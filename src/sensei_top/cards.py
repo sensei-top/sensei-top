@@ -1,0 +1,601 @@
+"""Card names: grpId -> "Sleight of Hand".
+
+Everything Arena logs about a card is a number, so the names have to come from
+somewhere else. There are two sources, and the local one is preferred:
+
+1. **The installed client's own card database** — a plain SQLite file inside
+   the Arena install. No network, always in step with the client that wrote
+   the log, and complete: it names tokens, the back faces of double-faced
+   cards and alternate-art basics, none of which Scryfall's ``arena_id``
+   covers. Refresh it by hand with the command after an Arena patch, or let
+   ``serve`` notice on its own (``_start_reference_refresh`` in ``cli.py``,
+   below) — that path is a local file read, not a network call, so it needs
+   no button and no credential (non-negotiable #5 governs metered/networked
+   calls; this is neither).
+2. **Scryfall's bulk export** — the fallback for when Arena is not installed
+   on this machine (reading a log copied from elsewhere). This is one of the
+   sanctioned outbound calls (brief §3), and it only ever downloads: no game
+   data leaves the machine.
+
+``ingest`` and ``project`` never touch this module. ``serve`` now does, but
+only the installed-client leg (1): ``arena_cards_missing``/
+``refresh_arena_cards`` at the bottom of this file, run from a background
+thread at startup and every few minutes after, so a grpId the client
+database defines but this table doesn't yet (a Cube pack card, most often)
+stops staying "unknown" until someone remembers to re-run the CLI. The
+Scryfall leg (2) is still the user's own call — ``sensei-top cards
+--scryfall`` once, and until they do, rules text and legality stay NULL
+rather than showing numbers at people.
+
+Scryfall's ``default_cards`` export is the right one: it lists every English
+printing, and ``arena_id`` (the same number as Arena's ``grpId``) is attached
+per printing. ``oracle_cards`` collapses to one printing per card and drops
+``arena_id`` for many of them; ``all_cards`` adds every other language for a
+tenfold size increase and no extra Arena coverage.
+
+The export is served as gzipped JSONL — one card object per line, ~75 MB
+compressed — so it is decompressed and parsed a line at a time and never held
+in memory whole. Only the Arena-legal minority survives into the table.
+
+Name backfill. ``arena_id`` alone leaves a real gap: Arena assigns
+its *own* grpId to every alternate-art, showcase or bonus-sheet copy of a
+card, and to each face of a double-faced, Adventure, Omen or Room card, but
+Scryfall's bulk export attaches ``arena_id`` to only one representative
+printing per functional card. Every sibling grpId — real, playable, and
+already sitting in the local table from the installed-client import — was
+left with ``standard_legality`` permanently NULL (measured: 1,043 rows across
+TLA/FIN/OM1/ECL/TDM/DSK/WOE alone), and the same gap left plenty of rows with
+an ``oracle_id`` (filled by a Cube pack's own ``arena_id`` printing) but no
+``oracle_text`` at all — a Cube pack card is exactly this shape (measured: 39
+of 276 Powered Cube grpIds). ``upsert_cards`` fixes both with a second pass,
+entirely local: while streaming the export it also indexes every non-token
+printing's Standard legality, oracle id, rules text and body fields
+(``mana_cost``, ``type_line``, ``power``, ``toughness``, ``keywords``,
+``produced_mana``) by *name* — the combined top-level name, each
+``card_faces[].name``, and (for a localized/reskinned product like OM1's
+Marvel names) ``printed_name`` and each face's ``printed_name`` too, since
+Scryfall's own om1 objects already carry the correct Standard legality under
+that name and need no cross-set alias to SPM. A face's own name carries that
+face's own rules text/cost/type/body, never the merged top-level card's — the
+same front-face fallback ``_row`` uses is only for the *combined* name.
+``produced_mana``/``keywords`` are whole-card properties with no per-face
+form, so every name a card answers to carries the same value for them. After
+the ``arena_id`` upsert, any row still NULL is backfilled by exact name
+match, COALESCE-only (never overwrites a value a row already has).
+
+A name is skipped **entirely** only when its Standard legality or its
+oracle_id resolves to more than one distinct value across the export — that
+disagreement is the actual signal that two different cards share a name, the
+same check this backfill has always made. When legality and oracle_id agree,
+they are filled as before, and each of the other seven fields is then filled
+*independently*: only when that field alone resolves to a single value, left
+NULL — never guessed (non-negotiable #4) — when it doesn't. A ``keywords``
+ordering quirk or a ``type_line`` erratum on one printing must never blank
+the legality fix this backfill exists for in the first place (measured:
+1,043 rows across TLA/FIN/OM1/ECL/TDM/DSK/WOE alone). Tokens are excluded on
+both sides: a token printing never enters the index, and a row whose
+``type_line`` says Token is never filled — Arena's Treasure and Spirit tokens
+share their names with non-token Scryfall objects.
+
+Cube packs specifically also lose grpIds outright: a Cube's own pack cards
+never carry Scryfall's ``arena_id`` at all for some printings that only exist
+in the installed client's own database (measured: 4 of 276 Powered Cube
+grpIds). ``arena_cards_missing``/``refresh_arena_cards`` below close that gap
+without a Scryfall run — a plain re-import of the installed client's own
+database, which already names every grpId it defines, run automatically by
+``serve`` whenever that database's own file changes (``cli.py``'s
+``_start_reference_refresh``).
+"""
+
+from __future__ import annotations
+
+import gzip
+import json
+import re
+import sqlite3
+import urllib.request
+from collections import defaultdict
+from collections.abc import Iterable, Iterator
+from pathlib import Path
+from typing import Any
+
+from sensei_top import steam
+
+BULK_INDEX_URL = "https://api.scryfall.com/bulk-data/default-cards"
+# Scryfall asks that clients identify themselves and state what they accept,
+# and refuses requests that do neither.
+HEADERS = {"User-Agent": "sensei-top/0.1", "Accept": "application/json"}
+TIMEOUT = 120.0
+
+
+def _get_json(url: str) -> Any:
+    request = urllib.request.Request(url, headers=HEADERS)
+    with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+        return json.load(response)
+
+
+def fetch_default_cards() -> Iterator[dict[str, Any]]:
+    """Stream Scryfall's default-cards export. The only networked function.
+
+    Two requests: the bulk-data index names the current file (its URI carries a
+    build timestamp, so it cannot be hardcoded), then the file itself, which
+    arrives gzipped with one card per line and is yielded as it decompresses.
+    """
+    index = _get_json(BULK_INDEX_URL)
+    uri = index.get("jsonl_download_uri")
+    if not uri:
+        raise RuntimeError(f"Scryfall bulk index named no JSONL export: {index!r}")
+    size = index.get("compressed_size")
+    if isinstance(size, int):
+        print(f"Downloading {size / 1_000_000:.0f} MB from Scryfall…")
+
+    request = urllib.request.Request(uri, headers=HEADERS)
+    with (
+        urllib.request.urlopen(request, timeout=TIMEOUT) as response,
+        gzip.GzipFile(fileobj=response) as stream,
+    ):
+        for line in stream:
+            if stripped := line.strip():
+                yield json.loads(stripped)
+
+
+def _upper(value: str | None) -> str | None:
+    """Both writers store `set_code` uppercase (migrations/041); Scryfall's
+    own `set` field is always lowercase."""
+    return value.upper() if value else None
+
+
+def _row(card: dict[str, Any]) -> tuple[Any, ...] | None:
+    """One Scryfall printing -> a `cards` row, or None if it has no arena_id
+    (paper/MTGO-only — no grpId to join against) or no name (malformed).
+
+    A double-faced card already carries a combined ``"Front // Back"`` name at
+    the top level, but its cost and colors live on the front face only.
+    """
+    arena_id = card.get("arena_id")
+    name = card.get("name")
+    if arena_id is None or not name:
+        return None
+    faces = card.get("card_faces") or [{}]
+    front = faces[0] if isinstance(faces[0], dict) else {}
+    colors = card.get("colors")
+    if colors is None:
+        colors = front.get("colors")
+    # produced_mana lives only on the top-level card, never per-face — a
+    # land's two faces (if it even has them) tap for the same mana. Left
+    # as None (not `[]`) when the key is genuinely absent, same as
+    # oracle_text below, so the COALESCE in _write can tell "Scryfall
+    # says this produces nothing" from "this row never asked Scryfall".
+    produced_mana = card.get("produced_mana")
+    # power/toughness/keywords: same front-face fallback as
+    # mana_cost/type_line above — a DFC's top-level card carries neither,
+    # only its faces do (Delver of Secrets has no top-level "power").
+    # keywords lives only at the top level in Scryfall's own schema (it
+    # is a whole-card property, e.g. ["Flying", "Trample"]), never
+    # per-face, so it has no front-face fallback to reach for.
+    power = card.get("power") or front.get("power")
+    toughness = card.get("toughness") or front.get("toughness")
+    keywords = card.get("keywords")
+    return (
+        arena_id,
+        name,
+        card.get("mana_cost") or front.get("mana_cost"),
+        card.get("type_line") or front.get("type_line"),
+        card.get("rarity"),
+        _upper(card.get("set")),
+        json.dumps(colors or []),
+        card.get("oracle_text") or front.get("oracle_text"),
+        (card.get("legalities") or {}).get("standard"),
+        card.get("oracle_id"),
+        json.dumps(produced_mana) if produced_mana is not None else None,
+        power,
+        toughness,
+        json.dumps(keywords) if keywords is not None else None,
+    )
+
+
+def _rows(cards: Iterable[dict[str, Any]]) -> Iterator[tuple[Any, ...]]:
+    """Keep the Arena-legal printings and flatten each to a row. See `_row`."""
+    for card in cards:
+        row = _row(card)
+        if row is not None:
+            yield row
+
+
+# Objects that are not real, playable cards. They must never seed the name
+# backfill below — an Arena token grp_id often carries a token's own generic
+# name ("Food", "Clue", "Ally"), and indexing a token would risk handing that
+# name's legality to an unrelated real card that happens to share it (or vice
+# versa). Measured: no such collision exists today, but the exclusion is what
+# keeps it that way.
+_NON_CARD_LAYOUTS = frozenset({"token", "double_faced_token", "emblem", "art_series"})
+
+
+def _is_non_card(card: dict[str, Any]) -> bool:
+    if card.get("layout") in _NON_CARD_LAYOUTS:
+        return True
+    return "Token" in (card.get("type_line") or "")
+
+
+# Every column the name backfill can fill, in the order the UPDATE below
+# binds them. `standard_legality`/`oracle_id`/`produced_mana`/`keywords` are
+# whole-card properties; `oracle_text`/`mana_cost`/`type_line`/`power`/
+# `toughness` are face-specific — see `_index_names`.
+_BACKFILL_FIELDS = (
+    "standard_legality", "oracle_id", "oracle_text", "produced_mana",
+    "power", "toughness", "keywords", "mana_cost", "type_line",
+)
+
+
+def _index_names(
+    card: dict[str, Any],
+    index: dict[str, dict[str, set[str]]],
+) -> None:
+    """Record one printing's backfill fields (`_BACKFILL_FIELDS`) under every
+    name Arena might show it by.
+
+    Beyond the top-level `name`, this indexes each `card_faces[].name` — a
+    double-faced, Adventure, Omen or Room card's own faces carry Arena grpIds
+    of their own. `standard_legality`, `oracle_id`, `produced_mana` and
+    `keywords` are whole-card properties, so every name a card answers to
+    gets the same value for them. The other five — `oracle_text`,
+    `mana_cost`, `type_line`, `power`, `toughness` — are face-specific: a
+    face's own name is indexed under *that face's own* value, never the
+    combined card's front-face fallback (that fallback — `card.get(x) or
+    front.get(x)` — is only for the top-level "Front // Back" name, matching
+    `_row`). It also indexes `printed_name` (top-level and per-face): OM1's
+    Marvel-skinned reprints show Arena a name Scryfall calls `printed_name`
+    ("Verilax the Havenskin") rather than `name` ("Anti-Venom, Horrifying
+    Healer") — and Scryfall's own om1 printing already carries the correct
+    Standard legality under that name, so no om1->spm set alias is needed.
+
+    Tokens, emblems and art-series objects are skipped entirely (`_is_non_card`).
+    """
+    if _is_non_card(card):
+        return
+
+    produced_mana = card.get("produced_mana")
+    keywords = card.get("keywords")
+    whole_card = {
+        "standard_legality": (card.get("legalities") or {}).get("standard"),
+        "oracle_id": card.get("oracle_id"),
+        "produced_mana": json.dumps(produced_mana) if produced_mana is not None else None,
+        "keywords": json.dumps(keywords) if keywords is not None else None,
+    }
+
+    faces = card.get("card_faces") or [{}]
+    front = faces[0] if isinstance(faces[0], dict) else {}
+    top_values = {
+        **whole_card,
+        "oracle_text": card.get("oracle_text") or front.get("oracle_text"),
+        "mana_cost": card.get("mana_cost") or front.get("mana_cost"),
+        "type_line": card.get("type_line") or front.get("type_line"),
+        "power": card.get("power") or front.get("power"),
+        "toughness": card.get("toughness") or front.get("toughness"),
+    }
+
+    def record(name: str | None, values: dict[str, Any]) -> None:
+        if not name:
+            return
+        entry = index[name]
+        for field, value in values.items():
+            if value is not None:
+                entry[field].add(value)
+
+    for key in ("name", "printed_name"):
+        record(card.get(key), top_values)
+
+    for face in card.get("card_faces") or []:
+        if not isinstance(face, dict):
+            continue
+        face_values = {
+            **whole_card,
+            "oracle_text": face.get("oracle_text"),
+            "mana_cost": face.get("mana_cost"),
+            "type_line": face.get("type_line"),
+            "power": face.get("power"),
+            "toughness": face.get("toughness"),
+        }
+        for key in ("name", "printed_name"):
+            record(face.get(key), face_values)
+
+
+def _backfill_by_name(
+    conn: sqlite3.Connection,
+    index: dict[str, dict[str, set[str]]],
+) -> tuple[int, int, int]:
+    """Fill every still-NULL column in `_BACKFILL_FIELDS`, by exact name
+    match against the index `_index_names` built. COALESCE-only — a row that
+    already has a value in any of these columns is never touched.
+
+    A name is skipped entirely only when its `standard_legality` or its
+    `oracle_id` resolves to more than one distinct value across the export —
+    that disagreement is the original ambiguity check this backfill has
+    always made, the actual signal that two different cards share a name.
+    When those two agree, they are filled as usual, and each of the other
+    seven fields is filled *independently* of the rest: only when that field
+    alone resolves to exactly one value, left NULL — never guessed
+    (non-negotiable #4) — when it doesn't. This keeps a `keywords` ordering
+    quirk or a `type_line` erratum on one printing from blanking the
+    legality/oracle_id fix this backfill exists for in the first place.
+
+    Returns (legality rows filled, oracle_text rows filled, names left
+    ambiguous).
+    """
+    updates: list[tuple[str | None, ...]] = []
+    ambiguous = 0
+    for name, fields in index.items():
+        if len(fields.get("standard_legality", ())) > 1 or len(fields.get("oracle_id", ())) > 1:
+            ambiguous += 1
+            continue
+        row = tuple(
+            next(iter(values)) if len(values) == 1 else None
+            for values in (fields.get(field, set()) for field in _BACKFILL_FIELDS)
+        )
+        updates.append((*row, name))
+
+    before_legality = conn.execute(
+        "SELECT COUNT(*) FROM cards WHERE standard_legality IS NULL"
+    ).fetchone()[0]
+    before_text = conn.execute(
+        "SELECT COUNT(*) FROM cards WHERE oracle_text IS NULL"
+    ).fetchone()[0]
+    conn.execute("BEGIN")
+    try:
+        conn.executemany(
+            """
+            UPDATE cards
+               SET standard_legality = COALESCE(standard_legality, ?),
+                   oracle_id         = COALESCE(oracle_id, ?),
+                   oracle_text       = COALESCE(oracle_text, ?),
+                   produced_mana     = COALESCE(produced_mana, ?),
+                   power             = COALESCE(power, ?),
+                   toughness         = COALESCE(toughness, ?),
+                   keywords          = COALESCE(keywords, ?),
+                   mana_cost         = COALESCE(mana_cost, ?),
+                   type_line         = COALESCE(type_line, ?)
+             WHERE name = ?
+               -- The index skips token *sources*; this skips token *targets*.
+               -- Arena's own token rows share generic names ("Treasure",
+               -- "Spirit") with non-token Scryfall objects, and a token
+               -- marked not_legal would rule a Standard match out of Standard.
+               AND COALESCE(type_line, '') NOT LIKE '%Token%'
+            """,
+            updates,
+        )
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
+    after_legality = conn.execute(
+        "SELECT COUNT(*) FROM cards WHERE standard_legality IS NULL"
+    ).fetchone()[0]
+    after_text = conn.execute(
+        "SELECT COUNT(*) FROM cards WHERE oracle_text IS NULL"
+    ).fetchone()[0]
+    return before_legality - after_legality, before_text - after_text, ambiguous
+
+
+def upsert_cards(conn: sqlite3.Connection, cards: Iterable[dict[str, Any]]) -> int:
+    """Write Scryfall's Arena-legal printings, then backfill sibling grpIds
+    that share a name but never got their own arena_id — see the module
+    docstring's "Name backfill" section.
+    """
+    primary_rows: list[tuple[Any, ...]] = []
+    name_index: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
+    for card in cards:
+        row = _row(card)
+        if row is not None:
+            primary_rows.append(row)
+        _index_names(card, name_index)
+
+    written = _write(conn, primary_rows)
+    legality_filled, text_filled, ambiguous = _backfill_by_name(conn, name_index)
+    print(
+        f"Name backfill: {legality_filled} legality row(s) filled, "
+        f"{text_filled} oracle_text row(s) filled, {ambiguous} name(s) left ambiguous"
+    )
+    return written
+
+
+def _write(conn: sqlite3.Connection, rows: Iterable[tuple[Any, ...]]) -> int:
+    """Store card rows, whatever produced them. Returns the row count.
+
+    Re-runnable: a later import refreshes names in place rather than
+    duplicating them, so this can be run again whenever a set is released.
+    """
+    rows = list(rows)
+    conn.execute("BEGIN")
+    try:
+        conn.executemany(
+            """
+            INSERT INTO cards (grp_id, name, mana_cost, type_line, rarity, set_code, colors,
+                               oracle_text, standard_legality, oracle_id, produced_mana,
+                               power, toughness, keywords)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (grp_id) DO UPDATE SET
+                 name = excluded.name,
+                 mana_cost = excluded.mana_cost,
+                 type_line = excluded.type_line,
+                 rarity = excluded.rarity,
+                 set_code = excluded.set_code,
+                 colors = excluded.colors,
+                 oracle_text = COALESCE(excluded.oracle_text, oracle_text),
+                 standard_legality = COALESCE(excluded.standard_legality, standard_legality),
+                 oracle_id = COALESCE(excluded.oracle_id, oracle_id),
+                 produced_mana = COALESCE(excluded.produced_mana, produced_mana),
+                 power = COALESCE(excluded.power, power),
+                 toughness = COALESCE(excluded.toughness, toughness),
+                 keywords = COALESCE(excluded.keywords, keywords),
+                 updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+            """,
+            rows,
+        )
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
+    return len(rows)
+
+
+# The installed client ships the mapping it uses itself, as a plain SQLite file.
+# It is the better source: it needs no network, it always matches the client
+# that wrote the log, and it covers what Scryfall's arena_id cannot — tokens,
+# the back faces of double-faced cards, and alternate-art basics, all of which
+# appear in a game log like any other card.
+
+_ARENA_DB_GLOB = "steamapps/common/MTGA/MTGA_Data/Downloads/Raw/Raw_CardDatabase_*.mtga"
+
+# Verified against 19,600 cards cross-checked with Scryfall's own rarities.
+_RARITY = {1: "basic land", 2: "common", 3: "uncommon", 4: "rare", 5: "mythic"}
+# Enums table, type 'CardColor'.
+_COLOR = {1: "W", 2: "U", 3: "B", 4: "R", 5: "G"}
+
+
+def arena_card_database_path() -> Path | None:
+    """The installed client's card database, or None if Arena is not installed.
+
+    The filename carries a content hash that changes with every client patch,
+    so it is globbed; if a stale copy is left behind, the newest wins.
+    """
+    found = [path for root in steam.library_roots() for path in root.glob(_ARENA_DB_GLOB)]
+    return max(found, key=lambda p: p.stat().st_mtime) if found else None
+
+
+def _arena_mana_cost(text: str | None) -> str | None:
+    """Arena writes mana as ``o5oR``; everything else writes ``{5}{R}``."""
+    if not text:
+        return None
+    return re.sub(r"o([^o]+)", r"{\1}", text)
+
+
+def _arena_type_line(types: str | None, subtypes: str | None) -> str | None:
+    if types and subtypes:
+        return f"{types} — {subtypes}"
+    return types or subtypes or None
+
+
+def read_arena_cards(path: Path) -> Iterator[tuple[Any, ...]]:
+    """Read grpId -> name (and friends) out of the client's own database.
+
+    Text lives in a localization table keyed by id, in two forms. ``Formatted =
+    1`` is the *display* form and embeds Unity rich-text markup: ``<nobr>``
+    around every hyphenated name, and a ``<sprite=…>`` badge on Alchemy's
+    rebalanced cards. React escapes strings, so those render literally in the
+    dashboard, and they match nothing when compared against an outside card
+    list. ``Formatted = 0`` is the plain form.
+
+    Exactly the marked-up titles carry a plain twin (1,264 of them), and the
+    other 25,308 have only the display form and no markup in it, so preferring
+    the plain form loses nothing. Stripping the tags instead would be wrong for
+    361 of them: a rebalanced card's plain name is ``A-Cori-Steel Cutter``, and
+    deleting the sprite would leave ``Cori-Steel Cutter``, a different card.
+    """
+    source = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    source.row_factory = sqlite3.Row
+    try:
+        for row in source.execute(
+            """
+            SELECT c.GrpId, c.OldSchoolManaText, c.Rarity, c.Colors, c.ExpansionCode,
+                   COALESCE(title_plain.Loc, title.Loc)       AS name,
+                   COALESCE(types_plain.Loc, types.Loc)       AS types,
+                   COALESCE(subtypes_plain.Loc, subtypes.Loc) AS subtypes
+              FROM Cards c
+              LEFT JOIN Localizations_enUS title
+                ON title.LocId = c.TitleId AND title.Formatted = 1
+              LEFT JOIN Localizations_enUS title_plain
+                ON title_plain.LocId = c.TitleId AND title_plain.Formatted = 0
+              LEFT JOIN Localizations_enUS types
+                ON types.LocId = c.TypeTextId AND types.Formatted = 1
+              LEFT JOIN Localizations_enUS types_plain
+                ON types_plain.LocId = c.TypeTextId AND types_plain.Formatted = 0
+              LEFT JOIN Localizations_enUS subtypes
+                ON subtypes.LocId = c.SubtypeTextId AND subtypes.Formatted = 1
+              LEFT JOIN Localizations_enUS subtypes_plain
+                ON subtypes_plain.LocId = c.SubtypeTextId AND subtypes_plain.Formatted = 0
+            """
+        ):
+            if not row["name"]:
+                continue
+            colors = [
+                _COLOR[int(value)]
+                for value in (row["Colors"] or "").split(",")
+                if value.strip().isdigit() and int(value) in _COLOR
+            ]
+            yield (
+                row["GrpId"],
+                row["name"],
+                _arena_mana_cost(row["OldSchoolManaText"]),
+                _arena_type_line(row["types"], row["subtypes"]),
+                _RARITY.get(row["Rarity"]),
+                _upper(row["ExpansionCode"]),
+                json.dumps(colors),
+                # The client's own database carries no rules text, legality,
+                # oracle id, mana-production data or body/keywords at all —
+                # see migrations/015_card_text.sql, migrations/017_card_legality.sql,
+                # migrations/021_produced_mana.sql and migrations/031_card_body.sql.
+                # _write's COALESCE keeps whatever a prior Scryfall run already
+                # supplied rather than erasing it with these Nones.
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+    finally:
+        source.close()
+
+
+def import_arena_cards(conn: sqlite3.Connection, path: Path) -> int:
+    """Copy the installed client's card names into the local table."""
+    return _write(conn, read_arena_cards(path))
+
+
+def _arena_grp_ids(path: Path) -> set[int]:
+    """Every grpId the installed client's own database defines — one SELECT
+    against that file, nothing else. Kept separate from `read_arena_cards`'
+    full join so a mere presence check never pays for the localization
+    joins it doesn't need.
+    """
+    source = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    try:
+        return {row[0] for row in source.execute("SELECT GrpId FROM Cards")}
+    finally:
+        source.close()
+
+
+def arena_cards_missing(conn: sqlite3.Connection, path: Path) -> int:
+    """Count grpIds the installed client's own database defines but this
+    table doesn't have a row for yet — a Cube pack card most often
+    (measured: 4 of 276 Powered Cube grpIds, module docstring). One SELECT
+    against the Arena file (`_arena_grp_ids`); the local side is one SELECT
+    on `cards` already open on `conn`.
+    """
+    existing = {row[0] for row in conn.execute("SELECT grp_id FROM cards")}
+    return len(_arena_grp_ids(path) - existing)
+
+
+def refresh_arena_cards(conn: sqlite3.Connection) -> int | None:
+    """Re-import the installed client's card database, but only the grpIds
+    this table doesn't have yet — most checks, after the first run, do no
+    writing at all. Returns the number of rows imported (0 when nothing was
+    missing), or `None` when no Arena install is found on this machine
+    (`arena_card_database_path`).
+
+    Unlike `import_arena_cards`, which always rewrites every row the client
+    defines (the CLI's own re-run-after-a-patch path, where refreshing
+    already-known names is the point), this is meant to be called
+    frequently and cheaply from a background thread — see
+    `cli.py::_start_reference_refresh` — so it only ever writes the rows
+    that are actually new.
+    """
+    path = arena_card_database_path()
+    if path is None:
+        return None
+    existing = {row[0] for row in conn.execute("SELECT grp_id FROM cards")}
+    missing = _arena_grp_ids(path) - existing
+    if not missing:
+        return 0
+    return _write(conn, (row for row in read_arena_cards(path) if row[0] in missing))

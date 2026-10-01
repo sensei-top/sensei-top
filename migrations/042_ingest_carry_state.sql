@@ -1,0 +1,26 @@
+-- 042_ingest_carry_state.sql — segmenter carry state, kept across polls.
+--
+-- The live watcher calls ingest_file roughly once a second, and each call
+-- used to build a brand-new Segmenter, so its carry-over state was lost at
+-- every poll boundary: the most recent header timestamp (inherited by a
+-- following request, which carries none of its own) and the header's
+-- context label (consumed by the next bare `{` line). A request that landed
+-- as the first entry of a poll got `logged_at = NULL`; the same request seen
+-- later by a whole-file read (Player-prev.log recovery) got its real
+-- timestamp instead, so it hashed to a different digest and was inserted a
+-- second time. Measured on a real database: 1,649 request pairs stored
+-- twice this way.
+--
+-- carry_ts/carry_context let ingest_file persist Segmenter.carry_state()
+-- alongside the byte offset and restore it into the next read's Segmenter
+-- (reader/segmenter.py's restore_carry). Both NULL means either "no read has
+-- completed yet" or "the last read started fresh" (from_start, a rotation,
+-- or a truncation) — never a guess at the previous file's state, since a
+-- fresh read's carry has to start empty regardless of what came before.
+--
+-- MTGO's own ingest (reader/mtgo.py) reuses this table's _read_state/
+-- _write_state for its own unrelated offset bookkeeping and never touches
+-- these two columns — they stay NULL for every MTGO row, which is correct:
+-- MTGO's reader has no segmenter and no header timestamps to carry.
+ALTER TABLE ingest_state ADD COLUMN carry_ts TEXT;
+ALTER TABLE ingest_state ADD COLUMN carry_context TEXT;
