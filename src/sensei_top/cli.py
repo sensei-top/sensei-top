@@ -920,7 +920,7 @@ def cmd_report(args) -> None:
         print("-" * 62)
         rows = conn.execute(
             """
-            SELECT COALESCE(deck_name, substr(deck_id, 1, 8)) AS deck, event_id,
+            SELECT COALESCE(deck_name, substr(deck_id, 1, 8), '(no deck)') AS deck, event_id,
                    matches_completed, matches_won, games_won, games_lost
               FROM v_deck_winrate ORDER BY matches_completed DESC
             """
@@ -941,7 +941,7 @@ def cmd_report(args) -> None:
         print("-" * 62)
         rows = conn.execute(
             """
-            SELECT COALESCE(d.name, substr(v.deck_id, 1, 8)) AS deck,
+            SELECT COALESCE(d.name, substr(v.deck_id, 1, 8), '(no deck)') AS deck,
                    v.on_play, v.games_completed, v.games_won
               FROM v_play_draw_winrate v
               LEFT JOIN decks d ON d.deck_id = v.deck_id
@@ -962,7 +962,7 @@ def cmd_report(args) -> None:
         print("-" * 62)
         rows = conn.execute(
             """
-            SELECT COALESCE(d.name, substr(v.deck_id, 1, 8)) AS deck,
+            SELECT COALESCE(d.name, substr(v.deck_id, 1, 8), '(no deck)') AS deck,
                    v.turn_count, v.games, v.games_won
               FROM v_deck_game_length v
               LEFT JOIN decks d ON d.deck_id = v.deck_id
@@ -992,7 +992,7 @@ def cmd_report(args) -> None:
         print("-" * 62)
         rows = conn.execute(
             """
-            SELECT COALESCE(d.name, substr(v.deck_id, 1, 8)) AS deck,
+            SELECT COALESCE(d.name, substr(v.deck_id, 1, 8), '(no deck)') AS deck,
                    v.turn_number, v.samples, v.avg_self_life, v.avg_opp_life,
                    v.avg_self_hand, v.avg_opp_hand, v.avg_self_lands,
                    v.avg_self_permanents, v.avg_opp_permanents
