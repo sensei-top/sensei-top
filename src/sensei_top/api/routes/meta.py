@@ -146,13 +146,35 @@ def live(request: Request, conn: Conn) -> LiveStatus:
 
 @router.get("/api/decks", response_model=list[Deck], tags=["decks"])
 def decks(conn: Conn) -> list[dict[str, Any]]:
-    """Every deck with enough context to pick one out of a list."""
+    """Every deck some match was played with, with enough context to pick one
+    out of a list.
+
+    A deck no match is picked to is left out: an MTGO deck (from the store or
+    an export) no match is picked to yet has a ``v_deck_summary`` row with no
+    matches, and a zero-match entry in the deck dropdown or a deck page is a
+    dead end.
+    The MTGO picker reads its own candidates route, so it still sees them.
+
+    ``first_played`` is the deck's earliest match start, from one grouped
+    pass over ``matches JOIN v_match_deck`` (the view's COALESCE has no index,
+    so a per-deck filter would rescan it for every deck). ``first_seen`` is
+    when the deck was first recorded, which for an MTGO deck is the day the
+    file was saved, not the day it was played.
+    """
     return _rows(
         conn,
         """
-        SELECT deck_id, name, format, matches_played, matches_won,
-               last_played, first_seen, last_seen
-          FROM v_deck_summary
-         ORDER BY COALESCE(last_played, last_seen, '') DESC
+        WITH first_played AS (
+            SELECT md.deck_id, MIN(m.started_at) AS first_played
+              FROM matches m
+              JOIN v_match_deck md ON md.match_id = m.match_id
+             GROUP BY md.deck_id
+        )
+        SELECT s.deck_id, s.name, s.format, s.matches_played, s.matches_won,
+               s.last_played, fp.first_played, s.first_seen, s.last_seen
+          FROM v_deck_summary s
+          LEFT JOIN first_played fp ON fp.deck_id = s.deck_id
+         WHERE s.matches_played > 0
+         ORDER BY COALESCE(s.last_played, s.last_seen, '') DESC
         """,
     )

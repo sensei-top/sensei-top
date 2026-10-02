@@ -72,7 +72,19 @@ export interface paths {
         };
         /**
          * Decks
-         * @description Every deck with enough context to pick one out of a list.
+         * @description Every deck some match was played with, with enough context to pick one
+         *     out of a list.
+         *
+         *     A deck no match is picked to is left out: an MTGO store deck the user has
+         *     not yet attached to a match has a ``v_deck_summary`` row with no matches,
+         *     and a zero-match entry in the deck dropdown or a deck page is a dead end.
+         *     The MTGO picker reads its own candidates route, so it still sees them.
+         *
+         *     ``first_played`` is the deck's earliest match start, from one grouped
+         *     pass over ``matches JOIN v_match_deck`` (the view's COALESCE has no index,
+         *     so a per-deck filter would rescan it for every deck). ``first_seen`` is
+         *     when the deck was first recorded, which for an MTGO deck is the day the
+         *     file was saved, not the day it was played.
          */
         get: operations["decks_api_decks_get"];
         put?: never;
@@ -208,15 +220,17 @@ export interface paths {
          * Winrate
          * @description Metric 1: winrate by deck, match- and game-level.
          *
-         *     One row per Arena deck, not per maindeck content hash: a single card
-         *     swap mints a new deck_id, so grouping on the hash splits one deck into
-         *     a row per version (nine, for this project's own most-played deck).
+         *     One row per deck (an Arena deck, or an MTGO deck the user picked for a
+         *     match), not per maindeck content hash: a single card swap mints a new
+         *     deck_id, so grouping on the hash splits one deck into a row per version
+         *     (nine, for this project's own most-played deck).
          *     Both filters apply before the rollup, so deck_id still means one
          *     content hash — matching the deck selector, which emits exactly that.
          *
-         *     Matches with no deck recorded, every MTGO match among them, are one
-         *     more row with a null ``deck_key`` rather than missing from the totals. A ``deck_id`` filter
-         *     leaves that row out, since none of those matches has one.
+         *     Matches with no deck, an MTGO match the user has not picked a deck for
+         *     among them (``v_match_deck``), are one more row with a null ``deck_key``
+         *     rather than missing from the totals. A ``deck_id`` filter leaves that
+         *     row out, since none of those matches has one.
          */
         get: operations["winrate_api_metrics_winrate_get"];
         put?: never;
@@ -266,8 +280,8 @@ export interface paths {
          * Play Draw
          * @description Metric 2: winrate on the play vs on the draw, per game.
          *
-         *     Matches with no deck recorded, every MTGO match among them, share the
-         *     rows whose ``deck_id`` is null. The view groups per source, and those
+         *     Matches with no deck, an MTGO match with no picked deck among them, share
+         *     the rows whose ``deck_id`` is null. The view groups per source, and those
          *     are the only rows two sources can share, so they are added together
          *     here rather than answered twice under 'all'.
          */
@@ -518,12 +532,93 @@ export interface paths {
          * @description Name the opponent's deck yourself: pick from the candidate list, or
          *     'Rogue' for a deck with no established archetype.
          *
-         *     The only write in this layer. An empty label clears the override, so
+         *     An empty label clears the override, so
          *     the same verb both sets and unsets and the classifier's own answer
          *     comes back — which is why the response is read from the view rather
          *     than echoing what was sent.
          */
         put: operations["set_opponent_deck_api_matches__match_id__opponent_deck_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/matches/{match_id}/mtgo-pick/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mtgo Pick Candidates
+         * @description The MTGO decks to offer for this match, the best match first.
+         *
+         *     A deck's score is how many of the distinct cards the user played in this
+         *     match (``card_events`` on the user's seat, resolved to an Arena
+         *     ``grp_id``) its list holds, maindeck or sideboard. A card Arena lacks
+         *     never resolves, so it counts for nothing on either side; a deck that
+         *     matches nothing is still listed, last, because the user may know better
+         *     than the overlap. Ties break on the deck's newest file, then its id.
+         *
+         *     The format pre-fill is the format MTGO's deck store files the deck under
+         *     (D16), else the last one confirmed for the same deck, else none (D10).
+         *     Each candidate also carries a few card names (``_card_names``). Nothing is
+         *     written, and the pick is never inferred from this ranking: the user
+         *     always confirms (D1).
+         */
+        get: operations["mtgo_pick_candidates_api_matches__match_id__mtgo_pick_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/matches/{match_id}/mtgo-pick": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Mtgo Pick
+         * @description Confirm an MTGO match's deck and format. 400 for an Arena match, for a
+         *     deck that is not one of the candidates, and for a body with neither field.
+         *
+         *     The body replaces any earlier pick whole, so a PUT with only a format
+         *     drops a deck confirmed before. There is no way back to "unconfirmed":
+         *     the user always confirms, and a pick that said something can only be
+         *     corrected, not withdrawn. The response is read from the view the rest of
+         *     the app reads, not echoed.
+         */
+        put: operations["set_mtgo_pick_api_matches__match_id__mtgo_pick_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mtgo/needs-pick": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mtgo Needs Pick
+         * @description MTGO matches with no pick yet, newest first, for the Home queue. A
+         *     match with a pick of only a format has been answered and is not listed.
+         */
+        get: operations["mtgo_needs_pick_api_mtgo_needs_pick_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -1735,6 +1830,11 @@ export interface components {
             matches_won: number;
             /** Last Played */
             last_played?: string | null;
+            /**
+             * First Played
+             * @description when the deck's earliest match started, across every source
+             */
+            first_played?: string | null;
             /** First Seen */
             first_seen?: string | null;
             /** Last Seen */
@@ -1828,7 +1928,7 @@ export interface components {
         DeckWinrate: {
             /**
              * Deck Key
-             * @description 'guid:<arena_deck_id>', or 'deck:<hash>' when Arena never named one; null on the one row that counts every match with no deck recorded, which is every MTGO match
+             * @description 'guid:<arena_deck_id>', or 'deck:<hash>' when Arena never named one; null on the one row that counts every match with no deck recorded, which for an MTGO match is one the user has not picked a deck for
              */
             deck_key: string | null;
             /** Arena Deck Id */
@@ -1904,7 +2004,7 @@ export interface components {
         GameLength: {
             /**
              * Deck Id
-             * @description null for matches with no deck recorded, which is every MTGO match
+             * @description null for matches with no deck recorded; an MTGO match has one only when the user picked it
              */
             deck_id: string | null;
             /** Deck Name */
@@ -2467,7 +2567,7 @@ export interface components {
             watching: boolean;
             /**
              * Mtgo Read At Startup
-             * @description the running watcher found an MTGO game-log directory and read it once at its own startup — MTGO is never polled during a live session
+             * @description the running watcher found an MTGO game-log directory and read it once at its own startup — MTGO's game logs are never polled during a live session
              * @default false
              */
             mtgo_read_at_startup: boolean;
@@ -3037,6 +3137,102 @@ export interface components {
              */
             format_reset_start?: string | null;
         };
+        /** MtgoDeckCandidate */
+        MtgoDeckCandidate: {
+            /** Deck Id */
+            deck_id: string;
+            /**
+             * Name
+             * @description the deck file's name, without its extension
+             */
+            name?: string | null;
+            /**
+             * Cards Matched
+             * @description how many of the distinct cards the user played in this match, among those that resolve to an Arena card, this deck's list holds, maindeck or sideboard
+             */
+            cards_matched: number;
+            /**
+             * Format Prefill
+             * @description the format MTGO's deck store files this deck under, else the format most recently confirmed for this same deck on any match; null when neither exists. A suggestion only: the user still confirms
+             */
+            format_prefill?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            /**
+             * Card Names
+             * @description up to five of the deck's card names to tell decks apart, basic lands left out. Spells before lands (a double-faced card by its front face); within each, cards the user played in this match first, then more maindeck copies, then name. A sideboard-only card counts as zero copies
+             */
+            card_names?: string[];
+        };
+        /**
+         * MtgoNeedsPick
+         * @description An MTGO match the user has not yet confirmed a deck or format for.
+         */
+        MtgoNeedsPick: {
+            /** Match Id */
+            match_id: string;
+            /** Opponent Name */
+            opponent_name?: string | null;
+            /** Started At */
+            started_at?: string | null;
+            /** Ended At */
+            ended_at?: string | null;
+            /** Result */
+            result?: string | null;
+            /** Games Won */
+            games_won?: number | null;
+            /** Games Lost */
+            games_lost?: number | null;
+        };
+        /**
+         * MtgoPick
+         * @description An MTGO match's deck and format as the user has confirmed them, read
+         *     from ``v_match_deck``.
+         */
+        MtgoPick: {
+            /** Deck Id */
+            deck_id?: string | null;
+            /** Format */
+            format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            /**
+             * Deck Confirmed
+             * @description true once the match has a pick, even one that confirms only a format
+             */
+            deck_confirmed: boolean;
+        };
+        /**
+         * MtgoPickCandidates
+         * @description The MTGO decks to offer for one match, best-matching first. Every deck
+         *     is listed, one that matches nothing included, so the user can always pick.
+         */
+        MtgoPickCandidates: {
+            /**
+             * Cards Seen
+             * @description distinct cards the user played in this match that resolve to an Arena card; the denominator for every candidate's cards_matched
+             */
+            cards_seen: number;
+            /** Candidates */
+            candidates: components["schemas"]["MtgoDeckCandidate"][];
+            /** @description the match's existing pick; null when it has none */
+            current?: components["schemas"]["MtgoPick"] | null;
+        };
+        /**
+         * MtgoPickIn
+         * @description The user's answer for an MTGO match, replacing any earlier one whole.
+         *
+         *     Either field may be null but not both: a format may be confirmed without a
+         *     deck. ``deck_id`` is one of the ids from ``GET .../mtgo-pick/candidates``.
+         */
+        MtgoPickIn: {
+            /**
+             * Deck Id
+             * @description a deck_id from GET .../mtgo-pick/candidates; null to confirm only a format
+             */
+            deck_id?: string | null;
+            /**
+             * Format
+             * @description one of the seven MTGO formats; null to confirm only a deck
+             */
+            format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+        };
         /**
          * MulliganCostOut
          * @description This deck's own kept-seven vs. mulliganed-to-six win rates
@@ -3422,7 +3618,7 @@ export interface components {
         PlayDrawWinrate: {
             /**
              * Deck Id
-             * @description null for matches with no deck recorded, which is every MTGO match
+             * @description null for matches with no deck recorded; an MTGO match has one only when the user picked it
              */
             deck_id: string | null;
             /** Deck Name */
@@ -3776,7 +3972,7 @@ export interface components {
         TurnCurve: {
             /**
              * Deck Id
-             * @description null for matches with no deck recorded, which is every MTGO match
+             * @description null for matches with no deck recorded; an MTGO match has one only when the user picked it
              */
             deck_id: string | null;
             /** Deck Name */
@@ -4436,6 +4632,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mtgo_pick_candidates_api_matches__match_id__mtgo_pick_candidates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MtgoPickCandidates"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_mtgo_pick_api_matches__match_id__mtgo_pick_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MtgoPickIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MtgoPick"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mtgo_needs_pick_api_mtgo_needs_pick_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MtgoNeedsPick"][];
                 };
             };
         };

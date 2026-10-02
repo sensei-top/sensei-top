@@ -1683,6 +1683,43 @@ def test_decks_carry_the_context_the_selector_shows(client):
     assert deck["last_played"] == "2026-08-13T15:18:39"
 
 
+def test_a_decks_first_played_is_its_earliest_match_start(client):
+    """The fixture's first match starts at entry 5 (its MatchGameRoomStateChangedEvent,
+    logged 2026-08-13T14:49:19, per fixture_peek.py), the second at 15:18:39, so
+    first_played is the older of the two."""
+    (deck,) = client.get("/api/decks").json()
+    assert deck["first_played"] == "2026-08-13T14:49:19"
+    assert deck["first_played"] < deck["last_played"]
+
+
+def test_decks_leave_out_one_no_match_is_picked_to(mtgo_pick_client):
+    """Three exported MTGO decks and two unpicked MTGO matches: the dropdown
+    still lists only the Arena deck, which has matches."""
+    assert mtgo_pick_client.get("/api/health").json()["decks"] == 4
+    (deck,) = mtgo_pick_client.get("/api/decks").json()
+    assert deck["name"] == "Spellelementals"
+    assert deck["matches_played"] > 0
+
+
+def test_a_picked_mtgo_deck_appears_and_its_range_starts_at_its_first_match(
+    mtgo_pick_db, make_client
+):
+    """mtgo_pick_db logs match A at 2099-01-01T00:00:00 and match B a day later,
+    and those are their started_at. The deck file's save time is first_seen, a
+    different moment: first_played is the older picked match's start."""
+    with make_client(create_app(mtgo_pick_db)) as client:
+        deck_id = _pick_decks(client)["Sample"]
+        for match_id in (MTGO_PICK_A, MTGO_PICK_B):
+            client.put(f"/api/matches/{match_id}/mtgo-pick", json={"deck_id": deck_id})
+        picked = {d["deck_id"]: d for d in client.get("/api/decks").json()}
+    assert len(picked) == 2  # the Arena deck and the one picked deck
+    row = picked[deck_id]
+    assert row["matches_played"] == 2
+    assert row["first_played"] == "2099-01-01T00:00:00"
+    assert row["last_played"] == "2099-01-02T00:00:00"
+    assert row["first_seen"] is not None and row["first_seen"] != row["first_played"]
+
+
 def test_deck_counts_include_a_match_still_being_played(live_client):
     """v_deck_winrate counts completed matches only. The selector must not
     drop a deck, or shrink its count, in the middle of a game."""

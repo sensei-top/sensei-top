@@ -49,13 +49,16 @@ export function chosenVersion(param: string | null | undefined, deckIds: string[
 const sameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
 
-/** When a version was played, from its `first_seen` to its `last_played`,
- *  in the viewer's own days: "Sep 14" for one day, "Sep 3 to 14" within a
+/** When a version was played, from its `first_played` (its `first_seen`
+ *  when it has none) to its `last_played`, in the viewer's own days: "Sep 14" for one day, "Sep 3 to 14" within a
  *  month, "Aug 28 to Sep 3" across two. With one of the two missing, the
  *  other day alone; with neither, `null`. A year other than `now`'s is
  *  written as `formatShortDay` writes it. */
-export function versionDays(deck: Pick<Deck, 'first_seen' | 'last_played'>, now: number): string | null {
-  const first = parseTimestamp(deck.first_seen)
+export function versionDays(
+  deck: Pick<Deck, 'first_played' | 'first_seen' | 'last_played'>,
+  now: number,
+): string | null {
+  const first = parseTimestamp(deck.first_played ?? deck.first_seen)
   const last = parseTimestamp(deck.last_played)
   if (first == null && last == null) return null
   if (first == null || last == null) return formatShortDay((first ?? last) as number, now)

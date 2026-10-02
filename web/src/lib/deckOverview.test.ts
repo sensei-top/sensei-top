@@ -23,7 +23,7 @@ const NOW = Date.parse('2026-09-29T16:00:00Z')
 
 /** A row of `/api/decks` with only what these functions read. */
 function version(deckId: string, rest: Partial<Deck> = {}): Deck {
-  return { deck_id: deckId, matches_played: 0, first_seen: null, last_played: null, ...rest } as Deck
+  return { deck_id: deckId, matches_played: 0, first_played: null, first_seen: null, last_played: null, ...rest } as Deck
 }
 
 /** A row of `/api/matches` with only what these functions read. */
@@ -116,6 +116,20 @@ describe('versionDays', () => {
   it('writes a year other than now’s once, at the end', () => {
     const row = version('a', { first_seen: '2025-09-03T15:00:00', last_played: '2025-09-14T20:00:00' })
     expect(versionDays(row, NOW)).toBe('Sep 3 to 14, 2025')
+  })
+
+  it('starts at the first played match, not the day the deck was saved', () => {
+    const row = version('a', {
+      first_seen: '2026-09-01T15:00:00',
+      first_played: '2026-09-10T15:00:00',
+      last_played: '2026-09-14T20:00:00',
+    })
+    expect(versionDays(row, NOW)).toBe('Sep 10 to 14')
+  })
+
+  it('falls back to first_seen when first_played is null', () => {
+    const row = version('a', { first_seen: '2026-09-01T15:00:00', last_played: '2026-09-14T20:00:00' })
+    expect(versionDays(row, NOW)).toBe('Sep 1 to 14')
   })
 
   it('is null with no date', () => {

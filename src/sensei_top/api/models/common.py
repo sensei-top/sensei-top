@@ -40,7 +40,7 @@ class LiveStatus(BaseModel):
     mtgo_read_at_startup: bool = Field(
         False,
         description="the running watcher found an MTGO game-log directory and read it once "
-        "at its own startup — MTGO is never polled during a live session",
+        "at its own startup — MTGO's game logs are never polled during a live session",
     )
     last_ingest_at: str | None = Field(
         None,
@@ -79,6 +79,9 @@ class Deck(BaseModel):
     matches_played: int = Field(description="every match, including one still in progress")
     matches_won: int
     last_played: str | None = None
+    first_played: str | None = Field(
+        None, description="when the deck's earliest match started, across every source"
+    )
     first_seen: str | None = None
     last_seen: str | None = None
 
