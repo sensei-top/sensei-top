@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Deck xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NetDeckID>0</NetDeckID>
+  <PreconstructedDeckID>0</PreconstructedDeckID>
+  <Cards CatID="22889" Quantity="4" Sideboard="false" Name="Sleight of Hand" />
+  <Cards CatID="149977" Quantity="2" Sideboard="false" Name="Traumatic Critique" />
+  <Cards CatID="149921" Quantity="4" Sideboard="false" Name="Prismari Charm" />
+  <Cards CatID="147131" Quantity="4" Sideboard="false" Name="Sunderflock" />
+  <Cards CatID="146699" Quantity="1" Sideboard="false" Name="Sear" />
+  <Cards CatID="146527" Quantity="3" Sideboard="false" Name="Spell Snare" />
+  <Cards CatID="137153" Quantity="4" Sideboard="false" Name="Riverpyre Verge" />
+  <Cards CatID="136507" Quantity="1" Sideboard="false" Name="Broadside Barrage" />
+  <Cards CatID="130251" Quantity="3" Sideboard="false" Name="Get Out" />
+  <Cards CatID="129341" Quantity="4" Sideboard="false" Name="Eddymurk Crab" />
+  <Cards CatID="116594" Quantity="4" Sideboard="false" Name="Hearth Elemental" />
+  <Cards CatID="94910" Quantity="2" Sideboard="false" Name="Stormcarved Coast" />
+  <Cards CatID="65142" Quantity="4" Sideboard="false" Name="Opt" />
+  <Cards CatID="64650" Quantity="2" Sideboard="false" Name="Abrade" />
+  <Cards CatID="61851" Quantity="4" Sideboard="false" Name="Spirebluff Canal" />
+  <Cards CatID="46805" Quantity="4" Sideboard="false" Name="Steam Vents" />
+  <Cards CatID="37610" Quantity="3" Sideboard="false" Name="Burst Lightning" />
+  <Cards CatID="15626" Quantity="6" Sideboard="false" Name="Island" />
+  <Cards CatID="123767" Quantity="1" Sideboard="false" Name="Three Steps Ahead" />
+  <Cards CatID="152435" Quantity="1" Sideboard="true" Name="Avengers Disassembled" />
+  <Cards CatID="149859" Quantity="3" Sideboard="true" Name="Colorstorm Stallion" />
+  <Cards CatID="144636" Quantity="2" Sideboard="true" Name="Wan Shi Tong, Librarian" />
+  <Cards CatID="143279" Quantity="1" Sideboard="true" Name="Consult the Star Charts" />
+  <Cards CatID="141209" Quantity="1" Sideboard="true" Name="Fire Magic" />
+  <Cards CatID="136507" Quantity="1" Sideboard="true" Name="Broadside Barrage" />
+  <Cards CatID="136257" Quantity="1" Sideboard="true" Name="Stock Up" />
+  <Cards CatID="129555" Quantity="2" Sideboard="true" Name="Sunspine Lynx" />
+  <Cards CatID="124195" Quantity="1" Sideboard="true" Name="Return the Favor" />
+  <Cards CatID="53982" Quantity="1" Sideboard="true" Name="Disdainful Stroke" />
+  <Cards CatID="27749" Quantity="1" Sideboard="true" Name="Flashfreeze" />
+</Deck>

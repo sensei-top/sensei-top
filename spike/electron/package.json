@@ -1,0 +1,14 @@
+{
+  "name": "sensei-top-shell-spike",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Throwaway Electron shell spike for release plan 6 phase 0. Never merged; results go into the plan.",
+  "main": "main.js",
+  "scripts": {
+    "start": "env -u ELECTRON_RUN_AS_NODE electron . --ozone-platform=x11",
+    "start:wayland": "env -u ELECTRON_RUN_AS_NODE electron . --ozone-platform=wayland"
+  },
+  "devDependencies": {
+    "electron": "44.5.1"
+  }
+}
