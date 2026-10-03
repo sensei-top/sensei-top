@@ -1,0 +1,204 @@
+# Testing
+
+Every test is fixture-backed or synthetic — no mocks of Arena, no network, no
+sleeping on real time for logic.
+
+This document is about the Python suite. The dashboard's tests (vitest, the
+pure functions under `web/src/lib/`) follow the same rule on ground truth and
+are described in [frontend.md](frontend.md), "Checks".
+
+> **Every parsing rule must have a fixture-backed test.** This is the single
+> most important quality lever in the project, because the log format changes
+> without notice and the change arrives as silently wrong numbers.
+
+## The fixtures
+
+| Fixture | What it is |
+|---|---|
+| `tests/fixtures/sample_player.log` | Small anonymized capture: entry shapes, noise lines, nested JSON |
+| `tests/fixtures/match_session.log` | A real Bo3 session: 2 matches, 5 games, 16 turns, 1 deck |
+| `tests/fixtures/combat_session.log` | A real match's combat: attacks, one declared block, creature-vs-creature damage, damage to a player, a non-combat life change — carved from `raw_events` after its own source log had already rotated away (see `migrations/014_combat.sql`'s own comment on why that is still a legitimate carve, not a reconstruction) |
+| `tests/fixtures/mulligan_session.log` | One real mulligan-then-keep sequence, 10 events: room start, the deal, the first offer, our own Mulligan, a second offer that includes a stale leftover `gameObject` sharing our hand's `zoneId` but absent from its `objectInstanceIds` (`projector/mulligan.py`'s own trap), our Accept — carved from `raw_events` the same legitimate way `combat_session.log` was, because no earlier capture happened to include a `GameStateMessage` mid-mulligan at all (`docs/arena-log.md` trap 14) |
+| `tests/fixtures/intermission_session.log` | One real Bo3 break, 44 entries: the auth and room start, all of game 1 (a turn-4 opponent concede), the whole break (`GameComplete` + `IntermissionReq`, `EnterSideboardingReq`, `SubmitDeckReq`/`Resp`, `SubmitDeckConfirmation`), game 2's `GameStage_Start`, then the match-final `GameComplete`/`MatchComplete` event and the room's `MatchCompleted` (`docs/arena-log.md` trap 11c). Carved from `raw_events` the same legitimate way `combat_session.log` was, because Arena's next launch wiped the source log. **A curated subset**: UIMessage- and TimerStateMessage-only events are dropped, and so is game 2's middle, so game 2's `turn_count` projects NULL. Game 1, the break and both results are complete |
+| `tests/fixtures/draft_session.log` | One real Quick Draft, start to finish: 42 packs seen, 42 picks made, set SOS — carved with `DTO_InventoryInfo` (the account's own gems/gold/wildcards/cosmetics, ~61 KB per pick response and irrelevant to drafting) stripped from every response, and every message-correlation uuid replaced with a deterministic synthetic one (`docs/draft.md` at the `archive/draft` tag). Since the draft assistant was deleted it pins only that the projector keeps a draft's entries raw and derives nothing from them (`test_projector.py`). The parser never reads `DTO_InventoryInfo`, so the carve costs no coverage. Stripped, this fixture is ~40 KB — small enough that it is the one fixture in this list safe to `Read` directly rather than only through `fixture_peek.py`; the others still run individual lines past 50,000 characters |
+| `tests/fixtures/human_draft_session.log` | One real Phantom Cube draft (2026-09-08, `CubeDraft_Powered_20260908`) — the human-draft message family (`Draft.Notify`/`EventPlayerDraftMakePick`), distinct from Quick Draft's, kept for the segmenter's `Draft.Notify` labelling (`test_segmenter.py`). **A curated subset, not the full draft**: the real capture ran 3 packs / 45 picks; the fixture keeps only the first 22 (through pack 2 pick 7), then appends the real `DraftCompleteDraft` request/response pair carved from the *end* of the same capture, with its own real header timestamp preserved so both keep the exact `logged_at` the capture gave them. Message-correlation uuids and `CourseId` replaced with deterministic synthetic ones; `CardPool`/`CourseDeckSummary` dropped, since the parser reads neither. Reading pack/pick numbers or "the draft completed" out of this fixture is safe; reading "the pool has 45 cards" or timing for picks 23–45 is not — they were never carved in |
+
+All of the above are **anonymized** — player names and user IDs are replaced
+(`SelfPlayer`, `OppPlayerOne`, `SELFCLIENTID0001`) or, for `draft_session.log`,
+account-state fields are stripped entirely since there is no player name in a
+draft message to begin with. Never commit a raw capture.
+
+### The fixtures are curated subsets
+
+`match_session.log` holds **34 log entries carved from a 4,595-entry session**.
+Intermediate messages were dropped when it was anonymized, so it is not a
+faithful timeline: match `fa7a4d16` game 2 records turns 1, 2, 3 and then 24,
+because turns 4–23 were cut.
+
+This matters enormously. An earlier investigation concluded turn 24 was a
+"stray post-game artifact" and turn 3 was the truth — exactly backwards, and
+the mistake came from treating the fixture as complete. **Gaps in the fixture
+are expected; contiguity is verified against the full log instead.**
+
+## Ground truth comes from the data
+
+Derive expected values by **reading the fixture** — grep the raw JSON, find the
+message, read the number. Never run the code and paste its output into an
+assertion: that asserts only that the code does what it currently does, and it
+locks in bugs as "expected".
+
+Where a value is non-obvious, the test says where it came from:
+
+```python
+def test_life_totals_at_decisive_final_turn(db):
+    """Ground truth read directly from the fixture's GameComplete messages,
+    not from running the projector and copying its output:
+
+    - fd5624a4 (LOSS match, self seat 2) game 2 ends at gameStateId 733 with
+      both players' lifeTotal == 10.
+    """
+```
+
+## Test style
+
+- **Docstrings explain why the case matters** — the trap being guarded, not the
+  mechanics. `test_no_double_counted_games` says *"Arena emits
+  GameStage_GameOver twice for the last game of a match."*
+- **Names state the claim**: `test_on_play_alternates_within_a_bo3`,
+  `test_recovery_does_not_duplicate_rotated_content`,
+  `test_absent_mulligan_count_means_zero`.
+- **Group with section comments**: `# --- digest ---`, `# --- robustness ---`.
+- **Fixtures over setup code**: a `conn` / `db` / `client` pytest fixture that
+  builds a temp database, ingests, projects, and yields.
+- **`make_client`, not a bare `TestClient`, for anything that talks to the
+  API.** `api/guard.py`'s `LoopbackGuard` refuses `TestClient`'s own default
+  `Host` (`testserver`, which names nothing loopback) with a 400, so a bare
+  `TestClient(create_app(...))` now fails before reaching a route.
+  `conftest.py`'s `make_client` fixture wraps one with a loopback `Host` and
+  the dashboard's own `X-Tracker-Client` header already set, so it looks like
+  the real frontend to the guard and a test can go back to being about the
+  route, not the guard. `test_guard.py` is the one module that builds bare
+  clients on purpose, to control exactly which headers are present.
+- **Synthetic minimal inputs** for edge cases the real log cannot easily show
+  (brace counting, escaped quotes, rollback on a bad migration).
+- **`tmp_path` always.** A test must never touch `data/sensei-top.db`.
+
+## Determinism over realism in timing tests
+
+Live mode is tested by driving `poll_once()` directly, not by sleeping and
+hoping. The loop around it is five lines; the logic is in the method.
+
+Where a thread genuinely must be tested (start/stop, surviving a failing poll),
+poll until a condition with a deadline rather than sleeping a fixed interval:
+
+```python
+deadline = time.monotonic() + 5
+while live.stats.projections == 0 and time.monotonic() < deadline:
+    time.sleep(0.02)
+```
+
+## Truncated-prefix parametrization
+
+MTGO's game-log file has no line-oriented framing to resume from mid-file —
+it only means something decoded whole, and the reader stores every distinct
+size it sees while a match is still live (`reader/mtgo.py`). That means the
+parser must hold true against **any** prefix of a real file, not just its
+final, complete form. `tests/test_projector_mtgo.py`'s
+`test_truncated_prefixes_are_monotonically_honest` is the pattern for any
+future live-source parser that faces the same situation: parametrize over a
+spread of byte cuts of one real fixture
+(`@pytest.mark.parametrize("cut", [40, 200, 800, 2000, ...])`) and assert the
+one property a mid-flush snapshot must satisfy — **a prefix may lose the
+tail, never gain content** (`set(prefix_strings) <= set(full_strings)`, never
+the reverse). A parser that hallucinates something from a truncated string —
+finishing a bracketed card name, inferring a game result, guessing a count —
+would violate append-only, never-synthesize semantics (non-negotiable #2 and
+#4) the moment a live poll caught the file mid-write, and this is the test
+shape that would catch it. `test_prefix_cut_mid_mulligan_is_incomplete_with_no_ended_at`
+extends the same idea one level up the pipeline: a specific, deliberately
+mid-mulligan cut of the fixture (`FIXTURE_BYTES[:222]`) must project to an
+`incomplete` match with no `ended_at`, not a guessed result.
+
+## Green tests are not proof
+
+The fixture is a subset and the real log is 4,595 entries. Before calling
+anything done, run against reality with a scratch database and check
+**structural invariants** — properties that must hold for any log, not counts
+that depend on which session was captured:
+
+- `COUNT(*) FROM turns` equals the count of distinct
+  `(match_id, game_number, turn_number)`
+- every `(match_id, game_number)` in `turns` exists in `games`
+- `MAX(turns.turn_number)` per game equals `games.turn_count`
+- turn numbers per game are contiguous from 1
+- turn-1 life totals equal the format's starting life for both seats
+- every match with a `MatchCompleted` event has a result in
+  (`win`, `loss`, `draw`) — never `incomplete`
+- `games_won + games_lost` equals the number of `games` rows for that match
+- no `turns` rows for matches whose `self_seat` is `NULL`
+
+Then re-run `project` and diff the tables: a second rebuild must produce
+byte-identical rows.
+
+**If an invariant fails, report it.** Do not relax the assertion to make it
+pass. The `turn_count` mismatch that surfaced during M2 was a real bug in
+trailing-turn handling, and weakening the check would have buried it.
+
+## Verifying a claim you inherited
+
+When told "X works this way", check it rather than assuming. The cheapest
+verification is usually a throwaway script over the real log:
+
+- Count how often the pattern actually occurs
+- Mutate the code to break the property, watch the test fail, then revert
+
+That mutation test is how the `source_file`-exclusion rule in the digest was
+confirmed to be load-bearing rather than decorative.
+
+## The metagame corpus
+
+`test_metagame.py` follows `test_archetypes.py`'s own pattern: no network at
+all. Every test builds a GitHub tree listing or a tournament event as an
+in-memory dict, shaped like the three real event files the findings document
+behind this feature verified against GitHub on 2026-08-18 — a Melee swiss
+event, an MTGO challenge, and an MTGO league — rather than a committed JSON
+fixture file. `metagame/source.py`'s own networked functions
+(`resolve_commit_sha`, `list_tree`, `fetch_event`) are monkeypatched exactly
+the way `archetypes.source.fetch_archive` already is.
+
+Two things this suite checks that nothing else in the project needs to:
+
+- **No player name survives parsing.** `test_parse_event_never_retains_a_player_name`
+  dumps the parsed decks and round matches to JSON and asserts the fixture's
+  synthetic handles are not in it — the privacy rule from `docs/metagame.md`,
+  made mechanical rather than left to review.
+- **A refresh is incremental.** `test_refresh_skips_files_whose_blob_sha_is_unchanged`
+  proves a second refresh over the same window re-fetches nothing whose blob
+  SHA has not moved, the same shape as `test_a_fresh_cache_opens_no_socket`
+  for the archetype definitions.
+
+`tests/test_classify.py`'s "complete decklists" section extends the same
+synthetic-`Definition` style the rest of that file already uses (its own
+docstring: "Definitions are synthetic so each rule is isolated") to
+`evaluate(..., complete=True)` and `choose(..., complete=True)`, rather than
+a committed real decklist — the assertions are about which *rule* fires, not
+about any one archetype's real card list, so a synthetic one-condition
+definition isolates the claim being tested exactly as it does everywhere
+else in that file.
+
+## Measuring the archetype classifier
+
+`scripts/verify_archetypes.py` is deliberately **not** in `tests/`: it needs a
+real database with real matches and a downloaded set of definitions, neither of
+which belongs in a hermetic suite. The unit tests cover the rules with
+synthetic definitions; this script answers "how accurate is it" with evidence.
+
+Its headline is the **self-agreement** check, which works because of an
+asymmetry. We never see the opponent's decklist, so there is no ground truth to
+score their label against — but we know our *own* list exactly. So it
+classifies our deck from all sixty cards, then again from only the cards we
+happened to reveal in each match, and compares. That is the same
+partial-information problem the opponent's label faces, against an answer we
+can check.
+
+Run it before believing any number on a deck's Matchups page.

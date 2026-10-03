@@ -1,0 +1,15 @@
+-- 021_produced_mana.sql — what a land (or any mana source) actually produces.
+--
+-- Same reference-data shape as 015_card_text.sql and 017_card_legality.sql:
+-- populated by `sensei-top cards --scryfall` from Scryfall's own
+-- `produced_mana` field, already present in the export this project already
+-- downloads — no new outbound call. `cards.colors` cannot stand in for this:
+-- it is a card's own color identity, which is `[]` for essentially every
+-- land including duals, so "what can Steam Vents tap for" has never been
+-- answerable from existing columns.
+--
+-- The Arena-client path (read_arena_cards in cards.py) has no mana-
+-- production data at all — same honest gap 015 records for oracle_text.
+-- A card only ever named by the installed client keeps produced_mana NULL
+-- forever until a Scryfall run also names it (rule 4: unknown, not guessed).
+ALTER TABLE cards ADD COLUMN produced_mana TEXT;   -- JSON array, e.g. '["U","R"]'

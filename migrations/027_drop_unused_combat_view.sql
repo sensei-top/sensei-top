@@ -1,0 +1,19 @@
+-- 027_drop_unused_combat_view.sql — drop v_combat_attacks, which nothing reads.
+--
+-- Migration 014 created two views over the combat tables. v_damage_events
+-- earned its keep (review/snapshot.py reads it, and projector/combat.py's
+-- seat-mapping comment refers to it). v_combat_attacks was never wired to
+-- anything: verified zero references across src/, web/src/, tests/ and docs/.
+--
+-- What is NOT dropped, and why: the combat_attacks and combat_blocks tables
+-- stay exactly as they are. They are projected from real captures and pinned
+-- by tests/test_combat.py against tests/fixtures/combat_session.log, but no
+-- analyzer consumes them yet. That is a deliberate state under this project's
+-- own rules rather than dead weight — raw_events is verbatim and projection
+-- is a full rebuild, so a future analyzer gets every attack and block ever
+-- captured retroactively, with no re-ingest. A view with no reader is
+-- different: it derives nothing that the table does not already hold, and it
+-- costs an agent a grep, a read, and a chain of reasoning that ends nowhere.
+--
+-- Re-adding the view later costs one migration and no data.
+DROP VIEW IF EXISTS v_combat_attacks;

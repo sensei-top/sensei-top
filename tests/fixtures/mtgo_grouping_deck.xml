@@ -1,0 +1,139 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CardGrouping xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  Name="Fixture Deck"
+  NetDeckId="100000001"
+  GroupingType="Deck"
+  FormatCode="CSTANDARD"
+  Image="52"
+  Timestamp="2026-01-01T00:00:00.000Z">
+  <Item
+    CatId="308"
+    Quantity="1"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="306"
+    Quantity="1"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="133410"
+    Quantity="2"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="139621"
+    Quantity="4"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="61855"
+    Quantity="4"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="136863"
+    Quantity="4"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="139189"
+    Quantity="4"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="139011"
+    Quantity="4"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="142909"
+    Quantity="4"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="139429"
+    Quantity="2"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="139489"
+    Quantity="4"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="144536"
+    Quantity="4"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="138953"
+    Quantity="4"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="144288"
+    Quantity="4"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="37610"
+    Quantity="2"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="149529"
+    Quantity="2"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="154156"
+    Quantity="4"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="63513"
+    Quantity="2"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="23590"
+    Quantity="4"
+    IsSideboard="false"
+    Annotation="0" />
+  <Item
+    CatId="37544"
+    Quantity="2"
+    IsSideboard="true"
+    Annotation="0" />
+  <Item
+    CatId="47477"
+    Quantity="2"
+    IsSideboard="true"
+    Annotation="0" />
+  <Item
+    CatId="117674"
+    Quantity="1"
+    IsSideboard="true"
+    Annotation="0" />
+  <Item
+    CatId="144772"
+    Quantity="2"
+    IsSideboard="true"
+    Annotation="0" />
+  <Item
+    CatId="142681"
+    Quantity="4"
+    IsSideboard="true"
+    Annotation="0" />
+  <Item
+    CatId="46469"
+    Quantity="3"
+    IsSideboard="true"
+    Annotation="0" />
+  <Item
+    CatId="129263"
+    Quantity="1"
+    IsSideboard="true"
+    Annotation="0" />
+</CardGrouping>

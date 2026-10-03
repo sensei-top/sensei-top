@@ -1,0 +1,21 @@
+-- 041_card_set_code_case.sql — normalise `cards.set_code` casing.
+--
+-- Two import paths wrote two different cases for the same column:
+-- `read_arena_cards` (the installed client's own database) carries Arena's
+-- own `ExpansionCode`, and the Scryfall merge (`cards.py::_row`) wrote
+-- `card.get("set")` verbatim — Scryfall always spells its set codes
+-- lowercase. Because `grp_id` is the primary key and the two paths can
+-- populate entirely distinct grpIds for what is conceptually the same
+-- printing (an alternate-art sibling that never got its own `arena_id`; see
+-- the "Name backfill" section of `cards.py`'s module docstring), the same
+-- set ended up represented under two casings in the same table — `TLA`
+-- next to `tla` — which made a naive `set_code IN (...)` filter miss half
+-- of what it meant to count.
+--
+-- `cards.set_code` has no reader outside `cards.py` itself
+-- (`draft_events.set_code` is a separate, unrelated column), so this is
+-- safe to normalise in place. Case only:
+-- this never maps one set code to another, and `cards.py`'s two writers are
+-- fixed in the same change (both now uppercase on write) so a future
+-- `sensei-top cards` / `cards --scryfall` run doesn't reintroduce the split.
+UPDATE cards SET set_code = UPPER(set_code) WHERE set_code IS NOT NULL;
