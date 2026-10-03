@@ -83,12 +83,19 @@ export function freshnessSentence(entry: RcqFreshnessOut, now: number): string {
  *  (`null` when that tier has none of it). */
 export type ExpectedOption = { key: string; label: string; share: number | null }
 
+/** A chip's share at or above this is offered up front; the rest of the
+ *  field waits behind "Other". */
+export const MAIN_SHARE = 0.02
+
 /** The archetypes to offer as expected, most played first. The field's
- *  presence comes one row per archetype and tier, and tiers are never
- *  blended (`docs/metagame.md`), so every share is read at one tier: the
- *  one with the most decks in the window. An archetype that tier never
- *  saw comes after, with no share, by its decks at the other tiers. Ties
- *  go by name. */
+ *  presence comes one row per archetype key, label and tier, and tiers are
+ *  never blended (`docs/metagame.md`), so every share is read at one tier:
+ *  the one with the most decks in the window. A key's rows at that tier
+ *  are summed — one key holds every colour pair of its archetype (Azorius
+ *  and Jeskai Control are both "Control"), so a single row's share is not
+ *  the key's. A key with one label is named by it, one with several by the
+ *  key itself. An archetype that tier never saw comes after, with no
+ *  share, by its decks at the other tiers. Ties go by name. */
 export function expectedOptions(presence: MetaPresence[]): {
   tier: string | null
   options: ExpectedOption[]
@@ -100,18 +107,21 @@ export function expectedOptions(presence: MetaPresence[]): {
     if (tier == null || decks > (tierDecks.get(tier) ?? 0)) tier = name
   }
 
-  const byKey = new Map<string, { label: string; share: number | null; decks: number }>()
+  const byKey = new Map<string, { labels: Set<string>; share: number | null; decks: number }>()
   for (const row of presence) {
-    const entry = byKey.get(row.archetype_key) ?? { label: row.label, share: null, decks: 0 }
+    const entry = byKey.get(row.archetype_key) ?? { labels: new Set<string>(), share: null, decks: 0 }
     entry.decks += row.decks
-    if (row.tier === tier) {
-      entry.share = row.share
-      entry.label = row.label
-    }
+    entry.labels.add(row.label)
+    if (row.tier === tier) entry.share = (entry.share ?? 0) + row.share
     byKey.set(row.archetype_key, entry)
   }
 
-  const options = Array.from(byKey, ([key, entry]) => ({ key, ...entry }))
+  const options = Array.from(byKey, ([key, entry]) => ({
+    key,
+    label: entry.labels.size === 1 ? [...entry.labels][0] : key,
+    share: entry.share,
+    decks: entry.decks,
+  }))
   options.sort((a, b) => {
     if (a.share != null && b.share != null && a.share !== b.share) return b.share - a.share
     if ((a.share == null) !== (b.share == null)) return a.share == null ? 1 : -1
@@ -122,6 +132,14 @@ export function expectedOptions(presence: MetaPresence[]): {
     tier,
     options: options.map(({ key, label, share }) => ({ key, label: archetypeName(label), share })),
   }
+}
+
+/** The options split for the chips: the main field up front, the rest
+ *  behind "Other". */
+export function splitOptions(options: ExpectedOption[]): { main: ExpectedOption[]; other: ExpectedOption[] } {
+  const main = options.filter((option) => option.share != null && option.share >= MAIN_SHARE)
+  const other = options.filter((option) => !(option.share != null && option.share >= MAIN_SHARE))
+  return { main, other }
 }
 
 /** The part of `Storage` the inputs need, so a test can hand in its own. */

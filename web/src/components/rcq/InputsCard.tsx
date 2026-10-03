@@ -1,7 +1,7 @@
 import { Check } from 'lucide-react'
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { archetypeName } from '../../lib/decks'
-import type { ExpectedOption, RcqInputs } from '../../lib/rcq'
+import { splitOptions, type ExpectedOption, type RcqInputs } from '../../lib/rcq'
 import { formatPercent } from '../../lib/time'
 import { Card, Select } from '../ui'
 
@@ -93,7 +93,12 @@ export function InputsCard({
   const offered = new Set(options.map((option) => option.key))
   const kept = (key: string): ExpectedOption => ({ key, label: archetypeName(names[key] ?? key), share: null })
   const missing = inputs.expected.filter((key) => !offered.has(key)).map(kept)
-  const chips = [...options, ...missing]
+  // The main field is always shown; the rest of it behind "Other", except
+  // a pick, which stays in view so it can be unpicked.
+  const [showOther, setShowOther] = useState(false)
+  const { main, other } = splitOptions(options)
+  const chips = [...main, ...other.filter((option) => showOther || expected.has(option.key)), ...missing]
+  const hiddenOther = other.filter((option) => !expected.has(option.key)).length
   const ownOptions = [
     ...options,
     ...(inputs.own != null && !offered.has(inputs.own) ? [kept(inputs.own)] : []),
@@ -129,6 +134,16 @@ export function InputsCard({
                   onToggle={() => toggle(option.key)}
                 />
               ))}
+              {hiddenOther > 0 && (
+                <button
+                  type="button"
+                  aria-expanded={showOther}
+                  onClick={() => setShowOther(!showOther)}
+                  className="min-h-[44px] rounded-pill border border-edge px-3 text-caption font-medium text-ink2 transition-chrome hover:text-ink"
+                >
+                  {showOther ? 'Fewer' : `Other (${hiddenOther})`}
+                </button>
+              )}
             </div>
           )}
         </div>

@@ -379,8 +379,11 @@ prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
   offers a picker of corpus archetypes (`own=`); a list is never guessed
   into an archetype.
 - **Expected archetypes are a nudge, not a fact.** The user picks corpus
-  archetype keys (`/api/metagame/presence`), not free text, which shares no
-  vocabulary with the corpus. Each pick always gets a prompt section with
+  archetype keys (`/api/metagame/presence`, the last 14 days), not free
+  text, which shares no vocabulary with the corpus. A chip's share is the
+  sum of its key's labels at the tier with the most decks (one key holds
+  every colour pair of an archetype); a key at 2% or more (`MAIN_SHARE`) is
+  shown up front, the rest behind "Other". Each pick always gets a prompt section with
   consensus and oracle text, even outside the top six, and the prompt says
   it is the player's prior about the store, not evidence about it.
 - **Evidence windows.** Besides the guide's post-reset shares, the prompt

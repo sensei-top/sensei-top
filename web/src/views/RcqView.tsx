@@ -3,7 +3,6 @@ import {
   useGenerateRcq,
   useGuide,
   useLLMStatus,
-  useMetagameStatus,
   useMetaPresence,
   useRcqGuide,
   useRcqPreview,
@@ -40,21 +39,19 @@ import { writerFrom } from '../lib/writer'
  *  prompt shown is the prompt sent; it is offered only while that preview
  *  is of the current inputs, and while a newer one is on its way the
  *  button waits. */
+/** How far back the expected-archetype chips read the field. */
+const CHIP_WINDOW_DAYS = 14
+
 export function RcqView({ deckKey }: { deckKey: string }) {
   const guide = useGuide(deckKey)
   const stored = useRcqGuide(deckKey)
   const llmStatus = useLLMStatus()
   const generate = useGenerateRcq()
 
-  // The field's window, as the guide's own field reads it: since the last
-  // reset when one is detected, else a year.
-  const status = useMetagameStatus()
-  const resetStart = status.data?.format_reset_start
-  const metaWindow: MetaWindow | undefined = status.data
-    ? resetStart
-      ? { since: resetStart }
-      : { days: 365 }
-    : undefined
+  // The field the chips offer: the last two weeks of Standard, the field
+  // a store's players will have netdecked from. The guide's own numbers
+  // keep their own window.
+  const metaWindow: MetaWindow = { days: CHIP_WINDOW_DAYS }
   const presence = useMetaPresence(metaWindow)
   const { tier, options } = useMemo(() => expectedOptions(presence.data ?? []), [presence.data])
 
@@ -88,7 +85,7 @@ export function RcqView({ deckKey }: { deckKey: string }) {
     (preview.data?.expected ?? []).map((each) => [each.key, each.name]),
   )
   const shareNote = tier
-    ? `A chip's share is of the Tier ${tier} decks ${resetStart ? 'since the last reset' : 'of the last year'}.`
+    ? `A chip's share is of the Tier ${tier} decks of the last ${CHIP_WINDOW_DAYS} days; the smaller archetypes are under "Other".`
     : null
 
   return (

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { CardVerdictOut, ListDiffOut, MetaPresence } from '../api'
 import {
   expectedOptions,
+  MAIN_SHARE,
+  splitOptions,
   freshnessSentence,
   markdownFileName,
   prefillText,
@@ -136,12 +138,37 @@ describe('expectedOptions', () => {
     ])
   })
 
+  it('sums every label of one key at the tier, named by the key', () => {
+    const { options } = expectedOptions([
+      presence('Control', 'Azorius Control', 'B', 21, 0.3),
+      presence('Control', 'Jeskai Control', 'B', 21, 0.3),
+      presence('UBMidrange', 'Dimir Midrange', 'B', 28, 0.4),
+    ])
+    expect(options).toEqual([
+      { key: 'Control', label: 'Control', share: 0.6 },
+      { key: 'UBMidrange', label: 'Dimir Midrange', share: 0.4 },
+    ])
+  })
+
   it('spaces a name run together', () => {
     expect(expectedOptions([presence('a', 'IzzetProwess', 'B', 1, 1)]).options[0].label).toBe('Izzet Prowess')
   })
 
   it('offers nothing for an empty field', () => {
     expect(expectedOptions([])).toEqual({ tier: null, options: [] })
+  })
+})
+
+describe('splitOptions', () => {
+  it('keeps a share under MAIN_SHARE, and no share, behind Other', () => {
+    const { main, other } = splitOptions([
+      { key: 'a', label: 'A', share: 0.5 },
+      { key: 'b', label: 'B', share: MAIN_SHARE },
+      { key: 'c', label: 'C', share: 0.01 },
+      { key: 'd', label: 'D', share: null },
+    ])
+    expect(main.map((option) => option.key)).toEqual(['a', 'b'])
+    expect(other.map((option) => option.key)).toEqual(['c', 'd'])
   })
 })
 
