@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Deck xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NetDeckID>0</NetDeckID>
+  <PreconstructedDeckID>0</PreconstructedDeckID>
+  <Cards CatID="20237" Quantity="4" Sideboard="false" Name="Goblin Charbelcher" />
+  <Cards CatID="146527" Quantity="3" Sideboard="false" Name="Spell Snare" />
+  <Cards CatID="129349" Quantity="3" Sideboard="false" Name="Into the Flood Maw" />
+  <Cards CatID="126589" Quantity="2" Sideboard="false" Name="Waterlogged Teachings" />
+  <Cards CatID="126585" Quantity="4" Sideboard="false" Name="Suppression Ray" />
+  <Cards CatID="126509" Quantity="4" Sideboard="false" Name="Sink into Stupor" />
+  <Cards CatID="126505" Quantity="4" Sideboard="false" Name="Hydroelectric Specimen" />
+  <Cards CatID="112052" Quantity="1" Sideboard="false" Name="Stern Scolding" />
+  <Cards CatID="102237" Quantity="3" Sideboard="false" Name="Force of Negation" />
+  <Cards CatID="97084" Quantity="4" Sideboard="false" Name="Tameshi, Reality Architect" />
+  <Cards CatID="83105" Quantity="4" Sideboard="false" Name="Sea Gate Restoration" />
+  <Cards CatID="83079" Quantity="4" Sideboard="false" Name="Jwari Disruption" />
+  <Cards CatID="83039" Quantity="2" Sideboard="false" Name="Beyeen Veil" />
+  <Cards CatID="62655" Quantity="4" Sideboard="false" Name="Whir of Invention" />
+  <Cards CatID="52827" Quantity="2" Sideboard="false" Name="Counterspell" />
+  <Cards CatID="37388" Quantity="4" Sideboard="false" Name="Preordain" />
+  <Cards CatID="25691" Quantity="4" Sideboard="false" Name="Lotus Bloom" />
+  <Cards CatID="21685" Quantity="4" Sideboard="false" Name="Disrupting Shoal" />
+  <Cards CatID="20700" Quantity="2" Sideboard="true" Name="Engineered Explosives" />
+  <Cards CatID="15704" Quantity="1" Sideboard="true" Name="Mountain" />
+  <Cards CatID="73353" Quantity="1" Sideboard="true" Name="Grafdigger&apos;s Cage" />
+  <Cards CatID="78226" Quantity="3" Sideboard="true" Name="Mystical Dispute" />
+  <Cards CatID="126125" Quantity="4" Sideboard="true" Name="Consign to Memory" />
+  <Cards CatID="130287" Quantity="2" Sideboard="true" Name="Unable to Scream" />
+  <Cards CatID="136257" Quantity="2" Sideboard="true" Name="Stock Up" />
+</Deck>
