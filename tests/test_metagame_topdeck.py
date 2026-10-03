@@ -187,3 +187,39 @@ def test_list_tournaments_posts_to_the_host_that_resolves(monkeypatch):
         "method": "POST",
         "auth": "k-123",
     }
+
+
+def _named(tid: str, name: str) -> dict:
+    return {**_TOURNAMENT, "TID": tid, "tournamentName": name}
+
+
+def test_non_constructed_names_are_skipped_and_std_is_kept(monkeypatch, conn):
+    monkeypatch.setenv("TOPDECK_API_KEY", "test-key")
+    monkeypatch.setattr(
+        topdeck,
+        "list_tournaments",
+        lambda **kw: [
+            _named("t1", "Commander night"),
+            _named("t2", "Pre release"),
+            _named("t3", "Torneo magic std"),
+        ],
+    )
+    result = topdeck.refresh_topdeck(conn, force=True)
+    assert (result.events, result.skipped) == (1, 2)
+    ids = [r["event_id"] for r in conn.execute("SELECT event_id FROM meta_event")]
+    assert ids == ["Tournaments/Topdeck/t3.json"]
+
+
+def test_a_stored_non_constructed_event_is_purged_with_its_rows(monkeypatch, conn):
+    from sensei_top.metagame.source import TournamentFile, parse_event, store_events
+
+    raw = topdeck._normalize(_named("old", "fractured pre release"))
+    store_events(
+        conn, [parse_event(raw, TournamentFile("Tournaments/Topdeck/old.json", "x"))]
+    )
+    assert conn.execute("SELECT COUNT(*) FROM meta_deck").fetchone()[0] > 0
+    monkeypatch.setenv("TOPDECK_API_KEY", "test-key")
+    monkeypatch.setattr(topdeck, "list_tournaments", lambda **kw: [])
+    topdeck.refresh_topdeck(conn, force=True)
+    for table in ("meta_event", "meta_deck", "meta_round_match", "meta_deck_archetype"):
+        assert conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] == 0

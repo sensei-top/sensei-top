@@ -66,6 +66,13 @@ FORMAT = "Standard"
 
 MAX_AGE_SECONDS = 24 * 3600
 
+# Organisers label commander nights, drafts and prereleases "Standard" too.
+# Leading boundary only: "Pre Release", "Prerelease" and the misspelt
+# "PreRealese" must all match.
+_NOT_CONSTRUCTED_RE = re.compile(
+    r"(?<![a-z])(commander|edh|draft|sealed|cube|jumpstart|pre.?r?e?a?l)", re.IGNORECASE
+)
+
 # One request line per tournament line in a decklist export: "4 Lightning
 # Bolt" or "4x Lightning Bolt". Fallback path only, for a standings row whose
 # deckObj carries no recognisable Mainboard/Sideboard structure — see
@@ -275,6 +282,31 @@ def _blob_sha(payload: dict[str, Any]) -> str:
     return hashlib.sha256(canonical).hexdigest()
 
 
+def _purge_not_constructed(conn) -> None:
+    """Delete already-stored TopDeck events whose name matches the rule, with
+    every child row, in one transaction."""
+    rows = conn.execute(
+        "SELECT event_id, name FROM meta_event WHERE event_id LIKE 'Tournaments/Topdeck/%'"
+    ).fetchall()
+    doomed = [r["event_id"] for r in rows if _NOT_CONSTRUCTED_RE.search(r["name"] or "")]
+    if not doomed:
+        return
+    log.warning("topdeck: purging %d stored non-constructed events", len(doomed))
+    conn.execute("BEGIN")
+    try:
+        for event_id in doomed:
+            conn.execute(
+                "UPDATE meta_event SET duplicate_of = NULL WHERE duplicate_of = ?", (event_id,)
+            )
+            for table in ("meta_deck_archetype", "meta_round_match", "meta_deck"):
+                conn.execute(f"DELETE FROM {table} WHERE event_id = ?", (event_id,))
+            conn.execute("DELETE FROM meta_event WHERE event_id = ?", (event_id,))
+        conn.execute("COMMIT")
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
+
+
 def refresh_topdeck(
     conn,
     *,
@@ -312,6 +344,10 @@ def refresh_topdeck(
         if not tid:
             skipped += 1
             continue
+        if _NOT_CONSTRUCTED_RE.search(str(tournament.get("tournamentName") or "")):
+            log.warning("topdeck event skipped: name matches the non-constructed rule")
+            skipped += 1
+            continue
         raw = _normalize(tournament)
         blob_sha = _blob_sha(raw)
         # Namespaced like fbettega's own "Tournaments/<source>/..." layout —
@@ -329,6 +365,7 @@ def refresh_topdeck(
         events.append(parsed)
 
     store_events(conn, events)
+    _purge_not_constructed(conn)
     fetched_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     conn.execute("BEGIN")
     try:
