@@ -126,7 +126,7 @@ Order, first match wins:
    ```toml
    [claude]
    api_key = "sk-ant-..."
-   model = "claude-opus-5"
+   model = "claude-opus-5-5"
    effort = "high"
    ```
    Written by `sensei-top config --set-key/--set-model/--set-effort`,
@@ -213,7 +213,7 @@ via `brief/from_guide.py`.
 
 ## Model, effort, and cost
 
-Default `claude-opus-5`, `thinking: {"type": "adaptive"}`,
+Default `claude-opus-5-5`, `thinking: {"type": "adaptive"}`,
 `output_config: {"effort": "high"}` — both overridable per-user via
 `sensei-top config --set-model` / `--set-effort`. The deck guide additionally
 requests structured output (`output_config.format`) against the existing

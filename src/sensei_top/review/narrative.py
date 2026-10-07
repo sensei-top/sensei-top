@@ -52,7 +52,7 @@ from dataclasses import dataclass
 from sensei_top.review.findings import Finding, MatchReport
 from sensei_top.review.snapshot import MatchSnapshot
 
-DEFAULT_MODEL = "claude-opus-5"
+DEFAULT_MODEL = "claude-opus-5-5"
 # A full structured review, not a footnote: raised from the old 250-word
 # summary because the game itself is now in the prompt, and effort/tokens
 # have to match the depth the user asked this feature to reach.

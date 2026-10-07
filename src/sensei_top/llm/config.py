@@ -33,7 +33,7 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "claude-opus-5"
+DEFAULT_MODEL = "claude-opus-5-5"
 DEFAULT_EFFORT = "high"
 
 

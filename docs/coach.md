@@ -456,8 +456,8 @@ roughly 50-60k input tokens, 20-30k output tokens (thinking included), and
 
 | Model | Price per MTok, in / out | Est. per report | Why |
 |---|---|---|---|
-| **Opus 5** (default) | $5 / $25 | ~$0.9-1.2 | Strong reasoning over statistics; supports the dynamic-filtering search tool. |
-| Opus 5.5 | $4 / $20 | ~$0.7-1.0 — **measured $1.04** (below) | Cheaper than Opus 5 per token; same dynamic-filtering search tool. |
+| Opus 5 | $5 / $25 | ~$0.9-1.2 | Strong reasoning over statistics; supports the dynamic-filtering search tool. |
+| **Opus 5.5** (default) | $4 / $20 | ~$0.7-1.0 — **measured $1.04** uncached, **$0.60** with prompt caching (`docs/llm.md`) | Cheaper than Opus 5 per token; same dynamic-filtering search tool. |
 | Fable 5.1 | $10 / $50 | ~$1.8-2.5 — **measured $3.23** (below) | Thinking is always on. |
 | Sonnet 5 | $2 / $10 | ~$0.4-0.5 | The cheaper option if quality holds. |
 

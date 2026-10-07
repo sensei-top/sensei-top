@@ -2174,7 +2174,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="set or show the opt-in Claude and TopDeck.gg credentials (no flags: show them)",
     )
     p_config.add_argument("--set-key", default=None, metavar="KEY", help="Anthropic API key")
-    p_config.add_argument("--set-model", default=None, metavar="ID", help="e.g. claude-opus-5")
+    p_config.add_argument("--set-model", default=None, metavar="ID", help="e.g. claude-opus-5-5")
     p_config.add_argument(
         "--set-effort", default=None, metavar="LEVEL",
         help="low | medium | high | xhigh | max",

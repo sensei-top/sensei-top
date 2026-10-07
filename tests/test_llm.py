@@ -86,7 +86,7 @@ def test_env_key_alone_falls_back_to_defaults(monkeypatch, tmp_path):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     monkeypatch.setenv("ANTHROPIC_API_KEY", "env-key")
     cfg = load()
-    assert cfg == LLMConfig(api_key="env-key", model="claude-opus-5", effort="high")
+    assert cfg == LLMConfig(api_key="env-key", model="claude-opus-5-5", effort="high")
 
 
 def test_the_config_file_alone_is_enough(monkeypatch, tmp_path):
@@ -766,7 +766,7 @@ def test_write_llm_config_round_trips_the_coach_table_and_preserves_other_keys(
 
     cfg = llm_config_module.load()
     assert cfg.api_key == "base-key"
-    assert cfg.model == "claude-opus-5"
+    assert cfg.model == "claude-opus-5-5"
     assert cfg.effort == "high"
 
     coach = llm_config_module.load_coach()
