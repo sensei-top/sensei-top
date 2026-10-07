@@ -1,0 +1,48 @@
+[UnityCrossThreadLogger]9/1/2026 4:36:50 PM: Match to GRE: ClientToGremessage
+{
+  "requestId": 202,
+  "clientToMatchServiceMessageType": "ClientToMatchServiceMessageType_ClientToGREMessage",
+  "timestamp": "639238882106561987",
+  "transactionId": "a7a14de6-2024-455b-b06a-d40346031be2",
+  "payload": {
+    "type": "ClientMessageType_SubmitDeckResp",
+    "gameStateId": 509,
+    "respId": 717,
+    "submitDeckResp": {
+      "deck": {
+        "deckCards": [68738, 68738, 75876, 79089],
+        "sideboardCards": [98392, 98475]
+      }
+    }
+  }
+}
+[UnityCrossThreadLogger]9/1/2026 4:36:51 PM: GRE to Match: GreToClientEvent
+{
+  "transactionId": "a7a14de6-2024-455b-b06a-d40346031be2",
+  "requestId": 202,
+  "timestamp": "1788291410814",
+  "greToClientEvent": {
+    "greToClientMessages": [
+      {
+        "type": "GREMessageType_GameStateMessage",
+        "systemSeatIds": [2],
+        "msgId": 1,
+        "gameStateId": 1,
+        "gameStateMessage": {
+          "type": "GameStateType_Full",
+          "gameStateId": 1,
+          "gameInfo": {
+            "matchID": "d3d8e7a3-564b-4a13-ae59-bcc3e9734784",
+            "gameNumber": 2,
+            "stage": "GameStage_Start",
+            "type": "GameType_Duel",
+            "variant": "GameVariant_Normal",
+            "matchState": "MatchState_GameInProgress",
+            "matchWinCondition": "MatchWinCondition_Best2of3",
+            "superFormat": "SuperFormat_Constructed"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+Startup Timestamp: 10/6/2026 2:42:24 PM
+[UnityCrossThreadLogger]==> GraphGetGraphState {"id":"0000ead0-0000-4000-8000-000000000014","request":"{\"GraphId\":\"NPE_Tutorial\"}"}
+[UnityCrossThreadLogger]06/10/2026 14:42:30
+<== GraphGetGraphState(0000ead0-0000-4000-8000-000000000014)
+{"NodeStates":{"PlayFamiliar1":{"Status":"Completed"},"PlayFamiliar2":{"Status":"Completed"},"PlayFamiliar3":{"Status":"Completed"},"PlayFamiliar4":{"Status":"Completed"},"PlayFamiliar5":{"Status":"Completed"},"SkipTutorial":{"Status":"Completed"},"Payout":{"Status":"Completed"},"Reset":{"Status":"Available"}},"MilestoneStates":{"TutorialComplete":true}}
+[UnityCrossThreadLogger]06/10/2026 14:42:37
+<== EventGetActiveMatches(0000ead0-0000-4000-8000-000000000015)
+{"MatchesV3":[]}
+06/10/2026 14:42:40 LoadWrapperScene
