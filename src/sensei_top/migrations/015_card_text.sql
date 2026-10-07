@@ -1,0 +1,14 @@
+-- 015_card_text.sql — oracle text, for the effect-tagging review/effects.py
+-- needs (sweeper, spot removal, counterspell, ...).
+--
+-- Not projector-owned: same reference-data table as the rest of `cards`,
+-- populated by `sensei-top cards` from Scryfall's own `oracle_text` field,
+-- already present in the export this project already downloads — no new
+-- outbound call, no change to what leaves the machine.
+--
+-- The Arena-client path (read_arena_cards in cards.py) has no oracle text at
+-- all: its own database carries only GrpId, mana text, rarity, colors and
+-- localized names/types, never rules text. A card named only from the
+-- installed client therefore keeps oracle_text NULL forever until a Scryfall
+-- run also names it — a real, honest gap (rule 4), not a bug to work around.
+ALTER TABLE cards ADD COLUMN oracle_text TEXT;

@@ -1,0 +1,251 @@
+@import "tailwindcss";
+
+/* "Table" — the dark-only palette. Chart-facing tokens (self/opponent/field/
+   grid/axis/muted/surface/ink) mirror theme.ts's Tokens: recharts writes SVG
+   presentation attributes, which do not resolve var(), so every value here
+   lives in three files that move together — this one, theme.ts and
+   scripts/validate_palette.py. tests/test_palette.py fails when they
+   disagree. See docs/design-system.md.
+
+   Validated with scripts/validate_palette.py (WCAG contrast + Machado et al.
+   2009 CVD simulation); re-run it before changing any value here. */
+:root {
+  color-scheme: dark;
+
+  /* Surfaces, darkest to most raised. */
+  --plane: #0b0c14;
+  --surface-1: #131522;
+  --surface-2: #1a1d2e;
+  --surface-3: #24283d;
+
+  /* Hairlines. --line and --line-2 are opaque: a chart's grid and axis, and
+     a rule drawn on --plane or --surface-1. --edge and --edge-strong are the
+     same two lines made translucent, so a border holds on any surface; over
+     --surface-1 they composite to within a few steps of --line and --line-2,
+     close but not equal. */
+  --line: #252a40;
+  --line-2: #343a57;
+  --edge: rgb(150 160 230 / 0.14);
+  --edge-strong: rgb(150 160 230 / 0.26);
+
+  /* Text. Never #fff — it haloes at distance. */
+  --ink: #f2f3f8;
+  --ink-2: #b9bdd0;
+  --muted: #989db5;
+
+  /* The accent: the brand, the primary action, and the one item a page leads
+     with. Never data — it is the only hue left that stays apart from all six
+     data colours under every simulated colour-vision deficiency.
+     --on-accent is the only text colour allowed on an accent fill. */
+  --accent: #f4b6e4;
+  --on-accent: #1a1020;
+  --focus: var(--accent);
+
+  /* Chart series, assigned by entity (never by rank — see theme.ts). */
+  --series-1: #4a95f0; /* self */
+  --series-2: #f0762f; /* opponent */
+  --series-3: #9ee0a8; /* the field / lands */
+
+  /* Result and status. A tinted pill is the colour at 12% under its own
+     word (bg-win/12 text-win), validated on plane, surface-1 and surface-2;
+     on surface-3 the word stands with no tint. */
+  --win: #57bd6d;
+  --loss: #e66e62;
+  --warn: #d9a13a;
+
+  /* Mana pips — canonical Mana-project disc colours. CSS only: they never
+     become a chart mark (docs/design-system.md's boundary rule), so they do
+     not belong in theme.ts's Tokens. */
+  --mana-w: #f0f2c0;
+  --mana-u: #b5cde3;
+  --mana-b: #aca29a;
+  --mana-r: #db8664;
+  --mana-g: #93b483;
+  --mana-glyph: #111111;
+
+  /* Elevation: a hairline highlight and one soft shadow under every raised
+     surface. */
+  --lift: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 12px 32px -12px rgb(0 0 0 / 0.6);
+
+  /* Density. Compact scales spacing by the full factor; type only down to a
+     readability floor (see the --text-* tokens below). The two large radii
+     step down with it. */
+  --d: 1;
+  --r-card: 18px;
+  --r-hero: 22px;
+
+  /* Fonts, each with a real fallback stack — never a network request.
+     Numbers are the interface face with tabular figures (body, below);
+     there is no monospaced face. */
+  --font-display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  --font-sans: 'Hanken Grotesk Variable', system-ui, sans-serif;
+}
+
+/* Compact is both a choice and a width: anything narrower than Tailwind's
+   `md` breakpoint is compact. */
+:root[data-density="compact"] {
+  --d: 0.85;
+  --r-card: 16px;
+  --r-hero: 18px;
+}
+
+@media (width < 48rem) {
+  :root {
+    --d: 0.85;
+    --r-card: 16px;
+    --r-hero: 18px;
+  }
+}
+
+@theme inline {
+  /* Surfaces (existing short names kept so current classes keep working). */
+  --color-plane: var(--plane);
+  --color-surface: var(--surface-1);
+  --color-s1: var(--series-1);
+  --color-s2: var(--series-2);
+  --color-s3: var(--series-3);
+  --color-surface2: var(--surface-2);
+  --color-surface3: var(--surface-3);
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line2: var(--line-2);
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-focus: var(--focus);
+  --color-win: var(--win);
+  --color-loss: var(--loss);
+  --color-warn: var(--warn);
+  --color-mana-w: var(--mana-w);
+  --color-mana-u: var(--mana-u);
+  --color-mana-b: var(--mana-b);
+  --color-mana-r: var(--mana-r);
+  --color-mana-g: var(--mana-g);
+  --color-mana-glyph: var(--mana-glyph);
+
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+
+  /* Every Tailwind spacing utility (p-4, gap-3, …) scales with density. */
+  --spacing: calc(0.25rem * var(--d));
+
+  /* Radii by role — no more ad-hoc rounded-* choice. */
+  --radius-control: 12px; /* inputs and selects, a row or a link that acts as a control */
+  --radius-block: 14px; /* nested blocks: a finding, a callout */
+  --radius-card: var(--r-card); /* cards and tiles */
+  --radius-hero: var(--r-hero); /* the one lead panel of a page */
+  --radius-pill: 999px; /* buttons, chips, pills */
+
+  /* Elevation, exposed as a utility: shadow-lift. */
+  --shadow-lift: var(--lift);
+
+  /* A label's tracking: tracking-label. Labels are sentence case. */
+  --tracking-label: 0.02em;
+
+  /* Type ramp — semantic names. The four small steps are the interface
+     face and carry floors, so Compact never drops below the readability
+     goal (docs/design-system.md). `title` and above are always the display
+     face (font-display) and carry their own weight and tracking.
+     Comfortable (--d: 1) values: chip 12, caption 13, body 14.5, lead 16,
+     title 18, heading 22, stat 30, hero 44, display 60. */
+  --text-chip: max(11px, calc(12px * var(--d)));
+  --text-chip--line-height: 1.3;
+  --text-caption: max(12px, calc(13px * var(--d)));
+  --text-caption--line-height: 1.4;
+  --text-body: max(14px, calc(14.5px * var(--d)));
+  --text-body--line-height: 1.5;
+  --text-lead: max(14.5px, calc(16px * var(--d)));
+  --text-lead--line-height: 1.45;
+  --text-title: calc(18px * var(--d));
+  --text-title--line-height: 1.25;
+  --text-title--letter-spacing: -0.01em;
+  --text-title--font-weight: 700;
+  --text-heading: calc(22px * var(--d));
+  --text-heading--line-height: 1.15;
+  --text-heading--letter-spacing: -0.015em;
+  --text-heading--font-weight: 700;
+  --text-stat: calc(30px * var(--d));
+  --text-stat--line-height: 1.1;
+  --text-stat--letter-spacing: -0.02em;
+  --text-stat--font-weight: 800;
+  --text-hero: calc(44px * var(--d));
+  --text-hero--line-height: 1;
+  --text-hero--letter-spacing: -0.03em;
+  --text-hero--font-weight: 800;
+  --text-display: calc(60px * var(--d));
+  --text-display--line-height: 1;
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 800;
+}
+
+body {
+  background: var(--plane);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: max(14px, calc(14.5px * var(--d)));
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+
+/* One focus ring, from a token, for everything that takes focus. A
+   component never spells its own. */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* The skip link's target takes focus so the next Tab starts inside the
+   page. It is the page, not a control, so it draws no ring. */
+#page:focus-visible {
+  outline: none;
+}
+
+/* Mana pip sizing — upscaled for distance; revised at the Stage 3 checkpoint
+   (18px read as small at second-monitor distance). Compact density never
+   shrinks a default pip below 18px (docs/design-system.md). */
+:root {
+  --pip: max(18px, calc(22px * var(--d)));
+  --pip-lg: max(22px, calc(28px * var(--d)));
+}
+
+/* Card art is its own picture, from /api/cards/{id}/art, and fills its box
+   at any shape; --art-y moves the picture up or down inside it. It is
+   never a crop of a whole card image: that would cut off the artist's
+   name and the copyright line, which Scryfall's rules forbid
+   (docs/attribution.md). */
+@utility card-art {
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: 50% var(--art-y, 30%);
+}
+
+/* A quick hover/selection transition for chrome (nav items, buttons,
+   segmented controls). No motion restriction here — the checkpoint (after
+   Stage 3) explicitly rejected a "nothing moves" rule; recharts' draw-in,
+   the skeleton shimmer and any other animation are all fine. Colour only:
+   nothing in the chrome changes size any more. */
+.transition-chrome {
+  transition-property: color, background-color, border-color;
+  transition-duration: 120ms;
+  transition-timing-function: ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .transition-chrome {
+    transition: none;
+  }
+  .animate-pulse {
+    animation: none;
+  }
+}
