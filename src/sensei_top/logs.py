@@ -7,8 +7,9 @@ problem a user reports arrives with the lines that led up to it, and a scratch
 
 - **Levels.** The file takes WARNING and up, DEBUG with ``--verbose``; the
   console keeps the levels it had before the file existed, ERROR, WARNING with
-  ``--verbose``. Each handler filters on its own level, and the root logger's
-  is the lower of the two, so neither starves the other.
+  ``--verbose``. Both also take the generate call's INFO lines, from
+  ``sensei_top.llm`` (trap 8). Each handler filters on its own, and the root
+  logger's level is the lower of the two, so neither starves the other.
 - **Lines.** ``2026-10-06T14:03:22.418Z 3f9a1c2e WARNING sensei_top.live: …``:
   UTC, so a file compares across machines and across a DST change without
   arithmetic; then the launch's session id, which tells apart ``serve`` and a
@@ -55,6 +56,12 @@ Traps:
    undecodable byte (a surrogate escape on Linux) would fail the write.
 7. Logging never stops a command: a file that cannot be opened is one
    console warning, and the command runs on without it.
+8. A handler's level cannot say "WARNING and up, plus one logger's INFO", and
+   the cost of each generate call is the one INFO line a user is promised
+   (non-negotiable 5, "never silent"). So the console sits at INFO, and the
+   file at INFO, or at DEBUG under ``--verbose``, where no floor is needed; a
+   ``_Level`` filter holds the floor each would otherwise have had. The file's
+   header is written before that filter goes on, or it would be dropped.
 """
 
 from __future__ import annotations
@@ -103,6 +110,29 @@ class _Session(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         record.session = self.session
         return True
+
+
+class _Level(logging.Filter):
+    """Holds a handler to ``floor`` and above, and lets through the INFO lines
+    of ``sensei_top.llm`` and its submodules.
+
+    The cost of each generate call is the one INFO line a user is promised
+    (non-negotiable 5, "never silent"), and a handler's own level cannot
+    express "WARNING and up, plus one logger's INFO" (trap 8). The prefix
+    rather than ``sensei_top.llm.client`` covers a later module under
+    ``llm/`` without a second edit; ``sensei_top.llmx`` is not under it.
+    """
+
+    def __init__(self, floor: int) -> None:
+        super().__init__()
+        self.floor = floor
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.levelno >= self.floor:
+            return True
+        return record.levelno >= logging.INFO and (
+            record.name == "sensei_top.llm" or record.name.startswith("sensei_top.llm.")
+        )
 
 
 class _FileFormatter(logging.Formatter):
@@ -205,7 +235,8 @@ def install(db_path: Path, command: str, *, verbose: bool) -> Path | None:
     root = logging.getLogger()
     if not root.handlers:
         console = logging.StreamHandler()
-        console.setLevel(logging.WARNING if verbose else logging.ERROR)
+        console.setLevel(logging.INFO)
+        console.addFilter(_Level(logging.WARNING if verbose else logging.ERROR))
         console.setFormatter(logging.Formatter(CONSOLE_FORMAT))
         root.addHandler(console)
         _installed.append(console)
@@ -227,12 +258,14 @@ def install(db_path: Path, command: str, *, verbose: bool) -> Path | None:
         print(f"WARNING not writing a log file: {exc}", file=sys.stderr)
         file_handler = None
     else:
-        file_handler.setLevel(logging.DEBUG if verbose else logging.WARNING)
+        file_handler.setLevel(logging.DEBUG if verbose else logging.INFO)
         file_handler.setFormatter(_FileFormatter(_home()))
         file_handler.addFilter(_Session(secrets.token_hex(4)))
         root.addHandler(file_handler)
         _installed.append(file_handler)
         file_handler.handle(_header(command, db))
+        if not verbose:  # DEBUG passes everything; the header is already written
+            file_handler.addFilter(_Level(logging.WARNING))
 
     if _installed:
         root.setLevel(min(handler.level for handler in _installed))

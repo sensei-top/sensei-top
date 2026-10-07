@@ -186,13 +186,10 @@ raw URL outside that list to visit.
 Each call also logs at `INFO` level — the model and effort before the call,
 then input/output tokens, cost, and elapsed time once it completes (or a
 `WARNING` if it fails). `llm/client.py` sets its own logger's level
-explicitly, so these lines used to reach the console whether or not
-`--verbose` was given. Since the log file (`logs.py`), each handler filters
-on its own level: the console takes `ERROR`, `WARNING` with `--verbose`, and
-the file `WARNING`, `DEBUG` with `--verbose`. So the `INFO` lines now reach
-the log file under `--verbose` and the console never; only the `WARNING`
-reaches either without it. That is a regression, recorded in
-`docs/status.md`; the cost itself is still stored with each narrative.
+explicitly, and `logs.py` lets the `INFO` lines of any `sensei_top.llm`
+logger through to both the console and the log file at the default levels,
+so a user watching `serve` sees what a button press spent (rule 5, "never
+silent"). Every other logger's `INFO` stays out.
 
 Under `--verbose` the log file also takes the `anthropic` SDK's own `DEBUG`
 lines, and its "Request options" line holds the request body: a generate

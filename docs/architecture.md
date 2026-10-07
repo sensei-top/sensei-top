@@ -457,7 +457,9 @@ the level, the logger and the message, with the home directory written as
 platform and the database, never the arguments: `config --set-key` carries
 a credential on argv. The file takes `WARNING` and up, `DEBUG` with
 `--verbose`; the console keeps `ERROR`, `WARNING` with `--verbose`; each
-handler filters on its own level. It rotates at 2 MB and keeps five old
+handler filters on its own level. Both also take the `INFO` lines of the
+`sensei_top.llm` loggers, the cost of each generate call (`docs/llm.md`).
+It rotates at 2 MB and keeps five old
 files. Logging never stops a command: a file that cannot be opened is one
 console warning, and the command runs on.
 

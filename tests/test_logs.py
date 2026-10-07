@@ -2,7 +2,9 @@
 
 Every expectation here comes from D10 and the line format the plan fixes:
 UTC times, an 8-hex-char session id per launch, WARNING and up (DEBUG with
-``--verbose``), the home directory written as ``~``. The watcher child's
+``--verbose``), the home directory written as ``~``. The console and the file
+also take ``sensei_top.llm``'s INFO lines; the two tests of that take their
+expectations from plan fix-llm-console-line, S1 and D2. The watcher child's
 records reaching ``serve``'s file are tested against a real ``serve`` in
 ``test_live.py``, where its child runs.
 
@@ -13,6 +15,7 @@ and takes off, after each test, the handlers ``main()`` installed.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import platform
@@ -173,6 +176,59 @@ def test_the_console_keeps_its_levels_and_the_file_takes_its_own(
     written = [line["message"] for line in lines(path)[1:]]
     expected = ["a warning", "an error"]
     assert written == (["a debug line", *expected] if verbose else expected)
+
+
+@contextlib.contextmanager
+def bare_root():
+    """pytest's own handlers off the root for the block, so ``install`` adds
+    its console handler (``logs.py``, trap 4), and back on afterwards. Taken
+    off inside the test, not in a fixture: pytest adds them again around each
+    phase."""
+    root = logging.getLogger()
+    pytest_handlers = root.handlers[:]
+    for handler in pytest_handlers:
+        root.removeHandler(handler)
+    try:
+        yield
+    finally:
+        for handler in pytest_handlers:
+            root.addHandler(handler)
+
+
+@pytest.mark.parametrize("verbose", [False, True])
+def test_the_generate_calls_info_line_reaches_the_console_and_the_file(
+    tmp_path, capsys, verbose
+):
+    """The cost of each generate call is logged at INFO by
+    ``sensei_top.llm.client``, and a user is promised it (non-negotiable 5,
+    "never silent"): it reaches the console and the file at the default
+    levels and under ``--verbose``."""
+    with bare_root():
+        path = run(tmp_path, *(["--verbose"] if verbose else []), "config")
+        capsys.readouterr()
+        logging.getLogger("sensei_top.llm.client").info("the cost line")
+        console = capsys.readouterr().err.splitlines()
+
+    assert console == ["INFO the cost line"]
+    assert [line["message"] for line in lines(path)[1:]] == ["the cost line"]
+
+
+@pytest.mark.parametrize("verbose", [False, True])
+@pytest.mark.parametrize("name", ["sensei_top.probe", "httpx", "sensei_top.llmx"])
+def test_every_other_loggers_info_line_stays_out(tmp_path, capsys, verbose, name):
+    """Only the ``sensei_top.llm`` prefix is let through at INFO: another
+    module's, a library's and a name that merely starts with ``sensei_top.llm``
+    reach neither the console nor, without ``--verbose``, the file. Under
+    ``--verbose`` the file takes DEBUG and up, so it takes them as it did."""
+    with bare_root():
+        path = run(tmp_path, *(["--verbose"] if verbose else []), "config")
+        capsys.readouterr()
+        logging.getLogger(name).info("an info line")
+        console = capsys.readouterr().err
+
+    assert console == ""
+    written = [line["message"] for line in lines(path)[1:]]
+    assert written == (["an info line"] if verbose else [])
 
 
 def test_a_second_launch_replaces_the_first_rather_than_stacking(tmp_path):
