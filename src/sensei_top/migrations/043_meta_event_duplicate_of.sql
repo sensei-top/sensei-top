@@ -1,0 +1,27 @@
+-- 043_meta_event_duplicate_of.sql — mark twin tournament events in the
+-- metagame corpus.
+--
+-- The fbettega/MTG_decklistcache mirror sometimes publishes one tournament
+-- under two or three paths: different `event_id`s (the path) and different
+-- blob SHAs, but byte-identical decklists and rounds. Measured on the real
+-- database (2026-09): 43 groups of identical events (35 pairs, 7 triples, 1
+-- quadruple) — 52 surplus events and 1,338 surplus decks (11% of the corpus).
+--
+-- `duplicate_of` names the surviving event_id a twin was folded into; NULL
+-- (the default, for every event that is not a twin) means the event counts
+-- normally. A twin *keeps* its own `meta_event` row rather than being
+-- deleted outright, so `already_fetched()`'s path -> blob_sha lookup still
+-- has an entry for it — otherwise a twin whose upstream file has not
+-- changed would look unfetched and be downloaded again on every refresh.
+--
+-- A twin's `meta_deck`, `meta_round_match` and `meta_deck_archetype` rows
+-- are deleted, not merely filtered, by `metagame/dedup.py::mark_duplicate_
+-- events`. That is deliberate: every reader that joins those tables (the
+-- presence/winrate/matchup views, consensus, the corpus prior, format-reset
+-- detection, the guide, coach and brief field shares) is then correct
+-- without learning about `duplicate_of` at all. Only the handful of readers
+-- that query `meta_event` alone — the status route's tier counts, and the
+-- guide's and coach's `MAX(event_date)` reads — need `WHERE duplicate_of IS
+-- NULL`, since a republished Tier C league can carry a *later* event_date
+-- than its own survivor.
+ALTER TABLE meta_event ADD COLUMN duplicate_of TEXT REFERENCES meta_event (event_id);

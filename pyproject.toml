@@ -1,0 +1,43 @@
+[project]
+name = "sensei-top"
+version = "0.6.0"
+description = "Fully local MTG Arena match analytics: log parser, SQLite store, dashboard"
+requires-python = ">=3.12"
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE"]
+# PyPI refuses any upload carrying this classifier: the package is proprietary.
+classifiers = ["Private :: Do Not Upload"]
+dependencies = [
+    "anthropic>=0.122.0",
+    "fastapi>=0.141.1",
+    "orjson>=3.10",
+    "pydantic>=2.7",
+    "uvicorn[standard]>=0.52.3",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.10.0",
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+sensei-top = "sensei_top.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
+preview = true
+explicit-preview-rules = true
+extend-select = ["PLW1514"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
