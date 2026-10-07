@@ -1,0 +1,277 @@
+import { describe, expect, it } from 'vitest'
+import type { Deck, DeckIdentityOut, Match } from '../api'
+import {
+  archetypeName,
+  deckAddress,
+  deckLine,
+  deckRecord,
+  deckRedirect,
+  decksTiles,
+  fieldNameLine,
+  formatName,
+  newestVersion,
+  resolveDeck,
+  tileDetail,
+} from './decks'
+
+// The zone is America/New_York (vitest.config.ts). Every timestamp below is
+// bare, so UTC. Names, keys and ids are invented.
+
+/** A row of `/api/guide/decks` with only what these functions read. */
+function identity(key: string, deckIds: string[], rest: Partial<DeckIdentityOut> = {}): DeckIdentityOut {
+  return {
+    key,
+    name: null,
+    format: null,
+    deck_ids: deckIds,
+    matches: 0,
+    match_wins: 0,
+    match_losses: 0,
+    last_played: null,
+    ...rest,
+  } as DeckIdentityOut
+}
+
+describe('resolveDeck', () => {
+  const kites = identity('guid:kites', ['v1', 'v2'])
+  const choir = identity('deck:v3', ['v3'])
+  const identities = [kites, choir]
+
+  it('names the deck whose key is the id', () => {
+    expect(resolveDeck('guid:kites', identities)).toEqual({ identity: kites, viaVersion: false })
+    expect(resolveDeck('deck:v3', identities)).toEqual({ identity: choir, viaVersion: false })
+  })
+
+  it('names the deck one of whose versions is the id, and marks it so', () => {
+    expect(resolveDeck('v2', identities)).toEqual({ identity: kites, viaVersion: true })
+    expect(resolveDeck('v3', identities)).toEqual({ identity: choir, viaVersion: true })
+  })
+
+  it('names nothing for an id that is neither, or no id', () => {
+    expect(resolveDeck('v9', identities)).toBeNull()
+    expect(resolveDeck(undefined, identities)).toBeNull()
+  })
+
+  it('names nothing from an empty list', () => {
+    expect(resolveDeck('guid:kites', [])).toBeNull()
+  })
+})
+
+describe('deckAddress', () => {
+  it('keeps the key’s colon bare', () => {
+    expect(deckAddress('guid:ab-12')).toBe('/decks/guid:ab-12')
+    expect(deckAddress('deck:a:b')).toBe('/decks/deck:a:b')
+  })
+
+  it('still encodes anything else that needs it', () => {
+    // A space is %20, a slash %2F: a slash left bare would end the segment.
+    expect(deckAddress('guid:two words')).toBe('/decks/guid:two%20words')
+    expect(deckAddress('deck:a/b')).toBe('/decks/deck:a%2Fb')
+  })
+})
+
+describe('deckRedirect', () => {
+  it('sends a version’s address to the deck’s, keeping the page under it', () => {
+    expect(deckRedirect('/decks/v2/guide', 'guid:kites')).toBe('/decks/guid:kites/guide')
+    expect(deckRedirect('/decks/v2/matchups', 'guid:kites')).toBe('/decks/guid:kites/matchups')
+  })
+
+  it('lands on the overview when the address had no page under the deck', () => {
+    expect(deckRedirect('/decks/v2', 'guid:kites')).toBe('/decks/guid:kites')
+  })
+
+  it('sends a key spelled with %3A, in either case, to the bare colon', () => {
+    expect(deckRedirect('/decks/guid%3Akites', 'guid:kites')).toBe('/decks/guid:kites')
+    expect(deckRedirect('/decks/guid%3akites/guide', 'guid:kites')).toBe('/decks/guid:kites/guide')
+  })
+
+  it('sends nowhere once the address is the deck’s own, so it cannot loop', () => {
+    expect(deckRedirect('/decks/guid:kites', 'guid:kites')).toBeNull()
+    expect(deckRedirect('/decks/guid:kites/matchups', 'guid:kites')).toBeNull()
+    expect(deckRedirect('/decks/guid:two%20words/guide', 'guid:two words')).toBeNull()
+  })
+})
+
+describe('newestVersion', () => {
+  const version = (deckId: string, lastPlayed: string) => ({ deck_id: deckId, last_played: lastPlayed }) as Deck
+  const versions = [version('v1', '2026-09-01T20:00:00'), version('v2', '2026-09-27T20:00:00'), version('v9', '2026-09-28T09:00:00')]
+
+  it('is the version played last among the deck’s own', () => {
+    // v9 is newer but another deck's.
+    expect(newestVersion(identity('guid:kites', ['v1', 'v2']), versions)).toBe('v2')
+  })
+
+  it('falls to the deck’s first version when none is listed', () => {
+    expect(newestVersion(identity('guid:choir', ['v5', 'v6']), versions)).toBe('v5')
+  })
+
+  it('is null for a deck with no version', () => {
+    expect(newestVersion(identity('guid:none', []), versions)).toBeNull()
+  })
+})
+
+describe('archetypeName', () => {
+  it('spaces a name run together', () => {
+    expect(archetypeName('AzureKites')).toBe('Azure Kites')
+    expect(archetypeName('4c LanternStormCombo')).toBe('4c Lantern Storm Combo')
+  })
+
+  it('leaves a name already spaced as it is', () => {
+    expect(archetypeName('Ember Choir')).toBe('Ember Choir')
+  })
+
+  it('leaves a hyphen as it is: a capital after one is not after a lower-case letter', () => {
+    expect(archetypeName('Mono-Blue Kites')).toBe('Mono-Blue Kites')
+  })
+
+  it('puts no space after a digit, nor between capitals', () => {
+    expect(archetypeName('4c Lantern')).toBe('4c Lantern')
+    expect(archetypeName('5Color Ramp')).toBe('5Color Ramp')
+    expect(archetypeName('UW Control')).toBe('UW Control')
+  })
+})
+
+describe('formatName', () => {
+  it('writes each format as the wording has it', () => {
+    expect(formatName('Standard')).toBe('Standard')
+    expect(formatName('TraditionalStandard')).toBe('Standard, best of three')
+    expect(formatName('TraditionalHistoric')).toBe('Historic, best of three')
+    expect(formatName('Draft')).toBe('Draft')
+    expect(formatName('HistoricBrawl')).toBe('Historic Brawl')
+    expect(formatName('Premodern')).toBe('Premodern')
+    expect(formatName('Modern')).toBe('Modern')
+  })
+
+  it('is null without a format', () => {
+    expect(formatName(null)).toBeNull()
+    expect(formatName(undefined)).toBeNull()
+  })
+})
+
+describe('fieldNameLine', () => {
+  it('names the field’s archetype when it differs from the typed name', () => {
+    expect(fieldNameLine('AzureKiteStorm', 'Kite Storm')).toBe('Azure Kite Storm in the field')
+  })
+
+  it('says nothing when the spaced name is the typed one, case aside', () => {
+    expect(fieldNameLine('EmberChoir', 'Ember Choir')).toBeNull()
+    expect(fieldNameLine('Ember Choir', 'ember choir')).toBeNull()
+  })
+
+  it('says nothing when the guide names no archetype', () => {
+    expect(fieldNameLine(null, 'Ember Choir')).toBeNull()
+    expect(fieldNameLine(undefined, null)).toBeNull()
+  })
+
+  it('names the archetype of a deck with no typed name', () => {
+    expect(fieldNameLine('LanternControl', null)).toBe('Lantern Control in the field')
+  })
+})
+
+describe('deckLine', () => {
+  const now = Date.UTC(2026, 8, 28, 12, 0, 0)
+
+  it('joins the format, every match and its wins, and the last played', () => {
+    // 2026-09-27 12:00 UTC is 24 hours before now: "1d ago".
+    const deck = identity('guid:kites', ['v1'], {
+      format: 'TraditionalStandard',
+      matches: 64,
+      match_wins: 30,
+      match_losses: 33,
+      last_played: '2026-09-27T12:00:00',
+    })
+    expect(deckLine(deck, now)).toBe('Standard, best of three · 64 matches, 30 won · last played 1d ago')
+  })
+
+  it('says one match in the singular', () => {
+    const deck = identity('guid:kites', ['v1'], { format: 'Standard', matches: 1, last_played: '2026-09-25T12:00:00' })
+    expect(deckLine(deck, now)).toBe('Standard · 1 match, 0 won · last played 3d ago')
+  })
+
+  it('leaves out a format it does not know, with no dash', () => {
+    const deck = identity('guid:kites', ['v1'], { matches: 2, last_played: '2026-09-13T12:00:00' })
+    expect(deckLine(deck, now)).toBe('2 matches, 0 won · last played 15d ago')
+  })
+
+  it('leaves out a last played it does not know', () => {
+    const deck = identity('guid:kites', ['v1'], { format: 'Draft', matches: 2, match_wins: 1 })
+    expect(deckLine(deck, now)).toBe('Draft · 2 matches, 1 won')
+  })
+})
+
+describe('deckRecord', () => {
+  it('is a rate from ten finished matches', () => {
+    // 35 / 60 = 0.583…, 58%.
+    expect(deckRecord({ finished: 60, wins: 35 })).toEqual({ figure: '58%', line: 'won 35 of 60' })
+    expect(deckRecord({ finished: 10, wins: 5 })).toEqual({ figure: '50%', line: 'won 5 of 10' })
+  })
+
+  it('is a count from one to nine', () => {
+    expect(deckRecord({ finished: 9, wins: 6 })).toEqual({ figure: '6 of 9', line: 'matches won' })
+    expect(deckRecord({ finished: 1, wins: 0 })).toEqual({ figure: '0 of 1', line: 'matches won' })
+  })
+
+  it('has no figure with no finished match', () => {
+    expect(deckRecord({ finished: 0, wins: 0 })).toEqual({ figure: null, line: 'no finished match yet' })
+  })
+})
+
+describe('tileDetail', () => {
+  it('writes the format, and the versions when there are several', () => {
+    expect(tileDetail('TraditionalStandard', 1)).toBe('Standard, best of three')
+    // Between the count and its word a no-break space (U+00A0): they never
+    // part on a narrow tile. The line may still break after the dot.
+    expect(tileDetail('TraditionalStandard', 4)).toBe('Standard, best of three · 4\u00a0versions')
+    expect(tileDetail(null, 4)).toBe('4\u00a0versions')
+  })
+
+  it('is null with no format and one version', () => {
+    expect(tileDetail(null, 1)).toBeNull()
+  })
+})
+
+describe('decksTiles', () => {
+  const match = (id: string, deckId: string, startedAt: string, result: string | null) =>
+    ({ match_id: id, deck_id: deckId, started_at: startedAt, result }) as Match
+
+  const identities = [
+    identity('guid:kites', ['v1', 'v2'], {
+      name: 'Azure Kites',
+      format: 'TraditionalStandard',
+      matches: 10,
+      match_wins: 6,
+      match_losses: 3,
+      last_played: '2026-09-27T20:00:00',
+    }),
+    identity('guid:none', ['v3'], { matches: 1 }),
+  ]
+  const matches = [
+    match('in-progress', 'v2', '2026-09-28T11:00:00', null),
+    match('older-loss', 'v2', '2026-09-10T20:00:00', 'loss'),
+    match('newest-win', 'v1', '2026-09-20T20:00:00', 'win'),
+    match('other-deck', 'v9', '2026-09-27T20:00:00', 'win'),
+  ]
+  const tiles = decksTiles(identities, matches)
+
+  it('keeps the API’s order, one tile per deck', () => {
+    expect(tiles.map((tile) => tile.key)).toEqual(['guid:kites', 'guid:none'])
+  })
+
+  it('counts wins and losses, draws aside, and writes the second line', () => {
+    expect(tiles[0]).toMatchObject({
+      name: 'Azure Kites',
+      finished: 9,
+      wins: 6,
+      lastPlayed: Date.UTC(2026, 8, 27, 20, 0, 0),
+      detail: 'Standard, best of three · 2\u00a0versions',
+    })
+  })
+
+  it('takes the art from the deck’s newest finished match, never one in progress', () => {
+    expect(tiles[0].artMatchId).toBe('newest-win')
+  })
+
+  it('leaves a deck with no finished match in the list without art, name or line', () => {
+    expect(tiles[1]).toMatchObject({ name: null, finished: 0, lastPlayed: null, detail: null, artMatchId: null })
+  })
+})
