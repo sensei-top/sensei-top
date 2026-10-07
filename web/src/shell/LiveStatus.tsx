@@ -123,11 +123,8 @@ export function LiveStatus({ className = '' }: { className?: string }) {
                 </p>
               )}
               <p>{changed ? `Data last changed ${changed}.` : 'No data yet.'}</p>
-              {watching && live.data?.mtgo_read_at_startup && (
-                <p>
-                  MTGO matches were read when the tracker started. One played since then appears after the
-                  tracker is restarted.
-                </p>
+              {watching && live.data?.mtgo_watching && (
+                <p>MTGO is watched too: each game appears once it ends.</p>
               )}
             </>
           )}

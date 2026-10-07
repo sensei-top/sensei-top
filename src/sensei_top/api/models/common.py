@@ -31,16 +31,17 @@ class LiveStatus(BaseModel):
     its own OS process now, not this one (``live.py``'s ``WatcherProcess`` —
     a rebuild sharing this process's GIL taxed every request ~5x), so
     nothing here can be read from in-memory watcher state. Only
-    ``watching`` itself is still asked of the watcher object directly
-    (``is_alive()`` on the child process), since that one bit doesn't need
-    shared memory to answer.
+    ``watching`` and ``mtgo_watching`` are still asked of the watcher
+    object directly (``is_alive()`` on the child process, and the MTGO
+    directory it was started with), since neither needs shared memory to
+    answer.
     """
 
     watching: bool = Field(description="a watcher is running and reachable from this server")
-    mtgo_read_at_startup: bool = Field(
+    mtgo_watching: bool = Field(
         False,
-        description="the running watcher found an MTGO game-log directory and read it once "
-        "at its own startup — MTGO's game logs are never polled during a live session",
+        description="the running watcher has an MTGO game-log directory and stores each "
+        "game from it once the game ends",
     )
     last_ingest_at: str | None = Field(
         None,

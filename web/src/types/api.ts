@@ -2829,11 +2829,11 @@ export interface components {
              */
             watching: boolean;
             /**
-             * Mtgo Read At Startup
-             * @description the running watcher found an MTGO game-log directory and read it once at its own startup — MTGO's game logs are never polled during a live session
+             * Mtgo Watching
+             * @description the running watcher has an MTGO game-log directory and stores each game from it once the game ends
              * @default false
              */
-            mtgo_read_at_startup: boolean;
+            mtgo_watching: boolean;
             /**
              * Last Ingest At
              * @description when new events last landed — not when the reader last looked

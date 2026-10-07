@@ -110,7 +110,7 @@ def live(request: Request, conn: Conn) -> LiveStatus:
     projections = projection_row[1] if projection_row else 0
     return LiveStatus(
         watching=bool(watcher and watcher.is_alive()),
-        mtgo_read_at_startup=bool(getattr(watcher, "mtgo_dir", None)),
+        mtgo_watching=bool(getattr(watcher, "mtgo_dir", None)),
         last_ingest_at=last_ingest,
         last_checked_at=last_checked,
         last_event_at=last_event,

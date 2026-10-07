@@ -104,7 +104,7 @@ function MagicOnlineCard({
           hint={
             sources.mtgoDir === null
               ? 'Nothing is read from Magic Online until a folder is set.'
-              : 'Read once, when the app starts.'
+              : 'Each game is read once it ends.'
           }
           error={text.errorOf('mtgoDir')}
         />

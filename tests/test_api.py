@@ -78,6 +78,7 @@ def test_live_status_reports_counts_without_a_watcher(client):
     heartbeat, and an external `ingest --watch --project` may be the writer."""
     body = client.get("/api/live").json()
     assert body["watching"] is False
+    assert body["mtgo_watching"] is False
     assert body["events"] == 34
     assert (body["matches"], body["games"], body["turns"]) == (2, 5, 16)
     assert body["last_ingest_at"] is not None
@@ -187,6 +188,23 @@ def test_live_reports_an_attached_watcher(tmp_path, make_client):
         assert c.get("/api/live").json()["watching"] is False  # not started yet
         watcher.stats.running = True
         assert c.get("/api/live").json()["watching"] is True
+        assert c.get("/api/live").json()["mtgo_watching"] is False  # no MTGO directory
+
+
+def test_live_reports_mtgo_watching_when_the_watcher_has_a_directory(tmp_path, make_client):
+    from sensei_top.live import LiveIngester
+
+    db_path = tmp_path / "w.db"
+    open_database(db_path).close()
+    watcher = LiveIngester(
+        db_path=db_path, log_path=tmp_path / "Player.log", mtgo_dir=tmp_path / "mtgo"
+    )
+
+    with make_client(create_app(db_path, watcher=watcher)) as c:
+        watcher.stats.running = True
+        body = c.get("/api/live").json()
+        assert body["watching"] is True
+        assert body["mtgo_watching"] is True
 
 
 def test_query_only_pragma_actually_blocks_writes(tmp_path):
