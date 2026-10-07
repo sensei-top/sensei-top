@@ -2,13 +2,13 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { useLocation } from 'react-router'
 import { useLive } from '../api'
 import { TextLink } from '../components/ui'
+import { liveState, WATCHER_STOPPED_SENTENCE, type LiveState as State } from '../lib/home'
 import { useMatchInProgress } from '../lib/liveMatch'
 import { ago, useNow } from '../lib/time'
 
-type State = 'down' | 'match' | 'watching' | 'idle'
-
 const WORDS: Record<State, string> = {
   down: 'Tracker not running',
+  stopped: 'Watcher stopped',
   match: 'Match in progress',
   watching: 'Watching Arena',
   idle: 'Not watching',
@@ -17,13 +17,15 @@ const WORDS: Record<State, string> = {
 // Never colour alone: the dot is decoration, the words are the fact.
 const DOT: Record<State, string> = {
   down: 'bg-warn',
+  stopped: 'bg-warn',
   match: 'animate-pulse bg-s3',
   watching: 'animate-pulse bg-s3',
   idle: 'bg-muted',
 }
 
 /** The tracker's state, one at a time, the first that holds: not running
- *  (the heartbeat's last request failed), a match in progress, watching
+ *  (the heartbeat's last request failed), the watcher
+ *  started and died, a match in progress, watching
  *  Arena, not watching. The words also sit in a polite
  *  live region of their own, out of sight beside the pill and never around
  *  it, so a change is announced, the control is not read again with it,
@@ -67,13 +69,12 @@ export function LiveStatus({ className = '' }: { className?: string }) {
   // Nothing to say until the first beat answers either way.
   if (live.isPending) return null
 
-  const state: State = live.isError
-    ? 'down'
-    : matchInProgress
-      ? 'match'
-      : live.data.watching
-        ? 'watching'
-        : 'idle'
+  const state: State = liveState({
+    isError: live.isError,
+    watcherStopped: Boolean(live.data?.watcher_stopped),
+    matchInProgress,
+    watching: Boolean(live.data?.watching),
+  })
   const watching = Boolean(live.data?.watching)
 
   // last_ingest_at is when data last *changed*, not when the reader last
@@ -114,7 +115,9 @@ export function LiveStatus({ className = '' }: { className?: string }) {
               )}
               {/* A match in progress says what watching or not
                   watching says: the log is followed only when it is. */}
-              {watching ? (
+              {state === 'stopped' ? (
+                <p>{WATCHER_STOPPED_SENTENCE}</p>
+              ) : watching ? (
                 <p>The tracker is following Arena's log as you play.</p>
               ) : (
                 <p>

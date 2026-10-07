@@ -38,6 +38,39 @@ export const UNNAMED_DECK_IN_SENTENCE = 'your unnamed deck'
 export const NOT_WATCHING_SENTENCE =
   "The tracker is running without watching Arena's log, so a match played now is not recorded by it. Restart the tracker with watching turned on."
 
+/** The callout Live shows, and the status panel's own sentence, when the
+ *  watcher process was started and then died on its own. */
+export const WATCHER_STOPPED_SENTENCE =
+  "The tracker stopped watching Arena's log after it started, so a match played now is not recorded. Restart the tracker; its log file says what went wrong."
+
+/** The sentence Live and Home's first step give while the tracker is not
+ *  recording: the watcher died after starting, or was never started; `null`
+ *  while it is watching. A dead watcher reads `watching: false` too, so the
+ *  stopped case is asked first. */
+export function watcherCallout(
+  live: { watching: boolean; watcher_stopped?: boolean } | undefined,
+): string | null {
+  if (!live) return null
+  if (live.watcher_stopped) return WATCHER_STOPPED_SENTENCE
+  return live.watching ? null : NOT_WATCHING_SENTENCE
+}
+
+export type LiveState = 'down' | 'stopped' | 'match' | 'watching' | 'idle'
+
+/** The status pill's state, the first that holds: the heartbeat failed, the
+ *  watcher died on its own, a match is in progress, watching, not watching. */
+export function liveState(input: {
+  isError: boolean
+  watcherStopped: boolean
+  matchInProgress: boolean
+  watching: boolean
+}): LiveState {
+  if (input.isError) return 'down'
+  if (input.watcherStopped) return 'stopped'
+  if (input.matchInProgress) return 'match'
+  return input.watching ? 'watching' : 'idle'
+}
+
 export function isFinished(match: Match): boolean {
   return match.result === 'win' || match.result === 'loss' || match.result === 'draw'
 }

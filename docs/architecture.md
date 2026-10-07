@@ -264,14 +264,13 @@ among them. It is a one-way pipe now, which a dead reader cannot block
 (`live._run_watcher`). If the drain of the child's log queue times out,
 because the child died holding the queue's lock mid-write, `stop()`
 cancels the join that would otherwise hang the interpreter's exit and logs
-a warning that the child's last records may be lost. A watcher that
-dies alone, found after plan 3's real-match check and recorded in
-`docs/status.md`, is noticed now: a monitor thread beside the
-drain waits on the child's sentinel and logs one ERROR when it dies on its
-own (after a short grace for the exit codes a group SIGTERM or Ctrl+C
-give, so a normal shutdown logs nothing), and `/api/live` reports
-`watcher_stopped`; `serve` keeps serving and does not restart the child
-(plan 6's shell supervises).
+a warning that the child's last records may be lost. A watcher that dies
+alone, found after plan 3's real-match check, is noticed now: a monitor
+thread beside the drain waits on the child's sentinel and logs one ERROR
+when it dies on its own (after a short grace for the exit codes a group
+SIGTERM or Ctrl+C give, so a normal shutdown logs nothing), and `/api/live`
+reports `watcher_stopped`; `serve` keeps serving and does not restart the
+child (plan 6's shell supervises; `docs/status.md` keeps the open row).
 
 ## Storage
 

@@ -10,11 +10,15 @@ import {
   lastFinished,
   lastSession,
   lastThirtyDays,
+  liveState,
+  NOT_WATCHING_SENTENCE,
   opponentNamed,
   ownScore,
   recentMatches,
   sessionHeadline,
   threeThings,
+  WATCHER_STOPPED_SENTENCE,
+  watcherCallout,
   weekStart,
   weeklyWinrate,
   winnerScore,
@@ -494,5 +498,35 @@ describe('homeField', () => {
     expect(homeField(presence, matches, identities, '2026-09-01', true, now, 'Standard')!.listShort).toBe(false)
     expect(homeField(presence, matches, identities, null, true, now, 'Standard')!.listShort).toBe(true)
     expect(homeField(presence, matches, identities, null, false, now, 'Standard')!.listShort).toBe(false)
+  })
+})
+
+describe('the pill state', () => {
+  const base = { isError: false, watcherStopped: false, matchInProgress: false, watching: true }
+  it('puts a failed heartbeat before a stopped watcher', () => {
+    expect(liveState({ ...base, isError: true, watcherStopped: true })).toBe('down')
+  })
+  it('puts a stopped watcher before a match in progress', () => {
+    expect(liveState({ ...base, watcherStopped: true, matchInProgress: true, watching: false })).toBe(
+      'stopped',
+    )
+  })
+  it('then a match, watching, not watching', () => {
+    expect(liveState({ ...base, matchInProgress: true })).toBe('match')
+    expect(liveState(base)).toBe('watching')
+    expect(liveState({ ...base, watching: false })).toBe('idle')
+  })
+})
+
+describe('the watcher callout', () => {
+  it('says the watcher stopped, though it also reads not watching', () => {
+    expect(watcherCallout({ watching: false, watcher_stopped: true })).toBe(WATCHER_STOPPED_SENTENCE)
+  })
+  it('says not watching when it never started', () => {
+    expect(watcherCallout({ watching: false, watcher_stopped: false })).toBe(NOT_WATCHING_SENTENCE)
+  })
+  it('says nothing while watching, or before the status arrives', () => {
+    expect(watcherCallout({ watching: true, watcher_stopped: false })).toBeNull()
+    expect(watcherCallout(undefined)).toBeNull()
   })
 })

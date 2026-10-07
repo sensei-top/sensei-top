@@ -1,9 +1,12 @@
 import type { LiveStatus } from '../../api'
-import { firstRunSteps, NOT_WATCHING_SENTENCE } from '../../lib/home'
+import { firstRunSteps, NOT_WATCHING_SENTENCE, watcherCallout } from '../../lib/home'
 import { OnboardingSteps, SectionLabel } from '../ui'
 
-const STEPS = [
-  { title: 'The tracker is watching Arena', detail: NOT_WATCHING_SENTENCE },
+const steps = (live: LiveStatus | undefined) => [
+  {
+    title: 'The tracker is watching Arena',
+    detail: watcherCallout(live) ?? NOT_WATCHING_SENTENCE,
+  },
   {
     title: 'Arena is writing its log',
     detail:
@@ -35,7 +38,7 @@ export function FirstRun({ live }: { live: LiveStatus | undefined }) {
         </p>
       </div>
       <div className="max-w-3xl">
-        <OnboardingSteps steps={STEPS.map((step, index) => ({ ...step, state: states[index] }))} />
+        <OnboardingSteps steps={steps(live).map((step, index) => ({ ...step, state: states[index] }))} />
       </div>
       <div className="space-y-2">
         <SectionLabel>What will appear here</SectionLabel>

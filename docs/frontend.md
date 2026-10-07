@@ -180,6 +180,7 @@ each other's; Guide drops it, since it reads the deck whole.
 | State | When | Its words |
 |---|---|---|
 | not running | the heartbeat's last request failed | "Tracker not running" |
+| watcher stopped | `/api/live` says `watcher_stopped`: the watcher process died on its own after `serve` started it | "Watcher stopped" |
 | a match | a match is in progress | "Match in progress" |
 | watching | `/api/live` says `watching` | "Watching Arena" |
 | not watching | none of the above | "Not watching" |
@@ -790,9 +791,10 @@ The first step not done is the one that is next, and the only one that
 says what to do. The third is never done on that screen: a recorded
 match ends first run.
 
-The first step's sentence is `NOT_WATCHING_SENTENCE`, which says what the
-live status's panel says (`shell/LiveStatus.tsx`). Live shows
-the same sentence in a callout above their empty states, below.
+The first step shows `watcherCallout`'s sentence: `NOT_WATCHING_SENTENCE`,
+or `WATCHER_STOPPED_SENTENCE` once the watcher has died after starting. It
+is the sentence the live status's panel (`shell/LiveStatus.tsx`) and Live's
+callout, below, show.
 
 ### The session, and the three things
 
@@ -946,7 +948,14 @@ with the place's own icon (`placeById`), a title, and one sentence that
 says what will appear and what causes it:
 
 - **Live** shows a `Callout tone="warn"` with `NOT_WATCHING_SENTENCE`
-  above the empty state while the tracker is not watching. Live is in
+  above the empty state while the tracker is not watching. When
+  `/api/live` says `watcher_stopped` (the watcher died after starting) it
+  shows `WATCHER_STOPPED_SENTENCE` instead, and above every branch: a
+  match in progress, the opening hand, the break and the empty state,
+  because a watcher that dies mid-match leaves the match frozen on screen.
+  It is a `shrink-0` item, so focus mode's height cap holds. `watcherCallout`
+  and `liveState` (`lib/home.ts`) choose the sentence and the pill's
+  state; Home's first step uses the same sentence. Live is in
   focus mode, where the live status is not drawn from 48rem up, so the
   page says so itself.
 - **Matches** tells "No matches yet" from "No match fits these filters"

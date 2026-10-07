@@ -8,7 +8,7 @@ import { OpponentHandCard } from '../components/OpponentHandCard'
 import { OpponentRead } from '../components/OpponentRead'
 import { SideboardOpponentRail, SideboardPlanCard } from '../components/SideboardPlanCard'
 import { Callout, Chip, Disclosure, EmptyState, ErrorNote, Loading, ManaPips, StatTile } from '../components/ui'
-import { NOT_WATCHING_SENTENCE } from '../lib/home'
+import { watcherCallout, WATCHER_STOPPED_SENTENCE } from '../lib/home'
 import { isLikelyAbandoned } from '../lib/liveMatch'
 import { type LivePanel, livePanels } from '../lib/livePanels'
 import { opponentLabelText } from '../lib/opponent'
@@ -208,6 +208,15 @@ export function CurrentMatchView() {
   const current = useCurrentMatch()
   const read = useCurrentMatchRead()
   const live = useLive()
+  // A watcher that died mid-match leaves the match frozen on screen, and the
+  // status pill is hidden on this page from 48rem up: say so above every
+  // branch. shrink-0 keeps focus mode's height cap.
+  const callout = watcherCallout(live.data)
+  const stopped = live.data?.watcher_stopped ? (
+    <div className="shrink-0">
+      <Callout tone="warn">{WATCHER_STOPPED_SENTENCE}</Callout>
+    </div>
+  ) : null
 
   if (current.isPending) return <Loading />
   if (current.error) return <ErrorNote error={current.error} />
@@ -227,7 +236,7 @@ export function CurrentMatchView() {
       // is not watching the page says so itself.
       return (
         <div className="flex flex-col gap-3">
-          {live.data && !live.data.watching && <Callout tone="warn">{NOT_WATCHING_SENTENCE}</Callout>}
+          {callout && <Callout tone="warn">{callout}</Callout>}
           <EmptyState
             icon={placeById('live').icon}
             title="No match in progress"
@@ -240,6 +249,7 @@ export function CurrentMatchView() {
     // the hand's read is advice and nothing else is known yet.
     return (
       <div className="flex h-full min-h-0 flex-col gap-3">
+        {stopped}
         <MatchStatusStrip match={null} openingHand={openingHand} adviceOff={!advice} />
         <div className="min-h-0 flex-1 overflow-hidden">
           {advice ? (
@@ -266,6 +276,7 @@ export function CurrentMatchView() {
   if (intermission) {
     return (
       <div className="flex h-full min-h-0 flex-col gap-3">
+        {stopped}
         <MatchStatusStrip match={match} openingHand={null} intermission={intermission} />
         <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto sm:grid-cols-[1fr_360px]">
           <div className="min-h-0">
@@ -328,6 +339,7 @@ export function CurrentMatchView() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
+      {stopped}
       <MatchStatusStrip match={match} openingHand={openingHand} adviceOff={!advice} />
 
       <div className="grid min-h-0 flex-1 gap-3 sm:grid-cols-[1fr_360px]">
