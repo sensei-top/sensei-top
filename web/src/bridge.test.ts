@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { readShellGlobal, shellStore, type BridgeSettings, type RawShell } from './bridge'
 
 const never = () => Promise.resolve({ ok: true } as const)
@@ -116,5 +116,21 @@ describe('the global', () => {
       delete holder.senseiTopShell
     }
     expect(readShellGlobal()).toBeUndefined()
+  })
+})
+
+describe('the dashboard\'s store', () => {
+  it('hears an event published before the first store read, from module load', async () => {
+    const { raw, emit } = fake(settings('1.0.0'))
+    const holder = globalThis as { senseiTopShell?: unknown }
+    holder.senseiTopShell = raw
+    try {
+      vi.resetModules()
+      const fresh = await import('./bridge')
+      emit(settings('1.0.4'))
+      expect(fresh.startShellStore().snapshot()?.app?.settings.version).toBe('1.0.4')
+    } finally {
+      delete holder.senseiTopShell
+    }
   })
 })
