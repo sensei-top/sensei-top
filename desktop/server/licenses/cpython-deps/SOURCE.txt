@@ -1,0 +1,14 @@
+The licence texts of the libraries compiled into, or shipped beside, the
+CPython runtime that the frozen server bundles. Copied unchanged from the
+python/licenses/ folder of python-build-standalone's release 20260807
+(cpython-3.12.13+20260807-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst;
+the Windows archive of the same tag carries the same texts, differing only
+in line endings). The texts are unchanged from release 20260623 (compared
+2026-10-08):
+https://github.com/astral-sh/python-build-standalone/releases/tag/20260807
+
+Only the libraries that reach the frozen build are kept. Berkeley DB (_dbm),
+Tcl/Tk, Tix and the X11 libraries (_tkinter) are left out because the server
+imports neither module. scripts/build_server.py stops when the runtime it
+freezes comes from a release whose texts were not compared, so a Python
+upgrade re-checks this folder.

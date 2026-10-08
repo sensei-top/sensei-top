@@ -1,0 +1,126 @@
+name: Desktop packages
+
+# By hand only: the repo is private and minutes are metered (D26). Plan 9 adds
+# the tag trigger, signing and publishing.
+on:
+  workflow_dispatch:
+    inputs:
+      # For the N -> N+1 update test only; both empty is the normal build.
+      version:
+        description: "Build as this version (update test only)"
+        required: false
+        default: ""
+      update_url:
+        description: "Feed URL baked into the build (update test only)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+# Every uv run refuses to rewrite uv.lock.
+env:
+  UV_LOCKED: "1"
+  # The frozen server must be built on uv's python-build-standalone CPython (its dependency
+  # licences are vendored in desktop/server/licenses/cpython-deps/), not the runner's own Python.
+  UV_PYTHON_PREFERENCE: only-managed
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      # setup-uv publishes no major tags, so it's pinned exactly. uv 0.12.3 with Python
+      # 3.12.13 resolves to python-build-standalone 20260807, the tag the vendored licences
+      # in desktop/server/licenses/cpython-deps/ were checked against.
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.12.3"
+          python-version: "3.12.13"
+          enable-cache: true
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: |
+            web/pnpm-lock.yaml
+            desktop/pnpm-lock.yaml
+      - run: uv sync --locked
+      - run: pnpm install --frozen-lockfile
+        working-directory: web
+      - run: pnpm install --frozen-lockfile
+        working-directory: desktop
+      # Fails when desktop/package.json's version is not pyproject's.
+      - run: uv run python scripts/sync_version.py --check
+      # Builds web_dist when stale, freezes the server, smoke-tests it.
+      - run: uv run python scripts/build_server.py
+      - run: |
+          args=()
+          if [ -n "$BUILD_VERSION" ]; then args+=("-c.extraMetadata.version=$BUILD_VERSION"); fi
+          if [ -n "$BUILD_UPDATE_URL" ]; then args+=("-c.publish.url=$BUILD_UPDATE_URL"); fi
+          pnpm dist:win "${args[@]}"
+        shell: bash
+        working-directory: desktop
+        env:
+          BUILD_VERSION: ${{ inputs.version }}
+          BUILD_UPDATE_URL: ${{ inputs.update_url }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sensei-top-windows
+          path: |
+            desktop/release/*.exe
+            desktop/release/*.appx
+            desktop/release/*.blockmap
+            desktop/release/latest.yml
+          retention-days: 7
+          if-no-files-found: error
+
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.12.3"
+          python-version: "3.12.13"
+          enable-cache: true
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: |
+            web/pnpm-lock.yaml
+            desktop/pnpm-lock.yaml
+      - run: uv sync --locked
+      - run: pnpm install --frozen-lockfile
+        working-directory: web
+      - run: pnpm install --frozen-lockfile
+        working-directory: desktop
+      - run: uv run python scripts/sync_version.py --check
+      - run: uv run python scripts/build_server.py
+      - run: |
+          args=()
+          if [ -n "$BUILD_VERSION" ]; then args+=("-c.extraMetadata.version=$BUILD_VERSION"); fi
+          if [ -n "$BUILD_UPDATE_URL" ]; then args+=("-c.publish.url=$BUILD_UPDATE_URL"); fi
+          pnpm dist:linux "${args[@]}"
+        shell: bash
+        working-directory: desktop
+        env:
+          BUILD_VERSION: ${{ inputs.version }}
+          BUILD_UPDATE_URL: ${{ inputs.update_url }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sensei-top-linux
+          path: |
+            desktop/release/*.AppImage
+            desktop/release/latest-linux.yml
+          retention-days: 7
+          if-no-files-found: error

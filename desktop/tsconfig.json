@@ -1,0 +1,25 @@
+{
+  // The shell's main process: CommonJS for Electron's main entry, compiled
+  // into dist/. The tests sit beside their modules but stay out of dist/;
+  // tsconfig.test.json type-checks them and scripts/ (`pnpm typecheck`), and
+  // vitest runs them from src/ and scripts/ (vitest.config.mts).
+  "compilerOptions": {
+    "target": "es2024",
+    "lib": ["es2024"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+    "rootDir": "src",
+    "outDir": "dist",
+    "sourceMap": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
+}

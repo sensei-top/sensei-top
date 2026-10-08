@@ -1,0 +1,29 @@
+{
+  "name": "sensei-top-desktop",
+  "productName": "Sensei Top",
+  "description": "A local Magic: The Gathering match tracker and coach.",
+  "author": "The Sensei Top authors",
+  "private": true,
+  "version": "0.6.0",
+  "license": "AGPL-3.0-only",
+  "desktopName": "sensei-top.desktop",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p .",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "dist:win": "pnpm run build && node scripts/notices.ts && electron-builder --win nsis appx --publish never",
+    "dist:linux": "pnpm run build && node scripts/notices.ts && electron-builder --linux AppImage --publish never",
+    "dev": "pnpm run build && env -u ELECTRON_RUN_AS_NODE electron ."
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3",
+    "typescript": "~6.0.2",
+    "vitest": "^5.0.2"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.9"
+  }
+}

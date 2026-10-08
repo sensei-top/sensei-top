@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Deck xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <NetDeckID>0</NetDeckID>
+  <PreconstructedDeckID>0</PreconstructedDeckID>
+  <Cards CatID="15758" Quantity="1" Sideboard="false" Name="Plains" />
+  <Cards CatID="154156" Quantity="4" Sideboard="false" Name="Smaug the Magnificent" />
+  <Cards CatID="149529" Quantity="2" Sideboard="false" Name="Erode" />
+  <Cards CatID="144536" Quantity="4" Sideboard="false" Name="Momo, Friendly Flier" />
+  <Cards CatID="144288" Quantity="4" Sideboard="false" Name="Multiversal Passage" />
+  <Cards CatID="142909" Quantity="4" Sideboard="false" Name="Nova Hellkite" />
+  <Cards CatID="139601" Quantity="4" Sideboard="false" Name="Clarion Conqueror" />
+  <Cards CatID="139647" Quantity="4" Sideboard="false" Name="Voice of Victory" />
+  <Cards CatID="139489" Quantity="4" Sideboard="false" Name="Maelstrom of the Spirit Dragon" />
+  <Cards CatID="139429" Quantity="2" Sideboard="false" Name="Twinmaw Stormbrood" />
+  <Cards CatID="139189" Quantity="4" Sideboard="false" Name="Sarkhan, Dragon Ascendant" />
+  <Cards CatID="139175" Quantity="4" Sideboard="false" Name="Magmatic Hellkite" />
+  <Cards CatID="137155" Quantity="4" Sideboard="false" Name="Sunbillow Verge" />
+  <Cards CatID="117662" Quantity="2" Sideboard="false" Name="Cavern of Souls" />
+  <Cards CatID="69921" Quantity="4" Sideboard="false" Name="Sacred Foundry" />
+  <Cards CatID="61855" Quantity="4" Sideboard="false" Name="Inspiring Vantage" />
+  <Cards CatID="34408" Quantity="4" Sideboard="false" Name="Burst Lightning" />
+  <Cards CatID="15704" Quantity="1" Sideboard="false" Name="Mountain" />
+  <Cards CatID="19639" Quantity="2" Sideboard="true" Name="Pyroclasm" />
+  <Cards CatID="47477" Quantity="2" Sideboard="true" Name="Boros Charm" />
+  <Cards CatID="117806" Quantity="1" Sideboard="true" Name="Get Lost" />
+  <Cards CatID="125235" Quantity="3" Sideboard="true" Name="Rest in Peace" />
+  <Cards CatID="129263" Quantity="2" Sideboard="true" Name="Dawn&apos;s Truce" />
+  <Cards CatID="130195" Quantity="1" Sideboard="true" Name="Split Up" />
+  <Cards CatID="142681" Quantity="4" Sideboard="true" Name="Seam Rip" />
+</Deck>
