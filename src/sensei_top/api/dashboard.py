@@ -51,6 +51,29 @@ from starlette.responses import Response
 from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
 
+# The dashboard's Content-Security-Policy (plan D28). Starts from
+# ``default-src 'self'``; each other directive is there for something in the
+# built bundle (src/sensei_top/web_dist), found by reading it:
+# - style-src 'unsafe-inline': React ``style={...}`` props in ten files under
+#   web/src (and the chart library's) set style attributes, which only
+#   'unsafe-inline' allows. No script is inline, so script-src stays 'self'.
+# - font-src 'self' data:: the fonts are self-hosted under /assets, and
+#   index-*.css also inlines two small woff2 files as ``url(data:font/woff2...)``.
+# - img-src 'self': card images come from the API's own /api/cards/ routes
+#   (components/CardImage.tsx, CardArt.tsx); the bundle holds no data: or
+#   external image. The https:// strings in the bundle are links, not loads.
+# - connect-src is not set: fetches go to the same origin, so default-src covers them.
+# - frame-ancestors, base-uri, object-src: nothing needs otherwise.
+CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "font-src 'self' data:; "
+    "img-src 'self'; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "object-src 'none'"
+)
+
 _SEPARATORS = re.compile(r"[\\/]+")
 
 
@@ -69,6 +92,11 @@ class DashboardFiles(StaticFiles):
         returned, becomes ``index.html`` for a GET or a HEAD of a page's path.
         Any other status stands, and so does a 404 under ``api`` or
         ``assets``."""
+        response = await self._answer(path, scope)
+        response.headers["Content-Security-Policy"] = CONTENT_SECURITY_POLICY
+        return response
+
+    async def _answer(self, path: str, scope: Scope) -> Response:
         try:
             response = await super().get_response(path, scope)
         except HTTPException as exc:

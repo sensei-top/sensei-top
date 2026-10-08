@@ -153,3 +153,21 @@ def test_with_no_web_dist_a_page_address_is_404(tmp_path, monkeypatch, make_clie
 def test_web_dist_is_found_inside_the_package():
     """A wheel carries only what is inside the package, so look for the dashboard there."""
     assert Path(sensei_top.__file__).parent / "web_dist" == app_module.WEB_DIST
+
+
+@pytest.mark.parametrize("path", ["/", "/matches/abc", "/assets/app.js"])
+def test_dashboard_responses_carry_a_csp(client, path):
+    from sensei_top.api.dashboard import CONTENT_SECURITY_POLICY
+
+    # LoopbackGuard (api/guard.py) adds its own frame-ancestors-only CSP to
+    # every response, so the dashboard's arrives as a second header.
+    response = client.get(path)
+    assert response.status_code == 200
+    assert CONTENT_SECURITY_POLICY in response.headers.get_list("content-security-policy")
+
+
+def test_the_api_carries_no_dashboard_csp(client):
+    response = client.get("/api/health")
+    assert response.status_code == 200
+    for value in response.headers.get_list("content-security-policy"):
+        assert "default-src" not in value
