@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CardGrouping xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  Name="Fixture Binder"
+  NetDeckId="100000002"
+  GroupingType="Binder"
+  FormatCode=""
+  Image="0"
+  Timestamp="2026-01-01T00:00:00.000Z">
+  <Item
+    CatId="1"
+    Quantity="10"
+    IsSideboard="false"
+    Annotation="0" />
+</CardGrouping>

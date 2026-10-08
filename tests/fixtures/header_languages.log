@@ -1,0 +1,124 @@
+[UnityCrossThreadLogger]10/6/2026 2:37:04 PM
+<== EventGetActiveMatches(0000ead0-0000-4000-8000-000000000000)
+{"MatchesV3":[]}
+10/6/2026 2:37:07 PM LoadWrapperScene
+[UnityCrossThreadLogger]2026/10/06 14:37:42
+<== DeckUpsertDeckV3(0000ead0-0000-4000-8000-000000000001)
+{"DeckId":"0000ead0-0000-4000-8000-000000000002","Name":"Boros Dragons","Attributes":[{"name":"Version","value":"11"},{"name":"TileID","value":"103489"},{"name":"LastPlayed","value":"\"2026-10-06T14:37:42.5740984-03:00\""},{"name":"LastUpdated","value":"\"2026-09-27T10:49:28.5452414-03:00\""},{"name":"IsFavorite","value":"true"},{"name":"Format","value":"Standard"}],"Description":"","DeckTileId":103489,"DeckArtId":457872,"PreferredCosmetics":{"Avatar":"Avatar_Basic_Smaug_HOB","Sleeve":"CardBack_DG_416074","Pet":"","Title":"","Emotes":[]}}
+[UnityCrossThreadLogger]2026/10/06 14:37:56: SELFCLIENTID0001 to Match: ClientToGreuimessage
+{
+  "requestId": 4,
+  "clientToMatchServiceMessageType": "ClientToMatchServiceMessageType_ClientToGREUIMessage",
+  "timestamp": "639269050764443333",
+  "transactionId": "0000ead0-0000-4000-8000-000000000003",
+  "payload": {
+    "type": "ClientMessageType_UIMessage",
+    "systemSeatId": 1,
+    "uiMessage": {
+      "seatIds": [
+        2
+      ],
+      "onHover": {}
+    }
+  }
+}
+[UnityCrossThreadLogger]2026-10-06 오후 2:38:24
+<== DeckUpsertDeckV3(0000ead0-0000-4000-8000-000000000004)
+{"DeckId":"0000ead0-0000-4000-8000-000000000002","Name":"Boros Dragons","Attributes":[{"name":"Version","value":"11"},{"name":"TileID","value":"103489"},{"name":"LastPlayed","value":"\"2026-10-06T14:38:24.5108075-03:00\""},{"name":"LastUpdated","value":"\"2026-09-27T10:49:28.5452414-03:00\""},{"name":"IsFavorite","value":"true"},{"name":"Format","value":"Standard"}],"Description":"","DeckTileId":103489,"DeckArtId":457872,"PreferredCosmetics":{"Avatar":"Avatar_Basic_Smaug_HOB","Sleeve":"CardBack_DG_416074","Pet":"","Title":"","Emotes":[]}}
+[UnityCrossThreadLogger]2026-10-06 오후 2:38:37: SELFCLIENTID0001 to Match: ClientToGreuimessage
+{
+  "requestId": 4,
+  "clientToMatchServiceMessageType": "ClientToMatchServiceMessageType_ClientToGREUIMessage",
+  "timestamp": "639269051176120283",
+  "transactionId": "0000ead0-0000-4000-8000-000000000005",
+  "payload": {
+    "type": "ClientMessageType_UIMessage",
+    "systemSeatId": 1,
+    "uiMessage": {
+      "seatIds": [
+        2
+      ],
+      "onHover": {}
+    }
+  }
+}
+[UnityCrossThreadLogger]06/10/2026 14:39:17
+<== DeckUpsertDeckV3(0000ead0-0000-4000-8000-000000000006)
+{"DeckId":"0000ead0-0000-4000-8000-000000000002","Name":"Boros Dragons","Attributes":[{"name":"Version","value":"11"},{"name":"TileID","value":"103489"},{"name":"LastPlayed","value":"\"2026-10-06T14:39:17.0806914-03:00\""},{"name":"LastUpdated","value":"\"2026-09-27T10:49:28.5452414-03:00\""},{"name":"IsFavorite","value":"true"},{"name":"Format","value":"Standard"}],"Description":"","DeckTileId":103489,"DeckArtId":457872,"PreferredCosmetics":{"Avatar":"Avatar_Basic_Smaug_HOB","Sleeve":"CardBack_DG_416074","Pet":"","Title":"","Emotes":[]}}
+[UnityCrossThreadLogger]06/10/2026 14:39:30: SELFCLIENTID0001 to Match: ClientToGreuimessage
+{
+  "requestId": 5,
+  "clientToMatchServiceMessageType": "ClientToMatchServiceMessageType_ClientToGREUIMessage",
+  "timestamp": "639269051705499170",
+  "transactionId": "0000ead0-0000-4000-8000-000000000007",
+  "payload": {
+    "type": "ClientMessageType_UIMessage",
+    "systemSeatId": 1,
+    "uiMessage": {
+      "seatIds": [
+        2
+      ],
+      "onHover": {}
+    }
+  }
+}
+[UnityCrossThreadLogger]06.10.2026 14:39:58
+<== DeckUpsertDeckV3(0000ead0-0000-4000-8000-000000000008)
+{"DeckId":"0000ead0-0000-4000-8000-000000000002","Name":"Boros Dragons","Attributes":[{"name":"Version","value":"11"},{"name":"TileID","value":"103489"},{"name":"LastPlayed","value":"\"2026-10-06T14:39:58.4713837-03:00\""},{"name":"LastUpdated","value":"\"2026-09-27T10:49:28.5452414-03:00\""},{"name":"IsFavorite","value":"true"},{"name":"Format","value":"Standard"}],"Description":"","DeckTileId":103489,"DeckArtId":457872,"PreferredCosmetics":{"Avatar":"Avatar_Basic_Smaug_HOB","Sleeve":"CardBack_DG_416074","Pet":"","Title":"","Emotes":[]}}
+[UnityCrossThreadLogger]06.10.2026 14:40:12: SELFCLIENTID0001 to Match: ClientToGreuimessage
+{
+  "requestId": 5,
+  "clientToMatchServiceMessageType": "ClientToMatchServiceMessageType_ClientToGREUIMessage",
+  "timestamp": "639269052125026176",
+  "transactionId": "0000ead0-0000-4000-8000-000000000009",
+  "payload": {
+    "type": "ClientMessageType_UIMessage",
+    "systemSeatId": 1,
+    "uiMessage": {
+      "seatIds": [
+        2
+      ],
+      "onHover": {}
+    }
+  }
+}
+[UnityCrossThreadLogger]06/10/2026 14:40:39
+<== DeckUpsertDeckV3(0000ead0-0000-4000-8000-000000000010)
+{"DeckId":"0000ead0-0000-4000-8000-000000000002","Name":"Boros Dragons","Attributes":[{"name":"Version","value":"11"},{"name":"TileID","value":"103489"},{"name":"LastPlayed","value":"\"2026-10-06T14:40:39.7030703-03:00\""},{"name":"LastUpdated","value":"\"2026-09-27T10:49:28.5452414-03:00\""},{"name":"IsFavorite","value":"true"},{"name":"Format","value":"Standard"}],"Description":"","DeckTileId":103489,"DeckArtId":457872,"PreferredCosmetics":{"Avatar":"Avatar_Basic_Smaug_HOB","Sleeve":"CardBack_DG_416074","Pet":"","Title":"","Emotes":[]}}
+[UnityCrossThreadLogger]06/10/2026 14:40:53: SELFCLIENTID0001 to Match: ClientToGreuimessage
+{
+  "requestId": 4,
+  "clientToMatchServiceMessageType": "ClientToMatchServiceMessageType_ClientToGREUIMessage",
+  "timestamp": "639269052534892993",
+  "transactionId": "0000ead0-0000-4000-8000-000000000011",
+  "payload": {
+    "type": "ClientMessageType_UIMessage",
+    "systemSeatId": 1,
+    "uiMessage": {
+      "seatIds": [
+        2
+      ],
+      "onHover": {}
+    }
+  }
+}
+[UnityCrossThreadLogger]06/10/2026 14:41:19
+<== DeckUpsertDeckV3(0000ead0-0000-4000-8000-000000000012)
+{"DeckId":"0000ead0-0000-4000-8000-000000000002","Name":"Boros Dragons","Attributes":[{"name":"Version","value":"11"},{"name":"TileID","value":"103489"},{"name":"LastPlayed","value":"\"2026-10-06T14:41:19.6067322-03:00\""},{"name":"LastUpdated","value":"\"2026-09-27T10:49:28.5452414-03:00\""},{"name":"IsFavorite","value":"true"},{"name":"Format","value":"Standard"}],"Description":"","DeckTileId":103489,"DeckArtId":457872,"PreferredCosmetics":{"Avatar":"Avatar_Basic_Smaug_HOB","Sleeve":"CardBack_DG_416074","Pet":"","Title":"","Emotes":[]}}
+[UnityCrossThreadLogger]06/10/2026 14:41:34: SELFCLIENTID0001 to Match: ClientToGreuimessage
+{
+  "requestId": 4,
+  "clientToMatchServiceMessageType": "ClientToMatchServiceMessageType_ClientToGREUIMessage",
+  "timestamp": "639269052948919851",
+  "transactionId": "0000ead0-0000-4000-8000-000000000013",
+  "payload": {
+    "type": "ClientMessageType_UIMessage",
+    "systemSeatId": 1,
+    "uiMessage": {
+      "seatIds": [
+        2
+      ],
+      "onHover": {}
+    }
+  }
+}

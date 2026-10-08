@@ -1,0 +1,32 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+*.db
+*.db-wal
+*.db-shm
+# Daily backup slots (src/sensei_top/backup/). *.db does not match these --
+# today they are covered only because `data/` is ignored wholesale below, but
+# the backup destination is configurable ($SENSEI_TOP_BACKUP_DIR / [backup] dir),
+# so a slot can land outside data/ too.
+*.db.backup
+*.db.backup.[0-9]*
+.env
+data/
+dist/
+src/sensei_top/web_dist/
+build/
+.claude/handoffs/
+# Per-user Claude Code settings; the shared skill under .claude/skills/ stays tracked.
+.claude/settings.local.json
+# Local agent definitions and the plan-running skill: they name plans and
+# handoffs that live outside the tree. navigating-sensei-top stays tracked.
+.claude/agents/
+.claude/skills/running-a-plan/
+# The unattended driver and its state, logs and session prompt; names home paths.
+.claude/overnight/
+# Personal deck prep (guides, sideboard plans, one-off scripts), kept on disk
+# but out of the repo; the Deck guide tab is the product's version of it.
+guides/
