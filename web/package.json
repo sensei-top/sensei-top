@@ -1,7 +1,7 @@
 {
   "name": "sensei-top-web",
   "private": true,
-  "version": "0.7.1",
+  "version": "0.7.2",
   "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
@@ -12,6 +12,7 @@
     "test": "vitest run",
     "preview": "vite preview",
     "shots": "node scripts/screenshots.mjs",
+    "site:images": "node scripts/site-images.mjs",
     "gen:types": "uv run --project .. python ../scripts/dump_openapi.py > openapi.json && openapi-typescript openapi.json -o src/types/api.ts"
   },
   "dependencies": {

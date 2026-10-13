@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-10-13
+
+The app is the same as 0.7.1's; this release carries the website.
+
+### Added
+
+- A help page on senseitop.com, in English and Brazilian Portuguese:
+  installing, the first run, Magic Online, what to do when something looks
+  wrong, and how to send a problem report.
+
+### Changed
+
+- The home page, rewritten in both languages around screenshots of the
+  dashboard. They come from a copy of a real database with every player
+  name and identifier replaced.
+- A link to the site shared in a chat or a post shows a preview card.
+- Visitors in Brazil land on the Portuguese help page, as they already did
+  on the home and privacy pages.
+- The bug report forms say the version is in Settings, under App.
+
 ## [0.7.1] - 2026-10-13
 
 ### Fixed
@@ -63,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keeps recording with the window closed, and start-with-Windows as an
   option. On Linux, an AppImage that updates itself in place.
 
-[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/sensei-top/sensei-top/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/sensei-top/sensei-top/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/sensei-top/sensei-top/releases/tag/v0.7.0

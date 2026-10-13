@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ajuda · Sensei Top</title>
+<meta name="description" content="Como instalar o Sensei Top, configurá-lo e enviar um relatório de problema.">
+<link rel="canonical" href="https://senseitop.com/pt-br/help/">
+<link rel="alternate" hreflang="en" href="https://senseitop.com/help/">
+<link rel="alternate" hreflang="pt-BR" href="https://senseitop.com/pt-br/help/">
+<link rel="alternate" hreflang="x-default" href="https://senseitop.com/help/">
+<meta name="theme-color" content="#0b0c14">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sensei Top">
+<meta property="og:title" content="Ajuda · Sensei Top">
+<meta property="og:description" content="Como instalar o Sensei Top, configurá-lo e enviar um relatório de problema.">
+<meta property="og:url" content="https://senseitop.com/pt-br/help/">
+<meta property="og:image" content="https://senseitop.com/img/og-pt-br.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A página Início do dashboard do Sensei Top: o retrospecto da última sessão e a última partida.">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/site.css">
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "73e9bc45819145e3afbbde2244e8d023"}'></script>
+</head>
+<body>
+<div class="page">
+
+<header class="site-header">
+<a class="brand" href="/pt-br/"><img src="/img/mark.svg" alt="" width="28" height="28">Sensei Top</a>
+<nav>
+<a href="/pt-br/#download">Baixar</a>
+<a href="/pt-br/help/">Ajuda</a>
+<a href="/pt-br/#never-leaves">Privacidade</a>
+<a href="/pt-br/#donate">Doar</a>
+</nav>
+<div class="lang" role="group" aria-label="Idioma" title="Idioma"><a href="/help/" hreflang="en" lang="en" title="Read in English" aria-label="English">EN</a><span aria-current="page">PT</span></div>
+</header>
+
+<main>
+<h1>Ajuda</h1>
+<p class="lead">Como instalar o Sensei Top, configurá-lo e o que fazer quando algo parece errado. Se a sua dúvida não estiver aqui, pergunte nas <a href="https://github.com/sensei-top/sensei-top/discussions">Discussions</a>.</p>
+<ul class="toc">
+<li><a href="#install">Instalar</a></li>
+<li><a href="#first-run">A primeira vez</a></li>
+<li><a href="#mtgo">Magic Online</a></li>
+<li><a href="#troubleshooting">Algo parece errado</a></li>
+<li><a href="#report">Enviar um relatório de problema</a></li>
+</ul>
+
+<section id="install">
+<h2>Instalar</h2>
+<h3>Windows</h3>
+<ol>
+<li>Baixe <a href="/download/windows">o instalador</a>, um arquivo terminado em <code>.exe</code>.</li>
+<li>Abra-o. Se o Windows disser <strong>O Windows protegeu o computador</strong>, clique em <strong>Mais informações</strong> e depois em <strong>Executar assim mesmo</strong>. O instalador ainda não tem assinatura de código, então o SmartScreen do Microsoft Defender o bloqueia na primeira vez.</li>
+<li>Escolha o idioma, English ou Português (Brasil). O aplicativo abre no mesmo.</li>
+<li>Na última página, escolha se o Sensei Top abre quando o Windows iniciar. Deixe ligado se puder: o aplicativo só registra os jogos enquanto está rodando.</li>
+</ol>
+<p>Ele é instalado só para o seu usuário do Windows e nunca pede permissão de administrador. Fechar a janela deixa o aplicativo rodando na bandeja do sistema, ainda registrando; para sair, use o menu do ícone na bandeja.</p>
+<h3>Linux e Steam Deck</h3>
+<ol>
+<li>Baixe <a href="/download/linux">o AppImage</a>, um arquivo terminado em <code>.AppImage</code>, e mova-o para uma pasta sua, como <code>Applications</code> na sua pasta pessoal. Ele se atualiza substituindo esse arquivo, então deixe-o num lugar onde você possa escrever.</li>
+<li>Abra as propriedades do arquivo, permita que ele seja executado como programa e clique duas vezes nele. No Steam Deck, faça isso no modo desktop.</li>
+</ol>
+<p>No Linux, fechar a janela encerra o aplicativo, e os jogos que você jogar depois não são registrados. Para mantê-lo rodando, ligue <b>Continuar rodando com a janela fechada</b> em <b>Configurações</b>, na seção <b>Aplicativo</b>. Se o aplicativo não abrir, o <a href="https://github.com/sensei-top/sensei-top/blob/main/INSTALL.md#linux">guia de instalação</a> (em inglês) tem a solução para cada sistema.</p>
+</section>
+
+<section id="first-run">
+<h2>A primeira vez</h2>
+<p>Na primeira vez que abre, o aplicativo guia você pela configuração, um passo de cada vez:</p>
+<ol>
+<li><b>Idioma</b>: inglês ou português. Dá para mudar depois em Configurações.</li>
+<li><b>Boas-vindas ao Sensei Top</b>: o que o aplicativo lê e o que sai do seu computador.</li>
+<li><b>Arena</b>: o aplicativo procura o log do Arena e confere se os Registros detalhados estão ligados. Se estiverem desligados: no Arena, abra <b>Opções</b>, depois <b>Conta</b>, marque <b>Registros detalhados (suporte de plugin)</b>, feche o Arena e abra-o de novo, e então aperte <b>Verificar de novo</b>. Sem os Registros detalhados, falta no log do Arena quase tudo o que o aplicativo lê. Se você só joga Magic Online, pule este passo.</li>
+<li><b>Dados dos cards</b>: aperte <b>Baixar dados dos cards</b>. São cerca de 80 MB e depois alguns minutos para descompactar, e você pode seguir enquanto isso roda.</li>
+<li><b>Magic Online</b>: <a href="#mtgo">veja abaixo</a>. Pule se você não joga Magic Online.</li>
+<li><b>Pronto</b>: jogue uma partida. Ela aparece no <b>Início</b> quando termina. No Linux, este passo também oferece <b>Abrir o Sensei Top ao entrar no computador</b>.</li>
+</ol>
+<p>Para passar pelos passos de novo, abra <b>Configurações</b>, depois <b>Aplicativo</b>, e aperte <b>Passar por eles de novo</b>.</p>
+<p><strong>Deixe o aplicativo rodando enquanto joga.</strong> O Arena esvazia o log toda vez que abre e guarda a sessão anterior só até abrir de novo. Uma sessão jogada com o Sensei Top fechado se perde depois de duas aberturas do Arena. <b>Abrir quando o Windows iniciar</b>, ou <b>Abrir quando você entrar no computador</b> no Linux, na seção <b>Aplicativo</b> das <b>Configurações</b>, resolve isso.</p>
+</section>
+
+<section id="mtgo">
+<h2>Magic Online</h2>
+<p>O log do Magic Online nunca diz qual jogador é você nem qual deck você jogou, então o aplicativo precisa de duas coisas suas, no passo de boas-vindas ou depois em <b>Configurações</b>, na seção <b>Fontes</b>:</p>
+<ul>
+<li><b>Seu nome no Magic Online</b>, para distinguir os seus jogos dos de seus oponentes.</li>
+<li>A <b>Pasta dos logs de jogo</b>, onde o Magic Online escreve arquivos chamados <code>Match_GameLog</code>. No Windows, quando o aplicativo encontra a pasta em que o Magic Online está escrevendo, ele a preenche para você salvar. Se não, ela fica em <code>AppData\Local\Apps\2.0\Data</code>; no Wine ou no Proton, dentro da pasta <code>drive_c</code> desse prefixo.</li>
+</ul>
+<p>Cada jogo é lido quando termina. O Magic Online muda essa pasta de lugar quando se atualiza; se jogos novos pararem de aparecer, escolha a pasta de novo em <b>Configurações</b>, na seção <b>Fontes</b>.</p>
+<p>Uma partida do Magic Online conta para um dos seus decks depois que você escolhe o deck. Abra a partida e responda <b>Qual deck foi este?</b>; com muitas partidas esperando, use o card <b>Precisa de um deck</b> no <b>Início</b>. Ele agrupa as partidas pelo deck salvo no Magic Online que tem mais cards dos que você jogou, e uma confirmação escolhe esse deck para o grupo inteiro. Partidas do Magic Online nunca aparecem em <b>Ao vivo</b>, que acompanha só o Arena.</p>
+</section>
+
+<section id="troubleshooting">
+<h2>Algo parece errado</h2>
+<h3>Nenhuma partida do Arena aparece</h3>
+<p>Confira se <b>Registros detalhados (suporte de plugin)</b> está marcado no Arena e se o Arena foi reaberto depois disso. Depois abra <b>Configurações</b>, na seção <b>Fontes</b>: ela diz se o aplicativo encontrou o log do Arena. Se você roda o Arena pelo Lutris, pelo Bottles ou por um prefixo do Wine seu, informe o <b>Arquivo de log</b> ali; o <a href="https://github.com/sensei-top/sensei-top/blob/main/INSTALL.md#linux">guia de instalação</a> diz onde ele fica.</p>
+<h3>Faltam partidas de uma sessão anterior</h3>
+<p>O Arena esvazia o log toda vez que abre. Uma sessão jogada com o Sensei Top fechado continua no log até a próxima abertura do Arena e se perde depois disso. Deixe o aplicativo rodando sempre que jogar.</p>
+<h3>O aplicativo diz <b>Acompanhamento parado</b> ou <b>Tracker parado</b></h3>
+<p>Saia do Sensei Top e abra-o de novo. No Windows, saia pelo menu do ícone na bandeja: fechar a janela o deixa rodando. Se acontecer de novo, <a href="#report">envie um relatório de problema</a>: o motivo está no log do aplicativo.</p>
+<h3>O aplicativo não abre</h3>
+<p>A janela dele diz onde fica o arquivo de log. Envie esse arquivo com algumas linhas sobre o que aconteceu, <a href="#where">como explicado abaixo</a>.</p>
+<h3>Datas ou horários parecem errados</h3>
+<p>Em <b>Configurações</b>, na seção <b>Fontes</b>, mude a <b>Ordem da data</b> para <b>Dia primeiro</b> ou <b>Mês primeiro</b> em vez de <b>Ler do log</b>.</p>
+<h3>Falta uma partida do Magic Online</h3>
+<p>Confira <b>Seu nome lá</b> e a <b>Pasta dos logs de jogo</b> em <b>Configurações</b>, na seção <b>Fontes</b>. Depois de uma atualização do Magic Online, a pasta normalmente mudou de lugar. Um jogo só aparece depois de terminar.</p>
+<h3>O deck do oponente está errado ou sem nome</h3>
+<p>O aplicativo nomeia o deck do oponente pelos cards que ele revelou, então um jogo em que ele mostrou poucos cards pode ficar com o nome errado ou sem nome. Na página da partida, aperte <b>Corrigir o deck</b> e escolha o certo. O aplicativo guarda a sua escolha.</p>
+</section>
+
+<section id="report">
+<h2>Enviar um relatório de problema</h2>
+<p>Quando algo está errado, uma exportação de diagnóstico mostra o que o aplicativo viu. Leva um minuto.</p>
+<ol>
+<li>Abra <b>Configurações</b>, depois <b>Aplicativo</b>, e aperte <b>Exportar diagnóstico</b>. O menu do ícone na bandeja tem a mesma opção.</li>
+<li>Uma janela lista o que vai no arquivo. Deixe <b>Incluir o Player.log</b> desmarcado, a menos que peçam: o log do Arena tem os nomes dos seus oponentes e os seus decks.</li>
+<li>Aperte <b>Salvar como…</b> e escolha onde salvar o zip.</li>
+<li>Envie o zip com algumas linhas: o que você fez, o que esperava, o que o aplicativo mostrou e o que o jogo mostrou.</li>
+</ol>
+<h3>O que vai no zip</h3>
+<ul>
+<li>Os arquivos de log do próprio aplicativo.</li>
+<li>As configurações do aplicativo, sem nenhuma chave e sem o seu nome no Magic Online.</li>
+<li>O que o aplicativo consegue encontrar no seu computador: o log do Arena, a pasta do Magic Online, os dados dos cards e o banco de dados.</li>
+<li>Quantas linhas cada tabela do banco de dados tem. Só a contagem, nunca as linhas.</li>
+</ul>
+<p>Nunca vai nele: o seu banco de dados, portanto nenhuma das suas partidas, e nenhuma chave. O <code>Player.log</code> do Arena só vai se você marcar a caixa.</p>
+<h3>Um problema que vai e volta</h3>
+<p>Ligue o <b>Modo de diagnóstico</b> em <b>Configurações</b>, na seção <b>Aplicativo</b>. O aplicativo passa a escrever muito mais detalhe no log; ligar ou desligar reinicia o tracker por um instante. Use o aplicativo até o problema aparecer de novo, exporte e depois desligue.</p>
+<h3 id="where">Para onde enviar</h3>
+<p>Abra uma issue com o <a href="https://github.com/sensei-top/sensei-top/issues/new?template=bug.yml">formulário de bug</a> e anexe o zip. O formulário está em inglês, mas pode escrever em português. Issues são públicas, então nunca anexe o <code>Player.log</code> a uma. Se algo parou de aparecer depois de uma atualização do Arena ou do Magic Online, o <a href="https://github.com/sensei-top/sensei-top/issues/new?template=log-change.yml">formulário de mudança no log</a> é o mais indicado. Para enviar um relatório em particular, mande por e-mail para <a href="mailto:contact@senseitop.com">contact@senseitop.com</a>. Uma dúvida, e não um problema, vai para as <a href="https://github.com/sensei-top/sensei-top/discussions">Discussions</a>.</p>
+</section>
+</main>
+
+<footer class="site-footer">
+<p lang="en">Sensei Top is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.</p>
+<p>Os dados e as imagens de cards vêm do <a href="https://scryfall.com">Scryfall</a>, os resultados de torneios do <a href="https://github.com/fbettega/MTG_decklistcache">MTG_decklistcache</a> e do <a href="https://topdeck.gg">TopDeck.gg</a>, e as definições de arquétipos do <a href="https://github.com/Badaro/MTGOFormatData">MTGOFormatData</a>. Nenhum deles produz ou endossa o Sensei Top. O que é usado de cada um, e em quais termos, está na <a href="https://github.com/sensei-top/sensei-top/blob/main/docs/attribution.md">página de atribuição</a>.</p>
+<p><a href="/pt-br/">Início</a> · <a href="/pt-br/privacy/">Privacidade</a> · <a href="/help/" hreflang="en" lang="en">English</a></p>
+</footer>
+
+</div>
+</body>
+</html>

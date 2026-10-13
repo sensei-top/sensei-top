@@ -87,6 +87,8 @@ jobs:
         env:
           BUILD_VERSION: ${{ inputs.version }}
           BUILD_UPDATE_URL: ${{ inputs.update_url }}
+      # One day: the private repository's Actions storage is metered by GB-day and its
+      # 0.5 GB went in five days of hand-run builds (469 MB each). Download the same day.
       - uses: actions/upload-artifact@v7
         with:
           name: sensei-top-windows
@@ -95,7 +97,7 @@ jobs:
             desktop/release/*.appx
             desktop/release/*.blockmap
             desktop/release/latest.yml
-          retention-days: 7
+          retention-days: 1
           if-no-files-found: error
 
   linux:
@@ -160,7 +162,7 @@ jobs:
           path: |
             desktop/release/*.AppImage
             desktop/release/latest-linux.yml
-          retention-days: 7
+          retention-days: 1
           if-no-files-found: error
 
   # The release is created with every asset in one command: a draft is invisible to

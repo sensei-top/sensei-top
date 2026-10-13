@@ -1026,6 +1026,27 @@ def _gather_terms(args: argparse.Namespace, repo: Path) -> tuple[list[Term], fro
     return terms, card_words
 
 
+def terms_for_demo(db: Path) -> list[Term]:
+    """The terms ``scripts/demo_db.py`` rewrites in a copy of ``db``: every
+    term this scan derives from that database (``arena-name``, ``arena-id``,
+    ``opponent``, ``mtgo-player``), plus this machine's MTGO handle, OS user
+    and home directory, filtered exactly as a scan filters them (card words
+    never count). ``db`` is opened ``mode=ro`` and must exist. No credential
+    is read. The loaders' own warnings are silenced for the call, as ``main``
+    silences them, since one can name a config file's absolute path."""
+    previous_disable_level = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            terms = _terms_from_mtgo_handle() + _terms_from_os_user() + _terms_from_home()
+            db_terms, card_words = _terms_from_db(db)
+    finally:
+        logging.disable(previous_disable_level)
+    dropped = {"short": 0, "generic": 0, "card-word": 0}
+    return _filter_terms(terms + db_terms, card_words, dropped)
+
+
 def _run(args: argparse.Namespace) -> int:
     repo = Path(args.repo)
     _check_git_repo(repo)

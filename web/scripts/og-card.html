@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Open Graph card</title>
+<!--
+  The 1200x630 card a link to the site unfurls into (plan 21, D13). Not a
+  page of the site: `site-images.mjs` opens it by file URL in a browser,
+  fills the three `data-slot` elements and the screenshot from its
+  language table, and photographs it to `og.png`. The fonts are the site's
+  own, from site/fonts/, and the colours are site.css's custom properties
+  copied by hand, as site/img/mark.svg does.
+-->
+<style>
+@font-face {
+  font-family: "Bricolage Grotesque Variable";
+  font-weight: 200 800;
+  src: url(../../site/fonts/bricolage-grotesque-latin-ext-wght-normal.woff2) format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Bricolage Grotesque Variable";
+  font-weight: 200 800;
+  src: url(../../site/fonts/bricolage-grotesque-latin-wght-normal.woff2) format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Hanken Grotesk Variable";
+  font-weight: 100 900;
+  src: url(../../site/fonts/hanken-grotesk-latin-ext-wght-normal.woff2) format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Hanken Grotesk Variable";
+  font-weight: 100 900;
+  src: url(../../site/fonts/hanken-grotesk-latin-wght-normal.woff2) format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  --plane: #0b0c14;
+  --edge: rgb(150 160 230 / 0.14);
+  --ink: #f2f3f8;
+  --ink-2: #b9bdd0;
+  --accent: #f4b6e4;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  position: relative;
+  width: 1200px;
+  height: 630px;
+  overflow: hidden;
+  background: var(--plane);
+  color: var(--ink);
+  font-family: "Hanken Grotesk Variable", "Segoe UI", system-ui, sans-serif;
+}
+
+.copy {
+  position: absolute;
+  top: 56px;
+  left: 64px;
+  width: 560px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 36px;
+  font-family: "Bricolage Grotesque Variable", "Segoe UI", system-ui, sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.brand img { width: 44px; height: 44px; }
+
+h1 {
+  margin: 0 0 24px;
+  font-family: "Bricolage Grotesque Variable", "Segoe UI", system-ui, sans-serif;
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+}
+
+.lead {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 19px;
+  line-height: 1.45;
+}
+
+/* A slice of the Home page, its left edge flush with the card's right half
+   and its right edge running off the card. */
+.shot {
+  position: absolute;
+  top: 84px;
+  left: 690px;
+  width: 1080px;
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.5);
+}
+
+/* The accent, as a thin rule along the card's foot. */
+.rule {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 6px;
+  background: var(--accent);
+}
+</style>
+</head>
+<body>
+<div class="copy">
+  <div class="brand"><img src="../../site/img/mark.svg" alt=""><span data-slot="brand"></span></div>
+  <h1 data-slot="title"></h1>
+  <p class="lead" data-slot="lead"></p>
+</div>
+<img class="shot" id="shot" alt="">
+<div class="rule"></div>
+</body>
+</html>

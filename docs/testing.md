@@ -166,7 +166,8 @@ ignored" from the session, so a harness that tests Ctrl+C calls
 
 `.github/workflows/desktop.yml` is the packaging workflow, separate from the
 checks above: by hand (`workflow_dispatch`, which builds both packages as
-artifacts kept 7 days and never publishes) and on a pushed tag `v*`. Every job is skipped for a tag
+artifacts kept one day, since the private repository's storage is metered,
+and never publishes) and on a pushed tag `v*`. Every job is skipped for a tag
 pushed anywhere but `sensei-top/sensei-top`, so tagging in the private
 repository costs nothing. On a tag in the public one the two builds first
 check that the tag is `v` plus `pyproject.toml`'s version, then a third job,

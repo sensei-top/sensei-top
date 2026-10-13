@@ -1,7 +1,13 @@
 # Sensei Top user guide
 
-How to use Sensei Top once it is installed. To install it, start with
-[INSTALL.md](../../INSTALL.md).
+The help for the installed app is on the website, in English and
+Portuguese: [senseitop.com/help](https://senseitop.com/help/) covers
+installing, the first run, Magic Online, troubleshooting and sending a
+problem report, with no terminal in it.
+
+These pages are the reference behind it: running Sensei Top from source,
+the command line, and what each dashboard page shows, which the website
+does not cover yet. To install it, start with [INSTALL.md](../../INSTALL.md).
 
 - [Getting started](getting-started.md): running it from source, pointing
   it at Arena's log, the date order of your log.

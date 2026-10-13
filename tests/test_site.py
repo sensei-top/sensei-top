@@ -1,6 +1,6 @@
 """The static site in `site/` keeps the promises its own copy makes.
 
-Five hand-written pages, no build step (`docs/frontend.md`, "The site"). The
+Seven hand-written pages, no build step (`docs/frontend.md`, "The site"). The
 checks read the HTML with the standard library's parser: the pages are small
 enough that a structural slip (a second script, a refresh, a link to the wrong
 repository, a drifted Fan Content notice) is the realistic failure, and none of
@@ -10,14 +10,17 @@ it shows in a browser until a visitor meets it.
 import json
 import re
 import shutil
+import struct
 import subprocess
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import pytest
 from test_attribution import WIZARDS_NOTICE
 
-SITE = Path(__file__).resolve().parents[1] / "site"
+ROOT = Path(__file__).resolve().parents[1]
+SITE = ROOT / "site"
 ORIGIN = "https://senseitop.com"
 PROJECT = "https://github.com/sensei-top/sensei-top"
 BEACON_SRC = "https://static.cloudflareinsights.com/beacon.min.js"
@@ -30,14 +33,22 @@ PAGES = {
     "/privacy/": ("privacy/index.html", "en", "/pt-br/privacy/"),
     "/pt-br/": ("pt-br/index.html", "pt-BR", "/"),
     "/pt-br/privacy/": ("pt-br/privacy/index.html", "pt-BR", "/privacy/"),
+    "/help/": ("help/index.html", "en", "/pt-br/help/"),
+    "/pt-br/help/": ("pt-br/help/index.html", "pt-BR", "/help/"),
 }
 ALL_PAGES = list(PAGES)
+# The landing's feature rows, one per place in the dashboard's rail.
+FEATURE_IDS = {"home", "live", "matches", "decks", "field", "coach"}
 # The 404 page is one page in both languages: no counterpart, no hreflang pair,
 # no description meta. It is in every list the shell pages share and out of
 # the ones about language and the head.
 NOT_FOUND = "/404.html"
 SHELL_PAGES = [*ALL_PAGES, NOT_FOUND]
-PAGE_WEIGHT_LIMIT = 600 * 1024
+FIRST_PAINT_LIMIT = 600 * 1024
+WHOLE_PAGE_LIMIT = 1024 * 1024
+LANDINGS = ["/", "/pt-br/"]
+# The pages whose head carries the Open Graph card: all six, never the 404.
+OPEN_GRAPH_PAGES = ALL_PAGES
 
 
 class Page(HTMLParser):
@@ -56,6 +67,8 @@ class Page(HTMLParser):
         self._in_script = False
         self.links: list[tuple[str, str]] = []  # (href, text) of every <a>
         self._link: tuple[str, list[str]] | None = None
+        self.labels: list[str] = []  # text of every <b>
+        self._label: list[str] | None = None
 
     def handle_starttag(self, tag, attrs):
         attributes = dict(attrs)
@@ -66,6 +79,8 @@ class Page(HTMLParser):
             self.ids.add(attributes["id"])
         if tag == "p":
             self._paragraph = []
+        if tag == "b":
+            self._label = []
         if tag == "script":
             self._in_script = True
         if tag in ("script", "style", "title"):
@@ -78,6 +93,9 @@ class Page(HTMLParser):
         if tag == "p" and self._paragraph is not None:
             self.paragraphs.append("".join(self._paragraph))
             self._paragraph = None
+        if tag == "b" and self._label is not None:
+            self.labels.append("".join(self._label))
+            self._label = None
         if tag == "script":
             self._in_script = False
         if tag in ("script", "style", "title"):
@@ -86,6 +104,8 @@ class Page(HTMLParser):
     def handle_data(self, data):
         if self._link is not None:
             self._link[1].append(data)
+        if self._label is not None:
+            self._label.append(data)
         if self._in_script:
             self.script_bodies.append(data)
         if self._skip:
@@ -226,11 +246,15 @@ def test_no_page_refreshes_itself(url_path):
 
 @pytest.mark.parametrize("url_path", ALL_PAGES)
 def test_the_head_describes_the_page(url_path):
-    _, page = load(url_path)
+    raw, page = load(url_path)
     viewport = [a for a in page.find("meta") if a.get("name") == "viewport"]
     description = [a for a in page.find("meta") if a.get("name") == "description"]
     assert len(viewport) == 1
     assert len(description) == 1 and description[0]["content"]
+    assert len(re.findall(r"<title>[^<]+</title>", raw)) == 1
+    # The Open Graph card says what the page itself says.
+    assert meta(page, "og:title") == [re.search(r"<title>([^<]+)</title>", raw).group(1)]
+    assert [a["href"] for a in page.find("link") if a.get("rel") == "icon"] == ["/favicon.svg"]
 
 
 @pytest.mark.parametrize("url_path", SHELL_PAGES)
@@ -246,8 +270,13 @@ def test_images_carry_alt_text_and_the_mark_is_decorative(url_path):
 @pytest.mark.parametrize("url_path", SHELL_PAGES)
 def test_local_references_resolve(url_path):
     _, page = load(url_path)
+    own = "/404.html" if url_path == NOT_FOUND else url_path
     references = [h for h in hrefs(page) if h.startswith("/") and h not in DOWNLOADS]
+    references += [own + h for h in hrefs(page) if h.startswith("#")]
     references += [a["src"] for a in page.find("img")]
+    references += [
+        urlsplit(a["content"]).path for a in page.find("meta") if a.get("property") == "og:image"
+    ]
     references += [a["href"] for a in page.find("link") if a["href"].startswith("/")]
     assert references
     anchors: dict[str, Page] = {}
@@ -262,6 +291,157 @@ def test_local_references_resolve(url_path):
                 anchors[target] = Page()
                 anchors[target].feed(target.read_text(encoding="utf-8"))
             assert fragment in anchors[target].ids, reference
+
+
+@pytest.mark.parametrize("url_path", ALL_PAGES)
+def test_both_languages_share_the_anchors(url_path):
+    """A link to a section works the same after the language switcher is pressed."""
+    _, page = load(url_path)
+    _, counterpart = load(PAGES[url_path][2])
+    assert page.ids == counterpart.ids
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_the_landing_has_the_feature_rows_in_the_rails_order(url_path):
+    _, page = load(url_path)
+    rows = [a["id"] for t, a in page.tags if t == "section" and "feature" in (a.get("class") or "")]
+    assert rows == ["home", "live", "matches", "decks", "field", "coach"]
+    assert page.ids >= FEATURE_IDS
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_the_hero_image_is_the_only_eager_one_on_the_landing(url_path):
+    _, page = load(url_path)
+    images = [a for a in page.find("img") if a["src"] != "/img/mark.svg"]
+    eager = [a for a in images if a.get("loading") != "lazy"]
+    assert len(eager) == 1
+    # The first content image in the document, so a lazy hero beside an eager
+    # Home row fails.
+    assert eager[0] is images[0]
+    assert eager[0]["src"] == ("/img/home.webp" if url_path == "/" else "/img/pt-br/home.webp")
+    assert eager[0].get("fetchpriority") == "high"
+    for img in images:
+        if img is not eager[0]:
+            assert img.get("loading") == "lazy", img["src"]
+            assert "fetchpriority" not in img
+        assert (img["width"], img["height"]) == ("1440", "900"), img["src"]
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_the_landing_preloads_the_two_latin_fonts_the_stylesheet_uses(url_path):
+    _, page = load(url_path)
+    css = (SITE / "site.css").read_text(encoding="utf-8")
+    preloads = [a for a in page.find("link") if a.get("rel") == "preload"]
+    assert sorted(a["href"] for a in preloads) == [
+        "/fonts/bricolage-grotesque-latin-wght-normal.woff2",
+        "/fonts/hanken-grotesk-latin-wght-normal.woff2",
+    ]
+    for link in preloads:
+        assert link["as"] == "font" and link["type"] == "font/woff2"
+        assert "crossorigin" in link
+        assert link["href"].removeprefix("/") in css
+
+
+def meta(page: Page, key: str, name: str = "property") -> list[str]:
+    return [a["content"] for a in page.find("meta") if a.get(name) == key]
+
+
+def plane() -> str:
+    """`--plane` on `:root` in the stylesheet: the colour `theme-color` must be."""
+    match = re.search(r"--plane:\s*(#[0-9a-fA-F]{6})\s*;", (SITE / "site.css").read_text("utf-8"))
+    assert match
+    return match.group(1).lower()
+
+
+@pytest.mark.parametrize("url_path", OPEN_GRAPH_PAGES)
+def test_the_head_carries_the_open_graph_card(url_path):
+    _, page = load(url_path)
+    _, lang, _ = PAGES[url_path]
+    english = lang == "en"
+    assert meta(page, "og:type") == ["website"]
+    assert meta(page, "og:site_name") == ["Sensei Top"]
+    assert meta(page, "og:url") == [ORIGIN + url_path]
+    assert meta(page, "og:description") == meta(page, "description", "name")
+    assert len(meta(page, "og:title")) == 1 and meta(page, "og:title")[0]
+    assert meta(page, "og:locale") == ["en_US" if english else "pt_BR"]
+    assert meta(page, "og:locale:alternate") == ["pt_BR" if english else "en_US"]
+    assert meta(page, "twitter:card", "name") == ["summary_large_image"]
+    assert meta(page, "theme-color", "name") == [plane()]
+    assert len(meta(page, "og:image:alt")) == 1 and meta(page, "og:image:alt")[0]
+    image = meta(page, "og:image")
+    # A reading page describes the card the way its language's landing does.
+    assert meta(page, "og:image:alt") == meta(
+        load("/" if english else "/pt-br/")[1], "og:image:alt"
+    )
+    assert image == [f"{ORIGIN}/img/og-{'en' if english else 'pt-br'}.png"]
+    png = (SITE / urlsplit(image[0]).path.lstrip("/")).read_bytes()
+    assert png[:8] == b"\x89PNG\r\n\x1a\n" and png[12:16] == b"IHDR"
+    width, height = struct.unpack(">II", png[16:24])
+    assert (width, height) == (1200, 630)
+    assert (meta(page, "og:image:width"), meta(page, "og:image:height")) == (["1200"], ["630"])
+
+
+def catalogue_strings(lang: str) -> list[str]:
+    """Every string the dashboard and the desktop shell show, in one language."""
+
+    def walk(node) -> list[str]:
+        if isinstance(node, dict):
+            return [s for value in node.values() for s in walk(value)]
+        return [node] if isinstance(node, str) else []
+
+    files = sorted((ROOT / "web" / "src" / "locales" / lang).glob("*.json"))
+    files.append(ROOT / "desktop" / "src" / "locales" / f"{lang}.json")
+    return [s for f in files for s in walk(json.loads(f.read_text(encoding="utf-8")))]
+
+
+@pytest.mark.parametrize("url_path", SHELL_PAGES)
+def test_every_app_label_is_the_apps_own_words(url_path):
+    """`<b>` quotes a label the app or Arena shows, so it must match the catalogue.
+
+    A renamed button would otherwise leave the help page naming one that no
+    longer exists. Arena's own labels count because the welcome step's
+    instructions quote them. Anything else set in bold, a Windows dialog or a
+    warning, is `<strong>`.
+    """
+    _, page = load(url_path)
+    lang = "en" if url_path == NOT_FOUND else PAGES[url_path][1]
+    strings = catalogue_strings(lang)
+    for label in page.labels:
+        phrase = re.compile(rf"(?<!\w){re.escape(label)}(?!\w)")
+        assert any(phrase.search(s) for s in strings), (url_path, label)
+
+
+def test_the_help_pages_quote_the_app():
+    for url_path in ("/help/", "/pt-br/help/"):
+        _, page = load(url_path)
+        assert len(page.labels) > 20, url_path
+    english = load("/help/")[1].labels
+    portuguese = load("/pt-br/help/")[1].labels
+    assert len(english) == len(portuguese)
+
+
+def test_the_404_page_has_no_card_and_keeps_its_head_bare():
+    _, page = load(NOT_FOUND)
+    assert not [a for a in page.find("meta") if (a.get("property") or "").startswith("og:")]
+    assert not meta(page, "twitter:card", "name")
+    assert not meta(page, "theme-color", "name")
+    assert not meta(page, "description", "name")
+
+
+@pytest.mark.parametrize("url_path", SHELL_PAGES)
+def test_the_header_reads_the_same_on_every_page(url_path):
+    """Download, Help, Privacy, Donate: the landing's header, the same four targets site-wide."""
+    raw, _ = load(url_path)
+    english = url_path == NOT_FOUND or PAGES[url_path][1] == "en"
+    prefix = "" if english else "/pt-br"
+    nav = Page()
+    nav.feed(re.search(r"<nav>(.*?)</nav>", raw, re.S).group(1))
+    assert nav.links == [
+        (f"{prefix}/#download", "Download" if english else "Baixar"),
+        (f"{prefix}/help/", "Help" if english else "Ajuda"),
+        (f"{prefix}/#never-leaves", "Privacy" if english else "Privacidade"),
+        (f"{prefix}/#donate", "Donate" if english else "Doar"),
+    ]
 
 
 def test_the_store_line_waits_in_a_comment_for_its_listing():
@@ -338,13 +518,21 @@ def test_the_stylesheet_loads_nothing_from_elsewhere_and_uses_only_the_two_subse
 
 
 @pytest.mark.parametrize("url_path", SHELL_PAGES)
-def test_a_page_with_everything_it_loads_stays_under_600_kb(url_path):
+def test_what_first_paint_loads_stays_under_600_kb_and_the_whole_page_under_1_mb(url_path):
+    """First paint: the HTML, the stylesheet, every font and each image not marked lazy.
+
+    A lazy image is fetched as it scrolls into view, so it counts toward the
+    second cap only; each file counts once, however many times the page shows it.
+    """
     raw, page = load(url_path)
     total = len(raw.encode("utf-8")) + (SITE / "site.css").stat().st_size
     total += sum(p.stat().st_size for p in (SITE / "fonts").glob("*.woff2"))
-    for img in page.find("img"):
-        total += (SITE / img["src"].lstrip("/")).stat().st_size
-    assert total < PAGE_WEIGHT_LIMIT
+    eager = {a["src"] for a in page.find("img") if a.get("loading") != "lazy"}
+    lazy = {a["src"] for a in page.find("img") if a.get("loading") == "lazy"} - eager
+    first_paint = total + sum((SITE / src.lstrip("/")).stat().st_size for src in eager)
+    whole = first_paint + sum((SITE / src.lstrip("/")).stat().st_size for src in lazy)
+    assert first_paint < FIRST_PAINT_LIMIT
+    assert whole < WHOLE_PAGE_LIMIT
 
 
 def test_the_404_page_is_english_with_a_portuguese_paragraph_and_no_counterpart():
@@ -378,13 +566,13 @@ def test_the_worker_serves_site_with_its_404_page():
 def test_the_download_buttons_go_to_the_worker_and_it_runs_only_for_them():
     """`/download/<platform>` redirects to the newest release's file (`worker/download.mjs`).
 
-    The script runs for `/download/*` and the two English pages a visitor in
+    The script runs for `/download/*` and the English pages a visitor in
     Brazil is sent from (`worker/language.mjs`); every other path is a static
     asset that never reaches it.
     """
     config = json.loads((SITE.parent / "wrangler.json").read_text(encoding="utf-8"))
     assert (SITE.parent / config["main"]).is_file()
-    assert config["assets"]["run_worker_first"] == ["/download/*", "/", "/privacy/"]
+    assert config["assets"]["run_worker_first"] == ["/download/*", *portuguese_redirects()]
     assert config["assets"]["binding"] == "ASSETS"
     assert config["observability"] == {"enabled": False}
     for url_path in ("/", "/pt-br/"):
@@ -394,17 +582,20 @@ def test_the_download_buttons_go_to_the_worker_and_it_runs_only_for_them():
         assert not [h for h in hrefs(page) if "/releases" in h], url_path
 
 
-def test_a_visitor_in_brazil_is_sent_only_to_the_same_page_in_portuguese():
-    """Each English page the language redirect leaves names its Portuguese pair."""
-    mapping = dict(
+def portuguese_redirects():
+    """`PORTUGUESE` in `worker/language.mjs`: English path -> Portuguese path."""
+    return dict(
         re.findall(
             r"'(/[^']*)': '(/pt-br/[^']*)'",
             (SITE.parent / "worker" / "language.mjs").read_text(encoding="utf-8"),
         )
     )
-    assert mapping == {"/": "/pt-br/", "/privacy/": "/pt-br/privacy/"}
-    for english, portuguese in mapping.items():
-        assert PAGES[english][2] == portuguese
+
+
+def test_a_visitor_in_brazil_is_sent_from_every_english_page_to_its_portuguese_one():
+    """The privacy pages promise the redirect for every English page with a Portuguese version."""
+    english = {path: other for path, (_, lang, other) in PAGES.items() if lang == "en"}
+    assert portuguese_redirects() == english
 
 
 def test_the_worker_script_passes_its_own_tests():

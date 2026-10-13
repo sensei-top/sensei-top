@@ -9,6 +9,19 @@
 <link rel="alternate" hreflang="en" href="https://senseitop.com/privacy/">
 <link rel="alternate" hreflang="pt-BR" href="https://senseitop.com/pt-br/privacy/">
 <link rel="alternate" hreflang="x-default" href="https://senseitop.com/privacy/">
+<meta name="theme-color" content="#0b0c14">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sensei Top">
+<meta property="og:title" content="Privacy · Sensei Top">
+<meta property="og:description" content="What Sensei Top sends, and what it never sends.">
+<meta property="og:url" content="https://senseitop.com/privacy/">
+<meta property="og:image" content="https://senseitop.com/img/og-en.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Sensei Top dashboard's Home page: the last session's record and the last match.">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="pt_BR">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/site.css">
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "73e9bc45819145e3afbbde2244e8d023"}'></script>
@@ -20,7 +33,8 @@
 <a class="brand" href="/"><img src="/img/mark.svg" alt="" width="28" height="28">Sensei Top</a>
 <nav>
 <a href="/#download">Download</a>
-<a href="/#never-leaves">What never leaves your machine</a>
+<a href="/help/">Help</a>
+<a href="/#never-leaves">Privacy</a>
 <a href="/#donate">Donate</a>
 </nav>
 <div class="lang" role="group" aria-label="Language" title="Language"><span aria-current="page">EN</span><a href="/pt-br/privacy/" hreflang="pt-BR" lang="pt-BR" title="Ler em português" aria-label="Português (Brasil)">PT</a></div>
@@ -55,9 +69,9 @@
 
 <section>
 <h2>This website</h2>
-<p>This site is static files served by a Cloudflare Worker, and one small script, behind the Download buttons and in front of the English home and privacy pages. It sets no cookie. Beyond the page itself it makes two requests. One is Cloudflare Web Analytics, a cookieless count of page views that keeps no identifier of yours; it tells us how many people read this page, and nothing about who. The other happens only if your browser cannot reach the site: it may tell Cloudflare so, through Network Error Logging; that report says which page failed and from which network and country, and Cloudflare keeps no address of yours from it.</p>
+<p>This site is static files served by a Cloudflare Worker, and one small script, behind the Download buttons and in front of every English page that has a Portuguese version. It sets no cookie. Beyond the page itself it makes two requests. One is Cloudflare Web Analytics, a cookieless count of page views that keeps no identifier of yours; it tells us how many people read this page, and nothing about who. The other happens only if your browser cannot reach the site: it may tell Cloudflare so, through Network Error Logging; that report says which page failed and from which network and country, and Cloudflare keeps no address of yours from it.</p>
 <p>The Download buttons point at this site so that they always find the newest installer. When you press one, the script asks GitHub for the name of the newest release's installer; that request comes from Cloudflare and carries nothing of yours. It then sends your browser to that file on GitHub Releases, and the download itself comes from GitHub, which receives what any web request carries, your IP address and browser among it. The script keeps no log, sets no cookie and stores nothing. If GitHub cannot be reached, it sends you to the releases page instead.</p>
-<p>The English home and privacy pages also pass through the script, to choose a language. Cloudflare already works out a country from the IP address of every request it serves; the script reads that country, not the address. If it is Brazil, and you did not come from another page of this site, the script sends you to the same page in Portuguese. Clicking English on a Portuguese page does not send you back, and the Portuguese pages are never redirected. To know whether you came from this site, your browser now tells it which page you came from when you move between its pages, and still tells no other site anything. The country is used for that one decision and nothing else; the script keeps no log of it and stores nothing.</p>
+<p>Every English page that has a Portuguese version also passes through the script, to choose a language. Cloudflare already works out a country from the IP address of every request it serves; the script reads that country, not the address. If it is Brazil, and you did not come from another page of this site, the script sends you to the same page in Portuguese. Clicking English on a Portuguese page does not send you back, and the Portuguese pages are never redirected. To know whether you came from this site, your browser now tells it which page you came from when you move between its pages, and still tells no other site anything. The country is used for that one decision and nothing else; the script keeps no log of it and stores nothing.</p>
 </section>
 
 <section>

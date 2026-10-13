@@ -1,5 +1,9 @@
 # Troubleshooting
 
+The installed app's version of this page, with no command line in it, is
+[senseitop.com/help](https://senseitop.com/help/#troubleshooting), in
+English and Portuguese.
+
 `sensei-top doctor` reports what Sensei Top can find: Arena's log, Magic
 Online's folder, the card data and the database. It changes nothing and is
 safe to run while the app is open. Start there.
@@ -29,7 +33,7 @@ match's page; that choice outlives every rebuild. See
 left beside it. Use `sensei-top restore`, which moves it aside; see
 [Backups](backups.md#restoring-one).
 
-**Reporting a bug.** The diagnostics export in Settings (or
+**Reporting a bug.** The diagnostics export in Settings, under App (or
 `sensei-top diagnostics --out FILE`) writes a zip of the app's logs and a
 report. It never includes your database, any key or your MTGO handle, and
 the player names that older versions' MTGO warnings wrote into the log are
@@ -37,4 +41,6 @@ masked on the way in. Arena's `Player.log` goes in only when you tick
 "Include Player.log" (or give the command `--with-player-log`), since that
 file names your opponents and your decks; issues are public, so leave it
 unticked for one. Attach the zip to an issue, with what the dashboard
-showed and what the game showed.
+showed and what the game showed. The step-by-step for the app, and where
+to send a zip privately, is
+[on the website](https://senseitop.com/help/#report).

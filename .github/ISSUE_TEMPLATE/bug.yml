@@ -12,7 +12,7 @@ body:
     id: version
     attributes:
       label: Sensei Top version
-      description: Settings shows it, under About.
+      description: Settings shows it, under App.
     validations:
       required: true
   - type: input

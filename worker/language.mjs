@@ -5,9 +5,13 @@
 // English link on a Portuguese page keeps working: `_headers` sends
 // `Referrer-Policy: same-origin`, which gives the site its own pages as the
 // Referer and every other site none. Portuguese pages are never redirected.
+// Every English page with a Portuguese version is here, and in
+// `run_worker_first`; `tests/test_site.py` fails when one is missing, because
+// the privacy pages promise the redirect for all of them.
 
 export const PORTUGUESE = {
   '/': '/pt-br/',
+  '/help/': '/pt-br/help/',
   '/privacy/': '/pt-br/privacy/',
 }
 

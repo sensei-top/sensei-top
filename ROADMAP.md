@@ -22,10 +22,11 @@ routine, [donations](#donations) keep it maintained.
 - **Windows and Linux installers.** A desktop window around the tracker,
   a setup that finds Arena's log and asks where MTGO keeps its own, updates
   that apply themselves. On Windows, a free installer and a paid
-  Microsoft Store build of the same app; the Store signs its build, and
-  the direct download is signed once the open-source signing programme
-  answers. On Linux, an AppImage, with
-  steps in `INSTALL.md` for Arch-based distributions, Ubuntu and SteamOS's
+  Microsoft Store build of the same app; the Store signs its build. The
+  direct download stays unsigned for now: the open-source signing
+  programme asks for more public use first, and the application goes in
+  again after the launch. On Linux, an AppImage, with steps in
+  `INSTALL.md` for Arch-based distributions, Ubuntu and SteamOS's
   desktop mode, tried on a Steam Deck before the release. No Flatpak, AUR
   or `.deb` package.
 - **The source goes public** under the AGPL-3.0, on GitHub, as a fresh

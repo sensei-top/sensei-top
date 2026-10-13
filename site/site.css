@@ -85,7 +85,7 @@ a:focus-visible, .button:focus-visible {
   outline-offset: 2px;
 }
 
-h1, h2, .brand {
+h1, h2, h3, .brand {
   font-family: var(--font-display);
   font-weight: 700;
   line-height: 1.15;
@@ -101,10 +101,19 @@ h2 {
   margin: 48px 0 12px;
   scroll-margin-top: 16px;
 }
+h3 {
+  font-size: 17px;
+  margin: 28px 0 8px;
+  scroll-margin-top: 16px;
+}
+h2 + h3 { margin-top: 0; }
 p { margin: 0 0 16px; color: var(--ink-2); }
-ul { margin: 0 0 16px; padding-left: 20px; color: var(--ink-2); }
+ul, ol { margin: 0 0 16px; padding-left: 20px; color: var(--ink-2); }
 li { margin-bottom: 8px; }
 strong { color: var(--ink); font-weight: 600; }
+/* A label the app itself shows, quoted from its catalogues. It looks like
+   strong; tests/test_site.py tells the two apart. */
+b { color: var(--ink); font-weight: 600; }
 code {
   padding: 1px 6px;
   border-radius: 12px;
@@ -133,7 +142,7 @@ code {
 }
 .brand img { width: 28px; height: 28px; border-radius: 7px; }
 .brand { margin-right: auto; }
-.site-header nav { display: flex; flex-wrap: wrap; gap: 4px 20px; font-size: 14px; }
+.site-header nav { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 14px; }
 .site-header nav a { color: var(--muted); text-decoration: none; }
 .site-header nav a:hover { color: var(--ink); }
 
@@ -169,6 +178,17 @@ code {
 
 .lead { font-size: 18px; color: var(--ink-2); }
 
+/* The help page's contents: its sections, in one wrapping row. */
+.toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+.toc li { margin: 0; }
+
 .actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0 32px; }
 .button {
   display: inline-block;
@@ -193,7 +213,7 @@ figure img {
   border-radius: 18px;
 }
 
-section > p:last-child, section > ul:last-child { margin-bottom: 0; }
+section > p:last-child, section > ul:last-child, section > ol:last-child { margin-bottom: 0; }
 
 .links { color: var(--muted); }
 
@@ -204,3 +224,135 @@ section > p:last-child, section > ul:last-child { margin-bottom: 0; }
   font-size: 13px;
 }
 .site-footer p { color: var(--muted); }
+
+/* The landing (docs/frontend.md, "The site"): wider than the reading pages, a
+   hero beside its image, feature rows that alternate sides. The classes
+   below exist only on the landing; every rule that overrides a selector the
+   other pages share is scoped under body.landing, so the help, privacy and
+   404 pages do not move. Every grid is one column under 1024px. */
+
+/* The clip is on the body, not on .page as S3 wrote: on .page it clips at the
+   padding box, so the hero image could overflow by only the page's padding,
+   not by 4rem. */
+body.landing { overflow-x: clip; }
+body.landing .page { max-width: 76rem; }
+body.landing h2 { font-size: 24px; }
+
+/* The hero's facts: a line of labels, not pills, so they never read as a
+   third button beside the two downloads. */
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.8;
+  text-transform: uppercase;
+}
+.facts li + li::before { content: "\00b7"; margin: 0 10px; color: var(--muted); }
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+body.landing .features { margin-top: 24px; }
+body.landing .feature { padding: 32px 0; }
+body.landing .feature h2 { margin-top: 0; font-size: 28px; scroll-margin-top: 16px; }
+body.landing .feature figure { margin: 24px 0 0; }
+
+.steps {
+  display: grid;
+  gap: 16px;
+  padding: 0;
+  margin: 0 0 16px;
+  list-style: none;
+  counter-reset: step;
+}
+.steps li {
+  position: relative;
+  margin: 0;
+  padding: 20px 20px 20px 64px;
+  border: 1px solid var(--edge);
+  border-radius: 18px;
+  background: var(--surface-1);
+  counter-increment: step;
+}
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  top: 18px;
+  left: 20px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+}
+.steps a { display: block; margin-top: 8px; }
+.note { color: var(--muted); font-size: 14px; }
+
+body.landing #guides .intro { max-width: 46rem; }
+.pair, .cards { display: grid; gap: 16px; }
+.cards { margin-top: 48px; }
+.card {
+  padding: 24px;
+  border: 1px solid var(--edge);
+  border-radius: 18px;
+  background: var(--surface-1);
+}
+body.landing .card h2, body.landing .card h3 { margin: 0 0 12px; font-size: 18px; }
+.card p, .card li { max-width: 46rem; }
+
+@media (min-width: 1024px) {
+  body.landing .hero {
+    display: grid;
+    grid-template-columns: 5fr 7fr;
+    gap: 48px;
+    align-items: center;
+    padding-top: 16px;
+  }
+  /* The image may run past the frame, up to 4rem and never past the window. */
+  body.landing .hero figure {
+    margin: 0 calc(-1 * min(4rem, (100vw - min(100vw, 76rem)) / 2 + var(--gutter))) 0 0;
+  }
+  body.landing .steps { grid-template-columns: repeat(3, 1fr); }
+  body.landing .feature {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    align-items: center;
+    padding: 56px 0;
+  }
+  body.landing .feature figure { margin: 0; }
+  body.landing .feature:nth-child(even) figure { order: -1; }
+  .pair, .cards { grid-template-columns: 1fr 1fr; gap: 24px; }
+  body.landing #guides { margin-top: 24px; }
+}
+
+@keyframes rise {
+  from { opacity: 0; translate: 0 16px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    body.landing .feature {
+      animation: rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 40%;
+    }
+  }
+}

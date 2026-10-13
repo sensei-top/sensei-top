@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Help · Sensei Top</title>
+<meta name="description" content="Installing Sensei Top, setting it up, and sending a problem report.">
+<link rel="canonical" href="https://senseitop.com/help/">
+<link rel="alternate" hreflang="en" href="https://senseitop.com/help/">
+<link rel="alternate" hreflang="pt-BR" href="https://senseitop.com/pt-br/help/">
+<link rel="alternate" hreflang="x-default" href="https://senseitop.com/help/">
+<meta name="theme-color" content="#0b0c14">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sensei Top">
+<meta property="og:title" content="Help · Sensei Top">
+<meta property="og:description" content="Installing Sensei Top, setting it up, and sending a problem report.">
+<meta property="og:url" content="https://senseitop.com/help/">
+<meta property="og:image" content="https://senseitop.com/img/og-en.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Sensei Top dashboard's Home page: the last session's record and the last match.">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="pt_BR">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/site.css">
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "73e9bc45819145e3afbbde2244e8d023"}'></script>
+</head>
+<body>
+<div class="page">
+
+<header class="site-header">
+<a class="brand" href="/"><img src="/img/mark.svg" alt="" width="28" height="28">Sensei Top</a>
+<nav>
+<a href="/#download">Download</a>
+<a href="/help/">Help</a>
+<a href="/#never-leaves">Privacy</a>
+<a href="/#donate">Donate</a>
+</nav>
+<div class="lang" role="group" aria-label="Language" title="Language"><span aria-current="page">EN</span><a href="/pt-br/help/" hreflang="pt-BR" lang="pt-BR" title="Ler em português" aria-label="Português (Brasil)">PT</a></div>
+</header>
+
+<main>
+<h1>Help</h1>
+<p class="lead">Installing Sensei Top, setting it up, and what to do when something looks wrong. If your question is not answered here, ask in <a href="https://github.com/sensei-top/sensei-top/discussions">Discussions</a>.</p>
+<ul class="toc">
+<li><a href="#install">Install</a></li>
+<li><a href="#first-run">The first run</a></li>
+<li><a href="#mtgo">Magic Online</a></li>
+<li><a href="#troubleshooting">Something looks wrong</a></li>
+<li><a href="#report">Send a problem report</a></li>
+</ul>
+
+<section id="install">
+<h2>Install</h2>
+<h3>Windows</h3>
+<ol>
+<li>Download <a href="/download/windows">the installer</a>, a file ending in <code>.exe</code>.</li>
+<li>Run it. If Windows says <strong>Windows protected your PC</strong>, click <strong>More info</strong>, then <strong>Run anyway</strong>. The installer is not code-signed yet, so Microsoft Defender SmartScreen stops it the first time.</li>
+<li>Choose the language, English or Português (Brasil). The app opens in the same one.</li>
+<li>On the last page, choose whether Sensei Top starts when Windows starts. Leave it on if you can: the app records only the games it is running for.</li>
+</ol>
+<p>It installs for your Windows user only and never asks for administrator rights. Closing the window keeps the app running in the system tray, still recording; to quit, use the tray icon's menu.</p>
+<h3>Linux and the Steam Deck</h3>
+<ol>
+<li>Download <a href="/download/linux">the AppImage</a>, a file ending in <code>.AppImage</code>, and move it to a folder of your own, such as <code>Applications</code> in your home folder. It updates itself by replacing this file, so keep it somewhere you can write to.</li>
+<li>Open the file's properties, allow it to run as a program, then double-click it. On the Steam Deck, do this in desktop mode.</li>
+</ol>
+<p>On Linux, closing the window quits the app, and games you play afterwards are not recorded. To keep it running, turn on <b>Keep running when the window is closed</b> in <b>Settings</b>, under <b>App</b>. If the app does not start, the <a href="https://github.com/sensei-top/sensei-top/blob/main/INSTALL.md#linux">install guide</a> has the fix for each system.</p>
+</section>
+
+<section id="first-run">
+<h2>The first run</h2>
+<p>The first time it opens, the app walks you through setup, one step at a time:</p>
+<ol>
+<li><b>Language</b>: English or Portuguese. Settings can change it later.</li>
+<li><b>Welcome to Sensei Top</b>: what the app reads, and what leaves your computer.</li>
+<li><b>Arena</b>: the app looks for Arena's log and checks that Detailed Logs are on. If they are off: in Arena, open <b>Options</b>, then <b>Account</b>, tick <b>Detailed Logs (Plugin Support)</b>, close Arena and start it again, then press <b>Check again</b>. Without Detailed Logs, Arena's log is missing most of what the app reads. If you play only Magic Online, skip this step.</li>
+<li><b>Card data</b>: press <b>Download card data</b>. It is about 80 MB, then a few minutes of unpacking, and you can go on while it runs.</li>
+<li><b>Magic Online</b>: <a href="#mtgo">see below</a>. Skip it if you do not play Magic Online.</li>
+<li><b>Ready</b>: play a match. It appears on <b>Home</b> when it ends. On Linux, this step also offers <b>Start Sensei Top when you log in</b>.</li>
+</ol>
+<p>To go through the steps again, open <b>Settings</b>, then <b>App</b>, and press <b>Go through them again</b>.</p>
+<p><strong>Keep the app running while you play.</strong> Arena empties its log every time it starts, and keeps the session before only until it starts again. A session played with Sensei Top closed is gone after two Arena launches. <b>Start when Windows starts</b>, or <b>Start when you log in</b> on Linux, under <b>App</b> in <b>Settings</b>, takes care of it.</p>
+</section>
+
+<section id="mtgo">
+<h2>Magic Online</h2>
+<p>Magic Online's log never says which player is you, or which deck you played, so the app needs two things from you, in its welcome step or later in <b>Settings</b>, under <b>Sources</b>:</p>
+<ul>
+<li><b>Your name on Magic Online</b>, so it can tell your games from your opponents'.</li>
+<li>The <b>Folder of game logs</b>, where Magic Online writes files named <code>Match_GameLog</code>. On Windows, when the app finds the folder Magic Online is writing, it fills it in for you to save. Otherwise it is under <code>AppData\Local\Apps\2.0\Data</code>; under Wine or Proton, inside that prefix's <code>drive_c</code> folder.</li>
+</ul>
+<p>Each game is read once it ends. Magic Online moves this folder when it updates, so if new games stop appearing, choose the folder again in <b>Settings</b>, under <b>Sources</b>.</p>
+<p>A Magic Online match counts toward one of your decks once you pick the deck. Open the match and answer <b>Which deck was this?</b>; with many matches waiting, use the <b>Needs a deck</b> card on <b>Home</b> instead. It groups the matches by the deck saved in Magic Online that holds the most cards you played, and one confirmation picks that deck for a whole group. Magic Online matches never appear on <b>Live</b>, which follows Arena only.</p>
+</section>
+
+<section id="troubleshooting">
+<h2>Something looks wrong</h2>
+<h3>No Arena matches at all</h3>
+<p>Check that <b>Detailed Logs (Plugin Support)</b> is ticked in Arena, and that Arena was restarted after you ticked it. Then open <b>Settings</b>, under <b>Sources</b>: it says whether the app found Arena's log. If you run Arena through Lutris, Bottles or a Wine prefix of your own, set the <b>Log file</b> there; the <a href="https://github.com/sensei-top/sensei-top/blob/main/INSTALL.md#linux">install guide</a> says where it is.</p>
+<h3>Matches from an earlier session are missing</h3>
+<p>Arena empties its log every time it starts. A session played with Sensei Top closed is still in the log until Arena's next launch, and gone after that. Keep the app running whenever you play.</p>
+<h3>The app says <b>Watcher stopped</b> or <b>Tracker not running</b></h3>
+<p>Quit Sensei Top and open it again. On Windows, quit from the tray icon's menu: closing the window leaves it running. If it happens again, <a href="#report">send a problem report</a>: the reason is in the app's log.</p>
+<h3>The app does not start</h3>
+<p>Its window says where its log file is. Send that file with a few lines about what happened, <a href="#where">as below</a>.</p>
+<h3>Dates or times look wrong</h3>
+<p>In <b>Settings</b>, under <b>Sources</b>, set the <b>Date order</b> to <b>Day first</b> or <b>Month first</b> instead of <b>Read it from the log</b>.</p>
+<h3>A Magic Online match is missing</h3>
+<p>Check <b>Your name there</b> and the <b>Folder of game logs</b> in <b>Settings</b>, under <b>Sources</b>. After a Magic Online update the folder has usually moved. A game appears only once it has ended.</p>
+<h3>The opponent's deck is wrong or unnamed</h3>
+<p>The app names the opponent's deck from the cards they revealed, so a game where they showed few cards can be named wrong or not at all. On the match's page, press <b>Correct the deck</b> and pick the right one. The app keeps your pick.</p>
+</section>
+
+<section id="report">
+<h2>Send a problem report</h2>
+<p>When something is wrong, a diagnostics export shows what the app saw. It takes a minute.</p>
+<ol>
+<li>Open <b>Settings</b>, then <b>App</b>, and press <b>Export diagnostics</b>. The tray icon's menu has the same entry.</li>
+<li>A window lists what goes in. Leave <b>Include Player.log</b> unticked unless you are asked for it: Arena's log names your opponents and your decks.</li>
+<li>Press <b>Save as…</b> and choose where to save the zip.</li>
+<li>Send the zip with a few lines: what you did, what you expected, what the app showed, and what the game showed.</li>
+</ol>
+<h3>What is in the zip</h3>
+<ul>
+<li>The app's own log files.</li>
+<li>The app's settings, with every key and your Magic Online name removed.</li>
+<li>What the app can find on your computer: Arena's log, Magic Online's folder, the card data and the database.</li>
+<li>How many rows each table of the database holds. The counts only, never the rows.</li>
+</ul>
+<p>Never in it: your database, so none of your matches, and no key. Arena's <code>Player.log</code> goes in only when you tick the box.</p>
+<h3>A problem that comes and goes</h3>
+<p>Turn on <b>Diagnostic mode</b> in <b>Settings</b>, under <b>App</b>. The app then writes much more detail to its log; turning it on or off restarts the tracker for a moment. Use the app until the problem shows up again, export, then turn it off.</p>
+<h3 id="where">Where to send it</h3>
+<p>Open an issue with the <a href="https://github.com/sensei-top/sensei-top/issues/new?template=bug.yml">bug form</a> and attach the zip. Issues are public, so never attach <code>Player.log</code> to one. If something stopped appearing after Arena or Magic Online updated, the <a href="https://github.com/sensei-top/sensei-top/issues/new?template=log-change.yml">log change form</a> is the better one. To send a report privately, e-mail it to <a href="mailto:contact@senseitop.com">contact@senseitop.com</a>. A question rather than a problem goes to <a href="https://github.com/sensei-top/sensei-top/discussions">Discussions</a>.</p>
+</section>
+</main>
+
+<footer class="site-footer">
+<p>Sensei Top is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.</p>
+<p>Card data and images come from <a href="https://scryfall.com">Scryfall</a>, tournament results from <a href="https://github.com/fbettega/MTG_decklistcache">MTG_decklistcache</a> and <a href="https://topdeck.gg">TopDeck.gg</a>, and archetype definitions from <a href="https://github.com/Badaro/MTGOFormatData">MTGOFormatData</a>. None of them produces or endorses Sensei Top. What is taken from each, and on what terms, is in the <a href="https://github.com/sensei-top/sensei-top/blob/main/docs/attribution.md">attribution page</a>.</p>
+<p><a href="/">Home</a> · <a href="/privacy/">Privacy</a> · <a href="/pt-br/help/" hreflang="pt-BR" lang="pt-BR">Português (Brasil)</a></p>
+</footer>
+
+</div>
+</body>
+</html>

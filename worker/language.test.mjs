@@ -18,6 +18,7 @@ function get(path, { country, referer } = {}) {
 test('a visitor in Brazil arriving from elsewhere gets the Portuguese page', async () => {
   for (const [path, portuguese] of [
     ['/', '/pt-br/'],
+    ['/help/', '/pt-br/help/'],
     ['/privacy/', '/pt-br/privacy/'],
     ['/?utm_source=x', '/pt-br/?utm_source=x'],
   ]) {
@@ -40,7 +41,7 @@ test('anyone else, and any Portuguese page, is served as asked', async () => {
   for (const country of [undefined, 'PT', 'US', 'XX', 'T1']) {
     assert.equal(await (await get('/', { country })).text(), 'asset', country)
   }
-  for (const path of ['/pt-br/', '/pt-br/privacy/', '/site.css', '/404.html', '/privacy']) {
+  for (const path of ['/pt-br/', '/pt-br/help/', '/pt-br/privacy/', '/site.css', '/404.html', '/privacy']) {
     assert.equal(await (await get(path, { country: 'BR' })).text(), 'asset', path)
   }
 })

@@ -9,18 +9,34 @@
 <link rel="alternate" hreflang="en" href="https://senseitop.com/">
 <link rel="alternate" hreflang="pt-BR" href="https://senseitop.com/pt-br/">
 <link rel="alternate" hreflang="x-default" href="https://senseitop.com/">
+<meta name="theme-color" content="#0b0c14">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sensei Top">
+<meta property="og:title" content="Sensei Top">
+<meta property="og:description" content="Análise de partidas de Magic: The Gathering Arena e Magic Online, gratuita e inteiramente local. Sem conta, sem envio.">
+<meta property="og:url" content="https://senseitop.com/pt-br/">
+<meta property="og:image" content="https://senseitop.com/img/og-pt-br.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A página Início do dashboard do Sensei Top: o retrospecto da última sessão e a última partida.">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/hanken-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "73e9bc45819145e3afbbde2244e8d023"}'></script>
 </head>
-<body>
+<body class="landing">
 <div class="page">
 
 <header class="site-header">
 <a class="brand" href="/pt-br/"><img src="/img/mark.svg" alt="" width="28" height="28">Sensei Top</a>
 <nav>
 <a href="/pt-br/#download">Baixar</a>
-<a href="/pt-br/#never-leaves">O que nunca sai do seu computador</a>
+<a href="/pt-br/help/">Ajuda</a>
+<a href="/pt-br/#never-leaves">Privacidade</a>
 <a href="/pt-br/#donate">Doar</a>
 </nav>
 <div class="lang" role="group" aria-label="Idioma" title="Idioma"><a href="/" hreflang="en" lang="en" title="Read in English" aria-label="English">EN</a><span aria-current="page">PT</span></div>
@@ -28,39 +44,96 @@
 
 <main>
 <section class="hero">
+<div class="hero-text">
 <h1>Suas partidas, seus decks, o meta de verdade. Tudo no seu próprio computador.</h1>
-<p class="lead">O Sensei Top lê os logs que o Arena e o Magic Online já escrevem e os transforma em um dashboard: cada partida e cada jogo, turno a turno, seu retrospecto com cada deck e contra cada arquétipo, e o metajogo dos torneios ao lado. Gratuito, de código aberto, sem conta.</p>
+<p class="lead">O Sensei Top lê os logs que o Arena e o Magic Online já escrevem e os transforma em um dashboard: cada partida e cada jogo, turno a turno, seu retrospecto com cada deck e contra cada arquétipo, e o metajogo dos torneios ao lado.</p>
+<ul class="facts"><li>Gratuito</li><li>Código aberto</li><li>Sem conta</li><li>Windows e Linux</li></ul>
 <p class="actions"><a class="button primary" href="/download/windows">Baixar para Windows</a> <a class="button" href="/download/linux">Baixar para Linux</a></p>
-<figure><img src="/img/home.png" width="1440" height="900" alt="A página Início: o retrospecto da última sessão, a última partida com um link para o relatório dela, e as partidas recentes ao lado da taxa de vitórias por semana."></figure>
-</section>
-
-<section id="shows">
-<h2>O que ele mostra</h2>
-<ul>
-<li><strong>Início.</strong> A última sessão, três coisas que valem uma olhada e a taxa de vitórias por semana.</li>
-<li><strong>Ao vivo</strong> (Arena). A partida em andamento, com um guia de mão inicial, uma leitura da mão provável do oponente, o que resta no seu grimório e um plano de sideboard entre os jogos. Em partida ranqueada, mostra só o que qualquer tracker mostra.</li>
-<li><strong>Partidas.</strong> Cada partida, com um relatório e um replay turno a turno de cada jogo, e um localizador de leaks que procura padrões entre as partidas.</li>
-<li><strong>Decks.</strong> O retrospecto de cada deck em cada versão, seus matchups e um guia que coloca sua lista contra o meta.</li>
-<li><strong>O meta.</strong> O metajogo a partir de resultados reais de torneios do Magic Online e de papel.</li>
-<li><strong>Treinador.</strong> Um relatório datado sobre todos os decks, cada um medido contra o anterior.</li>
-</ul>
-<figure><img src="/img/field.png" width="1440" height="900" alt="A página O meta: o metajogo de Padrão a partir de torneios de papel com 64 jogadores ou mais nos últimos 90 dias, arquétipo por arquétipo."></figure>
+</div>
+<figure><img src="/img/pt-br/home.webp" width="1440" height="900" fetchpriority="high" decoding="async" alt="A página Início: o retrospecto da última sessão, o dos últimos trinta dias e três cards: a última partida, um padrão entre as suas partidas e o meta em que você está jogando."></figure>
 </section>
 
 <section id="download">
-<h2>Baixar</h2>
-<p>O Sensei Top roda no Windows 10 e 11 (64 bits) e no Linux de 64 bits. Não há nada para se cadastrar.</p>
-<ul>
-<li><strong>Windows:</strong> <a href="/download/windows">o instalador</a>, um arquivo terminado em <code>.exe</code>. Ele instala só para o seu usuário e nunca pede direitos de administrador. O instalador ainda não é assinado, então o Windows pode pedir uma confirmação na primeira vez.</li>
+<h2>Primeiros passos</h2>
+<ol class="steps">
+<li><strong>Baixe.</strong> O instalador para Windows ou o AppImage para Linux. Nada para se cadastrar, e ele nunca pede direitos de administrador. <a href="/pt-br/help/#install">Como instalar</a></li>
+<li><strong>Ligue os registros detalhados.</strong> No Arena, em Opções → Conta, ligue <strong>Registros detalhados (suporte de plugin)</strong> e abra o Arena de novo. <a href="/pt-br/help/#first-run">A primeira vez</a></li>
+<li><strong>Jogue, e deixe o tracker aberto.</strong> O Arena apaga o log toda vez que abre, então o tracker registra o que viu enquanto estava aberto. O Magic Online é lido do mesmo jeito, pelos logs de jogo dele. <a href="/pt-br/help/#mtgo">Magic Online</a></li>
 <!-- Uncomment once the Microsoft Store listing exists, with its address for STORE_URL.
 <li><strong>Microsoft Store:</strong> o mesmo aplicativo, mantido atualizado pela <a href="STORE_URL">Store</a>.</li>
 -->
-<li><strong>Linux:</strong> <a href="/download/linux">o AppImage</a>, um arquivo terminado em <code>.AppImage</code>. Um arquivo só, sem instalação; ele se atualiza no lugar. Testado no CachyOS; os passos para Ubuntu e para o modo desktop do Steam Deck estão no guia de instalação.</li>
-</ul>
-<p>A única coisa a mudar no Arena: ligue <strong>Registros detalhados (suporte de plugin)</strong> em Opções → Conta e abra o Arena de novo. O <a href="https://github.com/sensei-top/sensei-top/blob/main/INSTALL.md">guia de instalação</a> tem os passos para cada sistema, e o <a href="https://github.com/sensei-top/sensei-top/blob/main/docs/user/README.md">guia do usuário</a> cobre cada página. Os dois estão em inglês por enquanto.</p>
+</ol>
+<p class="note">Windows 10 e 11 (64 bits) e Linux de 64 bits. O instalador ainda não é assinado, então o Windows pode pedir uma confirmação na primeira vez. O AppImage se atualiza no lugar; os passos para Ubuntu e para o modo desktop do Steam Deck estão no <a href="https://github.com/sensei-top/sensei-top/blob/main/INSTALL.md">guia de instalação</a>, em inglês por enquanto.</p>
 </section>
 
-<section id="never-leaves">
+<div class="features">
+<section class="feature" id="home">
+<div class="text">
+<p class="eyebrow">Início</p>
+<h2>Onde você está hoje</h2>
+<p>A última sessão em uma linha, seu retrospecto dos últimos trinta dias, sua taxa de vitórias por semana e três coisas que valem uma olhada: a última partida, um padrão entre as suas partidas e o meta em que você está jogando.</p>
+</div>
+<figure><img src="/img/pt-br/home.webp" width="1440" height="900" loading="lazy" decoding="async" alt="A página Início: o retrospecto da última sessão, o dos últimos trinta dias e três cards: a última partida, um padrão entre as suas partidas e o meta em que você está jogando."></figure>
+</section>
+<section class="feature" id="live">
+<div class="text">
+<p class="eyebrow">Ao vivo</p>
+<h2>A partida em andamento</h2>
+<p>O Arena já mostra vida, tamanho da mão e mana disponível, então o Sensei Top mostra o que ele não mostra: como é uma mão que vale manter com o deck que você está jogando, o que o oponente já revelou e o que o arquétipo dele costuma jogar junto, e exatamente o que resta no seu grimório, com as chances de comprar cada card em breve. Entre os jogos, o plano de sideboard do seu resumo de matchup, depois que você tiver escrito um. Em partida ranqueada, mostra o que qualquer tracker mostra, e nenhum conselho.</p>
+</div>
+<figure><img src="/img/pt-br/live.webp" width="1440" height="900" loading="lazy" decoding="async" alt="A página Ao vivo durante uma partida não ranqueada: o grimório restante com as chances de cada compra, e os cards revelados do oponente com o que o arquétipo dele costuma jogar junto."></figure>
+</section>
+<section class="feature" id="matches">
+<div class="text">
+<p class="eyebrow">Partidas</p>
+<h2>Cada partida, cada jogo, cada turno</h2>
+<p>Cada partida ganha um relatório próprio: quem precisava ser o beatdown, como foi a corrida de dano, onde o jogo virou e o que ainda estava vivo no final, cada item medido contra os seus outros jogos com o deck. Um replay turno a turno de cada jogo fica logo abaixo, e um localizador de leaks lê todas as suas partidas atrás dos padrões que custam jogos, com o tamanho da amostra e a margem ao lado de cada um. Um relatório escrito que você pode pedir.</p>
+</div>
+<figure><img src="/img/pt-br/match-report.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Um relatório de partida: a corrida de dano em cada jogo, o turno em que o jogo virou e o link para o replay turno a turno."></figure>
+</section>
+<section class="feature" id="decks">
+<div class="text">
+<p class="eyebrow">Decks</p>
+<h2>Cada deck, em cada versão</h2>
+<p>Seu retrospecto com cada lista que você jogou, separado por versão, com seus matchups contra cada arquétipo e a amostra por trás de cada taxa. O guia do deck coloca sua lista contra o que os jogadores que vencem torneios registram, e seu retrospecto por matchup contra a fatia de cada arquétipo no meta, dentro da janela do formato atual, para que um banimento nunca misture dois formatos em um só. Um guia escrito que você pode pedir.</p>
+</div>
+<figure><img src="/img/pt-br/matchups.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Os matchups de um deck: seu retrospecto contra cada arquétipo, com os jogos por trás de cada taxa e com que frequência aquele arquétipo vence em torneios."></figure>
+</section>
+<section class="feature" id="field">
+<div class="text">
+<p class="eyebrow">Meta</p>
+<h2>O meta de verdade</h2>
+<p>O metajogo a partir de resultados reais de torneios, do Magic Online e de papel, separado em níveis pela quantidade de evidência por trás da fatia de cada arquétipo, com o seu próprio retrospecto contra cada um no mesmo período. Por formato, e nunca atravessando um banimento.</p>
+</div>
+<figure><img src="/img/pt-br/field.webp" width="1440" height="900" loading="lazy" decoding="async" alt="A página Meta: o metajogo de Standard a partir das listas dos Challenges do Magic Online desde o último reinício do formato, arquétipo por arquétipo, com o seu retrospecto contra cada um."></figure>
+</section>
+<section class="feature" id="coach">
+<div class="text">
+<p class="eyebrow">Treinador</p>
+<h2>O que treinar a seguir</h2>
+<p>Um relatório sobre todos os decks que você joga: seu retrospecto jogando primeiro e comprando primeiro, jogo 1 contra os jogos depois do sideboard, mãos mantidas contra mulligans, onde as suas derrotas viram e três jogos de exemplo para rever. Cada relatório é datado e guardado, e o seguinte é medido contra ele. Um relatório escrito que você pode pedir.</p>
+</div>
+<figure><img src="/img/pt-br/coach.webp" width="1440" height="900" loading="lazy" decoding="async" alt="A página Treinador: o relatório de Standard mais recente, com a data e o custo medido, aberto no perfil do jogador com seus pontos fortes e fracos."></figure>
+</section>
+</div>
+
+<section id="guides">
+<h2>Relatórios escritos: dois caminhos, os dois seus</h2>
+<p class="intro">Todo número acima é trabalho do próprio aplicativo. O texto por cima deles é opcional, escrito por um modelo que o aplicativo nunca chama por conta própria, e você escolhe como.</p>
+<div class="pair">
+<article class="card">
+<h3>Copie o prompt</h3>
+<p>Cada relatório, guia e resumo vem com o seu prompt, montado a partir dos seus próprios jogos. Copie-o no assistente que você já usa e leia a resposta lá. Os prompts continuam em inglês: são texto para o modelo, não para você.</p>
+</article>
+<article class="card">
+<h3>Sua própria chave</h3>
+<p>Configure uma chave da Claude sua e aperte o botão que avisa que vai usá-la. O custo é medido em cada resposta e mostrado ao lado dela. Sem chave, nenhuma chamada. Sem o clique, nenhuma chamada.</p>
+</article>
+</div>
+</section>
+
+<div class="cards">
+<section class="card" id="never-leaves">
 <h2>O que nunca sai do seu computador</h2>
 <ul>
 <li><strong>Sem conta, sem envio.</strong> O dashboard roda no seu próprio computador, responde só a ele, e nenhuma partida sua é enviada a lugar nenhum.</li>
@@ -72,13 +145,7 @@
 <p>A <a href="/pt-br/privacy/">página de privacidade</a> lista cada requisição que o aplicativo faz e o que cada uma carrega.</p>
 </section>
 
-<section id="guides">
-<h2>Guias escritos, do seu jeito</h2>
-<p>Um guia de deck, um relatório de partida, um resumo de matchup ou um relatório do treinador é texto escrito, e o tracker dá dois caminhos para obtê-lo: um prompt que você copia e cola no assistente que já usa, ou uma chave da Claude que você mesmo configura, atrás de um botão que avisa que vai usar essa chave, com o custo medido mostrado ao lado da resposta. Nada é chamado sem a chave e sem o clique. O texto volta para o aplicativo e fica nele.</p>
-<p>Os prompts que você copia continuam em inglês: são texto para o modelo, não para você.</p>
-</section>
-
-<section id="not-planned">
+<section class="card" id="not-planned">
 <h2>O que não está planejado</h2>
 <p>Decisões, não lacunas. Cada uma foi considerada e recusada.</p>
 <ul>
@@ -91,24 +158,25 @@
 <p>O <a href="https://github.com/sensei-top/sensei-top/blob/main/ROADMAP.md">roadmap</a> tem os motivos, e o que vem a seguir.</p>
 </section>
 
-<section id="free-software">
+<section class="card" id="free-software">
 <h2>Software livre</h2>
 <p>O Sensei Top é software livre sob a GNU Affero General Public License, versão 3, e o tracker é gratuito agora e depois: nada gratuito vai pedir cadastro algum dia. Duas coisas pagas estão planejadas, e nenhuma tira nada. No lançamento, a versão da Microsoft Store é o mesmo aplicativo, para quem preferir apoiar o projeto desse jeito. Mais tarde, um plano pago opcional acrescenta recursos mais profundos e uma cota mensal de relatórios escritos, e é a única coisa que pede uma conta.</p>
 <p class="links"><a href="https://github.com/sensei-top/sensei-top">Código-fonte</a> · <a href="https://github.com/sensei-top/sensei-top/discussions">Discussões</a> · <a href="https://github.com/sensei-top/sensei-top/blob/main/ROADMAP.md">Roadmap</a> · <a href="https://github.com/sensei-top/sensei-top/blob/main/CHANGELOG.md">Histórico de versões</a></p>
 </section>
 
-<section id="donate">
+<section class="card" id="donate">
 <h2>Doar</h2>
 <p>Uma pessoa mantém o Sensei Top no tempo livre. Uma doação financia esse tempo. Ela não desbloqueia nada no aplicativo nem versão antecipada; o que ela dá é seu nome nos créditos se você quiser, um voto no que vem a seguir e a opção de patrocinar um item do roadmap pelo nome.</p>
 <p class="links"><a href="https://apoia.se/senseitop">Apoia.se, para o Brasil</a> · <a href="https://github.com/sponsors/sensei-top">GitHub Sponsors, para o resto do mundo</a></p>
 </section>
+</div>
 </main>
 
 <footer class="site-footer">
 <p lang="en">Sensei Top is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.</p>
 <p>Os dados e as imagens de cards vêm do <a href="https://scryfall.com">Scryfall</a>, os resultados de torneios do <a href="https://github.com/fbettega/MTG_decklistcache">MTG_decklistcache</a> e do <a href="https://topdeck.gg">TopDeck.gg</a>, e as definições de arquétipos do <a href="https://github.com/Badaro/MTGOFormatData">MTGOFormatData</a>. Nenhum deles produz ou endossa o Sensei Top. O que é usado de cada um, e em quais termos, está na <a href="https://github.com/sensei-top/sensei-top/blob/main/docs/attribution.md">página de atribuição</a>.</p>
 <p>Contato: <a href="mailto:contact@senseitop.com">contact@senseitop.com</a>. Para relatar uma vulnerabilidade, leia antes o <a href="https://github.com/sensei-top/sensei-top/blob/main/SECURITY.md">SECURITY.md</a>.</p>
-<p><a href="/pt-br/privacy/">Privacidade</a> · <a href="/" hreflang="en" lang="en">English</a></p>
+<p><a href="/pt-br/help/">Ajuda</a> · <a href="/pt-br/privacy/">Privacidade</a> · <a href="/" hreflang="en" lang="en">English</a></p>
 </footer>
 
 </div>

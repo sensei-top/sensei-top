@@ -9,18 +9,34 @@
 <link rel="alternate" hreflang="en" href="https://senseitop.com/">
 <link rel="alternate" hreflang="pt-BR" href="https://senseitop.com/pt-br/">
 <link rel="alternate" hreflang="x-default" href="https://senseitop.com/">
+<meta name="theme-color" content="#0b0c14">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sensei Top">
+<meta property="og:title" content="Sensei Top">
+<meta property="og:description" content="Free, fully local match analytics for Magic: The Gathering Arena and Magic Online. No account, no upload.">
+<meta property="og:url" content="https://senseitop.com/">
+<meta property="og:image" content="https://senseitop.com/img/og-en.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Sensei Top dashboard's Home page: the last session's record and the last match.">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="pt_BR">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/hanken-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "73e9bc45819145e3afbbde2244e8d023"}'></script>
 </head>
-<body>
+<body class="landing">
 <div class="page">
 
 <header class="site-header">
 <a class="brand" href="/"><img src="/img/mark.svg" alt="" width="28" height="28">Sensei Top</a>
 <nav>
 <a href="/#download">Download</a>
-<a href="/#never-leaves">What never leaves your machine</a>
+<a href="/help/">Help</a>
+<a href="/#never-leaves">Privacy</a>
 <a href="/#donate">Donate</a>
 </nav>
 <div class="lang" role="group" aria-label="Language" title="Language"><span aria-current="page">EN</span><a href="/pt-br/" hreflang="pt-BR" lang="pt-BR" title="Ler em português" aria-label="Português (Brasil)">PT</a></div>
@@ -28,39 +44,96 @@
 
 <main>
 <section class="hero">
+<div class="hero-text">
 <h1>Your matches, your decks, the real metagame. All on your own computer.</h1>
-<p class="lead">Sensei Top reads the logs Arena and Magic Online already write and turns them into a dashboard: every match and game, turn by turn, your record with each deck and against each archetype, and what the tournament metagame looks like next to it. Free, open source, no account.</p>
+<p class="lead">Sensei Top reads the logs Arena and Magic Online already write and turns them into a dashboard: every match and game, turn by turn, your record with each deck and against each archetype, and what the tournament metagame looks like next to it.</p>
+<ul class="facts"><li>Free</li><li>Open source</li><li>No account</li><li>Windows and Linux</li></ul>
 <p class="actions"><a class="button primary" href="/download/windows">Download for Windows</a> <a class="button" href="/download/linux">Download for Linux</a></p>
-<figure><img src="/img/home.png" width="1440" height="900" alt="The Home page: the last session's record, the last match with a link to its report, and the recent matches beside the win rate by week."></figure>
-</section>
-
-<section id="shows">
-<h2>What it shows</h2>
-<ul>
-<li><strong>Home.</strong> The last session, three things worth a look, and the win rate by week.</li>
-<li><strong>Live</strong> (Arena). The match in progress, with a keep guide for the opening hand, a read of the opponent's likely hand, your remaining library and a sideboard plan between games. In ranked play it shows only what any tracker shows.</li>
-<li><strong>Matches.</strong> Every match, with a report and a turn-by-turn replay of each game, and a leak finder that reads for patterns across matches.</li>
-<li><strong>Decks.</strong> Each deck's record over every version, its matchups, and a guide that sets your list against the field.</li>
-<li><strong>Field.</strong> The metagame from real Magic Online and paper tournament results.</li>
-<li><strong>Coach.</strong> A dated report across every deck, each one measured against the last.</li>
-</ul>
-<figure><img src="/img/field.png" width="1440" height="900" alt="The Field page: the Standard metagame from paper tournaments of 64 or more players over the last 90 days, archetype by archetype."></figure>
+</div>
+<figure><img src="/img/home.webp" width="1440" height="900" fetchpriority="high" decoding="async" alt="The Home page: the last session's record, the last thirty days' record, and three cards: the last match, one pattern across your matches, and the field you are playing in."></figure>
 </section>
 
 <section id="download">
-<h2>Download</h2>
-<p>Sensei Top runs on Windows 10 and 11 (64-bit) and on 64-bit Linux. There is nothing to sign up for.</p>
-<ul>
-<li><strong>Windows:</strong> <a href="/download/windows">the installer</a>, a file ending in <code>.exe</code>. It installs for your user only and never asks for administrator rights. The installer is not code-signed yet, so Windows may ask you to confirm the first time.</li>
+<h2>Get started</h2>
+<ol class="steps">
+<li><strong>Download.</strong> The Windows installer or the Linux AppImage. Nothing to sign up for, and it never asks for administrator rights. <a href="/help/#install">How to install</a></li>
+<li><strong>Turn on Detailed Logs.</strong> In Arena, under Options → Account, turn on <strong>Detailed Logs (Plugin Support)</strong>, then restart Arena. <a href="/help/#first-run">The first run</a></li>
+<li><strong>Play, and keep it running.</strong> Arena empties its log every time it starts, so the tracker records what it was open for. Magic Online is read the same way, from its own game logs. <a href="/help/#mtgo">Magic Online</a></li>
 <!-- Uncomment once the Microsoft Store listing exists, with its address for STORE_URL.
 <li><strong>Microsoft Store:</strong> the same app, kept up to date by <a href="STORE_URL">the Store</a>.</li>
 -->
-<li><strong>Linux:</strong> <a href="/download/linux">the AppImage</a>, a file ending in <code>.AppImage</code>. One file, no install; it updates itself in place. Tried on CachyOS; steps for Ubuntu and the Steam Deck's desktop mode are in the install guide.</li>
-</ul>
-<p>The one thing to change in Arena: turn on <strong>Detailed Logs (Plugin Support)</strong> under Options → Account, then restart it. The <a href="https://github.com/sensei-top/sensei-top/blob/main/INSTALL.md">install guide</a> has the steps for each system, and the <a href="https://github.com/sensei-top/sensei-top/blob/main/docs/user/README.md">user guide</a> covers every page.</p>
+</ol>
+<p class="note">Windows 10 and 11 (64-bit) and 64-bit Linux. The installer is not code-signed yet, so Windows may ask you to confirm the first time. The AppImage updates itself in place; steps for Ubuntu and the Steam Deck's desktop mode are in the <a href="https://github.com/sensei-top/sensei-top/blob/main/INSTALL.md">install guide</a>.</p>
 </section>
 
-<section id="never-leaves">
+<div class="features">
+<section class="feature" id="home">
+<div class="text">
+<p class="eyebrow">Home</p>
+<h2>Where you stand today</h2>
+<p>The last session in one line, your record over the last thirty days, your win rate by week, and three things worth a look: the last match, one pattern across your matches, and the field you are playing in.</p>
+</div>
+<figure><img src="/img/home.webp" width="1440" height="900" loading="lazy" decoding="async" alt="The Home page: the last session's record, the last thirty days' record, and three cards: the last match, one pattern across your matches, and the field you are playing in."></figure>
+</section>
+<section class="feature" id="live">
+<div class="text">
+<p class="eyebrow">Live</p>
+<h2>The match in progress</h2>
+<p>Arena already shows life, hand size and open mana, so Sensei Top shows what it does not: what a keepable hand looks like for the deck you are on, what the opponent has revealed and what their archetype usually runs beside it, and exactly what is left in your own library with the odds of drawing it soon. Between games, the sideboard plan from your matchup brief, once you have written one. In a ranked game it shows what every tracker shows, and no advice.</p>
+</div>
+<figure><img src="/img/live.webp" width="1440" height="900" loading="lazy" decoding="async" alt="The Live page during an unranked match: the remaining library with the odds of each draw, and the opponent's revealed cards with what their archetype usually runs beside them."></figure>
+</section>
+<section class="feature" id="matches">
+<div class="text">
+<p class="eyebrow">Matches</p>
+<h2>Every match, every game, every turn</h2>
+<p>Each match gets a report of its own: who had to be the beatdown, how the damage race went, where the game turned and what was still live at the end, each measured against your other games with the deck. A turn-by-turn replay of every game sits under it, and a leak finder reads across all your matches for the patterns that cost you, with the sample size and the margin beside each one. A written report you can ask for.</p>
+</div>
+<figure><img src="/img/match-report.webp" width="1440" height="900" loading="lazy" decoding="async" alt="A match report: the damage race in each game, the turn the game turned, and the link to its turn-by-turn replay."></figure>
+</section>
+<section class="feature" id="decks">
+<div class="text">
+<p class="eyebrow">Decks</p>
+<h2>Each deck, over every version</h2>
+<p>Your record with each list you have played, split by version, with your matchups against each archetype and the sample behind every rate. The deck guide sets your list against what winning tournament pilots register and your matchup record against the field's shares, inside the current format's window, so a ban never mixes two formats into one. A written guide you can ask for.</p>
+</div>
+<figure><img src="/img/matchups.webp" width="1440" height="900" loading="lazy" decoding="async" alt="A deck's matchups: your record against each archetype, with the games behind each rate and how often that archetype wins in tournaments."></figure>
+</section>
+<section class="feature" id="field">
+<div class="text">
+<p class="eyebrow">Field</p>
+<h2>The real metagame</h2>
+<p>The field from real tournament results, Magic Online and paper, tiered by how much evidence stands behind each archetype's share, with your own record against each one in the same period. Per format, and never across a ban.</p>
+</div>
+<figure><img src="/img/field.webp" width="1440" height="900" loading="lazy" decoding="async" alt="The Field page: the Standard metagame from Magic Online Challenge lists since the format's last reset, archetype by archetype, with your record against each."></figure>
+</section>
+<section class="feature" id="coach">
+<div class="text">
+<p class="eyebrow">Coach</p>
+<h2>What to practise next</h2>
+<p>One report across every deck you play: your record on the play and on the draw, game one against post-sideboard games, kept hands against mulligans, where your losses turn, and three example games to go back to. Each report is dated and kept, and the next one is measured against it. A written report you can ask for.</p>
+</div>
+<figure><img src="/img/coach.webp" width="1440" height="900" loading="lazy" decoding="async" alt="The Coach page: the latest Standard report, with its date and measured cost, opening on the player profile's strengths and weaknesses."></figure>
+</section>
+</div>
+
+<section id="guides">
+<h2>Written reports: two ways, both yours</h2>
+<p class="intro">Every number above is the app's own work. The prose on top of them is optional, written by a model the app never calls on its own, and you choose how.</p>
+<div class="pair">
+<article class="card">
+<h3>Copy the prompt</h3>
+<p>Each report, guide and brief comes with its prompt, built from your own games. Copy it into whatever assistant you already use, and read the answer there.</p>
+</article>
+<article class="card">
+<h3>Your own key</h3>
+<p>Set a Claude key of your own and press the button that says it will use it. The cost is measured from each answer and shown beside it. No key, no call. No press, no call.</p>
+</article>
+</div>
+</section>
+
+<div class="cards">
+<section class="card" id="never-leaves">
 <h2>What never leaves your machine</h2>
 <ul>
 <li><strong>No account, no upload.</strong> The dashboard runs on your own computer, answers only to it, and no match of yours is ever sent anywhere.</li>
@@ -72,12 +145,7 @@
 <p>The <a href="/privacy/">privacy page</a> lists every request the app makes, and what each one carries.</p>
 </section>
 
-<section id="guides">
-<h2>Written guides, on your terms</h2>
-<p>A deck guide, a match report, a matchup brief or a coaching report is written text, and the tracker gives you two ways to get it: a prompt you copy and paste into whatever assistant you already use, or a Claude key you set yourself, behind a button that says it will use that key, with the measured cost shown beside the answer. Nothing is called without the key and the press. The text comes back into the app and stays there.</p>
-</section>
-
-<section id="not-planned">
+<section class="card" id="not-planned">
 <h2>What is not planned</h2>
 <p>Decisions, not gaps. Each was considered and refused.</p>
 <ul>
@@ -90,24 +158,25 @@
 <p>The <a href="https://github.com/sensei-top/sensei-top/blob/main/ROADMAP.md">roadmap</a> has the reasons, and what comes next.</p>
 </section>
 
-<section id="free-software">
+<section class="card" id="free-software">
 <h2>Free software</h2>
 <p>Sensei Top is free software under the GNU Affero General Public License, version 3, and the tracker is free now and later: nothing free will ever ask you to sign up. Two paid things are planned, and neither takes anything away. At release, the Microsoft Store build is the same app, for anyone who would rather support the project that way. Later, an optional paid tier adds deeper features and a monthly allowance of written reports, and is the only thing that asks for an account.</p>
 <p class="links"><a href="https://github.com/sensei-top/sensei-top">Source code</a> · <a href="https://github.com/sensei-top/sensei-top/discussions">Discussions</a> · <a href="https://github.com/sensei-top/sensei-top/blob/main/ROADMAP.md">Roadmap</a> · <a href="https://github.com/sensei-top/sensei-top/blob/main/CHANGELOG.md">Changelog</a></p>
 </section>
 
-<section id="donate">
+<section class="card" id="donate">
 <h2>Donate</h2>
 <p>One person maintains Sensei Top in their spare time. A donation funds that time. It unlocks nothing in the app and no early build; what it gets you is your name in the credits if you want it there, a vote on what comes next, and the option to sponsor one item on the roadmap by name.</p>
 <p class="links"><a href="https://apoia.se/senseitop">Apoia.se, for Brazil</a> · <a href="https://github.com/sponsors/sensei-top">GitHub Sponsors, everywhere else</a></p>
 </section>
+</div>
 </main>
 
 <footer class="site-footer">
 <p>Sensei Top is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.</p>
 <p>Card data and images come from <a href="https://scryfall.com">Scryfall</a>, tournament results from <a href="https://github.com/fbettega/MTG_decklistcache">MTG_decklistcache</a> and <a href="https://topdeck.gg">TopDeck.gg</a>, and archetype definitions from <a href="https://github.com/Badaro/MTGOFormatData">MTGOFormatData</a>. None of them produces or endorses Sensei Top. What is taken from each, and on what terms, is in the <a href="https://github.com/sensei-top/sensei-top/blob/main/docs/attribution.md">attribution page</a>.</p>
 <p>Contact: <a href="mailto:contact@senseitop.com">contact@senseitop.com</a>. To report a vulnerability, read <a href="https://github.com/sensei-top/sensei-top/blob/main/SECURITY.md">SECURITY.md</a> first.</p>
-<p><a href="/privacy/">Privacy</a> · <a href="/pt-br/" hreflang="pt-BR" lang="pt-BR">Português (Brasil)</a></p>
+<p><a href="/help/">Help</a> · <a href="/privacy/">Privacy</a> · <a href="/pt-br/" hreflang="pt-BR" lang="pt-BR">Português (Brasil)</a></p>
 </footer>
 
 </div>

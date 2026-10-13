@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/home.png" alt="The Home page: the last session's record, the last match with a link to its report, and the recent matches beside the win rate by week.">
+  <img src="docs/images/home.png" alt="The Home page: the last session's record, the last thirty days' record, and three cards: the last match, one pattern across your matches, and the field you are playing in.">
 </p>
 
 Sensei Top reads the logs Arena and Magic Online already write on your
@@ -55,7 +55,7 @@ inglês: são texto para o modelo, não para você.
 - **Coach**: a dated report across every deck, each one measured against the last.
 
 <p align="center">
-  <img src="docs/images/field.png" alt="The Field page: the Standard metagame from paper tournaments of 64 or more players over the last 90 days, archetype by archetype.">
+  <img src="docs/images/field.png" alt="The Field page: the Standard metagame from Magic Online Challenge lists since the format's last reset, archetype by archetype, with your record against each.">
 </p>
 
 ## Download
@@ -79,9 +79,11 @@ Support)** under Options → Account, then restart it.
 
 ## Documentation
 
-The [user guide](docs/user/README.md) covers every page of the dashboard,
-the command line, Magic Online, written guides, backups and
-troubleshooting.
+The [help pages](https://senseitop.com/help/), in English and Portuguese,
+cover installing, the first run, Magic Online, troubleshooting and sending
+a problem report. The [user guide](docs/user/README.md) is the reference
+behind them: running from source, the command line, every page of the
+dashboard, written guides and backups.
 
 ## Build from source
 
