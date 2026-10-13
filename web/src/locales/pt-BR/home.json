@@ -1,0 +1,128 @@
+{
+  "unnamedDeckInSentence": "seu deck sem nome",
+  "unrecognizedDeck": "um deck não reconhecido",
+  "andMore": "e mais {{n}}",
+  "headline": {
+    "noWins": "Nenhuma vitória",
+    "wins_one": "{{count}} vitória",
+    "wins_other": "{{count}} vitórias",
+    "noLosses": "nenhuma derrota",
+    "losses_one": "{{count}} derrota",
+    "losses_other": "{{count}} derrotas",
+    "draws_one": "{{count}} empate",
+    "draws_other": "{{count}} empates",
+    "record": "{{wins}}, {{losses}}",
+    "recordWithDraws": "{{wins}}, {{losses}}, {{draws}}"
+  },
+  "notFound": {
+    "message": "Não há nada neste endereço.",
+    "goHome": "Ir para o Início"
+  },
+  "coach": {
+    "title": "Treinador",
+    "body": "Um relatório sobre todos os decks que você joga: o que não para de acontecer, onde os jogos perdidos viram, e o que ler em seguida. Ele é escrito quando você pede.",
+    "open": "Abrir o treinador"
+  },
+  "field": {
+    "title": "O meta de {{format}}, e você contra ele",
+    "noteSince": "{{kind}} desde {{since}}",
+    "noteLast90": "{{kind}}, últimos 90 dias",
+    "notPlayedSince": "não jogado desde {{since}}",
+    "notPlayedLast90": "não jogado nos últimos 90 dias",
+    "barsWithDeck": "As barras são a fatia de cada deck em {{lists}} listas de torneio. A linha sob cada uma é o seu retrospecto com {{deck}} no mesmo período.",
+    "barsNoDeck": "As barras são a fatia de cada deck em {{lists}} listas de torneio. A linha sob cada uma é o seu retrospecto no mesmo período.",
+    "listShort": "Seu retrospecto é contado sobre suas últimas 500 partidas.",
+    "sinceDate": "desde {{since}}",
+    "last90": "nos últimos 90 dias"
+  },
+  "firstRun": {
+    "title": "Esta página se preenche conforme você joga",
+    "lead": "O Sensei Top lê o log que o Arena escreve enquanto você joga. Nada foi registrado ainda.",
+    "watchingTitle": "O tracker está acompanhando o Arena",
+    "logTitle": "O Arena está escrevendo seu log",
+    "logDetail": "Nada chegou do Arena ainda. Abra o Arena. Se ele já está aberto, ligue Registros detalhados (suporte de plugin) no Arena, em Opções, depois Conta, e abra o Arena de novo.",
+    "playTitle": "Jogue uma partida",
+    "playDetail": "O tracker consegue ver o Arena. Jogue uma partida, e ela aparece aqui quando termina.",
+    "willAppear": "O que vai aparecer aqui",
+    "appear1": "Sua última sessão em uma linha, e seu retrospecto nos últimos 30 dias.",
+    "appear2": "Três coisas que valem uma olhada: sua última partida, um padrão entre suas partidas, e o meta.",
+    "appear3": "Suas partidas recentes, sua taxa de vitórias por semana e seus decks."
+  },
+  "decks": {
+    "title": "Decks",
+    "all": "Todos os decks",
+    "lastPlayed": "jogado pela última vez {{day}}"
+  },
+  "needsDeck": {
+    "title": "Precisa de um deck",
+    "subtitle": "O log do MTGO não diz qual deck você jogou. Escolha-o na partida para que ela conte para esse deck.",
+    "win": "Vitória",
+    "loss": "Derrota",
+    "draw": "Empate",
+    "resultScore": "{{result}} {{score}}",
+    "resultUnknown": "Resultado desconhecido",
+    "against": "contra {{opponent}}",
+    "reviewAll": "Revisar todas as {{n}} de uma vez"
+  },
+  "recent": {
+    "title": "Partidas recentes",
+    "allCount": "Todas as {{n}} partidas",
+    "all": "Todas as partidas"
+  },
+  "session": {
+    "last": "Última sessão · {{day}}",
+    "thirtyDays": "Nos últimos 30 dias você venceu <strong>{{won}}</strong> de <strong>{{played}}</strong> partidas, ou <strong>{{rate}}</strong>.",
+    "matches_one": "{{n}} partida",
+    "matches_other": "{{n}} partidas"
+  },
+  "things": {
+    "kicker": {
+      "match": "Última partida",
+      "pattern": "Padrão",
+      "field": "Meta"
+    },
+    "readReport": "Ler o relatório",
+    "seePatterns": "Ver todos os padrões",
+    "openField": "Abrir o meta",
+    "patternBody": "Você venceu {{won}} das {{with}} partidas {{clause}}, e {{wonOther}} das outras {{without}}.",
+    "wonScore": "Venceu {{opponent}} por {{score}}",
+    "won": "Venceu {{opponent}}",
+    "lostScore": "Perdeu por {{score}} para {{opponent}}",
+    "lost": "Perdeu para {{opponent}}",
+    "drewScore": "Empatou em {{score}} com {{opponent}}",
+    "drew": "Empatou com {{opponent}}",
+    "playedAgo": "Jogada {{when}}.",
+    "playedWithAgo": "Jogada com {{deck}}, {{when}}.",
+    "fieldTwo": "Dois decks são {{share}} do meta de {{format}}",
+    "fieldOne": "{{label}} é {{share}} do meta de {{format}}",
+    "pair": "{{first}} e {{second}}.",
+    "record": {
+      "pair": {
+        "deckPlayed": "Com {{deck}} você venceu {{tally}} contra eles.",
+        "deckNone": "Você não jogou {{deck}} contra nenhum dos dois {{when}}.",
+        "noDeckPlayed": "Você venceu {{tally}} contra eles.",
+        "noDeckNone": "Você não jogou contra eles {{when}}."
+      },
+      "single": {
+        "deckPlayed": "Com {{deck}} você venceu {{tally}} contra ele.",
+        "deckNone": "Você não jogou {{deck}} contra ele {{when}}.",
+        "noDeckPlayed": "Você venceu {{tally}} contra ele.",
+        "noDeckNone": "Você não jogou contra ele {{when}}."
+      }
+    },
+    "tally": "{{won}} de {{played}}"
+  },
+  "weekly": {
+    "title": "Taxa de vitórias por semana",
+    "single": "Você venceu {{won}} de {{played}} partidas na semana de {{week}}. O gráfico começa com uma segunda semana.",
+    "even": "empate",
+    "weekOf": "Semana de",
+    "weekOfLabel": "Semana de {{week}}",
+    "winRate": "Taxa de vitórias",
+    "hollow": "Um ponto vazado é uma semana com menos de dez partidas.",
+    "truncated": "Contado sobre suas últimas 500 partidas.",
+    "showNumbers": "Mostrar os números",
+    "matches": "Partidas",
+    "won": "Vitórias"
+  }
+}

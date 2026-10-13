@@ -1,0 +1,52 @@
+name: A log change
+description: Something stopped appearing after Arena or Magic Online updated.
+title: "Log change: "
+labels:
+  - log-format
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Arena and Magic Online change their logs without notice, and a report with the lines that broke is the fastest fix there is: raw log events are stored verbatim, so the fix reaches every match you already recorded. Remove names before pasting: your own handle, the opponent's, and any user id (a long string of letters and digits beside a name). Never attach your database, your whole Player.log, or your config file.
+  - type: dropdown
+    id: client
+    attributes:
+      label: Which client?
+      options:
+        - "Magic: The Gathering Arena"
+        - Magic Online
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Sensei Top version
+      description: Settings shows it, under About.
+    validations:
+      required: true
+  - type: input
+    id: since
+    attributes:
+      label: When did it start?
+      description: The date, or the client update that came just before, if you know it.
+  - type: textarea
+    id: missing
+    attributes:
+      label: What stopped appearing?
+      description: "A match, a game, a turn, a card, the opponent's deck name: say what the dashboard showed and what the game showed."
+    validations:
+      required: true
+  - type: textarea
+    id: lines
+    attributes:
+      label: The log lines
+      description: From Player.log (Arena) or the Match_GameLog file (Magic Online), around the match that went wrong, with names removed as the note above says. Long lines are fine.
+      render: text
+    validations:
+      required: true
+  - type: checkboxes
+    id: bundle
+    attributes:
+      label: Diagnostics
+      options:
+        - label: "I attached the diagnostics export from Settings (a zip of the app's logs and a secret-free report)."

@@ -1,0 +1,201 @@
+{
+  "you": "You",
+  "opponent": "Opponent",
+  "result": {
+    "win": "Win",
+    "loss": "Loss",
+    "draw": "Draw",
+    "incomplete": "Incomplete",
+    "unknown": "Result unknown",
+    "notFinished": "Not finished"
+  },
+  "events": {
+    "ranked": "Ranked",
+    "rankedBo3": "Ranked, best of three",
+    "unranked": "Unranked",
+    "unrankedBo3": "Unranked, best of three",
+    "direct": "Direct challenge",
+    "starter": "Starter decks",
+    "consEvent": "Traditional Constructed event",
+    "respelled": "{{head}}, {{tail}}"
+  },
+  "chart": {
+    "turn": "Turn {{turn}}"
+  },
+  "charts": {
+    "position": "Position",
+    "positionSubtitle": "Life, board, hand and mana weighed into one number, turn by turn. Above zero you are ahead.",
+    "positionSubtitleDot": "Life, board, hand and mana weighed into one number, turn by turn. Above zero you are ahead. The dot is the game's largest swing.",
+    "landsLegend": "Your lands, on Board only",
+    "life": "Life",
+    "lifeSubtitle": "Both players, turn by turn.",
+    "hand": "Cards in hand",
+    "handSubtitle": "The opponent's cards are hidden, and still counted.",
+    "board": "Board",
+    "boardSubtitle": "The permanents on each side, and your lands among yours.",
+    "yourPermanents": "Your permanents",
+    "theirPermanents": "Their permanents",
+    "yourLands": "Your lands"
+  },
+  "game": {
+    "title": "Game {{n}}",
+    "positionLabel": "Position in game {{n}}, turn by turn",
+    "seat": "Seat",
+    "onPlay": "On the play",
+    "onDraw": "On the draw",
+    "mulligans": "Mulligans",
+    "noMulligans": "None",
+    "length": "Length",
+    "turns_one": "{{n}} turn",
+    "turns_other": "{{n}} turns",
+    "ended": "Ended",
+    "replay": "Replay game {{n}}"
+  },
+  "hero": {
+    "kicker": "Match report",
+    "resultScore": "{{word}} {{won}}–{{lost}}",
+    "replay": "Replay turn by turn"
+  },
+  "row": {
+    "resultScore": "{{result}} {{score}}",
+    "unrecognizedDeck": "Unrecognized deck",
+    "showed": "showed {{card}}"
+  },
+  "summary": {
+    "matchesWon": "Matches won",
+    "matchesDetail_one": "{{won}} of {{n}} finished match",
+    "matchesDetail_other": "{{won}} of {{n}} finished matches",
+    "noMatches": "No finished matches",
+    "gamesWon": "Games won",
+    "gamesDetail_one": "{{won}} of {{n}} finished game",
+    "gamesDetail_other": "{{won}} of {{n}} finished games",
+    "noGames": "No finished games",
+    "counted": "Counted over the {{n}} newest matches."
+  },
+  "sideboarding": {
+    "title": "Sideboarding",
+    "subtitle": "What changed in your deck going into this game, as it was played.",
+    "in": "In",
+    "out": "Out",
+    "nothing": "Nothing"
+  },
+  "pick": {
+    "title": "Which deck was this?",
+    "subtitle": "MTGO's log does not say which deck you played. Pick yours and its format so this match counts toward it.",
+    "yourDeck": "Your deck",
+    "cardsPlayed": "{{matched}} of {{seen}} cards played",
+    "noList": "No list",
+    "formatAlone": "confirm the format alone",
+    "format": "Format",
+    "notConfirmed": "Not confirmed",
+    "formatNotConfirmed": "Format not confirmed",
+    "saving": "Saving…",
+    "confirm": "Confirm",
+    "change": "Change"
+  },
+  "scrubber": {
+    "turns": "Turns",
+    "opening": "Opening hand",
+    "open": "Open",
+    "turn": "Turn {{turn}}",
+    "turnYours": "Turn {{turn}}, your turn",
+    "turnTheirs": "Turn {{turn}}, the opponent's turn",
+    "legendYours": "Your turn",
+    "legendTheirs": "The opponent's turn",
+    "legendLife": "Under each turn: your life, then the opponent's."
+  },
+  "turnByTurn": {
+    "title": "Turn by turn",
+    "subtitleBoard": "The board at the end of each turn, laid out as on a table: hands on the outside, lands behind, everything else against the line between the two sides. A tapped card is turned sideways.",
+    "subtitlePlays": "What each player played, turn by turn.",
+    "noTurns": "No turns were recorded for this game.",
+    "opening": "Opening hand",
+    "playsOnly": "This game's log recorded what was played, not the board.",
+    "noBoard": "No board was recorded for this turn.",
+    "during": "During turn {{turn}}",
+    "nothing": "Nothing visible was drawn, cast or played.",
+    "someone": "Someone",
+    "event": {
+      "drew": "<who>{{who}}</who> drew <name>{{name}}</name>",
+      "cast": "<who>{{who}}</who> cast <name>{{name}}</name>",
+      "played": "<who>{{who}}</who> played <name>{{name}}</name>",
+      "moved": "<who>{{who}}</who> moved <name>{{name}}</name>",
+      "other": "<who>{{who}}</who> {{verb}} <name>{{name}}</name>"
+    }
+  },
+  "board": {
+    "new": "New",
+    "drawn": "Drawn",
+    "tapped": "tapped",
+    "none": "None",
+    "empty": "Empty",
+    "hidden": "{{n}} hidden",
+    "hand": "Hand",
+    "lands": "Lands",
+    "board": "Board",
+    "library": "Library",
+    "graveyard": "Graveyard",
+    "exile": "Exile",
+    "yourGraveyard": "Your graveyard",
+    "yourExile": "Your exile",
+    "theirGraveyard": "The opponent's graveyard",
+    "theirExile": "The opponent's exile",
+    "active": "Active",
+    "life": "life",
+    "unattributed": "Arena never said which seat was yours in this session, so the two sides cannot be told apart. The cards were recorded; whose they were was not.",
+    "legendNew": "New: it entered the battlefield this turn.",
+    "legendDrawn": "Drawn: you drew it this turn."
+  },
+  "report": {
+    "wholeMatch": "Whole match",
+    "placeYourTurn": "Game {{game}} · your turn {{turn}}",
+    "placeTurn": "Game {{game}} · turn {{turn}}",
+    "placePartial": "{{place}} · partly hidden",
+    "numbersBehind": "The numbers behind it",
+    "detail": "Detail",
+    "value": "Value",
+    "partlyHiddenNote": "Partly hidden: some of what the finding rests on was hidden, not observed, or ambiguous.",
+    "stoodOut": "What stood out",
+    "nothingStoodOut": "Nothing in this match weighed enough to stand out.",
+    "everyOther": "Every other finding ({{n}})",
+    "every": "Every finding ({{n}})",
+    "pairing": "This pairing",
+    "gapsTitle": "What this report could not see",
+    "gapsSubtitle": "Not evidence that something was wrong, only that this reader could not tell.",
+    "showOther_one": "Show the other one",
+    "showOther_other": "Show the other {{n}}",
+    "lineNote": "The line is your position, turn by turn: life, board, hand and mana weighed into one number. Above zero you are ahead.",
+    "dotNote": "The dot is the game's largest swing.",
+    "showNumbers": "Show the numbers",
+    "game": "Game",
+    "turn": "Turn",
+    "coachTitle": "Coach's summary",
+    "coachSubtitle": "Each game's shape turn by turn and this report's findings, written into coaching prose.",
+    "coachShow": "Show the coach's summary",
+    "nothingToReview": "Nothing to review for this match yet.",
+    "nothingToReport": "Nothing to report for this match: too little of it was recorded."
+  },
+  "history": {
+    "capFullShowing": "Showing {{shown}} of the {{inHand}} newest matches",
+    "capFull": "The {{inHand}} newest matches",
+    "capOne": "1 match",
+    "capShowing": "Showing {{shown}} of {{inHand}} matches, newest first",
+    "capAll": "{{inHand}} matches, newest first",
+    "emptyTitle": "No matches yet",
+    "emptyMessage": "Every match you play appears here when it ends, with its report and a turn-by-turn replay.",
+    "noFitTitle": "No match fits these filters",
+    "elsewhere_one": "{{n}} match is recorded under another source or deck.",
+    "elsewhere_other": "{{n}} matches are recorded under another source or deck.",
+    "showEvery": "Show every match",
+    "showMore": "Show {{n}} more",
+    "stops": "The list stops at the {{n}} newest matches."
+  },
+  "detail": {
+    "all": "All matches"
+  },
+  "replay": {
+    "back": "The match's report",
+    "noGames": "No game data was recorded for this match.",
+    "gameResult": "Game {{n}} · {{result}}"
+  }
+}

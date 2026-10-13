@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/sensei-top/sensei-top/discussions
+    about: "Ask in Discussions. Ideas and votes on what comes next go there too, and the roadmap says what is not planned."
+  - name: Security
+    url: https://github.com/sensei-top/sensei-top/blob/main/SECURITY.md
+    about: "Something you believe can be exploited: write to contact@senseitop.com instead of opening an issue. SECURITY.md says what to include."

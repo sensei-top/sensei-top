@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy · Sensei Top</title>
+<meta name="description" content="What Sensei Top sends, and what it never sends.">
+<link rel="canonical" href="https://senseitop.com/privacy/">
+<link rel="alternate" hreflang="en" href="https://senseitop.com/privacy/">
+<link rel="alternate" hreflang="pt-BR" href="https://senseitop.com/pt-br/privacy/">
+<link rel="alternate" hreflang="x-default" href="https://senseitop.com/privacy/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/site.css">
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "73e9bc45819145e3afbbde2244e8d023"}'></script>
+</head>
+<body>
+<div class="page">
+
+<header class="site-header">
+<a class="brand" href="/"><img src="/img/mark.svg" alt="" width="28" height="28">Sensei Top</a>
+<nav>
+<a href="/#download">Download</a>
+<a href="/#never-leaves">What never leaves your machine</a>
+<a href="/#donate">Donate</a>
+<a href="/pt-br/privacy/" hreflang="pt-BR" lang="pt-BR">Português</a>
+</nav>
+</header>
+
+<main>
+<h1>Privacy</h1>
+<p class="lead">Sensei Top collects nothing. There is no account, no telemetry, and no server of ours that your copy talks to. Your matches, decks and reports live in one database on your own computer and never leave it. This page lists every request the app makes on its own, what each one carries, and the one request this website makes.</p>
+
+<section>
+<h2>What the app downloads</h2>
+<p>Each of these is a reference download: data in, nothing about you out. Every one fails softly, so the app keeps working without it.</p>
+<ul>
+<li><strong><a href="https://scryfall.com">Scryfall</a></strong>: the card database, once, and card images one at a time as the dashboard shows them. A request for a picture names that card, so Scryfall can see which cards a copy has shown, never when, against whom or with what result.</li>
+<li><strong><a href="https://github.com/Badaro/MTGOFormatData">MTGOFormatData</a></strong>: the archetype definitions that name an opponent's deck.</li>
+<li><strong><a href="https://github.com/fbettega/MTG_decklistcache">MTG_decklistcache</a></strong> and <strong><a href="https://www.mtgo.com/decklists">mtgo.com</a></strong>: public tournament results for the Field page, in the formats you follow.</li>
+<li><strong><a href="https://topdeck.gg">TopDeck.gg</a></strong>: its events, only if you add a free key of your own in Settings. The request carries that key and nothing else of yours.</li>
+<li><strong><a href="https://github.com/sensei-top/sensei-top/releases">GitHub</a></strong>: the version check, once a day and each time the app starts. It carries what any web request does, your IP address and the app's version among it, and nothing about your games. <strong>Check for updates</strong> in Settings turns it off.</li>
+</ul>
+<p>Nothing about a user's games is sent to any of these, with the one exception Scryfall's line names.</p>
+</section>
+
+<section>
+<h2>The one call you ask for</h2>
+<p>A written guide or report can come from a prompt you copy into any assistant yourself, in which case the app sends nothing. If instead you set a Claude key of your own in Settings and press a generate button, the app sends that report's prompt to Anthropic's API under your key, shows the cost it measured, and stores the answer in your database. No key, no call; no press, no call. Nothing ever calls on a schedule.</p>
+</section>
+
+<section>
+<h2>Where your data lives</h2>
+<p>Your match history is one database file in a folder of its own; Settings shows the folder and opens it. A key you add is kept in Windows Credential Manager or your system keyring, or in a settings file in your home folder when there is no keyring to use; it is never in the database. Uninstalling the app leaves the folder where it is, so reinstalling picks up where you left off; delete it yourself to remove everything.</p>
+</section>
+
+<section>
+<h2>This website</h2>
+<p>This site is static files, served by Cloudflare Pages. It sets no cookie. The one request it makes beyond the page itself is Cloudflare Web Analytics, a cookieless count of page views that keeps no identifier of yours; it tells us how many people read this page, and nothing about who.</p>
+</section>
+
+<section>
+<h2>Contact</h2>
+<p><a href="mailto:contact@senseitop.com">contact@senseitop.com</a>. For a vulnerability, read <a href="https://github.com/sensei-top/sensei-top/blob/main/SECURITY.md">SECURITY.md</a> first.</p>
+</section>
+</main>
+
+<footer class="site-footer">
+<p>Sensei Top is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.</p>
+<p>Card data and images come from <a href="https://scryfall.com">Scryfall</a>, tournament results from <a href="https://github.com/fbettega/MTG_decklistcache">MTG_decklistcache</a> and <a href="https://topdeck.gg">TopDeck.gg</a>, and archetype definitions from <a href="https://github.com/Badaro/MTGOFormatData">MTGOFormatData</a>. None of them produces or endorses Sensei Top. What is taken from each, and on what terms, is in the <a href="https://github.com/sensei-top/sensei-top/blob/main/docs/attribution.md">attribution page</a>.</p>
+<p><a href="/">Home</a> · <a href="/pt-br/privacy/" hreflang="pt-BR" lang="pt-BR">Português (Brasil)</a></p>
+<p>Last changed 2026-10-12</p>
+</footer>
+
+</div>
+</body>
+</html>

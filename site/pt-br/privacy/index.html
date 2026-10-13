@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacidade · Sensei Top</title>
+<meta name="description" content="O que o Sensei Top envia, e o que ele nunca envia.">
+<link rel="canonical" href="https://senseitop.com/pt-br/privacy/">
+<link rel="alternate" hreflang="en" href="https://senseitop.com/privacy/">
+<link rel="alternate" hreflang="pt-BR" href="https://senseitop.com/pt-br/privacy/">
+<link rel="alternate" hreflang="x-default" href="https://senseitop.com/privacy/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/site.css">
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "73e9bc45819145e3afbbde2244e8d023"}'></script>
+</head>
+<body>
+<div class="page">
+
+<header class="site-header">
+<a class="brand" href="/pt-br/"><img src="/img/mark.svg" alt="" width="28" height="28">Sensei Top</a>
+<nav>
+<a href="/pt-br/#download">Baixar</a>
+<a href="/pt-br/#never-leaves">O que nunca sai do seu computador</a>
+<a href="/pt-br/#donate">Doar</a>
+<a href="/privacy/" hreflang="en" lang="en">English</a>
+</nav>
+</header>
+
+<main>
+<h1>Privacidade</h1>
+<p class="lead">O Sensei Top não coleta nada. Não há conta, não há telemetria e não há servidor nosso com o qual a sua cópia converse. Suas partidas, seus decks e seus relatórios vivem em um banco de dados no seu próprio computador e nunca saem dele. Esta página lista cada requisição que o aplicativo faz por conta própria, o que cada uma carrega, e a única requisição que este site faz.</p>
+
+<section>
+<h2>O que o aplicativo baixa</h2>
+<p>Cada um destes é um download de referência: dados entram, nada sobre você sai. Todos falham sem travar nada, então o aplicativo continua funcionando sem eles.</p>
+<ul>
+<li><strong><a href="https://scryfall.com">Scryfall</a></strong>: o banco de dados de cards, uma vez, e as imagens de cards uma a uma conforme o dashboard as mostra. Uma requisição de imagem nomeia aquele card, então o Scryfall pode ver quais cards uma cópia mostrou, nunca quando, contra quem ou com qual resultado.</li>
+<li><strong><a href="https://github.com/Badaro/MTGOFormatData">MTGOFormatData</a></strong>: as definições de arquétipos que dão nome ao deck do oponente.</li>
+<li><strong><a href="https://github.com/fbettega/MTG_decklistcache">MTG_decklistcache</a></strong> e <strong><a href="https://www.mtgo.com/decklists">mtgo.com</a></strong>: resultados públicos de torneios para a página O meta, nos formatos que você acompanha.</li>
+<li><strong><a href="https://topdeck.gg">TopDeck.gg</a></strong>: os eventos dele, só se você adicionar uma chave gratuita sua em Configurações. A requisição carrega essa chave e nada mais seu.</li>
+<li><strong><a href="https://github.com/sensei-top/sensei-top/releases">GitHub</a></strong>: a verificação de versão, uma vez por dia e cada vez que o aplicativo abre. Ela carrega o que qualquer requisição na web carrega, seu endereço IP e a versão do aplicativo entre outras coisas, e nada sobre os seus jogos. <strong>Verificar atualizações</strong> em Configurações a desliga.</li>
+</ul>
+<p>Nada sobre os jogos de um usuário é enviado a nenhum deles, com a única exceção que a linha do Scryfall descreve.</p>
+</section>
+
+<section>
+<h2>A única chamada que você pede</h2>
+<p>Um guia ou relatório escrito pode vir de um prompt que você mesmo copia para qualquer assistente, e nesse caso o aplicativo não envia nada. Se, em vez disso, você configurar uma chave da Claude sua em Configurações e apertar um botão de gerar, o aplicativo envia o prompt daquele relatório à API da Anthropic sob a sua chave, mostra o custo que mediu e guarda a resposta no seu banco de dados. Sem chave, sem chamada; sem clique, sem chamada. Nada chama por agendamento, nunca.</p>
+</section>
+
+<section>
+<h2>Onde seus dados ficam</h2>
+<p>Seu histórico de partidas é um arquivo de banco de dados em uma pasta só dele; Configurações mostra a pasta e a abre. Uma chave que você adiciona fica no Gerenciador de Credenciais do Windows ou no chaveiro do seu sistema, ou em um arquivo de configurações na sua pasta pessoal quando não há chaveiro para usar; ela nunca fica no banco de dados. Desinstalar o aplicativo deixa a pasta onde está, então reinstalar continua de onde você parou; apague-a você mesmo para remover tudo.</p>
+</section>
+
+<section>
+<h2>Este site</h2>
+<p>Este site é um conjunto de arquivos estáticos, servido pelo Cloudflare Pages. Ele não grava cookie. A única requisição que faz além da própria página é o Cloudflare Web Analytics, uma contagem de visitas sem cookie que não guarda nenhum identificador seu; ela nos diz quantas pessoas leram esta página, e nada sobre quem.</p>
+</section>
+
+<section>
+<h2>Contato</h2>
+<p><a href="mailto:contact@senseitop.com">contact@senseitop.com</a>. Para uma vulnerabilidade, leia antes o <a href="https://github.com/sensei-top/sensei-top/blob/main/SECURITY.md">SECURITY.md</a>.</p>
+</section>
+</main>
+
+<footer class="site-footer">
+<p lang="en">Sensei Top is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.</p>
+<p>Os dados e as imagens de cards vêm do <a href="https://scryfall.com">Scryfall</a>, os resultados de torneios do <a href="https://github.com/fbettega/MTG_decklistcache">MTG_decklistcache</a> e do <a href="https://topdeck.gg">TopDeck.gg</a>, e as definições de arquétipos do <a href="https://github.com/Badaro/MTGOFormatData">MTGOFormatData</a>. Nenhum deles produz ou endossa o Sensei Top. O que é usado de cada um, e em quais termos, está na <a href="https://github.com/sensei-top/sensei-top/blob/main/docs/attribution.md">página de atribuição</a>.</p>
+<p><a href="/pt-br/">Início</a> · <a href="/privacy/" hreflang="en" lang="en">English</a></p>
+<p>Última alteração: 2026-10-12</p>
+</footer>
+
+</div>
+</body>
+</html>

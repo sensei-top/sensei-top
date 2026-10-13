@@ -1,0 +1,65 @@
+{
+  "copy": {
+    "copied": "Copied",
+    "building": "Building the prompt…",
+    "copyPrompt": "Copy the prompt",
+    "showPrompt": "Show the prompt",
+    "hidePrompt": "Hide the prompt",
+    "thenSave": "Then save the answer with this command:",
+    "copyCommand": "Copy the command"
+  },
+  "generate": {
+    "emptyNote": "Nothing written yet.",
+    "writing": "Writing… {{elapsed}} s",
+    "rewrite": "Rewrite with Claude",
+    "write": "Write it with Claude"
+  },
+  "sharing": {
+    "neverSent": {
+      "identity": "Your Arena name or id.",
+      "opponent": "An opponent's name or id.",
+      "pickTime": "How long you took over a pick.",
+      "log": "The log itself, or anything from Magic Online."
+    },
+    "receipt": {
+      "removed": "This draft was removed from the server.",
+      "waiting": "This draft is sent once its games are over.",
+      "sharedAgo": "This draft was shared {{when}}.",
+      "shared": "This draft was shared.",
+      "undo": "Undo",
+      "removing": "Removing",
+      "notRemoved": "The server did not answer. The draft is still shared."
+    },
+    "note": {
+      "on": "Sharing draft data is on.",
+      "settings": "Settings"
+    },
+    "payload": {
+      "statusOff": "Sharing is off, so this was not sent. It is what would be.",
+      "statusSent": "This was sent {{when}}.",
+      "statusWaiting": "This is sent once the draft's games are over.",
+      "heading": "What this draft sends",
+      "numbers": "Cards are sent as Arena's numbers. They are shown here by name.",
+      "neverSent": "Never sent",
+      "about": "About the app",
+      "draft": "The draft",
+      "picks": "The picks",
+      "pack": "Pack {{pack}}",
+      "deck": "The deck",
+      "mainDeck": "Main deck",
+      "sideboard": "Sideboard",
+      "noDeck": "No deck was read from the log.",
+      "games": "The games",
+      "record": "Record: {{record}}",
+      "cards_one": "1 card",
+      "cards_other": "{{count}} cards",
+      "pickUnknown": "Pick {{pick}}: the card taken is not known, from {{from}}",
+      "pickTook": "Pick {{pick}}: took {{taken}} from {{from}}",
+      "onThePlay": "on the play",
+      "onTheDraw": "on the draw",
+      "turns_one": "1 turn",
+      "turns_other": "{{count}} turns",
+      "against": "against {{colours}}"
+    }
+  }
+}

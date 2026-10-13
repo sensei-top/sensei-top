@@ -1,0 +1,72 @@
+{
+  "prefill": {
+    "deckStore": "Pre-filled from the format MTGO files this deck under.",
+    "lastPick": "Pre-filled from your last pick for this deck.",
+    "inferred": "Pre-filled: inferred from the cards revealed in this match."
+  },
+  "matches_one": "{{n}} match",
+  "matches_other": "{{n}} matches",
+  "result": {
+    "win": "Win",
+    "loss": "Loss",
+    "draw": "Draw"
+  },
+  "range": "{{from}} – {{to}}",
+  "page": {
+    "intro": "MTGO's log does not say which deck you played. These matches are grouped by the saved list that holds the most cards you played in each; confirm a group and every match in it counts toward that list.",
+    "waiting_one": "{{matches}} needs a deck.",
+    "waiting_other": "{{matches}} need a deck.",
+    "done_one": "{{matches}} now counts toward {{list}}.",
+    "done_other": "{{matches}} now count toward {{list}}.",
+    "noMatches": "No MTGO matches yet. Arena's log names the deck it played, so Arena matches never need this page.",
+    "allDone": "Every MTGO match has a deck.",
+    "backHome": "Back to Home"
+  },
+  "sections": {
+    "sure": {
+      "title": "Fits a saved list",
+      "caption": "Each list holds at least nine in ten of the cards you played."
+    },
+    "partial": {
+      "title": "Close to a saved list",
+      "caption": "The list holds half or more of the cards you played, not all. Often a version you changed or never saved; confirm only if close enough is right for you."
+    },
+    "unsure": {
+      "title": "Pick one at a time",
+      "caption": "Too few cards, or no saved list fits. Open the match to pick a deck, or just its format."
+    }
+  },
+  "groups": {
+    "hide": "Hide",
+    "show_one": "Show {{n}} group",
+    "show_other": "Show {{n}} groups"
+  },
+  "unsure": {
+    "fewCards_one": "Only {{n}} card seen.",
+    "fewCards_other": "Only {{n}} cards seen.",
+    "bestList": "Best list: {{name}}, {{matched}} of {{seen}} cards.",
+    "noFit": "No saved list fits."
+  },
+  "hint": "Your cards read as {{hint}}.",
+  "against": "against {{name}}",
+  "group": {
+    "choose": "Choose a list",
+    "chooseFirst": "Choose a list first",
+    "tied": "These lists fit equally well.",
+    "played": "Cards you played from this list: {{cards}}",
+    "missing": "You played, not in this list: {{cards}}",
+    "alsoClose": "Also close in {{matches}}: {{list}}",
+    "useList": "Use this list",
+    "format": "Format",
+    "notConfirmed": "Not confirmed",
+    "hideMatches": "Hide matches",
+    "showMatches": "Show matches",
+    "saving": "Saving…",
+    "confirm": "Confirm {{matches}} as {{list}}"
+  },
+  "match": {
+    "cardsInList": "{{matched}} of {{seen}} cards in this list",
+    "putBack": "Put back",
+    "leaveOut": "Leave this match out"
+  }
+}

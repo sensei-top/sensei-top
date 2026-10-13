@@ -1,0 +1,337 @@
+{
+  "format": {
+    "bestOfThree": "{{format}}, melhor de três"
+  },
+  "fieldName": "{{name}} no meta",
+  "count": {
+    "matches_one": "{{n}} partida",
+    "matches_other": "{{n}} partidas",
+    "games_one": "{{n}} jogo",
+    "games_other": "{{n}} jogos",
+    "lists_one": "{{n}} lista",
+    "lists_other": "{{n}} listas"
+  },
+  "line": {
+    "matches_one": "{{n}} partida, {{won}} vencida",
+    "matches_other": "{{n}} partidas, {{won}} vencidas",
+    "lastPlayed": "jogado pela última vez {{ago}}"
+  },
+  "record": {
+    "wonOf": "venceu {{wins}} de {{finished}}",
+    "figureOf": "{{wins}} de {{finished}}",
+    "matchesWon": "partidas vencidas",
+    "none": "nenhuma partida terminada ainda"
+  },
+  "tile": {
+    "versions_one": "{{n}} versão",
+    "versions_other": "{{n}} versões",
+    "lastPlayed": "jogado pela última vez {{day}}"
+  },
+  "list": {
+    "empty": {
+      "title": "Nenhum deck ainda",
+      "message": "Um deck aparece aqui na primeira vez que você joga uma partida com ele, com seu retrospecto, seus matchups e seu guia."
+    }
+  },
+  "matches": {
+    "title": "Partidas",
+    "showMore": "Mostrar mais {{n}}"
+  },
+  "layout": {
+    "allDecks": "Todos os decks",
+    "nav": "Deck",
+    "notFound": {
+      "title": "Este deck não existe",
+      "message": "Nenhum dos seus decks tem este endereço."
+    },
+    "tabs": {
+      "overview": "Visão geral",
+      "matchups": "Matchups",
+      "guide": "Guia"
+    }
+  },
+  "overview": {
+    "daysWithinMonth": "{{from}} a {{to}}",
+    "dayWithYear": "{{day}} de {{year}}",
+    "daysAcross": "{{from}} a {{to}}",
+    "undated": "Sem data",
+    "newest": "Mais recente",
+    "noRank": "Nenhuma classificação registrada",
+    "captionAll_one": "{{n}} partida, mais recentes primeiro",
+    "captionAll_other": "{{n}} partidas, mais recentes primeiro",
+    "captionShowing_one": "Mostrando {{shown}} de {{n}} partida, mais recentes primeiro",
+    "captionShowing_other": "Mostrando {{shown}} de {{n}} partidas, mais recentes primeiro",
+    "noMatch": {
+      "title": "Nenhuma partida com esta versão",
+      "message": "Escolha outra versão, ou leia todas as versões juntas."
+    },
+    "playDrawNote": "Contado por jogo, sobre os jogos cujo primeiro jogador é conhecido.",
+    "rank": {
+      "title": "Por classificação",
+      "subtitle": "Sua classificação quando cada partida foi jogada. Só partidas terminadas.",
+      "rank": "Classificação",
+      "matches": "Partidas",
+      "won": "Vitórias",
+      "rate": "Taxa"
+    },
+    "versions": {
+      "title": "Versões",
+      "subtitle": "Uma mudança na lista começa uma nova versão. Escolha uma para lê-la sozinha."
+    },
+    "tiles": {
+      "onPlay": "No play",
+      "onDraw": "No draw",
+      "wonOfGames": "venceu {{won}} de {{games}} jogos",
+      "gamesWon": "jogos vencidos",
+      "noGamePlay": "nenhum jogo no play ainda",
+      "noGameDraw": "nenhum jogo no draw ainda",
+      "playAgainstDraw": "Play contra draw",
+      "tooFew": "poucos jogos para comparar",
+      "points_one": "{{sign}}{{n}} ponto",
+      "points_other": "{{sign}}{{n}} pontos",
+      "betterPlay": "melhor no play",
+      "betterDraw": "melhor no draw",
+      "noDifference": "sem diferença"
+    }
+  },
+  "written": {
+    "byOn": "Escrito em {{day}} por {{author}}.",
+    "by": "Escrito por {{author}}.",
+    "on": "Escrito em {{day}}, sem autor registrado.",
+    "cost": "Custou {{cost}}.",
+    "staleDefault": "As evidências mudaram desde então."
+  },
+  "guide": {
+    "prepareRcq": "Preparar para um RCQ",
+    "sectionsNav": "Seções do guia",
+    "problemOrphan": "{{archetype}}: {{message}}",
+    "sections": {
+      "scope": "Escopo",
+      "howItWorks": "Como funciona",
+      "yourPlay": "Seu jogo",
+      "theList": "A lista",
+      "theField": "O meta",
+      "sideboardPlans": "Planos de sideboard",
+      "matchupCoverage": "Cobertura de matchups",
+      "betweenRounds": "Entre rodadas",
+      "write": "Escrever e exportar"
+    },
+    "zone": {
+      "hand": "na sua mão",
+      "graveyard": "no seu cemitério",
+      "exile": "no exílio",
+      "battlefield": "no campo de batalha"
+    },
+    "type": {
+      "creature": "Criaturas",
+      "instant": "Mágicas instantâneas",
+      "sorcery": "Feitiços",
+      "artifact": "Artefatos",
+      "enchantment": "Encantamentos",
+      "planeswalker": "Planeswalkers",
+      "land": "Terrenos"
+    },
+    "zoneLabel": "{{type}} {{zone}}",
+    "timing": {
+      "byT4": "Até o turno 4",
+      "t56": "Turnos 5–6",
+      "t78": "Turnos 7–8",
+      "t9": "Turno 9 em diante",
+      "never": "Nunca"
+    },
+    "verdict": {
+      "add": "Adicionar",
+      "trim": "Reduzir",
+      "cut": "Cortar",
+      "flex": "Fora do meta"
+    },
+    "copies": {
+      "noneNone": "Você não joga nenhuma · nenhuma lista do meta o joga",
+      "playNone": "Você joga {{n}} · nenhuma lista do meta o joga",
+      "nonePlays": "Você não joga nenhuma · o meta {{copies}}, em {{share}} das listas",
+      "playPlays": "Você joga {{n}} · o meta {{copies}}, em {{share}} das listas"
+    },
+    "differ": {
+      "noCard": "Nenhum card.",
+      "singleInLine": "O único card está em linha com o meta.",
+      "singleDiffers": "O único card difere do meta.",
+      "none": "Nenhum dos {{total}} cards difere do meta.",
+      "one": "1 dos {{total}} cards difere do meta.",
+      "many": "{{differing}} dos {{total}} cards diferem do meta."
+    },
+    "inLine_one": "O único card em linha com o meta",
+    "inLine_other": "Os {{n}} cards em linha com o meta",
+    "movement": {
+      "level": "estável",
+      "up": "subiu {{points}} pontos",
+      "down": "caiu {{points}} pontos"
+    },
+    "fieldCaption": {
+      "tooFew_one": "{{n}} lista, poucas para confiar",
+      "tooFew_other": "{{n}} listas, poucas para confiar",
+      "changed": "mudou no reinício",
+      "gone": "sumiu desde o reinício"
+    },
+    "scope": {
+      "title": "Escopo",
+      "subtitle": "Do que este guia é feito.",
+      "through": "até {{date}}",
+      "everyCard": "todos os cards",
+      "cardsWithout_one": "{{n}} card sem",
+      "cardsWithout_other": "{{n}} cards sem",
+      "allTime": "Desde sempre",
+      "noneOlder": "nenhuma das suas partidas é mais antiga",
+      "olderMatches_one": "{{n}} das suas partidas é mais antiga",
+      "olderMatches_other": "{{n}} das suas partidas são mais antigas",
+      "noReset": "nenhum reinício do formato encontrado",
+      "record": "Retrospecto",
+      "tournamentLists": "Listas de torneio",
+      "rulesText": "Texto de regras",
+      "fieldSince": "Meta desde",
+      "resetOn": "Reinício do formato em <strong>{{date}}</strong> ({{detectedFrom}})."
+    },
+    "field": {
+      "title": "O meta",
+      "subtitle": "A fatia de cada arquétipo nas listas de torneio, os mais jogados primeiro.",
+      "subtitleReset": "A fatia de cada arquétipo nas listas de torneio desde o reinício do formato, os mais jogados primeiro.",
+      "noFormat": {
+        "title": "Nenhum meta para mostrar",
+        "message": "Nenhum formato de torneio é conhecido para este deck, então não há meta de torneios para mostrar."
+      },
+      "noResults": {
+        "title": "Nenhum resultado de torneio ainda",
+        "message": "Esta página mostra o que está sendo jogado em torneios e o seu retrospecto contra cada deck. Ela se preenche quando os resultados de torneios são baixados, o que esta versão faz só pela linha de comando."
+      },
+      "ownDetail_one": "{{wins}}–{{losses}} sobre {{n}} lista",
+      "ownDetail_other": "{{wins}}–{{losses}} sobre {{n}} listas",
+      "notFound": "não encontrado no meta",
+      "shown_one": "do único arquétipo mostrado",
+      "shown_other": "dos {{n}} arquétipos mostrados",
+      "columns": {
+        "archetype": "Arquétipo",
+        "share": "Fatia",
+        "before": "Antes",
+        "you": "Você"
+      },
+      "yourArchetype": "Seu arquétipo",
+      "mostPlayed": "Mais jogado",
+      "changedAtReset": "Mudou no reinício",
+      "noCarryOver": "Seu retrospecto não é carregado adiante."
+    },
+    "list": {
+      "title": "A lista",
+      "winningLists_one": "{{n}} lista vencedora",
+      "winningLists_other": "{{n}} listas vencedoras",
+      "wins_one": "{{n}} vitória",
+      "wins_other": "{{n}} vitórias",
+      "subtitle": "Contra {{lists}} de {{archetype}}, cada uma com {{wins}} ou mais.",
+      "subtitleReset": "Contra {{lists}} de {{archetype}} desde o reinício do formato, cada uma com {{wins}} ou mais.",
+      "noArchetype": {
+        "title": "Nenhum arquétipo encontrado para esta lista",
+        "message": "A lista é comparada com as do meta quando corresponde a um arquétipo que o meta conhece."
+      },
+      "maindeck": "Deck principal",
+      "sideboard": "Sideboard",
+      "duplicates": "Possivelmente um card sob dois nomes"
+    },
+    "patterns": {
+      "showOther_one": "Mostrar o outro",
+      "showOther_other": "Mostrar os outros {{n}}",
+      "missing_one": "{{n}} partida não está na lista que esta página lê.",
+      "missing_other": "{{n}} partidas não estão na lista que esta página lê."
+    },
+    "leak": {
+      "matchesWith_one": "A única partida com este padrão",
+      "matchesWith_other": "As {{n}} partidas com este padrão",
+      "pointsApart_one": "{{n}} ponto de diferença",
+      "pointsApart_other": "{{n}} pontos de diferença",
+      "withIt": "Com ele",
+      "withoutIt": "Sem ele",
+      "trainingPlan": {
+        "title": "Plano de treino",
+        "subtitle": "Sobre os padrões recorrentes do detector de leaks em todos os seus decks, não só neste."
+      }
+    },
+    "write": {
+      "rewrite": "Reescrever o guia",
+      "write": "Escrever o guia",
+      "subtitle": "Como o deck funciona, a correção para o seu padrão mais caro, uma nota sobre cada card, um plano de sideboard contra cada um dos arquétipos mais jogados e um checklist entre rodadas.",
+      "staleNote": "A lista mudou desde então.",
+      "noMatch": "Nenhuma partida com este deck foi registrada ainda, então não há sobre o que escrever."
+    },
+    "export": {
+      "title": "Exportar as evidências",
+      "subtitle": "Os números do guia em Markdown, para guardar ou colar em outro lugar.",
+      "show": "Mostrar o Markdown",
+      "hide": "Ocultar o Markdown",
+      "copy": "Copiar o Markdown",
+      "copied": "Copiado"
+    },
+    "play": {
+      "title": "Seu jogo",
+      "subtitle": "O que os jogos deste deck mostram, todas as versões juntas.",
+      "turns_one": "{{n}} turno",
+      "turns_other": "{{n}} turnos",
+      "keptSeven": "Manteve sete",
+      "mulliganed": "Fez mulligan",
+      "winTakes": "Uma vitória leva",
+      "lossTakes": "Uma derrota leva",
+      "medianOf_one": "mediana de {{n}} jogo",
+      "medianOf_other": "mediana de {{n}} jogos",
+      "across_one": "Em todos os seus decks, {{n}} padrão",
+      "across_other": "Em todos os seus decks, {{n}} padrões",
+      "patterns": "Padrões nas partidas deste deck",
+      "noPattern": "Nenhum padrão tem partidas terminadas suficientes com este deck ainda.",
+      "timing": {
+        "title": "Quando um card-chave resolveu pela primeira vez",
+        "subtitle": "Jogos vencidos e perdidos, pelo seu turno em que o card resolveu pela primeira vez.",
+        "card": "Card"
+      },
+      "board": {
+        "title": "A mesa no seu próprio turno",
+        "subtitle": "Medianas sobre os jogos ainda em andamento naquele turno.",
+        "won": "Jogos vencidos",
+        "lost": "Jogos perdidos",
+        "turn": "Turno",
+        "games": "Jogos",
+        "hand": "Mão",
+        "life": "Vida",
+        "theirPermanents": "Permanentes deles"
+      },
+      "divergence": {
+        "title": "Onde jogos vencidos e perdidos mais diferem",
+        "subtitle": "A contagem mediana no seu próprio turno, para os três tipos de card e lugar que mais diferem entre jogos vencidos e jogos perdidos.",
+        "won": "Vencidos",
+        "lost": "Perdidos"
+      }
+    },
+    "written": {
+      "none": {
+        "title": "Nenhum guia escrito ainda",
+        "message": "Como o deck funciona, um plano de sideboard contra cada arquétipo e um checklist entre rodadas aparecem aqui quando o guia é escrito."
+      },
+      "stale": {
+        "title": "Escrito antes de a lista mudar",
+        "message": "A lista mudou desde que este guia foi escrito, então uma nota ou um plano pode citar um card ou um número que não vale mais.",
+        "again": "Escrever de novo"
+      },
+      "bringIn": "Entra",
+      "takeOut": "Sai",
+      "noChanges": "Nenhuma troca de cards.",
+      "plansSubtitle": "O que entra e o que sai contra cada arquétipo, do segundo jogo em diante.",
+      "checked": "Encontrado ao conferir os planos"
+    }
+  },
+  "leak": {
+    "category": {
+      "frame": "Enquadramento",
+      "clock": "Clock",
+      "trajectory": "Trajetória",
+      "role": "Papel",
+      "information": "Informação",
+      "resources": "Recursos",
+      "baseline": "Linha de base",
+      "deckbuilding": "Construção do deck"
+    }
+  }
+}

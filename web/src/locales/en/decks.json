@@ -1,0 +1,337 @@
+{
+  "format": {
+    "bestOfThree": "{{format}}, best of three"
+  },
+  "fieldName": "{{name}} in the field",
+  "count": {
+    "matches_one": "{{n}}\u00a0match",
+    "matches_other": "{{n}}\u00a0matches",
+    "games_one": "{{n}}\u00a0game",
+    "games_other": "{{n}}\u00a0games",
+    "lists_one": "{{n}}\u00a0list",
+    "lists_other": "{{n}}\u00a0lists"
+  },
+  "line": {
+    "matches_one": "{{n}} match, {{won}} won",
+    "matches_other": "{{n}} matches, {{won}} won",
+    "lastPlayed": "last played {{ago}}"
+  },
+  "record": {
+    "wonOf": "won {{wins}} of {{finished}}",
+    "figureOf": "{{wins}} of {{finished}}",
+    "matchesWon": "matches won",
+    "none": "no finished match yet"
+  },
+  "tile": {
+    "versions_one": "{{n}}\u00a0versions",
+    "versions_other": "{{n}}\u00a0versions",
+    "lastPlayed": "last played {{day}}"
+  },
+  "list": {
+    "empty": {
+      "title": "No decks yet",
+      "message": "A deck appears here the first time you play a match with it, with its record, its matchups and its guide."
+    }
+  },
+  "matches": {
+    "title": "Matches",
+    "showMore": "Show {{n}} more"
+  },
+  "layout": {
+    "allDecks": "All decks",
+    "nav": "Deck",
+    "notFound": {
+      "title": "No such deck",
+      "message": "None of your decks has this address."
+    },
+    "tabs": {
+      "overview": "Overview",
+      "matchups": "Matchups",
+      "guide": "Guide"
+    }
+  },
+  "overview": {
+    "daysWithinMonth": "{{from}} to {{to}}",
+    "dayWithYear": "{{day}}, {{year}}",
+    "daysAcross": "{{from}} to {{to}}",
+    "undated": "Undated",
+    "newest": "Newest",
+    "noRank": "No rank recorded",
+    "captionAll_one": "{{n}}\u00a0matches, newest first",
+    "captionAll_other": "{{n}}\u00a0matches, newest first",
+    "captionShowing_one": "Showing {{shown}} of {{n}}\u00a0matches, newest first",
+    "captionShowing_other": "Showing {{shown}} of {{n}}\u00a0matches, newest first",
+    "noMatch": {
+      "title": "No match with this version",
+      "message": "Pick another version, or read every version together."
+    },
+    "playDrawNote": "Counted per game, over the games whose first player is known.",
+    "rank": {
+      "title": "By rank",
+      "subtitle": "Your rank when each match was played. Finished matches only.",
+      "rank": "Rank",
+      "matches": "Matches",
+      "won": "Won",
+      "rate": "Rate"
+    },
+    "versions": {
+      "title": "Versions",
+      "subtitle": "A change to the list starts a new version. Pick one to read it alone."
+    },
+    "tiles": {
+      "onPlay": "On the play",
+      "onDraw": "On the draw",
+      "wonOfGames": "won {{won}} of {{games}}\u00a0games",
+      "gamesWon": "games won",
+      "noGamePlay": "no game on the play yet",
+      "noGameDraw": "no game on the draw yet",
+      "playAgainstDraw": "Play against draw",
+      "tooFew": "too few games to compare",
+      "points_one": "{{sign}}{{n}}\u00a0point",
+      "points_other": "{{sign}}{{n}}\u00a0points",
+      "betterPlay": "better on the play",
+      "betterDraw": "better on the draw",
+      "noDifference": "no difference"
+    }
+  },
+  "written": {
+    "byOn": "Written by {{author}} on {{day}}.",
+    "by": "Written by {{author}}.",
+    "on": "Written on {{day}}.",
+    "cost": "It cost {{cost}}.",
+    "staleDefault": "The evidence has changed since."
+  },
+  "guide": {
+    "prepareRcq": "Prepare for an RCQ",
+    "sectionsNav": "Guide sections",
+    "problemOrphan": "{{archetype}}: {{message}}",
+    "sections": {
+      "scope": "Scope",
+      "howItWorks": "How it works",
+      "yourPlay": "Your play",
+      "theList": "The list",
+      "theField": "The field",
+      "sideboardPlans": "Sideboard plans",
+      "matchupCoverage": "Matchup coverage",
+      "betweenRounds": "Between rounds",
+      "write": "Write and export"
+    },
+    "zone": {
+      "hand": "in your hand",
+      "graveyard": "in your graveyard",
+      "exile": "in exile",
+      "battlefield": "on the battlefield"
+    },
+    "type": {
+      "creature": "Creatures",
+      "instant": "Instants",
+      "sorcery": "Sorceries",
+      "artifact": "Artifacts",
+      "enchantment": "Enchantments",
+      "planeswalker": "Planeswalkers",
+      "land": "Lands"
+    },
+    "zoneLabel": "{{type}} {{zone}}",
+    "timing": {
+      "byT4": "By turn 4",
+      "t56": "Turns 5–6",
+      "t78": "Turns 7–8",
+      "t9": "Turn 9 on",
+      "never": "Never"
+    },
+    "verdict": {
+      "add": "Add",
+      "trim": "Trim",
+      "cut": "Cut",
+      "flex": "Not in the field"
+    },
+    "copies": {
+      "noneNone": "You play none · no list of the field plays it",
+      "playNone": "You play {{n}} · no list of the field plays it",
+      "nonePlays": "You play none · the field {{copies}}, in {{share}} of its lists",
+      "playPlays": "You play {{n}} · the field {{copies}}, in {{share}} of its lists"
+    },
+    "differ": {
+      "noCard": "No card.",
+      "singleInLine": "The one card is in line with the field.",
+      "singleDiffers": "The one card differs from the field.",
+      "none": "None of the {{total}}\u00a0cards differs from the field.",
+      "one": "1 of the {{total}}\u00a0cards differs from the field.",
+      "many": "{{differing}} of the {{total}}\u00a0cards differ from the field."
+    },
+    "inLine_one": "The one card in line with the field",
+    "inLine_other": "The {{n}}\u00a0cards in line with the field",
+    "movement": {
+      "level": "level",
+      "up": "up {{points}}\u00a0points",
+      "down": "down {{points}}\u00a0points"
+    },
+    "fieldCaption": {
+      "tooFew_one": "{{n}}\u00a0list, too few to trust",
+      "tooFew_other": "{{n}}\u00a0lists, too few to trust",
+      "changed": "changed at the reset",
+      "gone": "gone since the reset"
+    },
+    "scope": {
+      "title": "Scope",
+      "subtitle": "What this guide is built from.",
+      "through": "through {{date}}",
+      "everyCard": "every card",
+      "cardsWithout_one": "{{n}}\u00a0card without",
+      "cardsWithout_other": "{{n}}\u00a0cards without",
+      "allTime": "All time",
+      "noneOlder": "none of your matches is older",
+      "olderMatches_one": "{{n}} of your matches is older",
+      "olderMatches_other": "{{n}} of your matches are older",
+      "noReset": "no format reset found",
+      "record": "Record",
+      "tournamentLists": "Tournament lists",
+      "rulesText": "Rules text",
+      "fieldSince": "Field since",
+      "resetOn": "Format reset on <strong>{{date}}</strong>. {{detectedFrom}}."
+    },
+    "field": {
+      "title": "The field",
+      "subtitle": "Each archetype's share of the tournament lists, most played first.",
+      "subtitleReset": "Each archetype's share of the tournament lists since the format reset, most played first.",
+      "noFormat": {
+        "title": "No field to show",
+        "message": "No tournament format is known for this deck, so there is no tournament field to show."
+      },
+      "noResults": {
+        "title": "No tournament results yet",
+        "message": "This page shows what is being played in tournaments and your own record against each deck. It fills in once tournament results are downloaded, which this version does only from the command line."
+      },
+      "ownDetail_one": "{{wins}}–{{losses}} over {{n}}\u00a0list",
+      "ownDetail_other": "{{wins}}–{{losses}} over {{n}}\u00a0lists",
+      "notFound": "not found in the field",
+      "shown_one": "of the one archetype shown",
+      "shown_other": "of the {{n}}\u00a0archetypes shown",
+      "columns": {
+        "archetype": "Archetype",
+        "share": "Share",
+        "before": "Before",
+        "you": "You"
+      },
+      "yourArchetype": "Your archetype",
+      "mostPlayed": "Most played",
+      "changedAtReset": "Changed at the reset",
+      "noCarryOver": "Your record does not carry over."
+    },
+    "list": {
+      "title": "The list",
+      "winningLists_one": "{{n}}\u00a0winning list",
+      "winningLists_other": "{{n}}\u00a0winning lists",
+      "wins_one": "{{n}}\u00a0win",
+      "wins_other": "{{n}}\u00a0wins",
+      "subtitle": "Against {{lists}} of {{archetype}}, each with {{wins}} or more.",
+      "subtitleReset": "Against {{lists}} of {{archetype}} since the format reset, each with {{wins}} or more.",
+      "noArchetype": {
+        "title": "No archetype found for this list",
+        "message": "The list is compared with the field's once it matches an archetype the field knows."
+      },
+      "maindeck": "Maindeck",
+      "sideboard": "Sideboard",
+      "duplicates": "Possibly one card under two names"
+    },
+    "patterns": {
+      "showOther_one": "Show the other one",
+      "showOther_other": "Show the other {{n}}",
+      "missing_one": "{{n}}\u00a0match is not in the list this page reads.",
+      "missing_other": "{{n}}\u00a0matches are not in the list this page reads."
+    },
+    "leak": {
+      "matchesWith_one": "The one match with this pattern",
+      "matchesWith_other": "The {{n}}\u00a0matches with this pattern",
+      "pointsApart_one": "{{n}}\u00a0point apart",
+      "pointsApart_other": "{{n}}\u00a0points apart",
+      "withIt": "With it",
+      "withoutIt": "Without it",
+      "trainingPlan": {
+        "title": "Training plan",
+        "subtitle": "Over the leak finder's recurring patterns across every one of your decks, not just this one."
+      }
+    },
+    "write": {
+      "rewrite": "Rewrite the guide",
+      "write": "Write the guide",
+      "subtitle": "How the deck works, the fix for your costliest pattern, a note on each card, a sideboard plan against each of the most played archetypes and a checklist between rounds.",
+      "staleNote": "The list has changed since.",
+      "noMatch": "No match with this deck is recorded yet, so there is nothing to write about."
+    },
+    "export": {
+      "title": "Export the evidence",
+      "subtitle": "The guide's numbers as Markdown, to keep or to paste elsewhere.",
+      "show": "Show the Markdown",
+      "hide": "Hide the Markdown",
+      "copy": "Copy the Markdown",
+      "copied": "Copied"
+    },
+    "play": {
+      "title": "Your play",
+      "subtitle": "What this deck's own games show, every version together.",
+      "turns_one": "{{n}}\u00a0turn",
+      "turns_other": "{{n}}\u00a0turns",
+      "keptSeven": "Kept seven",
+      "mulliganed": "Mulliganed",
+      "winTakes": "A win takes",
+      "lossTakes": "A loss takes",
+      "medianOf_one": "median of {{n}}\u00a0game",
+      "medianOf_other": "median of {{n}}\u00a0games",
+      "across_one": "Across all of your decks, {{n}}\u00a0pattern",
+      "across_other": "Across all of your decks, {{n}}\u00a0patterns",
+      "patterns": "Patterns in this deck's matches",
+      "noPattern": "No pattern has enough finished matches with this deck yet.",
+      "timing": {
+        "title": "When a key card first resolved",
+        "subtitle": "Games won and lost, by the turn of yours on which the card first resolved.",
+        "card": "Card"
+      },
+      "board": {
+        "title": "The board on your own turn",
+        "subtitle": "Medians over the games still going at that turn.",
+        "won": "Games won",
+        "lost": "Games lost",
+        "turn": "Turn",
+        "games": "Games",
+        "hand": "Hand",
+        "life": "Life",
+        "theirPermanents": "Their permanents"
+      },
+      "divergence": {
+        "title": "Where won and lost games differ most",
+        "subtitle": "The median count on your own turn, for the three kinds of card and place that differ most between games won and games lost.",
+        "won": "Won",
+        "lost": "Lost"
+      }
+    },
+    "written": {
+      "none": {
+        "title": "No written guide yet",
+        "message": "How the deck works, a sideboard plan against each archetype and a checklist between rounds appear here once the guide is written."
+      },
+      "stale": {
+        "title": "Written before the list changed",
+        "message": "The list has changed since this guide was written, so a note or a plan may name a card or a number that no longer holds.",
+        "again": "Write it again"
+      },
+      "bringIn": "Bring in",
+      "takeOut": "Take out",
+      "noChanges": "No card changes.",
+      "plansSubtitle": "What to bring in and what to take out against each archetype, from the second game on.",
+      "checked": "Found when the plans were checked"
+    }
+  },
+  "leak": {
+    "category": {
+      "frame": "Frame",
+      "clock": "Clock",
+      "trajectory": "Trajectory",
+      "role": "Role",
+      "information": "Information",
+      "resources": "Resources",
+      "baseline": "Baseline",
+      "deckbuilding": "Deckbuilding"
+    }
+  }
+}

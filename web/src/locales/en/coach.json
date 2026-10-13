@@ -1,0 +1,141 @@
+{
+  "history": {
+    "title": "Every report",
+    "latest": "latest",
+    "onPage": "on this page"
+  },
+  "model": {
+    "label": "Model",
+    "fromSettings": "{{model}} (from your settings)"
+  },
+  "format": {
+    "label": "Format"
+  },
+  "empty": {
+    "title": "Not enough matches for a report yet",
+    "message": "The coach reads your finished constructed matches and needs at least ten of them before it has something to say."
+  },
+  "stale": {
+    "title": "Written before your latest matches",
+    "body": "You have played since this report was written, so its numbers stop short of your latest matches. A new report reads them all."
+  },
+  "write": {
+    "new": "Write a new report",
+    "first": "Write your first report",
+    "subtitle": "Claude reads the numbers on this page and searches the web for {{format}} news, then writes the report. It takes a few minutes, and every report is kept."
+  },
+  "earlier": {
+    "noSuchTitle": "No such report",
+    "noSuchMessage": "There is no report with this number.",
+    "back": "Back to the coach",
+    "note": "An earlier report, kept as it was written.",
+    "goLatest": "Go to your latest report"
+  },
+  "sources": {
+    "reading": "Reading list",
+    "web": "From the web"
+  },
+  "report": {
+    "title": "{{format}} report",
+    "titleOf": "{{format}} report of {{day}}",
+    "times_one": "once",
+    "times_other": "{{n}} times",
+    "byline": {
+      "plain": "Written by {{label}}.",
+      "cost": "Written by {{label}}. It cost {{cost}}.",
+      "costSearched": "Written by {{label}}. It cost {{cost}} and searched the web {{times}}.",
+      "searched": "Written by {{label}}. It searched the web {{times}}."
+    },
+    "searches_one": "1 web search",
+    "searches_other": "{{n}} web searches",
+    "costNote": {
+      "last": "Your last report with {{label}} cost {{cost}}.",
+      "price": "{{label}} costs {{input}} per million tokens it reads and {{output}} per million it writes, plus its web searches."
+    }
+  },
+  "profile": {
+    "title": "Your numbers",
+    "rangeNote": "The range beside a rate is where your real rate most likely sits. The fewer the matches, the wider it is, and under ten matches no rate is shown.",
+    "population_one": "1 finished constructed match",
+    "population_other": "{{n}} finished constructed matches",
+    "caption": "{{matches}}.",
+    "captionTo": "{{matches}}, to {{day}}.",
+    "leftOut": "What these numbers leave out"
+  },
+  "split": {
+    "matches": "Matches",
+    "games": "Games",
+    "game1": "Game 1",
+    "postBoard": "After sideboarding",
+    "onPlay": "On the play",
+    "onDraw": "On the draw"
+  },
+  "rate": {
+    "record": "{{wins}} of {{n}}",
+    "nonePlayed": "None played",
+    "won": "{{record}} won",
+    "wonRange": "{{record}} won · {{range}}"
+  },
+  "table": {
+    "won": "Won",
+    "rate": "Rate",
+    "archetype": "Archetype",
+    "share": "Share"
+  },
+  "byDeck": {
+    "title": "By deck",
+    "subtitle": "Your decks with the most matches. Games on the play and on the draw are counted per game."
+  },
+  "roles": {
+    "title": "By role",
+    "subtitle": "The role each matchup cast you in, as the match report read it.",
+    "first": "Role",
+    "beatdown": "Beatdown",
+    "control": "Control",
+    "mixed": "Mixed",
+    "unknown": "No role found"
+  },
+  "mulligans": {
+    "title": "Mulligans",
+    "subtitle": "Counted per game.",
+    "first": "Opening hand",
+    "keptSeven": "Kept seven",
+    "mulliganed": "Mulliganed"
+  },
+  "decksMet": {
+    "title": "Decks you met",
+    "since": "Since {{day}}, when the format last changed. Most met first.",
+    "sinceReset": "Since the format last changed. Most met first."
+  },
+  "field": {
+    "title": "The field",
+    "to": "Tournament results from MTGO and paper, not the Arena ladder, to {{day}}.",
+    "plain": "Tournament results from MTGO and paper, not the Arena ladder.",
+    "lists_one": "1 list",
+    "lists_other": "{{n}} lists",
+    "variantsMore": "{{shown}} and {{n}} more"
+  },
+  "patterns": {
+    "title": "Patterns",
+    "subtitle": "What your matches with a pattern have in common, against your matches without it, over every deck.",
+    "noDifference": "No difference",
+    "better_one": "1 point better with it",
+    "better_other": "{{n}} points better with it",
+    "worse_one": "1 point worse with it",
+    "worse_other": "{{n}} points worse with it",
+    "count_one": "1 pattern",
+    "count_other": "{{n}} patterns",
+    "deckSummary": "{{deck}}, {{patterns}}"
+  },
+  "turning": {
+    "title": "Where lost games turned",
+    "subtitle": "The turn of yours on which a lost game first slipped, over the {{games}} where one was found.",
+    "lostGames_one": "1 lost game",
+    "lostGames_other": "{{n}} lost games",
+    "early": "Early, turns 1 to 3",
+    "mid": "Mid, turns 4 to 6",
+    "late": "Late, turn 7 on",
+    "noneDecisive": "None of them decisive",
+    "decisive": "{{n}} of them decisive"
+  }
+}

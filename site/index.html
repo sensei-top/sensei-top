@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sensei Top</title>
+<meta name="description" content="Free, fully local match analytics for Magic: The Gathering Arena and Magic Online. No account, no upload.">
+<link rel="canonical" href="https://senseitop.com/">
+<link rel="alternate" hreflang="en" href="https://senseitop.com/">
+<link rel="alternate" hreflang="pt-BR" href="https://senseitop.com/pt-br/">
+<link rel="alternate" hreflang="x-default" href="https://senseitop.com/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/site.css">
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "73e9bc45819145e3afbbde2244e8d023"}'></script>
+</head>
+<body>
+<div class="page">
+
+<header class="site-header">
+<a class="brand" href="/"><img src="/img/mark.svg" alt="" width="28" height="28">Sensei Top</a>
+<nav>
+<a href="/#download">Download</a>
+<a href="/#never-leaves">What never leaves your machine</a>
+<a href="/#donate">Donate</a>
+<a href="/pt-br/" hreflang="pt-BR" lang="pt-BR">Português</a>
+</nav>
+</header>
+
+<main>
+<section class="hero">
+<h1>Your matches, your decks, the real metagame. All on your own computer.</h1>
+<p class="lead">Sensei Top reads the logs Arena and Magic Online already write and turns them into a dashboard: every match and game, turn by turn, your record with each deck and against each archetype, and what the tournament metagame looks like next to it. Free, open source, no account.</p>
+<p class="actions"><a class="button primary" href="https://github.com/sensei-top/sensei-top/releases/latest">Download for Windows</a> <a class="button" href="https://github.com/sensei-top/sensei-top/releases/latest">Download for Linux</a></p>
+<figure><img src="/img/home.png" width="1440" height="900" alt="The Home page: the last session's record, the last match with a link to its report, and the recent matches beside the win rate by week."></figure>
+</section>
+
+<section id="shows">
+<h2>What it shows</h2>
+<ul>
+<li><strong>Home.</strong> The last session, three things worth a look, and the win rate by week.</li>
+<li><strong>Live</strong> (Arena). The match in progress, with a keep guide for the opening hand, a read of the opponent's likely hand, your remaining library and a sideboard plan between games. In ranked play it shows only what any tracker shows.</li>
+<li><strong>Matches.</strong> Every match, with a report and a turn-by-turn replay of each game, and a leak finder that reads for patterns across matches.</li>
+<li><strong>Decks.</strong> Each deck's record over every version, its matchups, and a guide that sets your list against the field.</li>
+<li><strong>Field.</strong> The metagame from real Magic Online and paper tournament results.</li>
+<li><strong>Coach.</strong> A dated report across every deck, each one measured against the last.</li>
+</ul>
+<figure><img src="/img/field.png" width="1440" height="900" alt="The Field page: the Standard metagame from paper tournaments of 64 or more players over the last 90 days, archetype by archetype."></figure>
+</section>
+
+<section id="download">
+<h2>Download</h2>
+<p>Sensei Top runs on Windows 10 and 11 (64-bit) and on 64-bit Linux. There is nothing to sign up for.</p>
+<ul>
+<li><strong>Windows:</strong> the installer, the file ending in <code>.exe</code> on the <a href="https://github.com/sensei-top/sensei-top/releases/latest">releases page</a>. It installs for your user only and never asks for administrator rights. The installer is not code-signed yet, so Windows may ask you to confirm the first time.</li>
+<!-- Uncomment once the Microsoft Store listing exists, with its address for STORE_URL.
+<li><strong>Microsoft Store:</strong> the same app, kept up to date by <a href="STORE_URL">the Store</a>.</li>
+-->
+<li><strong>Linux:</strong> the AppImage, the file ending in <code>.AppImage</code> on the <a href="https://github.com/sensei-top/sensei-top/releases/latest">releases page</a>. One file, no install; it updates itself in place. Tried on CachyOS; steps for Ubuntu and the Steam Deck's desktop mode are in the install guide.</li>
+</ul>
+<p>The one thing to change in Arena: turn on <strong>Detailed Logs (Plugin Support)</strong> under Options → Account, then restart it. The <a href="https://github.com/sensei-top/sensei-top/blob/main/INSTALL.md">install guide</a> has the steps for each system, and the <a href="https://github.com/sensei-top/sensei-top/blob/main/docs/user/README.md">user guide</a> covers every page.</p>
+</section>
+
+<section id="never-leaves">
+<h2>What never leaves your machine</h2>
+<ul>
+<li><strong>No account, no upload.</strong> The dashboard runs on your own computer, answers only to it, and no match of yours is ever sent anywhere.</li>
+<li><strong>Read-only towards both clients.</strong> It reads the log files Arena and Magic Online write and never touches anything either of them owns.</li>
+<li><strong>Open source.</strong> The code is public, under the AGPL, so anyone can check both claims.</li>
+<li><strong>What it does download:</strong> card data and images from Scryfall, archetype definitions and tournament results from public repositories and from mtgo.com, and TopDeck.gg's events if you add a free key of your own. Reference data in, nothing of yours out.</li>
+<li><strong>A version check, once a day,</strong> against this project's releases on GitHub. It carries what any web request does and nothing about your games. A switch in Settings turns it off.</li>
+</ul>
+<p>The <a href="/privacy/">privacy page</a> lists every request the app makes, and what each one carries.</p>
+</section>
+
+<section id="guides">
+<h2>Written guides, on your terms</h2>
+<p>A deck guide, a match report, a matchup brief or a coaching report is written text, and the tracker gives you two ways to get it: a prompt you copy and paste into whatever assistant you already use, or a Claude key you set yourself, behind a button that says it will use that key, with the measured cost shown beside the answer. Nothing is called without the key and the press. The text comes back into the app and stays there.</p>
+</section>
+
+<section id="not-planned">
+<h2>What is not planned</h2>
+<p>Decisions, not gaps. Each was considered and refused.</p>
+<ul>
+<li>An overlay, or any window over the game.</li>
+<li>Live advice during a ranked game.</li>
+<li>Reading the memory of, injecting into or automating either client.</li>
+<li>Draft, mobile, and Arena-only formats.</li>
+<li>Telemetry, or an account for anything free.</li>
+</ul>
+<p>The <a href="https://github.com/sensei-top/sensei-top/blob/main/ROADMAP.md">roadmap</a> has the reasons, and what comes next.</p>
+</section>
+
+<section id="free-software">
+<h2>Free software</h2>
+<p>Sensei Top is free software under the GNU Affero General Public License, version 3, and the tracker is free now and later: nothing free will ever ask you to sign up. Two paid things are planned, and neither takes anything away. At release, the Microsoft Store build is the same app, for anyone who would rather support the project that way. Later, an optional paid tier adds deeper features and a monthly allowance of written reports, and is the only thing that asks for an account.</p>
+<p class="links"><a href="https://github.com/sensei-top/sensei-top">Source code</a> · <a href="https://github.com/sensei-top/sensei-top/discussions">Discussions</a> · <a href="https://github.com/sensei-top/sensei-top/blob/main/ROADMAP.md">Roadmap</a> · <a href="https://github.com/sensei-top/sensei-top/blob/main/CHANGELOG.md">Changelog</a></p>
+</section>
+
+<section id="donate">
+<h2>Donate</h2>
+<p>One person maintains Sensei Top in their spare time. A donation funds that time. It unlocks nothing in the app and no early build; what it gets you is your name in the credits if you want it there, a vote on what comes next, and the option to sponsor one item on the roadmap by name.</p>
+<p class="links"><a href="https://apoia.se/senseitop">Apoia.se, for Brazil</a> · <a href="https://github.com/sponsors/sensei-top">GitHub Sponsors, everywhere else</a></p>
+</section>
+</main>
+
+<footer class="site-footer">
+<p>Sensei Top is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.</p>
+<p>Card data and images come from <a href="https://scryfall.com">Scryfall</a>, tournament results from <a href="https://github.com/fbettega/MTG_decklistcache">MTG_decklistcache</a> and <a href="https://topdeck.gg">TopDeck.gg</a>, and archetype definitions from <a href="https://github.com/Badaro/MTGOFormatData">MTGOFormatData</a>. None of them produces or endorses Sensei Top. What is taken from each, and on what terms, is in the <a href="https://github.com/sensei-top/sensei-top/blob/main/docs/attribution.md">attribution page</a>.</p>
+<p>Contact: <a href="mailto:contact@senseitop.com">contact@senseitop.com</a>. To report a vulnerability, read <a href="https://github.com/sensei-top/sensei-top/blob/main/SECURITY.md">SECURITY.md</a> first.</p>
+<p><a href="/privacy/">Privacy</a> · <a href="/pt-br/" hreflang="pt-BR" lang="pt-BR">Português (Brasil)</a></p>
+</footer>
+
+</div>
+</body>
+</html>

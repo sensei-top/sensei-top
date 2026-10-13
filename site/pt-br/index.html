@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sensei Top</title>
+<meta name="description" content="Análise de partidas de Magic: The Gathering Arena e Magic Online, gratuita e inteiramente local. Sem conta, sem envio.">
+<link rel="canonical" href="https://senseitop.com/pt-br/">
+<link rel="alternate" hreflang="en" href="https://senseitop.com/">
+<link rel="alternate" hreflang="pt-BR" href="https://senseitop.com/pt-br/">
+<link rel="alternate" hreflang="x-default" href="https://senseitop.com/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/site.css">
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "73e9bc45819145e3afbbde2244e8d023"}'></script>
+</head>
+<body>
+<div class="page">
+
+<header class="site-header">
+<a class="brand" href="/pt-br/"><img src="/img/mark.svg" alt="" width="28" height="28">Sensei Top</a>
+<nav>
+<a href="/pt-br/#download">Baixar</a>
+<a href="/pt-br/#never-leaves">O que nunca sai do seu computador</a>
+<a href="/pt-br/#donate">Doar</a>
+<a href="/" hreflang="en" lang="en">English</a>
+</nav>
+</header>
+
+<main>
+<section class="hero">
+<h1>Suas partidas, seus decks, o meta de verdade. Tudo no seu próprio computador.</h1>
+<p class="lead">O Sensei Top lê os logs que o Arena e o Magic Online já escrevem e os transforma em um dashboard: cada partida e cada jogo, turno a turno, seu retrospecto com cada deck e contra cada arquétipo, e o metajogo dos torneios ao lado. Gratuito, de código aberto, sem conta.</p>
+<p class="actions"><a class="button primary" href="https://github.com/sensei-top/sensei-top/releases/latest">Baixar para Windows</a> <a class="button" href="https://github.com/sensei-top/sensei-top/releases/latest">Baixar para Linux</a></p>
+<figure><img src="/img/home.png" width="1440" height="900" alt="A página Início: o retrospecto da última sessão, a última partida com um link para o relatório dela, e as partidas recentes ao lado da taxa de vitórias por semana."></figure>
+</section>
+
+<section id="shows">
+<h2>O que ele mostra</h2>
+<ul>
+<li><strong>Início.</strong> A última sessão, três coisas que valem uma olhada e a taxa de vitórias por semana.</li>
+<li><strong>Ao vivo</strong> (Arena). A partida em andamento, com um guia de mão inicial, uma leitura da mão provável do oponente, o que resta no seu grimório e um plano de sideboard entre os jogos. Em partida ranqueada, mostra só o que qualquer tracker mostra.</li>
+<li><strong>Partidas.</strong> Cada partida, com um relatório e um replay turno a turno de cada jogo, e um localizador de leaks que procura padrões entre as partidas.</li>
+<li><strong>Decks.</strong> O retrospecto de cada deck em cada versão, seus matchups e um guia que coloca sua lista contra o meta.</li>
+<li><strong>O meta.</strong> O metajogo a partir de resultados reais de torneios do Magic Online e de papel.</li>
+<li><strong>Treinador.</strong> Um relatório datado sobre todos os decks, cada um medido contra o anterior.</li>
+</ul>
+<figure><img src="/img/field.png" width="1440" height="900" alt="A página O meta: o metajogo de Padrão a partir de torneios de papel com 64 jogadores ou mais nos últimos 90 dias, arquétipo por arquétipo."></figure>
+</section>
+
+<section id="download">
+<h2>Baixar</h2>
+<p>O Sensei Top roda no Windows 10 e 11 (64 bits) e no Linux de 64 bits. Não há nada para se cadastrar.</p>
+<ul>
+<li><strong>Windows:</strong> o instalador, o arquivo terminado em <code>.exe</code> na <a href="https://github.com/sensei-top/sensei-top/releases/latest">página de versões</a>. Ele instala só para o seu usuário e nunca pede direitos de administrador. O instalador ainda não é assinado, então o Windows pode pedir uma confirmação na primeira vez.</li>
+<!-- Uncomment once the Microsoft Store listing exists, with its address for STORE_URL.
+<li><strong>Microsoft Store:</strong> o mesmo aplicativo, mantido atualizado pela <a href="STORE_URL">Store</a>.</li>
+-->
+<li><strong>Linux:</strong> o AppImage, o arquivo terminado em <code>.AppImage</code> na <a href="https://github.com/sensei-top/sensei-top/releases/latest">página de versões</a>. Um arquivo só, sem instalação; ele se atualiza no lugar. Testado no CachyOS; os passos para Ubuntu e para o modo desktop do Steam Deck estão no guia de instalação.</li>
+</ul>
+<p>A única coisa a mudar no Arena: ligue <strong>Registros detalhados (suporte de plugin)</strong> em Opções → Conta e abra o Arena de novo. O <a href="https://github.com/sensei-top/sensei-top/blob/main/INSTALL.md">guia de instalação</a> tem os passos para cada sistema, e o <a href="https://github.com/sensei-top/sensei-top/blob/main/docs/user/README.md">guia do usuário</a> cobre cada página. Os dois estão em inglês por enquanto.</p>
+</section>
+
+<section id="never-leaves">
+<h2>O que nunca sai do seu computador</h2>
+<ul>
+<li><strong>Sem conta, sem envio.</strong> O dashboard roda no seu próprio computador, responde só a ele, e nenhuma partida sua é enviada a lugar nenhum.</li>
+<li><strong>Só leitura em relação aos dois clientes.</strong> Ele lê os arquivos de log que o Arena e o Magic Online escrevem e nunca toca em nada que pertença a qualquer um dos dois.</li>
+<li><strong>Código aberto.</strong> O código é público, sob a AGPL, então qualquer pessoa pode conferir as duas afirmações.</li>
+<li><strong>O que ele baixa:</strong> dados e imagens de cards do Scryfall, definições de arquétipos e resultados de torneios de repositórios públicos e do mtgo.com, e os eventos do TopDeck.gg se você adicionar uma chave gratuita sua. Dados de referência entram; nada seu sai.</li>
+<li><strong>Uma verificação de versão, uma vez por dia,</strong> contra as versões deste projeto no GitHub. Ela carrega o que qualquer requisição na web carrega e nada sobre os seus jogos. Uma chave em Configurações a desliga.</li>
+</ul>
+<p>A <a href="/pt-br/privacy/">página de privacidade</a> lista cada requisição que o aplicativo faz e o que cada uma carrega.</p>
+</section>
+
+<section id="guides">
+<h2>Guias escritos, do seu jeito</h2>
+<p>Um guia de deck, um relatório de partida, um resumo de matchup ou um relatório do treinador é texto escrito, e o tracker dá dois caminhos para obtê-lo: um prompt que você copia e cola no assistente que já usa, ou uma chave da Claude que você mesmo configura, atrás de um botão que avisa que vai usar essa chave, com o custo medido mostrado ao lado da resposta. Nada é chamado sem a chave e sem o clique. O texto volta para o aplicativo e fica nele.</p>
+<p>Os prompts que você copia continuam em inglês: são texto para o modelo, não para você.</p>
+</section>
+
+<section id="not-planned">
+<h2>O que não está planejado</h2>
+<p>Decisões, não lacunas. Cada uma foi considerada e recusada.</p>
+<ul>
+<li>Um overlay, ou qualquer janela sobre o jogo.</li>
+<li>Conselhos ao vivo durante uma partida ranqueada.</li>
+<li>Ler a memória, injetar código ou automatizar qualquer um dos clientes.</li>
+<li>Draft, celular e formatos só do Arena.</li>
+<li>Telemetria, ou uma conta para qualquer coisa gratuita.</li>
+</ul>
+<p>O <a href="https://github.com/sensei-top/sensei-top/blob/main/ROADMAP.md">roadmap</a> tem os motivos, e o que vem a seguir.</p>
+</section>
+
+<section id="free-software">
+<h2>Software livre</h2>
+<p>O Sensei Top é software livre sob a GNU Affero General Public License, versão 3, e o tracker é gratuito agora e depois: nada gratuito vai pedir cadastro algum dia. Duas coisas pagas estão planejadas, e nenhuma tira nada. No lançamento, a versão da Microsoft Store é o mesmo aplicativo, para quem preferir apoiar o projeto desse jeito. Mais tarde, um plano pago opcional acrescenta recursos mais profundos e uma cota mensal de relatórios escritos, e é a única coisa que pede uma conta.</p>
+<p class="links"><a href="https://github.com/sensei-top/sensei-top">Código-fonte</a> · <a href="https://github.com/sensei-top/sensei-top/discussions">Discussões</a> · <a href="https://github.com/sensei-top/sensei-top/blob/main/ROADMAP.md">Roadmap</a> · <a href="https://github.com/sensei-top/sensei-top/blob/main/CHANGELOG.md">Histórico de versões</a></p>
+</section>
+
+<section id="donate">
+<h2>Doar</h2>
+<p>Uma pessoa mantém o Sensei Top no tempo livre. Uma doação financia esse tempo. Ela não desbloqueia nada no aplicativo nem versão antecipada; o que ela dá é seu nome nos créditos se você quiser, um voto no que vem a seguir e a opção de patrocinar um item do roadmap pelo nome.</p>
+<p class="links"><a href="https://apoia.se/senseitop">Apoia.se, para o Brasil</a> · <a href="https://github.com/sponsors/sensei-top">GitHub Sponsors, para o resto do mundo</a></p>
+</section>
+</main>
+
+<footer class="site-footer">
+<p lang="en">Sensei Top is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.</p>
+<p>Os dados e as imagens de cards vêm do <a href="https://scryfall.com">Scryfall</a>, os resultados de torneios do <a href="https://github.com/fbettega/MTG_decklistcache">MTG_decklistcache</a> e do <a href="https://topdeck.gg">TopDeck.gg</a>, e as definições de arquétipos do <a href="https://github.com/Badaro/MTGOFormatData">MTGOFormatData</a>. Nenhum deles produz ou endossa o Sensei Top. O que é usado de cada um, e em quais termos, está na <a href="https://github.com/sensei-top/sensei-top/blob/main/docs/attribution.md">página de atribuição</a>.</p>
+<p>Contato: <a href="mailto:contact@senseitop.com">contact@senseitop.com</a>. Para relatar uma vulnerabilidade, leia antes o <a href="https://github.com/sensei-top/sensei-top/blob/main/SECURITY.md">SECURITY.md</a>.</p>
+<p><a href="/pt-br/privacy/">Privacidade</a> · <a href="/" hreflang="en" lang="en">English</a></p>
+</footer>
+
+</div>
+</body>
+</html>

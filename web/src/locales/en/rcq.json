@@ -1,0 +1,88 @@
+{
+  "freshness": {
+    "sentence": "{{source}}: {{event}}, {{fetched}}",
+    "noEvent": "no event yet",
+    "newestEvent": "newest event {{day}}",
+    "neverFetched": "never fetched",
+    "fetched": "fetched {{ago}}"
+  },
+  "chips": {
+    "shareNote": "A chip's share is of the Tier {{tier}} decks of the last {{days}} days; the smaller archetypes are under \"Other\"."
+  },
+  "view": {
+    "back": "The guide",
+    "write": "Write the RCQ guide",
+    "writeAgain": "Write the RCQ guide again",
+    "subtitle": "A game plan, the field you will meet, a plan for each matchup checked against your 75, the flex slots and a checklist between rounds.",
+    "staleNote": "The list has changed since."
+  },
+  "inputs": {
+    "title": "Your list and the store",
+    "subtitle": "Kept on this computer for this deck, as you leave them.",
+    "yourList": "Your 75",
+    "listHint": "Arena's export, MTGO's or a plain list: a count and a name a line, the sideboard after a blank line or under \"Sideboard\".",
+    "expectedTitle": "Expected at the store",
+    "expectedHint": "Each one you pick gets its own plan. The field's numbers still lead.",
+    "reading": "Reading the field…",
+    "noArchetype": "The tournament corpus names no archetype yet.",
+    "fewer": "Fewer",
+    "other": "Other ({{n}})",
+    "ownLabel": "Your 75 is",
+    "notChosen": "Not chosen"
+  },
+  "preview": {
+    "title": "What the guide will read",
+    "pasteFirst": "Paste your 75 above to see how it reads.",
+    "updating": "Reading your changes…",
+    "counts": "Maindeck / sideboard",
+    "checkTitle": "Check the list",
+    "unresolved_one": "Not found in the card database, so the guide has no rules text for it: {{cards}}.",
+    "unresolved_other": "Not found in the card database, so the guide has no rules text for them: {{cards}}.",
+    "readsAs": "Your 75 reads as <name>{{name}}</name>.",
+    "readsAsChosen": "Your 75 reads as <name>{{name}}</name>, as you chose.",
+    "unnamed": "Your 75 could not be named from the field's lists.",
+    "chooseAbove": "Choose its archetype above.",
+    "noFormat": "No tournament format is known for this deck, so there is no tournament field to show.",
+    "expectedTitle": "Expected at the store",
+    "expected": {
+      "share": "<name>{{name}}</name>, {{pct}}% of the field",
+      "shareRecord": "<name>{{name}}</name>, {{pct}}% of the field; you are {{wins}}–{{losses}} against it",
+      "shareNone": "<name>{{name}}</name>, {{pct}}% of the field; you have not played it",
+      "absent": "<name>{{name}}</name>, not in the field",
+      "absentRecord": "<name>{{name}}</name>, not in the field; you are {{wins}}–{{losses}} against it",
+      "absentNone": "<name>{{name}}</name>, not in the field; you have not played it"
+    },
+    "freshTitle": "How fresh the field is",
+    "freshNone": "No tournament source has been fetched.",
+    "recentShares": "The field over the last 14 days",
+    "recentShare_one": "{{pct}}%, {{n}} deck",
+    "recentShare_other": "{{pct}}%, {{n}} decks",
+    "eventsSummary": "Events of the last 7 days ({{n}})",
+    "noEvents": "No event in the corpus in the last 7 days.",
+    "event_one": "{{source}} · Tier {{tier}} · {{n}} list",
+    "event_other": "{{source}} · Tier {{tier}} · {{n}} lists",
+    "eventDated_one": "{{date}} · {{source}} · Tier {{tier}} · {{n}} list",
+    "eventDated_other": "{{date}} · {{source}} · Tier {{tier}} · {{n}} lists",
+    "top8": "Top 8: {{decks}}"
+  },
+  "result": {
+    "role": {
+      "core": "Core",
+      "flex": "Flex",
+      "risk": "Risk"
+    },
+    "matchupsTitle": "Matchups",
+    "matchupsSubtitle": "Play or draw, and what to bring in and take out from the second game on, for your 75.",
+    "foundTitle": "Found when the plans were checked",
+    "flexTitle": "Flex slots",
+    "betweenRounds": "Between rounds",
+    "carryTitle": "Take it to the store",
+    "carrySubtitle": "The guide as Markdown, to read on your phone.",
+    "copied": "Copied",
+    "copy": "Copy as Markdown",
+    "download": "Download .md",
+    "building": "Building the Markdown…",
+    "gamePlan": "Game plan",
+    "field": "The field you will meet"
+  }
+}

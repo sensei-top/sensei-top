@@ -1,0 +1,3 @@
+# Fixtures are raw client captures: keep them byte-exact on every checkout
+# (Git for Windows defaults to core.autocrlf=true).
+tests/fixtures/** -text

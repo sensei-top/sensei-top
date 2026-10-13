@@ -1,0 +1,2153 @@
+# Sensei Top: the dashboard's prose from the server, in Brazilian Portuguese.
+# Translated by hand against the glossary in docs/i18n.md; the msgids come
+# from locale/sensei_top.pot, which scripts/i18n_extract.py generates.
+msgid ""
+msgstr ""
+"Project-Id-Version: sensei-top\n"
+"Language-Team: Brazilian Portuguese\n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: sensei_top/guide/rcq.py
+msgid "(unclassified)"
+msgstr "(não classificado)"
+
+#: sensei_top/review/analyzers/trajectory.py
+msgid ""
+"Across every turn this reader could measure, the position index never dropped"
+" from one recorded turn to the next."
+msgstr ""
+"Em todos os turnos que este leitor conseguiu medir, o índice de posição nunca"
+" caiu de um turno registrado para o seguinte."
+
+#: sensei_top/review/analyzers/baseline.py
+#, python-brace-format
+msgid ""
+"Across {n} matches in {tier} since the last format reset ({since}), {own} has"
+" beaten {opponent} {wins} times and lost {losses}."
+msgstr ""
+"Em {n} partidas em {tier} desde o último reinício do formato ({since}), {own}"
+" venceu {opponent} {wins} vezes e perdeu {losses}."
+
+#: sensei_top/review/analyzers/baseline.py
+#, python-brace-format
+msgid ""
+"Across {n} matches in {tier}, {own} has beaten {opponent} {wins} times and "
+"lost {losses}."
+msgstr ""
+"Em {n} partidas em {tier}, {own} venceu {opponent} {wins} vezes e perdeu "
+"{losses}."
+
+#: sensei_top/review/analyzers/frame.py
+#, python-brace-format
+msgid ""
+"Against {opponent}, comparing your deck's own creature/removal/card-advantage"
+" mix to the field's typical build of their archetype points to a mixed role —"
+" no side of this matchup clearly wins the beatdown-versus-control read. "
+"Misjudging this is Flores' classic error: the beatdown has to race, the "
+"control deck has to survive to card advantage — playing the other one's game "
+"plan loses on its own terms."
+msgstr ""
+"Contra {opponent}, comparar a mistura de criaturas, remoção e vantagem de "
+"cards do seu deck com a construção típica do arquétipo dele no meta aponta "
+"para um papel misto — nenhum lado deste matchup vence claramente a leitura de"
+" beatdown contra controle. Errar isso é o erro clássico de Flores: o beatdown"
+" tem que correr, o deck de controle tem que sobreviver até a vantagem de "
+"cards — jogar o plano de jogo do outro perde por si só."
+
+#: sensei_top/review/analyzers/frame.py
+#, python-brace-format
+msgid ""
+"Against {opponent}, comparing your deck's own creature/removal/card-advantage"
+" mix to the field's typical build of their archetype points to the beatdown. "
+"Misjudging this is Flores' classic error: the beatdown has to race, the "
+"control deck has to survive to card advantage — playing the other one's game "
+"plan loses on its own terms."
+msgstr ""
+"Contra {opponent}, comparar a mistura de criaturas, remoção e vantagem de "
+"cards do seu deck com a construção típica do arquétipo dele no meta aponta "
+"para o beatdown. Errar isso é o erro clássico de Flores: o beatdown tem que "
+"correr, o deck de controle tem que sobreviver até a vantagem de cards — jogar"
+" o plano de jogo do outro perde por si só."
+
+#: sensei_top/review/analyzers/frame.py
+#, python-brace-format
+msgid ""
+"Against {opponent}, comparing your deck's own creature/removal/card-advantage"
+" mix to the field's typical build of their archetype points to the control "
+"deck. Misjudging this is Flores' classic error: the beatdown has to race, the"
+" control deck has to survive to card advantage — playing the other one's game"
+" plan loses on its own terms."
+msgstr ""
+"Contra {opponent}, comparar a mistura de criaturas, remoção e vantagem de "
+"cards do seu deck com a construção típica do arquétipo dele no meta aponta "
+"para o deck de controle. Errar isso é o erro clássico de Flores: o beatdown "
+"tem que correr, o deck de controle tem que sobreviver até a vantagem de cards"
+" — jogar o plano de jogo do outro perde por si só."
+
+#: sensei_top/review/analyzers/clock.py
+#, python-brace-format
+msgid "An even race: {n} damage each way"
+msgid_plural "An even race: {n} damage each way"
+msgstr[0] "Corrida empatada: {n} de dano para cada lado"
+msgstr[1] "Corrida empatada: {n} de dano para cada lado"
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"An example match chosen for \"{chosen_for}\" could not be rebuilt for display"
+" and was skipped."
+msgstr ""
+"Uma partida de exemplo escolhida para \"{chosen_for}\" não pôde ser "
+"reconstruída para exibição e foi pulada."
+
+#: sensei_top/review/analyzers/frame.py
+msgid ""
+"Arena logs the hand it offers before each mulligan decision "
+"(table/opening_hand.py), but never the hand you actually shipped after "
+"bottoming cards under the London rule — the hands you shipped are not in the "
+"log at any point, so nothing here can say whether a mulligan was right."
+msgstr ""
+"O Arena registra a mão que oferece antes de cada decisão de mulligan "
+"(table/opening_hand.py), mas nunca a mão com que você de fato ficou depois de"
+" colocar cards no fundo pela regra de Londres — as mãos que você devolveu não"
+" estão no log em nenhum momento, então nada aqui pode dizer se um mulligan "
+"foi certo."
+
+#: sensei_top/review/analyzers/role_play.py
+#, python-brace-format
+msgid ""
+"Assigned role was '{role}', and nothing in this reader's checks found a "
+"mismatch — that is not the same as a perfectly played role, only that these "
+"specific checks found nothing."
+msgstr ""
+"O papel atribuído foi '{role}', e nada nas verificações deste leitor "
+"encontrou uma divergência — isso não é o mesmo que um papel jogado "
+"perfeitamente, só que estas verificações específicas não encontraram nada."
+
+#: sensei_top/review/analyzers/resources.py
+#, python-brace-format
+msgid ""
+"At the last turn this reader recorded for you (your turn {turn}), your hand "
+"still held {n} cards. Resources that never get spent are not card advantage —"
+" they are cards that arrived too late, cost too much, or never had the mana "
+"to matter."
+msgid_plural ""
+"At the last turn this reader recorded for you (your turn {turn}), your hand "
+"still held {n} cards. Resources that never get spent are not card advantage —"
+" they are cards that arrived too late, cost too much, or never had the mana "
+"to matter."
+msgstr[0] ""
+"No último turno que este leitor registrou para você (seu turno {turn}), sua "
+"mão ainda tinha {n} card. Recursos que nunca são gastos não são vantagem de "
+"cards — são cards que chegaram tarde demais, custaram demais, ou nunca "
+"tiveram a mana para importar."
+msgstr[1] ""
+"No último turno que este leitor registrou para você (seu turno {turn}), sua "
+"mão ainda tinha {n} cards. Recursos que nunca são gastos não são vantagem de "
+"cards — são cards que chegaram tarde demais, custaram demais, ou nunca "
+"tiveram a mana para importar."
+
+#: sensei_top/review/summary.py
+msgid "Baseline"
+msgstr "Linha de base"
+
+#: sensei_top/review/analyzers/baseline.py
+#, python-brace-format
+msgid ""
+"Before this match, you had played this matchup with this deck {n} time and "
+"won {win_rate}% of them ({games_won} games won to {games_lost} lost)."
+msgid_plural ""
+"Before this match, you had played this matchup with this deck {n} times and "
+"won {win_rate}% of them ({games_won} games won to {games_lost} lost)."
+msgstr[0] ""
+"Antes desta partida, você havia jogado este matchup com este deck {n} vez e "
+"vencido {win_rate}% delas ({games_won} jogos vencidos a {games_lost} "
+"perdidos)."
+msgstr[1] ""
+"Antes desta partida, você havia jogado este matchup com este deck {n} vezes e"
+" vencido {win_rate}% delas ({games_won} jogos vencidos a {games_lost} "
+"perdidos)."
+
+#: sensei_top/review/analyzers/clock.py
+#, python-brace-format
+msgid ""
+"By turn {turn}, you and the opponent had each dealt {n} damage to the other's"
+" life total — neither side was ahead in the race by damage output alone."
+msgid_plural ""
+"By turn {turn}, you and the opponent had each dealt {n} damage to the other's"
+" life total — neither side was ahead in the race by damage output alone."
+msgstr[0] ""
+"Até o turno {turn}, você e o oponente haviam causado {n} de dano cada um ao "
+"total de vida do outro — nenhum lado estava na frente na corrida só pelo dano"
+" causado."
+msgstr[1] ""
+"Até o turno {turn}, você e o oponente haviam causado {n} de dano cada um ao "
+"total de vida do outro — nenhum lado estava na frente na corrida só pelo dano"
+" causado."
+
+#: sensei_top/review/analyzers/role_play.py
+msgid ""
+"Card advantage can also cash out as board state or life total rather than "
+"hand size — a removal spell trading one-for-one shows up here as flat, not as"
+" a swing."
+msgstr ""
+"Vantagem de cards também pode se converter em mesa ou em total de vida em vez"
+" de tamanho de mão — uma remoção trocando um por um aparece aqui como "
+"estável, não como uma virada."
+
+#: sensei_top/review/analyzers/resources.py
+#, python-brace-format
+msgid "Card advantage ranged from {low:+d} to {high:+d} this game"
+msgstr "A vantagem de cards foi de {low:+d} a {high:+d} neste jogo"
+
+#: sensei_top/review/analyzers/resources.py
+msgid "Cards in hand at the last recorded turn"
+msgstr "Cards na mão no último turno registrado"
+
+#: sensei_top/api/routes/guide.py sensei_top/api/routes/rcq.py
+#, python-brace-format
+msgid "Claude's answer could not be read: {error}"
+msgstr "A resposta do Claude não pôde ser lida: {error}"
+
+#: sensei_top/review/summary.py
+msgid "Clock"
+msgstr "Clock"
+
+#: sensei_top/guide/decklist.py
+#, python-brace-format
+msgid "Could not read this line, so it was left out: \"{line}\""
+msgstr "Não foi possível ler esta linha, então ela foi deixada de fora: \"{line}\""
+
+#: sensei_top/review/analyzers/trajectory.py
+msgid "Damage taken in that window"
+msgstr "Dano sofrido nessa janela"
+
+#: sensei_top/review/analyzers/clock.py
+msgid "Damage the opponent dealt to you"
+msgstr "Dano que o oponente causou a você"
+
+#: sensei_top/review/analyzers/clock.py
+msgid "Damage you dealt to the opponent"
+msgstr "Dano que você causou ao oponente"
+
+#: sensei_top/table/opening_hand.py
+msgid ""
+"Deck list not seen yet for this match — the verdict needs the deck's land "
+"band."
+msgstr ""
+"A lista do deck ainda não foi vista nesta partida — o veredito precisa da "
+"faixa de terrenos do deck."
+
+#: sensei_top/review/summary.py
+#, python-brace-format
+msgid "Drew {wins}-{losses} with {opponent}"
+msgstr "Empatou em {wins}-{losses} com {opponent}"
+
+#: sensei_top/review/analyzers/information.py
+msgid ""
+"Every one of the opponent's usual staples either showed up or fell below the "
+"share this reader considers a staple."
+msgstr ""
+"Cada um dos staples habituais do oponente apareceu ou ficou abaixo da fatia "
+"que este leitor considera um staple."
+
+#: sensei_top/review/analyzers/clock.py
+msgid "Fell behind in the damage race"
+msgstr "Ficou atrás na corrida de dano"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Fewest players in a large paper tournament"
+msgstr "Mínimo de jogadores em um torneio de papel grande"
+
+#: sensei_top/review/summary.py
+msgid "Field record"
+msgstr "Retrospecto do meta"
+
+#: sensei_top/review/analyzers/information.py
+msgid "Field staples never revealed"
+msgstr "Staples do meta nunca revelados"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Field win rate for your archetype"
+msgstr "Taxa de vitórias do seu arquétipo no meta"
+
+#: sensei_top/review/analyzers/frame.py
+msgid "Field's creature share for this archetype"
+msgstr "Fatia de criaturas deste arquétipo no meta"
+
+#: sensei_top/review/analyzers/frame.py
+msgid "Field's draw/counter share for this archetype"
+msgstr "Fatia de compra/contramágicas deste arquétipo no meta"
+
+#: sensei_top/review/analyzers/frame.py
+msgid "Field's removal share for this archetype"
+msgstr "Fatia de remoção deste arquétipo no meta"
+
+#: sensei_top/review/summary.py
+msgid "Frame"
+msgstr "Enquadramento"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Game ended in a concede"
+msgstr "Jogo terminou em concessão"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Game ended on the clock"
+msgstr "Jogo terminou pelo tempo"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Game ran long against this deck's own average"
+msgstr "Jogo foi longo em relação à média deste deck"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Game ran short against this deck's own average"
+msgstr "Jogo foi curto em relação à média deste deck"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Games on the draw"
+msgstr "Jogos no draw"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Games on the play"
+msgstr "Jogos no play"
+
+#: sensei_top/review/analyzers/resources.py
+msgid ""
+"Hand sizes for both players were never recorded on the same turn this game, "
+"so no card-advantage swing could be measured."
+msgstr ""
+"Os tamanhos de mão dos dois jogadores nunca foram registrados no mesmo turno "
+"neste jogo, então nenhuma virada de vantagem de cards pôde ser medida."
+
+#: sensei_top/review/analyzers/role_play.py
+msgid "Held a board lead without attacking"
+msgstr "Manteve a vantagem de mesa sem atacar"
+
+#: sensei_top/review/analyzers/role_play.py
+#, python-brace-format
+msgid "Held a board lead without attacking on {n} turn"
+msgid_plural "Held a board lead without attacking on {n} turns"
+msgstr[0] "Manteve a vantagem de mesa sem atacar em {n} turno"
+msgstr[1] "Manteve a vantagem de mesa sem atacar em {n} turnos"
+
+#: sensei_top/review/analyzers/resources.py
+msgid "High point (hand size vs. theirs)"
+msgstr "Ponto alto (tamanho de mão contra o dele)"
+
+#: sensei_top/review/analyzers/information.py
+msgid "Highest share among those shown"
+msgstr "Maior fatia entre os mostrados"
+
+#: sensei_top/review/summary.py
+msgid "Information"
+msgstr "Informação"
+
+#: sensei_top/table/opening_hand.py
+msgid "Keep"
+msgstr "Manter"
+
+#: sensei_top/review/analyzers/frame.py
+msgid "Kept your opening seven"
+msgstr "Manteve seus sete iniciais"
+
+#: sensei_top/api/routes/matches.py
+msgid "Label may not contain control characters."
+msgstr "O rótulo não pode conter caracteres de controle."
+
+#: sensei_top/table/keep.py
+#, python-brace-format
+msgid ""
+"Land band from this deck's own curve ({cheap_share} of nonland cards at mana "
+"value {cheap_value} or less, average mana value {avg_mana_value}): keepable "
+"hands run {land_min}-{land_max} lands."
+msgstr ""
+"Faixa de terrenos pela curva deste deck ({cheap_share} dos cards não terreno "
+"com valor de mana {cheap_value} ou menos, valor de mana médio "
+"{avg_mana_value}): mãos para manter têm de {land_min} a {land_max} terrenos."
+
+#: sensei_top/review/leaks.py
+msgid "Lands running heavy relative to your deck's own ratio"
+msgstr "Terrenos acima da proporção do seu deck"
+
+#: sensei_top/review/analyzers/role_play.py
+msgid "Largest hand-size lead reached"
+msgstr "Maior vantagem de tamanho de mão alcançada"
+
+#: sensei_top/review/analyzers/clock.py
+msgid "Last turn either side dealt damage"
+msgstr "Último turno em que algum lado causou dano"
+
+#: sensei_top/review/analyzers/clock.py
+msgid "Led the damage race"
+msgstr "Liderou a corrida de dano"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Losses for your archetype"
+msgstr "Derrotas do seu arquétipo"
+
+#: sensei_top/review/analyzers/resources.py
+#, python-brace-format
+msgid "Lost holding {n} cards"
+msgid_plural "Lost holding {n} cards"
+msgstr[0] "Perdeu segurando {n} card"
+msgstr[1] "Perdeu segurando {n} cards"
+
+#: sensei_top/review/summary.py
+#, python-brace-format
+msgid "Lost {losses}-{wins} to {opponent}"
+msgstr "Perdeu por {losses}-{wins} para {opponent}"
+
+#: sensei_top/review/analyzers/resources.py
+msgid "Low point (hand size vs. theirs)"
+msgstr "Ponto baixo (tamanho de mão contra o dele)"
+
+#: sensei_top/review/analyzers/information.py
+msgid "Lowest share among those shown"
+msgstr "Menor fatia entre os mostrados"
+
+#: sensei_top/metagame/tiers.py
+msgid "MTGO challenges"
+msgstr "Challenges do MTGO"
+
+#: sensei_top/metagame/tiers.py
+msgid "MTGO leagues"
+msgstr "Ligas do MTGO"
+
+#: sensei_top/table/opening_hand.py
+msgid "Marginal"
+msgstr "No limite"
+
+#: sensei_top/review/summary.py
+#, python-brace-format
+msgid "Match vs {opponent} is not yet complete"
+msgstr "A partida contra {opponent} ainda não terminou"
+
+#: sensei_top/api/routes/mtgo_picks.py
+#, python-brace-format
+msgid "Match {id} is an Arena match; Arena's log names its deck."
+msgstr ""
+"A partida {id} é uma partida do Arena; o log do Arena nomeia o deck dela."
+
+#: sensei_top/api/routes/mtgo_picks.py
+#, python-brace-format
+msgid "Match {id} is listed twice."
+msgstr "A partida {id} está listada duas vezes."
+
+#: sensei_top/api/routes/mtgo_picks.py
+#, python-brace-format
+msgid "Match {id}: pick a deck from GET /api/mtgo/picks/candidates."
+msgstr "Partida {id}: escolha um deck de GET /api/mtgo/picks/candidates."
+
+#: sensei_top/api/routes/mtgo_picks.py
+#, python-brace-format
+msgid "Match {id}: pick a deck, a format, or both."
+msgstr "Partida {id}: escolha um deck, um formato, ou ambos."
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Matches in this tier"
+msgstr "Partidas neste tier"
+
+#: sensei_top/review/summary.py
+msgid "Matchup"
+msgstr "Matchup"
+
+#: sensei_top/table/opening_hand.py
+msgid "Mulligan"
+msgstr "Mulligan"
+
+#: sensei_top/review/analyzers/frame.py
+#, python-brace-format
+msgid "Mulliganed {n} time"
+msgid_plural "Mulliganed {n} times"
+msgstr[0] "Fez mulligan {n} vez"
+msgstr[1] "Fez mulligan {n} vezes"
+
+#: sensei_top/review/analyzers/frame.py
+msgid "Mulligans taken"
+msgstr "Mulligans feitos"
+
+#: sensei_top/review/analyzers/role_play.py
+msgid "Never held a card-advantage lead as the control deck"
+msgstr "Nunca teve vantagem de cards como o deck de controle"
+
+#: sensei_top/review/analyzers/role_play.py
+msgid "Never held a card-advantage lead this game"
+msgstr "Nunca teve vantagem de cards neste jogo"
+
+#: sensei_top/api/routes/narrative.py
+msgid "No Claude credential configured. Run 'sensei-top config --set-key'."
+msgstr ""
+"Nenhuma credencial do Claude configurada. Execute 'sensei-top config --set-"
+"key'."
+
+#: sensei_top/api/routes/rcq.py
+#, python-brace-format
+msgid "No RCQ guide stored for {key}."
+msgstr "Nenhum guia de RCQ guardado para {key}."
+
+#: sensei_top/guide/rcq.py
+#, python-brace-format
+msgid "No archetype with key {key} is in the tournament corpus."
+msgstr "Nenhum arquétipo com a chave {key} está no corpus de torneios."
+
+#: sensei_top/api/routes/cards.py
+#, python-brace-format
+msgid "No art for card {id}."
+msgstr "Nenhuma arte para o card {id}."
+
+#: sensei_top/guide/bundle.py
+msgid ""
+"No card legality data is present, so a format reset cannot be detected at "
+"all: every field share, consensus list and matchup rate below may pool across"
+" a ban. Run `sensei-top cards --scryfall` and rebuild this guide before "
+"trusting them."
+msgstr ""
+"Não há dados de legalidade de cards, então um reinício do formato não pode "
+"ser detectado: toda fatia do meta, lista de consenso e taxa de matchup abaixo"
+" pode misturar o antes e o depois de um banimento. Execute `sensei-top cards "
+"--scryfall` e reconstrua este guia antes de confiar nelas."
+
+#: sensei_top/coach/evidence.py
+msgid "No classified field corpus exists in this report's format window."
+msgstr ""
+"Não existe corpus do meta classificado na janela de formato deste relatório."
+
+#: sensei_top/review/analyzers/role_play.py
+msgid ""
+"No clear role was assigned for this matchup — either an archetype did not "
+"resolve for one side, or the two sides' profiles were too close to call a "
+"role either way (see frame's own finding or gap) — so whether it was played "
+"correctly could not be checked."
+msgstr ""
+"Nenhum papel claro foi atribuído neste matchup — ou um arquétipo não foi "
+"resolvido para um dos lados, ou os perfis dos dois lados eram próximos demais"
+" para definir um papel (veja a observação ou a lacuna do próprio "
+"enquadramento) — então não foi possível verificar se ele foi jogado "
+"corretamente."
+
+#: sensei_top/api/routes/coach.py
+#, python-brace-format
+msgid "No coach report with id {id}."
+msgstr "Nenhum relatório do treinador com o id {id}."
+
+#: sensei_top/review/analyzers/clock.py
+msgid "No damage to either player was observed this game."
+msgstr "Nenhum dano a nenhum dos jogadores foi observado neste jogo."
+
+#: sensei_top/review/analyzers/clock.py
+msgid ""
+"No damage was observed to either player in this match, so no race could be "
+"measured — either the game never reached combat, or this reader's combat "
+"parsing found nothing to attribute."
+msgstr ""
+"Nenhum dano a nenhum dos jogadores foi observado nesta partida, então nenhuma"
+" corrida pôde ser medida — ou o jogo nunca chegou ao combate, ou a leitura de"
+" combate deste leitor não encontrou nada a atribuir."
+
+#: sensei_top/api/deps.py
+#, python-brace-format
+msgid "No database at {database}. Run 'sensei-top ingest' then 'project'."
+msgstr ""
+"Nenhum banco de dados em {database}. Execute 'sensei-top ingest' e depois "
+"'project'."
+
+#: sensei_top/api/routes/guide.py sensei_top/api/routes/rcq.py
+#, python-brace-format
+msgid "No deck for key {key}."
+msgstr "Nenhum deck para a chave {key}."
+
+#: sensei_top/api/routes/metagame.py
+#, python-brace-format
+msgid "No event for key {key}."
+msgstr "Nenhum evento para a chave {key}."
+
+#: sensei_top/guide/bundle.py
+msgid ""
+"No format reset was detected in the tournament corpus — every number below "
+"spans its full available history."
+msgstr ""
+"Nenhum reinício do formato foi detectado no corpus de torneios — cada número "
+"abaixo cobre todo o histórico disponível."
+
+#: sensei_top/api/routes/cards.py
+#, python-brace-format
+msgid "No image for card {id}."
+msgstr "Nenhuma imagem para o card {id}."
+
+#: sensei_top/table/opening_hand.py
+msgid "No land band for this deck yet — see the keep guide for why."
+msgstr ""
+"Ainda não há faixa de terrenos para este deck — veja o guia de mão inicial "
+"para saber por quê."
+
+#: sensei_top/api/routes/matches.py sensei_top/api/routes/mtgo_picks.py
+#, python-brace-format
+msgid "No match {id}."
+msgstr "Nenhuma partida {id}."
+
+#: sensei_top/api/routes/matches.py
+#, python-brace-format
+msgid "No such archetype {key}."
+msgstr "Não existe o arquétipo {key}."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"No {fmt} card legality data is present, so a format reset cannot be detected "
+"at all: the format sections span every {fmt} match in this report, which may "
+"pool across a ban. Run `sensei-top cards --scryfall` and rebuild this report "
+"before trusting them."
+msgstr ""
+"Não há dados de legalidade de cards de {fmt}, então um reinício do formato "
+"não pode ser detectado: as seções do formato cobrem todas as partidas de "
+"{fmt} deste relatório, o que pode misturar o antes e o depois de um "
+"banimento. Execute `sensei-top cards --scryfall` e reconstrua este relatório "
+"antes de confiar nelas."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"No {fmt} format reset was detected — the format sections span every {fmt} "
+"match in this report rather than a post-reset window."
+msgstr ""
+"Nenhum reinício do formato {fmt} foi detectado — as seções do formato cobrem "
+"todas as partidas de {fmt} deste relatório, e não uma janela posterior ao "
+"reinício."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"No {fmt} matches on file: the per-deck, per-role and per-opponent records and"
+" the decklists are empty. The skill sections still cover every format played,"
+" and the field section still shows the {fmt} field."
+msgstr ""
+"Nenhuma partida de {fmt} registrada: os retrospectos por deck, por papel e "
+"por oponente e as listas estão vazios. As seções de habilidade ainda cobrem "
+"todos os formatos jogados, e a seção do meta ainda mostra o meta de {fmt}."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"No {fmt} matches since {win_start} (the last {fmt} format change): the per-"
+"deck, per-role and per-opponent records and the decklists are empty. The "
+"skill sections still cover every format played, and the field section still "
+"shows the {fmt} field."
+msgstr ""
+"Nenhuma partida de {fmt} desde {win_start} (a última mudança do formato "
+"{fmt}): os retrospectos por deck, por papel e por oponente e as listas estão "
+"vazios. As seções de habilidade ainda cobrem todos os formatos jogados, e a "
+"seção do meta ainda mostra o meta de {fmt}."
+
+#: sensei_top/api/routes/coach.py
+#, python-brace-format
+msgid ""
+"Not enough completed constructed matches yet — the coach needs at least "
+"{minimum}."
+msgstr ""
+"Ainda não há partidas de Construído terminadas suficientes — o treinador "
+"precisa de pelo menos {minimum}."
+
+#: sensei_top/review/analyzers/baseline.py
+msgid ""
+"Not enough completed games with this deck yet to compare on-play and on-draw "
+"records."
+msgstr ""
+"Ainda não há jogos terminados suficientes com este deck para comparar os "
+"retrospectos no play e no draw."
+
+#: sensei_top/review/summary.py
+msgid "Not enough of your own match history with this deck yet"
+msgstr "Ainda não há histórico suficiente das suas partidas com este deck"
+
+#: sensei_top/review/analyzers/resources.py
+msgid "Nothing about the resource trade could be measured for this match."
+msgstr "Nada sobre a troca de recursos pôde ser medido nesta partida."
+
+#: sensei_top/api/routes/review.py
+msgid "Nothing to write a training plan from yet."
+msgstr "Ainda não há de onde escrever um plano de treino."
+
+#: sensei_top/api/routes/guide.py
+msgid "Nothing to write about for this deck yet."
+msgstr "Ainda não há sobre o que escrever para este deck."
+
+#: sensei_top/api/routes/matches.py
+msgid "Nothing to write about for this match yet."
+msgstr "Ainda não há sobre o que escrever para esta partida."
+
+#: sensei_top/review/analyzers/frame.py
+msgid "On the draw"
+msgstr "No draw"
+
+#: sensei_top/review/analyzers/frame.py
+msgid "On the play"
+msgstr "No play"
+
+#: sensei_top/review/analyzers/information.py
+#, python-brace-format
+msgid ""
+"On your turn {turn} you had {permanents} permanents in play. {card}, one of "
+"{opponent}'s own staples, had not shown up yet — a hand this wide is exactly "
+"what that card is for."
+msgstr ""
+"No seu turno {turn} você tinha {permanents} permanentes em jogo. {card}, um "
+"dos staples de {opponent}, ainda não havia aparecido — uma mesa tão larga é "
+"exatamente para o que esse card serve."
+
+#: sensei_top/coach/evidence.py
+msgid ""
+"One or more decklists include a card with no matching row in the local card "
+"database; those copies are counted as unnamed rather than guessed at. Run "
+"`sensei-top cards --scryfall` to fill in the card database."
+msgstr ""
+"Uma ou mais listas incluem um card sem linha correspondente no banco de cards"
+" local; essas cópias são contadas como sem nome em vez de adivinhadas. "
+"Execute `sensei-top cards --scryfall` para preencher o banco de cards."
+
+#: sensei_top/api/routes/matches.py
+msgid "Only an MTGO match takes a deck pick; Arena's log names its deck."
+msgstr ""
+"Só uma partida de MTGO recebe uma escolha de deck; o log do Arena nomeia o "
+"deck dela."
+
+#: sensei_top/review/analyzers/baseline.py
+#, python-brace-format
+msgid ""
+"Only {n} matches of this pairing are on record in {tier} since the last "
+"format reset ({since}) — too few to call a field win rate."
+msgid_plural ""
+"Only {n} matches of this pairing are on record in {tier} since the last "
+"format reset ({since}) — too few to call a field win rate."
+msgstr[0] ""
+"Só {n} partida deste par está registrada em {tier} desde o último reinício do"
+" formato ({since}) — poucas para definir uma taxa de vitórias do meta."
+msgstr[1] ""
+"Só {n} partidas deste par estão registradas em {tier} desde o último reinício"
+" do formato ({since}) — poucas para definir uma taxa de vitórias do meta."
+
+#: sensei_top/review/analyzers/baseline.py
+#, python-brace-format
+msgid ""
+"Only {n} matches of this pairing are on record in {tier} — too few to call a "
+"field win rate."
+msgid_plural ""
+"Only {n} matches of this pairing are on record in {tier} — too few to call a "
+"field win rate."
+msgstr[0] ""
+"Só {n} partida deste par está registrada em {tier} — poucas para definir uma "
+"taxa de vitórias do meta."
+msgstr[1] ""
+"Só {n} partidas deste par estão registradas em {tier} — poucas para definir "
+"uma taxa de vitórias do meta."
+
+#: sensei_top/review/analyzers/baseline.py
+#, python-brace-format
+msgid ""
+"Only {n} other completed match in this matchup so far — too few to call a "
+"record."
+msgid_plural ""
+"Only {n} other completed matches in this matchup so far — too few to call a "
+"record."
+msgstr[0] ""
+"Só {n} outra partida terminada neste matchup até agora — poucas para definir "
+"um retrospecto."
+msgstr[1] ""
+"Só {n} outras partidas terminadas neste matchup até agora — poucas para "
+"definir um retrospecto."
+
+#: sensei_top/review/analyzers/clock.py
+#, python-brace-format
+msgid ""
+"Only {n} total damage was observed to either player — too little to call a "
+"race."
+msgid_plural ""
+"Only {n} total damage was observed to either player — too little to call a "
+"race."
+msgstr[0] ""
+"Só {n} de dano total foi observado a qualquer jogador — pouco para definir "
+"uma corrida."
+msgstr[1] ""
+"Só {n} de dano total foi observado a qualquer jogador — pouco para definir "
+"uma corrida."
+
+#: sensei_top/review/analyzers/baseline.py
+#, python-brace-format
+msgid ""
+"Only {play_games} completed games on the play and {draw_games} on the draw "
+"with this deck so far — too few to read a split from."
+msgstr ""
+"Só {play_games} jogos terminados no play e {draw_games} no draw com este deck"
+" até agora — poucos para ler uma divisão."
+
+#: sensei_top/review/analyzers/baseline.py
+#, python-brace-format
+msgid ""
+"Only {total_games} completed games recorded with this deck — too few to "
+"compare game length against."
+msgid_plural ""
+"Only {total_games} completed games recorded with this deck — too few to "
+"compare game length against."
+msgstr[0] ""
+"Só {total_games} jogo terminado registrado com este deck — poucos para "
+"comparar a duração dos jogos."
+msgstr[1] ""
+"Só {total_games} jogos terminados registrados com este deck — poucos para "
+"comparar a duração dos jogos."
+
+#: sensei_top/review/analyzers/clock.py
+msgid "Opponent's damage per player-turn"
+msgstr "Dano do oponente por turno de jogador"
+
+#: sensei_top/review/analyzers/resources.py
+msgid "Opponent's spells countered"
+msgstr "Mágicas do oponente anuladas"
+
+#: sensei_top/review/analyzers/information.py
+msgid "Over-committed the board with a sweeper unaccounted for"
+msgstr "Encheu a mesa demais com um sweeper não considerado"
+
+#: sensei_top/review/analyzers/information.py
+#, python-brace-format
+msgid "Peaked at {permanents} permanents with a sweeper unaccounted for"
+msgstr "Chegou a {permanents} permanentes com um sweeper não considerado"
+
+#: sensei_top/review/analyzers/information.py
+msgid "Permanents at the widest point"
+msgstr "Permanentes no ponto mais largo"
+
+#: sensei_top/api/routes/matches.py
+msgid "Pick a candidate from GET .../opponent-deck/candidates, or 'Rogue'."
+msgstr "Escolha um candidato de GET .../opponent-deck/candidates, ou 'Rogue'."
+
+#: sensei_top/api/routes/matches.py
+msgid "Pick a deck from GET .../mtgo-pick/candidates."
+msgstr "Escolha um deck de GET .../mtgo-pick/candidates."
+
+#: sensei_top/api/routes/matches.py
+msgid "Pick a deck, a format, or both."
+msgstr "Escolha um deck, um formato, ou ambos."
+
+#: sensei_top/review/summary.py
+msgid "Play/draw"
+msgstr "Play/draw"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Player-turns this game"
+msgstr "Turnos de jogador neste jogo"
+
+#: sensei_top/review/analyzers/trajectory.py
+msgid "Position index after the swing"
+msgstr "Índice de posição depois da virada"
+
+#: sensei_top/review/analyzers/trajectory.py
+msgid "Position index before the swing"
+msgstr "Índice de posição antes da virada"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Prior games lost"
+msgstr "Jogos perdidos antes"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Prior games won"
+msgstr "Jogos vencidos antes"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Prior matches in this matchup"
+msgstr "Partidas anteriores neste matchup"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Prior matches lost"
+msgstr "Partidas perdidas antes"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Prior matches won"
+msgstr "Partidas vencidas antes"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Prior win rate in this matchup"
+msgstr "Taxa de vitórias anterior neste matchup"
+
+#: sensei_top/review/summary.py
+msgid "Race"
+msgstr "Corrida"
+
+#: sensei_top/review/analyzers/baseline.py
+#, python-brace-format
+msgid "Ran long: {turns} player-turns"
+msgstr "Foi longo: {turns} turnos de jogador"
+
+#: sensei_top/review/analyzers/baseline.py
+#, python-brace-format
+msgid "Ran short: {turns} player-turns"
+msgstr "Foi curto: {turns} turnos de jogador"
+
+#: sensei_top/review/summary.py
+msgid "Resources"
+msgstr "Recursos"
+
+#: sensei_top/review/summary.py
+msgid "Risk"
+msgstr "Risco"
+
+#: sensei_top/review/summary.py
+msgid "Role"
+msgstr "Papel"
+
+#: sensei_top/review/analyzers/frame.py
+msgid "Role this matchup assigns"
+msgstr "Papel que este matchup atribui"
+
+#: sensei_top/guide/bundle.py
+#, python-brace-format
+msgid ""
+"Rules text is missing for {missing} of your {total} cards — run `sensei-top "
+"cards --scryfall` to fill this in."
+msgid_plural ""
+"Rules text is missing for {missing} of your {total} cards — run `sensei-top "
+"cards --scryfall` to fill this in."
+msgstr[0] ""
+"Falta o texto de regras de {missing} dos seus {total} cards — execute "
+"`sensei-top cards --scryfall` para preenchê-lo."
+msgstr[1] ""
+"Falta o texto de regras de {missing} dos seus {total} cards — execute "
+"`sensei-top cards --scryfall` para preenchê-lo."
+
+#: sensei_top/table/opening_hand.py
+msgid "Run 'sensei-top cards --scryfall' to fetch it."
+msgstr "Execute 'sensei-top cards --scryfall' para baixá-lo."
+
+#: sensei_top/review/analyzers/trajectory.py
+msgid "Size of the swing"
+msgstr "Tamanho da virada"
+
+#: sensei_top/review/analyzers/information.py
+msgid "Staples named beyond those listed"
+msgstr "Staples nomeados além dos listados"
+
+#: sensei_top/review/summary.py
+msgid "Still live"
+msgstr "Ainda possível"
+
+#: sensei_top/review/summary.py
+msgid "Stranded"
+msgstr "Encalhados"
+
+#: sensei_top/review/leaks.py
+msgid "Stuck on lands by your 4th turn"
+msgstr "Travado em terrenos até o seu 4º turno"
+
+#: sensei_top/table/keep.py
+msgid "T5-6"
+msgstr "T5-6"
+
+#: sensei_top/table/keep.py
+msgid "T7-8"
+msgstr "T7-8"
+
+#: sensei_top/table/keep.py
+msgid "T9+"
+msgstr "T9+"
+
+#: sensei_top/guide/rcq.py
+msgid ""
+"The archetype definitions name no archetype this 75 clearly fits; pick one to"
+" compare it against."
+msgstr ""
+"As definições de arquétipos não nomeiam nenhum arquétipo em que estes 75 "
+"claramente se encaixem; escolha um para compará-los."
+
+#: sensei_top/table/hand_read.py
+msgid ""
+"The card list is the field's typical decklist for this archetype, not their "
+"actual 60 cards, which this reader never sees."
+msgstr ""
+"A lista de cards é a lista típica deste arquétipo no meta, não os 60 cards "
+"reais do oponente, que este leitor nunca vê."
+
+#: sensei_top/guide/rcq.py
+msgid ""
+"The deck's format is unknown, so this 75 was not classified: archetype "
+"definitions are kept per format."
+msgstr ""
+"O formato do deck é desconhecido, então estes 75 não foram classificados: as "
+"definições de arquétipos são mantidas por formato."
+
+#: sensei_top/review/analyzers/baseline.py
+#, python-brace-format
+msgid "The field wins this matchup {rate}% of the time"
+msgstr "O meta vence este matchup {rate}% das vezes"
+
+#: sensei_top/review/analyzers/baseline.py
+#, python-brace-format
+msgid ""
+"The field's own results for this archetype pairing since the last format "
+"reset ({since}) were not available — either the corpus has not been fetched, "
+"or too few paper/MTGO events cover it."
+msgstr ""
+"Os resultados do meta para este par de arquétipos desde o último reinício do "
+"formato ({since}) não estavam disponíveis — ou o corpus não foi baixado, ou "
+"poucos eventos de papel/MTGO o cobrem."
+
+#: sensei_top/review/analyzers/baseline.py
+msgid ""
+"The field's own results for this archetype pairing were not available — "
+"either the corpus has not been fetched, or too few paper/MTGO events cover "
+"it."
+msgstr ""
+"Os resultados do meta para este par de arquétipos não estavam disponíveis — "
+"ou o corpus não foi baixado, ou poucos eventos de papel/MTGO o cobrem."
+
+#: sensei_top/review/analyzers/trajectory.py
+#, python-brace-format
+msgid "The game turned on your turn {turn}"
+msgstr "O jogo virou no seu turno {turn}"
+
+#: sensei_top/guide/decklist.py
+#, python-brace-format
+msgid "The maindeck has {n} cards, fewer than {minimum}."
+msgid_plural "The maindeck has {n} cards, fewer than {minimum}."
+msgstr[0] "O deck principal tem {n} card, menos que {minimum}."
+msgstr[1] "O deck principal tem {n} cards, menos que {minimum}."
+
+#: sensei_top/review/analyzers/clock.py
+#, python-brace-format
+msgid "The opponent was ahead in the damage race, {theirs} to {ours}"
+msgstr "O oponente estava na frente na corrida de dano, {theirs} a {ours}"
+
+#: sensei_top/review/analyzers/frame.py
+msgid ""
+"The opponent's archetype consensus carried no creature, removal or card-"
+"advantage signal at all, so no role vote could be read from it."
+msgstr ""
+"O consenso do arquétipo do oponente não trazia nenhum sinal de criaturas, "
+"remoção ou vantagem de cards, então nenhum voto de papel pôde ser lido dele."
+
+#: sensei_top/review/analyzers/information.py
+msgid ""
+"The opponent's archetype was not identified with enough of a corpus behind it"
+" to know what their deck usually plays, so nothing here could be read about "
+"what was still live."
+msgstr ""
+"O arquétipo do oponente não foi identificado com corpus suficiente para saber"
+" o que o deck dele costuma jogar, então nada aqui pôde ser lido sobre o que "
+"ainda era possível."
+
+#: sensei_top/review/summary.py
+msgid "The opponent's deck was never identified as a known archetype"
+msgstr "O deck do oponente nunca foi identificado como um arquétipo conhecido"
+
+#: sensei_top/review/analyzers/frame.py
+msgid ""
+"The opponent's deck was not identified as a known archetype for this match, "
+"so no field comparison was possible."
+msgstr ""
+"O deck do oponente não foi identificado como um arquétipo conhecido nesta "
+"partida, então nenhuma comparação com o meta foi possível."
+
+#: sensei_top/review/analyzers/frame.py
+msgid ""
+"The opponent's side of this comparison is the field's typical decklist for "
+"their archetype, not their actual 60 cards, which this reader never sees."
+msgstr ""
+"O lado do oponente nesta comparação é a lista típica do arquétipo dele no "
+"meta, não os 60 cards reais dele, que este leitor nunca vê."
+
+#: sensei_top/review/analyzers/trajectory.py
+msgid ""
+"The position index is a fixed-weight approximation over life, board, hand and"
+" mana — not a rules engine, and not a claim about which single play caused "
+"the swing."
+msgstr ""
+"O índice de posição é uma aproximação de pesos fixos sobre vida, mesa, mão e "
+"mana — não um motor de regras, nem uma afirmação sobre qual jogada específica"
+" causou a virada."
+
+#: sensei_top/guide/decklist.py
+#, python-brace-format
+msgid "The sideboard has {n} cards, more than {maximum}."
+msgid_plural "The sideboard has {n} cards, more than {maximum}."
+msgstr[0] "O sideboard tem {n} card, mais que {maximum}."
+msgstr[1] "O sideboard tem {n} cards, mais que {maximum}."
+
+#: sensei_top/review/analyzers/clock.py
+#, python-brace-format
+msgid ""
+"They dealt {theirs} damage to your life total; you dealt {ours} to theirs, "
+"through turn {turn}. Philosophy of Fire's own math: every card that does not "
+"convert into damage, on either side, is a card losing this particular race."
+msgstr ""
+"O oponente causou {theirs} de dano ao seu total de vida; você causou {ours} "
+"ao dele, até o turno {turn}. A matemática da Philosophy of Fire: todo card "
+"que não se converte em dano, de qualquer lado, é um card perdendo esta "
+"corrida em particular."
+
+#: sensei_top/review/analyzers/clock.py
+msgid ""
+"This counts damage dealt to a player only — creature-versus-creature combat "
+"and life lost to costs (a shockland, a payment) are excluded, since neither "
+"moves either player closer to winning the race itself."
+msgstr ""
+"Isto conta só o dano causado a um jogador — combate entre criaturas e vida "
+"perdida como custo (um shockland, um pagamento) ficam de fora, já que nenhum "
+"dos dois aproxima qualquer jogador de vencer a corrida em si."
+
+#: sensei_top/guide/bundle.py
+msgid "This deck has no recorded matches."
+msgstr "Este deck não tem partidas registradas."
+
+#: sensei_top/table/keep.py
+#, python-brace-format
+msgid ""
+"This deck has only {decided_games} decided game(s) on record -- key plays and"
+" the mulligan cost need at least {minimum} before a split means anything."
+msgid_plural ""
+"This deck has only {decided_games} decided game(s) on record -- key plays and"
+" the mulligan cost need at least {minimum} before a split means anything."
+msgstr[0] ""
+"Este deck tem só {decided_games} jogo decidido registrado -- as jogadas-chave"
+" e o custo do mulligan precisam de pelo menos {minimum} antes que uma divisão"
+" signifique algo."
+msgstr[1] ""
+"Este deck tem só {decided_games} jogos decididos registrados -- as jogadas-"
+"chave e o custo do mulligan precisam de pelo menos {minimum} antes que uma "
+"divisão signifique algo."
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "This deck's average"
+msgstr "Média deste deck"
+
+#: sensei_top/guide/bundle.py
+msgid ""
+"This deck's format is unknown: its deck record names no constructed format, "
+"and none of its matches has one from the log, a pick or inference. Without a "
+"format there is no field to compare it against, so the field shares, "
+"consensus list and matchup rates are left out. On MTGO, confirm the format on"
+" one of its matches and rebuild this guide."
+msgstr ""
+"O formato deste deck é desconhecido: o registro do deck não nomeia nenhum "
+"formato de Construído, e nenhuma das partidas dele tem um pelo log, por uma "
+"escolha ou por inferência. Sem um formato não há meta com que compará-lo, "
+"então as fatias do meta, a lista de consenso e as taxas de matchup ficam de "
+"fora. No MTGO, confirme o formato em uma das partidas dele e reconstrua este "
+"guia."
+
+#: sensei_top/table/keep.py
+msgid ""
+"This deck's nonland cards don't carry enough mana-cost data to read a curve "
+"from — no keepable-hand band without one."
+msgstr ""
+"Os cards não terreno deste deck não trazem dados de custo de mana suficientes"
+" para ler uma curva — sem ela não há faixa de mãos para manter."
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "This game did not finish before the timer ran out."
+msgstr "Este jogo não terminou antes de o tempo acabar."
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "This game ended by concession rather than playing to a finish."
+msgstr "Este jogo terminou por concessão, e não jogado até o fim."
+
+#: sensei_top/review/analyzers/baseline.py
+#, python-brace-format
+msgid ""
+"This game ran {turns} player-turns, against this deck's own average of "
+"{average}."
+msgstr ""
+"Este jogo durou {turns} turnos de jogador, contra a média de {average} deste "
+"deck."
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "This game's length was never recorded."
+msgstr "A duração deste jogo nunca foi registrada."
+
+#: sensei_top/review/analyzers/trajectory.py
+msgid "This game's position never swung against you"
+msgstr "A posição deste jogo nunca virou contra você"
+
+#: sensei_top/review/analyzers/information.py
+msgid ""
+"This is the field's typical decklist for the archetype, not the opponent's "
+"actual 60 cards — some of these may not be in this specific list at all."
+msgstr ""
+"Esta é a lista típica do arquétipo no meta, não os 60 cards reais do oponente"
+" — alguns destes podem nem estar nesta lista específica."
+
+#: sensei_top/review/analyzers/baseline.py
+msgid ""
+"This is the first time this deck has faced this opponent identification, so "
+"there is no personal record to compare against."
+msgstr ""
+"Esta é a primeira vez que este deck enfrenta esta identificação de oponente, "
+"então não há retrospecto pessoal para comparar."
+
+#: sensei_top/review/analyzers/resources.py
+msgid ""
+"This is the last turn this reader captured, which may not be the literal "
+"final turn of the game — a trailing turn can go unrecorded (see the "
+"projector's own flush_trailing)."
+msgstr ""
+"Este é o último turno que este leitor capturou, que pode não ser literalmente"
+" o último turno do jogo — um turno final pode ficar sem registro (veja o "
+"flush_trailing do próprio projetor)."
+
+#: sensei_top/review/match_report.py
+msgid ""
+"This match never resolved which seat was yours, so nothing about your own "
+"turns could be measured."
+msgstr ""
+"Esta partida nunca resolveu qual assento era o seu, então nada sobre os seus "
+"próprios turnos pôde ser medido."
+
+#: sensei_top/review/analyzers/frame.py
+msgid ""
+"This matchup casts you as a mixed role — no side of this matchup clearly wins"
+" the beatdown-versus-control read"
+msgstr ""
+"Este matchup coloca você em um papel misto — nenhum lado deste matchup vence "
+"claramente a leitura de beatdown contra controle"
+
+#: sensei_top/review/analyzers/frame.py
+msgid "This matchup casts you as the beatdown"
+msgstr "Este matchup coloca você como o beatdown"
+
+#: sensei_top/review/analyzers/role_play.py
+msgid ""
+"This matchup casts you as the beatdown deck — you have to kill the opponent "
+"before their plan comes online. On the turns counted here, your side had more"
+" power on board than the opponent's, and no damage was dealt to them that "
+"turn."
+msgstr ""
+"Este matchup coloca você como o deck beatdown — você tem que matar o oponente"
+" antes que o plano dele funcione. Nos turnos contados aqui, o seu lado tinha "
+"mais poder na mesa que o do oponente, e nenhum dano foi causado a ele naquele"
+" turno."
+
+#: sensei_top/review/analyzers/frame.py
+msgid "This matchup casts you as the control deck"
+msgstr "Este matchup coloca você como o deck de controle"
+
+#: sensei_top/review/analyzers/role_play.py
+msgid ""
+"This matchup casts you as the control deck — the deck that survives the early"
+" turns to trade one card at a time until it is ahead on resources. Across "
+"every turn this reader could measure, your hand was never larger than the "
+"opponent's, which is the reward that plan is supposed to produce."
+msgstr ""
+"Este matchup coloca você como o deck de controle — o deck que sobrevive aos "
+"primeiros turnos trocando um card por vez até estar na frente em recursos. Em"
+" todos os turnos que este leitor conseguiu medir, sua mão nunca foi maior que"
+" a do oponente, que é a recompensa que esse plano deveria produzir."
+
+#: sensei_top/review/analyzers/role_play.py
+msgid ""
+"This reader cannot see combat tricks, blockers held back for a reason, or a "
+"hand full of removal worth protecting — a board lead not pressed is sometimes"
+" exactly correct play."
+msgstr ""
+"Este leitor não vê truques de combate, bloqueadores segurados por um motivo, "
+"nem uma mão cheia de remoção que vale proteger — uma vantagem de mesa não "
+"pressionada às vezes é exatamente a jogada certa."
+
+#: sensei_top/review/analyzers/frame.py
+msgid ""
+"Too few of this match's cards carry known effect tags to read a role from — "
+"see the effect-tagging gap above."
+msgstr ""
+"Poucos cards desta partida trazem marcações de efeito conhecidas para ler um "
+"papel — veja a lacuna de marcação de efeitos acima."
+
+#: sensei_top/review/analyzers/trajectory.py
+msgid ""
+"Too few turns had both life totals recorded to trace a position trajectory "
+"for this game."
+msgstr ""
+"Poucos turnos tiveram os dois totais de vida registrados para traçar uma "
+"trajetória de posição neste jogo."
+
+#: sensei_top/review/summary.py
+msgid "Too little tournament data for the opponent's archetype"
+msgstr "Poucos dados de torneio para o arquétipo do oponente"
+
+#: sensei_top/review/analyzers/information.py
+msgid "Total staples considered"
+msgstr "Total de staples considerados"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid ""
+"Tournament results from one tier only (MTGO or paper, never Arena — Arena "
+"publishes no event results), the highest-ranked tier with enough matches of "
+"this pairing."
+msgstr ""
+"Resultados de torneios de um só tier (MTGO ou papel, nunca Arena — o Arena "
+"não publica resultados de eventos), o tier mais alto com partidas suficientes"
+" deste par."
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Tournament tier"
+msgstr "Tier do torneio"
+
+#: sensei_top/review/summary.py
+msgid "Trajectory"
+msgstr "Trajetória"
+
+#: sensei_top/review/summary.py
+msgid "Turned"
+msgstr "Virou"
+
+#: sensei_top/review/analyzers/role_play.py
+msgid "Turns with a board lead and no damage"
+msgstr "Turnos com vantagem de mesa e sem dano"
+
+#: sensei_top/review/analyzers/trajectory.py
+msgid "Turns with a position index"
+msgstr "Turnos com índice de posição"
+
+#: sensei_top/review/analyzers/role_play.py
+msgid "Turns with both hand sizes recorded"
+msgstr "Turnos com os dois tamanhos de mão registrados"
+
+#: sensei_top/coach/evidence.py
+msgid "Unnamed deck"
+msgstr "Deck sem nome"
+
+#: sensei_top/review/analyzers/information.py
+msgid ""
+"Whether the opponent actually held this card in hand at that moment is "
+"unknown — this names a real risk taken, not a confirmed punish."
+msgstr ""
+"Se o oponente de fato tinha este card na mão naquele momento é desconhecido —"
+" isto nomeia um risco real assumido, não uma punição confirmada."
+
+#: sensei_top/review/analyzers/frame.py
+msgid ""
+"Whether you were on the play or the draw was never observed for this game."
+msgstr "Se você estava no play ou no draw nunca foi observado neste jogo."
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Wins for your archetype"
+msgstr "Vitórias do seu arquétipo"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Wins on the draw"
+msgstr "Vitórias no draw"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Wins on the play"
+msgstr "Vitórias no play"
+
+#: sensei_top/review/analyzers/baseline.py
+#, python-brace-format
+msgid ""
+"With this deck you've won {play_wins} of {play_games} games on the play and "
+"{draw_wins} of {draw_games} on the draw."
+msgstr ""
+"Com este deck você venceu {play_wins} de {play_games} jogos no play e "
+"{draw_wins} de {draw_games} no draw."
+
+#: sensei_top/review/summary.py
+#, python-brace-format
+msgid "Won {wins}-{losses} vs {opponent}"
+msgstr "Venceu {opponent} por {wins}-{losses}"
+
+#: sensei_top/review/analyzers/clock.py
+#, python-brace-format
+msgid ""
+"You dealt {ours} damage to the opponent's life total; they dealt {theirs} to "
+"yours, through turn {turn}. Philosophy of Fire's own math: every card that "
+"does not convert into damage, on either side, is a card losing this "
+"particular race."
+msgstr ""
+"Você causou {ours} de dano ao total de vida do oponente; ele causou {theirs} "
+"ao seu, até o turno {turn}. A matemática da Philosophy of Fire: todo card que"
+" não se converte em dano, de qualquer lado, é um card perdendo esta corrida "
+"em particular."
+
+#: sensei_top/review/analyzers/frame.py
+msgid "You kept your opening hand without a mulligan."
+msgstr "Você manteve sua mão inicial sem mulligan."
+
+#: sensei_top/review/summary.py
+#, python-brace-format
+msgid "You led the damage race in all {total} games and still lost {n} game."
+msgid_plural ""
+"You led the damage race in all {total} games and still lost {n} games."
+msgstr[0] ""
+"Você liderou a corrida de dano em todos os {total} jogos e ainda assim perdeu"
+" {n} jogo."
+msgstr[1] ""
+"Você liderou a corrida de dano em todos os {total} jogos e ainda assim perdeu"
+" {n} jogos."
+
+#: sensei_top/review/analyzers/baseline.py
+#, python-brace-format
+msgid ""
+"You lost — your record in this matchup is {wins} wins to {losses} losses"
+msgstr ""
+"Você perdeu — seu retrospecto neste matchup é de {wins} vitórias a {losses} "
+"derrotas"
+
+#: sensei_top/review/analyzers/frame.py
+#, python-brace-format
+msgid "You took {n} mulligan before keeping a hand."
+msgid_plural "You took {n} mulligans before keeping a hand."
+msgstr[0] "Você fez {n} mulligan antes de manter uma mão."
+msgstr[1] "Você fez {n} mulligans antes de manter uma mão."
+
+#: sensei_top/review/analyzers/clock.py
+#, python-brace-format
+msgid "You were ahead in the damage race, {ours} to {theirs}"
+msgstr "Você estava na frente na corrida de dano, {ours} a {theirs}"
+
+#: sensei_top/review/analyzers/frame.py
+msgid "You were on the draw this game."
+msgstr "Você estava no draw neste jogo."
+
+#: sensei_top/review/analyzers/frame.py
+msgid "You were on the play this game."
+msgstr "Você estava no play neste jogo."
+
+#: sensei_top/review/analyzers/baseline.py
+#, python-brace-format
+msgid "You won — your record in this matchup is {wins} wins to {losses} losses"
+msgstr ""
+"Você venceu — seu retrospecto neste matchup é de {wins} vitórias a {losses} "
+"derrotas"
+
+#: sensei_top/table/opening_hand.py
+#, python-brace-format
+msgid ""
+"You've mulliganed once already this game — this is still a fresh 7 (London "
+"mulligan), but you'll bottom 1 card after keeping."
+msgid_plural ""
+"You've mulliganed {n} times already this game — this is still a fresh 7 "
+"(London mulligan), but you'll bottom {n} cards after keeping."
+msgstr[0] ""
+"Você já fez mulligan uma vez neste jogo — esta ainda é uma mão nova de 7 "
+"(mulligan de Londres), mas você vai colocar 1 card no fundo depois de manter."
+msgstr[1] ""
+"Você já fez mulligan {n} vezes neste jogo — esta ainda é uma mão nova de 7 "
+"(mulligan de Londres), mas você vai colocar {n} cards no fundo depois de "
+"manter."
+
+#: sensei_top/review/analyzers/clock.py
+msgid "Your damage per player-turn"
+msgstr "Seu dano por turno de jogador"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "Your deck's own play/draw record"
+msgstr "Retrospecto play/draw do seu deck"
+
+#: sensei_top/review/analyzers/resources.py
+#, python-brace-format
+msgid ""
+"Your hand size compared to the opponent's was as low as {low:+d} (your turn "
+"{low_turn}) and as high as {high:+d} (your turn {high_turn})."
+msgstr ""
+"Seu tamanho de mão em relação ao do oponente chegou a {low:+d} no mínimo (seu"
+" turno {low_turn}) e a {high:+d} no máximo (seu turno {high_turn})."
+
+#: sensei_top/review/analyzers/frame.py
+msgid "Your mulligan count was never observed for this game."
+msgstr "Sua contagem de mulligans nunca foi observada neste jogo."
+
+#: sensei_top/review/analyzers/frame.py
+msgid "Your own creature share"
+msgstr "Sua fatia de criaturas"
+
+#: sensei_top/guide/bundle.py
+msgid ""
+"Your own deck could not be classified against the field's archetype "
+"definitions — the list-vs-consensus comparison is unavailable."
+msgstr ""
+"Seu deck não pôde ser classificado pelas definições de arquétipos do meta — a"
+" comparação entre a lista e o consenso não está disponível."
+
+#: sensei_top/review/analyzers/frame.py
+msgid ""
+"Your own deck did not resolve to a known Standard archetype, so nothing here "
+"could compare it to the opponent's."
+msgstr ""
+"Seu deck não foi resolvido para um arquétipo de Padrão conhecido, então nada "
+"aqui pôde compará-lo ao do oponente."
+
+#: sensei_top/review/summary.py
+msgid "Your own deck's cards weren't recognized"
+msgstr "Os cards do seu deck não foram reconhecidos"
+
+#: sensei_top/review/analyzers/frame.py
+msgid "Your own draw/counter share"
+msgstr "Sua fatia de compra/contramágicas"
+
+#: sensei_top/review/analyzers/frame.py
+msgid "Your own removal share"
+msgstr "Sua fatia de remoção"
+
+#: sensei_top/review/analyzers/trajectory.py
+#, python-brace-format
+msgid ""
+"Your position went from {before} to {after} by your turn {turn} — the largest"
+" single swing against you this game."
+msgstr ""
+"Sua posição foi de {before} a {after} até o seu turno {turn} — a maior virada"
+" contra você neste jogo."
+
+#: sensei_top/review/analyzers/trajectory.py
+#, python-brace-format
+msgid ""
+"Your position went from {before} to {after} by your turn {turn} — the largest"
+" single swing against you this game. In that window, {card} was on record."
+msgstr ""
+"Sua posição foi de {before} a {after} até o seu turno {turn} — a maior virada"
+" contra você neste jogo. Nessa janela, {card} estava registrado."
+
+#: sensei_top/review/analyzers/trajectory.py
+#, python-brace-format
+msgid ""
+"Your position went from {before} to {after} by your turn {turn} — the largest"
+" single swing against you this game. In that window, {total} damage taken was"
+" on record."
+msgstr ""
+"Sua posição foi de {before} a {after} até o seu turno {turn} — a maior virada"
+" contra você neste jogo. Nessa janela, {total} de dano sofrido estava "
+"registrado."
+
+#: sensei_top/review/summary.py
+msgid "Your record"
+msgstr "Seu retrospecto"
+
+#: sensei_top/review/analyzers/resources.py
+msgid "Your spells countered"
+msgstr "Suas mágicas anuladas"
+
+#: sensei_top/review/analyzers/resources.py
+msgid "Your turn at the high point"
+msgstr "Seu turno no ponto alto"
+
+#: sensei_top/review/analyzers/resources.py
+msgid "Your turn at the low point"
+msgstr "Seu turno no ponto baixo"
+
+#: sensei_top/review/position.py
+msgid "a decisive swing"
+msgstr "uma virada decisiva"
+
+#: sensei_top/review/position.py
+msgid "a notable swing"
+msgstr "uma virada notável"
+
+#: sensei_top/review/position.py
+msgid "a small swing"
+msgstr "uma virada pequena"
+
+#: sensei_top/review/summary.py
+msgid "an unidentified opponent"
+msgstr "um oponente não identificado"
+
+#: sensei_top/api/routes/matches.py
+msgid "archetype_key requires a non-empty label."
+msgstr "archetype_key exige um rótulo não vazio."
+
+#: sensei_top/review/analyzers/role_play.py
+msgid "beatdown"
+msgstr "beatdown"
+
+#: sensei_top/table/keep.py
+msgid "by T4"
+msgstr "até o T4"
+
+#: sensei_top/review/summary.py
+msgid "conceded"
+msgstr "concedeu"
+
+#: sensei_top/review/analyzers/role_play.py
+msgid "control"
+msgstr "controle"
+
+#: sensei_top/archetypes/classify.py
+#, python-brace-format
+msgid "corpus: {n} of its own cards seen ({odds})"
+msgid_plural "corpus: {n} of its own cards seen ({odds})"
+msgstr[0] "corpus: {n} dos cards dele visto ({odds})"
+msgstr[1] "corpus: {n} dos cards dele vistos ({odds})"
+
+#: sensei_top/table/keep.py
+msgid "creature"
+msgstr "criatura"
+
+#: sensei_top/review/summary.py
+msgid "ended on the clock"
+msgstr "terminou pelo tempo"
+
+#: sensei_top/table/keep.py
+msgid "flex slot"
+msgid_plural "flex slots"
+msgstr[0] "slot flex"
+msgstr[1] "slots flex"
+
+#: sensei_top/review/summary.py
+#, python-brace-format
+msgid "held back {n}x"
+msgid_plural "held back {n}x"
+msgstr[0] "segurou {n}x"
+msgstr[1] "segurou {n}x"
+
+#: sensei_top/table/keep.py
+msgid "land"
+msgid_plural "lands"
+msgstr[0] "terreno"
+msgstr[1] "terrenos"
+
+#: sensei_top/archetypes/classify.py
+#, python-brace-format
+msgid "matched {card}"
+msgstr "correspondeu a {card}"
+
+#: sensei_top/api/routes/coach.py
+#, python-brace-format
+msgid "model must be one of {models}"
+msgstr "o modelo deve ser um de {models}"
+
+#: sensei_top/table/opening_hand.py
+#, python-brace-format
+msgid ""
+"mulliganing costs this deck at least {points} points here -- staying marginal"
+" rather than shipping"
+msgstr ""
+"fazer mulligan custa a este deck pelo menos {points} pontos aqui -- fica no "
+"limite em vez de devolver"
+
+#: sensei_top/archetypes/classify.py
+#, python-brace-format
+msgid "needs {colors} — none shown in {n} cards"
+msgid_plural "needs {colors} — none shown in {n} cards"
+msgstr[0] "precisa de {colors} — nenhuma mostrada em {n} card"
+msgstr[1] "precisa de {colors} — nenhuma mostrada em {n} cards"
+
+#: sensei_top/table/keep.py
+msgid "never resolved"
+msgstr "nunca resolveu"
+
+#: sensei_top/archetypes/classify.py
+msgid "no rival"
+msgstr "sem rival"
+
+#: sensei_top/table/opening_hand.py
+#, python-brace-format
+msgid ""
+"no threat like {card} in hand or reachable this hand ({card} is "
+"{wins}-{losses} from {band})"
+msgstr ""
+"nenhuma ameaça como {card} na mão ou alcançável com esta mão ({card} está "
+"{wins}-{losses} em {band})"
+
+#: sensei_top/archetypes/classify.py
+#, python-brace-format
+msgid "over {cap}x the next best"
+msgstr "mais de {cap}x o segundo melhor"
+
+#: sensei_top/metagame/tiers.py
+msgid "paper tournaments of 64 or more players"
+msgstr "torneios de papel com 64 ou mais jogadores"
+
+#: sensei_top/metagame/tiers.py
+msgid "paper tournaments under 64 players"
+msgstr "torneios de papel com menos de 64 jogadores"
+
+#: sensei_top/table/keep.py
+msgid "play at 1-3 mana"
+msgid_plural "plays at 1-3 mana"
+msgstr[0] "jogada de 1 a 3 de mana"
+msgstr[1] "jogadas de 1 a 3 de mana"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "players"
+msgstr "jogadores"
+
+#: sensei_top/review/analyzers/baseline.py
+#: sensei_top/review/analyzers/information.py
+msgid "this archetype"
+msgstr "este arquétipo"
+
+#: sensei_top/review/analyzers/frame.py
+msgid "this opponent"
+msgstr "este oponente"
+
+#: sensei_top/review/summary.py
+#, python-brace-format
+msgid "turn {turn} · {magnitude}"
+msgstr "turno {turn} · {magnitude}"
+
+#: sensei_top/review/analyzers/baseline.py
+msgid "your archetype"
+msgstr "seu arquétipo"
+
+#: sensei_top/guide/window.py
+#, python-brace-format
+msgid "{cards} last appeared in the {fmt} corpus on {date}"
+msgstr "{cards}: última aparição no corpus de {fmt} em {date}"
+
+#: sensei_top/table/opening_hand.py
+#, python-brace-format
+msgid "{card} in hand, reachable this hand ({band}: {wins}-{losses})"
+msgstr "{card} na mão, alcançável com esta mão ({band}: {wins}-{losses})"
+
+#: sensei_top/review/analyzers/information.py
+#, python-brace-format
+msgid "{count} of the opponent's usual staples never showed up"
+msgid_plural "{count} of the opponent's usual staples never showed up"
+msgstr[0] "{count} dos staples habituais do oponente nunca apareceu"
+msgstr[1] "{count} dos staples habituais do oponente nunca apareceram"
+
+# join(): the words between items of a list. Portuguese joins with "e" and no
+# comma before it; the placeholders may be reordered but not renamed.
+#: sensei_top/i18n.py
+#, python-brace-format
+msgid "{first} and {second}"
+msgstr "{first} e {second}"
+
+# join(): the words between items of a list. Portuguese joins with "e" and no
+# comma before it; the placeholders may be reordered but not renamed.
+#: sensei_top/i18n.py
+#, python-brace-format
+msgid "{head} and {last}"
+msgstr "{head} e {last}"
+
+# join(): the words between items of a list. Portuguese joins with "e" and no
+# comma before it; the placeholders may be reordered but not renamed.
+#: sensei_top/i18n.py
+#, python-brace-format
+msgid "{head}, {item}"
+msgstr "{head}, {item}"
+
+#: sensei_top/review/analyzers/information.py
+#, python-brace-format
+msgid ""
+"{highest}% to {lowest}% of {opponent}'s own tournament decklists run these, "
+"and none of them appeared this match: {names}, and {remainder} more."
+msgstr ""
+"De {highest}% a {lowest}% das listas de torneio de {opponent} jogam estes, e "
+"nenhum deles apareceu nesta partida: {names}, e mais {remainder}."
+
+#: sensei_top/review/analyzers/information.py
+#, python-brace-format
+msgid ""
+"{highest}% to {lowest}% of {opponent}'s own tournament decklists run these, "
+"and none of them appeared this match: {names}."
+msgstr ""
+"De {highest}% a {lowest}% das listas de torneio de {opponent} jogam estes, e "
+"nenhum deles apareceu nesta partida: {names}."
+
+#: sensei_top/guide/list_diff.py
+#, python-brace-format
+msgid ""
+"{names} share an identical type line and mana cost and never co-occur in one "
+"decklist — they may be the same card under two names: {shares}."
+msgstr ""
+"{names} têm a mesma linha de tipo e o mesmo custo de mana e nunca aparecem "
+"juntos em uma lista — podem ser o mesmo card sob dois nomes: {shares}."
+
+#: sensei_top/table/opening_hand.py
+#, python-brace-format
+msgid ""
+"{names}: no mana production on file — the call is the same whether or not it "
+"makes colored mana."
+msgstr ""
+"{names}: nenhuma produção de mana registrada — a decisão é a mesma, produza "
+"ou não mana colorida."
+
+#: sensei_top/table/opening_hand.py
+#, python-brace-format
+msgid ""
+"{name} counted as whichever basic type each spell needs — you choose it once,"
+" as it enters"
+msgstr ""
+"{name} contado como o tipo básico que cada mágica precisa — você o escolhe "
+"uma vez, quando ele entra"
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} Arena match(es) excluded: no event id was recorded, so the queue they "
+"were played in is unknown."
+msgid_plural ""
+"{n} Arena match(es) excluded: no event id was recorded, so the queue they "
+"were played in is unknown."
+msgstr[0] ""
+"{n} partida do Arena excluída: nenhum id de evento foi registrado, então a "
+"fila em que foi jogada é desconhecida."
+msgstr[1] ""
+"{n} partidas do Arena excluídas: nenhum id de evento foi registrado, então a "
+"fila em que foram jogadas é desconhecida."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} MTGO match(es) are counted in the overall rate, the skill splits, leaks "
+"and turning points, but in no per-deck line: MTGO records no deck, and none "
+"was picked for them."
+msgid_plural ""
+"{n} MTGO match(es) are counted in the overall rate, the skill splits, leaks "
+"and turning points, but in no per-deck line: MTGO records no deck, and none "
+"was picked for them."
+msgstr[0] ""
+"{n} partida de MTGO é contada na taxa geral, nas divisões de habilidade, nos "
+"leaks e nos pontos de virada, mas em nenhuma linha por deck: o MTGO não "
+"registra o deck, e nenhum foi escolhido para ela."
+msgstr[1] ""
+"{n} partidas de MTGO são contadas na taxa geral, nas divisões de habilidade, "
+"nos leaks e nos pontos de virada, mas em nenhuma linha por deck: o MTGO não "
+"registra o deck, e nenhum foi escolhido para elas."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} MTGO match(es) excluded: no one of the seven formats this app tracks "
+"allows every card they revealed."
+msgid_plural ""
+"{n} MTGO match(es) excluded: no one of the seven formats this app tracks "
+"allows every card they revealed."
+msgstr[0] ""
+"{n} partida de MTGO excluída: nenhum dos sete formatos que este aplicativo "
+"acompanha permite todos os cards que ela revelou."
+msgstr[1] ""
+"{n} partidas de MTGO excluídas: nenhum dos sete formatos que este aplicativo "
+"acompanha permite todos os cards que elas revelaram."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} MTGO match(es) excluded: revealed a card the local card database could "
+"not name, so its legality can't be read."
+msgid_plural ""
+"{n} MTGO match(es) excluded: revealed a card the local card database could "
+"not name, so its legality can't be read."
+msgstr[0] ""
+"{n} partida de MTGO excluída: revelou um card que o banco de cards local não "
+"conseguiu nomear, então sua legalidade não pode ser lida."
+msgstr[1] ""
+"{n} partidas de MTGO excluídas: revelaram um card que o banco de cards local "
+"não conseguiu nomear, então sua legalidade não pode ser lida."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} MTGO match(es) excluded: revealed a card with no legality on file (run "
+"`sensei-top cards --scryfall`)."
+msgid_plural ""
+"{n} MTGO match(es) excluded: revealed a card with no legality on file (run "
+"`sensei-top cards --scryfall`)."
+msgstr[0] ""
+"{n} partida de MTGO excluída: revelou um card sem legalidade registrada "
+"(execute `sensei-top cards --scryfall`)."
+msgstr[1] ""
+"{n} partidas de MTGO excluídas: revelaram um card sem legalidade registrada "
+"(execute `sensei-top cards --scryfall`)."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} MTGO match(es) excluded: the revealed cards fit two or more formats, "
+"neither inside the other, and only a confirmed format can tell which."
+msgid_plural ""
+"{n} MTGO match(es) excluded: the revealed cards fit two or more formats, "
+"neither inside the other, and only a confirmed format can tell which."
+msgstr[0] ""
+"{n} partida de MTGO excluída: os cards revelados cabem em dois ou mais "
+"formatos, nenhum contido no outro, e só um formato confirmado pode dizer "
+"qual."
+msgstr[1] ""
+"{n} partidas de MTGO excluídas: os cards revelados cabem em dois ou mais "
+"formatos, nenhum contido no outro, e só um formato confirmado pode dizer "
+"qual."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} MTGO match(es) excluded: too few distinct cards revealed to judge the "
+"match's format at all."
+msgid_plural ""
+"{n} MTGO match(es) excluded: too few distinct cards revealed to judge the "
+"match's format at all."
+msgstr[0] ""
+"{n} partida de MTGO excluída: poucos cards distintos revelados para julgar o "
+"formato da partida."
+msgstr[1] ""
+"{n} partidas de MTGO excluídas: poucos cards distintos revelados para julgar "
+"o formato da partida."
+
+#: sensei_top/table/opening_hand.py
+#, python-brace-format
+msgid "{n} card castable by turn {turn}"
+msgid_plural "{n} cards castable by turn {turn}"
+msgstr[0] "{n} card conjurável até o turno {turn}"
+msgstr[1] "{n} cards conjuráveis até o turno {turn}"
+
+#: sensei_top/table/opening_hand.py
+#, python-brace-format
+msgid ""
+"{n} card(s) in this hand are not in the card table yet — run 'sensei-top "
+"cards' for a verdict."
+msgid_plural ""
+"{n} card(s) in this hand are not in the card table yet — run 'sensei-top "
+"cards' for a verdict."
+msgstr[0] ""
+"{n} card desta mão ainda não está na tabela de cards — execute 'sensei-top "
+"cards' para um veredito."
+msgstr[1] ""
+"{n} cards desta mão ainda não estão na tabela de cards — execute 'sensei-top "
+"cards' para um veredito."
+
+#: sensei_top/review/summary.py
+#, python-brace-format
+msgid "{n} cards left in hand"
+msgid_plural "{n} cards left in hand"
+msgstr[0] "{n} card restante na mão"
+msgstr[1] "{n} cards restantes na mão"
+
+#: sensei_top/guide/decklist.py
+#, python-brace-format
+msgid ""
+"{n} copies of {card} across the maindeck and sideboard, more than {maximum}."
+msgid_plural ""
+"{n} copies of {card} across the maindeck and sideboard, more than {maximum}."
+msgstr[0] ""
+"{n} cópia de {card} entre deck principal e sideboard, mais que {maximum}."
+msgstr[1] ""
+"{n} cópias de {card} entre deck principal e sideboard, mais que {maximum}."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} deck(s) below {minimum} population matches are not broken out into their "
+"own leak table — too few of that deck's own matches to clear the leak "
+"finder's sample gate on both sides of a comparison."
+msgid_plural ""
+"{n} deck(s) below {minimum} population matches are not broken out into their "
+"own leak table — too few of that deck's own matches to clear the leak "
+"finder's sample gate on both sides of a comparison."
+msgstr[0] ""
+"{n} deck abaixo de {minimum} partidas de população não é destacado em sua "
+"própria tabela de leaks — poucas partidas desse deck para passar o limite de "
+"amostra do detector de leaks nos dois lados de uma comparação."
+msgstr[1] ""
+"{n} decks abaixo de {minimum} partidas de população não são destacados em "
+"suas próprias tabelas de leaks — poucas partidas de cada um para passar o "
+"limite de amostra do detector de leaks nos dois lados de uma comparação."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} deck(s) beyond the top {top} by sample size are not shown in the per-deck"
+" table ({matches} matches)."
+msgid_plural ""
+"{n} deck(s) beyond the top {top} by sample size are not shown in the per-deck"
+" table ({matches} matches)."
+msgstr[0] ""
+"{n} deck além dos {top} primeiros por tamanho de amostra não é mostrado na "
+"tabela por deck ({matches} partidas)."
+msgstr[1] ""
+"{n} decks além dos {top} primeiros por tamanho de amostra não são mostrados "
+"na tabela por deck ({matches} partidas)."
+
+#: sensei_top/table/opening_hand.py
+#, python-brace-format
+msgid "{n} land (in this deck's {land_min}-{land_max} band)"
+msgid_plural "{n} lands (in this deck's {land_min}-{land_max} band)"
+msgstr[0] "{n} terreno (na faixa de {land_min} a {land_max} deste deck)"
+msgstr[1] "{n} terrenos (na faixa de {land_min} a {land_max} deste deck)"
+
+#: sensei_top/table/opening_hand.py
+#, python-brace-format
+msgid "{n} land (outside this deck's {land_min}-{land_max} band)"
+msgid_plural "{n} lands (outside this deck's {land_min}-{land_max} band)"
+msgstr[0] "{n} terreno (fora da faixa de {land_min} a {land_max} deste deck)"
+msgstr[1] "{n} terrenos (fora da faixa de {land_min} a {land_max} deste deck)"
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} lost game(s) have no turning_point finding to place in the turning-point "
+"breakdown (never behind, too few recorded turns, or a missing report) and are"
+" not counted in any bucket."
+msgid_plural ""
+"{n} lost game(s) have no turning_point finding to place in the turning-point "
+"breakdown (never behind, too few recorded turns, or a missing report) and are"
+" not counted in any bucket."
+msgstr[0] ""
+"{n} jogo perdido não tem observação de turning_point para colocar na divisão "
+"de pontos de virada (nunca ficou atrás, poucos turnos registrados, ou "
+"relatório ausente) e não é contado em nenhuma faixa."
+msgstr[1] ""
+"{n} jogos perdidos não têm observação de turning_point para colocar na "
+"divisão de pontos de virada (nunca ficaram atrás, poucos turnos registrados, "
+"ou relatório ausente) e não são contados em nenhuma faixa."
+
+#: sensei_top/table/keep.py
+#, python-brace-format
+msgid ""
+"{n} maindeck card(s) are not in the card table yet, so land counts here may "
+"be undercounted — run 'sensei-top cards' for a keepable-hand band."
+msgid_plural ""
+"{n} maindeck card(s) are not in the card table yet, so land counts here may "
+"be undercounted — run 'sensei-top cards' for a keepable-hand band."
+msgstr[0] ""
+"{n} card do deck principal ainda não está na tabela de cards, então as "
+"contagens de terrenos aqui podem estar abaixo do real — execute 'sensei-top "
+"cards' para uma faixa de mãos para manter."
+msgstr[1] ""
+"{n} cards do deck principal ainda não estão na tabela de cards, então as "
+"contagens de terrenos aqui podem estar abaixo do real — execute 'sensei-top "
+"cards' para uma faixa de mãos para manter."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} match(es) excluded: none of the seven formats this app tracks is known "
+"for them (an Arena queue for another format, or an MTGO match with no "
+"confirmed or inferred format)."
+msgid_plural ""
+"{n} match(es) excluded: none of the seven formats this app tracks is known "
+"for them (an Arena queue for another format, or an MTGO match with no "
+"confirmed or inferred format)."
+msgstr[0] ""
+"{n} partida excluída: nenhum dos sete formatos que este aplicativo acompanha "
+"é conhecido para ela (uma fila do Arena de outro formato, ou uma partida de "
+"MTGO sem formato confirmado ou inferido)."
+msgstr[1] ""
+"{n} partidas excluídas: nenhum dos sete formatos que este aplicativo "
+"acompanha é conhecido para elas (uma fila do Arena de outro formato, ou uma "
+"partida de MTGO sem formato confirmado ou inferido)."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} match(es) excluded: played in a Limited queue, out of scope for this "
+"Constructed-focused report."
+msgid_plural ""
+"{n} match(es) excluded: played in a Limited queue, out of scope for this "
+"Constructed-focused report."
+msgstr[0] ""
+"{n} partida excluída: jogada em uma fila de Limitado, fora do escopo deste "
+"relatório voltado a Construído."
+msgstr[1] ""
+"{n} partidas excluídas: jogadas em uma fila de Limitado, fora do escopo deste"
+" relatório voltado a Construído."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid "{n} match(es) excluded: played in an excluded event ({events})."
+msgid_plural "{n} match(es) excluded: played in an excluded event ({events})."
+msgstr[0] "{n} partida excluída: jogada em um evento excluído ({events})."
+msgstr[1] "{n} partidas excluídas: jogadas em um evento excluído ({events})."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} match(es) in the format window have no classified opponent archetype and "
+"are not counted in the opponent-archetype table."
+msgid_plural ""
+"{n} match(es) in the format window have no classified opponent archetype and "
+"are not counted in the opponent-archetype table."
+msgstr[0] ""
+"{n} partida na janela do formato não tem arquétipo do oponente classificado e"
+" não é contada na tabela de arquétipos de oponentes."
+msgstr[1] ""
+"{n} partidas na janela do formato não têm arquétipo do oponente classificado "
+"e não são contadas na tabela de arquétipos de oponentes."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} opponent archetype(s) beyond the top {top} by sample size are not shown "
+"in the opponent-archetype table."
+msgid_plural ""
+"{n} opponent archetype(s) beyond the top {top} by sample size are not shown "
+"in the opponent-archetype table."
+msgstr[0] ""
+"{n} arquétipo de oponente além dos {top} primeiros por tamanho de amostra não"
+" é mostrado na tabela de arquétipos de oponentes."
+msgstr[1] ""
+"{n} arquétipos de oponente além dos {top} primeiros por tamanho de amostra "
+"não são mostrados na tabela de arquétipos de oponentes."
+
+#: sensei_top/review/summary.py
+#, python-brace-format
+msgid "{n} permanents, sweeper unaccounted for"
+msgid_plural "{n} permanents, sweeper unaccounted for"
+msgstr[0] "{n} permanente, sweeper não considerado"
+msgstr[1] "{n} permanentes, sweeper não considerado"
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} recurring pattern(s) beyond the top {top} by win-rate gap are not shown."
+msgid_plural ""
+"{n} recurring pattern(s) beyond the top {top} by win-rate gap are not shown."
+msgstr[0] ""
+"{n} padrão recorrente além dos {top} primeiros por diferença de taxa de "
+"vitórias não é mostrado."
+msgstr[1] ""
+"{n} padrões recorrentes além dos {top} primeiros por diferença de taxa de "
+"vitórias não são mostrados."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} {fmt} match(es) were played with a deck whose own format is another one, "
+"so they count in the {fmt} records but in no per-deck line."
+msgid_plural ""
+"{n} {fmt} match(es) were played with a deck whose own format is another one, "
+"so they count in the {fmt} records but in no per-deck line."
+msgstr[0] ""
+"{n} partida de {fmt} foi jogada com um deck cujo formato é outro, então ela "
+"conta nos retrospectos de {fmt} mas em nenhuma linha por deck."
+msgstr[1] ""
+"{n} partidas de {fmt} foram jogadas com um deck cujo formato é outro, então "
+"elas contam nos retrospectos de {fmt} mas em nenhuma linha por deck."
+
+#: sensei_top/archetypes/classify.py
+#, python-brace-format
+msgid "{odds}x the next best"
+msgstr "{odds}x o segundo melhor"
+
+#: sensei_top/table/opening_hand.py
+#, python-brace-format
+msgid ""
+"{optimistic} if {names} makes the colors this hand needs, {pessimistic} if it"
+" doesn't — no mana production on file for it."
+msgstr ""
+"{optimistic} se as cores que esta mão precisa vierem de {names}, "
+"{pessimistic} se não — nenhuma produção de mana registrada para isso."
+
+#: sensei_top/review/analyzers/resources.py
+#, python-brace-format
+msgid "{ours} of your spells countered, {theirs} of theirs"
+msgstr "{ours} das suas mágicas anuladas, {theirs} das dele"
+
+#: sensei_top/review/analyzers/resources.py
+#, python-brace-format
+msgid ""
+"{ours} spell of yours were countered this game; {theirs} of the opponent's "
+"were. A countered spell is a card lost with nothing gained, on whichever side"
+" it lands."
+msgid_plural ""
+"{ours} spells of yours were countered this game; {theirs} of the opponent's "
+"were. A countered spell is a card lost with nothing gained, on whichever side"
+" it lands."
+msgstr[0] ""
+"{ours} mágica sua foi anulada neste jogo; {theirs} do oponente foram. Uma "
+"mágica anulada é um card perdido sem nada ganho, de qualquer lado em que "
+"caia."
+msgstr[1] ""
+"{ours} mágicas suas foram anuladas neste jogo; {theirs} do oponente foram. "
+"Uma mágica anulada é um card perdido sem nada ganho, de qualquer lado em que "
+"caia."
+
+#: sensei_top/review/summary.py
+#, python-brace-format
+msgid "{ours} to {theirs}"
+msgstr "{ours} a {theirs}"

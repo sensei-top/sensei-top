@@ -1,0 +1,233 @@
+{
+  "view": {
+    "noVersionTitle": "No match with this version",
+    "noVersionMessage": "Pick another version, or read every version together.",
+    "everyVersion": "Every version",
+    "noFinishedTitle": "No finished match yet",
+    "noFinishedMessage": "Matchups are counted once a match has ended.",
+    "countedOver": "Counted over the {{n}} newest matches.",
+    "archetypesMet": "Archetypes met",
+    "archetypesMetSubtitle": "Finished matches only, most met first. A rate needs ten matches.",
+    "columns": {
+      "archetype": "Archetype",
+      "matches": "Matches",
+      "won": "Won",
+      "rate": "Rate"
+    }
+  },
+  "tiles": {
+    "archetypesMet": "Archetypes met",
+    "noneNamed": "none named",
+    "allNamed": "all named",
+    "namedAndNot": "{{named}}\u00a0named, {{notNamed}}\u00a0not",
+    "noneYet": "no archetype met {{min}}\u00a0times yet",
+    "oneSoFar": "one archetype met {{min}}\u00a0times so far",
+    "best": "Best matchup",
+    "worst": "Worst matchup",
+    "rankedRate": "won {{won}} of {{matches}} against {{against}}",
+    "rankedCount": "won against {{against}}",
+    "countOf": "{{won}} of {{matches}}"
+  },
+  "name": {
+    "unrecognized": "Unrecognized deck",
+    "showed": "showed {{card}}",
+    "unrecognizedInSentence": "an unrecognized deck",
+    "unknownInSentence": "an unknown deck"
+  },
+  "fieldLine": {
+    "games": "Games {{won}}–{{lost}}",
+    "record_one": "Games {{won}}–{{lost}} · wins {{rate}}% in tournaments, {{n}}\u00a0entry",
+    "record_other": "Games {{won}}–{{lost}} · wins {{rate}}% in tournaments, {{n}}\u00a0entries",
+    "recordThin_one": "Games {{won}}–{{lost}} · wins {{rate}}% in tournaments, {{n}}\u00a0entry, too few to trust",
+    "recordThin_other": "Games {{won}}–{{lost}} · wins {{rate}}% in tournaments, {{n}}\u00a0entries, too few to trust"
+  },
+  "pairing": {
+    "allMatchups": "All matchups",
+    "lastMet": "Last met {{since}}",
+    "noVersionTitle": "No match against it with this version",
+    "noMatchTitle": "No match against it yet",
+    "noMatchMessage": "Once you play one, it is counted here.",
+    "record": "Record",
+    "wonOf": "won {{won}} of {{matches}}",
+    "matchesWon": "matches won",
+    "games": "Games",
+    "yoursFirst": "yours first",
+    "inTournaments": "In tournaments",
+    "onlyNamed": "only a named archetype has results",
+    "noResults": "no tournament results for it",
+    "wonInTournaments_one": "won in tournaments, {{n}}\u00a0entry",
+    "wonInTournaments_other": "won in tournaments, {{n}}\u00a0entries",
+    "wonInTournamentsThin_one": "won in tournaments, {{n}}\u00a0entry, too few to trust",
+    "wonInTournamentsThin_other": "won in tournaments, {{n}}\u00a0entries, too few to trust"
+  },
+  "brief": {
+    "title": "Matchup brief",
+    "subtitle": "What to play around and what to bring in against this archetype. It is written once, and Live shows it whenever you meet one.",
+    "cannotWrite": "Too few tournament lists of this archetype to write a brief from yet.",
+    "formatUnknown": "No tournament format is known for this deck, so there are no tournament lists to write a brief from. On MTGO, you can set it by confirming the format of one of its matches.",
+    "cameWithGuide": "It came with the deck's written guide.",
+    "playAround": "Play around",
+    "notNamed": "A brief is written against an archetype named from tournament results, and this deck is not one.",
+    "notWritten": "No brief for it yet. Build its prompt, paste it into an assistant, and save the answer with the command that comes with it.",
+    "buildPrompt": "Build the prompt",
+    "staleTitle": "Written before the list or the field changed",
+    "staleMessage": "Your list or the tournament results have changed since this brief was written, so it may name a card or a number that no longer holds.",
+    "writeAgain": "Write it again"
+  },
+  "briefCard": {
+    "record_one": "Your record: {{wins}}-{{losses}} in {{count}} matches",
+    "record_other": "Your record: {{wins}}-{{losses}} in {{count}} matches",
+    "writtenBy": "written by {{model}}",
+    "fromGuideRun": "from a full guide run",
+    "ofTheField": "{{share}} of the field",
+    "reasoned": "reasoned from card text",
+    "unclassified": "Opponent not identified yet.",
+    "formatUnknown": "No tournament format is known for your deck, so there are no tournament lists to write a brief from.",
+    "noConsensus": "The tournament corpus has too few decks of this archetype to write a brief from.",
+    "stale": "The field has moved since this was written.",
+    "noBrief": "No brief written for this matchup yet. Most arrive with a full deck-guide import; this writes just this one."
+  },
+  "age": {
+    "now": "just now",
+    "hours_one": "{{count}}h ago",
+    "hours_other": "{{count}}h ago",
+    "days_one": "{{count}}d ago",
+    "days_other": "{{count}}d ago"
+  },
+  "plan": {
+    "game2": "Game 2 plan",
+    "out": "Out",
+    "in": "In",
+    "inLabel": "IN:",
+    "outLabel": "OUT:"
+  },
+  "coverage": {
+    "title": "Matchup coverage",
+    "subtitle": "Which archetypes have a brief: the ones you have met, most met first, then the most played ones you have not. Each opens its matchup, where its brief is.",
+    "nothingTitle": "Nothing to cover yet",
+    "nothingMessage": "Once you meet a named archetype, or tournament results are downloaded, it is listed here.",
+    "writeAll": "Write every missing brief",
+    "writeAllHint": "One prompt writes every brief that is missing or out of date.",
+    "noneEnough": "None of these archetypes has enough tournament lists to write from yet.",
+    "allWritten": "Every brief is written and up to date.",
+    "columns": {
+      "archetype": "Archetype",
+      "brief": "Brief",
+      "field": "Field"
+    },
+    "status": {
+      "ok": "Written",
+      "stale": "Out of date",
+      "missing": "Not written",
+      "noConsensus": "Too few lists"
+    },
+    "tiles": {
+      "matchesCovered": "Matches covered",
+      "noNamedMatch": "no match against a named archetype yet",
+      "matchesDetail_one": "{{covered}} of {{n}}\u00a0match against a named archetype",
+      "matchesDetail_other": "{{covered}} of {{n}}\u00a0matches against a named archetype",
+      "fieldCovered": "Field covered",
+      "noResults": "no tournament results yet",
+      "fieldDetail": "of tournament decks have an up-to-date brief",
+      "toWrite": "To write",
+      "ofArchetypes_one": "of {{n}}\u00a0archetype",
+      "ofArchetypes_other": "of {{n}}\u00a0archetypes",
+      "moreTooFew_one": "{{n}}\u00a0more has too few lists",
+      "moreTooFew_other": "{{n}}\u00a0more have too few lists",
+      "ofWithMore": "{{of}}; {{more}}"
+    },
+    "notes": {
+      "tooFew": "Too few lists to write: {{names}}.",
+      "deferred": "Left for the next prompt: {{names}}. Save this answer, then build it again."
+    }
+  },
+  "patterns": {
+    "longGame": {
+      "title": "Long games are where you lose",
+      "clause": "where a game ran past your deck's usual length"
+    },
+    "shortGame": {
+      "title": "Short games go against you",
+      "clause": "where a game ended sooner than your deck's usual length"
+    },
+    "raceBehind": {
+      "title": "Falling behind on damage costs you",
+      "clause": "where you fell behind in the damage race"
+    },
+    "raceAhead": {
+      "title": "Ahead on damage, and still losing",
+      "clause": "where you led the damage race"
+    },
+    "manaScrewed": {
+      "title": "Short on lands by turn four",
+      "clause": "where you were short on lands by your fourth turn"
+    },
+    "manaFlooded": {
+      "title": "More lands than your deck plans for",
+      "clause": "where you drew more lands than your deck's own share"
+    },
+    "overCommitted": {
+      "title": "Full boards, with a sweeper still possible",
+      "clause": "where you filled the board while the opponent's deck could still hold a sweeper"
+    },
+    "controlBehind": {
+      "title": "As the control deck, never ahead on cards",
+      "clause": "where you were the control deck and never led on cards"
+    },
+    "heldBack": {
+      "title": "Holding back with the stronger board",
+      "clause": "where you had the stronger board and did not attack"
+    },
+    "genericClause": "where this happened",
+    "sentence": "You won {{wins}} of the {{n}}\u00a0matches {{clause}}, and {{otherWins}} of the other {{otherN}}."
+  },
+  "sideboard": {
+    "thisOpponent": "this opponent",
+    "thisArchetype": "this archetype",
+    "headline": {
+      "noResult": "Board for game {{next}} vs {{label}}",
+      "won": "Won game {{game}} — board for game {{next}} vs {{label}}",
+      "wonReason": "Won game {{game}} ({{reason}}) — board for game {{next}} vs {{label}}",
+      "lost": "Lost game {{game}} — board for game {{next}} vs {{label}}",
+      "lostReason": "Lost game {{game}} ({{reason}}) — board for game {{next}} vs {{label}}"
+    },
+    "youPicked": "You picked: {{label}}",
+    "opponentConfidence": "{{label}} · {{confidence}} confidence",
+    "result": {
+      "win": "won",
+      "loss": "lost",
+      "draw": "drew",
+      "unresolved": "unresolved"
+    },
+    "gameResult": "G{{n}} {{result}}",
+    "lastTime": "Last time vs {{label}}",
+    "pastNote": "What you boarded last time — not advice.",
+    "pastNoteCut": "What you boarded last time — not advice. † no longer in your current 75.",
+    "noPlan": "No written plan for this matchup, and nothing to write one from.",
+    "formatUnknownNoPlan": "No tournament format is known for this match, so the opponent's deck can't be named from the cards seen, and there is no plan to show.",
+    "unclassifiedNoPlan": "Opponent not identified yet — no plan to show until a card is seen.",
+    "noPlanYet": "No written plan for this matchup yet.",
+    "closest": "No written plan for {{label}} — closest written plan: {{closest}}",
+    "stale": "Stale",
+    "staleMessage": "The field or your current 75 has moved since this plan was written.",
+    "boardFor": "Board for game {{next}}",
+    "fullWriteup": "Full writeup",
+    "opponent": "Opponent",
+    "formatUnknown": "No tournament format is known for this match, so the opponent's deck can't be named from the cards seen.",
+    "unclassified": "Opponent not identified yet.",
+    "cardsSeen_one": "{{count}} cards seen",
+    "cardsSeen_other": "{{count}} cards seen",
+    "cardsSeenFrom_one": "{{count}} cards seen · {{source}}",
+    "cardsSeenFrom_other": "{{count}} cards seen · {{source}}",
+    "yourPick": "your pick",
+    "liveRead": "live read",
+    "otherPlans": "Other written plans",
+    "alternative": "{{label}} · {{fit}}% fit · {{confidence}}"
+  },
+  "position": {
+    "turnLabel": "Turn {{turn}}",
+    "series": "Position",
+    "showNumbers": "Show the numbers",
+    "turn": "Turn"
+  }
+}

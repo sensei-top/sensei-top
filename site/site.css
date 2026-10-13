@@ -1,0 +1,175 @@
+/* The dashboard's look (docs/design-system.md): dark plane, one accent,
+   Bricolage Grotesque for headings, Hanken Grotesk for text. The hexes are
+   the dashboard's, copied by hand; the site has no build to share them. */
+
+@font-face {
+  font-family: "Bricolage Grotesque Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url(fonts/bricolage-grotesque-latin-ext-wght-normal.woff2) format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Bricolage Grotesque Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url(fonts/bricolage-grotesque-latin-wght-normal.woff2) format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Hanken Grotesk Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(fonts/hanken-grotesk-latin-ext-wght-normal.woff2) format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Hanken Grotesk Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(fonts/hanken-grotesk-latin-wght-normal.woff2) format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: dark;
+  --plane: #0b0c14;
+  --surface-1: #131522;
+  --surface-3: #24283d;
+  --line-2: #343a57;
+  --edge: rgb(150 160 230 / 0.14);
+  --ink: #f2f3f8;
+  --ink-2: #b9bdd0;
+  --muted: #989db5;
+  --accent: #f4b6e4;
+  --on-accent: #1a1020;
+  --font-display: "Bricolage Grotesque Variable", "Segoe UI", system-ui, sans-serif;
+  --font-sans: "Hanken Grotesk Variable", "Segoe UI", system-ui, sans-serif;
+  --gutter: 16px;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--plane);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: break-word;
+}
+
+.page {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 0 var(--gutter) 48px;
+}
+
+a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 3px;
+}
+a:hover { text-decoration-color: var(--ink); }
+a:focus-visible, .button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+h1, h2, .brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+h1 {
+  font-size: clamp(30px, 8vw, 44px);
+  font-weight: 800;
+  margin: 32px 0 16px;
+}
+h2 {
+  font-size: 22px;
+  margin: 48px 0 12px;
+  scroll-margin-top: 16px;
+}
+p { margin: 0 0 16px; color: var(--ink-2); }
+ul { margin: 0 0 16px; padding-left: 20px; color: var(--ink-2); }
+li { margin-bottom: 8px; }
+strong { color: var(--ink); font-weight: 600; }
+code {
+  padding: 1px 6px;
+  border-radius: 12px;
+  background: var(--surface-3);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.95em;
+}
+
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--edge);
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.brand img { width: 28px; height: 28px; border-radius: 7px; }
+.site-header nav { display: flex; flex-wrap: wrap; gap: 4px 20px; font-size: 14px; }
+.site-header nav a { color: var(--muted); text-decoration: none; }
+.site-header nav a:hover { color: var(--ink); }
+
+.lead { font-size: 18px; color: var(--ink-2); }
+
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0 32px; }
+.button {
+  display: inline-block;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.button:hover { background: var(--line-2); }
+.button.primary { background: var(--accent); color: var(--on-accent); }
+.button.primary:hover { background: color-mix(in oklab, var(--accent) 90%, transparent); }
+
+figure { margin: 24px 0; }
+figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--edge);
+  border-radius: 18px;
+}
+
+section > p:last-child, section > ul:last-child { margin-bottom: 0; }
+
+.links { color: var(--muted); }
+
+.site-footer {
+  margin-top: 56px;
+  padding-top: 24px;
+  border-top: 1px solid var(--edge);
+  font-size: 13px;
+}
+.site-footer p { color: var(--muted); }

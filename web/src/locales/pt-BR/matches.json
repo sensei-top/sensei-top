@@ -1,0 +1,201 @@
+{
+  "you": "Você",
+  "opponent": "Oponente",
+  "result": {
+    "win": "Vitória",
+    "loss": "Derrota",
+    "draw": "Empate",
+    "incomplete": "Incompleta",
+    "unknown": "Resultado desconhecido",
+    "notFinished": "Não terminada"
+  },
+  "events": {
+    "ranked": "Ranqueada",
+    "rankedBo3": "Ranqueada, melhor de três",
+    "unranked": "Não ranqueada",
+    "unrankedBo3": "Não ranqueada, melhor de três",
+    "direct": "Desafio direto",
+    "starter": "Decks iniciais",
+    "consEvent": "Evento de Construído Tradicional",
+    "respelled": "{{head}}, {{tail}}"
+  },
+  "chart": {
+    "turn": "Turno {{turn}}"
+  },
+  "charts": {
+    "position": "Posição",
+    "positionSubtitle": "Vida, mesa, mão e mana pesadas em um só número, turno a turno. Acima de zero você está na frente.",
+    "positionSubtitleDot": "Vida, mesa, mão e mana pesadas em um só número, turno a turno. Acima de zero você está na frente. O ponto é a maior virada do jogo.",
+    "landsLegend": "Seus terrenos, só em Mesa",
+    "life": "Vida",
+    "lifeSubtitle": "Os dois jogadores, turno a turno.",
+    "hand": "Cards na mão",
+    "handSubtitle": "Os cards do oponente estão ocultos, e ainda assim contados.",
+    "board": "Mesa",
+    "boardSubtitle": "As permanentes de cada lado, e seus terrenos entre as suas.",
+    "yourPermanents": "Suas permanentes",
+    "theirPermanents": "Permanentes deles",
+    "yourLands": "Seus terrenos"
+  },
+  "game": {
+    "title": "Jogo {{n}}",
+    "positionLabel": "Posição no jogo {{n}}, turno a turno",
+    "seat": "Assento",
+    "onPlay": "No play",
+    "onDraw": "No draw",
+    "mulligans": "Mulligans",
+    "noMulligans": "Nenhum",
+    "length": "Duração",
+    "turns_one": "{{n}} turno",
+    "turns_other": "{{n}} turnos",
+    "ended": "Terminou",
+    "replay": "Replay do jogo {{n}}"
+  },
+  "hero": {
+    "kicker": "Relatório da partida",
+    "resultScore": "{{word}} {{won}}–{{lost}}",
+    "replay": "Replay turno a turno"
+  },
+  "row": {
+    "resultScore": "{{result}} {{score}}",
+    "unrecognizedDeck": "Deck não reconhecido",
+    "showed": "mostrou {{card}}"
+  },
+  "summary": {
+    "matchesWon": "Partidas vencidas",
+    "matchesDetail_one": "{{won}} de {{n}} partida terminada",
+    "matchesDetail_other": "{{won}} de {{n}} partidas terminadas",
+    "noMatches": "Nenhuma partida terminada",
+    "gamesWon": "Jogos vencidos",
+    "gamesDetail_one": "{{won}} de {{n}} jogo terminado",
+    "gamesDetail_other": "{{won}} de {{n}} jogos terminados",
+    "noGames": "Nenhum jogo terminado",
+    "counted": "Contado sobre as {{n}} partidas mais recentes."
+  },
+  "sideboarding": {
+    "title": "Trocas de sideboard",
+    "subtitle": "O que mudou no seu deck entrando neste jogo, como foi jogado.",
+    "in": "Entra",
+    "out": "Sai",
+    "nothing": "Nada"
+  },
+  "pick": {
+    "title": "Qual deck foi este?",
+    "subtitle": "O log do MTGO não diz qual deck você jogou. Escolha o seu e o formato dele para que esta partida conte para ele.",
+    "yourDeck": "Seu deck",
+    "cardsPlayed": "{{matched}} de {{seen}} cards jogados",
+    "noList": "Nenhuma lista",
+    "formatAlone": "confirmar só o formato",
+    "format": "Formato",
+    "notConfirmed": "Não confirmado",
+    "formatNotConfirmed": "Formato não confirmado",
+    "saving": "Salvando…",
+    "confirm": "Confirmar",
+    "change": "Alterar"
+  },
+  "scrubber": {
+    "turns": "Turnos",
+    "opening": "Mão inicial",
+    "open": "Inicial",
+    "turn": "Turno {{turn}}",
+    "turnYours": "Turno {{turn}}, seu turno",
+    "turnTheirs": "Turno {{turn}}, turno do oponente",
+    "legendYours": "Seu turno",
+    "legendTheirs": "Turno do oponente",
+    "legendLife": "Sob cada turno: sua vida, depois a do oponente."
+  },
+  "turnByTurn": {
+    "title": "Turno a turno",
+    "subtitleBoard": "A mesa no final de cada turno, disposta como em uma mesa de verdade: as mãos do lado de fora, os terrenos atrás, todo o resto junto à linha entre os dois lados. Um card virado fica deitado.",
+    "subtitlePlays": "O que cada jogador jogou, turno a turno.",
+    "noTurns": "Nenhum turno foi registrado para este jogo.",
+    "opening": "Mão inicial",
+    "playsOnly": "O log deste jogo registrou o que foi jogado, não a mesa.",
+    "noBoard": "Nenhuma mesa foi registrada para este turno.",
+    "during": "Durante o turno {{turn}}",
+    "nothing": "Nada visível foi comprado, conjurado ou jogado.",
+    "someone": "Alguém",
+    "event": {
+      "drew": "<who>{{who}}</who> comprou <name>{{name}}</name>",
+      "cast": "<who>{{who}}</who> conjurou <name>{{name}}</name>",
+      "played": "<who>{{who}}</who> jogou <name>{{name}}</name>",
+      "moved": "<who>{{who}}</who> moveu <name>{{name}}</name>",
+      "other": "<who>{{who}}</who> {{verb}} <name>{{name}}</name>"
+    }
+  },
+  "board": {
+    "new": "Novo",
+    "drawn": "Comprado",
+    "tapped": "virado",
+    "none": "Nenhum",
+    "empty": "Vazio",
+    "hidden": "{{n}} ocultos",
+    "hand": "Mão",
+    "lands": "Terrenos",
+    "board": "Mesa",
+    "library": "Grimório",
+    "graveyard": "Cemitério",
+    "exile": "Exílio",
+    "yourGraveyard": "Seu cemitério",
+    "yourExile": "Seu exílio",
+    "theirGraveyard": "Cemitério do oponente",
+    "theirExile": "Exílio do oponente",
+    "active": "Ativo",
+    "life": "de vida",
+    "unattributed": "O Arena nunca disse qual assento era o seu nesta sessão, então os dois lados não podem ser distinguidos. Os cards foram registrados; de quem eram, não.",
+    "legendNew": "Novo: entrou no campo de batalha neste turno.",
+    "legendDrawn": "Comprado: você o comprou neste turno."
+  },
+  "report": {
+    "wholeMatch": "Partida inteira",
+    "placeYourTurn": "Jogo {{game}} · seu turno {{turn}}",
+    "placeTurn": "Jogo {{game}} · turno {{turn}}",
+    "placePartial": "{{place}} · parcialmente oculto",
+    "numbersBehind": "Os números por trás",
+    "detail": "Detalhe",
+    "value": "Valor",
+    "partlyHiddenNote": "Parcialmente oculto: parte do que sustenta a observação estava oculta, não foi observada, ou era ambígua.",
+    "stoodOut": "O que se destacou",
+    "nothingStoodOut": "Nada nesta partida pesou o bastante para se destacar.",
+    "everyOther": "Todas as outras observações ({{n}})",
+    "every": "Todas as observações ({{n}})",
+    "pairing": "Este matchup",
+    "gapsTitle": "O que este relatório não conseguiu ver",
+    "gapsSubtitle": "Não é prova de que algo deu errado, só de que este leitor não conseguiu dizer.",
+    "showOther_one": "Mostrar a outra",
+    "showOther_other": "Mostrar as outras {{n}}",
+    "lineNote": "A linha é a sua posição, turno a turno: vida, mesa, mão e mana pesadas em um só número. Acima de zero você está na frente.",
+    "dotNote": "O ponto é a maior virada do jogo.",
+    "showNumbers": "Mostrar os números",
+    "game": "Jogo",
+    "turn": "Turno",
+    "coachTitle": "Resumo do treinador",
+    "coachSubtitle": "A forma de cada jogo turno a turno e as observações deste relatório, escritas em prosa de treinador.",
+    "coachShow": "Mostrar o resumo do treinador",
+    "nothingToReview": "Nada para analisar nesta partida ainda.",
+    "nothingToReport": "Nada a relatar nesta partida: pouco dela foi registrado."
+  },
+  "history": {
+    "capFullShowing": "Mostrando {{shown}} das {{inHand}} partidas mais recentes",
+    "capFull": "As {{inHand}} partidas mais recentes",
+    "capOne": "1 partida",
+    "capShowing": "Mostrando {{shown}} de {{inHand}} partidas, mais recentes primeiro",
+    "capAll": "{{inHand}} partidas, mais recentes primeiro",
+    "emptyTitle": "Nenhuma partida ainda",
+    "emptyMessage": "Toda partida que você joga aparece aqui quando termina, com seu relatório e um replay turno a turno.",
+    "noFitTitle": "Nenhuma partida cabe nestes filtros",
+    "elsewhere_one": "{{n}} partida está registrada sob outra fonte ou deck.",
+    "elsewhere_other": "{{n}} partidas estão registradas sob outra fonte ou deck.",
+    "showEvery": "Mostrar todas as partidas",
+    "showMore": "Mostrar mais {{n}}",
+    "stops": "A lista para nas {{n}} partidas mais recentes."
+  },
+  "detail": {
+    "all": "Todas as partidas"
+  },
+  "replay": {
+    "back": "O relatório da partida",
+    "noGames": "Nenhum dado de jogo foi registrado para esta partida.",
+    "gameResult": "Jogo {{n}} · {{result}}"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "prefill": {
+    "deckStore": "Preenchido com o formato em que o MTGO arquiva este deck.",
+    "lastPick": "Preenchido com sua última escolha para este deck.",
+    "inferred": "Preenchido: inferido dos cards revelados nesta partida."
+  },
+  "matches_one": "{{n}} partida",
+  "matches_other": "{{n}} partidas",
+  "result": {
+    "win": "Vitória",
+    "loss": "Derrota",
+    "draw": "Empate"
+  },
+  "range": "{{from}} – {{to}}",
+  "page": {
+    "intro": "O log do MTGO não diz qual deck você jogou. Estas partidas estão agrupadas pela lista salva que contém mais dos cards que você jogou em cada uma; confirme um grupo e toda partida nele conta para essa lista.",
+    "waiting_one": "{{matches}} precisa de um deck.",
+    "waiting_other": "{{matches}} precisam de um deck.",
+    "done_one": "{{matches}} agora conta para {{list}}.",
+    "done_other": "{{matches}} agora contam para {{list}}.",
+    "noMatches": "Nenhuma partida de MTGO ainda. O log do Arena nomeia o deck que jogou, então as partidas de Arena nunca precisam desta página.",
+    "allDone": "Toda partida de MTGO tem um deck.",
+    "backHome": "Voltar ao Início"
+  },
+  "sections": {
+    "sure": {
+      "title": "Cabe em uma lista salva",
+      "caption": "Cada lista contém pelo menos nove em cada dez dos cards que você jogou."
+    },
+    "partial": {
+      "title": "Perto de uma lista salva",
+      "caption": "A lista contém metade ou mais dos cards que você jogou, não todos. Muitas vezes é uma versão que você alterou ou nunca salvou; confirme só se perto o bastante serve para você."
+    },
+    "unsure": {
+      "title": "Escolha uma por vez",
+      "caption": "Poucos cards, ou nenhuma lista salva cabe. Abra a partida para escolher um deck, ou só o formato dela."
+    }
+  },
+  "groups": {
+    "hide": "Ocultar",
+    "show_one": "Mostrar {{n}} grupo",
+    "show_other": "Mostrar {{n}} grupos"
+  },
+  "unsure": {
+    "fewCards_one": "Só {{n}} card visto.",
+    "fewCards_other": "Só {{n}} cards vistos.",
+    "bestList": "Melhor lista: {{name}}, {{matched}} de {{seen}} cards.",
+    "noFit": "Nenhuma lista salva cabe."
+  },
+  "hint": "Seus cards parecem {{hint}}.",
+  "against": "contra {{name}}",
+  "group": {
+    "choose": "Escolher uma lista",
+    "chooseFirst": "Escolha uma lista primeiro",
+    "tied": "Estas listas cabem igualmente bem.",
+    "played": "Cards que você jogou desta lista: {{cards}}",
+    "missing": "Você jogou, fora desta lista: {{cards}}",
+    "alsoClose": "Também perto em {{matches}}: {{list}}",
+    "useList": "Usar esta lista",
+    "format": "Formato",
+    "notConfirmed": "Não confirmado",
+    "hideMatches": "Ocultar partidas",
+    "showMatches": "Mostrar partidas",
+    "saving": "Salvando…",
+    "confirm": "Confirmar {{matches}} como {{list}}"
+  },
+  "match": {
+    "cardsInList": "{{matched}} de {{seen}} cards nesta lista",
+    "putBack": "Devolver",
+    "leaveOut": "Deixar esta partida de fora"
+  }
+}

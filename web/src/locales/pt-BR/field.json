@@ -1,0 +1,236 @@
+{
+  "controls": {
+    "format": "Formato",
+    "window": "Período",
+    "tournaments": "Torneios"
+  },
+  "format": {
+    "none": "Nenhuma das suas partidas é de {{format}}.",
+    "fromLog": "{{n}} do log do Arena",
+    "confirmed": "{{n}} confirmadas por você",
+    "inferred": "{{n}} inferidas dos cards revelados",
+    "head_one": "{{n}} das suas partidas é de {{format}}",
+    "head_other": "{{n}} das suas partidas são de {{format}}",
+    "withParts": "{{head}}: {{parts}}.",
+    "headOnly": "{{head}}."
+  },
+  "window": {
+    "since": "desde {{date}}",
+    "whenLast": "nos últimos {{days}} dias",
+    "shortLast": "últimos {{days}} dias",
+    "optionLast": "Últimos {{days}} dias",
+    "optionReset": "Desde o último reinício ({{date}})"
+  },
+  "tier": {
+    "kind": {
+      "A": "torneios de papel com 64+ jogadores",
+      "B": "Challenges do MTGO",
+      "C": "Ligas do MTGO",
+      "D": "torneios de papel com menos de 64 jogadores"
+    },
+    "option": {
+      "A": "Papel 64+",
+      "B": "Challenges do MTGO",
+      "C": "Ligas do MTGO",
+      "D": "Papel abaixo de 64"
+    }
+  },
+  "pairs": {
+    "option": {
+      "A": "Papel 64+",
+      "AB": "+ Challenges do MTGO",
+      "ABD": "+ papel menor"
+    },
+    "none": {
+      "A": "Não há, {{when}}, nenhuma rodada entre dois decks nomeados em torneios de papel com 64+ jogadores.",
+      "AB": "Não há, {{when}}, nenhuma rodada entre dois decks nomeados em torneios de papel com 64+ jogadores ou Challenges do MTGO.",
+      "ABD": "Não há, {{when}}, nenhuma rodada entre dois decks nomeados."
+    }
+  },
+  "share": {
+    "actionSince": "{{kind}} {{short}}",
+    "actionLast": "{{kind}}, {{short}}",
+    "title": "O que está sendo jogado",
+    "empty": "Não há, {{when}}, nenhuma lista de {{kind}}.",
+    "notPlayed": "não jogado {{when}}",
+    "bars": "Cada barra é a fatia de um deck, {{when}}, entre {{lists}} listas de {{kind}}. A linha sob cada uma é o seu retrospecto contra ele no mesmo período, com qualquer deck seu.",
+    "short": "Seu retrospecto é contado sobre suas últimas {{n}} partidas.",
+    "league": "Uma liga publica só as listas invictas, então isto é o que vence ligas, não tudo o que é jogado."
+  },
+  "row": {
+    "won": "venceu {{won}} de {{played}}",
+    "lists_one": "{{n}} lista",
+    "lists_other": "{{n}} listas"
+  },
+  "tiles": {
+    "listsRead": "Listas lidas",
+    "listsDetail": "{{kind}} {{when}}",
+    "mostPlayed": "Mais jogado",
+    "mostPlayedDetail": "{{pct}}% dessas listas",
+    "againstOne": "Você contra o mais jogado",
+    "againstTwo": "Você contra os dois mais jogados",
+    "recordValue": "{{won}} de {{played}}",
+    "wonDetail": "partidas vencidas, com qualquer deck seu",
+    "notMet": "não enfrentado {{when}}"
+  },
+  "showAll": "Mostrar todos os {{n}}",
+  "events": {
+    "title": "Os eventos",
+    "subtitle": "Mais recentes primeiro. Abra um para ver suas listas, cada uma com seu arquétipo, e um link para onde os resultados foram publicados.",
+    "empty": "Não há, {{when}}, nenhum evento de {{kind}}.",
+    "standingsOnly": "só as colocações",
+    "lists_one": "{{n}} lista",
+    "lists_other": "{{n}} listas",
+    "wonBy": "vencido por {{winner}}"
+  },
+  "winrate": {
+    "title": "Como o meta vence",
+    "subtitle": "Torneios de papel e Challenges do MTGO juntos, conforme a escolha acima. Uma liga publica só as listas invictas, então não tem derrotas para contar.",
+    "empty": "Nenhum arquétipo tem, {{when}}, duas partidas terminadas.",
+    "columns": {
+      "archetype": "Arquétipo",
+      "winRate": "Taxa de vitórias",
+      "matches": "Partidas",
+      "lists": "Listas"
+    }
+  },
+  "matchups": {
+    "title": "Arquétipo contra arquétipo",
+    "subtitle": "Rodadas entre dois decks nomeados. Uma taxa sobre menos de cinco partidas fica esmaecida: poucas para se apoiar.",
+    "countedFrom": "Contado a partir de",
+    "nextAB": "Contar também os Challenges do MTGO",
+    "nextABD": "Contar também os eventos de papel menores",
+    "columns": {
+      "archetype": "Arquétipo",
+      "against": "Contra",
+      "matches": "Partidas",
+      "record": "Retrospecto"
+    },
+    "pair": "{{label}} contra {{opponent}}",
+    "matches_one": "{{n}} partida,",
+    "matches_other": "{{n}} partidas,"
+  },
+  "page": {
+    "emptyTitle": "Nenhum resultado de torneio de {{format}} ainda",
+    "emptyMessage": "Esta página mostra o que está sendo jogado em torneios e o seu retrospecto contra cada deck. Ela se preenche quando os resultados de torneios são baixados, o que o servidor faz sozinho enquanto roda; sensei-top meta faz isso pela linha de comando.",
+    "topdeckCredit": "Dados de torneios de {{format}} de <site>TopDeck.gg</site>."
+  },
+  "sources": {
+    "summary": "De onde vêm estes números",
+    "sectionLabel": "Fontes",
+    "events": "{{total}} eventos de torneio guardados: {{a}} de papel com 64+ jogadores, {{b}} Challenges do MTGO, {{c}} Ligas do MTGO, {{d}} de papel menores.",
+    "copies_one": "Mais 1 foi deixado de lado como cópia de um evento já contado.",
+    "copies_other": "Mais {{n}} foram deixados de lado como cópias de um evento já contado.",
+    "resultsNever": "Os resultados de torneios nunca foram baixados.",
+    "resultsWindow_one": "Os resultados de torneios foram baixados há {{age}}, cobrindo {{n}} dia.",
+    "resultsWindow_other": "Os resultados de torneios foram baixados há {{age}}, cobrindo {{n}} dias.",
+    "results": "Os resultados de torneios foram baixados há {{age}}.",
+    "rulesNever": "As regras de arquétipos nunca foram baixadas.",
+    "rules_one": "{{n}} regra de arquétipo, baixada há {{age}}.",
+    "rules_other": "{{n}} regras de arquétipos, baixadas há {{age}}.",
+    "rulesFallback": "Os decks que nenhuma regra nomeia são agrupados por uma regra mais simples.",
+    "columns": {
+      "source": "Fonte",
+      "events": "Eventos (última atualização)",
+      "freshness": "Idade",
+      "status": "Estado"
+    },
+    "name": {
+      "fbettega": "Cache MTGO + Melee",
+      "mtgo": "Listas do MTGO.com",
+      "topdeck": "TopDeck.gg (RCQs)"
+    },
+    "daysOld": "há {{days}}d",
+    "neverFetched": "nunca baixado",
+    "status": {
+      "needsNoKey": "não precisa de chave",
+      "configured": "configurada",
+      "configuredNotFetched": "configurada, ainda não baixada",
+      "notConfigured": "não configurada"
+    },
+    "download": "Para baixá-los de novo, execute:"
+  },
+  "event": {
+    "notFound": "Nenhum evento neste endereço.",
+    "back": "Voltar ao meta",
+    "league": "Uma liga publica só as listas invictas.",
+    "sourceTopdeck": "Dados fornecidos por <site>{{site}}</site>.",
+    "sourceTopdeckEvent": "<site>Este evento no {{site}}</site>",
+    "sourceResults": "Resultados de <site>{{site}}</site>",
+    "read": {
+      "standingsOnlyOn": "Só as colocações: nenhuma lista foi retornada para este evento quando ele foi lido pela última vez, em {{emptyDay}}.",
+      "standingsOnly": "Só as colocações: nenhuma lista foi retornada para este evento quando ele foi lido pela última vez.",
+      "listsEmpty": "Listas como lidas em {{listsDay}}; nenhuma foi retornada quando este evento foi lido pela última vez, em {{emptyDay}}.",
+      "listsGone": "Listas como lidas em {{listsDay}}; a página do evento não foi encontrada quando ele foi lido pela última vez, em {{emptyDay}}.",
+      "unrecordedEmpty": "As listas mostradas foram lidas em uma data que não foi registrada; nenhuma foi retornada quando este evento foi lido pela última vez, em {{emptyDay}}.",
+      "unrecordedGone": "As listas mostradas foram lidas em uma data que não foi registrada; a página do evento não foi encontrada quando ele foi lido pela última vez, em {{emptyDay}}."
+    },
+    "ordinal": {
+      "one": "{{n}}º",
+      "two": "{{n}}º",
+      "few": "{{n}}º",
+      "other": "{{n}}º"
+    },
+    "kind": {
+      "A": "torneio de papel com 64+ jogadores",
+      "B": "Challenge do MTGO",
+      "C": "Liga do MTGO",
+      "D": "torneio de papel com menos de 64 jogadores"
+    },
+    "group": {
+      "creature": "Criaturas ({{n}})",
+      "planeswalker": "Planeswalkers ({{n}})",
+      "battle": "Batalhas ({{n}})",
+      "instant": "Mágicas instantâneas ({{n}})",
+      "sorcery": "Feitiços ({{n}})",
+      "artifact": "Artefatos ({{n}})",
+      "enchantment": "Encantamentos ({{n}})",
+      "land": "Terrenos ({{n}})",
+      "other": "{{type}} ({{n}})",
+      "unknown": "Tipo desconhecido ({{n}})"
+    },
+    "sideboard": "Sideboard ({{n}})",
+    "noArchetype": "Nenhum arquétipo nomeado",
+    "noList": "Nenhuma lista publicada."
+  },
+  "holds": {
+    "waiting": "{{name}} — aguardando: {{what}}. A próxima leitura é depois de {{when}}.",
+    "paused": "{{name}} — pausado desde {{since}}: {{what}}. {{meta}}",
+    "pausedAdvice": "{{head}}; {{advice}}",
+    "pausedEnd": "{{head}}.",
+    "meta": "Nada mais é lido até você executar `sensei-top meta`",
+    "metaNotBefore": "Nada mais é lido até você executar `sensei-top meta`, e não antes de {{when}}",
+    "waitingWhat": {
+      "429": "o site pediu uma pausa (HTTP 429)",
+      "503": "o site respondeu que está indisponível (HTTP 503)"
+    },
+    "pausedWhat": {
+      "mtgo": {
+        "403": "o site recusou a leitura (HTTP 403)",
+        "401": "o site pediu um login (HTTP 401)",
+        "451": "o site recusou a leitura por motivos legais (HTTP 451)",
+        "429": "o site pediu uma pausa duas vezes seguidas (HTTP 429)",
+        "503": "o site respondeu que está indisponível (HTTP 503) por um dia inteiro"
+      },
+      "topdeck": {
+        "401": "a chave não foi aceita (HTTP 401)",
+        "403": "o site recusou a leitura (HTTP 403)",
+        "451": "o site recusou a leitura por motivos legais (HTTP 451)",
+        "429": "o site pediu uma pausa duas vezes seguidas (HTTP 429)"
+      }
+    },
+    "advice": {
+      "mtgo": {
+        "403": "releia os Termos de Serviço da Daybreak antes disso.",
+        "401": "o Sensei Top nunca faz login no mtgo.com — releia os Termos de Serviço da Daybreak antes disso.",
+        "451": "abra o mtgo.com no seu navegador e leia o aviso que está lá antes disso.",
+        "503": "confira se o mtgo.com abre no seu navegador antes disso."
+      },
+      "topdeck": {
+        "401": "defina uma chave válida com `sensei-top config --set-topdeck-key KEY` primeiro.",
+        "403": "releia os termos da API do TopDeck.gg antes disso.",
+        "451": "abra o topdeck.gg no seu navegador e leia o aviso que está lá antes disso."
+      }
+    }
+  }
+}

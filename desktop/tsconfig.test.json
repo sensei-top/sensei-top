@@ -1,0 +1,8 @@
+{
+  // The build's settings with the tests and scripts/ included, checked and
+  // never emitted. rootDir widens to "." because scripts/ sits outside src/.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true, "rootDir": "." },
+  "include": ["src", "scripts"],
+  "exclude": []
+}

@@ -1,0 +1,55 @@
+{
+  "save": "Save",
+  "saved": "Saved",
+  "saving": "Saving",
+  "cancel": "Cancel",
+  "loading": "Loading",
+  "opening": "Opening",
+  "loadError": "Could not load data",
+  "notSet": "Not set",
+  "on": "On",
+  "off": "Off",
+  "unnamedDeck": "Unnamed deck",
+  "unknownDeck": "Unknown deck",
+  "languages": {
+    "en": "English",
+    "pt-BR": "Português (Brasil)"
+  },
+  "card": {
+    "hidden": "Hidden card",
+    "unknown": "Unknown card"
+  },
+  "theCard": "The card",
+  "showCard": "Show the card",
+  "showCardNamed": "Show the card: {{name}}",
+  "revealedColours": "Revealed colours: {{colours}}",
+  "colours": {
+    "W": "white",
+    "U": "blue",
+    "B": "black",
+    "R": "red",
+    "G": "green"
+  },
+  "finding": {
+    "decisive": "Decisive",
+    "flag": "Flag",
+    "notice": "Notice",
+    "note": "Note"
+  },
+  "steps": {
+    "done": "Done",
+    "next": "Next",
+    "later": "Later"
+  },
+  "filters": {
+    "source": "Source",
+    "allSources": "All sources",
+    "deck": "Deck",
+    "allDecks": "All decks",
+    "unlistedDeck": "A deck not in this list",
+    "version": "Version",
+    "everyVersion": "Every version",
+    "matches_one": "{{count}} match",
+    "matches_other": "{{count}} matches"
+  }
+}

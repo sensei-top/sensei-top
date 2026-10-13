@@ -1,0 +1,4 @@
+libgcc_s, which the Linux build of the frozen server carries, is GCC's
+runtime library: GPL-3.0-or-later with the GCC Runtime Library Exception,
+version 3.1. COPYING3 is the GPL's text and COPYING.RUNTIME the exception's,
+as GCC distributes them: https://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html

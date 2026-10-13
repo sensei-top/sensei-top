@@ -1,0 +1,327 @@
+import { useTranslation } from 'react-i18next'
+import type {
+  CurrentMatch,
+  IntermissionOpponentOut,
+  IntermissionOut,
+  PastBoardingCardOut,
+  PastBoardingGameOut,
+  PastBoardingOut,
+} from '../api'
+import type { TFunction } from '../i18n'
+import { seenOpponentCards } from '../lib/brief'
+import { cardName } from '../lib/cards'
+import { confidenceLabel } from '../lib/opponent'
+import { BoardPlan, BriefProvenance, PlayAroundList } from './MatchupBriefCard'
+import { CopyPromptCard } from './CopyPromptCard'
+import { Card, Chip, Disclosure, EmptyState, Meter, Prose, SectionLabel } from './ui'
+
+/** Arena's own `ResultReason_*` spelling, humanised the same way for every
+ *  value it sends — the fixture only shows `ResultReason_Concede`
+ *  ("concede"), but nothing here assumes that's the only one that exists. */
+function humanizeReason(reason: string): string {
+  const stripped = reason.replace(/^ResultReason_/, '')
+  return stripped.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase()
+}
+
+/** "Lost game 1 (concede) — board for game 2 vs Boros Aggro." `won`/`reason`
+ *  are dropped when null (rule 4: unknown means no render, never a guess) —
+ *  ``won`` is only null when Arena never named a winning team or our own
+ *  seat, which leaves nothing honest to say about who won. */
+function headline(intermission: IntermissionOut, t: TFunction): string {
+  const label = intermission.opponent?.label ?? t('matchups.sideboard.thisOpponent')
+  const next = intermission.next_game
+  if (intermission.won == null) return t('matchups.sideboard.headline.noResult', { next, label })
+  const game = intermission.game_number
+  const reason = intermission.reason ? humanizeReason(intermission.reason) : null
+  if (intermission.won) {
+    return reason
+      ? t('matchups.sideboard.headline.wonReason', { game, reason, next, label })
+      : t('matchups.sideboard.headline.won', { game, next, label })
+  }
+  return reason
+    ? t('matchups.sideboard.headline.lostReason', { game, reason, next, label })
+    : t('matchups.sideboard.headline.lost', { game, next, label })
+}
+
+function opponentHeaderText(opponent: IntermissionOpponentOut, t: TFunction): string {
+  if (opponent.source === 'manual') return t('matchups.sideboard.youPicked', { label: opponent.label })
+  return t('matchups.sideboard.opponentConfidence', {
+    label: opponent.label,
+    confidence: confidenceLabel(opponent.confidence, t),
+  })
+}
+
+function resultWord(result: string | null | undefined, t: TFunction): string {
+  switch (result) {
+    case undefined:
+    case null:
+    case '':
+      return t('matchups.sideboard.result.unresolved')
+    case 'win':
+      return t('matchups.sideboard.result.win')
+    case 'loss':
+      return t('matchups.sideboard.result.loss')
+    case 'draw':
+      return t('matchups.sideboard.result.draw')
+    default:
+      return result
+  }
+}
+
+/** Never a bare grpId (`lib/cards.ts`'s rule, applied to the differently
+ *  named `card` field `PastBoardingCardOut` carries instead of
+ *  `card_name`) — plus a dagger flag for a card since cut from the current
+ *  75, never dropped (rule 4). */
+function pastCardLabel(c: PastBoardingCardOut, t: TFunction): string {
+  const name = cardName({ card_name: c.card, grp_id: c.grp_id }, t)
+  return c.in_current_75 ? name : `${name}†`
+}
+
+function formatDelta(g: PastBoardingGameOut, t: TFunction): string {
+  const out = g.board_out.map((c) => `−${c.n} ${pastCardLabel(c, t)}`).join(', ')
+  const inn = g.board_in.map((c) => `+${c.n} ${pastCardLabel(c, t)}`).join(', ')
+  return [out, inn].filter(Boolean).join(' ')
+}
+
+/** One compact line per prior match: the boarding delta (deduplicated when
+ *  a later game's board didn't change from the one before it — the common
+ *  case, since most Bo3s only reboard once) followed by every game's own
+ *  result. */
+function pastBoardingLine(entry: PastBoardingOut, t: TFunction): string {
+  const deltas: string[] = []
+  let last = ''
+  for (const g of entry.games) {
+    const d = formatDelta(g, t)
+    if (d && d !== last) {
+      deltas.push(d)
+      last = d
+    }
+  }
+  const results = entry.games
+    .map((g) => t('matchups.sideboard.gameResult', { n: g.game_number, result: resultWord(g.result, t) }))
+    .join(', ')
+  return [deltas.join('; '), results].filter(Boolean).join(' · ')
+}
+
+function hasCutCard(entries: PastBoardingOut[]): boolean {
+  return entries.some((e) =>
+    e.games.some((g) => [...g.board_in, ...g.board_out].some((c) => !c.in_current_75))
+  )
+}
+
+/** "What you boarded last time" — never advice, just a fact from
+ *  ``game_decks``. Shown under a written plan when there is one
+ *  (``plan_basis === 'exact'``); it *is* the primary content, above any
+ *  closest-match plan, when there is not (S4/S8). */
+function PastBoardingList({ entries, label }: { entries: PastBoardingOut[]; label: string }) {
+  const { t } = useTranslation()
+  if (entries.length === 0) return null
+  return (
+    <div>
+      <SectionLabel as="h4">{t('matchups.sideboard.lastTime', { label })}</SectionLabel>
+      <ul className="mt-1 space-y-1 text-caption text-ink2">
+        {entries.map((entry) => (
+          <li key={entry.match_id}>{pastBoardingLine(entry, t)}</li>
+        ))}
+      </ul>
+      <p className="mt-1 text-caption text-muted">
+        {hasCutCard(entries) ? t('matchups.sideboard.pastNoteCut') : t('matchups.sideboard.pastNote')}
+      </p>
+    </div>
+  )
+}
+
+/** Which archetype `past_boarding` is measured against: the opponent's own
+ *  classified archetype when one was named, otherwise the top alternative
+ *  (S4 step 5b — "the named archetype and, if there is none, the top
+ *  alternative"). */
+function pastBoardingLabel(intermission: IntermissionOut, t: TFunction): string {
+  if (intermission.opponent?.archetype_key) return intermission.opponent.label
+  return intermission.alternatives?.[0]?.label ?? t('matchups.sideboard.thisArchetype')
+}
+
+/** The primary break-phase card: what to board for the next game, from the
+ *  best free tier available (S4's precedence) — an exact written plan, the
+ *  closest one already written for a different archetype, this deck's own
+ *  past boarding against the archetype, or (last) a prompt to write an
+ *  exact plan from. Reuses `MatchupBriefCard`'s extracted `BoardPlan`/
+ *  `PlayAroundList`/`BriefProvenance` rather than forking their rendering. */
+export function SideboardPlanCard({
+  intermission,
+  match,
+}: {
+  intermission: IntermissionOut
+  match: CurrentMatch | null
+}) {
+  const { t } = useTranslation()
+  const seen = seenOpponentCards(match)
+  const title = headline(intermission, t)
+  // `alternatives`/`past_boarding` default to `[]` server-side
+  // (Field(default_factory=list)) but the generated type still marks them
+  // optional, since a default makes a field un-required in the OpenAPI
+  // schema rather than non-nullable.
+  const pastBoardingEntries = intermission.past_boarding ?? []
+  const pastBoarding =
+    pastBoardingEntries.length > 0 ? (
+      <PastBoardingList entries={pastBoardingEntries} label={pastBoardingLabel(intermission, t)} />
+    ) : null
+
+  if (!intermission.plan && !intermission.prompt) {
+    // Nothing to show and nothing to write one from: no opponent named yet
+    // (a game 1 conceded before a card was seen), no identity for our own
+    // deck, or a match whose format is unknown, which is never read live.
+    // Say so rather than render a copy card whose buttons are dead.
+    return (
+      <Card title={title}>
+        <div className="space-y-4">
+          <EmptyState
+            message={
+              intermission.opponent
+                ? t('matchups.sideboard.noPlan')
+                : intermission.fmt === null
+                  ? t('matchups.sideboard.formatUnknownNoPlan')
+                  : t('matchups.sideboard.unclassifiedNoPlan')
+            }
+          />
+          {pastBoarding}
+        </div>
+      </Card>
+    )
+  }
+
+  if (!intermission.plan) {
+    // No exact and no closest plan — the copy-prompt path MatchupBriefCard
+    // already renders for the ordinary in-game brief, mirrored here with the
+    // break's own deck_key/archetype_key.
+    return (
+      <CopyPromptCard
+        title={title}
+        subtitle={t('matchups.sideboard.noPlanYet')}
+        prompt={intermission.prompt}
+        importCommand={
+          intermission.deck_key && intermission.opponent?.archetype_key
+            ? `sensei-top brief --deck "${intermission.deck_key}" ` +
+              `--archetype "${intermission.opponent.archetype_key}" --import brief.json`
+            : undefined
+        }
+      >
+        {pastBoarding}
+      </CopyPromptCard>
+    )
+  }
+
+  const plan = intermission.plan
+  const isClosest = intermission.plan_basis === 'closest'
+  const closestLabel = intermission.plan_archetype_label ?? plan.archetype_label ?? plan.archetype_key
+
+  return (
+    <Card title={title}>
+      <div className="space-y-4">
+        {isClosest && pastBoarding}
+        {isClosest && (
+          <p className="rounded-block border border-warn/40 bg-plane px-3 py-2 text-caption text-warn">
+            {t('matchups.sideboard.closest', {
+              label: intermission.opponent?.label ?? t('matchups.sideboard.thisOpponent'),
+              closest: closestLabel,
+            })}
+          </p>
+        )}
+        {intermission.stale && (
+          <p className="text-caption text-warn">
+            <Chip variant="warn">{t('matchups.sideboard.stale')}</Chip>{' '}
+            {t('matchups.sideboard.staleMessage')}
+          </p>
+        )}
+        <BoardPlan
+          boardIn={plan.board_in}
+          boardOut={plan.board_out}
+          problems={plan.problems}
+          size="large"
+          heading={t('matchups.sideboard.boardFor', { next: intermission.next_game })}
+        />
+        <PlayAroundList playAround={plan.play_around} seen={seen} />
+        {!isClosest && pastBoarding}
+        <Disclosure summary={t('matchups.sideboard.fullWriteup')}>
+          <div className="space-y-3">
+            <Prose text={plan.prose} />
+            <BriefProvenance brief={plan} />
+          </div>
+        </Disclosure>
+      </div>
+    </Card>
+  )
+}
+
+/** The break-phase rail: who the opponent looks like right now (live read,
+ *  not the projected — possibly stale — name), and the other archetypes
+ *  with a written plan, each expandable to its own full plan reusing the
+ *  same shared pieces as the primary card. */
+export function SideboardOpponentRail({
+  intermission,
+  match,
+}: {
+  intermission: IntermissionOut
+  match: CurrentMatch | null
+}) {
+  const { t } = useTranslation()
+  const seen = seenOpponentCards(match)
+  const alternatives = intermission.alternatives ?? []
+  return (
+    <div className="flex flex-col gap-3">
+      <Card title={t('matchups.sideboard.opponent')} elevation={2}>
+        {intermission.opponent ? (
+          <p className="text-body text-ink">{opponentHeaderText(intermission.opponent, t)}</p>
+        ) : (
+          <EmptyState
+            message={
+              intermission.fmt === null
+                ? t('matchups.sideboard.formatUnknown')
+                : t('matchups.sideboard.unclassified')
+            }
+          />
+        )}
+        <p className="mt-2 text-caption text-muted">
+          {intermission.opponent
+            ? t('matchups.sideboard.cardsSeenFrom', {
+                count: intermission.cards_seen,
+                source:
+                  intermission.opponent.source === 'manual'
+                    ? t('matchups.sideboard.yourPick')
+                    : t('matchups.sideboard.liveRead'),
+              })
+            : t('matchups.sideboard.cardsSeen', { count: intermission.cards_seen })}
+        </p>
+      </Card>
+
+      {alternatives.length > 0 && (
+        <Card title={t('matchups.sideboard.otherPlans')} elevation={2}>
+          <div className="divide-y divide-edge/50">
+            {alternatives.map((alt) => (
+              <div key={alt.archetype_key} className="py-2">
+                <Disclosure
+                  summary={t('matchups.sideboard.alternative', {
+                    label: alt.label,
+                    fit: Math.round(alt.fit * 100),
+                    confidence: confidenceLabel(alt.confidence, t),
+                  })}
+                >
+                  <div className="space-y-3">
+                    <Meter fraction={alt.fit} color="s1" />
+                    <BoardPlan
+                      boardIn={alt.brief.board_in}
+                      boardOut={alt.brief.board_out}
+                      problems={alt.brief.problems}
+                    />
+                    <PlayAroundList playAround={alt.brief.play_around} seen={seen} />
+                    <Prose text={alt.brief.prose} />
+                    <BriefProvenance brief={alt.brief} />
+                  </div>
+                </Disclosure>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  )
+}

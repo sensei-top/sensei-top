@@ -1,0 +1,47 @@
+name: A bug
+description: The app did something wrong, or did not start.
+title: "Bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Never attach your database, your Player.log, or your config file; the config file can hold a key. If a log change is the cause, the "A log change" form is the better one.
+  - type: input
+    id: version
+    attributes:
+      label: Sensei Top version
+      description: Settings shows it, under About.
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      description: Windows 10, Windows 11, or the Linux distribution and desktop; and whether it is the installer, the Microsoft Store build, or the AppImage.
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to see it again
+      description: Step by step, if you can make it happen twice.
+  - type: checkboxes
+    id: bundle
+    attributes:
+      label: Diagnostics
+      options:
+        - label: "I attached the diagnostics export from Settings (a zip of the app's logs and a secret-free report)."

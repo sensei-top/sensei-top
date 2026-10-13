@@ -1,0 +1,233 @@
+{
+  "view": {
+    "noVersionTitle": "Nenhuma partida com esta versão",
+    "noVersionMessage": "Escolha outra versão, ou leia todas as versões juntas.",
+    "everyVersion": "Todas as versões",
+    "noFinishedTitle": "Nenhuma partida terminada ainda",
+    "noFinishedMessage": "Os matchups são contados quando uma partida termina.",
+    "countedOver": "Contado sobre as {{n}} partidas mais recentes.",
+    "archetypesMet": "Arquétipos enfrentados",
+    "archetypesMetSubtitle": "Só partidas terminadas, os mais enfrentados primeiro. Uma taxa precisa de dez partidas.",
+    "columns": {
+      "archetype": "Arquétipo",
+      "matches": "Partidas",
+      "won": "Vitórias",
+      "rate": "Taxa"
+    }
+  },
+  "tiles": {
+    "archetypesMet": "Arquétipos enfrentados",
+    "noneNamed": "nenhum nomeado",
+    "allNamed": "todos nomeados",
+    "namedAndNot": "{{named}} nomeados, {{notNamed}} não",
+    "noneYet": "nenhum arquétipo enfrentado {{min}} vezes ainda",
+    "oneSoFar": "um arquétipo enfrentado {{min}} vezes até agora",
+    "best": "Melhor matchup",
+    "worst": "Pior matchup",
+    "rankedRate": "venceu {{won}} de {{matches}} contra {{against}}",
+    "rankedCount": "venceu contra {{against}}",
+    "countOf": "{{won}} de {{matches}}"
+  },
+  "name": {
+    "unrecognized": "Deck não reconhecido",
+    "showed": "mostrou {{card}}",
+    "unrecognizedInSentence": "um deck não reconhecido",
+    "unknownInSentence": "um deck desconhecido"
+  },
+  "fieldLine": {
+    "games": "Jogos {{won}}–{{lost}}",
+    "record_one": "Jogos {{won}}–{{lost}} · vence {{rate}}% em torneios, {{n}} participação",
+    "record_other": "Jogos {{won}}–{{lost}} · vence {{rate}}% em torneios, {{n}} participações",
+    "recordThin_one": "Jogos {{won}}–{{lost}} · vence {{rate}}% em torneios, {{n}} participação, poucas para confiar",
+    "recordThin_other": "Jogos {{won}}–{{lost}} · vence {{rate}}% em torneios, {{n}} participações, poucas para confiar"
+  },
+  "pairing": {
+    "allMatchups": "Todos os matchups",
+    "lastMet": "Último encontro {{since}}",
+    "noVersionTitle": "Nenhuma partida contra ele com esta versão",
+    "noMatchTitle": "Nenhuma partida contra ele ainda",
+    "noMatchMessage": "Quando você jogar uma, ela é contada aqui.",
+    "record": "Retrospecto",
+    "wonOf": "venceu {{won}} de {{matches}}",
+    "matchesWon": "partidas vencidas",
+    "games": "Jogos",
+    "yoursFirst": "os seus primeiro",
+    "inTournaments": "Em torneios",
+    "onlyNamed": "só um arquétipo nomeado tem resultados",
+    "noResults": "nenhum resultado de torneio para ele",
+    "wonInTournaments_one": "vencidos em torneios, {{n}} participação",
+    "wonInTournaments_other": "vencidos em torneios, {{n}} participações",
+    "wonInTournamentsThin_one": "vencidos em torneios, {{n}} participação, poucas para confiar",
+    "wonInTournamentsThin_other": "vencidos em torneios, {{n}} participações, poucas para confiar"
+  },
+  "brief": {
+    "title": "Briefing do matchup",
+    "subtitle": "O que respeitar e o que colocar contra este arquétipo. É escrito uma vez, e Ao vivo o mostra sempre que você enfrenta um.",
+    "cannotWrite": "Poucas listas de torneio deste arquétipo para escrever um briefing ainda.",
+    "formatUnknown": "Nenhum formato de torneio é conhecido para este deck, então não há listas de torneio de onde escrever um briefing. No MTGO, você pode defini-lo confirmando o formato de uma das partidas dele.",
+    "cameWithGuide": "Veio com o guia escrito do deck.",
+    "playAround": "Respeitar",
+    "notNamed": "Um briefing é escrito contra um arquétipo nomeado a partir de resultados de torneios, e este deck não é um.",
+    "notWritten": "Nenhum briefing para ele ainda. Monte o prompt, cole em um assistente e salve a resposta com o comando que vem com ele.",
+    "buildPrompt": "Montar o prompt",
+    "staleTitle": "Escrito antes de a lista ou o meta mudar",
+    "staleMessage": "Sua lista ou os resultados de torneios mudaram desde que este briefing foi escrito, então ele pode citar um card ou um número que não vale mais.",
+    "writeAgain": "Escrever de novo"
+  },
+  "briefCard": {
+    "record_one": "Seu retrospecto: {{wins}}-{{losses}} em {{count}} partida",
+    "record_other": "Seu retrospecto: {{wins}}-{{losses}} em {{count}} partidas",
+    "writtenBy": "escrito por {{model}}",
+    "fromGuideRun": "de uma rodada completa do guia",
+    "ofTheField": "{{share}} do meta",
+    "reasoned": "deduzido do texto dos cards",
+    "unclassified": "Oponente ainda não identificado.",
+    "formatUnknown": "Nenhum formato de torneio é conhecido para o seu deck, então não há listas de torneio de onde escrever um briefing.",
+    "noConsensus": "O corpus de torneios tem poucos decks deste arquétipo para escrever um briefing.",
+    "stale": "O meta mudou desde que isto foi escrito.",
+    "noBrief": "Nenhum briefing escrito para este matchup ainda. A maioria chega com a importação completa do guia do deck; isto escreve só este."
+  },
+  "age": {
+    "now": "agora mesmo",
+    "hours_one": "há {{count}}h",
+    "hours_other": "há {{count}}h",
+    "days_one": "há {{count}}d",
+    "days_other": "há {{count}}d"
+  },
+  "plan": {
+    "game2": "Plano para o jogo 2",
+    "out": "Sai",
+    "in": "Entra",
+    "inLabel": "ENTRA:",
+    "outLabel": "SAI:"
+  },
+  "coverage": {
+    "title": "Cobertura de matchups",
+    "subtitle": "Quais arquétipos têm um briefing: os que você enfrentou, os mais enfrentados primeiro, depois os mais jogados que você ainda não enfrentou. Cada um abre seu matchup, onde está o briefing.",
+    "nothingTitle": "Nada para cobrir ainda",
+    "nothingMessage": "Quando você enfrentar um arquétipo nomeado, ou resultados de torneios forem baixados, ele é listado aqui.",
+    "writeAll": "Escrever todos os briefings que faltam",
+    "writeAllHint": "Um prompt escreve todo briefing que falta ou está desatualizado.",
+    "noneEnough": "Nenhum destes arquétipos tem listas de torneio suficientes para escrever ainda.",
+    "allWritten": "Todos os briefings estão escritos e atualizados.",
+    "columns": {
+      "archetype": "Arquétipo",
+      "brief": "Briefing",
+      "field": "Meta"
+    },
+    "status": {
+      "ok": "Escrito",
+      "stale": "Desatualizado",
+      "missing": "Não escrito",
+      "noConsensus": "Poucas listas"
+    },
+    "tiles": {
+      "matchesCovered": "Partidas cobertas",
+      "noNamedMatch": "nenhuma partida contra um arquétipo nomeado ainda",
+      "matchesDetail_one": "{{covered}} de {{n}} partida contra um arquétipo nomeado",
+      "matchesDetail_other": "{{covered}} de {{n}} partidas contra um arquétipo nomeado",
+      "fieldCovered": "Meta coberto",
+      "noResults": "nenhum resultado de torneio ainda",
+      "fieldDetail": "dos decks de torneio têm um briefing atualizado",
+      "toWrite": "A escrever",
+      "ofArchetypes_one": "de {{n}} arquétipo",
+      "ofArchetypes_other": "de {{n}} arquétipos",
+      "moreTooFew_one": "mais {{n}} tem poucas listas",
+      "moreTooFew_other": "mais {{n}} têm poucas listas",
+      "ofWithMore": "{{of}}; {{more}}"
+    },
+    "notes": {
+      "tooFew": "Poucas listas para escrever: {{names}}.",
+      "deferred": "Deixados para o próximo prompt: {{names}}. Salve esta resposta, depois monte-o de novo."
+    }
+  },
+  "patterns": {
+    "longGame": {
+      "title": "Jogos longos são onde você perde",
+      "clause": "em que um jogo passou da duração habitual do seu deck"
+    },
+    "shortGame": {
+      "title": "Jogos curtos vão contra você",
+      "clause": "em que um jogo terminou antes da duração habitual do seu deck"
+    },
+    "raceBehind": {
+      "title": "Ficar atrás na corrida de dano custa caro",
+      "clause": "em que você ficou atrás na corrida de dano"
+    },
+    "raceAhead": {
+      "title": "Na frente na corrida de dano, e ainda assim perdendo",
+      "clause": "em que você liderou a corrida de dano"
+    },
+    "manaScrewed": {
+      "title": "Falta de terrenos até o turno quatro",
+      "clause": "em que faltaram terrenos até o seu quarto turno"
+    },
+    "manaFlooded": {
+      "title": "Mais terrenos do que o deck prevê",
+      "clause": "em que você comprou mais terrenos do que a proporção do seu deck"
+    },
+    "overCommitted": {
+      "title": "Mesa cheia, com um sweeper ainda possível",
+      "clause": "em que você encheu a mesa enquanto o deck do oponente ainda podia ter um sweeper"
+    },
+    "controlBehind": {
+      "title": "Como o deck de controle, nunca na frente em cards",
+      "clause": "em que você era o deck de controle e nunca liderou em cards"
+    },
+    "heldBack": {
+      "title": "Segurando o ataque com a mesa mais forte",
+      "clause": "em que você tinha a mesa mais forte e não atacou"
+    },
+    "genericClause": "em que isso aconteceu",
+    "sentence": "Você venceu {{wins}} das {{n}} partidas {{clause}}, e {{otherWins}} das outras {{otherN}}."
+  },
+  "sideboard": {
+    "thisOpponent": "este oponente",
+    "thisArchetype": "este arquétipo",
+    "headline": {
+      "noResult": "Trocas para o jogo {{next}} vs {{label}}",
+      "won": "Venceu o jogo {{game}} — trocas para o jogo {{next}} vs {{label}}",
+      "wonReason": "Venceu o jogo {{game}} ({{reason}}) — trocas para o jogo {{next}} vs {{label}}",
+      "lost": "Perdeu o jogo {{game}} — trocas para o jogo {{next}} vs {{label}}",
+      "lostReason": "Perdeu o jogo {{game}} ({{reason}}) — trocas para o jogo {{next}} vs {{label}}"
+    },
+    "youPicked": "Você escolheu: {{label}}",
+    "opponentConfidence": "{{label}} · confiança {{confidence}}",
+    "result": {
+      "win": "venceu",
+      "loss": "perdeu",
+      "draw": "empatou",
+      "unresolved": "sem resultado"
+    },
+    "gameResult": "J{{n}} {{result}}",
+    "lastTime": "Última vez vs {{label}}",
+    "pastNote": "O que você trocou da última vez — não é um conselho.",
+    "pastNoteCut": "O que você trocou da última vez — não é um conselho. † não está mais nos seus 75 atuais.",
+    "noPlan": "Nenhum plano escrito para este matchup, e nada de onde escrever um.",
+    "formatUnknownNoPlan": "Nenhum formato de torneio é conhecido para esta partida, então o deck do oponente não pode ser nomeado pelos cards vistos, e não há plano para mostrar.",
+    "unclassifiedNoPlan": "Oponente ainda não identificado — nenhum plano para mostrar até que um card seja visto.",
+    "noPlanYet": "Nenhum plano escrito para este matchup ainda.",
+    "closest": "Nenhum plano escrito para {{label}} — plano escrito mais próximo: {{closest}}",
+    "stale": "Desatualizado",
+    "staleMessage": "O meta ou os seus 75 atuais mudaram desde que este plano foi escrito.",
+    "boardFor": "Trocas para o jogo {{next}}",
+    "fullWriteup": "Texto completo",
+    "opponent": "Oponente",
+    "formatUnknown": "Nenhum formato de torneio é conhecido para esta partida, então o deck do oponente não pode ser nomeado pelos cards vistos.",
+    "unclassified": "Oponente ainda não identificado.",
+    "cardsSeen_one": "{{count}} card visto",
+    "cardsSeen_other": "{{count}} cards vistos",
+    "cardsSeenFrom_one": "{{count}} card visto · {{source}}",
+    "cardsSeenFrom_other": "{{count}} cards vistos · {{source}}",
+    "yourPick": "sua escolha",
+    "liveRead": "leitura ao vivo",
+    "otherPlans": "Outros planos escritos",
+    "alternative": "{{label}} · {{fit}}% de encaixe · {{confidence}}"
+  },
+  "position": {
+    "turnLabel": "Turno {{turn}}",
+    "series": "Posição",
+    "showNumbers": "Mostrar os números",
+    "turn": "Turno"
+  }
+}

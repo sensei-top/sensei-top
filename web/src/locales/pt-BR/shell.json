@@ -1,0 +1,46 @@
+{
+  "places": {
+    "home": "Início",
+    "live": "Ao vivo",
+    "matches": "Partidas",
+    "decks": "Decks",
+    "field": "Meta",
+    "coach": "Treinador",
+    "settings": "Configurações"
+  },
+  "documentTitle": "{{name}} · {{product}}",
+  "notFound": "Esta página não existe",
+  "titles": {
+    "mtgoPicks": "Escolher decks do MTGO",
+    "welcome": "Boas-vindas"
+  },
+  "homeLink": "{{product}}, início",
+  "skipLink": "Pular para a página",
+  "trackerDown": "O tracker não está rodando, então nada de novo pode ser carregado. O que está na tela é o que foi carregado por último. Este aviso some quando o tracker voltar a responder.",
+  "footer": {
+    "local": "Lê um banco de dados SQLite local. Sem conta, sem upload.",
+    "credits": "Créditos"
+  },
+  "nav": {
+    "main": "Principal",
+    "matchInProgress": "partida em andamento,",
+    "more": "Mais",
+    "morePlaces": "Mais páginas",
+    "close": "Fechar"
+  },
+  "liveStatus": {
+    "down": "Tracker parado",
+    "stopped": "Acompanhamento parado",
+    "match": "Partida em andamento",
+    "watching": "Acompanhando o Arena",
+    "idle": "Sem acompanhar",
+    "unreachable": "Esta página não consegue falar com o tracker. O que está na tela é o que foi carregado por último.",
+    "goToMatch": "Ir para a partida",
+    "following": "O tracker está acompanhando o log do Arena enquanto você joga.",
+    "notWatching": "O tracker está rodando sem acompanhar o log do Arena, então uma partida jogada agora não é registrada por ele. Reinicie o tracker com o acompanhamento ligado.",
+    "watcherStopped": "O tracker parou de acompanhar o log do Arena depois de iniciar, então uma partida jogada agora não é registrada. Reinicie o tracker; o arquivo de log dele diz o que deu errado.",
+    "changed": "Dados alterados pela última vez {{ago}}.",
+    "noData": "Nenhum dado ainda.",
+    "mtgoWatched": "O MTGO também é acompanhado: cada jogo aparece quando termina."
+  }
+}

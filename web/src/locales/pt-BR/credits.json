@@ -1,0 +1,102 @@
+{
+  "wizards": {
+    "reads": "O Sensei Top lê os arquivos de log que o Magic: The Gathering Arena e o Magic Online escrevem nesta máquina. Ele não altera nenhum dos dois clientes e não lê nada da memória deles.",
+    "images": "As imagens dos cards são mostradas inteiras. Onde a arte de um card aparece sozinha, o botão no canto dela mostra o card inteiro, que carrega o nome do artista e a linha de copyright."
+  },
+  "dataSources": {
+    "heading": "Fontes de dados",
+    "opening": "O Sensei Top não embute nenhum destes dados. Cada cópia instalada baixa o que precisa para a máquina em que roda.",
+    "closing": "O Sensei Top não é produzido, endossado ou afiliado a Scryfall, TopDeck.gg, Daybreak Games e mtgo.com, melee.gg, Anthropic, ou aos mantenedores de MTGOFormatData e MTG_decklistcache. Seus nomes aparecem aqui para creditar seu trabalho.",
+    "entries": {
+      "scryfall": {
+        "taken": "Nomes de cards, texto de regras, legalidade, imagens de cards e arte de cards.",
+        "terms": "Usados sob os termos da API do Scryfall."
+      },
+      "mtgoFormatData": {
+        "taken": "As definições de arquétipos que nomeiam o deck de um oponente. O fork de Jiliac é a alternativa quando o primeiro repositório não pode ser alcançado.",
+        "terms": "Nenhum dos dois repositórios traz um arquivo de licença."
+      },
+      "decklistCache": {
+        "taken": "Resultados de torneios do MTGO e do Melee para a página Meta.",
+        "terms": "GPL-3.0. Baixados por cada cópia, nunca embutidos nem redistribuídos por este projeto."
+      },
+      "topdeck": {
+        "taken": "Resultados de torneios, pela API deles e com a sua própria chave gratuita.",
+        "terms": "Usados sob os termos da API do TopDeck.gg, lidos em 2026-10-05: uso gratuito, com um crédito visível e um link de volta obrigatórios, dentro dos limites de requisições."
+      },
+      "mtgo": {
+        "taken": "As páginas públicas de resultados dos eventos nos formatos que você acompanha: listas, colocações e chaves. Os nomes dos jogadores são descartados quando a página é lida e nunca armazenados.",
+        "terms": "Lidas conforme os Termos de Serviço da Daybreak e o EULA do MTGO em 2026-10-05: baixadas devagar pela sua própria cópia, para o seu próprio uso, e mostradas com um link para a página de cada evento no mtgo.com."
+      },
+      "anthropic": {
+        "taken": "A API do Claude, só quando você configura uma chave e aperta um botão de escrever.",
+        "terms": "Sua própria conta e chave, sob os termos da Anthropic."
+      }
+    }
+  },
+  "fonts": {
+    "heading": "Fontes tipográficas e símbolos",
+    "opening": "Estes vêm dentro do dashboard. Cada um está listado com seu aviso de copyright, e a licença está no link abaixo; o texto completo dela está junto dos avisos das bibliotecas do dashboard, em \"Software em que é construído\".",
+    "byAuthor": "{{name}}, de {{author}}",
+    "entries": {
+      "mana": {
+        "usedFor": "Os glifos dos símbolos de mana."
+      },
+      "bricolage": {
+        "usedFor": "Títulos e números de destaque."
+      },
+      "hanken": {
+        "usedFor": "Texto e números da interface."
+      }
+    }
+  },
+  "software": {
+    "heading": "Software em que é construído",
+    "opening": "O Sensei Top é construído com software livre. Cada obra abaixo está listada com sua licença; os textos completos viajam com cada cópia, onde a entrada diz.",
+    "entries": {
+      "electron": {
+        "name": "Electron e Chromium",
+        "usedFor": "A janela do aplicativo de desktop. Não participa quando o dashboard é aberto no seu próprio navegador pela linha de comando.",
+        "notice": "Electron sob a licença MIT, com o texto em LICENSE.electron.txt; os avisos do Chromium em LICENSES.chromium.html. Os dois arquivos estão na pasta em que o aplicativo de desktop é instalado."
+      },
+      "desktop": {
+        "name": "Bibliotecas do aplicativo de desktop",
+        "usedFor": "electron-updater e os pacotes de que ele depende, que verificam as atualizações do aplicativo de desktop e as instalam.",
+        "notice": "Em sua maioria licenças MIT e ISC; sax sob a Blue Oak Model License 1.0.0 e argparse sob a Python License 2.0. O aplicativo de desktop instala todos os textos em resources/licenses/desktop-third-party-notices.txt."
+      },
+      "python": {
+        "name": "Python",
+        "usedFor": "O servidor que lê os logs e serve este dashboard.",
+        "notice": "PSF License, com as bibliotecas compiladas nele (OpenSSL, SQLite, libffi, zlib, bzip2, xz, expat, mpdecimal, libedit) sob suas próprias licenças. O aplicativo de desktop instala os textos em resources/server/licenses; uma instalação pela linha de comando os carrega em seu ambiente Python."
+      },
+      "pythonLibraries": {
+        "name": "Bibliotecas Python",
+        "usedFor": "FastAPI, Starlette, Uvicorn, pydantic, orjson, keyring, cryptography, o SDK da Anthropic e os pacotes de que eles dependem.",
+        "notice": "Licenças MIT, BSD, Apache 2.0 e PSF; orjson em parte sob a Mozilla Public License 2.0, com seu código-fonte em github.com/ijl/orjson. O aplicativo de desktop instala cada texto em resources/server/licenses/python, listados no INDEX.txt de lá; uma instalação pela linha de comando os carrega em seu ambiente Python."
+      },
+      "dashboard": {
+        "name": "Bibliotecas do dashboard",
+        "usedFor": "React, TanStack Query, React Router, Recharts, Lucide e os pacotes de que eles dependem, compilados nesta página.",
+        "notice": "Em sua maioria licenças MIT e ISC. Todo aviso de copyright e texto de licença está abaixo."
+      },
+      "pyinstaller": {
+        "name": "PyInstaller",
+        "usedFor": "Empacota o servidor para o aplicativo de desktop.",
+        "notice": "GPL 2 ou posterior com a Bootloader Exception; seus hooks de execução sob Apache 2.0. Texto em resources/server/licenses."
+      }
+    },
+    "notices": {
+      "show": "Mostrar os avisos",
+      "hide": "Ocultar os avisos",
+      "loading": "Carregando os avisos…",
+      "failed": "Os avisos não puderam ser carregados. Eles estão em third-party-notices.txt, na pasta de onde o dashboard é servido."
+    }
+  },
+  "program": {
+    "copyright": "Copyright (C) 2026 Os autores do Sensei Top.",
+    "free": "O Sensei Top é software livre sob a GNU Affero General Public License, versão 3. Ele vem sem nenhuma garantia.",
+    "copy": "Uma cópia da licença é instalada com o programa, e está no link abaixo.",
+    "name": "O nome e o logotipo não são cobertos por essa licença.",
+    "sourceLink": "Código-fonte"
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "history": {
+    "title": "Todos os relatórios",
+    "latest": "mais recente",
+    "onPage": "nesta página"
+  },
+  "model": {
+    "label": "Modelo",
+    "fromSettings": "{{model}} (das suas configurações)"
+  },
+  "format": {
+    "label": "Formato"
+  },
+  "empty": {
+    "title": "Ainda não há partidas suficientes para um relatório",
+    "message": "O treinador lê suas partidas de Construído terminadas e precisa de pelo menos dez antes de ter algo a dizer."
+  },
+  "stale": {
+    "title": "Escrito antes das suas partidas mais recentes",
+    "body": "Você jogou desde que este relatório foi escrito, então os números dele param antes das suas partidas mais recentes. Um novo relatório lê todas elas."
+  },
+  "write": {
+    "new": "Escrever um novo relatório",
+    "first": "Escrever seu primeiro relatório",
+    "subtitle": "O Claude lê os números desta página e busca na web notícias de {{format}}, depois escreve o relatório. Leva alguns minutos, e todo relatório é guardado."
+  },
+  "earlier": {
+    "noSuchTitle": "Este relatório não existe",
+    "noSuchMessage": "Não há relatório com este número.",
+    "back": "Voltar ao treinador",
+    "note": "Um relatório anterior, guardado como foi escrito.",
+    "goLatest": "Ir para o seu relatório mais recente"
+  },
+  "sources": {
+    "reading": "Lista de leitura",
+    "web": "Da web"
+  },
+  "report": {
+    "title": "Relatório de {{format}}",
+    "titleOf": "Relatório de {{format}} de {{day}}",
+    "times_one": "{{n}} vez",
+    "times_other": "{{n}} vezes",
+    "byline": {
+      "plain": "Escrito por {{label}}.",
+      "cost": "Escrito por {{label}}. Custou {{cost}}.",
+      "costSearched": "Escrito por {{label}}. Custou {{cost}} e buscou na web {{times}}.",
+      "searched": "Escrito por {{label}}. Buscou na web {{times}}."
+    },
+    "searches_one": "{{n}} busca na web",
+    "searches_other": "{{n}} buscas na web",
+    "costNote": {
+      "last": "Seu último relatório com {{label}} custou {{cost}}.",
+      "price": "{{label}} custa {{input}} por milhão de tokens que lê e {{output}} por milhão que escreve, mais suas buscas na web."
+    }
+  },
+  "profile": {
+    "title": "Seus números",
+    "rangeNote": "A faixa ao lado de uma taxa é onde sua taxa real mais provavelmente está. Quanto menos partidas, mais larga ela é, e abaixo de dez partidas nenhuma taxa é mostrada.",
+    "population_one": "{{n}} partida de Construído terminada",
+    "population_other": "{{n}} partidas de Construído terminadas",
+    "caption": "{{matches}}.",
+    "captionTo": "Até {{day}}, {{matches}}.",
+    "leftOut": "O que estes números deixam de fora"
+  },
+  "split": {
+    "matches": "Partidas",
+    "games": "Jogos",
+    "game1": "Jogo 1",
+    "postBoard": "Depois das trocas de sideboard",
+    "onPlay": "No play",
+    "onDraw": "No draw"
+  },
+  "rate": {
+    "record": "{{wins}} de {{n}}",
+    "nonePlayed": "Nenhuma jogada",
+    "won": "{{record}} vencidas",
+    "wonRange": "{{record}} vencidas · {{range}}"
+  },
+  "table": {
+    "won": "Vitórias",
+    "rate": "Taxa",
+    "archetype": "Arquétipo",
+    "share": "Fatia"
+  },
+  "byDeck": {
+    "title": "Por deck",
+    "subtitle": "Seus decks com mais partidas. Jogos no play e no draw são contados por jogo."
+  },
+  "roles": {
+    "title": "Por papel",
+    "subtitle": "O papel em que cada matchup colocou você, como o relatório da partida o leu.",
+    "first": "Papel",
+    "beatdown": "Beatdown",
+    "control": "Controle",
+    "mixed": "Misto",
+    "unknown": "Nenhum papel encontrado"
+  },
+  "mulligans": {
+    "title": "Mulligans",
+    "subtitle": "Contados por jogo.",
+    "first": "Mão inicial",
+    "keptSeven": "Manteve sete",
+    "mulliganed": "Fez mulligan"
+  },
+  "decksMet": {
+    "title": "Decks que você enfrentou",
+    "since": "Desde {{day}}, quando o formato mudou pela última vez. Os mais enfrentados primeiro.",
+    "sinceReset": "Desde que o formato mudou pela última vez. Os mais enfrentados primeiro."
+  },
+  "field": {
+    "title": "O meta",
+    "to": "Até {{day}}, resultados de torneios do MTGO e de papel, não do ranqueado do Arena.",
+    "plain": "Resultados de torneios do MTGO e de papel, não do ranqueado do Arena.",
+    "lists_one": "1 lista",
+    "lists_other": "{{n}} listas",
+    "variantsMore": "{{shown}} e mais {{n}}"
+  },
+  "patterns": {
+    "title": "Padrões",
+    "subtitle": "O que suas partidas com um padrão têm em comum, contra suas partidas sem ele, em todos os decks.",
+    "noDifference": "Sem diferença",
+    "better_one": "{{n}} ponto melhor com ele",
+    "better_other": "{{n}} pontos melhor com ele",
+    "worse_one": "{{n}} ponto pior com ele",
+    "worse_other": "{{n}} pontos pior com ele",
+    "count_one": "1 padrão",
+    "count_other": "{{n}} padrões",
+    "deckSummary": "{{deck}}, {{patterns}}"
+  },
+  "turning": {
+    "title": "Onde os jogos perdidos viraram",
+    "subtitle": "O seu turno em que um jogo perdido começou a escapar, sobre os {{games}} em que um foi encontrado.",
+    "lostGames_one": "{{n}} jogo perdido",
+    "lostGames_other": "{{n}} jogos perdidos",
+    "early": "Cedo, turnos 1 a 3",
+    "mid": "Meio, turnos 4 a 6",
+    "late": "Tarde, turno 7 em diante",
+    "noneDecisive": "Nenhum deles decisivo",
+    "decisive": "{{n}} deles decisivos"
+  }
+}

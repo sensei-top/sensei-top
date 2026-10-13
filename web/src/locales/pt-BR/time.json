@@ -1,0 +1,14 @@
+{
+  "ago": {
+    "seconds": "há {{count}}s",
+    "minutes": "há {{count}}min",
+    "hours": "há {{count}}h",
+    "days": "há {{count}}d"
+  },
+  "age": {
+    "seconds": "{{count}}s",
+    "minutes": "{{count}}min",
+    "hours": "{{count}}h",
+    "days": "{{count}}d"
+  }
+}

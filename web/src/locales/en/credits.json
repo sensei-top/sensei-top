@@ -1,0 +1,102 @@
+{
+  "wizards": {
+    "reads": "Sensei Top reads the log files Magic: The Gathering Arena and Magic Online write on this machine. It changes neither client and reads nothing from their memory.",
+    "images": "Card images are shown whole. Where card art appears on its own, the button in its corner shows the whole card, which carries the artist's name and the copyright line."
+  },
+  "dataSources": {
+    "heading": "Data sources",
+    "opening": "Sensei Top bundles none of this data. Each installed copy downloads what it needs to the machine it runs on.",
+    "closing": "Sensei Top is not produced by, endorsed by or affiliated with Scryfall, TopDeck.gg, Daybreak Games and mtgo.com, melee.gg, Anthropic, or the maintainers of MTGOFormatData and MTG_decklistcache. Their names appear here to credit their work.",
+    "entries": {
+      "scryfall": {
+        "taken": "Card names, rules text, legality, card images and card art.",
+        "terms": "Used under Scryfall's API terms."
+      },
+      "mtgoFormatData": {
+        "taken": "The archetype definitions that name an opponent's deck. Jiliac's fork is the fallback when the first repository cannot be reached.",
+        "terms": "Neither repository carries a licence file."
+      },
+      "decklistCache": {
+        "taken": "MTGO and Melee tournament results for the Field page.",
+        "terms": "GPL-3.0. Downloaded by each copy, never bundled or redistributed by this project."
+      },
+      "topdeck": {
+        "taken": "Tournament results, through their API and your own free key.",
+        "terms": "Used under TopDeck.gg's API terms, read 2026-10-05: free to use, a visible credit and link back required, inside its rate limits."
+      },
+      "mtgo": {
+        "taken": "The public result pages of events in the formats you follow: decklists, standings and brackets. Player handles are dropped when the page is read and never stored.",
+        "terms": "Read against Daybreak's Terms of Service and the MTGO EULA on 2026-10-05: fetched slowly by your own copy, for your own use, and shown with a link to each event's page on mtgo.com."
+      },
+      "anthropic": {
+        "taken": "The Claude API, only when you configure a key and press a generate button.",
+        "terms": "Your own account and key, under Anthropic's terms."
+      }
+    }
+  },
+  "fonts": {
+    "heading": "Fonts and symbols",
+    "opening": "These ship inside the dashboard. Each is listed with its copyright notice and the licence is linked below; its full text is with the dashboard libraries' notices, under \"Software it is built on\".",
+    "byAuthor": "{{name}}, by {{author}}",
+    "entries": {
+      "mana": {
+        "usedFor": "The mana symbol glyphs."
+      },
+      "bricolage": {
+        "usedFor": "Headings and headline numbers."
+      },
+      "hanken": {
+        "usedFor": "Interface text and numbers."
+      }
+    }
+  },
+  "software": {
+    "heading": "Software it is built on",
+    "opening": "Sensei Top is built from free software. Each work below is listed with its licence; the full texts travel with every copy, where the entry says.",
+    "entries": {
+      "electron": {
+        "name": "Electron and Chromium",
+        "usedFor": "The desktop app's window. Not involved when the dashboard is opened in your own browser from the command line.",
+        "notice": "Electron under the MIT licence, its text in LICENSE.electron.txt; Chromium's notices in LICENSES.chromium.html. Both files are in the folder the desktop app is installed in."
+      },
+      "desktop": {
+        "name": "Desktop app libraries",
+        "usedFor": "electron-updater and the packages it depends on, which check for the desktop app's updates and install them.",
+        "notice": "Mostly MIT and ISC licences; sax under the Blue Oak Model License 1.0.0 and argparse under the Python License 2.0. The desktop app installs every text in resources/licenses/desktop-third-party-notices.txt."
+      },
+      "python": {
+        "name": "Python",
+        "usedFor": "The server that reads the logs and serves this dashboard.",
+        "notice": "PSF License, with the libraries compiled into it (OpenSSL, SQLite, libffi, zlib, bzip2, xz, expat, mpdecimal, libedit) under their own licences. The desktop app installs the texts under resources/server/licenses; a command-line install carries them in its Python environment."
+      },
+      "pythonLibraries": {
+        "name": "Python libraries",
+        "usedFor": "FastAPI, Starlette, Uvicorn, pydantic, orjson, keyring, cryptography, the Anthropic SDK and the packages they depend on.",
+        "notice": "MIT, BSD, Apache 2.0 and PSF licences; orjson in part under the Mozilla Public License 2.0, with its source at github.com/ijl/orjson. The desktop app installs each text in resources/server/licenses/python, listed in INDEX.txt there; a command-line install carries them in its Python environment."
+      },
+      "dashboard": {
+        "name": "Dashboard libraries",
+        "usedFor": "React, TanStack Query, React Router, Recharts, Lucide and the packages they depend on, built into this page.",
+        "notice": "Mostly MIT and ISC licences. Every copyright notice and licence text is below."
+      },
+      "pyinstaller": {
+        "name": "PyInstaller",
+        "usedFor": "Packages the server for the desktop app.",
+        "notice": "GPL 2 or later with the Bootloader Exception; its run-time hooks under Apache 2.0. Text in resources/server/licenses."
+      }
+    },
+    "notices": {
+      "show": "Show the notices",
+      "hide": "Hide the notices",
+      "loading": "Loading the notices…",
+      "failed": "The notices could not be loaded. They are in third-party-notices.txt, in the folder the dashboard is served from."
+    }
+  },
+  "program": {
+    "copyright": "Copyright (C) 2026 The Sensei Top authors.",
+    "free": "Sensei Top is free software under the GNU Affero General Public License, version 3. It comes with no warranty.",
+    "copy": "A copy of the licence is installed with the program, and is linked below.",
+    "name": "The name and logo are not covered by that licence.",
+    "sourceLink": "Source code"
+  }
+}

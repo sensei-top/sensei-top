@@ -1,0 +1,46 @@
+{
+  "places": {
+    "home": "Home",
+    "live": "Live",
+    "matches": "Matches",
+    "decks": "Decks",
+    "field": "Field",
+    "coach": "Coach",
+    "settings": "Settings"
+  },
+  "documentTitle": "{{name}} · {{product}}",
+  "notFound": "No such page",
+  "titles": {
+    "mtgoPicks": "Pick MTGO decks",
+    "welcome": "Welcome"
+  },
+  "homeLink": "{{product}}, home",
+  "skipLink": "Skip to the page",
+  "trackerDown": "The tracker is not running, so nothing new can load. What is on screen is what was last loaded. This notice goes away once the tracker answers again.",
+  "footer": {
+    "local": "Reads a local SQLite database. No account, no upload.",
+    "credits": "Credits"
+  },
+  "nav": {
+    "main": "Main",
+    "matchInProgress": "match in progress,",
+    "more": "More",
+    "morePlaces": "More places",
+    "close": "Close"
+  },
+  "liveStatus": {
+    "down": "Tracker not running",
+    "stopped": "Watcher stopped",
+    "match": "Match in progress",
+    "watching": "Watching Arena",
+    "idle": "Not watching",
+    "unreachable": "This page cannot reach the tracker. What is on screen is what was last loaded.",
+    "goToMatch": "Go to the match",
+    "following": "The tracker is following Arena's log as you play.",
+    "notWatching": "The tracker is running without watching Arena's log, so a match played now is not recorded by it. Restart the tracker with watching turned on.",
+    "watcherStopped": "The tracker stopped watching Arena's log after it started, so a match played now is not recorded. Restart the tracker; its log file says what went wrong.",
+    "changed": "Data last changed {{ago}}.",
+    "noData": "No data yet.",
+    "mtgoWatched": "MTGO is watched too: each game appears once it ends."
+  }
+}

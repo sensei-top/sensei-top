@@ -1,0 +1,58 @@
+appId: top.sensei.app
+productName: Sensei Top
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**
+  - assets/**
+  - "!dist/**/*.test.*"
+  - "!dist/notices/**"
+  - package.json
+npmRebuild: false
+# Placeholder feed, like installer.nsh's URLs: plan 9 phase 1 puts the releases,
+# tagged `vX.Y.Z`, on the public repository. Until then a check fails with a
+# 404, which the shell logs. The github provider, not a generic `latest/download`
+# URL: differential download fetches the installed version's blockmap from that
+# version's own release, which `latest/download` cannot serve.
+publish:
+  provider: github
+  owner: sensei-top
+  repo: sensei-top
+extraResources:
+  - from: server/dist/sensei-top
+    to: server
+  - from: ../LICENSE
+    to: LICENSE
+  - from: ../TRADEMARK.md
+    to: TRADEMARK.md
+  - from: dist/notices/third-party-notices.txt
+    to: licenses/desktop-third-party-notices.txt
+win:
+  icon: build/icon.png
+  target: [nsis, appx]
+nsis:
+  artifactName: Sensei-Top-Setup-${version}.${ext}
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  createStartMenuShortcut: true
+  createDesktopShortcut: false
+  include: build/installer.nsh
+  installerLanguages: [en_US, pt_BR]
+  multiLanguageInstaller: true
+  displayLanguageSelector: true
+appx:
+  artifactName: Sensei-Top-${version}.${ext}
+  # Placeholder identity: plan 9 fills these in from Partner Center.
+  identityName: SenseiTop.Placeholder
+  publisher: CN=00000000-0000-0000-0000-000000000000
+  publisherDisplayName: Sensei Top
+  applicationId: SenseiTop
+linux:
+  icon: build/icon.png
+  artifactName: Sensei-Top-${version}.${ext}
+  target: [AppImage]
+  category: Game
+  executableName: sensei-top
+  syncDesktopName: true

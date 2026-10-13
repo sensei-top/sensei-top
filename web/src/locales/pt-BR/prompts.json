@@ -1,0 +1,65 @@
+{
+  "copy": {
+    "copied": "Copiado",
+    "building": "Montando o prompt…",
+    "copyPrompt": "Copiar o prompt",
+    "showPrompt": "Mostrar o prompt",
+    "hidePrompt": "Ocultar o prompt",
+    "thenSave": "Depois salve a resposta com este comando:",
+    "copyCommand": "Copiar o comando"
+  },
+  "generate": {
+    "emptyNote": "Nada escrito ainda.",
+    "writing": "Escrevendo… {{elapsed}} s",
+    "rewrite": "Reescrever com o Claude",
+    "write": "Escrever com o Claude"
+  },
+  "sharing": {
+    "neverSent": {
+      "identity": "Seu nome ou id no Arena.",
+      "opponent": "O nome ou id de um oponente.",
+      "pickTime": "Quanto tempo você levou em uma escolha.",
+      "log": "O log em si, ou qualquer coisa do Magic Online."
+    },
+    "receipt": {
+      "removed": "Este draft foi removido do servidor.",
+      "waiting": "Este draft é enviado quando seus jogos terminam.",
+      "sharedAgo": "Este draft foi compartilhado {{when}}.",
+      "shared": "Este draft foi compartilhado.",
+      "undo": "Desfazer",
+      "removing": "Removendo",
+      "notRemoved": "O servidor não respondeu. O draft continua compartilhado."
+    },
+    "note": {
+      "on": "O compartilhamento de dados de draft está ligado.",
+      "settings": "Configurações"
+    },
+    "payload": {
+      "statusOff": "O compartilhamento está desligado, então isto não foi enviado. É o que seria.",
+      "statusSent": "Isto foi enviado {{when}}.",
+      "statusWaiting": "Isto é enviado quando os jogos do draft terminam.",
+      "heading": "O que este draft envia",
+      "numbers": "Os cards são enviados como os números do Arena. Aqui são mostrados pelo nome.",
+      "neverSent": "Nunca enviado",
+      "about": "Sobre o aplicativo",
+      "draft": "O draft",
+      "picks": "As escolhas",
+      "pack": "Pacote {{pack}}",
+      "deck": "O deck",
+      "mainDeck": "Deck principal",
+      "sideboard": "Sideboard",
+      "noDeck": "Nenhum deck foi lido do log.",
+      "games": "Os jogos",
+      "record": "Retrospecto: {{record}}",
+      "cards_one": "{{count}} card",
+      "cards_other": "{{count}} cards",
+      "pickUnknown": "Escolha {{pick}}: o card pego não é conhecido, de {{from}}",
+      "pickTook": "Escolha {{pick}}: pegou {{taken}} de {{from}}",
+      "onThePlay": "no play",
+      "onTheDraw": "no draw",
+      "turns_one": "{{count}} turno",
+      "turns_other": "{{count}} turnos",
+      "against": "contra {{colours}}"
+    }
+  }
+}

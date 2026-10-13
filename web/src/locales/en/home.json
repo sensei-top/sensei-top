@@ -1,0 +1,128 @@
+{
+  "unnamedDeckInSentence": "your unnamed deck",
+  "unrecognizedDeck": "an unrecognized deck",
+  "andMore": "and {{n}} more",
+  "headline": {
+    "noWins": "No wins",
+    "wins_one": "{{count}} win",
+    "wins_other": "{{count}} wins",
+    "noLosses": "no losses",
+    "losses_one": "{{count}} loss",
+    "losses_other": "{{count}} losses",
+    "draws_one": "{{count}} draw",
+    "draws_other": "{{count}} draws",
+    "record": "{{wins}}, {{losses}}",
+    "recordWithDraws": "{{wins}}, {{losses}}, {{draws}}"
+  },
+  "notFound": {
+    "message": "Nothing is at this address.",
+    "goHome": "Go to Home"
+  },
+  "coach": {
+    "title": "Coach",
+    "body": "A report across every deck you play: what keeps happening, where lost games turn, and what to read next. It is written when you ask for it.",
+    "open": "Open the coach"
+  },
+  "field": {
+    "title": "The {{format}} field, and you against it",
+    "noteSince": "{{kind}} since {{since}}",
+    "noteLast90": "{{kind}}, last 90 days",
+    "notPlayedSince": "not played since {{since}}",
+    "notPlayedLast90": "not played in the last 90 days",
+    "barsWithDeck": "Bars are each deck's share of {{lists}} tournament lists. The line under each is your own record with {{deck}} in the same period.",
+    "barsNoDeck": "Bars are each deck's share of {{lists}} tournament lists. The line under each is your own record in the same period.",
+    "listShort": "Your record is counted over your last 500 matches.",
+    "sinceDate": "since {{since}}",
+    "last90": "in the last 90 days"
+  },
+  "firstRun": {
+    "title": "This page fills in as you play",
+    "lead": "Sensei Top reads the log Arena writes while you play. Nothing is recorded yet.",
+    "watchingTitle": "The tracker is watching Arena",
+    "logTitle": "Arena is writing its log",
+    "logDetail": "Nothing has arrived from Arena yet. Start Arena. If it is already open, turn on Detailed Logs (Plugin Support) in Arena, under Options, then Account, and start Arena again.",
+    "playTitle": "Play a match",
+    "playDetail": "The tracker can see Arena. Play a match, and it appears here when it ends.",
+    "willAppear": "What will appear here",
+    "appear1": "Your last session in one line, and your record over the last 30 days.",
+    "appear2": "Three things worth a look: your last match, a pattern across your matches, and the field.",
+    "appear3": "Your recent matches, your win rate by week and your decks."
+  },
+  "decks": {
+    "title": "Decks",
+    "all": "All decks",
+    "lastPlayed": "last played {{day}}"
+  },
+  "needsDeck": {
+    "title": "Needs a deck",
+    "subtitle": "MTGO's log does not say which deck you played. Pick it on the match so it counts toward that deck.",
+    "win": "Win",
+    "loss": "Loss",
+    "draw": "Draw",
+    "resultScore": "{{result}} {{score}}",
+    "resultUnknown": "Result unknown",
+    "against": "against {{opponent}}",
+    "reviewAll": "Review all {{n}} at once"
+  },
+  "recent": {
+    "title": "Recent matches",
+    "allCount": "All {{n}} matches",
+    "all": "All matches"
+  },
+  "session": {
+    "last": "Last session · {{day}}",
+    "thirtyDays": "Over the last 30 days you have won <strong>{{won}}</strong> of <strong>{{played}}</strong> matches, or <strong>{{rate}}</strong>.",
+    "matches_one": "{{n}} match",
+    "matches_other": "{{n}} matches"
+  },
+  "things": {
+    "kicker": {
+      "match": "Last match",
+      "pattern": "Pattern",
+      "field": "Field"
+    },
+    "readReport": "Read the report",
+    "seePatterns": "See every pattern",
+    "openField": "Open the field",
+    "patternBody": "You won {{won}} of the {{with}} matches {{clause}}, and {{wonOther}} of the other {{without}}.",
+    "wonScore": "Won {{score}} against {{opponent}}",
+    "won": "Won against {{opponent}}",
+    "lostScore": "Lost {{score}} to {{opponent}}",
+    "lost": "Lost to {{opponent}}",
+    "drewScore": "Drew {{score}} with {{opponent}}",
+    "drew": "Drew with {{opponent}}",
+    "playedAgo": "Played {{when}}.",
+    "playedWithAgo": "Played with {{deck}}, {{when}}.",
+    "fieldTwo": "Two decks are {{share}} of the {{format}} field",
+    "fieldOne": "{{label}} is {{share}} of the {{format}} field",
+    "pair": "{{first}} and {{second}}.",
+    "record": {
+      "pair": {
+        "deckPlayed": "With {{deck}} you have won {{tally}} against them.",
+        "deckNone": "You have not played {{deck}} against either {{when}}.",
+        "noDeckPlayed": "You have won {{tally}} against them.",
+        "noDeckNone": "You have not played against them {{when}}."
+      },
+      "single": {
+        "deckPlayed": "With {{deck}} you have won {{tally}} against it.",
+        "deckNone": "You have not played {{deck}} against it {{when}}.",
+        "noDeckPlayed": "You have won {{tally}} against it.",
+        "noDeckNone": "You have not played against it {{when}}."
+      }
+    },
+    "tally": "{{won}} of {{played}}"
+  },
+  "weekly": {
+    "title": "Win rate by week",
+    "single": "You won {{won}} of {{played}} matches in the week of {{week}}. The chart starts with a second week.",
+    "even": "even",
+    "weekOf": "Week of",
+    "weekOfLabel": "Week of {{week}}",
+    "winRate": "Win rate",
+    "hollow": "A hollow dot is a week with fewer than ten matches.",
+    "truncated": "Counted over your last 500 matches.",
+    "showNumbers": "Show the numbers",
+    "matches": "Matches",
+    "won": "Won"
+  }
+}

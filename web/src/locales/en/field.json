@@ -1,0 +1,236 @@
+{
+  "controls": {
+    "format": "Format",
+    "window": "Window",
+    "tournaments": "Tournaments"
+  },
+  "format": {
+    "none": "None of your matches are {{format}}.",
+    "fromLog": "{{n}} from Arena's log",
+    "confirmed": "{{n}} you confirmed",
+    "inferred": "{{n}} inferred from the cards revealed",
+    "head_one": "{{n}} of your matches is {{format}}",
+    "head_other": "{{n}} of your matches are {{format}}",
+    "withParts": "{{head}}: {{parts}}.",
+    "headOnly": "{{head}}."
+  },
+  "window": {
+    "since": "since {{date}}",
+    "whenLast": "in the last {{days}} days",
+    "shortLast": "last {{days}} days",
+    "optionLast": "Last {{days}} days",
+    "optionReset": "Since the last reset ({{date}})"
+  },
+  "tier": {
+    "kind": {
+      "A": "paper tournaments of 64+ players",
+      "B": "MTGO challenges",
+      "C": "MTGO leagues",
+      "D": "paper tournaments under 64 players"
+    },
+    "option": {
+      "A": "Paper 64+",
+      "B": "MTGO challenges",
+      "C": "MTGO leagues",
+      "D": "Paper under 64"
+    }
+  },
+  "pairs": {
+    "option": {
+      "A": "Paper 64+",
+      "AB": "+ MTGO challenges",
+      "ABD": "+ smaller paper"
+    },
+    "none": {
+      "A": "No rounds between two named decks in paper tournaments of 64+ players {{when}}.",
+      "AB": "No rounds between two named decks in paper tournaments of 64+ players or MTGO challenges {{when}}.",
+      "ABD": "No rounds between two named decks {{when}}."
+    }
+  },
+  "share": {
+    "actionSince": "{{kind}} {{short}}",
+    "actionLast": "{{kind}}, {{short}}",
+    "title": "What is being played",
+    "empty": "No lists from {{kind}} {{when}}.",
+    "notPlayed": "not played {{when}}",
+    "bars": "Each bar is a deck's share of {{lists}} lists from {{kind}} {{when}}. The line under each is your own record against it in the same period, with any of your decks.",
+    "short": "Your record is counted over your last {{n}} matches.",
+    "league": "A league publishes only its undefeated lists, so this is what wins leagues, not all that is played."
+  },
+  "row": {
+    "won": "won {{won}} of {{played}}",
+    "lists_one": "{{n}}\u00a0list",
+    "lists_other": "{{n}}\u00a0lists"
+  },
+  "tiles": {
+    "listsRead": "Lists read",
+    "listsDetail": "{{kind}} {{when}}",
+    "mostPlayed": "Most played",
+    "mostPlayedDetail": "{{pct}}% of those lists",
+    "againstOne": "You against the most played",
+    "againstTwo": "You against the top two",
+    "recordValue": "{{won}} of {{played}}",
+    "wonDetail": "matches won, with any of your decks",
+    "notMet": "not met {{when}}"
+  },
+  "showAll": "Show all {{n}}",
+  "events": {
+    "title": "The events",
+    "subtitle": "Newest first. Open one for its decklists, each with its archetype, and a link to where the results were published.",
+    "empty": "No events from {{kind}} {{when}}.",
+    "standingsOnly": "standings only",
+    "lists_one": "{{n}} decklist",
+    "lists_other": "{{n}} decklists",
+    "wonBy": "won by {{winner}}"
+  },
+  "winrate": {
+    "title": "How the field wins",
+    "subtitle": "Paper tournaments and MTGO challenges together, whichever is chosen above. A league publishes only its undefeated lists, so it has no losses to count.",
+    "empty": "No archetype has two finished matches {{when}}.",
+    "columns": {
+      "archetype": "Archetype",
+      "winRate": "Win rate",
+      "matches": "Matches",
+      "lists": "Lists"
+    }
+  },
+  "matchups": {
+    "title": "Archetype against archetype",
+    "subtitle": "Rounds between two named decks. A rate on fewer than five matches is muted: too few to lean on.",
+    "countedFrom": "Counted from",
+    "nextAB": "Count MTGO challenges too",
+    "nextABD": "Count smaller paper events too",
+    "columns": {
+      "archetype": "Archetype",
+      "against": "Against",
+      "matches": "Matches",
+      "record": "Record"
+    },
+    "pair": "{{label}} against {{opponent}}",
+    "matches_one": "{{n}}\u00a0match,",
+    "matches_other": "{{n}}\u00a0matches,"
+  },
+  "page": {
+    "emptyTitle": "No {{format}} tournament results yet",
+    "emptyMessage": "This page shows what is being played in tournaments and your own record against each deck. It fills in once tournament results are downloaded, which the server does on its own while it runs; sensei-top meta does it from the command line.",
+    "topdeckCredit": "{{format}} tournament data from <site>TopDeck.gg</site>."
+  },
+  "sources": {
+    "summary": "Where these numbers come from",
+    "sectionLabel": "Sources",
+    "events": "{{total}} tournament events stored: {{a}} paper with 64+ players, {{b}} MTGO challenges, {{c}} MTGO leagues, {{d}} smaller paper.",
+    "copies_one": "1 more was set aside as copies of an event already counted.",
+    "copies_other": "{{n}} more were set aside as copies of an event already counted.",
+    "resultsNever": "Tournament results have never been downloaded.",
+    "resultsWindow_one": "Tournament results were downloaded {{age}} ago, covering {{n}} days.",
+    "resultsWindow_other": "Tournament results were downloaded {{age}} ago, covering {{n}} days.",
+    "results": "Tournament results were downloaded {{age}} ago.",
+    "rulesNever": "Archetype rules have never been downloaded.",
+    "rules_one": "{{n}} archetype rules, downloaded {{age}} ago.",
+    "rules_other": "{{n}} archetype rules, downloaded {{age}} ago.",
+    "rulesFallback": "Decks no rule names are grouped by a simpler rule.",
+    "columns": {
+      "source": "Source",
+      "events": "Events (last refresh)",
+      "freshness": "Freshness",
+      "status": "Status"
+    },
+    "name": {
+      "fbettega": "MTGO + Melee cache",
+      "mtgo": "MTGO.com decklists",
+      "topdeck": "TopDeck.gg (RCQs)"
+    },
+    "daysOld": "{{days}}d old",
+    "neverFetched": "never fetched",
+    "status": {
+      "needsNoKey": "needs no key",
+      "configured": "configured",
+      "configuredNotFetched": "configured, not yet fetched",
+      "notConfigured": "not configured"
+    },
+    "download": "To download them again, run:"
+  },
+  "event": {
+    "notFound": "No event at this address.",
+    "back": "Back to the field",
+    "league": "A league publishes only its undefeated lists.",
+    "sourceTopdeck": "Data provided by <site>{{site}}</site>.",
+    "sourceTopdeckEvent": "<site>This event on {{site}}</site>",
+    "sourceResults": "Results from <site>{{site}}</site>",
+    "read": {
+      "standingsOnlyOn": "Standings only: no decklists were returned for this event when it was last read, on {{emptyDay}}.",
+      "standingsOnly": "Standings only: no decklists were returned for this event when it was last read.",
+      "listsEmpty": "Decklists as read on {{listsDay}}; none were returned when this event was last read, on {{emptyDay}}.",
+      "listsGone": "Decklists as read on {{listsDay}}; the event's page was not found when it was last read, on {{emptyDay}}.",
+      "unrecordedEmpty": "The decklists shown were read on a date that was not recorded; none were returned when this event was last read, on {{emptyDay}}.",
+      "unrecordedGone": "The decklists shown were read on a date that was not recorded; the event's page was not found when it was last read, on {{emptyDay}}."
+    },
+    "ordinal": {
+      "one": "{{n}}st",
+      "two": "{{n}}nd",
+      "few": "{{n}}rd",
+      "other": "{{n}}th"
+    },
+    "kind": {
+      "A": "paper tournament of 64+ players",
+      "B": "MTGO challenge",
+      "C": "MTGO league",
+      "D": "paper tournament under 64 players"
+    },
+    "group": {
+      "creature": "Creatures ({{n}})",
+      "planeswalker": "Planeswalkers ({{n}})",
+      "battle": "Battles ({{n}})",
+      "instant": "Instants ({{n}})",
+      "sorcery": "Sorceries ({{n}})",
+      "artifact": "Artifacts ({{n}})",
+      "enchantment": "Enchantments ({{n}})",
+      "land": "Lands ({{n}})",
+      "other": "{{type}} ({{n}})",
+      "unknown": "Unknown type ({{n}})"
+    },
+    "sideboard": "Sideboard ({{n}})",
+    "noArchetype": "No archetype named",
+    "noList": "No decklist published."
+  },
+  "holds": {
+    "waiting": "{{name}} — waiting: {{what}}. The next fetch is after {{when}}.",
+    "paused": "{{name}} — paused since {{since}}: {{what}}. {{meta}}",
+    "pausedAdvice": "{{head}}; {{advice}}",
+    "pausedEnd": "{{head}}.",
+    "meta": "Nothing more is read until you run `sensei-top meta`",
+    "metaNotBefore": "Nothing more is read until you run `sensei-top meta`, and not before {{when}}",
+    "waitingWhat": {
+      "429": "the site asked for a pause (HTTP 429)",
+      "503": "the site answered that it is unavailable (HTTP 503)"
+    },
+    "pausedWhat": {
+      "mtgo": {
+        "403": "the site refused the fetch (HTTP 403)",
+        "401": "the site asked for a login (HTTP 401)",
+        "451": "the site refused the fetch for legal reasons (HTTP 451)",
+        "429": "the site asked for a pause twice in a row (HTTP 429)",
+        "503": "the site has answered that it is unavailable (HTTP 503) for a whole day"
+      },
+      "topdeck": {
+        "401": "the key was not accepted (HTTP 401)",
+        "403": "the site refused the fetch (HTTP 403)",
+        "451": "the site refused the fetch for legal reasons (HTTP 451)",
+        "429": "the site asked for a pause twice in a row (HTTP 429)"
+      }
+    },
+    "advice": {
+      "mtgo": {
+        "403": "re-read Daybreak's Terms of Service before you do.",
+        "401": "Sensei Top never logs in to mtgo.com — re-read Daybreak's Terms of Service before you do.",
+        "451": "open mtgo.com in your browser and read the notice there before you do.",
+        "503": "check that mtgo.com opens in your browser before you do."
+      },
+      "topdeck": {
+        "401": "set a working key with `sensei-top config --set-topdeck-key KEY` first.",
+        "403": "re-read TopDeck.gg's API terms before you do.",
+        "451": "open topdeck.gg in your browser and read the notice there before you do."
+      }
+    }
+  }
+}

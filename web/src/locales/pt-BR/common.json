@@ -1,0 +1,55 @@
+{
+  "save": "Salvar",
+  "saved": "Salvo",
+  "saving": "Salvando",
+  "cancel": "Cancelar",
+  "loading": "Carregando",
+  "opening": "Abrindo",
+  "loadError": "Não foi possível carregar os dados",
+  "notSet": "Não definido",
+  "on": "Ligado",
+  "off": "Desligado",
+  "unnamedDeck": "Deck sem nome",
+  "unknownDeck": "Deck desconhecido",
+  "languages": {
+    "en": "English",
+    "pt-BR": "Português (Brasil)"
+  },
+  "card": {
+    "hidden": "Card oculto",
+    "unknown": "Card desconhecido"
+  },
+  "theCard": "O card",
+  "showCard": "Mostrar o card",
+  "showCardNamed": "Mostrar o card: {{name}}",
+  "revealedColours": "Cores reveladas: {{colours}}",
+  "colours": {
+    "W": "branco",
+    "U": "azul",
+    "B": "preto",
+    "R": "vermelho",
+    "G": "verde"
+  },
+  "finding": {
+    "decisive": "Decisivo",
+    "flag": "Alerta",
+    "notice": "Aviso",
+    "note": "Nota"
+  },
+  "steps": {
+    "done": "Concluído",
+    "next": "Próximo",
+    "later": "Depois"
+  },
+  "filters": {
+    "source": "Fonte",
+    "allSources": "Todas as fontes",
+    "deck": "Deck",
+    "allDecks": "Todos os decks",
+    "unlistedDeck": "Um deck fora desta lista",
+    "version": "Versão",
+    "everyVersion": "Todas as versões",
+    "matches_one": "{{count}} partida",
+    "matches_other": "{{count}} partidas"
+  }
+}

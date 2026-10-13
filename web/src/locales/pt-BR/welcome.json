@@ -1,0 +1,93 @@
+{
+  "frame": {
+    "step": "Passo {{n}} de {{total}}",
+    "start": "Começar",
+    "next": "Próximo",
+    "skipBackground": "Pular, fazer em segundo plano",
+    "back": "Voltar",
+    "goHome": "Ir para o Início",
+    "finishing": "Concluindo"
+  },
+  "headings": {
+    "language": "Idioma",
+    "welcome": "Boas-vindas ao Sensei Top",
+    "arena": "Arena",
+    "cards": "Dados dos cards",
+    "mtgo": "Magic Online",
+    "done": "Pronto"
+  },
+  "language": {
+    "body": "O Sensei Top lê em inglês e em português do Brasil. Escolha um aqui; dá para mudar quando quiser em Configurações.",
+    "label": "Idioma"
+  },
+  "intro": {
+    "body": "O Sensei Top lê os logs que o Magic: The Gathering Arena e o Magic Online escrevem neste computador enquanto você joga, e os transforma no seu histórico de partidas, nas suas taxas de vitórias por deck e por matchup, e em análises dos seus jogos. Suas partidas ficam neste computador.",
+    "wizardsNotice": "Sensei Top é um conteúdo de fã não oficial permitido sob a política de conteúdo de fãs. Não aprovado/apoiado pela Wizards. Porções do material usado são propriedade da Wizards of the Coast. ©Wizards of the Coast LLC.",
+    "leavesTitle": "O que sai deste computador",
+    "downloads": "Downloads de dados de referência: dados e imagens de cards do Scryfall, definições de arquétipos do MTGOFormatData, resultados de torneios do MTG_decklistcache e do mtgo.com para os formatos que você acompanha, e do TopDeck.gg só se você adicionar sua própria chave. Nada sobre os seus jogos é enviado.",
+    "updatesUnavailable": "Esta cópia não verifica sozinha se há novas versões.",
+    "dailyCheck": "Uma verificação diária de nova versão do aplicativo.",
+    "checkForUpdates": "Verificar atualizações",
+    "claude": "Escrita com o Claude, só se você adicionar sua própria chave do Claude e apertar um botão que diz que escreve. Sem chave, o aplicativo lhe dá um prompt para copiar em um chat.",
+    "credits": "Cada fonte e seus termos estão listados em <credits>Configurações, em Sobre e créditos</credits>."
+  },
+  "arena": {
+    "notFound": "O aplicativo não encontrou o log do Arena. Se o Arena está instalado, abra-o uma vez e verifique de novo. Se você só joga Magic Online, pule este passo.",
+    "enabled": "O aplicativo encontrou o log do Arena, e os Registros detalhados estão ligados.",
+    "unknown": "O aplicativo encontrou o log do Arena, mas ainda não viu a linha em que o Arena diz que os Registros detalhados estão ligados. O Arena a escreve quando inicia.",
+    "disabled": "O log do Arena diz que os Registros detalhados estão desligados.",
+    "logFile": "Arquivo de log",
+    "instruction1": "No Arena, abra Opções, depois Conta.",
+    "instruction2": "Marque Registros detalhados (suporte de plugin).",
+    "instruction3": "Feche o Arena e abra-o de novo.",
+    "checkAgain": "Verificar de novo",
+    "checking": "Verificando",
+    "restoreTitle": "Já usou o Sensei Top antes?",
+    "restoreBody": "Restaure suas partidas de um arquivo de backup. Faça isso antes de jogar: uma restauração substitui o que este computador registrou pelo conteúdo do backup.",
+    "chooseBackup": "Escolher um arquivo de backup"
+  },
+  "cards": {
+    "intro": "O texto de regras e a legalidade por formato de cada card vêm do Scryfall, um download de cerca de 80 MB que depois leva alguns minutos para ser descompactado e salvo. Os guias de deck precisam deles. Você pode seguir enquanto ele roda.",
+    "download": "Baixar dados dos cards",
+    "downloadAgain": "Baixar de novo",
+    "tryAgain": "Tentar de novo",
+    "starting": "Iniciando",
+    "alreadyHave": "Este computador já tem o texto de regras de {{n}} cards.",
+    "meterLabel": "Download dos dados dos cards",
+    "progressStart": "Iniciando o download.",
+    "progressSave": "Salvando os cards no banco de dados. Isso leva alguns minutos.",
+    "progressSoFar": "Baixando dados dos cards: {{done}} MB até agora.",
+    "progressOf": "Baixando dados dos cards: {{done}} de {{total}} MB.",
+    "doneEmpty": "Dados dos cards recebidos.",
+    "doneCount": "Dados dos cards recebidos: texto de regras de {{n}} cards.",
+    "failed": "O download falhou: {{reason}}",
+    "alsoTitle": "Também baixando por conta própria",
+    "archetypes": "Definições de arquétipos",
+    "tournaments": "Resultados de torneios",
+    "background": "Estes rodam em segundo plano sempre que o aplicativo está aberto; nada aqui espera por eles.",
+    "notKnown": "Não se sabe",
+    "notYet": "Ainda não",
+    "updated": "Atualizado há {{age}}"
+  },
+  "age": {
+    "lessThanHour": "menos de uma hora",
+    "hours_one": "{{count}} hora",
+    "hours_other": "{{count}} horas",
+    "days_one": "{{count}} dia",
+    "days_other": "{{count}} dias"
+  },
+  "mtgo": {
+    "skip": "Pule este passo se você não joga Magic Online.",
+    "handleLabel": "Seu nome no Magic Online",
+    "handleHint": "O log do Magic Online nunca diz qual jogador é você, então o aplicativo precisa do seu nome para distinguir seus jogos dos de seus oponentes.",
+    "folderLabel": "Pasta dos logs de jogo",
+    "hintSaved": "Cada jogo é lido quando termina.",
+    "hintFound": "O Magic Online está escrevendo seus logs de jogo aqui. Salve para lê-los.",
+    "hintNone": "A pasta em que o Magic Online escreve arquivos chamados Match_GameLog. No Windows, fica em AppData\\Local\\Apps\\2.0\\Data. No Wine ou no Proton, fica dentro da pasta drive_c desse prefixo."
+  },
+  "done": {
+    "body": "Jogue uma partida. Ela aparece no Início quando termina.",
+    "autostartLabel": "Abrir o Sensei Top ao entrar no computador",
+    "autostartDescription": "Ele inicia em segundo plano e registra seus jogos sem você precisar abri-lo."
+  }
+}

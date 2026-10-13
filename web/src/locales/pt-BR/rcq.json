@@ -1,0 +1,88 @@
+{
+  "freshness": {
+    "sentence": "{{source}}: {{event}}, {{fetched}}",
+    "noEvent": "nenhum evento ainda",
+    "newestEvent": "evento mais recente em {{day}}",
+    "neverFetched": "nunca baixado",
+    "fetched": "baixado {{ago}}"
+  },
+  "chips": {
+    "shareNote": "A fatia de um chip é sobre os decks de Tier {{tier}} dos últimos {{days}} dias; os arquétipos menores estão em \"Outros\"."
+  },
+  "view": {
+    "back": "O guia",
+    "write": "Escrever o guia de RCQ",
+    "writeAgain": "Escrever o guia de RCQ de novo",
+    "subtitle": "Um plano de jogo, o meta que você vai encontrar, um plano para cada matchup conferido contra seus 75, os slots flex e um checklist entre rodadas.",
+    "staleNote": "A lista mudou desde então."
+  },
+  "inputs": {
+    "title": "Sua lista e a loja",
+    "subtitle": "Guardados neste computador para este deck, como você os deixar.",
+    "yourList": "Seus 75",
+    "listHint": "A exportação do Arena, a do MTGO ou uma lista simples: uma quantidade e um nome por linha, o sideboard depois de uma linha em branco ou sob \"Sideboard\".",
+    "expectedTitle": "Esperados na loja",
+    "expectedHint": "Cada um que você escolher ganha seu próprio plano. Os números do meta continuam mandando.",
+    "reading": "Lendo o meta…",
+    "noArchetype": "O corpus de torneios ainda não nomeia nenhum arquétipo.",
+    "fewer": "Menos",
+    "other": "Outros ({{n}})",
+    "ownLabel": "Seus 75 são",
+    "notChosen": "Não escolhido"
+  },
+  "preview": {
+    "title": "O que o guia vai ler",
+    "pasteFirst": "Cole seus 75 acima para ver como eles são lidos.",
+    "updating": "Lendo suas alterações…",
+    "counts": "Deck principal / sideboard",
+    "checkTitle": "Confira a lista",
+    "unresolved_one": "Não encontrado no banco de cards, então o guia não tem texto de regras para ele: {{cards}}.",
+    "unresolved_other": "Não encontrados no banco de cards, então o guia não tem texto de regras para eles: {{cards}}.",
+    "readsAs": "Seus 75 são lidos como <name>{{name}}</name>.",
+    "readsAsChosen": "Seus 75 são lidos como <name>{{name}}</name>, como você escolheu.",
+    "unnamed": "Seus 75 não puderam ser nomeados a partir das listas do meta.",
+    "chooseAbove": "Escolha o arquétipo deles acima.",
+    "noFormat": "Nenhum formato de torneio é conhecido para este deck, então não há meta de torneios para mostrar.",
+    "expectedTitle": "Esperados na loja",
+    "expected": {
+      "share": "<name>{{name}}</name>, {{pct}}% do meta",
+      "shareRecord": "<name>{{name}}</name>, {{pct}}% do meta; você está {{wins}}–{{losses}} contra ele",
+      "shareNone": "<name>{{name}}</name>, {{pct}}% do meta; você ainda não jogou contra ele",
+      "absent": "<name>{{name}}</name>, fora do meta",
+      "absentRecord": "<name>{{name}}</name>, fora do meta; você está {{wins}}–{{losses}} contra ele",
+      "absentNone": "<name>{{name}}</name>, fora do meta; você ainda não jogou contra ele"
+    },
+    "freshTitle": "Quão atualizado o meta está",
+    "freshNone": "Nenhuma fonte de torneios foi baixada.",
+    "recentShares": "O meta nos últimos 14 dias",
+    "recentShare_one": "{{pct}}%, {{n}} deck",
+    "recentShare_other": "{{pct}}%, {{n}} decks",
+    "eventsSummary": "Eventos dos últimos 7 dias ({{n}})",
+    "noEvents": "Nenhum evento no corpus nos últimos 7 dias.",
+    "event_one": "{{source}} · Tier {{tier}} · {{n}} lista",
+    "event_other": "{{source}} · Tier {{tier}} · {{n}} listas",
+    "eventDated_one": "{{date}} · {{source}} · Tier {{tier}} · {{n}} lista",
+    "eventDated_other": "{{date}} · {{source}} · Tier {{tier}} · {{n}} listas",
+    "top8": "Top 8: {{decks}}"
+  },
+  "result": {
+    "role": {
+      "core": "Núcleo",
+      "flex": "Flex",
+      "risk": "Risco"
+    },
+    "matchupsTitle": "Matchups",
+    "matchupsSubtitle": "Play ou draw, e o que entra e o que sai do segundo jogo em diante, para seus 75.",
+    "foundTitle": "Encontrado ao conferir os planos",
+    "flexTitle": "Slots flex",
+    "betweenRounds": "Entre rodadas",
+    "carryTitle": "Leve para a loja",
+    "carrySubtitle": "O guia em Markdown, para ler no celular.",
+    "copied": "Copiado",
+    "copy": "Copiar como Markdown",
+    "download": "Baixar .md",
+    "building": "Montando o Markdown…",
+    "gamePlan": "Plano de jogo",
+    "field": "O meta que você vai encontrar"
+  }
+}

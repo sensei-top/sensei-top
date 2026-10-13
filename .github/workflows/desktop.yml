@@ -1,0 +1,259 @@
+name: Desktop packages
+
+# By hand, or on a `vX.Y.Z` tag. Never on a branch push: the private repository's
+# minutes are metered (D26), so every job is skipped for a tag pushed anywhere but
+# the public repository, where the `release` job publishes what the two builds made.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      # For the N -> N+1 update test only; both empty is the normal build.
+      version:
+        description: "Build as this version (update test only)"
+        required: false
+        default: ""
+      update_url:
+        description: "Generic feed URL baked into the build (update test only)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+# Every uv run refuses to rewrite uv.lock.
+env:
+  UV_LOCKED: "1"
+  # The frozen server must be built on uv's python-build-standalone CPython (its dependency
+  # licences are vendored in desktop/server/licenses/cpython-deps/), not the runner's own Python.
+  UV_PYTHON_PREFERENCE: only-managed
+
+jobs:
+  windows:
+    if: github.event_name != 'push' || github.repository == 'sensei-top/sensei-top'
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      # setup-uv publishes no major tags, so it's pinned exactly. uv 0.12.3 with Python
+      # 3.12.13 resolves to python-build-standalone 20260807, the tag the vendored licences
+      # in desktop/server/licenses/cpython-deps/ were checked against.
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.12.3"
+          python-version: "3.12.13"
+          enable-cache: true
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: |
+            web/pnpm-lock.yaml
+            desktop/pnpm-lock.yaml
+      - run: uv sync --locked
+      # On a tag, the tag is the version being built.
+      - name: Check the tag is pyproject's version
+        if: github.ref_type == 'tag'
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: >-
+          uv run python -c "import os, sys, tomllib;
+          v = tomllib.load(open('pyproject.toml', 'rb'))['project']['version'];
+          t = os.environ['TAG'];
+          sys.exit(None if t == 'v' + v else f'tag {t} is not v{v} (pyproject.toml)')"
+      - run: pnpm install --frozen-lockfile
+        working-directory: web
+      - run: pnpm install --frozen-lockfile
+        working-directory: desktop
+      # Fails when desktop/package.json's version is not pyproject's.
+      - run: uv run python scripts/sync_version.py --check
+      # Builds web_dist when stale, freezes the server, smoke-tests it.
+      - run: uv run python scripts/build_server.py
+      - run: |
+          args=()
+          if [ -n "$BUILD_VERSION" ]; then args+=("-c.extraMetadata.version=$BUILD_VERSION"); fi
+          # The loopback feed is a generic one. `-c` can't drop the github provider's
+          # owner and repo, which the generic schema refuses, so the block is rewritten.
+          if [ -n "$BUILD_UPDATE_URL" ]; then
+            sed -i "/^publish:\$/,/^  repo: /c\\publish:\\n  provider: generic\\n  url: $BUILD_UPDATE_URL" electron-builder.yml
+          fi
+          pnpm dist:win "${args[@]}"
+        shell: bash
+        working-directory: desktop
+        env:
+          BUILD_VERSION: ${{ inputs.version }}
+          BUILD_UPDATE_URL: ${{ inputs.update_url }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sensei-top-windows
+          path: |
+            desktop/release/*.exe
+            desktop/release/*.appx
+            desktop/release/*.blockmap
+            desktop/release/latest.yml
+          retention-days: 7
+          if-no-files-found: error
+
+  linux:
+    if: github.event_name != 'push' || github.repository == 'sensei-top/sensei-top'
+    # Pinned, not `ubuntu-latest`: the frozen server runs only on a glibc at least as
+    # new as the build host's, so moving the runner raises the oldest Ubuntu the
+    # AppImage runs on (INSTALL.md names it).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.12.3"
+          python-version: "3.12.13"
+          enable-cache: true
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: |
+            web/pnpm-lock.yaml
+            desktop/pnpm-lock.yaml
+      - run: uv sync --locked
+      # On a tag, the tag is the version being built.
+      - name: Check the tag is pyproject's version
+        if: github.ref_type == 'tag'
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: >-
+          uv run python -c "import os, sys, tomllib;
+          v = tomllib.load(open('pyproject.toml', 'rb'))['project']['version'];
+          t = os.environ['TAG'];
+          sys.exit(None if t == 'v' + v else f'tag {t} is not v{v} (pyproject.toml)')"
+      - run: pnpm install --frozen-lockfile
+        working-directory: web
+      - run: pnpm install --frozen-lockfile
+        working-directory: desktop
+      - run: uv run python scripts/sync_version.py --check
+      - run: uv run python scripts/build_server.py
+      - run: |
+          args=()
+          if [ -n "$BUILD_VERSION" ]; then args+=("-c.extraMetadata.version=$BUILD_VERSION"); fi
+          # The loopback feed is a generic one. `-c` can't drop the github provider's
+          # owner and repo, which the generic schema refuses, so the block is rewritten.
+          if [ -n "$BUILD_UPDATE_URL" ]; then
+            sed -i "/^publish:\$/,/^  repo: /c\\publish:\\n  provider: generic\\n  url: $BUILD_UPDATE_URL" electron-builder.yml
+          fi
+          pnpm dist:linux "${args[@]}"
+        shell: bash
+        working-directory: desktop
+        env:
+          BUILD_VERSION: ${{ inputs.version }}
+          BUILD_UPDATE_URL: ${{ inputs.update_url }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sensei-top-linux
+          path: |
+            desktop/release/*.AppImage
+            desktop/release/latest-linux.yml
+          retention-days: 7
+          if-no-files-found: error
+
+  # The release is created with every asset in one command: a draft is invisible to
+  # electron-updater, but a published release with no latest.yml is a release the
+  # updater logs an error on. `gh release create` uploads the files before it
+  # publishes. The Store package (.appx) is not attached: its identity is a
+  # placeholder until Partner Center gives the real one.
+  release:
+    # A push, not just a tag ref: a `workflow_dispatch` run on a tag could carry the
+    # update-test inputs (a feed URL baked into the build), and must never publish.
+    if: github.event_name == 'push' && github.repository == 'sensei-top/sensei-top'
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      # Secrets cannot be read in a step's `if`, so the question is asked here.
+      HAS_VIRUSTOTAL_KEY: ${{ secrets.VIRUSTOTAL_API_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.12.3"
+          python-version: "3.12.13"
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: sensei-top-*
+          merge-multiple: true
+          path: assets
+      - name: Release notes from CHANGELOG.md
+        env:
+          TAG: ${{ github.ref_name }}
+        run: uv run --no-project python scripts/release_notes.py --version "${TAG#v}" > notes.md
+      - name: Check the updater's files are all here
+        run: |
+          shopt -s nullglob
+          for name in latest.yml latest-linux.yml; do
+            if [ ! -f "assets/$name" ]; then
+              echo "no $name in the build artifacts" >&2
+              exit 1
+            fi
+          done
+          for pattern in "Sensei-Top-Setup-*.exe" "Sensei-Top-*.AppImage"; do
+            files=(assets/$pattern)
+            if [ ${#files[@]} -eq 0 ]; then
+              echo "no $pattern in the build artifacts" >&2
+              exit 1
+            fi
+          done
+      # Fail-soft: a scan that cannot run never blocks a release. A free key allows four
+      # requests a minute, and each file takes two (an upload address, then the upload),
+      # so the loop waits between them. The page for a file exists once its analysis ends.
+      - name: Upload to VirusTotal
+        if: env.HAS_VIRUSTOTAL_KEY == 'true'
+        continue-on-error: true
+        env:
+          VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+        run: |
+          shopt -s nullglob
+          : > virustotal-links.md
+          for file in assets/Sensei-Top-Setup-*.exe assets/Sensei-Top-*.AppImage; do
+            url=$(curl -fsS --header "x-apikey: $VIRUSTOTAL_API_KEY" https://www.virustotal.com/api/v3/files/upload_url | jq -r .data) || { echo "no upload address for $file" >&2; continue; }
+            sleep 20
+            curl -fsS --header "x-apikey: $VIRUSTOTAL_API_KEY" --form "file=@$file" "$url" > /dev/null || { echo "upload of $file failed" >&2; continue; }
+            sha256=$(sha256sum "$file" | cut -d' ' -f1)
+            echo "- [$(basename "$file")](https://www.virustotal.com/gui/file/$sha256)" >> virustotal-links.md
+            sleep 20
+          done
+          # The heading goes in only when at least one scan was uploaded.
+          if [ -s virustotal-links.md ]; then
+            {
+              echo
+              echo "### VirusTotal"
+              echo
+              echo "The installer and the AppImage are not code-signed yet, and unsigned Electron apps are flagged by some engines. The scans (they may still be running):"
+              echo
+              cat virustotal-links.md
+            } >> notes.md
+          fi
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          shopt -s nullglob
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "$TAG" \
+            --notes-file notes.md \
+            assets/Sensei-Top-Setup-*.exe \
+            assets/Sensei-Top-Setup-*.exe.blockmap \
+            assets/latest.yml \
+            assets/Sensei-Top-*.AppImage \
+            assets/latest-linux.yml
