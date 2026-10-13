@@ -69,8 +69,8 @@ a nonzero game count to behave correctly.
 ⚠️ One consequence, accepted rather than special-cased: a ``.dat`` abandoned
 while still tiny (a client crash between the opening die roll and the first
 ``joined the game`` line, so ``parsed.handles`` never resolves against the
-configured handle) will re-emit the same "handle does not resolve to exactly
-one opponent" warning on **every** rebuild, forever — the file never changes
+configured handle) will re-emit the same "configured MTGO handle is not among
+the players" warning on **every** rebuild, forever — the file never changes
 again, so nothing about the input ever satisfies the check. This is
 acceptable: it is real information (a match genuinely never got past that
 point) and the file itself does not grow to invalidate it, so it does not
@@ -340,8 +340,8 @@ def _write_match(
             else:
                 seat = None
                 warner.warn(
-                    f"card event handle {event.handle!r} matches neither "
-                    f"configured player in match {parsed.match_id}"
+                    f"a card event's player is neither of the match's two in "
+                    f"match {parsed.match_id}, game {game.game_number}"
                 )
             grp_id = _resolve_grp_id(conn, grp_id_cache, event.name, warner)
             # The transcript's name only where no card stands for it: what
@@ -442,12 +442,19 @@ def project_mtgo(conn: sqlite3.Connection, handle: str | None) -> dict[str, int]
             warner.warn(f"{source_file}: no match GUID found in decoded strings")
             continue
 
+        # Counts, never the handles: this line reaches the log, and the log
+        # the diagnostics zip a public bug report attaches.
         others = parsed.handles - {handle}
-        if handle not in parsed.handles or len(others) != 1:
+        if handle not in parsed.handles:
             warner.warn(
-                f"{source_file}: configured handle {handle!r} does not "
-                f"resolve to exactly one opponent among {sorted(parsed.handles)!r} "
-                f"for match {parsed.match_id}"
+                f"{source_file}: the configured MTGO handle is not among the "
+                f"{len(parsed.handles)} player(s) of match {parsed.match_id}"
+            )
+            continue
+        if len(others) != 1:
+            warner.warn(
+                f"{source_file}: the configured MTGO handle has {len(others)} "
+                f"opponents rather than one in match {parsed.match_id}"
             )
             continue
         opponent_handle = next(iter(others))

@@ -12,7 +12,9 @@ What goes in, and what never does:
 - ``row_counts.json``: one row count per table of the database, read through
   a ``?mode=ro`` connection. The database itself never goes in.
 - ``logs/``: the app's own log files beside the database, and the desktop
-  shell's with ``--shell-log``.
+  shell's with ``--shell-log``, as written except for the player names the
+  MTGO warnings of 0.7.0 and earlier carried, which are masked
+  (``_LEGACY_MTGO``). A log keeps those lines until it rotates them away.
 - ``Player.log``: only with ``--with-player-log``. It names the user's
   opponents and decks, so the shell's dialog asks first.
 
@@ -37,6 +39,34 @@ from sensei_top.llm.config import config_path
 
 SECRET_KEY = "api_key"
 
+MASK = "<masked>"
+
+# The MTGO warnings 0.7.0 and earlier wrote with a player's handle in them, or
+# a transcript line that names one. They are written without since
+# (projector/mtgo/parse.py, ParsedMatch.warnings), and none of these shapes
+# matches a line written since. `[^\r\n]` rather than `.`: a log written on
+# Windows ends its lines with `\r\n`.
+_LEGACY_MTGO: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"(card event handle ).*?( matches neither )"), rf"\g<1>{MASK}\g<2>"),
+    (
+        re.compile(
+            r"(configured handle ).*?( does not resolve to exactly one opponent among )"
+            r"[^\r\n]*?( for match )"
+        ),
+        rf"\g<1>{MASK}\g<2>{MASK}\g<3>",
+    ),
+    (re.compile(r"(unrecognised (?:mulligan count|hand size) in )[^\r\n]*"), rf"\g<1>{MASK}"),
+    (
+        re.compile(
+            r"(mulligan count mismatch for ).*?"
+            r"(: 'mulligans to' implied \d+, 'begins the game' implied \d+ )[^\r\n]*"
+        ),
+        rf"\g<1>{MASK}\g<2>({MASK})",
+    ),
+    (re.compile(r"(no preceding start block )\(['\"][^\r\n]*"), rf"\g<1>({MASK})"),
+    (re.compile(r"(card event before any game started: )['\"][^\r\n]*"), rf"\g<1>{MASK}"),
+)
+
 
 @dataclass(frozen=True)
 class Entry:
@@ -56,6 +86,28 @@ def _bytes(name: str, data: bytes) -> Entry:
 def _file(name: str, path: Path) -> Entry | None:
     try:
         return Entry(name, path.stat().st_size, path=path)
+    except OSError:
+        return None
+
+
+def mask_legacy_mtgo(data: bytes) -> bytes:
+    """``data``, a log file's bytes, with the player names ``_LEGACY_MTGO``
+    finds masked. Every other byte comes back as it was, undecodable ones
+    included."""
+    if b"[mtgo]" not in data:
+        return data
+    lines = data.decode("utf-8", "surrogateescape").splitlines(keepends=True)
+    for i, line in enumerate(lines):
+        if "[mtgo]" in line:
+            for pattern, replacement in _LEGACY_MTGO:
+                line = pattern.sub(replacement, line)
+            lines[i] = line
+    return "".join(lines).encode("utf-8", "surrogateescape")
+
+
+def _log(name: str, path: Path) -> Entry | None:
+    try:
+        return _bytes(name, mask_legacy_mtgo(path.read_bytes()))
     except OSError:
         return None
 
@@ -164,12 +216,12 @@ def entries(
     log_file = logs.log_path(db_path.resolve())
     if log_file.parent.is_dir():
         found += [
-            _file(f"logs/{p.name}", p)
+            _log(f"logs/{p.name}", p)
             for p in sorted(log_file.parent.glob(f"{logs.LOG_NAME}*"))
             if p.is_file()
         ]
     if shell_log is not None:
-        found.append(_file("logs/shell.log", shell_log))
+        found.append(_log("logs/shell.log", shell_log))
     if with_player_log:
         player, _source = resolve_log()
         if player is not None:

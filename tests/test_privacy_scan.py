@@ -346,6 +346,36 @@ def test_explicit_db_yields_arena_name_arena_id_and_opponent_hits(tmp_path):
         assert value not in result.stderr
 
 
+def test_handles_in_an_mtgo_game_log_are_terms_without_a_match_row(tmp_path):
+    """The MTGO fixture's two players (Player1 and Player2000, from
+    `scripts/mtgo_probe.py tests/fixtures/mtgo_match_session.log`) become
+    `mtgo-player` terms from the raw event alone: no `matches` row names
+    them, as for a game log the projector skipped."""
+    import base64
+
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    _write(repo, "docs/notes.md", "Lost to Player2000 in game 2.\n")
+    _commit_all(repo)
+
+    db_path = tmp_path / "scratch.db"
+    _make_db(db_path)
+    payload = (REPO_ROOT / "tests" / "fixtures" / "mtgo_match_session.log").read_bytes()
+    conn = sqlite3.connect(db_path)
+    conn.execute("ALTER TABLE raw_events ADD COLUMN source TEXT")
+    conn.execute(
+        "INSERT INTO raw_events (label, payload, source) VALUES ('MtgoGameLog', ?, 'mtgo')",
+        (base64.b64encode(payload).decode("ascii"),),
+    )
+    conn.commit()
+    conn.close()
+
+    result = _run_scan(repo, "--db", str(db_path))
+    assert result.returncode == 1
+    assert result.stdout.strip().splitlines() == ["mtgo-player\tdocs/notes.md\t1"]
+    assert "Player2000" not in result.stdout + result.stderr
+
+
 def test_screen_name_without_hash_suffix_is_a_word_term(tmp_path):
     """A screenName with no '#'-suffix (the split in amendment 2 only
     applies when one is present) is still a real identifier -- it must be
@@ -1263,3 +1293,54 @@ def test_declared_identity_in_a_tracked_file_is_a_finding(tmp_path):
     assert "git-first-name\tAUTHORS.md\t1" in lines
     assert not [line for line in lines if "history:log" in line]
     _assert_no_identity_echoed(result)
+
+
+def test_declared_name_in_root_authors_is_not_a_finding(tmp_path):
+    """The public clone's declared name is the handle, and AUTHORS is where
+    the handle lives: a git-name / git-first-name hit there that equals the
+    declared name is set aside, in the tree and in the history blob."""
+    repo, env = _declared_repo(tmp_path)
+    _write(repo, "AUTHORS", f"Maintainer\n----------\n\n{_DECLARED_NAME}\n")
+    _commit_as_declared(repo, env, "docs: authors")
+
+    result = _scan_with_identity(repo, env, "--history")
+    assert result.returncode == 0
+    assert result.stdout == ""
+    _assert_no_identity_echoed(result)
+
+
+def test_declared_name_pass_is_authors_only_and_declared_only(tmp_path):
+    """Only AUTHORS, only the declared value: the same name in another file
+    is still a finding, and the global, personal name in AUTHORS is too."""
+    repo, env = _declared_repo(tmp_path)
+    _write(repo, "AUTHORS", f"{_DECLARED_NAME}\nThanks to {_GLOBAL_NAME}.\n")
+    _write(repo, "README.md", f"By {_DECLARED_NAME}.\n")
+    _commit_as_declared(repo, env, "docs: authors")
+
+    result = _scan_with_identity(repo, env)
+    assert result.returncode == 1
+    assert sorted(result.stdout.splitlines()) == [
+        "git-first-name\tAUTHORS\t1",
+        "git-first-name\tREADME.md\t1",
+        "git-name\tAUTHORS\t1",
+        "git-name\tREADME.md\t1",
+    ]
+    _assert_no_identity_echoed(result)
+
+
+def test_declared_first_name_in_root_authors_is_not_a_finding(tmp_path):
+    """A two-word declared name makes its first word a git-first-name term;
+    that word alone in AUTHORS is set aside like the whole name."""
+    repo, env = _declared_repo(tmp_path)
+    subprocess.run(
+        ["git", "-C", str(repo), "config", "--local", "user.name", "Qzxdeclfirst Qzxdeclsecond"],
+        check=True, capture_output=True, env=env,
+    )
+    _write(repo, "AUTHORS", "Qzxdeclfirst\n")
+    _write(repo, "README.md", "By Qzxdeclfirst.\n")
+    _commit_as_declared(repo, env, "docs: authors")
+
+    result = _scan_with_identity(repo, env)
+    assert result.returncode == 1
+    assert result.stdout.splitlines() == ["git-first-name\tREADME.md\t1"]
+    assert "Qzxdecl" not in result.stdout

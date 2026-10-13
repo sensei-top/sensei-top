@@ -2236,14 +2236,18 @@ would hide the three that matter.
 `site/` is the public landing page and privacy page at `senseitop.com`, in
 English and Brazilian Portuguese: four hand-written HTML files (`index.html`,
 `privacy/index.html` and the same two under `pt-br/`), a fifth, `404.html`,
-in both languages on one page (without it Cloudflare Pages answers an unknown
-path with `/`), one `site.css`, no build step and no JavaScript of ours. It is not part of `web/` and shares
+in both languages on one page (served for any unknown path, because
+`wrangler.json` sets `not_found_handling` to `404-page`), one `site.css`, no build step and no JavaScript of ours. It is not part of `web/` and shares
 nothing with it at build time: the palette, the two fonts and the mark are
 copied by hand (the hexes in `site.css` follow "Palette" in
 [design-system.md](design-system.md); `fonts/` holds the latin and latin-ext
 subsets of the two `@fontsource-variable` files with their OFL texts,
-`img/` the two screenshots from `docs/images/` and the mark from
-`web/public/favicon.svg`). A change to the dashboard's colours is not a
+`img/` the two screenshots from `docs/images/`, the mark from
+`web/public/favicon.svg` and the language switcher's globe, drawn for the
+site with `--muted`'s hex baked in, since an image in CSS cannot take the
+text colour). The switcher sits in the header beside the page links, not
+among them: the globe, the current language's code and a link to the
+other's, with the group labelled "Language" or "Idioma". A change to the dashboard's colours is not a
 change to the site until someone makes it there.
 
 The one script on a page is Cloudflare Web Analytics' beacon, carrying the
@@ -2256,9 +2260,47 @@ the `WIZARDS_NOTICE` in `tests/test_attribution.py`, on the Portuguese pages
 too. The Microsoft Store line is an HTML comment in each home page, with
 `STORE_URL` for an address, until the listing exists.
 
-Cloudflare Pages serves the directory as it is (production branch `main`,
-no build command, output directory `site`), with `www` redirecting to
-`senseitop.com`. Paths in the pages are absolute from the site's root, so
+A Cloudflare Worker serves the directory as static assets: Workers Builds,
+connected to the public repository, deploys `main` with `npx wrangler deploy`
+and no build command. `wrangler.json` at the repository root names the
+Worker, points it at `site/` and turns off preview URLs and Workers Logs;
+without the file, Workers Builds writes its own on every deploy, which
+answers an unknown path with an empty 404. Workers static assets read
+`_headers` and `_redirects` the way Pages does, and never serve either file.
+
+Two things are not plain files. The Download buttons, `/download/windows`
+and `/download/linux`, run the Worker's script (`worker/index.mjs`, its
+logic in `worker/download.mjs`); so do `/` and `/privacy/`, for the language
+below. `run_worker_first` in `wrangler.json` keeps it to those paths. It fetches
+the newest release's `latest.yml` or `latest-linux.yml` from GitHub — the
+feed an installed copy's updater reads — and redirects to the file it names
+in that release, so the buttons follow each release with no step of their
+own. GitHub's `releases/latest/download/<name>` cannot do it directly,
+because the installers' names carry the version (`electron-builder.yml`).
+The release job publishes every asset in one command, so the feed never
+names a file that is not there yet. A feed it cannot fetch or does not
+recognise sends the visitor to the releases page. The runtime takes every
+export of `index.mjs` for an entry point, so it exports only the handler;
+`worker/download.test.mjs` runs under `node --test`, from
+`tests/test_site.py`. Try it with `wrangler dev`: the dry run of a deploy
+does not start the runtime, and missed exactly that mistake.
+
+The same script picks the language (`worker/language.mjs`, for `/` and
+`/privacy/` only): a visitor whose `request.cf.country` is `BR` gets a
+redirect to the Portuguese page, unless the request's Referer is a page of
+the site itself, which is what keeps the English link on a Portuguese page
+from bouncing straight back. Without a cookie (the privacy pages promise
+none), that Referer is the only memory of the choice, and it is why
+`_headers` sends `Referrer-Policy: same-origin` rather than `no-referrer`:
+the site sees its own pages as the Referer, and every other site still sees
+none. A Brazilian who types the address afresh lands on Portuguese each
+time, and a Portuguese page is never redirected to English. `wrangler dev`
+fills `request.cf` from the machine's own connection, so it shows only the
+local country's side; the other side is the unit test.
+The Worker answers on `senseitop.com`, with `www` redirecting there, and on
+the account's `workers.dev` address. It was meant to be a Pages project
+(plan 9, D2); the dashboard's git flow now creates a Worker, and a static
+site loses nothing by it. Paths in the pages are absolute from the site's root, so
 open them through a static server (`python3 -m http.server --directory
 site`), not from `file://`.
 

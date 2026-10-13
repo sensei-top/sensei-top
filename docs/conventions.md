@@ -53,6 +53,10 @@ produces a warning and a `NULL`, never an exception that stops ingestion.
 - A failing live poll is recorded; the loop continues.
 - Warnings are counted (`projector.warnings`) and surfaced in CLI output, so
   "0 warnings" is a meaningful signal rather than silence.
+- A log line never names a player, the user included: no handle, screen
+  name or user id, and no raw log line, which carries them. Say which game,
+  which card, what count. The log goes into the diagnostics zip, and the
+  issue templates ask for that zip on a public issue.
 
 **Never invent a value to fill a gap.** If self seat is unresolved, `turns`
 rows are omitted entirely rather than written with meaningless self/opponent

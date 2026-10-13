@@ -299,7 +299,12 @@ describe('the main window', () => {
 
   it('isolates the page from Node', () => {
     const { fake } = makeWindow('linux');
-    expect(fake.options.webPreferences).toEqual({ nodeIntegration: false, contextIsolation: true, sandbox: true });
+    expect(fake.options.webPreferences).toEqual({
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      spellcheck: false,
+    });
     expect(fake.options.show).toBe(false);
   });
 

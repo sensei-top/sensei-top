@@ -132,9 +132,40 @@ code {
   text-decoration: none;
 }
 .brand img { width: 28px; height: 28px; border-radius: 7px; }
+.brand { margin-right: auto; }
 .site-header nav { display: flex; flex-wrap: wrap; gap: 4px 20px; font-size: 14px; }
 .site-header nav a { color: var(--muted); text-decoration: none; }
 .site-header nav a:hover { color: var(--ink); }
+
+/* The language switcher: a globe and two codes, apart from the page links. */
+.lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+.lang::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  margin: 0 4px 0 7px;
+  background: url(img/globe.svg) center / contain no-repeat;
+}
+.lang a, .lang span { padding: 6px 9px; border-radius: 999px; }
+.lang span { background: var(--surface-3); color: var(--ink); }
+.lang a { color: var(--muted); text-decoration: none; }
+.lang a:hover { color: var(--ink); background: var(--surface-1); }
+/* On a phone the brand and the switcher share the first row, the links the second. */
+@media (max-width: 640px) {
+  .lang { order: 1; }
+  .site-header nav { order: 2; width: 100%; }
+}
 
 .lead { font-size: 18px; color: var(--ink-2); }
 

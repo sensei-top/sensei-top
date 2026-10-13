@@ -140,7 +140,12 @@ branch stops.
    `.github/workflows/desktop.yml`) on the public repository, and only
    there. Watch it finish, then check that the release holds `latest.yml`
    and `latest-linux.yml`: they are what an installed copy's updater reads,
-   and a release without them reaches nobody.
+   and a release without them reaches nobody. The very first snapshot is
+   the exception: GitHub does not evaluate a workflow for the push that
+   introduces its file, and that push carries `desktop.yml` and the tag
+   together, so no run starts (0.7.0, 2026-10-13). Delete the tag on the
+   public repository and push it again at the same commit; the second
+   push is an ordinary tag push and starts the job.
 
 ## A hotfix
 

@@ -35,3 +35,6 @@ desktop/node_modules/
 # Personal deck prep (guides, sideboard plans, one-off scripts), kept on disk
 # but out of the repo; the Deck guide tab is the product's version of it.
 guides/
+
+# wrangler dev's local state (docs/frontend.md, "The site")
+.wrangler/

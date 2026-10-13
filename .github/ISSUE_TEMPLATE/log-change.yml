@@ -49,4 +49,4 @@ body:
     attributes:
       label: Diagnostics
       options:
-        - label: "I attached the diagnostics export from Settings (a zip of the app's logs and a secret-free report)."
+        - label: "I attached the diagnostics export from Settings, with \"Include Player.log\" left unticked (a zip of the app's logs and a secret-free report)."

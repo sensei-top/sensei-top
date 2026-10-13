@@ -9,6 +9,8 @@ it shows in a browser until a visitor meets it.
 
 import json
 import re
+import shutil
+import subprocess
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -19,6 +21,8 @@ SITE = Path(__file__).resolve().parents[1] / "site"
 ORIGIN = "https://senseitop.com"
 PROJECT = "https://github.com/sensei-top/sensei-top"
 BEACON_SRC = "https://static.cloudflareinsights.com/beacon.min.js"
+# Answered by the Worker script in `worker/`, not by a file under `site/`.
+DOWNLOADS = ("/download/windows", "/download/linux")
 
 # url path -> (file, html lang, the path of the same page in the other language)
 PAGES = {
@@ -146,6 +150,25 @@ def test_language_link_goes_to_the_same_page_in_the_other_language(url_path):
 
 
 @pytest.mark.parametrize("url_path", SHELL_PAGES)
+def test_the_language_switcher_sits_outside_the_page_links(url_path):
+    """A globe with EN and PT in the header, not a link among the page's sections."""
+    raw, page = load(url_path)
+    english = url_path == NOT_FOUND or PAGES[url_path][1] == "en"
+    assert "hreflang" not in re.search(r"<nav>(.*?)</nav>", raw, re.S).group(1)
+    groups = [a for a in page.find("div") if a.get("class") == "lang"]
+    assert len(groups) == 1
+    assert groups[0]["role"] == "group"
+    assert groups[0]["aria-label"] == ("Language" if english else "Idioma")
+    switcher = Page()
+    switcher.feed(re.search(r'<div class="lang"[^>]*>(.*?)</div>', raw, re.S).group(1))
+    assert [a.get("aria-current") for a in switcher.find("span")] == ["page"]
+    assert switcher.visible_text == "ENPT"
+    assert [text for _, text in switcher.links] == (["PT"] if english else ["EN"])
+    assert "url(img/globe.svg)" in (SITE / "site.css").read_text(encoding="utf-8")
+    assert (SITE / "img" / "globe.svg").is_file()
+
+
+@pytest.mark.parametrize("url_path", SHELL_PAGES)
 def test_the_fan_content_notice_is_the_policy_wording(url_path):
     _, page = load(url_path)
     assert WIZARDS_NOTICE in page.paragraphs
@@ -223,7 +246,7 @@ def test_images_carry_alt_text_and_the_mark_is_decorative(url_path):
 @pytest.mark.parametrize("url_path", SHELL_PAGES)
 def test_local_references_resolve(url_path):
     _, page = load(url_path)
-    references = [h for h in hrefs(page) if h.startswith("/")]
+    references = [h for h in hrefs(page) if h.startswith("/") and h not in DOWNLOADS]
     references += [a["src"] for a in page.find("img")]
     references += [a["href"] for a in page.find("link") if a["href"].startswith("/")]
     assert references
@@ -256,7 +279,7 @@ def test_the_privacy_pages_carry_the_date_they_changed():
     phrases = {"/privacy/": "Last changed", "/pt-br/privacy/": "Última alteração:"}
     for url_path, phrase in phrases.items():
         _, page = load(url_path)
-        assert f"{phrase} 2026-10-12" in page.paragraphs
+        assert f"{phrase} 2026-10-13" in page.paragraphs
 
 
 def test_the_privacy_pages_name_every_request_the_app_makes():
@@ -278,7 +301,8 @@ def test_the_privacy_pages_name_every_request_the_app_makes():
 def test_the_headers_allow_only_self_and_the_beacon():
     headers = (SITE / "_headers").read_text(encoding="utf-8")
     assert "X-Content-Type-Options: nosniff" in headers
-    assert "Referrer-Policy: no-referrer" in headers
+    # The site's own pages as the Referer (`worker/language.mjs`), no other site's.
+    assert "Referrer-Policy: same-origin" in headers
     csp = next(
         line.split(":", 1)[1].strip()
         for line in headers.splitlines()
@@ -335,3 +359,63 @@ def test_the_404_page_is_english_with_a_portuguese_paragraph_and_no_counterpart(
     portuguese = [t for t, a in page.tags if a.get("lang") == "pt-BR" and t == "p"]
     assert len(portuguese) == 2
     assert not [a for a in page.find("link") if a.get("rel") in ("canonical", "alternate")]
+
+
+def test_the_worker_serves_site_with_its_404_page():
+    """The site is a Cloudflare Worker's static assets, configured by `wrangler.json`.
+
+    Without the file, Workers Builds generates one on every deploy, and the
+    generated one answers an unknown path with an empty 404 rather than
+    `404.html`.
+    """
+    config = json.loads((SITE.parent / "wrangler.json").read_text(encoding="utf-8"))
+    assets = config["assets"]
+    assert (SITE.parent / assets["directory"]).resolve() == SITE
+    assert assets["not_found_handling"] == "404-page"
+    assert (SITE / "404.html").is_file()
+
+
+def test_the_download_buttons_go_to_the_worker_and_it_runs_only_for_them():
+    """`/download/<platform>` redirects to the newest release's file (`worker/download.mjs`).
+
+    The script runs for `/download/*` and the two English pages a visitor in
+    Brazil is sent from (`worker/language.mjs`); every other path is a static
+    asset that never reaches it.
+    """
+    config = json.loads((SITE.parent / "wrangler.json").read_text(encoding="utf-8"))
+    assert (SITE.parent / config["main"]).is_file()
+    assert config["assets"]["run_worker_first"] == ["/download/*", "/", "/privacy/"]
+    assert config["assets"]["binding"] == "ASSETS"
+    assert config["observability"] == {"enabled": False}
+    for url_path in ("/", "/pt-br/"):
+        _, page = load(url_path)
+        buttons = [a["href"] for a in page.find("a") if "button" in (a.get("class") or "").split()]
+        assert buttons == list(DOWNLOADS), url_path
+        assert not [h for h in hrefs(page) if "/releases" in h], url_path
+
+
+def test_a_visitor_in_brazil_is_sent_only_to_the_same_page_in_portuguese():
+    """Each English page the language redirect leaves names its Portuguese pair."""
+    mapping = dict(
+        re.findall(
+            r"'(/[^']*)': '(/pt-br/[^']*)'",
+            (SITE.parent / "worker" / "language.mjs").read_text(encoding="utf-8"),
+        )
+    )
+    assert mapping == {"/": "/pt-br/", "/privacy/": "/pt-br/privacy/"}
+    for english, portuguese in mapping.items():
+        assert PAGES[english][2] == portuguese
+
+
+def test_the_worker_script_passes_its_own_tests():
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed")
+    result = subprocess.run(
+        [node, "--test", "worker/*.test.mjs"],
+        cwd=SITE.parent,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr

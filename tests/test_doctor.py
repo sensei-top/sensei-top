@@ -303,6 +303,56 @@ def test_a_symlinked_db_still_gets_its_log_in_the_zip(tmp_path):
     assert "logs/sensei-top.log" in _members(out)
 
 
+def test_mtgo_warnings_from_0_7_0_reach_the_zip_without_player_names(tmp_path):
+    """Each MTGO warning 0.7.0 wrote with a handle in it, spelled as its
+    f-string in projector/mtgo/ formatted it then, with "Hero" as the user
+    and "Villain" as the opponent. The last two lines name a card and come
+    from no player, so they pass through as written; one line ends the way
+    a log written on Windows does."""
+    prefix = "2026-10-01T10:00:00.000Z 0a1b2c3d WARNING sensei_top.projector.mtgo.project: [mtgo] "
+    source = "Match_GameLog_x.dat"
+    legacy = [
+        "card event handle 'Villain' matches neither configured player in match m1",
+        f"{source}: configured handle 'Hero' does not resolve to exactly one "
+        "opponent among ['Hero', 'Villain', 'Villain-'] for match m1",
+        f"{source}: unrecognised mulligan count in 'Villain mulligans to umpteen cards.'",
+        f"{source}: unrecognised hand size in "
+        "'Villain begins the game with umpteen cards in hand.'",
+        f"{source}: mulligan count mismatch for Villain: 'mulligans to' implied 1, "
+        "'begins the game' implied 2 ('Villain begins the game with five cards in hand.')",
+        f"{source}: game boundary inferred from 'Turn 1' with no preceding start "
+        "block ('Turn 1: Villain')",
+        f"{source}: card event before any game started: "
+        "\"Villain casts @[Urza's Saga@:1,2:@].\"",
+    ]
+    kept = [
+        "MTGO card name 'Urza's Saga' not found in cards.name",
+        f"{source}: card event before any game started: CastSpell 'Opt'",
+    ]
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    text = "".join(prefix + line + "\n" for line in legacy[:-1])
+    text += prefix + legacy[-1] + "\r\n"
+    text += "".join(prefix + line + "\n" for line in kept)
+    (log_dir / "sensei-top.log").write_text(text, newline="")
+    out = tmp_path / "d.zip"
+    _diagnostics(tmp_path, "--out", str(out))
+    zipped = _members(out)["logs/sensei-top.log"].decode()
+    assert "Hero" not in zipped
+    assert "Villain" not in zipped
+    lines = zipped.splitlines(keepends=True)
+    assert lines[1].endswith(
+        "configured handle <masked> does not resolve to exactly one opponent "
+        "among <masked> for match m1\n"
+    )
+    assert lines[4].endswith(
+        "mismatch for <masked>: 'mulligans to' implied 1, 'begins the game' implied 2 (<masked>)\n"
+    )
+    assert lines[6].endswith("started: <masked>\r\n")
+    # The command's own header line follows them.
+    assert lines[7:9] == [prefix + line + "\n" for line in kept]
+
+
 def test_a_relative_mtga_log_is_reported_absolute(tmp_path, capsys, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "rel.log").write_text("x\n")

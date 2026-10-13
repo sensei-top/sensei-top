@@ -265,6 +265,8 @@ class ParsedMatch:
     games: list[GameRecord]
     winner_handle: str | None   # from the final "wins the match" line
     score_line: tuple[str, int, int] | None   # self-check only; see docstring
+    # Never a handle or a raw line, which names one: project.py logs these,
+    # and the log goes into the diagnostics zip a bug report attaches.
     warnings: list[str]
 
 
@@ -335,7 +337,7 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
             handles.add(handle)
             kept = _parse_number(m.group("n"))
             if kept is None:
-                warnings.append(f"unrecognised mulligan count in {s!r}")
+                warnings.append(f"unrecognised mulligan count {m.group('n')!r}")
             else:
                 ensure_fresh_game()
                 current.mulligans_by_handle[handle] = 7 - kept
@@ -347,16 +349,16 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
             handles.add(handle)
             kept = _parse_number(m.group("n"))
             if kept is None:
-                warnings.append(f"unrecognised hand size in {s!r}")
+                warnings.append(f"unrecognised hand size {m.group('n')!r}")
             else:
                 ensure_fresh_game()
                 authoritative = 7 - kept
                 existing = current.mulligans_by_handle.get(handle)
                 if existing is not None and existing != authoritative:
                     warnings.append(
-                        f"mulligan count mismatch for {handle}: "
+                        f"mulligan count mismatch in game {current.game_number}: "
                         f"'mulligans to' implied {existing}, "
-                        f"'begins the game' implied {authoritative} ({s!r})"
+                        f"'begins the game' implied {authoritative}"
                     )
                 current.mulligans_by_handle[handle] = authoritative
             continue
@@ -377,7 +379,7 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
                 # it rather than let a second silent double-count happen.
                 warnings.append(
                     f"game boundary inferred from 'Turn 1' with no preceding "
-                    f"start block ({s!r})"
+                    f"start block (game {len(games) + 1})"
                 )
                 current = _start_new_game(games)
             if current is not None:
@@ -398,7 +400,10 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
             handle = m.group("handle")
             handles.add(handle)
             if current is None:
-                warnings.append(f"card event before any game started: {s!r}")
+                warnings.append(
+                    f"card event before any game started: {category} "
+                    f"{m.group('name')!r}"
+                )
             else:
                 current.card_events.append(
                     CardEvent(

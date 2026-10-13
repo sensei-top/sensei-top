@@ -357,6 +357,37 @@ def test_bare_turn_one_with_no_start_block_starts_a_new_game_and_warns():
     assert "Turn 1" in parsed.warnings[0]
 
 
+def test_no_parser_warning_names_a_player():
+    """Every warning the parser can raise, from one synthetic list, and none
+    of them carries a handle: project.py logs them, and the log goes into
+    the diagnostics zip a public bug report attaches. The line shapes are
+    parse.py's own regexes; "umpteen" is a count word it cannot read. The
+    trailing "targeting" clause is real MTGO text an ability line may carry,
+    and is where a second player would be named."""
+    strings = [
+        GUID,
+        "Player2000 activates an ability of @[Test Card@:1,2:@] targeting Player1",
+        "Player1 joined the game.",
+        "Player2000 joined the game.",
+        "Player1 mulligans to umpteen cards.",
+        "Player1 begins the game with umpteen cards in hand.",
+        "Player2000 mulligans to six cards.",
+        "Player2000 begins the game with five cards in hand.",
+        "Turn 1: Player1",
+        "Turn 1: Player2000",
+        "Turn 2: Player1",
+        "Turn 1: Player1",
+    ]
+    parsed = parse_strings(strings)
+    assert len(parsed.warnings) == 5
+    for warning in parsed.warnings:
+        assert "Player1" not in warning
+        assert "Player2000" not in warning
+    assert "Test Card" in parsed.warnings[0]
+    assert "umpteen" in parsed.warnings[1]
+    assert "game 1" in parsed.warnings[3]
+
+
 # --- last_game_decided ---------------------------------------------------
 #
 # Cut points are found in the fixture's raw bytes, never by running the
@@ -774,6 +805,20 @@ def test_prefix_cut_mid_mulligan_is_incomplete_with_no_ended_at(conn):
     assert game["on_play"] is None
     assert game["turn_count"] is None
     assert game["self_mulligans"] is None
+
+
+def test_a_handle_not_in_the_match_warns_without_naming_anyone(conn, caplog):
+    """The fixture's players are Player1 and Player2000; a configured handle
+    that is neither skips the match with one warning that names no one, the
+    configured handle included — it is the user's own MTGO name."""
+    _insert_mtgo_row(conn, data=FIXTURE_BYTES, logged_at="2026-09-14T12:42:37")
+    with caplog.at_level(logging.WARNING):
+        result = project_mtgo(conn, "Player3")
+    assert result["matches"] == 0
+    [message] = [m for m in caplog.messages if "configured MTGO handle" in m]
+    assert "2 player(s)" in message
+    for handle in (*HANDLES, "Player3"):
+        assert handle not in message
 
 
 def test_no_handle_configured_projects_nothing_but_warns_once(conn):

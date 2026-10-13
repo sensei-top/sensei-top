@@ -2,7 +2,8 @@
 this machine's own identifiers, without ever printing one.
 
 Every term this checks for is derived at run time from local sources: an
-Arena database's own auth events and opponent list, this machine's MTGO/
+Arena database's own auth events and opponent list, every handle its MTGO
+game logs name (`mtgo-player`), this machine's MTGO/
 Claude/TopDeck config, git identity and remote, the OS user, the home
 directory, and the Steam library. None of it is hard-coded here, because a
 hard-coded identifier in this file would be exactly the leak the file exists
@@ -62,7 +63,13 @@ One file is exempt for one category: `AUTHORS` at the repo root may carry the
 maintainer's public handle (`git-account`), in the tree and in history blobs
 (where a blob is exempt by the one path `rev-list` names it under, so a
 byte-identical copy elsewhere passes, harmlessly), and every other category
-there, and the handle anywhere else, is still a hit.
+there, and the handle anywhere else, is still a hit. The one addition: when
+the scanned repository declares a local identity (below), its `user.name`
+is a `git-name` term and its first word a `git-first-name` term, and in
+`AUTHORS` a hit of either that *equals* that declared name is set aside
+too -- the public clone's declared name is the handle, and AUTHORS is where
+the handle lives. The global, personal name gets no such pass: only the
+declared value, only in AUTHORS, only those two categories.
 
 The git identity is read twice: the repository's effective `user.name` /
 `user.email` and the global ones (`git config --global`). The public
@@ -85,7 +92,8 @@ The project's own name, `sensei-top`, is a generic word: it is the public
 repository's owner, so a clone of it would otherwise make every mention of
 the project a `git-account` hit.
 
-Opponent names are filtered against the `cards` table's own vocabulary before
+Opponent names (`opponent`, and `mtgo-player`, which also holds the user's
+own MTGO handle) are filtered against the `cards` table's own vocabulary before
 being checked -- an opponent whose handle happens to equal an ordinary word
 that is also a card name would otherwise flood the result with matches no
 text search can tell apart from a real leak. The user's own terms (every
@@ -116,6 +124,10 @@ _MIN_TERM_LENGTH = 4
 _GENERIC_WORDS = frozenset({"mtga", "arena", "tracker", "sensei-top"})
 # The maintainer's public handle lives in AUTHORS and nowhere else (AGENTS.md, "Privacy").
 _PUBLIC_IDENTITY = {"AUTHORS": frozenset({"git-account"})}
+# The two categories the declared local name produces (`_terms_from_git_identity`).
+_DECLARED_NAME_CATEGORIES = frozenset({"git-name", "git-first-name"})
+# Other players' names, checked against card-name words first (module docstring).
+_CARD_WORD_FILTERED = frozenset({"opponent", "mtgo-player"})
 
 
 class MatchKind(StrEnum):
@@ -134,10 +146,44 @@ class Term:
 class DeclaredIdentity:
     """The scanned repository's own local ``user.name`` / ``user.email``,
     either ``None`` when unset. Never a term source: it only sets fields
-    aside in ``history:log``."""
+    aside in ``history:log``, and its name aside in ``AUTHORS``."""
 
     name: str | None
     email: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class Exemption:
+    """What one file may carry: whole categories (``git-account`` in
+    AUTHORS), and the lowercase values a ``git-name`` / ``git-first-name``
+    hit may equal there (the declared name and its first word, in AUTHORS).
+    ``NO_EXEMPTION`` for every other file."""
+
+    categories: frozenset[str] = frozenset()
+    names: frozenset[str] = frozenset()
+
+    def covers(self, candidate: Term, value_lower: str) -> bool:
+        if candidate.category in self.categories:
+            return True
+        return candidate.category in _DECLARED_NAME_CATEGORIES and value_lower in self.names
+
+
+NO_EXEMPTION = Exemption()
+
+
+def _exemption(path: str, declared: DeclaredIdentity) -> Exemption:
+    """``path`` is repo-relative (``AUTHORS``, or ``docs/AUTHORS``, which
+    gets nothing), as both the tree walk and ``rev-list`` label it."""
+    categories = _PUBLIC_IDENTITY.get(path)
+    if categories is None:
+        return NO_EXEMPTION
+    names: set[str] = set()
+    if declared.name:
+        names.add(declared.name.lower())
+        tokens = declared.name.split()
+        if tokens:
+            names.add(tokens[0].lower())
+    return Exemption(categories=categories, names=frozenset(names))
 
 
 class PrivacyScanError(Exception):
@@ -399,7 +445,7 @@ def _terms_from_db(db_path: Path) -> tuple[list[Term], frozenset[str]]:
     # instead of a literal path character (amendment I).
     conn = sqlite3.connect(db_path.resolve().as_uri() + "?mode=ro", uri=True)
     try:
-        terms = _terms_from_auth(conn) + _terms_from_matches(conn)
+        terms = _terms_from_auth(conn) + _terms_from_matches(conn) + _terms_from_mtgo_events(conn)
         card_words = _card_words(conn)
     finally:
         conn.close()
@@ -455,6 +501,35 @@ def _terms_from_matches(conn: sqlite3.Connection) -> list[Term]:
     terms = _terms([("opponent", name, MatchKind.WORD) for (name,) in names])
     terms += _terms([("opponent", uid, MatchKind.SUBSTRING) for (uid,) in ids])
     return terms
+
+
+def _terms_from_mtgo_events(conn: sqlite3.Connection) -> list[Term]:
+    """Every handle an MTGO game log in ``raw_events`` names, the user's own
+    included. ``matches`` holds only the opponents of the matches the
+    projector resolved; a game log it skipped (the configured handle not
+    among its players, a third one) names players no other source here
+    knows. Decoded the projector's way, since the payload is the client's
+    own binary string stream, base64-encoded."""
+    import base64
+    import binascii
+
+    from sensei_top.projector.mtgo.decode import decode_strings
+    from sensei_top.projector.mtgo.parse import parse_strings
+
+    try:
+        rows = conn.execute(
+            "SELECT payload FROM raw_events WHERE source = 'mtgo' AND payload IS NOT NULL"
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    handles: set[str] = set()
+    for (payload,) in rows:
+        try:
+            data = base64.b64decode(payload)
+        except (ValueError, TypeError, binascii.Error):
+            continue
+        handles |= parse_strings(decode_strings(data)).handles
+    return _terms([("mtgo-player", handle, MatchKind.WORD) for handle in sorted(handles)])
 
 
 def _card_words(conn: sqlite3.Connection) -> frozenset[str]:
@@ -526,7 +601,7 @@ def _filter_terms(
             dropped["generic"] += 1
             continue
         if (
-            candidate.category == "opponent"
+            candidate.category in _CARD_WORD_FILTERED
             and candidate.match == MatchKind.WORD
             and candidate.value.lower() in card_words
         ):
@@ -653,7 +728,7 @@ def _accumulate_hits(
     path_label: str,
     data: bytes,
     compiled: list[tuple[Term, str, re.Pattern[str]]],
-    exempt: frozenset[str] = frozenset(),
+    exempt: Exemption = NO_EXEMPTION,
 ) -> None:
     """A cheap lowercase ``in`` pre-check before the compiled regex, per term
     per decoding -- with ~900 terms across a full tree this is the
@@ -668,7 +743,7 @@ def _accumulate_hits(
     for text in _decode_variants(data):
         text_lower = text.lower()
         for candidate, value_lower, pattern in compiled:
-            if candidate.category in exempt or value_lower not in text_lower:
+            if exempt.covers(candidate, value_lower) or value_lower not in text_lower:
                 continue
             count = len(pattern.findall(text))
             if count:
@@ -784,7 +859,10 @@ def _log_all_paths(repo: Path) -> set[str]:
 
 
 def _scan_history_blobs(
-    repo: Path, compiled: list[tuple[Term, str, re.Pattern[str]]], hits: dict[tuple[str, str], int]
+    repo: Path,
+    compiled: list[tuple[Term, str, re.Pattern[str]]],
+    hits: dict[tuple[str, str], int],
+    declared: DeclaredIdentity,
 ) -> int:
     """Every unique blob reachable from any ref, reported as
     ``history:<path>@<blob7>`` -- including a file that was committed and
@@ -838,7 +916,7 @@ def _scan_history_blobs(
             continue
         # rev-list names each blob once, so a byte-identical copy of AUTHORS
         # elsewhere passes too: harmless, it carries only AUTHORS's own text.
-        exempt = _PUBLIC_IDENTITY.get(path, frozenset())
+        exempt = _exemption(path, declared)
         _accumulate_hits(hits, f"history:{path}@{sha[:7]}", data, compiled, exempt)
     return len(contents)
 
@@ -959,6 +1037,7 @@ def _run(args: argparse.Namespace) -> int:
 
     hits: dict[tuple[str, str], int] = {}
     counts = {"missing": 0}
+    declared = _declared_identity(repo)
     tracked = _list_tracked_files(repo)
     prefix = _repo_prefix(repo)
     for rel_path in tracked:
@@ -966,15 +1045,13 @@ def _run(args: argparse.Namespace) -> int:
         _accumulate_path_name_hits(hits, label, "", compiled)
         data = _tracked_file_content(repo / rel_path, label, compiled, counts)
         if data is not None:
-            _accumulate_hits(
-                hits, label, data, compiled, _PUBLIC_IDENTITY.get(prefix + label, frozenset())
-            )
+            _accumulate_hits(hits, label, data, compiled, _exemption(prefix + label, declared))
 
     blobs_scanned = 0
     accepted: list[str] = []
     if args.history:
-        blobs_scanned = _scan_history_blobs(repo, compiled, hits)
-        accepted = _scan_history_log(repo, compiled, hits, _declared_identity(repo))
+        blobs_scanned = _scan_history_blobs(repo, compiled, hits, declared)
+        accepted = _scan_history_log(repo, compiled, hits, declared)
 
     for (category, path), count in sorted(hits.items()):
         print(f"{category}\t{path}\t{count}")

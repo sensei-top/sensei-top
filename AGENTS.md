@@ -64,7 +64,7 @@ One line each; the detail is in the doc named, and
 - `src/sensei_top/db.py` — `open_database()`, the one place migrations are applied.
 - `web/src/` — React dashboard: `routes.tsx` is the table of addresses, `shell/` the layout, `pages/` read an address, `views/` and `components/` draw — `docs/frontend.md`, "The shell". Older docs call a view a tab; it is the same view, at its address.
 - `desktop/` — the Electron shell (TypeScript, its own `pnpm` project): `src/main.ts` is the only file that loads Electron; `server.ts` runs `serve` with its stdin as a lifeline, `window.ts`, `tray.ts`, `log.ts` (the server log's format, in `logs/shell.log`), `store.ts` (`shell.json`); `server/` freezes the server with PyInstaller — `desktop/README.md`.
-- `site/` — the landing and privacy pages, plain HTML and CSS with no build step, served by Cloudflare Pages from the public repository; `tests/test_site.py` pins the promises the copy makes — `docs/frontend.md`, "The site".
+- `site/` — the landing and privacy pages, plain HTML and CSS with no build step, served as a Cloudflare Worker's static assets from the public repository (`wrangler.json`), with one script, `worker/`, that redirects the Download buttons to the newest release's files and a visitor in Brazil to the Portuguese pages; `tests/test_site.py` pins the promises the copy makes — `docs/frontend.md`, "The site".
 - `tests/` — flat `tests/*.py`, all fixture-backed, no mocks of Arena. The dashboard's own tests sit beside what they test, `web/src/**/*.test.ts` and `web/scripts/*.test.ts` — `docs/frontend.md`, "Checks".
 - `src/sensei_top/migrations/NNN_*.sql` — applied only inside `open_database()`, at process startup: a one-shot command's, against the `--db` it is given, or `serve`'s. Everything `serve` opens later uses `connect()`, so a new migration is **pending** until `serve --watch` restarts — `docs/architecture.md`, "Storage". Check `SELECT MAX(version) FROM schema_version` on a read-only connection rather than assuming. The API never migrates.
 - `docs/user/` — the user guide the README links; change it with any user-visible behaviour.
@@ -239,8 +239,10 @@ published). It derives your identifiers locally and prints only categories,
 paths and counts, never an identifier itself. Fixtures are anonymized;
 player names, user IDs and local paths must not appear in tracked files. The
 one public identity is the maintainer's handle, in `AUTHORS` and nowhere else;
-the scan exempts that file for that one category (`git-account`), so the
-handle anywhere else is still a finding.
+the scan exempts that file for that one category (`git-account`), and for a
+git-name hit that equals the scanned clone's own declared `user.name` (the
+public clone commits as the handle), so the handle anywhere else is still a
+finding.
 `data/`, `*.db`, `*.db-wal` and `*.db-shm` stay gitignored — they hold real
 match history. A real Anthropic API key lives outside the repo entirely: in
 the system keyring (service `sensei-top`) where one exists, or in

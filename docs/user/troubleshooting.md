@@ -31,7 +31,10 @@ left beside it. Use `sensei-top restore`, which moves it aside; see
 
 **Reporting a bug.** The diagnostics export in Settings (or
 `sensei-top diagnostics --out FILE`) writes a zip of the app's logs and a
-report. It never includes your database or any key. Arena's `Player.log`
-goes in only when the command is given `--with-player-log`, since that
-file names your opponents and your decks. Attach it to an issue, with what the dashboard showed and
-what the game showed.
+report. It never includes your database, any key or your MTGO handle, and
+the player names that older versions' MTGO warnings wrote into the log are
+masked on the way in. Arena's `Player.log` goes in only when you tick
+"Include Player.log" (or give the command `--with-player-log`), since that
+file names your opponents and your decks; issues are public, so leave it
+unticked for one. Attach the zip to an issue, with what the dashboard
+showed and what the game showed.

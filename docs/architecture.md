@@ -1789,6 +1789,10 @@ to a bug report"; the desktop shell drives both.
   from the parsed tables, never by text substitution), `row_counts.json`, the app's
   log files and, on request, the shell's log and `Player.log`. Paths inside
   it are written with `~` for the home directory, as `logs.py` writes them.
+  No log line names a player: the MTGO projector's warnings carry counts,
+  game numbers and card names instead (`ParsedMatch.warnings`), and the ones
+  0.7.0 and earlier wrote with a handle in them are masked as the logs are
+  copied in (`_LEGACY_MTGO`), since a log keeps them until it rotates.
   The database never goes in. `--list` prints each entry and its size and
   writes nothing; an existing `--out` file is refused.
 

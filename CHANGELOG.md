@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-13
+
+### Fixed
+
+- The app's log no longer names a player. Magic Online warnings quoted
+  handles and whole log lines; they now say which game, card and count.
+  The diagnostics export masks the names an older log still holds, so a
+  zip attached to a public issue carries none.
+- The desktop window no longer downloads a spellcheck dictionary from
+  Google on Windows and Linux, a request the privacy page never listed.
+- The bug report forms say to leave "Include Player.log" unticked on a
+  public issue.
+
 ## [0.7.0] - 2026-10-12
 
 ### Added
@@ -50,5 +63,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keeps recording with the window closed, and start-with-Windows as an
   option. On Linux, an AppImage that updates itself in place.
 
-[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/sensei-top/sensei-top/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/sensei-top/sensei-top/releases/tag/v0.7.0
