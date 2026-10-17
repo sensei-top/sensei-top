@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exist yet. It now links the site's **Donate** section, which lists
   every way to donate: Apoia.se for Brazil, and PayPal for everywhere
   else.
+- Saving an MTGO match's deck and format while the app was rebuilding its
+  match history could fail with "database is locked". It now waits for
+  the rebuild to finish, up to a minute, and if the rebuild takes longer
+  than that it says so in a sentence instead of showing an error.
 
 ## [1.0.0] - 2026-10-17
 
