@@ -1013,6 +1013,20 @@ msgstr ""
 "A lista de cards é a lista típica deste arquétipo no meta, não os 60 cards "
 "reais do oponente, que este leitor nunca vê."
 
+#: sensei_top/api/app.py
+msgid ""
+"The database is busy with a rebuild, so nothing was saved. Try again in a "
+"moment."
+msgstr ""
+"O banco de dados está ocupado com uma reconstrução, então nada foi salvo. "
+"Tente de novo em instantes."
+
+#: sensei_top/api/app.py
+msgid "The database is busy with a rebuild. Try again in a moment."
+msgstr ""
+"O banco de dados está ocupado com uma reconstrução. Tente de novo em "
+"instantes."
+
 #: sensei_top/guide/rcq.py
 msgid ""
 "The deck's format is unknown, so this 75 was not classified: archetype "

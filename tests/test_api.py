@@ -4009,6 +4009,55 @@ def test_bulk_put_is_refused_without_the_client_header(mtgo_pick_db):
     assert response.status_code == 403
 
 
+def _hold_write_lock(db_path) -> sqlite3.Connection:
+    """A second connection holding the write lock, the way the watcher's
+    rebuild holds it for the whole of ``project()``."""
+    holder = sqlite3.connect(db_path, isolation_level=None, check_same_thread=False)
+    holder.execute("BEGIN IMMEDIATE")
+    return holder
+
+
+def test_a_pick_saved_mid_rebuild_waits_for_the_rebuild_to_commit(
+    mtgo_pick_db, mtgo_pick_client
+):
+    """2026-10-17: a pick saved while a rebuild held the lock failed after
+    the old 5 s wait. Released after 6 s here, past that old wait."""
+    import threading
+
+    holder = _hold_write_lock(mtgo_pick_db)
+    release = threading.Timer(6.0, lambda: holder.execute("COMMIT"))
+    release.start()
+    try:
+        response = mtgo_pick_client.put("/api/mtgo/picks", json={"items": [
+            {"match_id": MTGO_PICK_A, "format": "Modern"},
+        ]})
+    finally:
+        release.join()
+        holder.close()
+    assert response.status_code == 200
+    assert response.json() == {"written": 1}
+
+
+def test_a_pick_that_outwaits_the_lock_is_a_503_that_wrote_nothing(
+    mtgo_pick_db, mtgo_pick_client, monkeypatch
+):
+    monkeypatch.setattr("sensei_top.api.deps.WRITE_BUSY_TIMEOUT_MS", 50)
+    holder = _hold_write_lock(mtgo_pick_db)
+    try:
+        response = mtgo_pick_client.put("/api/mtgo/picks", json={"items": [
+            {"match_id": MTGO_PICK_A, "format": "Modern"},
+        ]})
+    finally:
+        holder.execute("ROLLBACK")
+        holder.close()
+    assert response.status_code == 503
+    assert response.json()["detail"] == (
+        "The database is busy with a rebuild, so nothing was saved. Try again in a moment."
+    )
+    current = mtgo_pick_client.get(f"/api/matches/{MTGO_PICK_A}/mtgo-pick/candidates").json()
+    assert current["current"] is None
+
+
 def _bulk(client) -> dict:
     response = client.get("/api/mtgo/picks/candidates")
     assert response.status_code == 200

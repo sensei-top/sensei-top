@@ -77,13 +77,15 @@ as the ~80 lines that actually construct the app.
 
 from __future__ import annotations
 
+import sqlite3
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from importlib.metadata import version as package_version
 from importlib.resources import files
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Receive, Scope, Send
 
@@ -102,7 +104,7 @@ from sensei_top.api.routes import (
     rcq,
     review,
 )
-from sensei_top.i18n import use_language
+from sensei_top.i18n import _, use_language
 
 # The built dashboard ships inside the package (``web_dist/``, gitignored,
 # written by ``pnpm build``). ``StaticFiles`` needs a real directory, which
@@ -131,6 +133,26 @@ class RequestLanguage:
         header = Headers(scope=scope).get("accept-language")
         with use_language(header):
             await self.app(scope, receive, send)
+
+
+async def database_busy(request: Request, exc: Exception) -> JSONResponse:
+    """A write that waited out ``deps.WRITE_BUSY_TIMEOUT_MS`` behind the
+    watcher's rebuild is answered 503 with a sentence the dashboard shows,
+    rather than a 500 and a traceback: nothing was written, and the same
+    request succeeds once the rebuild commits. A read can meet the same lock,
+    so only a write says nothing was saved. Any other ``OperationalError``
+    is re-raised, so it stays the 500 it was."""
+    code = getattr(exc, "sqlite_errorcode", None)
+    if code is None or code & 0xFF not in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):
+        raise exc
+    if request.method == "GET":
+        detail = _("The database is busy with a rebuild. Try again in a moment.")
+    else:
+        detail = _(
+            "The database is busy with a rebuild, so nothing was saved. "
+            "Try again in a moment."
+        )
+    return JSONResponse(status_code=503, content={"detail": detail})
 
 
 @asynccontextmanager
@@ -171,6 +193,7 @@ def create_app(db_path: str | Path, watcher: object | None = None) -> FastAPI:
     # the language is only set for a request it lets through.
     app.add_middleware(RequestLanguage)
     app.add_middleware(LoopbackGuard)
+    app.add_exception_handler(sqlite3.OperationalError, database_busy)
     app.state.database = database
     app.state.watcher = watcher
     # Cache for the current-match hand read's archetype consensus (see

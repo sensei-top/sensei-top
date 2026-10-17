@@ -860,6 +860,16 @@ msgid ""
 "actual 60 cards, which this reader never sees."
 msgstr ""
 
+#: sensei_top/api/app.py
+msgid ""
+"The database is busy with a rebuild, so nothing was saved. Try again in a "
+"moment."
+msgstr ""
+
+#: sensei_top/api/app.py
+msgid "The database is busy with a rebuild. Try again in a moment."
+msgstr ""
+
 #: sensei_top/guide/rcq.py
 msgid ""
 "The deck's format is unknown, so this 75 was not classified: archetype "
