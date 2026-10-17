@@ -204,9 +204,24 @@ _WORD_NUMBERS = {"zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5
 
 
 def _parse_number(token: str) -> int | None:
-    if token.isdigit():
-        return int(token)
+    if token.isascii() and token.isdigit():
+        try:
+            return int(token)
+        except ValueError:  # more digits than int() converts
+            return None
     return _WORD_NUMBERS.get(token.lower())
+
+
+def _ascii_int(text: str) -> int | None:
+    """``text`` as a whole number, or ``None`` unless it is ASCII digits
+    ``int()`` accepts (it also takes non-ASCII digits, and refuses more than
+    4,300 of them)."""
+    if not (text.isascii() and text.isdigit()):
+        return None
+    try:
+        return int(text)
+    except ValueError:
+        return None
 
 
 def _strip_at_p_prefix(s: str) -> str:
@@ -371,7 +386,10 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
             # below, never stored. See the module docstring's "Turn units":
             # what gets stored is an ordinal count of `Turn` lines, Arena's
             # own units, not this raw MTGO number.
-            turn_number = int(m.group("n"))
+            turn_number = _ascii_int(m.group("n"))
+            if turn_number is None:
+                warnings.append(f"unrecognised turn number {m.group('n')!r}")
+                continue
             if turn_number == 1 and (current is None or current.turn_count >= 2):
                 # Fallback boundary only: the primary signal is the start
                 # block above. Firing here means that block was never seen
@@ -439,7 +457,13 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
         m = _LEADS_MATCH_RE.match(s)
         if m:
             handles.add(m.group("handle"))
-            score_line = (m.group("handle"), int(m.group("a")), int(m.group("b")))
+            a, b = _ascii_int(m.group("a")), _ascii_int(m.group("b"))
+            if a is None or b is None:
+                warnings.append(
+                    f"unrecognised match score {m.group('a')!r}-{m.group('b')!r}"
+                )
+            else:
+                score_line = (m.group("handle"), a, b)
             continue
 
         # Anything else is real MTGO text this parser has no use for yet
@@ -461,9 +485,10 @@ def last_game_decided(data: bytes) -> bool:
     loop on bytes it has not stored yet, half-copied ones included, and one
     file's bytes must not stop that loop. ``decode_strings`` and
     ``parse_strings`` are both written never to raise, but ``parse_strings``
-    turns ``\\d+`` captures into ``int``, and Python refuses an ``int`` of more
-    than 4,300 digits with a ``ValueError``; whatever escapes is logged and
-    read as undecided.
+    turns ``\\d+`` captures into ``int`` through guards: a count that is not
+    ASCII digits (``\u0663``, which ``int()`` would read as 3) or is too long
+    for ``int()`` (past 4,300 digits) is warned about and its line skipped
+    rather than raised; whatever still escapes is logged and read as undecided.
     """
     try:
         games = parse_strings(decode_strings(data)).games

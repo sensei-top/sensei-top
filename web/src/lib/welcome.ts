@@ -1,36 +1,47 @@
-import type { TFunction } from '../i18n'
+import type { AppSettings } from '../bridge'
 
-/** The six welcome steps, in order; each is the value of `?step=`. */
-export const WELCOME_STEPS = ['language', 'welcome', 'arena', 'cards', 'mtgo', 'done'] as const
+/** Every welcome step, in order; each is the value of `?step=`. A run shows
+ *  only the ones `stepsFor` keeps. */
+export const WELCOME_STEPS = ['start', 'plays', 'arena', 'mtgo', 'done'] as const
 
 export type WelcomeStep = (typeof WELCOME_STEPS)[number]
 
-/** The step an address names; step 1 (the language) for a missing or unknown value. */
+/** Which clients the user plays, as the shell keeps it. */
+export type Plays = AppSettings['plays']
+
+/** The step an address names; Start for a missing, unknown or retired value
+ *  (`?step=cards` from before the steps changed). */
 export function stepOf(param: string | null): WelcomeStep {
-  return WELCOME_STEPS.find((step) => step === param) ?? 'language'
+  return WELCOME_STEPS.find((step) => step === param) ?? 'start'
 }
 
-/** The step's place in the run, 1 to 6. */
-export function stepNumber(step: WelcomeStep): number {
-  return WELCOME_STEPS.indexOf(step) + 1
+/** The steps a run shows: Arena's and Magic Online's only when chosen. A
+ *  missing or empty choice reads as both, as it does everywhere else. A
+ *  `current` step the choice leaves out (an address typed by hand, or the
+ *  choice not yet back from the shell) is kept in its place, so the step on
+ *  show always has a number and neighbours. */
+export function stepsFor(plays: Plays, current?: WelcomeStep): WelcomeStep[] {
+  const chosen: readonly WelcomeStep[] = plays && plays.length > 0 ? plays : ['arena', 'mtgo']
+  return WELCOME_STEPS.filter(
+    (step) => step === current || (step !== 'arena' && step !== 'mtgo') || chosen.includes(step),
+  )
 }
 
-/** The step before or after, `null` at either end. */
-export function neighbour(step: WelcomeStep, by: -1 | 1): WelcomeStep | null {
-  return WELCOME_STEPS[WELCOME_STEPS.indexOf(step) + by] ?? null
+/** The step's place in the steps shown, from 1. */
+export function stepNumber(step: WelcomeStep, steps: readonly WelcomeStep[]): number {
+  return steps.indexOf(step) + 1
+}
+
+/** The step shown before or after, `null` at either end. */
+export function neighbour(step: WelcomeStep, by: -1 | 1, steps: readonly WelcomeStep[]): WelcomeStep | null {
+  const at = steps.indexOf(step)
+  if (at === -1) return null
+  return steps[at + by] ?? null
 }
 
 /** The address of a step. */
 export function stepHref(step: WelcomeStep): string {
   return `/welcome?step=${step}`
-}
-
-/** How long ago a download ran, from its age in hours: under an hour,
- *  under 48 hours in hours, else in days. */
-export function agePhrase(hours: number, t: TFunction): string {
-  if (hours < 1) return t('welcome.age.lessThanHour')
-  if (hours < 48) return t('welcome.age.hours', { count: Math.floor(hours) })
-  return t('welcome.age.days', { count: Math.floor(hours / 24) })
 }
 
 /** A sentence for a failure the shell wrote: with a full stop at its end. */

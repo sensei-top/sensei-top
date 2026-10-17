@@ -1,6 +1,6 @@
 # The dashboard
 
-The dashboard has seven places and Settings, each at an address of its own,
+The dashboard has six places and Settings, each at an address of its own,
 so a page can be bookmarked, linked to and reloaded as it is:
 
 - **Home** — the last session, three things worth a look, the recent matches

@@ -47,7 +47,8 @@ const SECTION_CLASS =
  *  The written sections come from whatever was generated or imported
  *  for this deck. `NarrativeAndExport` offers to write it with Claude
  *  when a credential is configured (`docs/llm.md`), and
- *  `sensei-top guide --deck KEY --import FILE` otherwise. Both land in
+ *  otherwise takes an answer pasted into the card (or, in a browser with
+ *  no desktop shell, `sensei-top guide --deck KEY --import FILE`). Both land in
  *  the same query, an ordinary one on the heartbeat, so an import from
  *  the terminal shows on the page within a few seconds. While that query
  *  is pending neither a written section nor the callout that says there

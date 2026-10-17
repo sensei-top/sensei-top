@@ -216,3 +216,50 @@ def test_a_shared_archetype_name_is_filed_under_its_majority_key(conn):
     conn.commit()
     assert store.read_brief(conn, "guid:x", "majority") is not None
     assert store.read_brief(conn, "guid:x", "minority") is None
+
+
+def test_briefs_carry_the_hash_the_guide_was_written_for(conn):
+    """An imported guide answered for an older 75 (``answers.read_answer``'s
+    ``context``) stores its briefs with that 75's hash, so they read as
+    stale like the guide itself (plan 24, D13); none given is today's."""
+    _archetype_row(conn, "mardu_discard", "Mardu Discard")
+    conn.commit()
+    identity = _identity()
+    older = "ab" * 32
+    narrative = _narrative(
+        MatchupPlan(archetype="Mardu Discard", prose="p", board_in=(), board_out=()),
+    )
+
+    store_guide_matchups(conn, _guide(identity), narrative, model="m", list_hash=older)
+    assert store.read_brief(conn, "guid:x", "mardu_discard").list_hash == older
+
+    store_guide_matchups(conn, _guide(identity), narrative, model="m")
+    assert (
+        store.read_brief(conn, "guid:x", "mardu_discard").list_hash
+        == store.list_hash(identity.current_cards)
+    )
+
+
+def test_an_older_hash_still_spares_a_live_brief_for_todays_list(conn):
+    """The skip compares the live brief with today's 75, whatever list the
+    guide was written for: a brief for this exact list is not replaced by a
+    guide written for an older one."""
+    _archetype_row(conn, "mardu_discard", "Mardu Discard")
+    identity = _identity()
+    store.write_brief(conn, store.Brief(
+        deck_key="guid:x", archetype_key="mardu_discard", archetype_label="Mardu Discard",
+        archetype_share=None, personal_matches=None, personal_wins=None, personal_losses=None,
+        prose="live prose", play_around=(), board_in=(), board_out=(),
+        staples=(), problems=(), prompt="p", model="m",
+        generated_at="2026-08-20T00:00:00.000Z", corpus_commit=None,
+        list_hash=store.list_hash(identity.current_cards), source="live",
+    ))
+    conn.commit()
+    narrative = _narrative(
+        MatchupPlan(archetype="Mardu Discard", prose="guide prose", board_in=(), board_out=()),
+    )
+    written = store_guide_matchups(
+        conn, _guide(identity), narrative, model="m", list_hash="ab" * 32,
+    )
+    assert written == 0
+    assert store.read_brief(conn, "guid:x", "mardu_discard").prose == "live prose"

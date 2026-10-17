@@ -51,5 +51,17 @@
     "everyVersion": "Every version",
     "matches_one": "{{count}} match",
     "matches_other": "{{count}} matches"
+  },
+  "cardData": {
+    "meterLabel": "Card data download",
+    "starting": "Starting",
+    "progressStart": "Starting the download.",
+    "progressSoFar": "Downloading card data: {{done}} MB so far.",
+    "progressOf": "Downloading card data: {{done}} of {{total}} MB.",
+    "progressSave": "Saving cards to the database. This takes a few minutes.",
+    "done": "Card data is in: rules text for {{n}} cards.",
+    "doneEmpty": "Card data is in.",
+    "failed": "The card data download failed: {{reason}}",
+    "tryAgain": "Try again"
   }
 }

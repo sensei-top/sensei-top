@@ -3,6 +3,9 @@
 An Electron main process that runs the tracker's own `serve` as a child and
 shows the dashboard in a window, with a tray icon. It adds no feature of its
 own: everything the window shows is the dashboard `serve` already serves.
+The design (the handshake with `serve`, the process tree, the two settings
+files, the shell's log, the frozen server and the support commands) is in
+[docs/desktop.md](../docs/desktop.md); this file is how to build and run it.
 
 ## Running it in development
 
@@ -31,14 +34,7 @@ through: `pnpm --dir desktop build && pnpm --dir desktop exec electron . --ozone
 
 ### Where the data goes
 
-The shell keeps the database, its `logs/` and its working directory in one
-data directory:
-
-- Windows: `%LOCALAPPDATA%\Sensei Top`
-- elsewhere: `$XDG_DATA_HOME/sensei-top`, which is `~/.local/share/sensei-top`
-  when the variable is unset
-
-Every child gets `--db <dir>/sensei-top.db` and runs in that directory.
+Where the data directory is on each system: `docs/desktop.md`, "The desktop shell".
 **A development run starts against that real directory** unless you point it
 elsewhere:
 
@@ -54,36 +50,11 @@ well for a run that touches nothing of yours.
 ### The port
 
 The window loads `http://127.0.0.1:<port>`, and the page's local storage
-belongs to that origin, so the port is kept steady:
-
-1. The port the last server reported is in `shell.json`. If it is free, it is
-   asked for again (`serve --port <port>`). If it is taken, the shell waits up
-   to 3 s for it, since its own previous server may still be shutting down.
-2. Otherwise `serve --port 0` lets the OS choose, and the port the ready line
-   (`{"listening": <port>}`) reports is remembered.
-3. A remembered port that `serve` cannot bind after all (another program took
-   it between the probe and the bind) is retried once with `--port 0`.
-4. Never 8000, the developer's `serve`: a remembered 8000 is ignored, and an
-   OS-chosen 8000 is given back and asked for again.
+belongs to that origin, so the port is kept steady: `docs/desktop.md`, "The desktop shell".
 
 ### Restarts
 
-`serve` runs with `--exit-on-stdin-close`: its stdin is a pipe the shell
-holds open and never writes to, so the server shuts down in order however the
-shell ends. Quitting closes the pipe, waits 10 s, then sends SIGTERM, then
-SIGKILL.
-
-An unexpected exit, a start that fails, or a start that prints no ready line
-within 60 s is restarted after 1 s, at most 3 times in any 5 minutes (a
-sliding window: a server that ran for a while earns its restarts back). A
-server that printed no ready line is stopped, and the next one starts only
-once it has exited, so two never share the database. Past the limit the
-window names the log file, which says why, the tray says "Tracker could not
-start", and launching the app again tries once more with a fresh budget.
-A restart the shell asks for itself (a setting changed) is never counted. A
-restart because the watcher stopped on its own is, and past the limit the
-server keeps running without a watcher, the tray says "Watcher stopped", and the
-next restart of any kind tries again.
+How `serve` is stopped and restarted: `docs/desktop.md`, "The desktop shell".
 
 ### Closing the window
 
@@ -94,11 +65,10 @@ Quit always quits.
 
 ## The log
 
-`<data dir>/logs/shell.log`, beside the server's `sensei-top.log`, in the same
-line format (`src/sensei_top/logs.py`), rotated the same way (5 × 2 MB), with
-the home directory written as `~`. Each launch has an 8-hex session id, handed
-to the server as `SENSEI_TOP_SESSION`. `diagnostic: true` in `shell.json` adds
-the DEBUG lines and starts the server with `--verbose`.
+`<data dir>/logs/shell.log`, beside the server's `sensei-top.log`; its format,
+rotation and session id are in `docs/desktop.md`, "The desktop shell".
+`diagnostic: true` in `shell.json` adds the DEBUG lines and starts the server
+with `--verbose`.
 
 ## Files
 

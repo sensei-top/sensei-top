@@ -1,4 +1,4 @@
-# PyInstaller spec for the frozen server (docs/architecture.md, "The desktop
+# PyInstaller spec for the frozen server (docs/desktop.md, "The desktop
 # shell", "The frozen server"). Run by scripts/build_server.py, which gives it
 # the work and dist paths; run by hand it is
 #   uv run pyinstaller desktop/server/sensei-top.spec

@@ -4,10 +4,11 @@
 own: what the *format* looks like, not just this player's own results.
 Arena publishes no event results at all — every Arena-derived metagame
 figure anyone has ever seen comes from self-selected tracker uploads or an
-aggregator that declines automated reads (see `docs/architecture.md`'s
-"Metagame data" section for the two sites rejected on inspection). So this
-package reads real tournament results instead: MTGO leagues and challenges,
-and paper events reported through Melee.gg, via
+aggregator that declines automated reads (see `docs/review.md`'s
+"Metagame data: real tournament results, not Arena aggregators" section for
+the two sites rejected on inspection). So this package reads real tournament
+results instead: MTGO leagues and challenges, and paper events reported
+through Melee.gg, via
 [`fbettega/MTG_decklistcache`](https://github.com/fbettega/MTG_decklistcache)
 — the maintained successor to the archived `Badaro/MTGODecklistCache`.
 
@@ -125,7 +126,7 @@ live match, partial) and `metagame.classify_meta_decks()` (a corpus
 decklist, complete) write the same `archetype_key`, the `Definition.key`
 that is the file stem in `MTGOFormatData`. That shared key is what makes
 `v_meta_winrate` and a personal `v_match_opponent` row joinable at all:
-the dashboard's field numbers (`docs/frontend.md`, "Field, and the
+the dashboard's field numbers (`docs/frontend-pages.md`, "Field, and the
 field-winrate join") and `review/narrative.py`'s `FieldContext` both key
 off `opponent_key`'s `'archetype:' + archetype_key` form, and both
 refuse to join anything else. A manual label, a colours-only guess, or
@@ -774,7 +775,7 @@ list for this archetype look like"; `archetypes/corpus.py` asks a different,
 narrower question of the same data — "given the cards one opponent has
 revealed so far, which archetype's corpus decks look most like that" — as a
 second, complementary evidence source for `classify.py`'s deck-naming
-pipeline (`docs/architecture.md`'s "A second evidence source: the corpus's
+pipeline (`docs/opponent-deck.md`'s "A second evidence source: the corpus's
 own decklists" has the full mechanism and the naive-Bayes formula).
 
 The ban-handling here is deliberately not the format-reset window described

@@ -71,15 +71,16 @@
 
 <section id="first-run">
 <h2>The first run</h2>
-<p>The first time it opens, the app walks you through setup, one step at a time:</p>
+<p>The first time it opens, the app walks you through setup, one short step at a time:</p>
 <ol>
-<li><b>Language</b>: English or Portuguese. Settings can change it later.</li>
-<li><b>Welcome to Sensei Top</b>: what the app reads, and what leaves your computer.</li>
-<li><b>Arena</b>: the app looks for Arena's log and checks that Detailed Logs are on. If they are off: in Arena, open <b>Options</b>, then <b>Account</b>, tick <b>Detailed Logs (Plugin Support)</b>, close Arena and start it again, then press <b>Check again</b>. Without Detailed Logs, Arena's log is missing most of what the app reads. If you play only Magic Online, skip this step.</li>
-<li><b>Card data</b>: press <b>Download card data</b>. It is about 80 MB, then a few minutes of unpacking, and you can go on while it runs.</li>
-<li><b>Magic Online</b>: <a href="#mtgo">see below</a>. Skip it if you do not play Magic Online.</li>
-<li><b>Ready</b>: play a match. It appears on <b>Home</b> when it ends. On Linux, this step also offers <b>Start Sensei Top when you log in</b>.</li>
+<li><b>Welcome to Sensei Top</b>: choose the <b>Language</b>, English or Portuguese. <b>What leaves this computer</b> opens the list of everything the app downloads. If you used Sensei Top before, <b>Restore a backup</b> brings your match history back.</li>
+<li><b>Which do you play?</b>: <b>Arena</b>, <b>Magic Online</b> or <b>Both</b>. The next steps set up only what you pick.</li>
+<li><b>Arena</b>: the app looks for Arena's log and checks that Detailed Logs are on. If they are not, the step shows where to turn them on: in Arena, open <b>Options</b>, then <b>Account</b>, tick <b>Detailed Logs (Plugin Support)</b>, close Arena and start it again, then press <b>Check again</b>. Without Detailed Logs, no Arena match is recorded.</li>
+<li><b>Magic Online</b>: <a href="#mtgo">see below</a>.</li>
+<li><b>Ready</b>: play a match. It appears on <b>Home</b> when it ends. Where the app can update itself, this step has <b>Check for a new version once a day</b>; on Linux, it also offers <b>Start Sensei Top when you log in</b>.</li>
 </ol>
+<p>Card data, about 80 MB, downloads on its own the first time the app opens, and <b>Ready</b> shows how far it has got. The deck guides need it. If the download fails, press <b>Try again</b> there, or <b>Download card data</b> in <b>Settings</b>, under <b>Sources</b>.</p>
+<p>If you play Arena, <b>Home</b> shows <b>Turn on Detailed Logs in Arena</b> until Arena's log says they are on, with the same steps and <b>Check again</b>. Arena writes that line only when it starts, so start Arena again before you check.</p>
 <p>To go through the steps again, open <b>Settings</b>, then <b>App</b>, and press <b>Go through them again</b>.</p>
 <p><strong>Keep the app running while you play.</strong> Arena empties its log every time it starts, and keeps the session before only until it starts again. A session played with Sensei Top closed is gone after two Arena launches. <b>Start when Windows starts</b>, or <b>Start when you log in</b> on Linux, under <b>App</b> in <b>Settings</b>, takes care of it.</p>
 </section>
@@ -90,6 +91,7 @@
 <ul>
 <li><b>Your name on Magic Online</b>, so it can tell your games from your opponents'.</li>
 <li>The <b>Folder of game logs</b>, where Magic Online writes files named <code>Match_GameLog</code>. On Windows, when the app finds the folder Magic Online is writing, it fills it in for you to save. Otherwise it is under <code>AppData\Local\Apps\2.0\Data</code>; under Wine or Proton, inside that prefix's <code>drive_c</code> folder.</li>
+<li>Optionally, the <b>Folder of decks</b>, where you export decks from Magic Online as <code>.dek</code> files. The app already reads the decks Magic Online keeps beside its game logs; this folder adds the ones you export.</li>
 </ul>
 <p>Each game is read once it ends. Magic Online moves this folder when it updates, so if new games stop appearing, choose the folder again in <b>Settings</b>, under <b>Sources</b>.</p>
 <p>A Magic Online match counts toward one of your decks once you pick the deck. Open the match and answer <b>Which deck was this?</b>; with many matches waiting, use the <b>Needs a deck</b> card on <b>Home</b> instead. It groups the matches by the deck saved in Magic Online that holds the most cards you played, and one confirmation picks that deck for a whole group. Magic Online matches never appear on <b>Live</b>, which follows Arena only.</p>

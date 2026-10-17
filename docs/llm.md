@@ -65,7 +65,9 @@ built a prompt, the dashboard offered it as copyable text
 (`CopyPromptCard`), and the user pasted it into a Claude chat, saved the
 answer, and ran a CLI import. That round trip — `docs/brief.md` and
 `docs/guide.md` describe it in full — is how the first deck guide was
-written, and it still works exactly as before.
+written, and it still works exactly as before. The import is optional now:
+each card takes the pasted answer in a box and saves it itself ("Saving a
+pasted answer", below).
 
 What's new is a second path, opt-in: configure a Claude credential, and the
 same five "get a written narrative" surfaces become one-click "write it with
@@ -84,7 +86,8 @@ and neither ever needs an account. What follows from that:
 
 - `CopyPromptCard` and the "Show the prompt" toggle stay, and the prompts
   keep improving as features of their own. A user with no key, or with an
-  assistant subscription they already pay for, generates by pasting.
+  assistant subscription they already pay for, generates by pasting the
+  prompt into it and the answer back into the card.
 - A configured credential is a user path, not a development setting. The
   dashboard's Settings say so plainly, and the website never uses the
   phrase "AI" as the pitch: the tracker, the field and the current-match
@@ -221,6 +224,29 @@ foreign `Origin` or without the dashboard's `X-Tracker-Client` header before
 it reaches the route, so another page open in your browser cannot trigger a
 metered call.
 
+### Saving a pasted answer
+
+Seven `PUT` routes store an answer the user pasted into a card, one per
+card that offers a prompt: `PUT /api/matches/{match_id}/report/narrative`,
+`PUT /api/review/leaks/narrative`, `PUT /api/coach/narrative`
+(`?format=`), `PUT /api/guide/{key}/narrative`,
+`PUT /api/guide/{key}/briefs/{archetype_key}`,
+`PUT /api/guide/{key}/coverage` and `PUT /api/guide/{key}/rcq/narrative`.
+None constructs a client or sends anything anywhere. Each reads the
+answer through `answers.py::read_answer`, the parser the CLI importers
+use, and writes the table its generate route or importer writes
+(non-negotiable #6's allowlist; `test_only_authored_artifact_routes_write`
+pins all seven). The answer's `for` line must name this card: an answer
+for another card, or with no `for` line at all (which the CLI still
+accepts, with a warning), is refused with a sentence saying why (422)
+and nothing is stored. An answer over 256 KB is refused before anything
+is looked up (413). A pasted answer is stored with the author `pasted`
+and no cost or token counts, which stay `NULL` ("Model, effort, and
+cost", below); the dashboard says "Pasted in." where it would name a
+model. The stored prompt is the copied prompt rebuilt at save time,
+except on the brief and coverage routes, which store what
+`brief --import` stores, the build context (`docs/brief.md`).
+
 The coach's call is also the only one that can reach the network *during* the
 call, not just at its start and end: `write_report` (below) hands Claude a
 server-side web-search tool restricted to `coach/canon.py::ALLOWED_DOMAINS`,
@@ -242,15 +268,22 @@ call's whole prompt, which is the user's own match data, written to
 `<db dir>/logs/sensei-top.log`. The credential is not in it. Without
 `--verbose` the file takes neither.
 
-**No prompt text changes because of this feature.** These are the same
-`full_prompt` builders the copy-paste path has always used, tested the same
-way — `test_narrative_prompt_carries_no_local_paths` and
-`test_context_never_carries_any_game_in_progress_signal` cover exactly what
-leaves the machine, and they are load-bearing now in a way they were only
-decorative before: a bug in one of those builders used to produce a prompt a
-human read before pasting anywhere; now it's a prompt the API sends.
+**A generate call sends the copied prompt without its last section.**
+The prompt a card offers to copy ends with the answer contract
+(`answers.py::answer_format`): a `for` line naming the card, a
+`context` hash of what the prompt was built from, and the JSON shape to
+answer in, one `{"prose": ...}` object for the prose cards. A generate
+call sends the prompt without that contract (`full_prompt`, the coach's
+`CoachPrompt.prompt`), because its reply is stored whole or read through
+the tool's own schema. The evidence is the same text either way, tested
+the same way: `test_narrative_prompt_carries_no_local_paths` and
+`test_context_never_carries_any_game_in_progress_signal` cover exactly
+what leaves the machine, and they are load-bearing now in a way they
+were only decorative before: a bug in one of those builders used to
+produce a prompt a human read before pasting anywhere; now it's a
+prompt the API sends.
 
-The matchup brief (`POST /api/current-match/brief`) deliberately has **no**
+The matchup brief (`GET /api/current-match/brief`) deliberately has **no**
 generate button — it stays `CopyPromptCard`-only. It still gets filled
 automatically for any archetype the deck guide covers, because generating the
 guide writes into `matchup_brief` the same way `guide --import` already does
@@ -275,8 +308,8 @@ models, a `--set-model`/`--set-coach-model` override may name any of them.
 The coach's own dropdown offers only four of the five (`REPORT_MODELS`,
 above) — every priced model but Haiku 4.5, which rejects the adaptive
 thinking and explicit effort `write_report` always sends. An unrecognized
-model prices at `NULL`, never a guess, per non-negotiable #4. A
-hand-imported (copy/paste) narrative has no cost at all — those columns stay
+model prices at `NULL`, never a guess, per non-negotiable #4. An
+imported or pasted narrative has no cost at all — those columns stay
 `NULL`, not `0.0`, because zero would claim a fact ("this cost nothing")
 rather than record an absence ("this wasn't priced").
 

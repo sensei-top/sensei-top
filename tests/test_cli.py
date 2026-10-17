@@ -815,6 +815,8 @@ def test_config_json_round_trips_every_setter(tmp_path, monkeypatch, capsys, mem
     arena_log.write_text("", encoding="utf-8")
     mtgo_dir = tmp_path / "mtgo"
     mtgo_dir.mkdir()
+    decks = tmp_path / "decks"
+    decks.mkdir()
     backups = tmp_path / "copies"
 
     monkeypatch.setattr(sys, "stdin", io.StringIO(CLAUDE_KEY + "\n"))
@@ -826,6 +828,7 @@ def test_config_json_round_trips_every_setter(tmp_path, monkeypatch, capsys, mem
         "--set-date-order", "dmy",
         "--set-mtgo-handle", "Player1",
         "--set-mtgo-dir", str(mtgo_dir),
+        "--set-mtgo-deck-dir", str(decks),
         "--set-backup-dir", str(backups),
         "--set-backup-keep", "3",
         "--set-model", "claude-sonnet-5",
@@ -839,7 +842,8 @@ def test_config_json_round_trips_every_setter(tmp_path, monkeypatch, capsys, mem
     assert body == {
         "config_path": str(config_path()),
         "arena": {"log": str(arena_log.resolve()), "date_order": "dmy"},
-        "mtgo": {"handle": "Player1", "dir": str(mtgo_dir.resolve()), "deck_dir": None},
+        "mtgo": {"handle": "Player1", "dir": str(mtgo_dir.resolve()),
+                 "deck_dir": str(decks.resolve())},
         "backup": {"dir": str(backups.resolve()), "keep": 3},
         "claude": {
             "key_set": True, "key_source": "keyring",
@@ -854,7 +858,7 @@ def test_config_json_round_trips_every_setter(tmp_path, monkeypatch, capsys, mem
         tmp_path,
         "--clear-key", "--clear-topdeck-key",
         "--set-arena-log", "", "--set-date-order", "",
-        "--set-mtgo-handle", "", "--set-mtgo-dir", "",
+        "--set-mtgo-handle", "", "--set-mtgo-dir", "", "--set-mtgo-deck-dir", "",
         "--set-backup-dir", "", "--set-backup-keep", "",
         "--set-model", "", "--set-effort", "",
     )
@@ -1098,8 +1102,7 @@ def test_the_date_order_comes_from_arena_unless_locale_is_given(command, tmp_pat
 
 
 def test_the_mtgo_setters_keep_a_hand_written_deck_dir(tmp_path, capsys):
-    """[mtgo] deck_dir has no setter; writing the handle or the directory
-    must not erase it, as the old writer did."""
+    """A deck_dir written by hand survives the other two setters."""
     decks = str(tmp_path / "decks")
     mtgo_dir = tmp_path / "mtgo"
     mtgo_dir.mkdir()
@@ -1109,6 +1112,29 @@ def test_the_mtgo_setters_keep_a_hand_written_deck_dir(tmp_path, capsys):
     assert _config_json(tmp_path, capsys)["mtgo"]["deck_dir"] == decks
     _config(tmp_path, "--set-mtgo-dir", str(mtgo_dir))
     assert _config_json(tmp_path, capsys)["mtgo"]["deck_dir"] == decks
+
+
+def test_set_mtgo_deck_dir_writes_and_clears_it(tmp_path, capsys):
+    decks = tmp_path / "decks"
+    decks.mkdir()
+    _config(tmp_path, "--set-mtgo-deck-dir", str(decks))
+    assert _config_json(tmp_path, capsys)["mtgo"]["deck_dir"] == str(decks.resolve())
+    _config(tmp_path, "--set-mtgo-deck-dir", "")
+    assert _config_json(tmp_path, capsys)["mtgo"]["deck_dir"] is None
+
+
+def test_the_mtgo_setters_keep_each_others_fields(tmp_path, capsys):
+    mtgo_dir = tmp_path / "mtgo"
+    mtgo_dir.mkdir()
+    decks = tmp_path / "decks"
+    decks.mkdir()
+    _config(tmp_path, "--set-mtgo-handle", "Player1")
+    _config(tmp_path, "--set-mtgo-dir", str(mtgo_dir))
+    _config(tmp_path, "--set-mtgo-deck-dir", str(decks))
+    mtgo = _config_json(tmp_path, capsys)["mtgo"]
+    assert mtgo["handle"] == "Player1"
+    assert mtgo["dir"] == str(mtgo_dir.resolve())
+    assert mtgo["deck_dir"] == str(decks.resolve())
 
 
 def test_a_keyring_that_refuses_the_write_sends_the_key_to_the_file(tmp_path, capsys):

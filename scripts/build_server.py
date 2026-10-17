@@ -5,7 +5,7 @@
 
 The output is ``desktop/server/dist/sensei-top/`` (a PyInstaller ``--onedir``
 build; both work directories are gitignored). The smoke test is the test for
-this step (``docs/architecture.md``, "The frozen server"); it is not part of
+this step (``docs/desktop.md``, "The frozen server"); it is not part of
 ``pytest -q`` because the build takes minutes. It writes only inside a temporary
 directory: its own database, config home and working directory, and a
 fixture log from ``tests/fixtures``. Its child processes get a temporary

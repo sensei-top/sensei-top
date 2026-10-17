@@ -13,14 +13,15 @@ import {
   versionRecord,
   versionsInOrder,
 } from './deckOverview'
+import { NBSP } from './matchups'
 
 const t = translator('en')
 
 // The zone is America/New_York (vitest.config.ts). Every timestamp below is
-// bare, so UTC. Ids are invented. The no-break space and the minus sign are
-// written as escapes, as the source writes them.
+// bare, so the log's own local clock. Ids are invented. The minus sign is
+// written as an escape, as the source writes it; the no-break space is the
+// source's own `NBSP`.
 
-const NBSP = '\u00a0'
 const MINUS = '\u2212'
 const NOW = Date.parse('2026-09-29T16:00:00Z')
 
@@ -91,8 +92,9 @@ describe('chosenVersion', () => {
 
 describe('versionLabel', () => {
   it('names one day once', () => {
-    // 09:00 and 22:00 in New York on Sep 14; the second is Sep 15 in UTC.
-    const row = version('a', { first_seen: '2026-09-14T13:00:00', last_played: '2026-09-15T02:00:00', matches_played: 1 })
+    // 09:00 and 22:00 on the log's own clock, both Sep 14; in UTC the second
+    // is Sep 15, so a UTC day would name two.
+    const row = version('a', { first_seen: '2026-09-14T09:00:00', last_played: '2026-09-14T22:00:00', matches_played: 1 })
     expect(versionLabel(row, NOW, t)).toBe(`Sep 14 · 1${NBSP}match`)
   })
 

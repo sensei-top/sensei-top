@@ -37,7 +37,7 @@
 import { t } from './i18n';
 import type { Logger } from './log';
 import { silent } from './log';
-import type { LanguageChoice, ShellJson } from './store';
+import type { LanguageChoice, Play, ShellJson } from './store';
 import type { UpdateStatus } from './updater';
 
 export type DetailedLogs = 'enabled' | 'disabled' | 'unknown';
@@ -57,6 +57,7 @@ export type ShellSettings = {
     dateOrder: DateOrder;
     mtgoHandle: string | null;
     mtgoDir: string | null;
+    mtgoDeckDir: string | null;
     /** The folder doctor found MTGO writing to (Windows only), else `null`. */
     mtgoFound: string | null;
     dataDir: string;
@@ -114,6 +115,8 @@ export type AppSettings = {
   diagnostic: boolean;
   /** shell.json's `language`; `'system'` when unset. */
   language: LanguageChoice;
+  /** shell.json's `plays`; both when unset. */
+  plays: Play[];
   /** Where the shell's own update stands (S14). */
   update: UpdateStatus;
   /** shell.json's `onboarded` (S15): the shell opens `/welcome` until it is true. */
@@ -128,7 +131,7 @@ export type AppSettings = {
 };
 
 /** An app-setting change the page can send. */
-export type AppChange = Partial<Pick<AppSettings, 'startWithSystem' | 'keepRunningOnClose' | 'checkForUpdates' | 'diagnostic' | 'language'>>;
+export type AppChange = Partial<Pick<AppSettings, 'startWithSystem' | 'keepRunningOnClose' | 'checkForUpdates' | 'diagnostic' | 'language' | 'plays'>>;
 
 /** What `window.senseiTopShell.initial` holds, and what a change sends. */
 export type BridgeSettings = ShellSettings & { app: AppSettings };
@@ -159,7 +162,7 @@ export const CHANNELS = {
 
 export interface ConfigJson {
   arena: { log: string | null; dateOrder: DateOrder };
-  mtgo: { handle: string | null; dir: string | null };
+  mtgo: { handle: string | null; dir: string | null; deckDir: string | null };
   backup: { dir: string; keep: number };
   claude: { keySet: boolean; model: string };
   topdeck: { keySet: boolean };
@@ -206,7 +209,7 @@ export function parseConfigJson(output: string): ConfigJson {
   if (!Array.isArray(root.models)) throw new Error('config --json: models is not a list');
   return {
     arena: { log: textOrNull(arena.log, 'arena.log'), dateOrder },
-    mtgo: { handle: textOrNull(mtgo.handle, 'mtgo.handle'), dir: textOrNull(mtgo.dir, 'mtgo.dir') },
+    mtgo: { handle: textOrNull(mtgo.handle, 'mtgo.handle'), dir: textOrNull(mtgo.dir, 'mtgo.dir'), deckDir: textOrNull(mtgo.deck_dir, 'mtgo.deck_dir') },
     backup: { dir: text(backup.dir, 'backup.dir'), keep },
     claude: { keySet: flag(claude.key_set, 'claude.key_set'), model: text(claude.model, 'claude.model') },
     topdeck: { keySet: flag(topdeck.key_set, 'topdeck.key_set') },
@@ -268,6 +271,7 @@ export function toShellSettings(config: ConfigJson, doctor: DoctorArena | null, 
       dateOrder: config.arena.dateOrder,
       mtgoHandle: config.mtgo.handle,
       mtgoDir: config.mtgo.dir,
+      mtgoDeckDir: config.mtgo.deckDir,
       mtgoFound: doctor?.mtgoFound ?? null,
       dataDir: extras.dataDir,
     },
@@ -310,6 +314,7 @@ export function toAppSettings(
     checkForUpdates: prefs.checkForUpdates ?? true,
     diagnostic: prefs.diagnostic ?? false,
     language: prefs.language ?? 'system',
+    plays: prefs.plays ?? ['arena', 'mtgo'],
     update: info.update,
     onboarded: prefs.onboarded ?? false,
     askAutostart: info.askAutostart,
@@ -358,6 +363,10 @@ export function planChange(change: DeepPartial<ShellSettings>): PlannedChange {
       args.push('--set-mtgo-dir', sources.mtgoDir ?? '');
       restart = true;
     }
+    if (sources.mtgoDeckDir !== undefined) {
+      args.push('--set-mtgo-deck-dir', sources.mtgoDeckDir ?? '');
+      restart = true;
+    }
   }
   if (change.writing?.model !== undefined) args.push('--set-model', change.writing.model);
   const backup = change.backup;
@@ -402,6 +411,7 @@ export function planAppChange(
   if (change.checkForUpdates !== undefined) patch.checkForUpdates = change.checkForUpdates;
   if (change.diagnostic !== undefined) patch.diagnostic = change.diagnostic;
   if (change.language !== undefined) patch.language = change.language;
+  if (change.plays !== undefined) patch.plays = change.plays;
   return { patch, restart: change.diagnostic !== undefined && change.diagnostic !== current.diagnostic };
 }
 
@@ -571,6 +581,11 @@ export class SettingsService {
   private doctor: DoctorArena | null = null;
   private firstDataState: FirstData = { state: 'idle' };
   private firstDataAbort: AbortController | null = null;
+  private firstDataRun: Promise<Saved> | null = null;
+  /** The abort in flight is a restore's, not the user's. */
+  private quietAbort = false;
+  /** Restores asked for and not yet finished; no download starts while any is. */
+  private pendingRestores = 0;
 
   constructor(private readonly deps: SettingsDeps) {
     this.log = deps.log ?? silent;
@@ -605,6 +620,8 @@ export class SettingsService {
     } catch (error) {
       this.log.warn('settings could not be read', { error: String(error) });
       this.cache = null;
+      // A count from before this read describes a database that may be gone.
+      this.doctor = null;
     }
     return this.cache;
   }
@@ -733,31 +750,52 @@ export class SettingsService {
     });
   }
 
-  restoreFrom(file: string): Promise<Saved> {
-    if (this.firstDataState.state === 'running') {
-      return Promise.resolve({ ok: false, error: t('restore.downloadRunning') });
-    }
-    return this.serial(async () => {
-      await this.deps.stopServer();
-      let code: number | null | 'not-run' = 0;
-      let stderr = '';
-      try {
-        await this.deps.run(['restore', file]);
-      } catch (error) {
-        const shaped = errorShape(error);
-        if (shaped) ({ code, stderr } = shaped);
-        else code = 'not-run';
-      }
-      const outcome = interpretRestore(code, stderr);
-      if (!outcome.restartServer) {
-        this.log.error('restore ended partway; the server stays stopped', { code, files: filePairLines(stderr) });
+  async restoreFrom(file: string): Promise<Saved> {
+    // D5: no download runs while a restore does. Counted before any await, so
+    // nothing queued ahead of this restore starts a download behind its back.
+    this.pendingRestores += 1;
+    let restarted = false;
+    try {
+      await this.stopDownloadForRestore();
+      return await this.serial(async () => {
+        await this.deps.stopServer();
+        let code: number | null | 'not-run' = 0;
+        let stderr = '';
+        try {
+          await this.deps.run(['restore', file]);
+        } catch (error) {
+          const shaped = errorShape(error);
+          if (shaped) ({ code, stderr } = shaped);
+          else code = 'not-run';
+        }
+        const outcome = interpretRestore(code, stderr);
+        if (!outcome.restartServer) {
+          this.log.error('restore ended partway; the server stays stopped', { code, files: filePairLines(stderr) });
+          return outcome.saved;
+        }
+        await this.deps.startServer();
+        restarted = true;
+        // A finished or failed download described the database just replaced.
+        if (outcome.saved.ok && this.firstDataState.state !== 'idle' && this.firstDataState.state !== 'running') {
+          this.setFirstData({ state: 'idle' });
+        }
+        await this.publish();
+        if (outcome.saved.ok) this.deps.reloadWindow();
         return outcome.saved;
-      }
-      await this.deps.startServer();
-      await this.publish();
-      if (outcome.saved.ok) this.deps.reloadWindow();
-      return outcome.saved;
-    });
+      });
+    } finally {
+      this.pendingRestores -= 1;
+      // D5 again, against the restored database; the publish above has just read it.
+      if (restarted) this.startIfNoCards();
+    }
+  }
+
+  private async stopDownloadForRestore(): Promise<void> {
+    if (!this.firstDataRun) return;
+    this.quietAbort = true;
+    this.firstDataAbort?.abort();
+    await this.firstDataRun;
+    this.quietAbort = false;
   }
 
   /** Reads the config and doctor again and sends the result (the Arena
@@ -778,6 +816,17 @@ export class SettingsService {
    *  leaving the page does not stop it. */
   async firstData(): Promise<Saved> {
     if (this.firstDataState.state === 'running') return { ok: false, error: t('cards.alreadyRunning') };
+    if (this.pendingRestores > 0) return { ok: false, error: t('cards.restoreRunning') };
+    const run = this.runFirstData();
+    this.firstDataRun = run;
+    try {
+      return await run;
+    } finally {
+      if (this.firstDataRun === run) this.firstDataRun = null;
+    }
+  }
+
+  private async runFirstData(): Promise<Saved> {
     this.setFirstData({ state: 'running', line: null });
     const controller = new AbortController();
     this.firstDataAbort = controller;
@@ -808,6 +857,13 @@ export class SettingsService {
         },
       });
     } catch (error) {
+      if (controller.signal.aborted && this.quietAbort) {
+        // Stopped for a restore: the page shows no error.
+        this.quietAbort = false;
+        this.firstDataAbort = null;
+        this.setFirstData({ state: 'idle' });
+        return { ok: false, error: t('cards.stopped') };
+      }
       const message = controller.signal.aborted
         ? t('cards.stopped')
         : failureSentence(errorStderr(error), t('cards.noReason'));
@@ -821,6 +877,22 @@ export class SettingsService {
     // The refresh sends the settings, with the new rules-text count.
     await this.serial(() => this.publish());
     return { ok: true };
+  }
+
+  /** D5: starts the card-data download when doctor counted zero cards with rules
+   *  text (`null` is unknown, not zero) and none is running or finished. */
+  async startFirstDataIfMissing(): Promise<void> {
+    // The launch's first doctor run starts before `serve` creates the database,
+    // so an unknown count is read again before deciding.
+    if (this.doctor?.rulesText == null) await this.serial(() => this.publish());
+    this.startIfNoCards();
+  }
+
+  private startIfNoCards(): void {
+    if (this.pendingRestores > 0) return;
+    if (this.doctor?.rulesText !== 0 || this.firstDataState.state !== 'idle') return;
+    this.log.info('no card data yet; starting the download on its own');
+    void this.firstData();
   }
 
   /** The app is quitting: a running download ends as `failed`. */

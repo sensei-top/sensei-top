@@ -1,6 +1,25 @@
 import { useEffect, useState } from 'react'
-import { scrollEdge, spyCurrent } from './guide'
-import type { ScrollEdge } from './guide'
+
+/** Where the window stands against the page's two ends: `top` when it is
+ *  not scrolled at all, `end` when its foot is within 2 px of the page's,
+ *  `null` in between. A page that fits the window is at its `top`. */
+export type ScrollEdge = 'top' | 'end' | null
+
+export function scrollEdge(scrollY: number, viewportHeight: number, documentHeight: number): ScrollEdge {
+  if (scrollY <= 0) return 'top'
+  if (scrollY + viewportHeight >= documentHeight - 2) return 'end'
+  return null
+}
+
+/** The current section of a scroll spy: the first of `ids` at the page's
+ *  top, the last at its end, and between them `observed`, the observer's
+ *  own answer. */
+export function spyCurrent(ids: readonly string[], observed: string, edge: ScrollEdge): string {
+  if (ids.length === 0) return observed
+  if (edge === 'top') return ids[0]
+  if (edge === 'end') return ids[ids.length - 1]
+  return observed
+}
 
 /** Which of `ids` is current, by watching each with one shared
  *  `IntersectionObserver` rather than a scroll listener — a section counts

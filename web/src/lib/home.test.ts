@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { translator } from '../i18n'
 import type { DeckIdentityOut, LeakOut, Match, MetaPresence } from '../api'
+import type { DetailedLogs } from '../bridge'
 import {
+  detailedLogsNag,
   fieldWindowStart,
   firstPattern,
   firstRunSteps,
@@ -12,6 +14,7 @@ import {
   lastSession,
   lastThirtyDays,
   liveState,
+  mtgoOnly,
   opponentNamed,
   ownScore,
   recentMatches,
@@ -23,8 +26,8 @@ import {
 } from './home'
 
 // The zone is America/New_York (vitest.config.ts). Every timestamp below is
-// bare, so UTC: 04:00 UTC is midnight in New York until November 1, 2026,
-// and 05:00 UTC after it. September 28, 2026 is a Monday.
+// bare, so the log's own local clock: 04:00 UTC is midnight in New York
+// until November 1, 2026, and 05:00 UTC after it. September 28, 2026 is a Monday.
 
 const HOUR = 3_600_000
 const DAY = 24 * HOUR
@@ -55,7 +58,7 @@ describe('lastSession', () => {
     const afternoon = match('m0', '2026-09-27T16:00:00', 'loss', { ended_at: '2026-09-27T16:59:59' })
     const session = lastSession([afternoon, ...evening])
     expect(ids(session!.matches)).toEqual(['m3', 'm2', 'm1'])
-    expect(session!.start).toBe(Date.UTC(2026, 8, 27, 20, 0, 0))
+    expect(session!.start).toBe(new Date(2026, 8, 27, 20, 0, 0).getTime())
     expect(session!.tally).toEqual({ played: 3, wins: 2, losses: 1, draws: 0 })
   })
 
@@ -125,7 +128,7 @@ describe('sessionHeadline', () => {
 })
 
 describe('lastThirtyDays', () => {
-  const now = Date.UTC(2026, 8, 28, 12, 0, 0)
+  const now = new Date(2026, 8, 28, 12, 0, 0).getTime()
   const rows = [
     match('today', '2026-09-28T10:00:00', 'win'),
     match('edge', '2026-08-29T12:00:00', 'loss'),
@@ -155,6 +158,23 @@ describe('first run', () => {
     expect(firstRunSteps({ watching: true, events: 0 })).toEqual(['done', 'next', 'later'])
     expect(firstRunSteps({ watching: true, events: 12 })).toEqual(['done', 'done', 'next'])
     expect(firstRunSteps({ watching: false, events: 12 })).toEqual(['next', 'done', 'later'])
+    // The Arena path ignores MTGO's watching.
+    expect(firstRunSteps({ watching: true, events: 0, mtgo_watching: true })).toEqual(['done', 'next', 'later'])
+  })
+
+  it('reads the second step as MTGO watching for an MTGO-only player', () => {
+    const live = (watching: boolean, mtgo: boolean, events = 0) => ({ watching, events, mtgo_watching: mtgo })
+    expect(firstRunSteps(live(true, false, 40), true)).toEqual(['done', 'next', 'later'])
+    expect(firstRunSteps(live(true, true), true)).toEqual(['done', 'done', 'next'])
+    expect(firstRunSteps(live(false, false, 3), true)).toEqual(['next', 'later', 'later'])
+    expect(firstRunSteps(undefined, true)).toEqual(['next', 'later', 'later'])
+  })
+
+  it('is MTGO-only only when plays is exactly mtgo', () => {
+    expect(mtgoOnly(['mtgo'])).toBe(true)
+    expect(mtgoOnly(['arena'])).toBe(false)
+    expect(mtgoOnly(['arena', 'mtgo'])).toBe(false)
+    expect(mtgoOnly(undefined)).toBe(false)
   })
 })
 
@@ -317,7 +337,7 @@ describe('weeklyWinrate', () => {
 })
 
 describe('homeDecks', () => {
-  const now = Date.UTC(2026, 8, 28, 12, 0, 0)
+  const now = new Date(2026, 8, 28, 12, 0, 0).getTime()
   const identity = (key: string, deckIds: string[], rest: Partial<DeckIdentityOut>) =>
     ({ key, name: key, deck_ids: deckIds, matches: 0, match_wins: 0, match_losses: 0, last_played: null, ...rest }) as DeckIdentityOut
 
@@ -349,7 +369,7 @@ describe('homeDecks', () => {
   })
 
   it('counts a deck’s finished matches as its wins and losses, draws aside', () => {
-    expect(decks[1]).toMatchObject({ finished: 9, wins: 6, lastPlayed: Date.UTC(2026, 8, 27, 20, 0, 0) })
+    expect(decks[1]).toMatchObject({ finished: 9, wins: 6, lastPlayed: new Date(2026, 8, 27, 20, 0, 0).getTime() })
   })
 
   it('takes its art from the newest finished match, never the one in progress', () => {
@@ -364,10 +384,10 @@ describe('homeDecks', () => {
 })
 
 describe('fieldWindowStart', () => {
-  const now = Date.UTC(2026, 8, 28, 12, 0, 0)
+  const now = new Date(2026, 8, 28, 12, 0, 0).getTime()
 
-  it('is the reset’s date at midnight UTC', () => {
-    expect(fieldWindowStart('2026-09-01', now)).toBe(Date.UTC(2026, 8, 1))
+  it('is the reset’s date at the viewer’s midnight', () => {
+    expect(fieldWindowStart('2026-09-01', now)).toBe(new Date(2026, 8, 1).getTime())
   })
 
   it('is 90 days before the clock without a reset', () => {
@@ -377,7 +397,7 @@ describe('fieldWindowStart', () => {
 })
 
 describe('homeField', () => {
-  const now = Date.UTC(2026, 8, 28, 12, 0, 0)
+  const now = new Date(2026, 8, 28, 12, 0, 0).getTime()
   // A row and a match name a deck by its key and its label together; here
   // the label is the key's own, one label to a key.
   const row = (tier: string, key: string, decks: number) =>
@@ -454,12 +474,13 @@ describe('homeField', () => {
   it('gives the record of the newest match’s deck, every version of it, inside the window', () => {
     const field = homeField(presence, matches, identities, '2026-09-01', false, now, 'Standard')!
     expect(field.deck).toEqual({ name: 'Izzet', deckIds: new Set(['a1', 'a2']) })
-    // Against "big": matches 1 and 2. Match 4 was another deck's, 5 began a
-    // second before the reset, 6 is not finished.
+    // Against "big": matches 1 and 2. Match 4 was another deck's, 5 began
+    // 23:59:59 local the day before the reset (one second outside the
+    // window), 6 is not finished.
     expect(field.rows[0].record).toEqual({ played: 2, won: 1 })
     expect(field.rows[1].record).toEqual({ played: 1, won: 1 })
     expect(field.topTwo).toEqual({ played: 3, won: 2 })
-    expect(field.windowStart).toBe(Date.UTC(2026, 8, 1))
+    expect(field.windowStart).toBe(new Date(2026, 8, 1).getTime())
     expect(field.reset).toBe('2026-09-01')
   })
 
@@ -483,6 +504,17 @@ describe('homeField', () => {
       name: 'Stray',
       deckIds: new Set(['z9']),
     })
+  })
+
+  it('takes the art from the match against the row’s own label, not another label of its key', () => {
+    const labelled = (id: string, startedAt: string, label: string) =>
+      match(id, startedAt, 'win', { deck_id: 'a1', format: 'Standard', opponent_key: 'archetype:control', opponent_label: label })
+    const rows = [{ tier: 'C', archetype_key: 'control', label: 'Jeskai Control', decks: 9 } as unknown as MetaPresence]
+    const pair = [
+      labelled('newer-other', '2026-09-27T20:00:00', 'Sultai Control'),
+      labelled('older-own', '2026-09-20T20:00:00', 'Jeskai Control'),
+    ]
+    expect(homeField(rows, pair, identities, null, false, now, 'Standard')!.artMatchId).toBe('older-own')
   })
 
   it('takes the first row’s art from the newest finished match against it, whatever the deck', () => {
@@ -513,5 +545,27 @@ describe('the pill state', () => {
     expect(liveState({ ...base, matchInProgress: true })).toBe('match')
     expect(liveState(base)).toBe('watching')
     expect(liveState({ ...base, watching: false })).toBe('idle')
+  })
+})
+
+describe('detailedLogsNag', () => {
+  const sources = (path: string | null, detailedLogs: DetailedLogs) => ({ arenaLog: { path, found: true, detailedLogs } })
+
+  it('asks while doctor does not read them on, for a player of Arena', () => {
+    expect(detailedLogsNag(sources('/log', 'disabled'), ['arena'])).toBe(true)
+    expect(detailedLogsNag(sources('/log', 'unknown'), ['arena', 'mtgo'])).toBe(true)
+    expect(detailedLogsNag(sources('/log', 'enabled'), ['arena'])).toBe(false)
+  })
+
+  it('reads a missing plays as both', () => {
+    expect(detailedLogsNag(sources('/log', 'disabled'), undefined)).toBe(true)
+  })
+
+  it('does not ask without a log path', () => {
+    expect(detailedLogsNag(sources(null, 'unknown'), ['arena'])).toBe(false)
+  })
+
+  it('never asks an MTGO-only player', () => {
+    expect(detailedLogsNag(sources('/log', 'disabled'), ['mtgo'])).toBe(false)
   })
 })

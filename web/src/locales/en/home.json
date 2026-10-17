@@ -46,7 +46,15 @@
     "willAppear": "What will appear here",
     "appear1": "Your last session in one line, and your record over the last 30 days.",
     "appear2": "Three things worth a look: your last match, a pattern across your matches, and the field.",
-    "appear3": "Your recent matches, your win rate by week and your decks."
+    "appear3": "Your recent matches, your win rate by week and your decks.",
+    "mtgoLead": "Sensei Top reads the game logs Magic Online writes while you play. Nothing is recorded yet.",
+    "mtgoWatchingTitle": "The tracker is running",
+    "mtgoFolderTitle": "It is watching Magic Online's folder",
+    "mtgoFolderDetail": "No folder of game logs is set yet. Set it in Settings, under Sources.",
+    "mtgoPlayTitle": "Play a match",
+    "mtgoPlayDetail": "Each game is read once it ends, and the match appears here.",
+    "mtgoNotWatching": "The tracker is running without watching Magic Online's folder, so a game played now is not recorded. Restart the tracker with watching turned on.",
+    "mtgoWatcherStopped": "The tracker stopped watching after it started, so a game played now is not recorded. Restart the tracker; its log file says what went wrong."
   },
   "decks": {
     "title": "Decks",
@@ -124,5 +132,12 @@
     "showNumbers": "Show the numbers",
     "matches": "Matches",
     "won": "Won"
+  },
+  "detailedLogs": {
+    "title": "Turn on Detailed Logs in Arena",
+    "body": "Without them, no Arena match is recorded.",
+    "checkAgain": "Check again",
+    "checking": "Checking",
+    "stillOff": "Not confirmed yet. Arena says so when it starts, so start Arena again first."
   }
 }

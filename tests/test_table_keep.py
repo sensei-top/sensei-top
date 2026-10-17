@@ -195,6 +195,33 @@ def test_maindeck_kwarg_is_ignored_once_a_projected_row_exists(conn):
     assert with_maindeck.land_max == without.land_max
 
 
+def test_boarded_maindeck_wins_over_the_projected_row(conn):
+    """Under ``boarded`` the passed list is the deck held after a sideboarding
+    break and the decks row is game 1's: every list-derived number reads the
+    list, while deck_id is kept for the mulligan record."""
+    _insert_card(conn, 1, "Island", mana_cost=None, type_line="Basic Land — Island")
+    _insert_card(conn, 2, "Bear", mana_cost="{1}{G}", type_line="Creature — Bear",
+                 oracle_text="Vanilla creature.")
+    _insert_deck(conn, "d1", [1] * 17 + [2] * 43)
+    conn.execute("INSERT INTO matches (match_id, deck_id) VALUES ('m1', 'd1')")
+    conn.execute(
+        "INSERT INTO games (match_id, game_number, result, self_mulligans) "
+        "VALUES ('m1', 1, 'loss', 2)"
+    )
+    conn.commit()
+
+    guide = build_keep_guide(conn, "d1", maindeck=[1] * 20 + [2] * 40, boarded=True)
+    assert guide is not None
+    assert guide.deck_id == "d1"
+    assert [(r.mulligans, r.games, r.wins) for r in guide.mulligan_record] == [(2, 1, 0)]
+    assert guide.maindeck_size == 60
+    assert guide.land_count == 20
+    assert guide.creature_count == 40
+    # boarded with no list falls back to the row, as without the flag
+    plain = build_keep_guide(conn, "d1", boarded=True)
+    assert plain is not None and plain.land_count == 17
+
+
 # --- key_plays / mulligan_cost (Layer 2: the deck's own play evidence) -----
 #
 # These reuse guide/play.py's key_card_timing and mulligan_record rather

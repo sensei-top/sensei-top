@@ -25,6 +25,7 @@
     sensei-top config --set-arena-log PATH           where Arena's Player.log is
     sensei-top config --set-mtgo-handle HANDLE       which MTGO player is you
     sensei-top config --set-mtgo-dir DIR             where MTGO writes its game logs
+    sensei-top config --set-mtgo-deck-dir DIR        where your MTGO deck exports (.dek) are
     sensei-top config                                show the settings (keys masked)
     sensei-top config --json                         every setting as JSON, no key in it
     sensei-top backup [--force] [--dir PATH] [--keep N] [--deep-verify]
@@ -75,6 +76,7 @@ from sensei_top.reader.mtgo_decks import ingest_deck_dir
 from sensei_top.reader.segmenter import DATE_ORDERS
 
 if TYPE_CHECKING:
+    from sensei_top.answers import Answer
     from sensei_top.metagame.auto import RefreshState
     from sensei_top.metagame.source import RefreshResult
 
@@ -868,23 +870,26 @@ def _drop_file_key(table_name: str) -> bool:
     return True
 
 
-def _write_mtgo_config(*, handle: str | None = None, directory: str | None = None) -> None:
+def _write_mtgo_config(
+    *, handle: str | None = None, directory: str | None = None, deck_dir: str | None = None
+) -> None:
     """Merge into the existing ``[mtgo]`` table (if any), leaving ``[claude]``
     and ``[topdeck]`` untouched -- and, like ``_write_backup_config`` below,
     merging **within its own table field by field** too: ``--set-mtgo-dir``
     alone must not erase a ``handle`` set earlier by ``--set-mtgo-handle``, or
-    vice versa, since the two flags are independent and typically run on two
-    separate occasions; a hand-written ``deck_dir`` survives both. An empty
-    string clears its field (``_merge``). Neither field is a secret — the
-    handle is the user's own MTGO account name, needed only because MTGO's log
-    carries no auth event to learn "which player is us" from, and the
-    directory is a path on the user's own machine (``mtgo/config.py``'s module
-    docstring covers both) — so unlike the two API keys, nothing here masks
-    either one."""
+    vice versa, since the flags are independent and typically run on separate
+    occasions: the three fields merge independently, so each flag leaves the
+    other two as they were. An empty string clears its field (``_merge``). No
+    field is a secret — the handle is the user's own MTGO account name, needed
+    only because MTGO's log carries no auth event to learn "which player is
+    us" from, and the directories are paths on the user's own machine
+    (``mtgo/config.py``'s module docstring covers all three) — so unlike the
+    two API keys, nothing here masks any of them."""
     tables = _read_config_tables()
     table = dict(tables.get("mtgo", {}))
     _merge(table, "handle", handle)
     _merge(table, "dir", directory)
+    _merge(table, "deck_dir", deck_dir)
     _put_table(tables, "mtgo", table)
     _write_config_tables(tables)
 
@@ -1117,10 +1122,10 @@ def cmd_config(args) -> None:
     """``--set-*`` and ``--clear-*`` write; ``--json`` prints every setting
     for the desktop shell, which never writes the file itself (D2); with no
     flag, or ``--show``, a summary: the two resolved credentials (source and
-    the key masked to its last 4 characters) plus the configured MTGO handle
-    and log directory, each shown in full with its own source — neither is a
-    secret: the handle is the user's own account name, the directory a path
-    on their own machine — and where backups go. This never echoes a full
+    the key masked to its last 4 characters) plus the configured MTGO handle,
+    log directory and deck directory, each shown in full with its own source —
+    none is a secret: the handle is the user's own account name, the
+    directories paths on their own machine — and where backups go. This never echoes a full
     key, on disk or in the config file's own directory listing — only in the
     file's contents, which is why ``_write_config_tables`` chmods it 600.
 
@@ -1132,11 +1137,11 @@ def cmd_config(args) -> None:
     (AGENTS.md non-negotiable #5), the free, rate-limited TopDeck.gg key (the
     "free downloads" standard), the ``[mtgo]`` table (the handle
     ``project()`` needs to know which seat in an MTGO game log is ours, and
-    the directory its files are read from — two fields, one table, each
-    settable on its own), the ``[arena]`` table (D11), and the backup
-    destination and retention count. A flag for one never touches another's
-    table — see ``_write_llm_config``/``_write_topdeck_config``/
-    ``_write_mtgo_config``/``_write_arena_config``/``_write_backup_config``.
+    the game-log directory and the deck-export directory its files are read
+    from — three fields, one table, each settable on its own), the
+    ``[arena]`` table (D11), and the backup destination and retention count.
+    A flag for one never touches another's table — see
+    ``_write_llm_config``/``_write_topdeck_config``/``_write_mtgo_config``/``_write_arena_config``/``_write_backup_config``.
     """
     from sensei_top.llm import config as llm_config
     from sensei_top.metagame import config as topdeck_config
@@ -1155,6 +1160,7 @@ def cmd_config(args) -> None:
             args.set_topdeck_key,
             args.set_mtgo_handle,
             args.set_mtgo_dir,
+            args.set_mtgo_deck_dir,
             args.set_backup_dir,
             args.set_backup_keep,
             args.set_arena_log,
@@ -1199,6 +1205,15 @@ def cmd_config(args) -> None:
                 print(f"{resolved_dir} does not exist yet; stored anyway.")
         _write_mtgo_config(directory=resolved_dir)
         _written("MTGO log directory", resolved_dir)
+
+    if args.set_mtgo_deck_dir is not None:
+        resolved_deck_dir = args.set_mtgo_deck_dir
+        if resolved_deck_dir:
+            resolved_deck_dir = str(Path(resolved_deck_dir).expanduser().resolve())
+            if not Path(resolved_deck_dir).exists():
+                print(f"{resolved_deck_dir} does not exist yet; stored anyway.")
+        _write_mtgo_config(deck_dir=resolved_deck_dir)
+        _written("MTGO deck directory", resolved_deck_dir)
 
     if args.set_arena_log is not None:
         arena_log = args.set_arena_log
@@ -1287,6 +1302,15 @@ def cmd_config(args) -> None:
         mtgo_dir, mtgo_dir_source = resolved_dir
         print(f"MTGO directory source: {mtgo_dir_source}")
         print(f"  Directory: {mtgo_dir}")
+
+    resolved_deck = resolve_deck_dir()
+    if resolved_deck is None:
+        print("No MTGO deck directory configured. MTGO deck exports won't be read.")
+        print("  Run 'sensei-top config --set-mtgo-deck-dir DIR', or export MTGO_DECK_DIR.")
+    else:
+        deck_dir, deck_dir_source = resolved_deck
+        print(f"MTGO deck directory source: {deck_dir_source}")
+        print(f"  Directory: {deck_dir}")
 
     from sensei_top.arena_config import load_date_order, load_log
 
@@ -1502,6 +1526,26 @@ def cmd_report(args) -> None:
     print()
 
 
+def _read_import(path: str, expected_for: str) -> Answer:
+    """An ``--import FILE`` answer, read through the same contract the
+    dashboard's paste box uses (``answers.read_answer``), except that an
+    answer with no header — one saved before prompts asked for it — is read
+    whole, with a warning. Exits with the reason when it cannot be read."""
+    from sensei_top.answers import AnswerError, headerless_warning, read_answer
+
+    raw = Path(path).read_text(encoding="utf-8")
+    try:
+        answer = read_answer(raw, expected_for, require_header=False)
+    except AnswerError as exc:
+        sys.exit(f"Could not read {path}: {exc}")
+    if answer.headerless:
+        warning = headerless_warning()
+        # Not the file's path: a log line never carries a local path.
+        logging.getLogger(__name__).warning("import: %s", warning)
+        print(warning, file=sys.stderr)
+    return answer
+
+
 def cmd_guide(args) -> None:
     from sensei_top.guide.bundle import build_deck_guide
     from sensei_top.guide.deck import list_identities
@@ -1541,6 +1585,7 @@ def cmd_guide(args) -> None:
         return
 
     if args.import_file:
+        from sensei_top.answers import guide_for
         from sensei_top.brief.from_guide import store_guide_matchups
         from sensei_top.brief.store import corpus_commit, list_hash
         from sensei_top.guide.authored import write_narrative
@@ -1550,21 +1595,28 @@ def cmd_guide(args) -> None:
             guide_narrative_from_json,
         )
 
-        raw = Path(args.import_file).read_text(encoding="utf-8")
+        identity = guide.provenance.deck
+        answer = _read_import(args.import_file, guide_for(identity.key))
         try:
-            narrative = guide_narrative_from_json(raw, guide)
+            narrative = guide_narrative_from_json(answer.body, guide)
         except NarrativeError as exc:
             sys.exit(f"Could not read {args.import_file}: {exc}")
 
-        identity = guide.provenance.deck
         write_narrative(
             conn, identity.key, narrative,
-            list_hash=list_hash(identity.current_cards),
+            # The 75 the answer says it was written for, so one written for
+            # an older list reads as stale (plan 24, D13).
+            list_hash=(
+                answer.context if answer.context is not None
+                else list_hash(identity.current_cards)
+            ),
             prompt=full_prompt(guide, conn=conn) or "",
             author=args.author,
             corpus_commit=corpus_commit(conn),
         )
-        written = store_guide_matchups(conn, guide, narrative, model=args.author)
+        written = store_guide_matchups(
+            conn, guide, narrative, model=args.author, list_hash=answer.context,
+        )
         conn.commit()
         print(f"Imported the guide for {identity.name or identity.key}.")
         print(f"  {written} matchup brief(s) stored — these also drive the Current match tab.")
@@ -1606,9 +1658,11 @@ def cmd_rcq(args) -> None:
         return
 
     if args.import_file:
-        raw = Path(args.import_file).read_text(encoding="utf-8")
+        from sensei_top.answers import rcq_for
+
+        answer = _read_import(args.import_file, rcq_for(evidence.guide.provenance.deck.key))
         try:
-            narrative = rcq_from_json(raw, evidence)
+            narrative = rcq_from_json(answer.body, evidence)
         except NarrativeError as exc:
             sys.exit(f"Could not read {args.import_file}: {exc}")
         for note in narrative.flex_notes:
@@ -1690,13 +1744,15 @@ def cmd_brief(args) -> None:
         return
 
     if args.import_file:
+        from sensei_top.answers import brief_for
         from sensei_top.brief.importer import import_brief
         from sensei_top.brief.narrative import NarrativeError
 
-        raw = Path(args.import_file).read_text(encoding="utf-8")
+        answer = _read_import(args.import_file, brief_for(identity.key, args.archetype))
         try:
             brief = import_brief(
-                conn, identity, args.archetype, args.archetype, raw, author=args.author,
+                conn, identity, args.archetype, args.archetype, answer.body,
+                author=args.author, written_for=answer.context,
             )
         except NarrativeError as exc:
             sys.exit(f"Could not read {args.import_file}: {exc}")
@@ -1750,13 +1806,15 @@ def cmd_brief_missing(conn, identity, args) -> None:
         return
 
     if args.import_file:
+        from sensei_top.answers import coverage_for
         from sensei_top.brief.importer import import_briefs
         from sensei_top.brief.narrative import NarrativeError
 
-        raw = Path(args.import_file).read_text(encoding="utf-8")
+        answer = _read_import(args.import_file, coverage_for(identity.key))
         try:
             stored, skipped = import_briefs(
-                conn, identity, raw, author=args.author, labels=labels,
+                conn, identity, answer.body, author=args.author, labels=labels,
+                written_for=answer.context,
             )
         except NarrativeError as exc:
             sys.exit(f"Could not read {args.import_file}: {exc}")
@@ -2250,7 +2308,7 @@ def cmd_serve(args) -> None:
     )
     try:
         # Bound here, not by uvicorn, so `--port 0` yields a port we can
-        # report (docs/architecture.md, "The desktop shell"). The ready line
+        # report (docs/desktop.md, "The desktop shell"). The ready line
         # waits for `server.started`, which is the guarantee that uvicorn
         # accepts connections.
         sock = _bind_listening_socket(args.host, args.port)
@@ -2724,6 +2782,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_config.add_argument(
         "--set-mtgo-dir", default=None, metavar="DIR",
         help="directory of Match_GameLog_*.dat files — enables MTGO ingestion",
+    )
+    p_config.add_argument(
+        "--set-mtgo-deck-dir", default=None, metavar="DIR",
+        help="directory of your MTGO .dek deck exports — read with the game logs",
     )
     p_config.add_argument(
         "--set-backup-dir", default=None, metavar="DIR",

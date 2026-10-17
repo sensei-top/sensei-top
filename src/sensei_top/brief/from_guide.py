@@ -22,6 +22,7 @@ from sensei_top.llm.provenance import now_iso
 
 def store_guide_matchups(
     conn: sqlite3.Connection, guide: DeckGuide, narrative: GuideNarrative, *, model: str,
+    list_hash: str | None = None,
 ) -> int:
     """Write one ``Brief`` per matchup plan in ``narrative.matchups``.
     Returns the number actually written.
@@ -35,12 +36,19 @@ def store_guide_matchups(
     ``source='live'`` row whose ``list_hash`` already matches the current
     75 — a brief written for this exact matchup, from a smaller and cheaper
     prompt, is not improved by a guide's broader sweep.
+
+    ``list_hash`` is the hash of the 75 the guide was written for, when an
+    imported answer says so (``answers.read_answer``'s ``context``): each
+    brief is stored with it, so a guide answered for an older list leaves
+    briefs that read as stale, like the guide itself. ``None`` is today's
+    75. The skip above always compares with today's.
     """
     identity = guide.provenance.deck
     key_by_name = archetype_key_by_name(conn)
     share_by_name = {s.archetype: s.share for s in guide.field.shares}
     rate_by_name = {r.archetype: r for r in guide.field.personal_rates}
     hash_now = store.list_hash(identity.current_cards)
+    written_for = list_hash if list_hash is not None else hash_now
     written = 0
 
     for plan in narrative.matchups:
@@ -74,7 +82,7 @@ def store_guide_matchups(
             model=model,
             generated_at=now_iso(),
             corpus_commit=store.corpus_commit(conn),
-            list_hash=hash_now,
+            list_hash=written_for,
             source="guide",
         )
         store.write_brief(conn, brief)

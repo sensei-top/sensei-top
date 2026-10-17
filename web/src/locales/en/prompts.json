@@ -6,7 +6,15 @@
     "showPrompt": "Show the prompt",
     "hidePrompt": "Hide the prompt",
     "thenSave": "Then save the answer with this command:",
-    "copyCommand": "Copy the command"
+    "copyCommand": "Copy the command",
+    "thenPaste": "Then paste the assistant's answer here and save it.",
+    "pasteLabel": "The assistant's answer",
+    "pastePlaceholder": "Paste the whole answer, exactly as the assistant gave it.",
+    "save": "Save the answer",
+    "saving": "Saving…",
+    "notSaved": "The answer was not saved.",
+    "notSavedOffline": "The tracker did not answer, so the answer was not saved. It is still in the box.",
+    "orCommand": "Or save it with this command:"
   },
   "generate": {
     "emptyNote": "Nothing written yet.",

@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-17
+
+### Added
+
+- Every card that gives you a prompt to copy now takes the answer back:
+  the match report, the leak finder, the deck guide, the matchup briefs,
+  the sideboard plan, matchup coverage, the Coach and the RCQ guide. Paste
+  the assistant's whole answer into the box under the prompt and press
+  **Save the answer**. The answer names the card it was written for, so
+  one pasted into the wrong card is refused and nothing is stored. Before,
+  only the deck guide, the briefs and the RCQ guide could be saved, and
+  only from a terminal.
+- A **Card data** card in **Settings**, under **Sources**: how many cards
+  have rules text, and **Download card data** to fetch it or fetch it
+  again.
+- An optional **Folder of decks** for Magic Online, for the decks you
+  export as `.dek` files. The app already read the decks Magic Online
+  keeps beside its game logs.
+
+### Changed
+
+- The welcome steps ask which you play, Arena, Magic Online or both, and
+  show only that client's setup.
+- The Arena step draws where Detailed Logs are turned on in Arena, with
+  **Check again**. **Home** keeps asking until Arena's log says they are
+  on.
+- Card data downloads on its own the first time the app opens, and
+  **Ready** shows how far it has got. It is no longer a step of its own.
+- The footer says where your match history is kept, instead of naming a
+  database format.
+- Written prose in the deck guide, the Coach and the RCQ guide fills the
+  width of its card.
+
+### Fixed
+
+- Match times showed shifted by your offset from UTC, three hours early
+  in Brazil. They now read in your own clock.
+- After sideboarding, **Live**'s remaining library and keep guide counted
+  game 1's list. They count the list you boarded into.
+- **Live** showed no matchup brief when the deck's format was unknown,
+  even with one already written. A written brief now shows first.
+- Pick-Two Draft matches counted toward the Coach. They are Limited, and
+  left out with the other draft queues.
+- A match report could keep an earlier reading of the match after the
+  app's read of its format changed.
+- A Magic Online log line with a number in unusual digits, such as "²",
+  is skipped with a warning instead of failing.
+- **Home**'s field card could show the art of another deck of the same
+  archetype. It now matches the deck it names.
+- A card face Scryfall cannot find on its own, such as Enroot of
+  Carnivorous Cultivator // Enroot, drew an empty box. It now takes the
+  picture of the card it belongs to.
+
 ## [0.7.2] - 2026-10-13
 
 The app is the same as 0.7.1's; this release carries the website.
@@ -83,7 +136,8 @@ The app is the same as 0.7.1's; this release carries the website.
   keeps recording with the window closed, and start-with-Windows as an
   option. On Linux, an AppImage that updates itself in place.
 
-[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/sensei-top/sensei-top/compare/v0.7.2...v1.0.0
 [0.7.2]: https://github.com/sensei-top/sensei-top/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/sensei-top/sensei-top/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/sensei-top/sensei-top/releases/tag/v0.7.0

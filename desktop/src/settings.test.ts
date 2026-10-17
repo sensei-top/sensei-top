@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   asksAutostart,
   CHANNELS,
@@ -48,6 +48,14 @@ const DOCTOR = {
 const NO_APP_EXTRAS = { askAutostart: false, rulesText: null, firstData: { state: 'idle' } } as const;
 
 describe('config --json to ShellSettings', () => {
+  it('carries mtgo.deck_dir into sources.mtgoDeckDir, null when unset', () => {
+    const extras = { dataDir: '/data', backupInFolder: 2, lastBackup: null };
+    const doctor = parseDoctorArena(JSON.stringify(DOCTOR));
+    const withDir = { ...CONFIG, mtgo: { ...CONFIG.mtgo, deck_dir: '/mtgo/decks' } };
+    expect(toShellSettings(parseConfigJson(JSON.stringify(withDir)), doctor, extras).sources.mtgoDeckDir).toBe('/mtgo/decks');
+    expect(toShellSettings(parseConfigJson(JSON.stringify(CONFIG)), doctor, extras).sources.mtgoDeckDir).toBeNull();
+  });
+
   it('maps every field the page shows', () => {
     const settings = toShellSettings(parseConfigJson(JSON.stringify(CONFIG)), parseDoctorArena(JSON.stringify(DOCTOR)), {
       dataDir: '/data',
@@ -60,6 +68,7 @@ describe('config --json to ShellSettings', () => {
         dateOrder: 'auto',
         mtgoHandle: 'someone',
         mtgoDir: '/mtgo/logs',
+        mtgoDeckDir: null,
         mtgoFound: null,
         dataDir: '/data',
       },
@@ -115,6 +124,7 @@ describe('config --json to ShellSettings', () => {
       checkForUpdates: true,
       diagnostic: false,
       language: 'system',
+      plays: ['arena', 'mtgo'],
       update: { state: 'idle' },
       onboarded: false,
       askAutostart: false,
@@ -192,6 +202,8 @@ describe('a change to CLI arguments', () => {
     expect(planChange({ sources: { mtgoHandle: null, mtgoDir: '/m' } }).args).toEqual([
       'config', '--set-mtgo-handle', '', '--set-mtgo-dir', '/m',
     ]);
+    expect(planChange({ sources: { mtgoDeckDir: '/mtgo/decks' } }).args).toEqual(['config', '--set-mtgo-deck-dir', '/mtgo/decks']);
+    expect(planChange({ sources: { mtgoDeckDir: null } }).args).toEqual(['config', '--set-mtgo-deck-dir', '']);
     expect(planChange({ writing: { model: 'claude-opus-5-5' } }).args).toEqual(['config', '--set-model', 'claude-opus-5-5']);
     expect(planChange({ backup: { dir: '/b', keep: 4 } }).args).toEqual(['config', '--set-backup-dir', '/b', '--set-backup-keep', '4']);
   });
@@ -232,6 +244,7 @@ describe('which changes restart the server (D12, D18)', () => {
     expect(planChange({ sources: { arenaLog: { path: '/a' } } }).restart).toBe(true);
     expect(planChange({ sources: { dateOrder: 'mdy' } }).restart).toBe(true);
     expect(planChange({ sources: { mtgoDir: '/m' } }).restart).toBe(true);
+    expect(planChange({ sources: { mtgoDeckDir: '/m' } }).restart).toBe(true);
     expect(planChange({ sources: { mtgoHandle: 'x' } }).restart).toBe(true);
     expect(planChange({ backup: { dir: '/b' } }).restart).toBe(true);
     expect(planChange({ backup: { keep: 2 } }).restart).toBe(true);
@@ -380,7 +393,7 @@ const BUSY = 'A backup started 2m ago (pid 123) is still running; nothing to do.
 
 type Cards = { lines: string[]; fail?: RunError; finish?: Promise<void> };
 
-function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?: string; slot?: { at: string; bytes: number } | null; open?: string | Error; storeFails?: boolean; cards?: Cards; doctor?: () => string } = {}) {
+function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?: string; slot?: { at: string; bytes: number } | null; open?: string | Error; storeFails?: boolean; cards?: Cards; doctor?: () => string; configFails?: { on: boolean }; restoreHold?: Promise<void> } = {}) {
   const backupOutput = extra.backupOutput ?? '  Backup:    2,048 bytes, verified\n';
   const calls: Array<{ args: readonly string[]; stdin?: string }> = [];
   const events: string[] = [];
@@ -388,6 +401,9 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
   const stored: ShellJson = {};
   const changes: BridgeSettings[] = [];
   const warnings: Array<{ message: string; fields?: unknown }> = [];
+  const infos: string[] = [];
+  let cardsActive = 0;
+  const overlap = { restoreDuringCards: false };
   const updates: { status: UpdateStatus; switched: boolean[] } = { status: { state: 'idle' }, switched: [] };
   let rules = 5;
   const late: Array<() => void> = [];
@@ -395,19 +411,27 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
     run: async (args, options) => {
       calls.push({ args, ...(options?.stdin === undefined ? {} : { stdin: options.stdin }) });
       events.push(`run ${args[0]}`);
+      if (args[0] === 'restore' && cardsActive > 0) overlap.restoreDuringCards = true;
+      if (args[0] === 'restore' && extra.restoreHold) await extra.restoreHold;
+      if (args[0] === 'config' && args[1] === '--json' && extra.configFails?.on) return Promise.reject(new RunError(1, 'no'));
       if (args[0] === 'cards' && extra.cards) {
-        for (const line of extra.cards.lines) options?.onLine?.(line);
-        const aborted = new Promise<never>((_, reject) =>
-          options?.signal?.addEventListener('abort', () => {
-            // a real child's output can still arrive after the rejection
-            late.push(() => options.onLine?.('late line'));
-            reject(new Error('aborted'));
-          }),
-        );
-        if (extra.cards.finish) await Promise.race([extra.cards.finish, aborted]);
-        if (extra.cards.fail) throw extra.cards.fail;
-        rules = 27000;
+        cardsActive += 1;
+        try {
+          for (const line of extra.cards.lines) options?.onLine?.(line);
+          const aborted = new Promise<never>((_, reject) =>
+            options?.signal?.addEventListener('abort', () => {
+              // a real child's output can still arrive after the rejection
+              late.push(() => options.onLine?.('late line'));
+              reject(new Error('aborted'));
+            }),
+          );
+          if (extra.cards.finish) await Promise.race([extra.cards.finish, aborted]);
+          if (extra.cards.fail) throw extra.cards.fail;
+          rules = 27000;
         return extra.cards.lines.join('\n');
+        } finally {
+          cardsActive -= 1;
+        }
       }
       const failure = failures[args[0] ?? ''];
       if (failure && !(args[0] === 'config' && args[1] === '--json')) return Promise.reject(failure);
@@ -450,12 +474,12 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
     setUpdateChecks: (on) => void updates.switched.push(on),
     log: {
       debug: () => {},
-      info: () => {},
+      info: (message) => void infos.push(message),
       warn: (message, fields) => void warnings.push({ message, ...(fields ? { fields } : {}) }),
       error: () => {},
     },
   };
-  return { service: new SettingsService(deps), languages, late, calls, events, stored, changes, warnings, updates };
+  return { service: new SettingsService(deps), languages, late, calls, events, stored, changes, warnings, infos, overlap, updates };
 }
 
 describe('the service', () => {
@@ -663,6 +687,174 @@ describe('the service', () => {
     expect(changes.at(-1)?.app.onboarded).toBe(true);
   });
 
+  describe('card data on its own (D5)', () => {
+    const doctorWith = (...counts: Array<number | null>) => {
+      let n = 0;
+      return () => JSON.stringify({ ...DOCTOR, cards: { arena_ids: 10, rules_text: counts[Math.min(n++, counts.length - 1)] } });
+    };
+    const cardCalls = (calls: Array<{ args: readonly string[] }>) => calls.filter((c) => c.args[0] === 'cards').length;
+
+    it('starts when doctor counted zero, and logs one line', async () => {
+      const { service, calls, infos } = harness({}, { doctor: doctorWith(0), cards: { lines: ['x'] } });
+      await service.refresh();
+      await service.startFirstDataIfMissing();
+      expect(cardCalls(calls)).toBe(1);
+      expect(infos).toEqual(['no card data yet; starting the download on its own']);
+    });
+
+    it('does not start on a positive count', async () => {
+      const { service, calls, infos } = harness({}, { doctor: doctorWith(27000) });
+      await service.refresh();
+      await service.startFirstDataIfMissing();
+      expect(cardCalls(calls)).toBe(0);
+      expect(infos).toEqual([]);
+    });
+
+    it('reads an unknown count again, and starts when the second read is zero', async () => {
+      const { service, calls, infos } = harness({}, { doctor: doctorWith(null, 0), cards: { lines: ['x'] } });
+      await service.refresh();
+      await service.startFirstDataIfMissing();
+      expect(cardCalls(calls)).toBe(1);
+      expect(infos).toHaveLength(1);
+    });
+
+    it('does not start when the count is still unknown after the second read', async () => {
+      const { service, calls, infos } = harness({}, { doctor: doctorWith(null), cards: { lines: ['x'] } });
+      await service.refresh();
+      await service.startFirstDataIfMissing();
+      expect(cardCalls(calls)).toBe(0);
+      expect(infos).toEqual([]);
+    });
+
+    it('does not start a second download while one runs', async () => {
+      let release!: () => void;
+      const finish = new Promise<void>((resolve) => (release = resolve));
+      const { service, calls, infos } = harness({}, { doctor: doctorWith(0), cards: { lines: ['x'], finish } });
+      await service.refresh();
+      await service.startFirstDataIfMissing();
+      await service.startFirstDataIfMissing();
+      // firstData() would refuse a second run itself, so the cards count cannot tell;
+      // the single info line does: the state check returned before logging.
+      expect(cardCalls(calls)).toBe(1);
+      expect(infos).toHaveLength(1);
+      release();
+    });
+
+    it('does not retry after a failure', async () => {
+      const { service, calls, infos } = harness({}, { doctor: doctorWith(0), cards: { lines: [], fail: new RunError(1, 'no') } });
+      await service.refresh();
+      expect(await service.firstData()).toMatchObject({ ok: false });
+      await service.startFirstDataIfMissing();
+      expect(cardCalls(calls)).toBe(1);
+      expect(infos).toEqual([]);
+    });
+
+    it('a restore stops a running download without an error, restores, then checks again', async () => {
+      let release!: () => void;
+      const finish = new Promise<void>((resolve) => (release = resolve));
+      const { service, calls, events, changes } = harness({}, { doctor: doctorWith(5, 0), cards: { lines: [], finish } });
+      await service.refresh();
+      const download = service.firstData();
+      expect(await service.restoreFrom('/b/backup')).toEqual({ ok: true });
+      await download;
+      const order = events.filter((e) => e === 'run cards' || e === 'stop' || e === 'run restore');
+      expect(order.slice(0, 3)).toEqual(['run cards', 'stop', 'run restore']);
+      expect(changes.some((c) => c.app.firstData.state === 'failed')).toBe(false);
+      expect(service.current?.app.firstData).not.toMatchObject({ state: 'failed' });
+      expect(cardCalls(calls)).toBe(2);
+      release();
+    });
+  });
+
+  describe('card data and restore (D5)', () => {
+    const doctorWith = (...counts: Array<number | null>) => {
+      let n = 0;
+      return () => JSON.stringify({ ...DOCTOR, cards: { arena_ids: 10, rules_text: counts[Math.min(n++, counts.length - 1)] } });
+    };
+    const cardCalls = (calls: Array<{ args: readonly string[] }>) => calls.filter((c) => c.args[0] === 'cards').length;
+    const hold = () => {
+      let release!: () => void;
+      const finish = new Promise<void>((resolve) => (release = resolve));
+      return { finish, release };
+    };
+
+    it('a restore queued behind the launch re-read never runs beside a download', async () => {
+      const { finish, release } = hold();
+      const { service, calls, overlap, infos } = harness({}, { doctor: doctorWith(null, 0), cards: { lines: [], finish } });
+      await service.refresh();
+      const start = service.startFirstDataIfMissing();
+      const restore = service.restoreFrom('/b/backup');
+      await Promise.all([start, restore]);
+      expect(overlap.restoreDuringCards).toBe(false);
+      expect(cardCalls(calls)).toBe(1);
+      expect(infos).toHaveLength(1);
+      release();
+    });
+
+    it('a second restore queued behind one whose check starts a download never overlaps it', async () => {
+      const { finish, release } = hold();
+      const { service, calls, overlap, infos } = harness({}, { doctor: doctorWith(0), cards: { lines: [], finish } });
+      await service.refresh();
+      const first = service.restoreFrom('/b/one');
+      const second = service.restoreFrom('/b/two');
+      await Promise.all([first, second]);
+      expect(overlap.restoreDuringCards).toBe(false);
+      expect(calls.filter((c) => c.args[0] === 'restore')).toHaveLength(2);
+      expect(cardCalls(calls)).toBe(1);
+      expect(infos).toHaveLength(1);
+      release();
+    });
+
+    it('a restore after a finished download checks again against the restored database', async () => {
+      const { service, calls } = harness({}, { doctor: doctorWith(0), cards: { lines: ['x'] } });
+      await service.refresh();
+      await service.firstData();
+      expect(await service.restoreFrom('/b/backup')).toEqual({ ok: true });
+      expect(cardCalls(calls)).toBe(2);
+    });
+
+    it('a restore after a failed download checks again too', async () => {
+      const { service, calls } = harness({}, { doctor: doctorWith(0), cards: { lines: [], fail: new RunError(1, 'no') } });
+      await service.refresh();
+      await service.firstData();
+      expect(await service.restoreFrom('/b/backup')).toEqual({ ok: true });
+      expect(cardCalls(calls)).toBe(2);
+    });
+
+    it('refuses a Download pressed while a restore runs, and the check afterwards still starts one', async () => {
+      const { finish: restoreHold, release } = hold();
+      const { service, calls } = harness({}, { doctor: doctorWith(0), cards: { lines: ['x'] }, restoreHold });
+      await service.refresh();
+      const restore = service.restoreFrom('/b/backup');
+      await vi.waitFor(() => expect(calls.some((c) => c.args[0] === 'restore')).toBe(true));
+      expect(await service.firstData()).toEqual({ ok: false, error: 'A restore is running. Download once it has finished.' });
+      expect(cardCalls(calls)).toBe(0);
+      release();
+      expect(await restore).toEqual({ ok: true });
+      expect(cardCalls(calls)).toBe(1);
+    });
+
+    it('starts nothing after a restore when the settings could not be read', async () => {
+      const configFails = { on: false };
+      const { service, calls } = harness({}, { doctor: doctorWith(0), cards: { lines: ['x'] }, configFails });
+      await service.refresh();
+      configFails.on = true;
+      expect(await service.restoreFrom('/b/backup')).toEqual({ ok: true });
+      expect(cardCalls(calls)).toBe(0);
+    });
+  });
+
+  describe('plays', () => {
+    it('is written by a change and read back', async () => {
+      const { service, stored } = harness();
+      await service.refresh();
+      expect(await service.setApp({ plays: ['mtgo'] })).toEqual({ ok: true });
+      expect(stored.plays).toEqual(['mtgo']);
+      expect(service.current?.app.plays).toEqual(['mtgo']);
+      expect(planAppChange(service.current!.app, { plays: ['arena'] }).patch).toEqual({ plays: ['arena'] });
+    });
+  });
+
   describe('first data (D21)', () => {
     const lines = ['Downloading 78 MB from Scryfall…', '', '30000 cards stored in DB'];
 
@@ -788,21 +980,6 @@ describe('the service', () => {
       expect(changes.at(-1)?.app.firstData).toEqual({ state: 'failed', error: 'The download was stopped.' });
       void service.firstData();
       expect(calls.filter((c) => c.args[0] === 'cards')).toHaveLength(2);
-    });
-
-    it('refuses a restore while the download runs, without stopping the server', async () => {
-      let release!: () => void;
-      const finish = new Promise<void>((resolve) => (release = resolve));
-      const { service, events } = harness({}, { cards: { lines: [], finish } });
-      const download = service.firstData();
-      expect(await service.restoreFrom('/b/backup')).toEqual({
-        ok: false,
-        error: 'The card download is still running. Restore once it has finished.',
-      });
-      expect(events).not.toContain('stop');
-      expect(events).not.toContain('run restore');
-      release();
-      await download;
     });
 
     it('does not queue a save behind the download', async () => {

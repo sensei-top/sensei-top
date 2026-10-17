@@ -37,11 +37,11 @@ import {
 const t = translator('en')
 
 // The zone is America/New_York (vitest.config.ts). Timestamps below are
-// bare, so UTC.
+// bare, so the log's own local clock.
 
 const DAY = 24 * 3_600_000
 const RESET = '2026-08-11'
-const NOW = Date.UTC(2026, 8, 29, 12) // Sep 29, 2026, 12:00 UTC
+const NOW = new Date(2026, 8, 29, 12).getTime() // Sep 29, 2026, noon on the log's own clock
 
 function presence(key: string, tier: string, decks: number, label = key): MetaPresence {
   return { archetype_key: key, label, colors: null, tier, decks, share: 0 }
@@ -168,8 +168,8 @@ describe('the window', () => {
     expect(metaWindowOf(15, RESET)).toEqual({ days: 15 })
   })
 
-  it('starts at the reset, 00:00 UTC, or the day count before now', () => {
-    expect(windowStartOf('reset', RESET, NOW)).toBe(Date.UTC(2026, 7, 11))
+  it('starts at the reset, the viewer’s local midnight, or the day count before now', () => {
+    expect(windowStartOf('reset', RESET, NOW)).toBe(new Date(2026, 7, 11).getTime())
     expect(windowStartOf(30, RESET, NOW)).toBe(NOW - 30 * DAY)
   })
 
@@ -327,7 +327,7 @@ describe('the rows', () => {
 describe('the record against a row', () => {
   const tempo = presence('tempo', 'B', 5, 'Izzet Tempo')
   const ramp = presence('ramp', 'B', 4, 'Gruul Ramp')
-  const start = Date.UTC(2026, 7, 11)
+  const start = new Date(2026, 7, 11).getTime()
   const vs = (key: string, label: string) => ({ opponent_key: `archetype:${key}`, opponent_label: label })
   const matches = [
     // In the window, two decks of the viewer's: both count.
@@ -335,7 +335,7 @@ describe('the record against a row', () => {
     match('m2', '2026-09-02T20:00:00', 'loss', { deck_id: 'd2', ...vs('tempo', 'Izzet Tempo') }),
     match('m3', '2026-09-03T20:00:00', 'win', { deck_id: null, ...vs('tempo', 'Izzet Tempo') }),
     // Before the window: not counted.
-    match('m4', '2026-08-10T20:00:00', 'win', { deck_id: 'd1', ...vs('tempo', 'Izzet Tempo') }),
+    match('m4', '2026-08-10T23:59:59', 'win', { deck_id: 'd1', ...vs('tempo', 'Izzet Tempo') }),
     // Not finished: not counted.
     match('m5', '2026-09-04T20:00:00', null, { deck_id: 'd1', ...vs('tempo', 'Izzet Tempo') }),
     // Another deck of the field's.
@@ -388,7 +388,7 @@ describe('the viewer\'s own matches by format', () => {
 
 describe('the viewer\'s own counts', () => {
   const tempo = presence('tempo', 'B', 5, 'Izzet Tempo')
-  const start = Date.UTC(2026, 7, 11)
+  const start = new Date(2026, 7, 11).getTime()
   const vs = { opponent_key: 'archetype:tempo', opponent_label: 'Izzet Tempo' }
 
   it('counts only the selected format\'s matches, not another\'s or one with none', () => {
@@ -411,7 +411,7 @@ describe('the viewer\'s own counts', () => {
 })
 
 describe('the list of 500', () => {
-  const start = Date.UTC(2026, 7, 11)
+  const start = new Date(2026, 7, 11).getTime()
   const full = Array.from({ length: 500 }, (_, index) =>
     match(`m${index}`, '2026-09-01T20:00:00', 'win'),
   )

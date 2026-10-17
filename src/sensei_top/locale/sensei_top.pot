@@ -811,6 +811,43 @@ msgstr ""
 msgid "T9+"
 msgstr ""
 
+#: sensei_top/answers.py
+#, python-brace-format
+msgid "The answer could not be read: {detail}"
+msgstr ""
+
+#: sensei_top/answers.py
+msgid "The answer has its \"for\" line but no \"answer\" object after it."
+msgstr ""
+
+#: sensei_top/answers.py
+msgid ""
+"The answer has no \"for\" line, so there is no telling where it belongs. "
+"Copy the prompt here again and paste the new answer."
+msgstr ""
+
+#: sensei_top/answers.py
+msgid "The answer has no text in it."
+msgstr ""
+
+#: sensei_top/answers.py
+msgid ""
+"The answer is longer than any answer here needs to be. Check that only the "
+"answer was pasted."
+msgstr ""
+
+#: sensei_top/answers.py
+msgid ""
+"The answer is not a JSON object. Paste the whole answer, from its first `{{`"
+" to its last `}}`."
+msgstr ""
+
+#: sensei_top/answers.py
+msgid ""
+"The answer's \"context\" line was changed. It has to be copied back exactly "
+"as the prompt gave it."
+msgstr ""
+
 #: sensei_top/guide/rcq.py
 msgid ""
 "The archetype definitions name no archetype this 75 clearly fits; pick one "
@@ -827,6 +864,19 @@ msgstr ""
 msgid ""
 "The deck's format is unknown, so this 75 was not classified: archetype "
 "definitions are kept per format."
+msgstr ""
+
+#: sensei_top/api/routes/guide.py
+#, python-brace-format
+msgid ""
+"The field has no consensus list for {archetype} yet, so there is nothing to "
+"anchor a brief to."
+msgstr ""
+
+#: sensei_top/api/routes/guide.py
+msgid ""
+"The field has no consensus list yet for any archetype in this answer, so "
+"none of its briefs could be stored."
 msgstr ""
 
 #: sensei_top/review/analyzers/baseline.py
@@ -917,6 +967,22 @@ msgid ""
 " convert into damage, on either side, is a card losing this particular race."
 msgstr ""
 
+#: sensei_top/answers.py
+msgid ""
+"This answer has no \"for\" line, so it was read as one saved before answers "
+"carried it."
+msgstr ""
+
+#: sensei_top/answers.py
+#, python-brace-format
+msgid "This answer is for {card} of {subject}. Paste it there."
+msgstr ""
+
+#: sensei_top/answers.py
+#, python-brace-format
+msgid "This answer is for {card}, not this one. Paste it there."
+msgstr ""
+
 #: sensei_top/review/analyzers/clock.py
 msgid ""
 "This counts damage dealt to a player only — creature-versus-creature combat "
@@ -941,6 +1007,12 @@ msgstr[1] ""
 
 #: sensei_top/review/analyzers/baseline.py
 msgid "This deck's average"
+msgstr ""
+
+#: sensei_top/api/routes/guide.py
+msgid ""
+"This deck's format is not known yet, so there is no field to anchor a brief "
+"to."
 msgstr ""
 
 #: sensei_top/guide/bundle.py
@@ -1283,8 +1355,28 @@ msgstr ""
 msgid "Your turn at the low point"
 msgstr ""
 
+#: sensei_top/answers.py
+msgid "a coach report"
+msgstr ""
+
 #: sensei_top/review/position.py
 msgid "a decisive swing"
+msgstr ""
+
+#: sensei_top/answers.py
+msgid "a deck guide"
+msgstr ""
+
+#: sensei_top/answers.py
+msgid "a match report"
+msgstr ""
+
+#: sensei_top/answers.py
+msgid "a matchup brief"
+msgstr ""
+
+#: sensei_top/answers.py
+msgid "a matchup coverage"
 msgstr ""
 
 #: sensei_top/review/position.py
@@ -1295,8 +1387,28 @@ msgstr ""
 msgid "a small swing"
 msgstr ""
 
+#: sensei_top/answers.py
+msgid "an RCQ guide"
+msgstr ""
+
 #: sensei_top/review/summary.py
 msgid "an unidentified opponent"
+msgstr ""
+
+#: sensei_top/answers.py
+msgid "another deck"
+msgstr ""
+
+#: sensei_top/answers.py
+msgid "another deck or opponent"
+msgstr ""
+
+#: sensei_top/answers.py
+msgid "another format"
+msgstr ""
+
+#: sensei_top/answers.py
+msgid "another match"
 msgstr ""
 
 #: sensei_top/api/routes/matches.py
@@ -1413,6 +1525,10 @@ msgstr[1] ""
 
 #: sensei_top/review/analyzers/baseline.py
 msgid "players"
+msgstr ""
+
+#: sensei_top/answers.py
+msgid "the training plan"
 msgstr ""
 
 #: sensei_top/review/analyzers/baseline.py

@@ -519,7 +519,8 @@ def _report_inputs_token(conn: sqlite3.Connection) -> tuple[Any, ...]:
     rebuild, including ones that changed no verdict, and the watcher
     rebuilds every few seconds while Arena is open — keying on it would
     empty this cache that often for no reason. ``matches``/``games``/
-    ``decks``/``opponent_deck_override``/``mtgo_match_pick`` are digested on
+    ``decks``/``opponent_deck_override``/``mtgo_match_pick``/
+    ``match_format_inference`` are digested on
     every column, since any of them can change what a report says (a
     corrected result, an edited deck list, a manual deck override, an MTGO
     match's picked deck, which ``v_match_deck`` reads in place of
@@ -569,6 +570,12 @@ def _report_inputs_token(conn: sqlite3.Connection) -> tuple[Any, ...]:
         conn, "SELECT * FROM mtgo_match_pick ORDER BY match_id"
     )
 
+    # What v_match_format reads for an MTGO match: a changed inference moves
+    # a report's format, and so its corpus, without touching the tables above.
+    format_inference_digest = _table_digest(
+        conn, "SELECT * FROM match_format_inference ORDER BY match_id"
+    )
+
     max_rowids = tuple(
         conn.execute(f"SELECT COALESCE(MAX(rowid), 0) FROM {table}").fetchone()[0]
         for table in (
@@ -604,6 +611,7 @@ def _report_inputs_token(conn: sqlite3.Connection) -> tuple[Any, ...]:
         opponent_archetype_digest,
         opponent_deck_override_digest,
         mtgo_match_pick_digest,
+        format_inference_digest,
         max_rowids,
         _corpus_token(conn),
         meta_deck_count,

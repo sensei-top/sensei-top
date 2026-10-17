@@ -2,6 +2,7 @@ import { useMemo, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   useGenerateMatchReportNarrative,
+  usePasteMatchReportNarrative,
   useLLMStatus,
   useMatchReport,
   useReportNarrativePrompt,
@@ -326,6 +327,7 @@ function ReportNarrativeCard({ matchId }: { matchId: string }) {
   const prompt = useReportNarrativePrompt(matchId, open)
   const llmStatus = useLLMStatus()
   const generate = useGenerateMatchReportNarrative()
+  const paste = usePasteMatchReportNarrative()
 
   if (!open) {
     return (
@@ -361,6 +363,7 @@ function ReportNarrativeCard({ matchId }: { matchId: string }) {
       onGenerate={() => generate.mutate(matchId)}
       generating={generate.isPending}
       generateError={generate.error?.message}
+      save={(answer) => paste.mutateAsync({ matchId, answer })}
     />
   )
 }

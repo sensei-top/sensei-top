@@ -24,7 +24,7 @@ Two hard rules govern it:
    both may be populated (``sensei-top cards``) long after a match was
    projected. A stored ``findings`` table would read *wrong*, not merely
    stale, for every match analyzed before that download finished — the same
-   reasoning ``docs/architecture.md`` gives for why ``v_match_opponent`` is a
+   reasoning ``docs/opponent-deck.md`` gives for why ``v_match_opponent`` is a
    view and not a column. Nothing here needs ``project()`` to know it
    exists, so nothing in ``projector/`` may import this package.
 

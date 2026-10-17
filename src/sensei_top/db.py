@@ -38,7 +38,7 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
     # across queries instead of re-reading them from disk every time.
     conn.execute("PRAGMA cache_size=-65536")      # 64 MB, negative = KiB
     # mmap trades a page-cache copy for a direct-mapped read — measured
-    # before keeping (see docs/architecture.md): 256 MB is a starting point,
+    # before keeping: 256 MB is a starting point,
     # not a target, on a host already under swap pressure with Arena
     # resident.
     conn.execute("PRAGMA mmap_size=268435456")    # 256 MB

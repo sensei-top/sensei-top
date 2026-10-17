@@ -6,11 +6,13 @@
  * them, and starts that sample's state again. Under Settings, what the
  * invented draft sends, as the sample's sharing says; then the two lines
  * sharing draws on a draft's page; then a report's card as each writer
- * draws it, over an invented prompt and report.
+ * draws it, over an invented prompt and report; last, the drawing of where
+ * Arena keeps Detailed Logs, at the Arena step's size and the Home banner's.
  */
 import { useEffect, useState } from 'react'
 import type { AppSettings, Saved, Shell } from '../bridge'
 import { GenerateCard } from '../components/GenerateCard'
+import { DetailedLogsGuide } from '../components/onboarding/DetailedLogsGuide'
 import { DraftReceipt } from '../components/sharing/DraftReceipt'
 import { PayloadView } from '../components/sharing/PayloadView'
 import { SharingNote } from '../components/sharing/SharingNote'
@@ -51,6 +53,7 @@ export default function SurfacesView() {
       <SampleSettings key={sample} sample={sample} />
       <DraftPageSamples key={`draft-${sample}`} sample={sample} />
       <WritingSamples />
+      <DetailedLogsSamples />
     </main>
   )
 }
@@ -165,10 +168,35 @@ function DraftPageSamples({ sample }: { sample: SampleId }) {
   )
 }
 
+/** The Detailed Logs drawing in both its sizes: the Arena step's, and the
+ *  Home banner's (`compact`). Its words are the catalogue's, in the
+ *  dashboard's language. */
+function DetailedLogsSamples() {
+  const samples = [
+    { label: 'Full size', compact: false },
+    { label: 'Compact', compact: true },
+  ]
+  return (
+    <section aria-labelledby="detailed-logs-title" className="space-y-4">
+      <h2 id="detailed-logs-title" className="font-display text-heading text-ink">
+        Where Detailed Logs are
+      </h2>
+      <p className="text-body text-muted">The drawing on the Arena step and, compact, on Home's banner.</p>
+      <div className="space-y-6">
+        {samples.map(({ label, compact }) => (
+          <div key={label} className="space-y-2">
+            <SectionLabel>{label}</SectionLabel>
+            <DetailedLogsGuide compact={compact} />
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 const SAMPLE_PROMPT = 'You are a coach. Read the games below and say what to change.'
 const SAMPLE_PROSE =
   'You kept seven-card hands that had two lands in nine of your last forty games, and won three of them.'
-const SAMPLE_COMMAND = 'sensei-top coach import answer.md'
 
 /** How long the sample takes to write its report. */
 const SAMPLE_WRITE_MS = 400
@@ -200,7 +228,8 @@ function WritingSamples() {
 
 /** One sample report card. A card whose writer writes starts empty, and a
  *  press on its button writes the invented report after a moment, with no
- *  request; one with nothing to press starts over the invented report. */
+ *  request; one with no writer starts with the invented report, and its
+ *  Save replaces that with the pasted text, in memory, with no request. */
 function SampleWriting({ writer }: { writer: Writer }) {
   const writes = writer.by === 'key'
   const [narrative, setNarrative] = useState<string | null>(writes ? null : SAMPLE_PROSE)
@@ -223,7 +252,7 @@ function SampleWriting({ writer }: { writer: Writer }) {
       narrative={narrative}
       onGenerate={() => setGenerating(true)}
       generating={generating}
-      importCommand={SAMPLE_COMMAND}
+      save={async (answer) => setNarrative(answer)}
     />
   )
 }

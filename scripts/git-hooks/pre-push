@@ -1,0 +1,2 @@
+#!/bin/sh
+exec uv run --quiet python scripts/privacy_scan.py --pre-push "$1"

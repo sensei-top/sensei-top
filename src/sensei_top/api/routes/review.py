@@ -7,13 +7,21 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Callable
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 
+from sensei_top.answers import LEAKS_FOR, PASTED_AUTHOR
 from sensei_top.api.convert import _leak_out
 from sensei_top.api.deps import Conn, DeckFilter, SourceFilter, WritableConn
-from sensei_top.api.models.common import NarrativeResponse
+from sensei_top.api.models.common import NarrativeResponse, PastedAnswerIn
 from sensei_top.api.models.review import LeaksOut
-from sensei_top.api.routes.narrative import NarrativeSpec, narrative_get, narrative_post
+from sensei_top.api.routes.narrative import (
+    NarrativeSpec,
+    check_pasted_length,
+    narrative_get,
+    narrative_post,
+    read_pasted_prose,
+    run_authored_write,
+)
 from sensei_top.api.sql import _consensus_window, _shared_report_cache
 from sensei_top.i18n import _, english
 from sensei_top.review import leaks_narrative as review_leaks_narrative
@@ -81,6 +89,10 @@ def _leaks_narrative_spec(request: Request, conn: sqlite3.Connection) -> Narrati
     return NarrativeSpec(
         build_context=build_context,
         full_prompt=review_leaks_narrative.full_prompt,
+        copied_prompt=lambda context: review_leaks_narrative.copied_prompt(
+            context, answer_for=LEAKS_FOR,
+            context_hash=leaks_store.context_hash(context),
+        ),
         read_stored=lambda: leaks_store.read_leaks_narrative(conn),
         context_hash=leaks_store.context_hash,
         no_context_detail=_("Nothing to write a training plan from yet."),
@@ -126,4 +138,37 @@ def generate_leaks_narrative(request: Request, conn: WritableConn) -> NarrativeR
     return NarrativeResponse(
         status=env.status, narrative=env.content, prompt=env.prompt,
         model=env.who, generated_at=env.when, cost_usd=env.cost_usd, stale=env.stale,
+    )
+
+
+@router.put(
+    "/api/review/leaks/narrative", response_model=NarrativeResponse, tags=["review"]
+)
+def paste_leaks_narrative(
+    request: Request, body: PastedAnswerIn, conn: WritableConn
+) -> NarrativeResponse:
+    """Store an answer pasted into the training plan's card. Makes no model
+    call; same refusals, storage and response as the per-match paste route
+    (422 for another card's answer or one with no prose, 413 over 256 KB,
+    the header's context stored, the model ``pasted``)."""
+    check_pasted_length(body.answer)
+    spec = _leaks_narrative_spec(request, conn)
+    context = spec.build_context()
+    if context is None:
+        raise HTTPException(status_code=404, detail=spec.no_context_detail)
+    answer, prose = read_pasted_prose(body.answer, LEAKS_FOR)
+    prompt = spec.copied_prompt(context)
+
+    run_authored_write(conn, lambda: leaks_store.write_leaks_narrative(
+        conn,
+        prose=prose, prompt=prompt, model=PASTED_AUTHOR,
+        context_hash=answer.context,
+    ))
+
+    stored = spec.read_stored()
+    assert stored is not None
+    return NarrativeResponse(
+        status="ok", narrative=stored.prose, prompt=prompt, model=stored.model,
+        generated_at=stored.generated_at, cost_usd=stored.cost_usd,
+        stale=stored.context_hash != spec.context_hash(context),
     )

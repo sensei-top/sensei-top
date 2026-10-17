@@ -82,8 +82,9 @@ its bookkeeping:
 
 ## The analyzers, one per module in `review/analyzers/`
 
-Each is a pure function of one `MatchSnapshot` (`review/snapshot.py`, the
-only module that touches `sqlite3`). The registry order in
+Each is a pure function of one `MatchSnapshot` (`review/snapshot.py`;
+"The match report, and its optional narrative" below lists every module
+here that touches `sqlite3`). The registry order in
 `analyzers/__init__.py` is the order a postmortem actually reads in.
 
 ### `frame.py` — the matchup, and the role it demands
@@ -342,10 +343,16 @@ well as the copy-paste one:
 - `GET .../narrative` always serves the prompt, built locally, offered as
   copyable text by `GenerateCard` (which falls back to plain
   `CopyPromptCard` with no credential configured).
-- `POST .../narrative` sends that same prompt through `llm.write_prose` and
+- `POST .../narrative` sends the prompt without its answer contract
+  (`full_prompt`; the copied one, `copied_prompt`, ends by asking for one
+  `{"prose": ...}` object) through `llm.write_prose` and
   stores the answer — `match_narrative` for the per-match route,
   `leaks_narrative` (a single row; the leak finder here is unscoped) for the
   leaks route — when a credential is configured. 503 otherwise.
+- `PUT .../narrative` stores an answer pasted into the card, read
+  through `answers.py` (its `for` line must name this match, or the
+  training plan), in the same table, with the author `pasted` and no
+  cost. It calls no model (`docs/llm.md`, "Saving a pasted answer").
 
 The match prompt carries the game's turn-by-turn shape (life/hand/board/
 power/lands, both sides' resolved spells) alongside the report's own
@@ -353,12 +360,12 @@ findings and gaps — deliberately more than the old findings-only version,
 because a coach shown only conclusions can only restate them. The leaks
 prompt carries only the ranked pattern list, never a specific match's turns.
 
-Unlike the deck guide, neither has a CLI import path: a stored narrative here
-only ever comes from the generate button, since there was never a manual
-round trip worth preserving for a single match read once. The deck guide and
-the matchup brief additionally support a hand-written import because those
-describe a deck rather than one game and stay useful for as long as the deck
-does (`docs/brief.md`).
+Unlike the deck guide, neither has a CLI import path: a stored
+narrative here comes from the generate button or from an answer pasted
+into the card, since a terminal round trip was never worth adding for a
+single match read once. The deck guide and the matchup brief also take
+a CLI import because they describe a deck rather than one game and stay
+useful for as long as the deck does (`docs/brief.md`).
 
 ## What still isn't analyzed
 
@@ -368,3 +375,151 @@ in the schema for a future analyzer to use (e.g., attacks that went in
 unblocked when a block was available). Per-game sideboard decklists and
 turn/decision timing (`TimerStateMessage`) are documented as unlocked-but-
 unbuilt in the original planning pass; nothing here depends on them yet.
+
+## The match report, and its optional narrative
+
+`src/sensei_top/review/` is a post-projection analysis package, the same
+shape as `archetypes/` one stage further out: it reads projected tables and
+views, never `raw_events`, and nothing in `projector/` may import it (see its
+own module docstring for the two hard rules this implies). `GET
+/api/matches/{id}/report` returns its output — deterministic findings and
+gaps, recomputed fresh on every request rather than stored.
+
+The report is a postmortem built on the game's own strategy canon (Flores'
+role assignment, Duke's damage racing and tempo/card-advantage framing, the
+Lichess-style idea of naming the turn that decided a game) rather than log
+bookkeeping — see "The analyzers, one per module in `review/analyzers/`" above
+for what each analyzer measures and the article behind it. `review/analyzers/` is a package, one module per concept
+in that arc (`frame`, `clock`, `trajectory`, `role_play`, `information`,
+`resources`, `baseline`), registered in `review/analyzers/__init__.py`'s
+`ANALYZERS` tuple; `match_report.py` runs every entry over one
+`MatchSnapshot` and concatenates the results in a stable sort, never
+registry order.
+
+**Computed on demand, not persisted — the same reasoning as
+`v_match_opponent` (`docs/opponent-deck.md`, "Naming the opponent's deck"), one step further.** Several analyzers read
+`cards.type_line`/`oracle_text` (to tag a card's effect, or classify a
+decklist) and `decks.cards_json`, neither owned by the projector and both
+possibly populated (`sensei-top cards`) long after a match was projected.
+A stored `findings` table would read *wrong*, not merely stale, for every
+match analyzed before that download finished. **The analyzers themselves never
+touch `sqlite3`** — they are pure functions of a `MatchSnapshot`, which is what
+makes them testable from a constructed snapshot with no database at all — every
+one has the signature `analyze_*(snap: MatchSnapshot) -> AnalyzerResult`, with
+zero database access in `review/analyzers/`.
+
+Query access in this package is confined to five modules with distinct jobs:
+`snapshot.py` (the per-match read the analyzers run on, 21 queries),
+`leaks.py` (the cross-match population, 6), `consensus.py` (the corpus scan,
+3), and `narrative_store.py` / `leaks_store.py` (2 each). `match_report.py`
+takes a connection but issues no query of its own — it passes one through to
+`build_snapshot` and then runs the pure analyzers over the result.
+
+`snapshot.py` does one read per match, including a same-request
+classification of the player's own deck (`archetypes.classify`'s
+`complete=True` path, the same one `metagame.classify_meta` runs over a
+corpus decklist) and a scan of the metagame corpus for the opponent's
+archetype's consensus decklist (`review/consensus.py`).
+
+Every analyzer returns `Finding`s (something observed) and `Gap`s (something
+it could not evaluate, and why) — kept as separate lists so a report's
+silence is never mistaken for "nothing was wrong" (rule 4). `self_open_mana`
+is the sharpest case: NULL means both "tapped out" and "never observed your
+board" (migration 008), so nothing here computes an "unspent mana" reading
+from it. `review/position.py`'s position index —
+a transparent, fixed-weight formula over life/board/hand/mana, never fitted
+to outcomes — turns the per-turn combat and life data ("What became possible, and why" above) into the number `trajectory.py`
+anchors a game's turning point to.
+
+**The narrative is the coaching layer over all of this, not a summary of
+it** — and this module does not fetch it itself.
+`src/sensei_top/review/narrative.py` (formerly `advisor.py`, before that a
+live mid-match hint) builds the *prompt*: the match's turn-by-turn shape,
+both sides' play sequence, and the report's own findings and gaps, asking
+for a full structured review rather than a 250-word note. AGENTS.md
+non-negotiable #5 permits an opt-in, user-configured Claude call
+(`src/sensei_top/llm/`, `docs/llm.md`) but confines it to that one small
+package — `review/narrative.py` stays a pure function of already-projected
+data:
+
+- **`build_narrative_context(report, snap, field=...)`** formats an
+  already-computed `MatchReport` together with its `MatchSnapshot`:
+  per-turn life/hand/board/power/lands for both sides, both sides' resolved
+  spells in order, then the findings and gaps. Never a raw zone dump — no
+  hands, no graveyards, no exile contents, and `MatchSnapshot` never carries
+  the opponent's Arena handle or user id in the first place, so there is
+  nothing to leak there even by accident. It ends with an explicit "not
+  tracked" block (the stack, counters, attachments, the exact phase or step,
+  the opponent's hand) so whoever writes the review is never left to assume
+  silence means empty (rule 4).
+- **`full_prompt(context)`** prepends the framing that used to travel as a
+  `system` parameter.
+- **`GET /api/matches/{id}/report/narrative`** returns the stored prose
+  (`status: "ok"`) once written, or the prompt to write one
+  (`status: "prompt"`) otherwise. **`POST`** on the same path sends that
+  prompt through `llm.write_prose` and stores the answer in
+  `match_narrative`, when a credential is configured (503 otherwise).
+  `MatchReportPanel` renders either state through `GenerateCard`, which
+  falls back to plain `CopyPromptCard` with no credential configured. There
+  is no *CLI* importer for a per-match review — it is read once, about a
+  game already played ("The narrative" above) — so a stored narrative here comes
+  only from the generate button.
+
+**The matchup brief still has no generate button of its own**, and that has not
+changed — but it is no longer import-only either. `POST /api/guide/{key}/
+narrative` writes `matchup_brief` rows as a second effect, via
+`brief/from_guide.py::store_guide_matchups`, for every matchup the generated
+guide covers. So a brief now arrives by three paths: a CLI `brief --import`, a
+CLI `guide --import`, or the guide's generate route. Its own card
+(`MatchupBriefCard`) remains `CopyPromptCard`-only, deliberately — a brief is
+read while a game is on the clock, which is the worst moment to start a
+minutes-long API call.
+
+A malformed answer or import raises `NarrativeError` — the CLI says what was
+wrong rather than storing half a guide, and the generate route maps it to a
+502 rather than storing anything; the API's own `GET` routes answer `200`
+with an honest status for every "nothing to show yet" case — an empty
+report, never a broken page.
+
+### Metagame data: real tournament results, not Arena aggregators
+
+The report's matchup context wanted one more input: how the current
+archetype is actually performing in the field right now, not just what
+defines it. Three sources were evaluated and two were rejected before
+`metagame/` was written — its own fetch still has to meet the free-download
+standard (reference lookups only, fail-soft, no more than the feature needs;
+AGENTS.md non-negotiable #5, in full in [llm.md](llm.md)):
+
+- `mtgdecks.net/robots.txt` disallows `ClaudeBot`, `anthropic-ai`,
+  `Claude-Webt`, `GPTBot`, `CCBot`, and a site-specific `MTGMeta-Scraper`
+  user agent by name, and carries `Content-Signal: ai-train=no`. That isn't
+  rate-limiting; it's the site stating, in the one channel meant for
+  automated readers, that this kind of tool specifically should not read it.
+- `mtgazone.com` blocks even an unauthenticated fetch of its own
+  `robots.txt` (403) — its anti-bot layer refuses the request before any
+  policy can be read at all.
+- `17lands.com` publishes aggregated play data under a CC BY 4.0 license —
+  the right posture, the opposite of the two sites above — but it collects
+  from Arena Limited drafts, not constructed. Its data cannot answer a
+  Standard matchup question regardless of license terms, so it was rejected
+  on coverage, not access **for this feature**. That reasoning still holds
+  exactly as written — but it does not generalize to every feature this
+  project might build, only to a *constructed* matchup question. The draft
+  assistant (deleted 2026-10-01; `archive/draft` tag) asked a Limited pick
+  question instead, the one thing 17lands' data actually answers, and reused
+  this same access verdict rather than re-litigating it.
+
+Rule 5 draws the line between the sanctioned calls and everything else at
+"does this serve the data freely to any request, for the format this project
+actually classifies." `fbettega/MTG_decklistcache` clears both bars: MIT-
+adjacent GPL-3.0 data served over plain `git`/HTTP, and its `MTGO` and
+`MTGmelee` sources are real constructed results, in the formats `archetypes/`
+classifies. The fetch follows Standard, Modern and every format the stored corpus
+already holds (`metagame/auto.py::followed_formats`); `sensei-top meta
+--format X` adds another on demand. `metagame/`
+fetches it windowed by date and incremental by blob SHA (the cache is ~157 MB
+of history this project mostly does not need); see [metagame.md](metagame.md)
+for the evidence-tier rules that constrain what each stored event is allowed to
+claim, and for why `archetypes.classify`'s rule engine runs in a different mode
+against a full decklist than it does against the dozen cards a live match
+reveals.

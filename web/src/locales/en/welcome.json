@@ -3,91 +3,71 @@
     "step": "Step {{n}} of {{total}}",
     "start": "Start",
     "next": "Next",
-    "skipBackground": "Skip, do it in the background",
     "back": "Back",
     "goHome": "Go to Home",
     "finishing": "Finishing"
   },
   "headings": {
-    "language": "Language",
-    "welcome": "Welcome to Sensei Top",
+    "start": "Welcome to Sensei Top",
+    "plays": "Which do you play?",
     "arena": "Arena",
-    "cards": "Card data",
     "mtgo": "Magic Online",
     "done": "Ready"
   },
   "language": {
-    "body": "Sensei Top reads in English and in Brazilian Portuguese. Pick one here; you can change it any time in Settings.",
     "label": "Language"
   },
+  "start": {
+    "promise": "Your match history and game reviews, from the logs Arena and Magic Online already write. Nothing about your games leaves this computer.",
+    "restoreTitle": "Used Sensei Top before?",
+    "restore": "Restore a backup"
+  },
   "intro": {
-    "body": "Sensei Top reads the logs that Magic: The Gathering Arena and Magic Online write on this computer while you play, and turns them into your match history, your win rates by deck and matchup, and reviews of your games. Your matches stay on this computer.",
     "wizardsNotice": "Sensei Top is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.",
     "leavesTitle": "What leaves this computer",
     "downloads": "Downloads of reference data: card data and images from Scryfall, archetype definitions from MTGOFormatData, tournament results from MTG_decklistcache and from mtgo.com for the formats you follow, and from TopDeck.gg only if you add your own key. Nothing about your games is sent.",
     "updatesUnavailable": "This copy does not check for new versions itself.",
     "dailyCheck": "A daily check for a new version of the app.",
-    "checkForUpdates": "Check for updates",
     "claude": "Writing with Claude, only if you add your own Claude key and press a button that says it writes. Without a key, the app gives you a prompt to copy into a chat instead.",
     "credits": "Every source and its terms are listed in <credits>Settings, under About and credits</credits>."
   },
+  "plays": {
+    "body": "The next steps set up only what you pick.",
+    "arena": "Arena",
+    "mtgo": "Magic Online",
+    "both": "Both"
+  },
   "arena": {
-    "notFound": "The app did not find Arena's log. If Arena is installed, start it once, then check again. If you play only Magic Online, skip this step.",
+    "notFound": "The app did not find Arena's log. If Arena is installed, start it once, then check again.",
     "enabled": "The app found Arena's log, and Detailed Logs are on.",
-    "unknown": "The app found Arena's log, but has not seen the line where Arena says Detailed Logs are on. Arena writes it when it starts.",
-    "disabled": "Arena's log says Detailed Logs are off.",
+    "unknown": "The app found Arena's log, but it does not say Detailed Logs are on yet. Without them, no match is recorded.",
+    "disabled": "Arena's log says Detailed Logs are off. Without them, no match is recorded.",
     "logFile": "Log file",
-    "instruction1": "In Arena, open Options, then Account.",
-    "instruction2": "Tick Detailed Logs (Plugin Support).",
-    "instruction3": "Close Arena and start it again.",
     "checkAgain": "Check again",
-    "checking": "Checking",
-    "restoreTitle": "Used Sensei Top before?",
-    "restoreBody": "Restore your matches from a backup file. Do it before you play: a restore replaces what this computer has recorded with the backup's contents.",
-    "chooseBackup": "Choose a backup file"
+    "checking": "Checking"
   },
-  "cards": {
-    "intro": "Rules text and format legality for every card come from Scryfall, a download of about 80 MB that then takes a few minutes to unpack and save. The deck guides need them. You can go on while it runs.",
-    "download": "Download card data",
-    "downloadAgain": "Download again",
-    "tryAgain": "Try again",
-    "starting": "Starting",
-    "alreadyHave": "This computer already has rules text for {{n}} cards.",
-    "meterLabel": "Card data download",
-    "progressStart": "Starting the download.",
-    "progressSave": "Saving cards to the database. This takes a few minutes.",
-    "progressSoFar": "Downloading card data: {{done}} MB so far.",
-    "progressOf": "Downloading card data: {{done}} of {{total}} MB.",
-    "doneEmpty": "Card data is in.",
-    "doneCount": "Card data is in: rules text for {{n}} cards.",
-    "failed": "The download failed: {{reason}}",
-    "alsoTitle": "Also downloading by itself",
-    "archetypes": "Archetype definitions",
-    "tournaments": "Tournament results",
-    "background": "These run in the background whenever the app is open; nothing here waits for them.",
-    "notKnown": "Not known",
-    "notYet": "Not yet",
-    "updated": "Updated {{age}} ago"
-  },
-  "age": {
-    "lessThanHour": "less than an hour",
-    "hours_one": "{{count}} hour",
-    "hours_other": "{{count}} hours",
-    "days_one": "{{count}} day",
-    "days_other": "{{count}} days"
+  "guide": {
+    "options": "Options",
+    "account": "Account",
+    "detailed": "Detailed Logs (Plugin Support)",
+    "restart": "Then close Arena and start it again.",
+    "aria": "In Arena, open Options, then Account, and tick Detailed Logs (Plugin Support). Then close Arena and start it again."
   },
   "mtgo": {
-    "skip": "Skip this step if you do not play Magic Online.",
     "handleLabel": "Your name on Magic Online",
-    "handleHint": "Magic Online's log never says which player is you, so the app needs your name to tell your games from your opponents'.",
+    "handleHint": "The log never says which player is you.",
     "folderLabel": "Folder of game logs",
     "hintSaved": "Each game is read once it ends.",
     "hintFound": "Magic Online is writing its game logs here. Save to read them.",
-    "hintNone": "The folder where Magic Online writes files named Match_GameLog. On Windows it is under AppData\\Local\\Apps\\2.0\\Data. Under Wine or Proton, it is inside that prefix's drive_c folder."
+    "hintNone": "Where Magic Online writes Match_GameLog files: AppData\\Local\\Apps\\2.0\\Data, or the prefix's drive_c under Wine or Proton.",
+    "decksLabel": "Folder of decks",
+    "decksHint": "Optional: where you export .dek files."
   },
   "done": {
     "body": "Play a match. It appears on Home when it ends.",
+    "updatesLabel": "Check for a new version once a day",
     "autostartLabel": "Start Sensei Top when you log in",
-    "autostartDescription": "It starts in the background and records your games without you opening it."
+    "autostartDescription": "It records your games without you opening it.",
+    "tour": "A tour of the dashboard"
   }
 }

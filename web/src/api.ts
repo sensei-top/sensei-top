@@ -4,6 +4,7 @@ import {
   useQueries,
   useQuery,
   useQueryClient,
+  type QueryClient,
   type UseQueryResult,
 } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
@@ -136,6 +137,8 @@ export type RcqMatchupOut = components['schemas']['RcqMatchupOut']
 export type RcqFlexNoteOut = components['schemas']['RcqFlexNoteOut']
 export type RcqGenerateIn = components['schemas']['RcqGenerateIn']
 export type RcqMarkdownOut = components['schemas']['RcqMarkdownOut']
+export type PastedAnswerIn = components['schemas']['PastedAnswerIn']
+export type RcqPasteIn = components['schemas']['RcqPasteIn']
 
 /** How often the dashboard asks whether anything changed. Cheap (a few COUNTs)
  *  compared with refetching every metric on a timer. */
@@ -731,6 +734,9 @@ export const useMetagameEvent = (key: string | undefined) =>
  *  write a row. Only its presence is checked. */
 const CLIENT_HEADERS = { 'X-Tracker-Client': 'dashboard' } as const
 
+/** A refusal is an `ApiError`, its message the API's `detail` when that
+ *  is a sentence; a request that got no answer at all rejects with
+ *  `fetch`'s own error, which is how a paste box tells the two apart. */
 async function put<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(new URL(path, window.location.origin), {
     method: 'PUT',
@@ -739,7 +745,8 @@ async function put<T>(path: string, body: unknown): Promise<T> {
   })
   if (!response.ok) {
     const detail = await response.json().catch(() => null)
-    throw new Error(detail?.detail ?? `${response.status} ${response.statusText}`)
+    const message = typeof detail?.detail === 'string' ? detail.detail : `${response.status} ${response.statusText}`
+    throw new ApiError(message, response.status)
   }
   return response.json() as Promise<T>
 }
@@ -885,19 +892,40 @@ export const useGenerateLeaksNarrative = () => {
   })
 }
 
+/** What a stored deck guide changes besides its own narrative: its
+ *  matchup plans land in `matchup_brief` (`brief/from_guide.py`), so the
+ *  deck's briefs, its coverage and the live matchup brief on the Current
+ *  match tab are invalidated with it. Resolves once they have refetched. */
+const invalidateGuideWrite = (queryClient: QueryClient, key: string) =>
+  Promise.all([
+    ...['guide-narrative', 'guide-briefs', 'guide-coverage', 'guide-coverage-prompt'].map((name) =>
+      queryClient.invalidateQueries({ queryKey: [name, key] }),
+    ),
+    queryClient.invalidateQueries({ queryKey: ['current-match-brief'] }),
+    queryClient.invalidateQueries({ queryKey: ['current-match-read'] }),
+  ])
+
+/** What a stored brief, or a coverage answer's briefs, changes: the
+ *  deck's briefs, its coverage and the live matchup brief. Resolves once
+ *  they have refetched. */
+const invalidateBriefWrite = (queryClient: QueryClient, key: string) =>
+  Promise.all([
+    ...['guide-briefs', 'guide-coverage', 'guide-coverage-prompt'].map((name) =>
+      queryClient.invalidateQueries({ queryKey: [name, key] }),
+    ),
+    queryClient.invalidateQueries({ queryKey: ['current-match-brief'] }),
+    queryClient.invalidateQueries({ queryKey: ['current-match-read'] }),
+  ])
+
 /** Write this deck's guide narrative with Claude, and store it — also fills
- *  every matchup plan it covers into `matchup_brief`
- *  (`brief/from_guide.py`), so the live matchup brief on the Current match
- *  tab needs invalidating too, not just this deck's own narrative. */
+ *  every matchup plan it covers into `matchup_brief`, so it invalidates
+ *  what `invalidateGuideWrite` names, not just this deck's own narrative. */
 export const useGenerateGuideNarrative = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (key: string) =>
       post<GuideNarrativeResponse>(`/api/guide/${encodeURIComponent(key)}/narrative`),
-    onSuccess: (_data, key) => {
-      queryClient.invalidateQueries({ queryKey: ['guide-narrative', key] })
-      queryClient.invalidateQueries({ queryKey: ['current-match-brief'] })
-    },
+    onSuccess: (_data, key) => invalidateGuideWrite(queryClient, key),
   })
 }
 
@@ -942,5 +970,152 @@ export const useGenerateCoachNarrative = () => {
       queryClient.invalidateQueries({ queryKey: ['coach'] })
       queryClient.invalidateQueries({ queryKey: ['coach-narrative'] })
     },
+  })
+}
+
+/** Which card a pasted answer is for, and what its `PUT` needs besides
+ *  the answer. The RCQ guide's carries the 75 and the picks it was
+ *  written from; the coach's the format the page's reads showed. */
+export type PasteTarget =
+  | { card: 'match'; matchId: string }
+  | { card: 'leaks' }
+  | { card: 'guide'; key: string }
+  | { card: 'rcq'; key: string; inputs: RcqGenerateIn }
+  | { card: 'coach'; format: string }
+  | { card: 'brief'; key: string; archetypeKey: string }
+  | { card: 'coverage'; key: string }
+
+/** The address and body of the `PUT` that stores a pasted answer: the
+ *  generate route's own address (`POST` asks the model, `PUT` stores what
+ *  the user pasted, and never calls out). Every body is `{ answer }` but
+ *  the RCQ guide's, which is the generate route's fields and the answer.
+ *  The coach's always names its format, for the same reason its generate
+ *  route does: the server's default can move between the read and the
+ *  save. */
+export function pasteRequest(
+  target: PasteTarget,
+  answer: string,
+): { path: string; body: PastedAnswerIn | RcqPasteIn } {
+  switch (target.card) {
+    case 'match':
+      return { path: `/api/matches/${encodeURIComponent(target.matchId)}/report/narrative`, body: { answer } }
+    case 'leaks':
+      return { path: '/api/review/leaks/narrative', body: { answer } }
+    case 'guide':
+      return { path: `/api/guide/${encodeURIComponent(target.key)}/narrative`, body: { answer } }
+    case 'rcq':
+      return {
+        path: `/api/guide/${encodeURIComponent(target.key)}/rcq/narrative`,
+        body: { ...target.inputs, answer },
+      }
+    case 'coach':
+      return { path: `/api/coach/narrative?format=${encodeURIComponent(target.format)}`, body: { answer } }
+    case 'brief':
+      return {
+        path: `/api/guide/${encodeURIComponent(target.key)}/briefs/${encodeURIComponent(target.archetypeKey)}`,
+        body: { answer },
+      }
+    case 'coverage':
+      return { path: `/api/guide/${encodeURIComponent(target.key)}/coverage`, body: { answer } }
+  }
+}
+
+const putPasted = <T,>(target: PasteTarget, answer: string) => {
+  const { path, body } = pasteRequest(target, answer)
+  return put<T>(path, body)
+}
+
+/* The seven paste mutations. Each stores an answer pasted into its card
+ * (`CopyPromptCard`'s box) and, on success, invalidates the card's own
+ * queries, a stored answer changing no row count the heartbeat reads. Its
+ * `onSuccess` returns the invalidations, so the mutation settles only once
+ * those reads have refetched: the box says "Saving…" until the stored
+ * answer is on the card, and does not empty early inviting a second save
+ * (the coach, leak and RCQ tables keep every row). The response body is never
+ * written into a query: a `PUT` answers with what it stored, and the next
+ * `GET` is what the card should show (the coach's, for one, rebuilds the
+ * prompt the `PUT` returned). A refusal rejects with `ApiError`, whose
+ * message is the server's sentence. */
+
+/** A pasted "Coach's summary" for one match. */
+export const usePasteMatchReportNarrative = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ matchId, answer }: { matchId: string; answer: string }) =>
+      putPasted<NarrativeResponse>({ card: 'match', matchId }, answer),
+    onSuccess: (_data, { matchId }) =>
+      queryClient.invalidateQueries({ queryKey: ['match-report-narrative-prompt', matchId] }),
+  })
+}
+
+/** A pasted training plan over the leak finder's ranked output. */
+export const usePasteLeaksNarrative = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ answer }: { answer: string }) => putPasted<NarrativeResponse>({ card: 'leaks' }, answer),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leaks-narrative'] }),
+  })
+}
+
+/** A pasted deck guide. Its matchup plans land in `matchup_brief` in the
+ *  same write, so the deck's briefs, its coverage and the live brief are
+ *  invalidated with the narrative. */
+export const usePasteGuideNarrative = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ key, answer }: { key: string; answer: string }) =>
+      putPasted<GuideNarrativeResponse>({ card: 'guide', key }, answer),
+    onSuccess: (_data, { key }) => invalidateGuideWrite(queryClient, key),
+  })
+}
+
+/** A pasted RCQ guide, sent with the 75 and the picks it was written
+ *  from (`inputs`, the same fields the generate route takes). */
+export const usePasteRcq = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ key, inputs, answer }: { key: string; inputs: RcqGenerateIn; answer: string }) =>
+      putPasted<RcqGuideOut>({ card: 'rcq', key, inputs }, answer),
+    onSuccess: (_data, { key }) =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['rcq-guide', key] }),
+        queryClient.invalidateQueries({ queryKey: ['rcq-markdown', key] }),
+      ]),
+  })
+}
+
+/** A pasted coach report, for the format the page's reads showed. */
+export const usePasteCoachNarrative = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ format, answer }: { format: string; answer: string }) =>
+      putPasted<CoachNarrativeResponse>({ card: 'coach', format }, answer),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['coach'] }),
+        queryClient.invalidateQueries({ queryKey: ['coach-narrative'] }),
+      ]),
+  })
+}
+
+/** A pasted matchup brief for one archetype: the deck's briefs, its
+ *  coverage and the live brief are invalidated. */
+export const usePasteBrief = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ key, archetypeKey, answer }: { key: string; archetypeKey: string; answer: string }) =>
+      putPasted<MatchupBriefOut>({ card: 'brief', key, archetypeKey }, answer),
+    onSuccess: (_data, { key }) => invalidateBriefWrite(queryClient, key),
+  })
+}
+
+/** A pasted answer to the coverage prompt, up to eight briefs at once:
+ *  invalidated as for one brief. */
+export const usePasteCoverage = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ key, answer }: { key: string; answer: string }) =>
+      putPasted<CoverageOut>({ card: 'coverage', key }, answer),
+    onSuccess: (_data, { key }) => invalidateBriefWrite(queryClient, key),
   })
 }

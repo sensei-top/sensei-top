@@ -46,7 +46,15 @@
     "willAppear": "O que vai aparecer aqui",
     "appear1": "Sua última sessão em uma linha, e seu retrospecto nos últimos 30 dias.",
     "appear2": "Três coisas que valem uma olhada: sua última partida, um padrão entre suas partidas, e o meta.",
-    "appear3": "Suas partidas recentes, sua taxa de vitórias por semana e seus decks."
+    "appear3": "Suas partidas recentes, sua taxa de vitórias por semana e seus decks.",
+    "mtgoLead": "O Sensei Top lê os logs de jogo que o Magic Online escreve enquanto você joga. Nada foi registrado ainda.",
+    "mtgoWatchingTitle": "O tracker está rodando",
+    "mtgoFolderTitle": "Ele está acompanhando a pasta do Magic Online",
+    "mtgoFolderDetail": "A pasta dos logs de jogo ainda não foi definida. Defina-a em Configurações, na seção Fontes.",
+    "mtgoPlayTitle": "Jogue uma partida",
+    "mtgoPlayDetail": "Cada jogo é lido quando termina, e a partida aparece aqui.",
+    "mtgoNotWatching": "O tracker está rodando sem acompanhar a pasta do Magic Online, então um jogo disputado agora não é registrado. Reinicie o tracker com o acompanhamento ligado.",
+    "mtgoWatcherStopped": "O tracker parou de acompanhar depois de iniciar, então um jogo disputado agora não é registrado. Reinicie o tracker; o arquivo de log dele diz o que deu errado."
   },
   "decks": {
     "title": "Decks",
@@ -124,5 +132,12 @@
     "showNumbers": "Mostrar os números",
     "matches": "Partidas",
     "won": "Vitórias"
+  },
+  "detailedLogs": {
+    "title": "Ligue os Registros detalhados no Arena",
+    "body": "Sem eles, nenhuma partida do Arena é registrada.",
+    "checkAgain": "Verificar de novo",
+    "checking": "Verificando",
+    "stillOff": "Ainda não confirmado. O Arena só diz isso ao iniciar, então abra-o de novo primeiro."
   }
 }

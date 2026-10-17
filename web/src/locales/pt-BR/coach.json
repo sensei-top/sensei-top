@@ -42,6 +42,7 @@
     "times_other": "{{n}} vezes",
     "byline": {
       "plain": "Escrito por {{label}}.",
+      "pasted": "Colado.",
       "cost": "Escrito por {{label}}. Custou {{cost}}.",
       "costSearched": "Escrito por {{label}}. Custou {{cost}} e buscou na web {{times}}.",
       "searched": "Escrito por {{label}}. Buscou na web {{times}}."

@@ -10,10 +10,14 @@ your task touches; they are not required reading up front:
 | Document | Covers | Read when |
 |---|---|---|
 | [docs/architecture.md](docs/architecture.md) | The two-stage pipeline, module boundaries, schema and migrations | touching `reader/`, `projector/`, `live.py`, or a migration |
+| [docs/opponent-deck.md](docs/opponent-deck.md) | Naming the opponent's deck: the rule engine, a match's format, ranking by fit, the corpus as a second evidence source, the user's pick | touching `archetypes/` or the opponent-deck read |
+| [docs/desktop.md](docs/desktop.md) | The Electron shell's design, the frozen server, the support commands (`doctor`) | touching `desktop/`, `doctor.py`, or `scripts/build_server.py` |
 | [docs/arena-log.md](docs/arena-log.md) | What Arena's log actually does, and the traps that cost real debugging | parsing or interpreting log entries |
 | [docs/conventions.md](docs/conventions.md) | Code style, comments, error handling, CLI and API patterns | writing any Python |
 | [docs/testing.md](docs/testing.md) | Fixture discipline and what counts as verification | writing or changing tests |
-| [docs/frontend.md](docs/frontend.md) | Dashboard: the shell and its addresses, typed API contract, chart rules; the static site | touching `web/` or `site/` |
+| [docs/frontend.md](docs/frontend.md) | Dashboard rules: the shell and its addresses, shared primitives, typed API contract, data fetching, keyed text, card images, `GenerateCard`, chart rules, ports, checks | touching `web/` |
+| [docs/frontend-pages.md](docs/frontend-pages.md) | The dashboard page by page: Home, Matches and a match's views, the current-match reads, the opponent-deck read, the MTGO picks, the match report, Decks, the RCQ page, the Deck guide, Field, Coach | changing what one page shows or does |
+| [docs/frontend-site.md](docs/frontend-site.md) | The static site in `site/`, screenshots, and the demo database they are taken against | touching `site/`, or taking a screenshot |
 | [docs/i18n.md](docs/i18n.md) | Keying a string in the dashboard, the API and the shell; why every prompt is built in English; what is never translated; adding a language; the Magic glossary | adding or changing any text a user reads, or touching `i18n.py`, `locale/`, `web/src/i18n.ts` or `web/src/locales/` |
 | [docs/design-system.md](docs/design-system.md) | The visual system: palette + validation, type ramp, radii, elevation, density, mana-pip rules, the rules a new component follows | touching visual styling anywhere in `web/`, `components/ui/`, or `scripts/validate_palette.py` |
 | [docs/metagame.md](docs/metagame.md) | The evidence tiers, complete- vs. partial-decklist classification, corpus fetch policy | touching `metagame/` or the personal/field matchup join |
@@ -50,7 +54,7 @@ One line each; the detail is in the doc named, and
 - `src/sensei_top/brief/` — the live matchup brief, one per `(deck, archetype)`, persisted as an authored artifact; `coverage.py` reads which archetypes still lack one — `docs/brief.md`.
 - `src/sensei_top/coach/` — the dated cross-deck coach report, kept as history; reuses `review/` and `guide/` — `docs/coach.md`.
 - `src/sensei_top/table/` — the current-match reads: a request-time replay of `raw_events`, never stored. Arena-only. `ranked.py` is the ranked-play rule: no advice on Live during a ranked game — `docs/current-match.md`.
-- `src/sensei_top/archetypes/` — deck-archetype classification from revealed cards: a rule engine (`classify.py`) and a corpus read (`corpus.py`) — `docs/architecture.md`, "Naming the opponent's deck".
+- `src/sensei_top/archetypes/` — deck-archetype classification from revealed cards: a rule engine (`classify.py`) and a corpus read (`corpus.py`) — `docs/opponent-deck.md`, "Naming the opponent's deck".
 - `src/sensei_top/metagame/` — real tournament results, tiered by evidence quality — `docs/metagame.md`.
 - `src/sensei_top/backup/` — the daily verified database snapshot; imports neither `reader` nor `projector` — `docs/architecture.md`, "Backups".
 - `src/sensei_top/cli.py` — every subcommand (`uv run sensei-top --help` lists them). `serve` refuses any `--host` that isn't loopback (non-negotiable #5). The watcher's flags and how it stores each MTGO game once the game ends are in `docs/architecture.md`, "Live mode's two cadences".
@@ -63,8 +67,8 @@ One line each; the detail is in the doc named, and
 - `src/sensei_top/logs.py` — the log file under the `--db`'s `logs/` folder; `procs.py` — the watcher child dies with `serve` — `docs/architecture.md`, "The log file".
 - `src/sensei_top/db.py` — `open_database()`, the one place migrations are applied.
 - `web/src/` — React dashboard: `routes.tsx` is the table of addresses, `shell/` the layout, `pages/` read an address, `views/` and `components/` draw — `docs/frontend.md`, "The shell". Older docs call a view a tab; it is the same view, at its address.
-- `desktop/` — the Electron shell (TypeScript, its own `pnpm` project): `src/main.ts` is the only file that loads Electron; `server.ts` runs `serve` with its stdin as a lifeline, `window.ts`, `tray.ts`, `log.ts` (the server log's format, in `logs/shell.log`), `store.ts` (`shell.json`); `server/` freezes the server with PyInstaller — `desktop/README.md`.
-- `site/` — the landing, help and privacy pages, plain HTML and CSS with no build step, served as a Cloudflare Worker's static assets from the public repository (`wrangler.json`), with one script, `worker/`, that redirects the Download buttons to the newest release's files and a visitor in Brazil to the Portuguese pages; `tests/test_site.py` pins the promises the copy makes — `docs/frontend.md`, "The site".
+- `desktop/` — the Electron shell (TypeScript, its own `pnpm` project): `src/main.ts` is the only file that loads Electron; `server.ts` runs `serve` with its stdin as a lifeline, `window.ts`, `tray.ts`, `log.ts` (the server log's format, in `logs/shell.log`), `store.ts` (`shell.json`); `server/` freezes the server with PyInstaller — `desktop/README.md` for the build steps, `docs/desktop.md` for the design.
+- `site/` — the landing, help and privacy pages, plain HTML and CSS with no build step, served as a Cloudflare Worker's static assets from the public repository (`wrangler.json`), with one script, `worker/`, that redirects the Download buttons to the newest release's files and a visitor in Brazil to the Portuguese pages; `tests/test_site.py` pins the promises the copy makes — `docs/frontend-site.md`, "The site".
 - `tests/` — flat `tests/*.py`, all fixture-backed, no mocks of Arena. The dashboard's own tests sit beside what they test, `web/src/**/*.test.ts` and `web/scripts/*.test.ts` — `docs/frontend.md`, "Checks".
 - `src/sensei_top/migrations/NNN_*.sql` — applied only inside `open_database()`, at process startup: a one-shot command's, against the `--db` it is given, or `serve`'s. Everything `serve` opens later uses `connect()`, so a new migration is **pending** until `serve --watch` restarts — `docs/architecture.md`, "Storage". Check `SELECT MAX(version) FROM schema_version` on a read-only connection rather than assuming. The API never migrates.
 - `docs/user/` — the from-source and command-line reference, and the dashboard tour until the site has one; the installed app's help is `site/help/`, in both languages. Change whichever describes a user-visible behaviour you change; `tests/test_site.py` fails when a label the help quotes leaves the catalogues.
@@ -129,8 +133,9 @@ One line each; the detail is in the doc named, and
    which reversed the 2026-10-01 one (Pro tiers, a proxy, the prompt
    removed). The project stays free software (AGPL-3.0-only, `LICENSE`),
    and nothing free ever needs an account or a payment. Two paid things are
-   planned. At release, the Microsoft Store listing is sold, and it is the
-   same build as the free download. At around 3,000 monthly active users,
+   planned. The Microsoft Store listing is the same build as the free
+   download, listed free at release and priced once the blockers
+   `docs/status.md` names clear. At around 3,000 monthly active users,
    an optional subscription gated by feature, never by the player's rank or
    event type, whose reports come from a monthly allowance inside it —
    never tokens, credits or a prepaid balance, which would be reselling
@@ -142,10 +147,12 @@ One line each; the detail is in the doc named, and
    no login and stays loopback-only. Building the subscription rewrites
    this rule and the statements `docs/llm.md`, "Nothing hosted writes for
    the user", lists; until then the two paths that generate prose are the
-   user's own: the prompt round trip (`CopyPromptCard`, `guide --import`,
-   `brief --import`), kept and kept improving, and a credential the user
-   configures themselves, and both stay free beside the allowance. What
-   each paid thing waits on is in `docs/status.md`. Planned, not built:
+   user's own: the prompt round trip (`CopyPromptCard`, whose box saves
+   the pasted answer through a `PUT` that calls no model, and
+   `guide --import` and `brief --import` from a terminal), kept and kept
+   improving, and a credential the user configures themselves, and both
+   stay free beside the allowance. What each paid thing waits on is in
+   `docs/status.md`. Planned, not built:
    a provider adapter so the credential can be any OpenAI-compatible
    endpoint or a local model, which widens "the only module that imports
    `anthropic`" to "the only package that talks to a model" and labels each
@@ -239,7 +246,7 @@ published). It derives your identifiers locally and prints only categories,
 paths and counts, never an identifier itself. Fixtures are anonymized;
 player names, user IDs and local paths must not appear in tracked files.
 A screenshot is a tracked file too: take it against the demo database,
-never the real one (`docs/frontend.md`, "The demo database"). The
+never the real one (`docs/frontend-site.md`, "The demo database"). The
 one public identity is the maintainer's handle, in `AUTHORS` and nowhere else;
 the scan exempts that file for that one category (`git-account`), and for a
 git-name hit that equals the scanned clone's own declared `user.name` (the
@@ -268,14 +275,10 @@ naming, but a location the user chooses is theirs to keep out of the tree.
   back by pull request with a merge commit; `main` moves only on a release or
   a hotfix. Pushing, opening a pull request and merging wait for the user's
   word — [docs/branching.md](docs/branching.md).
-- **One feature per session.** When a task finishes, or context passes ~150k
+- **One feature per session.** When a task finishes, or context passes ~120k
   tokens, write a handoff note to `.claude/handoffs/<topic>.md` (gitignored;
   any existing note there shows the pattern) and tell the
   user to `/clear` before starting the next thing — every turn re-reads the
   whole context, so a long session pays for its own history over and over.
-- **Unattended, by the user's choice only.** `.claude/overnight/run.sh`
-  runs the loop above overnight: a fresh session per pull request, the push
-  and merge done by the driver after the checks pass, the real server
-  restarted on `develop`. A session it starts never pushes or merges
-  itself — [docs/branching.md](docs/branching.md), "Who pushes and who
-  merges".
+  Auto-compaction starts near 167k, so a session that waits for 150k
+  compacts during its next phase.

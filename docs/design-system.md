@@ -3,10 +3,10 @@
 The dashboard's visual system: one dark palette with one accent, a type
 ramp with a readability floor, radii by role, one elevation recipe, density,
 the mana-pip rules and the rules for showing card art. `docs/frontend.md`
-covers the shell and each view's own behavior; this file is only the tokens
-and the rules a new component follows. Every token and every primitive can
-be seen, in every state, on the reference page ("The reference page",
-below).
+and `docs/frontend-pages.md` cover the shell and each view's own behavior;
+this file is only the tokens and the rules a new component follows. Every
+token and every primitive can be seen, in every state, on the reference page
+("The reference page", below).
 
 ## Palette
 
@@ -76,9 +76,10 @@ Where it appears:
   prop. It is never decoration: the card's body opens with who wrote
   it, when and what it cost (`writtenNote`, `lib/written.ts`), ahead of
   the prose.
-- `Meter`'s `accent` fill: a meter that measures no data. The Welcome
-  page's card-data download draws one: determinate while downloading,
-  indeterminate while saving.
+- `Meter`'s `accent` fill: a meter that measures no data. The
+  card-data download draws one (`CardDataProgress`, on the welcome
+  steps' Ready and in Settings' Card data card): determinate while
+  downloading, indeterminate while saving.
 - The focus ring, and the wordmark's glyph: `BrandGlyph` is the link Home
   at the top of the rail, and in the strip under 48rem. The wordmark
   itself (`Wordmark`, the glyph beside the name) is drawn on the reference
@@ -91,6 +92,11 @@ Where it appears:
   each of the three things among them. The number is never the only
   carrier: the step says its state in a word, and the three things are
   an ordered list.
+- The Detailed Logs drawing (`DetailedLogsGuide`): the ring around the
+  one thing to press in each panel, its step's number in the numbered
+  disc above, and the tick in Detailed Logs' checkbox, drawn in
+  `--on-accent` on an accent fill. The frames and the placeholder bars
+  stay neutral, so the accent marks only what to press.
 
 `--on-accent` is the only text colour allowed on an accent fill, and an
 accent fill is the only place it appears.
@@ -304,11 +310,14 @@ sets `:focus-visible` to a 2px outline in `--focus`, offset 2px. A
 component never spells its own, which is why no primitive in
 `components/ui/` carries a focus class.
 
-The one exception is the skip link's target, `<main id="page">`. It takes
+One exception is the skip link's target, `<main id="page">`. It takes
 focus so the next Tab starts inside the page, and it draws no ring,
 because it is the page and not a control. The rule sits in `index.css`
-beside the ring's own (`#page:focus-visible`), so a component still never
-spells a focus class.
+beside the ring's own (`#page:focus-visible`), so no component spells it.
+The other is the Guide's section block (`SECTION_CLASS` in
+`views/GuideView.tsx`), which takes focus when a link scrolls it to the
+top and, for the same reason, draws no ring. It is the one component that
+spells a focus class, `outline-none!`, to beat the ring's rule.
 
 ## Links
 
@@ -429,7 +438,7 @@ chart, it lives in the numbers table, never on the chart canvas.
 Pips and colour letters never say the same thing twice. Where pips sit
 beside an opponent label that begins with its own colour letters (the
 colours-and-signature fallback), the letters are stripped for display —
-`docs/frontend.md`'s "The opponent-deck read".
+`docs/frontend-pages.md`'s "The opponent-deck read".
 
 ## Card art
 
@@ -487,7 +496,7 @@ Using `CardArt`:
 - **A page shows a card once.** A page with several pieces of art takes
   each from `lib/matchArt.ts`: `castCards` is the cards one side cast in
   a match, and `takeUnused` takes the first of them that the page does
-  not show yet (`docs/frontend.md`'s "Home"). The reference page is the
+  not show yet (`docs/frontend-pages.md`'s "Home"). The reference page is the
   exception, since it shows the same few cards in every shape.
 
 Using `CardTile`:
@@ -563,16 +572,15 @@ the card's shape.
 
 A skeleton shown there as a sample sits inside an element carrying
 `data-sample`, which tells the screenshot script that it is not a page
-still loading (`docs/frontend.md`'s "Screenshots").
+still loading (`docs/frontend-site.md`'s "Screenshots").
 
-`/design/surfaces`, linked from the top of `/design` and back, is the
-second reference page: it draws surfaces rather than primitives,
-Settings in every state a desktop shell can hand over, picked by a
-"Sample" select at its top, and a report's card as each writer draws
-it. Everything on it is invented (`docs/frontend.md`, "The second
-reference page"). A new
-state of a surface gets its sample there, as a new state of a
-primitive gets one on `/design`.
+`/design/surfaces`, linked from the top of `/design` and back, is the second
+reference page: it draws surfaces rather than primitives, Settings in every
+state a desktop shell can hand over, picked by a "Sample" select at its top,
+a report's card as each writer draws it, and the Detailed Logs drawing at
+both its sizes. Everything on it is invented (`docs/frontend.md`, "The
+second reference page"). A new state of a surface gets its sample there, as
+a new state of a primitive gets one on `/design`.
 
 ## Where the code is still older
 
@@ -583,8 +591,6 @@ what the rule replaces:
 - Radii chosen per component (`rounded`, `rounded-md`, `rounded-lg`,
   `rounded-xl`, `rounded-full`) and one `shadow-xl`, on
   `CardImage.tsx`'s enlarged card.
-- Focus spelled by a component: the deck filter in `OpponentDeckLabel.tsx`
-  carries `outline-none`.
 - `CardImage`'s two placeholders, no id (a dashed box) and a failed
   load (the name in a small label), are plain `rounded`, not
   `rounded-control` or a `Chip`.

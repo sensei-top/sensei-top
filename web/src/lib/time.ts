@@ -13,14 +13,16 @@ export function useNow(): number {
 }
 
 /** Milliseconds since the epoch for a timestamp from the API, or `null`
- *  when it is absent or cannot be parsed. The database writes UTC without
- *  an offset in some paths, so a bare timestamp is read as UTC rather than
- *  silently as local time. The one place that reading lives: every function
+ *  when it is absent or cannot be parsed. A bare `YYYY-MM-DDTHH:MM:SS` is the
+ *  log's own local clock (`started_at`, `ended_at`, `logged_at` and what is
+ *  built from them are naive local time), so it is read as the viewer's local
+ *  time; a value with `Z` or an offset is read as written. Every UTC value
+ *  the server sends carries `Z` (`tests/test_timestamps.py` pins it), so a
+ *  bare value is never UTC. The one place that reading lives: every function
  *  below, and `lib/home.ts`, go through it. */
 export function parseTimestamp(iso: string | null | undefined): number | null {
   if (!iso) return null
-  const normalised = /[Zz]|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : `${iso}Z`
-  const then = Date.parse(normalised)
+  const then = Date.parse(iso)
   return Number.isNaN(then) ? null : then
 }
 
@@ -44,7 +46,7 @@ export function ago(iso: string | null | undefined, now: number): string | null 
  *  behind `ago()`'s formatted string, for callers that need to compare
  *  against a threshold (e.g. flagging a match `v_current_match` still calls
  *  current only because nothing newer has started yet — see
- *  `docs/current-match.md`). Same bare-timestamp-is-UTC normalisation. */
+ *  `docs/current-match.md`). A bare timestamp is local time (`parseTimestamp`). */
 export function minutesSince(iso: string | null | undefined, now: number): number | null {
   const then = parseTimestamp(iso)
   if (then == null) return null
@@ -52,7 +54,7 @@ export function minutesSince(iso: string | null | undefined, now: number): numbe
 }
 
 /** An absolute date/time for a match, in the active language and the
- *  viewer's own zone. Same bare-timestamp-is-UTC normalisation as `ago`, so
+ *  viewer's own zone. Reads a bare timestamp as local time, as `ago` does, so
  *  a match listed as "3h ago" and one listed by clock time never disagree
  *  about when it was. */
 export function when(iso: string | null | undefined): string {

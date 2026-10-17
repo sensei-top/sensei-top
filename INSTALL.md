@@ -10,11 +10,11 @@ There is nothing to sign up for.
 - [Where your data lives](#where-your-data-lives)
 - [Updates](#updates)
 
-The first time it opens, the app walks you through setup: it looks for
-Arena's log, asks where Magic Online keeps its game logs if you play there,
-and downloads the card data. In Arena, turn on **Detailed Logs (Plugin
-Support)** under Options → Account, then restart Arena. Without it, Arena's
-log is missing most of what the app reads.
+The first time it opens, the app walks you through setup: it asks which you
+play, looks for Arena's log, asks where Magic Online keeps its game logs if
+you play there, and downloads the card data on its own. In Arena, turn on
+**Detailed Logs (Plugin Support)** under Options → Account, then restart
+Arena. Without it, Arena's log is missing most of what the app reads.
 
 ## Windows
 
@@ -117,10 +117,6 @@ with `--no-sandbox` added to the command, and please report it.
 
 ### SteamOS (desktop mode)
 
-> **Untested.** These steps have not been run on a Steam Deck yet. If you
-> try them, please
-> [tell us how it went](https://github.com/sensei-top/sensei-top/discussions).
-
 Use desktop mode (Steam button → Power → Switch to Desktop). SteamOS
 replaces its system files when it updates, so keep everything in your home
 folder and install nothing system-wide.
@@ -137,8 +133,10 @@ folder and install nothing system-wide.
 If it won't start, try the `--appimage-extract-and-run` command from the
 Linux section above.
 
-Whether Sensei Top keeps recording while you play in Game Mode hasn't been
-tried yet. Run it from desktop mode for now.
+Sensei Top runs only in desktop mode for now. Returning to Game Mode
+closes it with the rest of the desktop, so play Arena in desktop mode
+while you want your games recorded. Starting it from Game Mode hasn't been
+tried yet.
 
 ## Where your data lives
 

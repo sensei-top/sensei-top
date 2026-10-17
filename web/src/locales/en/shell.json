@@ -18,7 +18,7 @@
   "skipLink": "Skip to the page",
   "trackerDown": "The tracker is not running, so nothing new can load. What is on screen is what was last loaded. This notice goes away once the tracker answers again.",
   "footer": {
-    "local": "Reads a local SQLite database. No account, no upload.",
+    "local": "Your match history is kept on this computer. No account needed.",
     "credits": "Credits"
   },
   "nav": {

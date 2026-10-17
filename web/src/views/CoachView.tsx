@@ -8,6 +8,7 @@ import {
   useCoachReport,
   useFormats,
   useGenerateCoachNarrative,
+  usePasteCoachNarrative,
   useLLMStatus,
   type CoachModelOption,
   type CoachNarrativeResponse,
@@ -17,6 +18,7 @@ import {
 import { CoachReport } from '../components/CoachReport'
 import { Profile } from '../components/coach/Profile'
 import { GenerateCard } from '../components/GenerateCard'
+import { isPasted } from '../lib/written'
 import { Callout, Card, EmptyState, ErrorNote, Loading, Select, TextLink } from '../components/ui'
 import {
   coachAddress,
@@ -97,6 +99,7 @@ function HistoryCard({
                 {historyDetail(
                   {
                     label: modelLabel(r.model, models),
+                    pasted: isPasted(r.model),
                     costUsd: r.cost_usd,
                     searches: r.web_search_requests,
                   },
@@ -200,6 +203,7 @@ function ReportDocument({
             {reportByline(
               {
                 label: modelLabel(report.model, models),
+                pasted: isPasted(report.model),
                 costUsd: report.cost_usd,
                 searches: report.web_search_requests,
               },
@@ -236,6 +240,7 @@ function LatestCoach() {
   const coach = useCoach(format, format !== undefined)
   const narrative = useCoachNarrative(format, format !== undefined)
   const generate = useGenerateCoachNarrative()
+  const paste = usePasteCoachNarrative()
   // The day in a title changes with the year alone: read the clock once.
   const [now] = useState(() => Date.now())
   // null means "the configured default"; see ModelSelect above.
@@ -316,6 +321,7 @@ function LatestCoach() {
               onGenerate={() => generate.mutate({ model, format })}
               generating={generate.isPending}
               generateError={generate.error?.message}
+              save={(answer) => paste.mutateAsync({ format, answer })}
               emptyNote={null}
               controls={
                 models.length > 0 ? (

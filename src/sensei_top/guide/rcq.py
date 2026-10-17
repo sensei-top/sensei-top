@@ -26,6 +26,7 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import date, timedelta
 
+from sensei_top.answers import rcq_for
 from sensei_top.archetypes.classify import (
     Verdict,
     _card_colors_by_name,
@@ -531,10 +532,14 @@ def _counts_block(title: str, counts: Counter) -> list[str]:
 
 
 @english()
-def rcq_prompt(evidence: RcqEvidence, *, conn) -> str:
-    """The complete text to hand an assistant: the framing, the schema, then
-    the evidence — the deck guide's own evidence, with the pasted 75 in
-    place of the identity's current list."""
+def rcq_prompt(evidence: RcqEvidence, *, conn, answer_contract: bool = True) -> str:
+    """The complete text to hand an assistant: the framing, the evidence —
+    the deck guide's own evidence, with the pasted 75 in place of the
+    identity's current list — then the answer contract (``answers.py``)
+    naming this deck's RCQ guide. No ``context``: an RCQ guide has no
+    staleness hash, since each one is the record of one pasted list.
+    ``answer_contract=False`` is the generate route's prompt, which puts the
+    schema before the evidence and leaves the contract out."""
     guide = evidence.guide
     # The guide's note that the identity's own list went unclassified is
     # about that list, not the pasted 75: dropped by its flag, which says it
@@ -636,7 +641,10 @@ def rcq_prompt(evidence: RcqEvidence, *, conn) -> str:
         ),
     )
 
-    return _wrap_json_prompt(RCQ_SYSTEM_PROMPT, _RCQ_TOOL["input_schema"], "\n".join(lines))
+    return _wrap_json_prompt(
+        RCQ_SYSTEM_PROMPT, _RCQ_TOOL["input_schema"], "\n".join(lines),
+        answer_for=rcq_for(deck.key) if answer_contract else None,
+    )
 
 
 def _canonical_names(parsed: ParsedList) -> dict[str, str]:

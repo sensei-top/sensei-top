@@ -33,27 +33,6 @@ export function guideSections({ written, plans, checklist }: WrittenParts, t: TF
   return sections
 }
 
-/** Where the window stands against the page's two ends: `top` when it is
- *  not scrolled at all, `end` when its foot is within 2 px of the page's,
- *  `null` in between. A page that fits the window is at its `top`. */
-export type ScrollEdge = 'top' | 'end' | null
-
-export function scrollEdge(scrollY: number, viewportHeight: number, documentHeight: number): ScrollEdge {
-  if (scrollY <= 0) return 'top'
-  if (scrollY + viewportHeight >= documentHeight - 2) return 'end'
-  return null
-}
-
-/** The current section of a scroll spy: the first of `ids` at the page's
- *  top, the last at its end, and between them `observed`, the observer's
- *  own answer. */
-export function spyCurrent(ids: readonly string[], observed: string, edge: ScrollEdge): string {
-  if (ids.length === 0) return observed
-  if (edge === 'top') return ids[0]
-  if (edge === 'end') return ids[ids.length - 1]
-  return observed
-}
-
 /** A row that scrolls sideways, and a link in it, all in px: `rowWidth`
  *  the row's visible width, `scrollWidth` its whole width, `pendingLeft`
  *  where its scroll is going (where it is, when no scroll is in flight),

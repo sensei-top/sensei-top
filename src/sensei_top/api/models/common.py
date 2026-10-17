@@ -236,3 +236,14 @@ class MatchupBriefResponse(BaseModel):
     )
     stale: bool = Field(False, description="the corpus has moved since this brief was written")
     error: str | None = Field(None, description="set when something could not be built")
+
+
+class PastedAnswerIn(BaseModel):
+    """A pasted answer: the whole text the assistant gave back, header and
+    all (``answers.read_answer``). Read, never sent anywhere: a ``PUT`` that
+    takes this makes no model call."""
+
+    answer: str = Field(
+        description="the assistant's answer exactly as it gave it, from the prompt's "
+        "answer contract; over 256 KB is a 413"
+    )

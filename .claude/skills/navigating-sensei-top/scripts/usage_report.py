@@ -12,8 +12,10 @@ run.
     uv run python .claude/skills/navigating-sensei-top/scripts/usage_report.py --days 7
     uv run python .claude/skills/navigating-sensei-top/scripts/usage_report.py --since 2026-09-28
 
-Read-only. Prints counts and sums only, never a transcript's text, a path or
-a session id. The transcript directory is derived from the repo root, so
+Read-only. Prints counts and sums only, never a transcript's text or a path;
+the one identifier it prints is the first 8 characters of a session id, for
+the main sessions that passed the handoff threshold without writing a handoff
+note, so a reader can check them by hand. The transcript directory is derived from the repo root, so
 nothing here names a home directory.
 
 The dollar figure is an API-equivalent from list prices, not a bill: a
@@ -48,12 +50,21 @@ TARGET_AVG_CONTEXT = 85_000
 TARGET_SUBAGENT_MEDIAN = 60
 TARGET_SUBAGENT_MAX = 150
 
+# AGENTS.md, "Working style": a session writes a handoff note once its
+# context passes this, before auto-compaction (near 167k) does it for them.
+HANDOFF_THRESHOLD = 120_000
+HANDOFF_DIR = "/.claude/handoffs/"
+HANDOFF_TOOLS = ("Write", "Edit")
+
 
 @dataclass
 class Transcript:
     is_subagent: bool
+    session: str = ""
     contexts: list[int] = field(default_factory=list)
     compactions: int = 0
+    # A Write or Edit under .claude/handoffs/ before the first compaction.
+    handoff_written: bool = False
 
 
 @dataclass
@@ -90,10 +101,26 @@ def _timestamp(row: dict) -> datetime | None:
         return None
 
 
+def _writes_handoff(message: dict) -> bool:
+    content = message.get("content")
+    if not isinstance(content, list):
+        return False
+    for block in content:
+        if (
+            isinstance(block, dict)
+            and block.get("type") == "tool_use"
+            and block.get("name") in HANDOFF_TOOLS
+            and isinstance(block.get("input"), dict)
+            and HANDOFF_DIR in str(block["input"].get("file_path", ""))
+        ):
+            return True
+    return False
+
+
 def _read(
-    path: Path, since: datetime, totals: dict[str, ModelTotals], seen: set[str]
+    path: Path, since: datetime, totals: dict[tuple[str, str], ModelTotals], seen: set[str]
 ) -> Transcript:
-    transcript = Transcript(is_subagent=path.parent.name == "subagents")
+    transcript = Transcript(is_subagent=path.parent.name == "subagents", session=path.stem)
     with path.open(encoding="utf-8", errors="replace") as handle:
         for line in handle:
             try:
@@ -111,6 +138,10 @@ def _read(
             message = row.get("message")
             if row.get("type") != "assistant" or not isinstance(message, dict):
                 continue
+            # Before the dedup below: a response's tool_use block is its own
+            # row, and the text block ahead of it has already claimed the id.
+            if transcript.compactions == 0 and _writes_handoff(message):
+                transcript.handoff_written = True
             usage = message.get("usage")
             model = message.get("model")
             if not isinstance(usage, dict) or not isinstance(model, str) or model == "<synthetic>":
@@ -133,7 +164,8 @@ def _read(
             else:
                 written_1h, written_5m = 0, written
 
-            total = totals[model]
+            # Keyed by role too, so the cost splits between main sessions and subagents.
+            total = totals[("subagent" if transcript.is_subagent else "main", model)]
             total.calls += 1
             total.input += fresh
             total.cache_read += read
@@ -186,6 +218,21 @@ def _report_group(name: str, group: list[Transcript]) -> None:
     )
 
 
+def _report_handoff_rule(sessions: list[Transcript]) -> None:
+    sessions = [t for t in sessions if t.contexts]
+    over = [t for t in sessions if max(t.contexts) > HANDOFF_THRESHOLD]
+    wrote = [t for t in over if t.handoff_written]
+    print("Handoff rule (main sessions):")
+    print(f"  peak context over {HANDOFF_THRESHOLD:,}      {len(over)} of {len(sessions)}")
+    print(f"  wrote a handoff first    {len(wrote)} of {len(over)}")
+    print(f"  Target: every session over {HANDOFF_THRESHOLD // 1000}k wrote one.")
+    missed = [t for t in over if not t.handoff_written]
+    if missed:
+        print("  without one (session, peak context):")
+        for t in sorted(missed, key=lambda t: -max(t.contexts)):
+            print(f"    {t.session[:8]}  {max(t.contexts):,}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     window = parser.add_mutually_exclusive_group()
@@ -203,33 +250,37 @@ def main() -> int:
         print("No transcripts found for this repo.")
         return 1
 
-    totals: dict[str, ModelTotals] = defaultdict(ModelTotals)
+    totals: dict[tuple[str, str], ModelTotals] = defaultdict(ModelTotals)
     seen: set[str] = set()
     transcripts = [_read(path, since, totals, seen) for path in sorted(directory.rglob("*.jsonl"))]
 
     print(f"Window: since {since.date().isoformat()} (UTC)")
     print()
     print(
-        f"{'model':<28}{'calls':>8}{'cache read':>13}{'cache write':>13}"
+        f"{'role':<10}{'model':<28}{'calls':>8}{'cache read':>13}{'cache write':>13}"
         f"{'output':>10}{'US$':>10}"
     )
     dollars = 0.0
+    by_role: dict[str, float] = defaultdict(float)
     unpriced: list[str] = []
-    for model, total in sorted(totals.items(), key=lambda item: -item[1].calls):
+    rows = sorted(totals.items(), key=lambda item: (item[0][0], -item[1].calls))
+    for (role, model), total in rows:
         cost = _cost(model, total)
         if cost is None:
             unpriced.append(model)
         else:
             dollars += cost
+            by_role[role] += cost
         print(
-            f"{model:<28}{total.calls:>8,}{_millions(total.cache_read):>13}"
+            f"{role:<10}{model:<28}{total.calls:>8,}{_millions(total.cache_read):>13}"
             f"{_millions(total.cache_write_5m + total.cache_write_1h):>13}"
             f"{_millions(total.output):>10}"
             f"{('n/a' if cost is None else f'{cost:,.0f}'):>10}"
         )
     print(f"API-equivalent at list prices of {PRICES_AS_OF}: US$ {dollars:,.0f}")
+    print(f"  main sessions US$ {by_role['main']:,.0f}, subagents US$ {by_role['subagent']:,.0f}")
     if unpriced:
-        print(f"Not priced, left out of the sum: {', '.join(unpriced)}")
+        print(f"Not priced, left out of the sum: {', '.join(sorted(set(unpriced)))}")
     print()
 
     _report_group("Main sessions", [t for t in transcripts if not t.is_subagent])
@@ -242,6 +293,8 @@ def main() -> int:
         f"max under {TARGET_SUBAGENT_MAX}; fewer than 1 main session in 4 compacting "
         "more than once."
     )
+    print()
+    _report_handoff_rule([t for t in transcripts if not t.is_subagent])
     return 0
 
 

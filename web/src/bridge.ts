@@ -7,7 +7,9 @@ import { useSyncExternalStore } from 'react'
  * none, so here it answers `null` and every page draws what the API alone
  * can say. A component takes the parts it shows as props and never reads
  * this module's hook itself, so a change of the shell's shape is a change
- * of one mapping, in the page that calls `useShell()`.
+ * of one mapping, in the page that calls `useShell()`. The one exception is
+ * `CopyPromptBody`, which asks only whether a shell exists (to hide the
+ * import command), never its shape.
  */
 
 /** Every field of `T` optional, at every depth; an array is taken whole. */
@@ -33,6 +35,8 @@ export type ShellSettings = {
     dateOrder: DateOrder
     mtgoHandle: string | null
     mtgoDir: string | null
+    /** The folder of MTGO `.dek` exports, `null` when unset. */
+    mtgoDeckDir: string | null
     /** The folder the shell found Magic Online writing to (Windows only),
      *  else `null`. Read-only. */
     mtgoFound: string | null
@@ -141,11 +145,14 @@ export type AppSettings = {
   /** The language preference (`shell.json`'s `language`). Absent from a
    *  shell that keeps none, and the page then keeps its own (`i18n.ts`). */
   language?: LanguageChoice
+  /** Which clients the user plays (`shell.json`'s `plays`); absent from a
+   *  shell that keeps none, and the page then reads both. */
+  plays?: ('arena' | 'mtgo')[]
 }
 
 /** What the page can change of `AppSettings`. */
 export type AppChange = Partial<
-  Pick<AppSettings, 'startWithSystem' | 'keepRunningOnClose' | 'checkForUpdates' | 'diagnostic' | 'language'>
+  Pick<AppSettings, 'startWithSystem' | 'keepRunningOnClose' | 'checkForUpdates' | 'diagnostic' | 'language' | 'plays'>
 >
 
 /** The shell's actions. `exportDiagnostics` answers `{ ok: true }` when the

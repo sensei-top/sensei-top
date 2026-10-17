@@ -13,7 +13,9 @@ makes the call itself** — only ``sensei_top.llm.client`` imports
 assembles the evidence, ``full_prompt`` wraps it with ``system_prompt(fmt)``, and
 ``build_coach_prompt`` is the one entry point that turns a connection into a
 complete, storable prompt — the API (a later phase) calls it for both a GET
-(copy-this-prompt) and a POST (send it through ``llm.write_report``) route.
+(copy-this-prompt: ``CoachPrompt.copied``, which ends with the answer
+contract) and a POST (``CoachPrompt.prompt`` through ``llm.write_report``)
+route.
 
 **Unknowns are stated, never guessed (rule 4).** Every rate goes through
 ``format_rate``, which reads "no data" at n=0 rather than a bare 0%; an
@@ -37,6 +39,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
+from sensei_top.answers import answer_format, coach_for, prose_schema
 from sensei_top.coach.canon import ALLOWED_DOMAINS, CanonEntry, entries_for
 from sensei_top.coach.evidence import (
     CoachEvidence,
@@ -618,6 +621,7 @@ class CoachPrompt:
     previous: CoachReport | None
     context: str
     prompt: str
+    copied: str
     metrics: dict
     context_hash: str
 
@@ -678,12 +682,20 @@ def build_coach_prompt(
     # never hashes the same as a report on another.
     evidence_only_context = build_coach_context(evidence, entries, None, ())
 
+    context_hash = _context_hash(evidence_only_context)
+    prompt = full_prompt(context, fmt)
+    # ``prompt`` is what a POST sends and stores; ``copied`` is the same text
+    # plus the answer contract, for the card's copy button.
+    schema = prose_schema("markdown with the headings named above")
+    copied = f"{prompt}\n\n---\n\n{answer_format(coach_for(fmt), context_hash, schema)}"
+
     return CoachPrompt(
         evidence=evidence,
         entries=entries,
         previous=previous,
         context=context,
-        prompt=full_prompt(context, fmt),
+        prompt=prompt,
+        copied=copied,
         metrics=metrics_snapshot(evidence),
-        context_hash=_context_hash(evidence_only_context),
+        context_hash=context_hash,
     )

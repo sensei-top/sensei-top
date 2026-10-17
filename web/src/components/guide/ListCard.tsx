@@ -19,7 +19,7 @@ function CardRow({ card, note }: { card: CardVerdictOut; note: string | undefine
       </div>
       <p className="mt-0.5 text-caption text-muted tabular-nums">{copiesLine(card, t)}</p>
       {note && (
-        <div className="mt-2 max-w-prose text-left">
+        <div className="mt-2 text-left">
           <Prose text={note} />
         </div>
       )}

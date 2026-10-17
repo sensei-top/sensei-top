@@ -623,6 +623,46 @@ def test_card_image_with_no_known_name_does_not_attempt_a_name_fallback(
     assert len(calls) == 1
 
 
+def test_a_face_scryfall_cannot_find_alone_takes_its_other_faces_picture(
+    client, tmp_path, monkeypatch
+):
+    """Scryfall's answers on 2026-10-17: "Carnivorous Cultivator // Enroot"
+    (a prepare card, one picture) has no arena_id, and `named?exact=Enroot`
+    is a 404 while `named?exact=Carnivorous Cultivator` finds the card. The
+    two faces share the card's oracle_id in the cards table, so Enroot's art
+    is the card's, cached under the creature's id."""
+    conn = sqlite3.connect(client.app.state.database)
+    conn.executemany(
+        "INSERT INTO cards (grp_id, name, oracle_id) VALUES (?, ?, ?)",
+        [
+            (106333, "Carnivorous Cultivator", "db655c5a-06f6-42bc-8180-d9ca1c1d939a"),
+            (106334, "Enroot", "db655c5a-06f6-42bc-8180-d9ca1c1d939a"),
+        ],
+    )
+    conn.commit()
+    conn.close()
+
+    urls = []
+
+    def get(url):
+        urls.append(url)
+        if "named?exact=Carnivorous%20Cultivator" in url:
+            return b"CULTIVATOR-ART"
+        raise card_images._NotFoundError
+
+    monkeypatch.setattr(card_images, "_get", get)
+
+    response = client.get("/api/cards/106334/art")
+    assert response.status_code == 200
+    assert response.content == b"CULTIVATOR-ART"
+    assert (tmp_path / "card_images" / "art" / "106333.jpg").read_bytes() == b"CULTIVATOR-ART"
+    assert (tmp_path / "card_images" / "art" / "106334.missing").exists()
+
+    asked = len(urls)
+    assert client.get("/api/cards/106334/art").status_code == 200
+    assert len(urls) == asked, "the miss marker and the other face's file absorb the second request"
+
+
 # --- card art -----------------------------------------------------------------
 # The art route is the image route's twin over card_images._download_art; the
 # same rule holds: every test replaces the networked function, never the network.
@@ -1164,6 +1204,81 @@ def test_current_match_read_clears_intermission_at_game_2_start(tmp_path, make_c
     assert body["intermission"] is None
     # Game 2 has begun: the break's allowance ends with it.
     assert body["advice"] is False
+
+
+def test_current_match_read_keep_guide_counts_the_boarded_list_after_entry_39(
+    tmp_path, make_client
+):
+    """The route passes ``boarded`` to the keep guide: after the fixture's
+    SubmitDeckResp (entry 39) the guide counts that list. The three seeded
+    card rows are typed as basic lands only as markers: 87145 x2 is only in
+    the boarded list, 95758 x2 and 102793 x4 only in game 1's (entry 2)."""
+    db_path = tmp_path / "intermission_api.db"
+    conn = open_database(db_path)
+    ingest_file(conn, INTERMISSION_FIXTURE, locale_hint="mdy")
+    conn.execute("DELETE FROM raw_events WHERE id > ?", (39 + 1,))
+    conn.commit()
+    project(conn)
+    for grp in (95758, 102793, 87145):
+        conn.execute(
+            "INSERT INTO cards (grp_id, name, mana_cost, type_line) "
+            "VALUES (?, ?, NULL, 'Basic Land \u2014 Island')",
+            (grp, f"Land {grp}"),
+        )
+    conn.commit()
+    conn.close()
+    with make_client(create_app(db_path)) as client:
+        body = client.get("/api/current-match/read").json()
+    assert body["keep"]["land_count"] == 2
+
+
+def test_current_match_read_opening_hand_keep_guide_counts_the_boarded_list(
+    tmp_path, make_client
+):
+    """The route's opening-hand call passes ``boarded`` too: a mulligan offer
+    appended after entry 39 takes that path, and its keep guide counts the
+    boarded list (87145 x2 is a marker land only the boarded list holds)."""
+    db_path = tmp_path / "intermission_api.db"
+    conn = open_database(db_path)
+    ingest_file(conn, INTERMISSION_FIXTURE, locale_hint="mdy")
+    conn.execute("DELETE FROM raw_events WHERE id > ?", (39 + 1,))
+    conn.commit()
+    project(conn)
+    for grp in (95758, 102793, 87145):
+        conn.execute(
+            "INSERT INTO cards (grp_id, name, mana_cost, type_line) "
+            "VALUES (?, ?, NULL, 'Basic Land \u2014 Island')",
+            (grp, f"Land {grp}"),
+        )
+    hand_ids = list(range(9001, 9008))
+    gsm = {
+        "type": "GameStateType_Diff",
+        "gameStateId": 2,
+        "players": [
+            {"systemSeatNumber": 1, "pendingMessageType": "ClientMessageType_MulliganResp"}
+        ],
+        "turnInfo": {},
+        "zones": [
+            {"zoneId": 31, "type": "ZoneType_Hand", "ownerSeatId": 1,
+             "objectInstanceIds": hand_ids},
+        ],
+        "gameObjects": [
+            {"instanceId": iid, "grpId": 95638, "zoneId": 31, "cardTypes": ["CardType_Land"]}
+            for iid in hand_ids
+        ],
+    }
+    payload = {"greToClientEvent": {"greToClientMessages": [{"gameStateMessage": gsm}]}}
+    conn.execute(
+        "INSERT INTO raw_events (digest, source_file, kind, label, payload) "
+        "VALUES ('offer', 'Player.log', 'event', 'GreToClientEvent', ?)",
+        (json.dumps(payload),),
+    )
+    conn.commit()
+    conn.close()
+    with make_client(create_app(db_path)) as client:
+        body = client.get("/api/current-match/read").json()
+    assert body["opening_hand"] is not None
+    assert body["keep"]["land_count"] == 2
 
 
 def test_card_names_are_null_until_the_card_table_is_populated(live_client):
@@ -3548,6 +3663,14 @@ def test_only_authored_artifact_routes_write():
         ("/api/guide/{key}/narrative", "POST"),
         ("/api/guide/{key}/rcq/narrative", "POST"),
         ("/api/coach/narrative", "POST"),
+        # Pasted answers (plan 24, D1): no model call, only the same tables.
+        ("/api/guide/{key}/narrative", "PUT"),
+        ("/api/guide/{key}/rcq/narrative", "PUT"),
+        ("/api/guide/{key}/briefs/{archetype_key}", "PUT"),
+        ("/api/guide/{key}/coverage", "PUT"),
+        ("/api/matches/{match_id}/report/narrative", "PUT"),
+        ("/api/review/leaks/narrative", "PUT"),
+        ("/api/coach/narrative", "PUT"),
     }
 
 
@@ -3693,6 +3816,49 @@ def test_current_match_brief_for_a_deck_with_no_format_is_format_unknown(live_cl
     body = live_client.get("/api/current-match/brief").json()
     assert body["status"] == "format_unknown"
     assert body["brief"] is None and body["prompt"] is None
+
+
+def test_current_match_brief_returns_a_stored_brief_even_with_no_format(live_client):
+    """A brief written while the deck had a format is still the user's: with
+    the format gone and the opponent picked, the stored brief comes back
+    ``ok`` (with its staleness), not ``format_unknown``."""
+    from sensei_top.brief.store import Brief, write_brief
+    from sensei_top.guide.deck import list_identities
+
+    match_id = "fa7a4d16-afb7-4094-bae2-111092fc71d2"
+    conn = sqlite3.connect(live_client.app.state.database)
+    conn.row_factory = sqlite3.Row
+    identity = list_identities(conn)[0]
+    conn.execute(
+        "INSERT INTO opponent_deck_override (match_id, label, updated_at, archetype_key) "
+        "VALUES (?, 'Some Deck', 't', 'some_deck')",
+        (match_id,),
+    )
+    conn.commit()
+    conn.close()
+    _make_deck_formatless(live_client)
+
+    # Nothing stored yet: the format is the answer.
+    assert live_client.get("/api/current-match/brief").json()["status"] == "format_unknown"
+
+    conn = sqlite3.connect(live_client.app.state.database)
+    conn.row_factory = sqlite3.Row
+    write_brief(conn, Brief(
+        deck_key=identity.key, archetype_key="some_deck", archetype_label="Some Deck",
+        archetype_share=None, personal_matches=None, personal_wins=None,
+        personal_losses=None, prose="Stored earlier.", play_around=(),
+        board_in=(), board_out=(), staples=(), problems=(), prompt="p",
+        model="pasted", generated_at="2026-09-01T00:00:00.000Z",
+        corpus_commit=None, list_hash="old", source="live",
+    ))
+    conn.commit()
+    conn.close()
+
+    body = live_client.get("/api/current-match/brief").json()
+    assert body["status"] == "ok"
+    assert body["brief"]["prose"] == "Stored earlier."
+    assert body["stale"] is True
+    assert body["prompt"] is None
 
 
 def test_current_match_read_for_a_match_with_no_format_has_a_format_unknown_hand(

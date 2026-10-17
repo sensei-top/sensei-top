@@ -16,11 +16,13 @@ complete, inspectable prompt:
 
 * **``build_narrative_context`` returns the evidence**, and ``full_prompt``
   wraps it with the framing that used to be sent as a ``system`` parameter.
-  ``GET /api/matches/{id}/report/narrative`` serves it; ``POST`` on the same
-  path sends it through ``llm.write_prose`` and stores the answer
-  (``review/narrative_store.py``) when a credential is configured — see
-  ``docs/llm.md``. With none configured, the dashboard offers the same text
-  as something to paste into an assistant the user already pays for.
+  ``GET /api/matches/{id}/report/narrative`` serves ``copied_prompt`` (the
+  same text plus the answer contract); ``POST`` on the same path sends
+  ``full_prompt`` itself, with no contract, through ``llm.write_prose`` and
+  stores the answer (``review/narrative_store.py``) when a credential is
+  configured — see ``docs/llm.md``. With none configured, the dashboard
+  offers the copyable prompt as something to paste into an assistant the
+  user already pays for.
 * **Unknowns are stated, never guessed (rule 4).** The context lists the
   report's own gaps as a named "not evaluated" section, and ends with what
   this reader never sees for any match at all (the stack, counters,
@@ -49,6 +51,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from sensei_top.answers import answer_format, prose_schema
 from sensei_top.i18n import english
 from sensei_top.review.findings import Finding, MatchReport
 from sensei_top.review.snapshot import MatchSnapshot
@@ -110,11 +113,23 @@ def full_prompt(context: str) -> str:
     sent as a ``system`` parameter, then the evidence itself.
 
     ``build_narrative_context`` returns the evidence alone; this wraps it
-    into something a person can paste into a Claude Code session in one go.
-    That is the whole replacement for the call this module used to make —
-    see AGENTS.md non-negotiable #5 and ``docs/review.md``.
+    into the text the generate path (``POST``) sends. The copyable prompt
+    is ``copied_prompt``: this text plus the answer contract. See AGENTS.md
+    non-negotiable #5 and ``docs/review.md``.
     """
     return _wrap_prompt(SYSTEM_PROMPT, context)
+
+
+@english()
+def copied_prompt(context: str, *, answer_for: str, context_hash: str) -> str:
+    """``full_prompt`` plus the answer contract (``answers.answer_format``),
+    for the prompt the card offers to copy. The generate path keeps
+    ``full_prompt``: its reply is stored as prose whole, so it must not be
+    asked for a JSON object."""
+    return (
+        f"{full_prompt(context)}\n\n---\n\n"
+        f"{answer_format(answer_for, context_hash, prose_schema('plain prose'))}"
+    )
 
 
 

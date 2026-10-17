@@ -1466,18 +1466,28 @@ def test_generate_guide_narrative_converges_with_the_hand_import_parser(
         }],
         "checklist": ["Am I racing?"],
     }
-    monkeypatch.setattr(
-        llm_client_module, "write_json",
-        lambda prompt, schema, *, cfg, label: Completion(
+    prompts = []
+
+    def fake(prompt, schema, *, cfg, label):
+        prompts.append(prompt)
+        return Completion(
             text=json.dumps(payload), model="claude-opus-5",
             input_tokens=2000, output_tokens=1500, cost_usd=0.0475,
-        ),
-    )
+        )
+
+    monkeypatch.setattr(llm_client_module, "write_json", fake)
 
     resp = client.post(f"/api/guide/{guide_key}/narrative")
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "ok"
+    # The generate path keeps its own prompt (plan 24, D12); the answer
+    # contract ends only the copied one the GET serves.
+    assert "Answer as a single JSON object matching this schema" in prompts[0]
+    assert "Answer with exactly one JSON object" not in prompts[0]
+    copied = client.get(f"/api/guide/{guide_key}/narrative").json()["prompt"]
+    assert "Answer with exactly one JSON object" in copied
+    assert "Answer as a single JSON object matching this schema" not in copied
     assert body["guide"]["engine"] == "Cheap spells trigger prowess."
     assert body["cost_usd"] == pytest.approx(0.0475)
 

@@ -131,7 +131,8 @@ The widened figure only exists on the live replay, `other_mana_sources` is
 it into a single misleading number.
 
 **Our own remaining library** (`build_library_remaining`) is the maindeck
-(`decks.cards_json`) minus every copy of our own cards this game has shown
+(`decks.cards_json`, or the boarded list once a SubmitDeckResp was seen,
+below) minus every copy of our own cards this game has shown
 outside the library, deduplicated by `instance_id` so a card drawn then cast
 counts once, not twice — the same subtraction `NextDrawsCard.tsx` used to
 run client-side off a stale `turns` row, now server-side against the fresh
@@ -204,7 +205,21 @@ touching `matches`. `deck_id` is computed with `projector/matches.py`'s own
 `project()` would assign once it catches up — the route falls back to
 `match_row['deck_id']` only when the replay itself found no connectResp in
 either window (no match ingested this session, or a capture starting well
-inside the match).
+inside the match). After a sideboarding break `deck_maindeck` takes the
+latest `ClientMessageType_SubmitDeckResp` of this match
+(`submitDeckResp.deck`, a client-outbound message at the payload's top
+level, the shape `projector/matches.py`'s `_handle_submit_deck` parses): once
+one has been seen it replaces the connectResp's list, and a later connectResp
+does not take it back. `deck_id` stays game 1's: it hashes the connectResp
+list only, which is the one `project()`'s own `deck_id` is computed from. The
+pre-anchor lookback reads connectResp messages only, since a SubmitDeckResp
+before the anchor is an earlier match's.
+
+`LiveState.deck_boarded` says `deck_maindeck` came from a SubmitDeckResp; the
+library panel (`build_library_remaining`) and the keep guide
+(`build_keep_guide(..., boarded=)`) then count that list rather than the
+`decks` row, which is game 1's. The keep guide's mulligan record still reads
+by `deck_id`, game 1's deck.
 
 **The keep guide it builds along the way is reused, not recomputed.**
 `OpeningHandRead` exposes the `KeepGuide` it already built internally
@@ -325,7 +340,8 @@ alone, exactly as it did before this mechanism existed.
 
 *"What does a keepable hand look like for this deck, in general?"* — the
 mulligan question a player who knows their own list already answers from
-memory, computed instead from `decks.cards_json` and the same
+memory, computed instead from `decks.cards_json` (the boarded list after a
+sideboarding break; see the opening-hand read above) and the same
 `cards.type_line` / `mana_cost` / `oracle_text` columns `review/snapshot.py`
 already reads for the post-game report. Valid at any point in the game,
 including before the very first decision — unlike the opening-hand read

@@ -15,8 +15,15 @@ import {
 // September, five in January.
 
 describe('parseTimestamp', () => {
-  it('reads a bare timestamp as UTC, not as the viewer’s own time', () => {
-    expect(parseTimestamp('2026-09-27T22:46:00')).toBe(Date.UTC(2026, 8, 27, 22, 46, 0))
+  it('reads a bare timestamp as the viewer’s local time, not as UTC', () => {
+    // 22:46 in New York on September 27 is 02:46 UTC on the 28th.
+    expect(parseTimestamp('2026-09-27T22:46:00')).toBe(Date.UTC(2026, 8, 28, 2, 46, 0))
+  })
+
+  it('reads a bare timestamp on each side of the clock change as local', () => {
+    // Oct 31 is EDT (UTC−4), Nov 2 is EST (UTC−5); the clocks go back on Nov 1 at 02:00.
+    expect(parseTimestamp('2026-10-31T12:00:00')).toBe(Date.UTC(2026, 9, 31, 16, 0, 0))
+    expect(parseTimestamp('2026-11-02T12:00:00')).toBe(Date.UTC(2026, 10, 2, 17, 0, 0))
   })
 
   it('keeps an offset that is written', () => {
@@ -34,7 +41,8 @@ describe('parseTimestamp', () => {
 
 describe('ago', () => {
   const then = '2026-09-27T12:00:00'
-  const at = (seconds: number) => Date.UTC(2026, 8, 27, 12, 0, 0) + seconds * 1000
+  // 12:00 local in New York (EDT, UTC-4) is 16:00 UTC.
+  const at = (seconds: number) => Date.UTC(2026, 8, 27, 16, 0, 0) + seconds * 1000
 
   it('changes unit at the minute, the hour and the day', () => {
     expect(ago(then, at(59))).toBe('59s ago')
@@ -56,7 +64,7 @@ describe('ago', () => {
 
 describe('minutesSince', () => {
   it('is the minutes between the timestamp and the clock', () => {
-    expect(minutesSince('2026-09-27T12:00:00', Date.UTC(2026, 8, 27, 13, 30, 0))).toBe(90)
+    expect(minutesSince('2026-09-27T12:00:00', Date.UTC(2026, 8, 27, 17, 30, 0))).toBe(90)
   })
 
   it('is null without a timestamp', () => {

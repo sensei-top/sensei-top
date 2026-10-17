@@ -128,9 +128,13 @@ mid-mulligan cut of the fixture (`FIXTURE_BYTES[:222]`) must project to an
 ## CI
 
 `.github/workflows/ci.yml` runs two jobs on pull requests into `develop` or
-`main`, and by hand (`workflow_dispatch`). Not on every push: the repo is
-private and Actions minutes are metered (2,000 a month on Free, and a Windows
-minute counts twice).
+`main`, by hand (`workflow_dispatch`), and on pushes to `develop` and `main`.
+Two repositories hold this file. The private one never spends minutes on a
+push: its Actions minutes are metered (2,000 a month on Free, and a Windows
+minute counts twice), so each job carries
+`if: github.event_name != 'push' || github.repository == 'sensei-top/sensei-top'`
+and a push there shows a run whose jobs are skipped. The public repository,
+`sensei-top/sensei-top`, runs every trigger, since its minutes are unmetered.
 
 - **Linux:** `ruff check .`, `pytest -q`, then in `web/` `pnpm lint`, `test`
   and `build`, then the drift check: `pnpm gen:types` followed by
@@ -141,10 +145,14 @@ minute counts twice).
   build is needed there. `.gitattributes` marks `tests/fixtures/**` as `-text`
   so Git for Windows' CRLF conversion never touches the raw captures.
 
+The privacy scan has its own gate, outside CI: the tracked hook
+`scripts/git-hooks/pre-push`, enabled in a clone with
+`git config core.hooksPath scripts/git-hooks`, runs
+`privacy_scan.py --pre-push` over the commits a push sends.
+
 `verify.py --full` runs the same drift check after `pnpm build`, so a stale
-`api.ts` fails locally (and in the overnight driver's pre-merge run) before
-it fails in CI; the fix it names is `cd web && pnpm gen:types` and commit the
-result.
+`api.ts` fails locally before it fails in CI; the fix it names is
+`cd web && pnpm gen:types` and commit the result.
 
 Python is the 3.12 in `.python-version`; pnpm 11 and Node 24 (LTS).
 
@@ -154,9 +162,9 @@ them. GitHub rounds each job up to a whole minute and bills a Windows minute
 twice, so one run costs 4 + 2 × 8 = 20 of the month's 2,000: about 100 runs
 a month.
 
-Windows skips six tests by design (a `?` in a file name, POSIX permission
-bits, the open-database race in the install move, `/dev/shm`); each
-`skipif` says why. What CI cannot reach is checked by hand on a Windows
+Windows skips about fifteen tests by design (a `:` or `?` in a file name,
+POSIX permission bits, POSIX signals, the open-database race in the
+install move, `/dev/shm`); each skip says why. What CI cannot reach is checked by hand on a Windows
 machine, as plan 3 did on a Windows 10 VM: a kill that leaves no watcher
 (`taskkill /F`, the Job Object), Ctrl+C, the log file beside a second
 process. One trap there: a process started over `ssh` inherits "Ctrl+C

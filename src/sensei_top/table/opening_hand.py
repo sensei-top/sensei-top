@@ -674,6 +674,7 @@ def build_opening_hand_read(
     deck_id: str | None,
     offer: MulliganOffer | None = _NOT_GIVEN,  # type: ignore[assignment]
     maindeck: Sequence[int] | None = None,
+    boarded: bool = False,
 ) -> OpeningHandRead | None:
     """The read for a mulligan decision pending right now, or ``None`` when
     nothing is (the caller — ``api/app.py`` — decides how "nothing pending"
@@ -687,7 +688,8 @@ def build_opening_hand_read(
     forwarded to ``build_keep_guide`` unchanged — its own fallback for a
     ``deck_id`` that has no ``v_deck_land_count`` row yet: the live replay's
     own ``LiveState.deck_maindeck``, so the first mulligan of a match has a
-    land band before ``project()`` writes a ``matches`` row.
+    land band before ``project()`` writes a ``matches`` row. ``boarded`` is
+    forwarded the same way (``LiveState.deck_boarded``).
 
     ``offer`` defaults to replaying ``raw_events`` itself
     (``table/live.py``'s anchor plus ``projector/live_state.py``'s replay) —
@@ -718,7 +720,11 @@ def build_opening_hand_read(
     unnamed_count = sum(1 for c in cards if c.name is None)
     land_count = len(land_grp_ids)
     on_the_play = offer.active_player == offer.seat if offer.active_player is not None else None
-    keep = build_keep_guide(conn, deck_id, maindeck=maindeck) if deck_id is not None else None
+    keep = (
+        build_keep_guide(conn, deck_id, maindeck=maindeck, boarded=boarded)
+        if deck_id is not None
+        else None
+    )
 
     if colors_known:
         land_colors = [colors_by_grp[g] for g in land_grp_ids]

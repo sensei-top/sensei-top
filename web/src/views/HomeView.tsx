@@ -14,8 +14,9 @@ import {
   type MetaWindow,
 } from '../api'
 import { CoachPointer } from '../components/home/CoachPointer'
+import { DetailedLogsBanner, type DetailedLogsInputs } from '../components/home/DetailedLogsBanner'
 import { FieldAgainstYou } from '../components/home/FieldAgainstYou'
-import { FirstRun } from '../components/home/FirstRun'
+import { FirstRun, type FirstRunShell } from '../components/home/FirstRun'
 import { HomeDecks } from '../components/home/HomeDecks'
 import { NeedsDeckCard } from '../components/home/NeedsDeckCard'
 import { RecentMatches } from '../components/home/RecentMatches'
@@ -25,6 +26,7 @@ import { WeeklyWinrate } from '../components/home/WeeklyWinrate'
 import { ErrorNote, Skeleton } from '../components/ui'
 import {
   firstPattern,
+  firstRunSteps,
   HOME_MATCH_LIMIT,
   homeDecks,
   homeField,
@@ -48,7 +50,15 @@ const MINUTE = 60_000
  *  coach's pointer. Every count is `lib/home.ts`'s. A request that fails
  *  says so in the card that needed it; one on its way holds that card's
  *  place. */
-export function HomeView() {
+export function HomeView({
+  detailedLogs = null,
+  firstRun,
+}: {
+  /** The Detailed Logs banner's inputs; `null` draws none. */
+  detailedLogs?: DetailedLogsInputs | null
+  /** What the shell adds to first run; absent in a browser. */
+  firstRun?: FirstRunShell
+}) {
   const now = useNow()
   // The counts move with the minute, not with every second's re-render.
   const minute = Math.floor(now / MINUTE) * MINUTE
@@ -168,7 +178,20 @@ export function HomeView() {
   if (matches.isPending) return <HomeLoading />
   if (matches.error) return <ErrorNote error={matches.error} />
   if (!counted) return <HomeLoading />
-  if (isFirstRun(rows ?? [])) return <FirstRun live={live.data} />
+  // FirstRun's log step carries the drawing and Check again as its own
+  // detail while it is the next step, so the banner is held back then. The
+  // events count every source, so a player of both with an MTGO folder can
+  // read that step as done with no Arena event; it shows no detail then, and
+  // the banner stands above FirstRun while the nag holds.
+  if (isFirstRun(rows ?? [])) {
+    const logDone = firstRunSteps(live.data, firstRun?.mtgoOnly)[1] === 'done'
+    return (
+      <div className="space-y-6 md:space-y-8">
+        {detailedLogs && logDone && <DetailedLogsBanner {...detailedLogs} />}
+        <FirstRun live={live.data} shell={firstRun} />
+      </div>
+    )
+  }
 
   // With no finished week the chart draws nothing, and the recent matches
   // take the whole row.
@@ -176,6 +199,8 @@ export function HomeView() {
   const showField = fieldPending || fieldError != null || field != null
   return (
     <div className="space-y-6 md:space-y-8">
+      {detailedLogs && <DetailedLogsBanner {...detailedLogs} />}
+
       {counted.session && (
         <SessionHero session={counted.session} thirty={counted.thirty} art={heroArt} now={minute} />
       )}

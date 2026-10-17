@@ -271,8 +271,15 @@ the one parser both round trips converge on:
   /api/guide/{key}/narrative` sends the prompt via `llm.write_json` against
   `_GUIDE_TOOL`'s own schema (made strict by `llm.strict_schema`) and parses
   the structured answer straight through `guide_narrative_from_json`.
-- **No credential, the same round trip as before.** `guide --deck KEY
-  --prompt` → write it wherever you like → `guide --deck KEY --import FILE`.
+- **No credential, the same round trip, now ending in the dashboard.**
+  The Guide page's prompt → an assistant → its answer pasted into the
+  card and saved (`PUT /api/guide/{key}/narrative`), or from a terminal
+  `guide --deck KEY --prompt` → `guide --deck KEY --import FILE`. Both
+  read the answer through `answers.py::read_answer`, which checks its
+  `for: guide:{key}` line and unwraps its `answer` object, before
+  `guide_narrative_from_json`. The stored `list_hash` is the answer's
+  `context`, the hash of the 75 the prompt was built from, so a guide
+  answered for an older list reads as out of date.
 
 Either way the result stores the deck-level half in `deck_narrative`
 (`guide/authored.py`) and every matchup plan in `matchup_brief`, so one
@@ -441,6 +448,11 @@ prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
   returns the prompt, for the no-credential path.
   `POST …/rcq/narrative` (`{decklist, expected[], own?}`) calls Claude and
   stores the answer (503 with no credential, `docs/llm.md`).
+  Or the answer to the copied prompt is pasted into the page's box
+  (`PUT …/rcq/narrative`, the generate body plus `answer`): the server
+  rebuilds the prompt from that body and checks the answer's
+  `for: rcq:{key}` line. The RCQ prompt carries no `context` hash
+  (`docs/status.md`).
   `sensei-top rcq --deck KEY --decklist FILE [--expect K1,K2] [--own K]
   --prompt` prints the prompt and makes no call; `--import FILE [--author
   NAME]` stores a written answer.
@@ -456,15 +468,15 @@ prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
 
 ## CLI
 
-`sensei-top guide` with no `--deck` lists deck keys;
-`sensei-top guide --deck <key> [--markdown PATH]` prints (or writes) one
-guide, including any narrative that has been generated or imported for it.
-`--prompt` prints the text to write that narrative from; `--import FILE`
-stores it — the offline path, and the only path with no credential
-configured. A deck's Guide page does the same round trip in one press, in
-its "Write the guide" section, when `sensei-top config --set-key` has been run
-(`docs/llm.md`). This is what makes a one-off script per deck redundant —
-regenerate any deck's guide the same way instead.
+`sensei-top guide` with no `--deck` lists deck keys; `sensei-top guide
+--deck <key> [--markdown PATH]` prints (or writes) one guide, including any
+narrative that has been generated or imported for it. `--prompt` prints the
+text to write that narrative from; `--import FILE` stores it, as the Guide
+page's box does with a pasted answer. A deck's Guide page does the same
+round trip in one press, in its "Write the guide" section, when `sensei-top
+config --set-key` has been run (`docs/llm.md`). This is what makes a one-off
+script per deck redundant — regenerate any deck's guide the same way
+instead.
 
 ## What this does not do
 

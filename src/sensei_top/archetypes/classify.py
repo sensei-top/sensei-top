@@ -532,7 +532,7 @@ _FALLBACK_FIT_RAMP = 4  # matched common cards beyond this add nothing more
 
 # A verdict is named only when it clears an absolute floor and beats the best
 # *differently labelled* rival by a real margin. Both were fitted against a
-# validation pass over real matches (see docs/architecture.md) — tune them if
+# validation pass over real matches (see docs/opponent-deck.md) — tune them if
 # real data disagrees, don't treat them as derived.
 MIN_ARCHETYPE_FIT = 0.20
 MIN_FALLBACK_FIT = 0.25

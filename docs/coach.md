@@ -44,10 +44,14 @@ answer a row never recorded. `latest_coach_report(conn, fmt)` is the newest
 report of `fmt`, a NULL row counting as Standard; `list_coach_reports` is
 every report of every format.
 
-`GET /api/coach`, `GET /api/coach/narrative` and `POST /api/coach/narrative`
-take an optional `?format=`; omitted, they use `api/sql.py::default_format`
+`GET /api/coach`, `GET /api/coach/narrative`,
+`POST /api/coach/narrative` and `PUT /api/coach/narrative` (a pasted
+report, `docs/llm.md`, "Saving a pasted answer") take an optional
+`?format=`; omitted, they use `api/sql.py::default_format`
 (D13: the most recent match's format, else Standard), and every response
-says which format it used. Only a report of the requested format is ever the
+says which format it used. The Coach page always sends it on the `PUT`, so a
+pasted answer's `coach:{format}` line is checked against the format the page
+shows. Only a report of the requested format is ever the
 latest one on the narrative route, so another format's report can never read
 as current. The Coach page carries the format in its address and draws the
 same "Format" select the Field page does, only when more than one format has
@@ -69,7 +73,7 @@ already does for the deck guide.
 The population is every match with `result IN ('win', 'loss')` that is
 **Constructed** and has a **format**: `v_match_format.format` is not NULL
 (the format Arena's log named, else the user's MTGO pick, else the format the
-match's revealed cards fit — plan 13, D6; `docs/architecture.md`). Every
+match's revealed cards fit — plan 13, D6; `docs/opponent-deck.md`). Every
 format is kept, not only the report's own: which sections a match reaches is
 the report's choice (see "The two windows"), not the population's. Every
 exclusion that actually removes at least one match earns its own line in
@@ -84,7 +88,7 @@ never noticed those matches existed.
   not a real ladder result.
 - **A Limited queue.** `coach/evidence.py::_is_limited_event` — an event
   id whose first `_`-separated part is `QuickDraft`, `PremierDraft`,
-  `TradDraft` or `CubeDraft` — out of scope for a report about deckbuilding and matchup decisions across a player's own 75s.
+  `TradDraft`, `CubeDraft` or `PickTwoDraft` — out of scope for a report about deckbuilding and matchup decisions across a player's own 75s.
 
 **MTGO** has no event to ask: `projector/mtgo/project.py` always writes
 `event_id = NULL` (and `deck_id = NULL`) for an MTGO match, so it skips those
@@ -308,6 +312,14 @@ another format searches the same nine domains: the list was checked for
 Standard only and has not been re-checked for the other formats, and adding
 a domain waits for the user (plan 13 leaves it out of scope).
 
+Two domains here, `mtgdecks.net` and `mtgazone.com`, are sites
+`metagame/` will not download from (`docs/review.md`, "Metagame data: real
+tournament results, not Arena aggregators"). They stay, by the user's
+decision of 2026-10-13: `metagame/`'s fetch is this app's own automated
+reader, which those sites' robots rules address, while the coach's search
+is Anthropic's tool, run under its own crawler policy, once per button
+press, on the user's own credential.
+
 Web search exists for exactly one job — the `Format notes` section's
 current-format facts (bans, top decks, recent articles on the archetypes a
 player plays and faces) — and nowhere else. `SYSTEM_PROMPT` states this as a
@@ -398,7 +410,7 @@ stored prose stays verbatim and neither report can be rewritten in place.
   in front of it. `coach/narrative.py::clean_report` fixes this at read
   time — it finds the first occurrence of `## ` followed by a `HEADINGS`
   entry, even glued mid-line as in the Fable shape, and returns the prose
-  from there; `api/routes/coach.py::_report_out` is the one place all three
+  from there; `api/routes/coach.py::_report_out` is the one place all four
   routes' prose passes through it, so the fix reaches every route with no
   duplicated logic. Stored prose is still verbatim — the row on disk keeps
   its narration — only what the API and CLI ever see is trimmed.
@@ -446,7 +458,9 @@ never an upsert — a coach report is history, the same way a match itself
 is, not a single current slot the way `match_narrative`/`leaks_narrative`
 are. Each row is written with its format. `list_coach_reports` reads that
 history back newest first, every format; `latest_coach_report(conn, fmt)`
-the newest of one format.
+the newest of one format. A pasted report keeps the same metrics snapshot
+and cited reading ids a generated one does, so the next report's progress
+reads against it; its cost and search count are `NULL`.
 
 ## Cost
 

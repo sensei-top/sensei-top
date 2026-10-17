@@ -16,7 +16,7 @@ not NULL. Arena is first asked about its event, three exclusions:
 * ``event_id`` in ``_EXCLUDED_EVENTS`` — events that are not a real ladder
   result (``DualColorPrecons``, a preconstructed-deck event).
 * ``_is_limited_event(event_id)`` — a Limited queue (Quick, Premier,
-  Traditional or Cube Draft), out of scope for a Constructed-focused report.
+  Traditional, Cube or Pick-Two Draft), out of scope for a Constructed-focused report.
 
 MTGO writes no ``event_id`` (``projector/mtgo/project.py`` always inserts
 ``NULL``), so it has no event to ask that of. Its ``matches.deck_id`` is
@@ -114,8 +114,11 @@ from sensei_top.review.snapshot import _classify_own_deck, build_snapshot
 
 # Arena's event-name prefix for each draft queue: "QuickDraft_SOS_20260831".
 # Read off real captures when the draft assistant parsed them (archive/draft,
-# projector/draft.py); an unrecognized prefix is not Limited.
-_LIMITED_PREFIXES = frozenset({"QuickDraft", "PremierDraft", "TradDraft", "CubeDraft"})
+# projector/draft.py); an unrecognized prefix is not Limited. "PickTwoDraft"
+# came from a real database event id (the one tests/test_table_ranked.py
+# records), not from the draft captures, which did not supply it.
+_LIMITED_PREFIXES = frozenset({"QuickDraft", "PremierDraft", "TradDraft", "CubeDraft",
+                                "PickTwoDraft"})
 
 
 def _is_limited_event(event_id: str) -> bool:

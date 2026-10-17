@@ -172,20 +172,28 @@ def build_library_remaining(
     subtraction against what has been seen elsewhere, the same math
     ``web/src/components/NextDrawsCard.tsx`` used to run client-side off a
     stale ``turns`` row — moved here so it rides the fresh replay instead.
+    Once the replay has seen a SubmitDeckResp (``state.deck_boarded``) the
+    subtraction runs against ``state.deck_maindeck``, the list held for the
+    game after a sideboarding break, rather than the ``decks`` row (game 1's).
     Empty when there is no deck, no live state, or self_seat is unresolved
     — never a guess at what's left (rule 4).
     """
-    if deck_id is None or state is None or state.self_seat is None:
+    if state is None or state.self_seat is None:
         return ()
-    deck_row = conn.execute(
-        "SELECT cards_json FROM decks WHERE deck_id = ?", (deck_id,)
-    ).fetchone()
-    if deck_row is None:
-        return ()
-    try:
-        maindeck = json.loads(deck_row["cards_json"]).get("maindeck") or []
-    except (json.JSONDecodeError, AttributeError):
-        return ()
+    if state.deck_boarded and state.deck_maindeck:
+        maindeck = list(state.deck_maindeck)
+    else:
+        if deck_id is None:
+            return ()
+        deck_row = conn.execute(
+            "SELECT cards_json FROM decks WHERE deck_id = ?", (deck_id,)
+        ).fetchone()
+        if deck_row is None:
+            return ()
+        try:
+            maindeck = json.loads(deck_row["cards_json"]).get("maindeck") or []
+        except (json.JSONDecodeError, AttributeError):
+            return ()
     counts = Counter(int(g) for g in maindeck)
     if not counts:
         return ()

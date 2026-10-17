@@ -91,6 +91,7 @@ def import_briefs(
     author: str,
     labels: dict[str, str | None] | None = None,
     fmt: str | None = None,
+    written_for: str | None = None,
 ) -> tuple[list[Brief], list[tuple[str, str]]]:
     """Store every brief in a ``full_multi_prompt`` answer, one
     ``import_brief`` call per item so each stored row gets exactly the
@@ -110,7 +111,8 @@ def import_briefs(
     ``labels`` supplies the display label for each archetype key (typically
     ``brief/coverage.py``'s own rows) — falls back to the bare key when a
     label is not given, the same fallback ``import_brief`` itself already
-    tolerates for a single import.
+    tolerates for a single import. ``written_for`` is as ``import_brief``'s,
+    for every item.
     """
     parsed_items = brief_narrative.briefs_from_json(raw)
     labels = labels or {}
@@ -122,6 +124,7 @@ def import_briefs(
         try:
             brief = import_brief(
                 conn, identity, archetype_key, label, _reraw(parsed), author=author, fmt=fmt,
+                written_for=written_for,
             )
         except LookupError as exc:
             skipped.append((archetype_key, str(exc)))
@@ -139,6 +142,7 @@ def import_brief(
     *,
     author: str,
     fmt: str | None = None,
+    written_for: str | None = None,
 ) -> Brief:
     """Parse, validate and store one authored brief.
 
@@ -150,6 +154,11 @@ def import_brief(
     problem recorded** rather than rejected or silently repaired — the same
     posture ``guide/plans.py`` has always taken, so the dashboard shows the
     problem next to the plan.
+
+    ``written_for`` is the ``list_hash`` the answer says it was written for
+    (its ``context``, ``answers.read_answer``), stored in place of the
+    current 75's so a brief written for an older list reads as stale;
+    ``None`` (an answer with no header) stores the current one.
     """
     parsed = brief_narrative.brief_from_json(raw)
 
@@ -193,7 +202,10 @@ def import_brief(
         model=author,
         generated_at=now_iso(),
         corpus_commit=store.corpus_commit(conn),
-        list_hash=store.list_hash(identity.current_cards),
+        list_hash=(
+            written_for if written_for is not None
+            else store.list_hash(identity.current_cards)
+        ),
         source="live",
     )
     store.write_brief(conn, brief)

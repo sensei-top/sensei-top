@@ -41,9 +41,14 @@ generates a standalone brief on its own. The round trip:
    again** once a stored one is out of date ("The brief on a pairing's
    page", below).
 2. Paste it into whatever assistant you already pay for. It answers with one
-   JSON object matching `_BRIEF_TOOL`'s schema (the schema is in the prompt).
-3. `sensei-top brief --deck KEY --archetype KEY --import FILE` parses it,
-   validates the sideboard plan against your real 75, and stores it.
+   JSON object: a `for` and a `context` line, then an `answer` matching
+   `_BRIEF_TOOL`'s schema (the prompt's last section says so).
+3. Paste the answer into the card's box and save it
+   (`PUT /api/guide/{key}/briefs/{archetype_key}`), or from a terminal
+   `sensei-top brief --deck KEY --archetype KEY --import FILE`. Either
+   way it is read through `answers.py::read_answer`, whose
+   `for: brief:{deck key}:{archetype key}` line must name this deck and
+   opponent, then validated against your real 75 and stored.
 
 **Most briefs never need step 1 or 3 individually.** A generated or imported
 deck guide (`POST /api/guide/{key}/narrative` or `guide --deck KEY --import
@@ -74,6 +79,11 @@ wrong are recorded and checked before it is ever read back as current.
 - **`corpus_commit`** only makes a brief *stale*. Nothing here acts on that
   difference automatically — the API surfaces it as `stale: true` and lets
   the reader judge, the same posture `docs/guide.md`'s own provenance takes.
+
+`matchup_brief.prompt` holds the build context `brief/importer.py`
+is given, not the text a card offered to copy, for a brief stored by
+`brief --import` or either `PUT`: one coverage prompt covers up to
+eight briefs, and nothing reads the column back.
 
 ## Never pooled across an undetected reset either
 
@@ -123,18 +133,19 @@ a live, unbriefed opponent and made an API call to fill the gap. That thread
 is gone with the call. Nothing in `brief/` runs on a timer, and `serve
 --watch` starts exactly one background thread again (`LiveIngester`).
 
-What survives from that design is the guard order it needed, now inside the
-API route (`api/routes/current_match.py::_brief_response`): no current
-match (`no_match`), a deck with no format (`format_unknown`, checked before
-the opponent, because the classifier never names an opponent in a match
-with no format and `unclassified` would promise a read that never comes),
-an opponent the classifier has not named (`unclassified`), an archetype
-with too little corpus to anchor a brief to (`no_consensus`) — each is a
-distinct, honestly-reported status rather than an empty card. The format
-check comes before the stored brief is read, so on this route a stored
-brief does not outrank `format_unknown`; on a pairing's page it does
-(below). That difference is a gap, not a design: `docs/status.md`'s debt
-register carries it.
+What survives from that design is the guard order it needed, now
+inside the API route (`api/routes/current_match.py::_brief_response`):
+no current match (`no_match`); an opponent the classifier has not
+named, `format_unknown` when the deck has no format (the classifier
+never names an opponent in a match with no format, so `unclassified`
+would promise a read that never comes) and `unclassified` otherwise; a
+named opponent on a deck with no format, which returns a stored brief
+(`ok`, with no `prompt`, since none can be built without a format) and
+`format_unknown` only when nothing is stored; an archetype with too
+little corpus to anchor a brief to (`no_consensus`). Each is a
+distinct, honestly-reported status rather than an empty card, and a
+stored brief outranks `format_unknown` here as on a pairing's page
+(below).
 
 ## The Bo3 break reuses this exact system — never a call during it
 
@@ -143,15 +154,16 @@ entirely on what this package already stores: the exact `matchup_brief` for
 the opponent the live replay just named, or — with none stored — the closest
 one already written for a different archetype this deck could plausibly be
 facing (`_closest_alternatives`, best `fit` first). Neither path ever calls
-out. Measured on 392 real breaks, the median is ~39 s (80% end within
-60 s); a Claude call plus building its own prompt would eat most of that
-before an answer could even come back, so "call out mid-break" was never on
-the table — AGENTS.md non-negotiable #5's "every call is a button press,
-never a schedule" already rules it out, and a break is exactly the kind of
-moment a schedule would be tempting to add one for. What the break phase
-*does* offer, with no plan stored at all, is the same prompt/import round
-trip as any other missing brief: a **Copy prompt** card and the exact
-`brief --import` command to paste the written answer back with.
+out. Measured on 392 real breaks, the median is ~39 s (80% end within 60 s);
+a Claude call plus building its own prompt would eat most of that before an
+answer could even come back, so "call out mid-break" was never on the table
+— AGENTS.md non-negotiable #5's "every call is a button press, never a
+schedule" already rules it out, and a break is exactly the kind of moment a
+schedule would be tempting to add one for. What the break phase *does*
+offer, with no plan stored at all, is the same prompt/import round trip as
+any other missing brief: a **Copy prompt** card that takes the written
+answer back in its box, with the `brief --import` command beside it when
+running from source.
 
 ## `brief/coverage.py` — which of the field this deck's briefs actually cover
 
@@ -222,12 +234,13 @@ states:
   says the list or the tournament results have changed since it was
   written, and a **Write it again** button sits below it.
 
-Either button opens the prompt in place; the prompt is fetched only on
-that press (`useGuideBriefPrompt`), never on the page's load. It comes
-with its import command filled in, `sensei-top brief --deck "<deck key>"
---archetype "<archetype>" --import brief.json`. When the route answers
-`format_unknown` or `no_consensus` instead of a prompt, the sentence for
-that state stands where the prompt would have been.
+Either button opens the prompt in place; the prompt is fetched only on that
+press (`useGuideBriefPrompt`), never on the page's load. Under it, a box
+takes the answer back (`PUT /api/guide/{key}/briefs/{archetype_key}`);
+running from source, the import command is filled in too, `sensei-top brief
+--deck "<deck key>" --archetype "<archetype>" --import brief.json`. When the
+route answers `format_unknown` or `no_consensus` instead of a prompt, the
+sentence for that state stands where the prompt would have been.
 
 ## The multi-brief prompt, and `brief --missing`
 
@@ -256,7 +269,11 @@ multi-brief prompt for every archetype `brief/coverage.py` marks
 `missing`/`stale` for that deck, in coverage order (times faced desc, then
 field share desc, then key — the same order the dashboard's own coverage
 table uses, so a gap never moves between the two); `--missing --import
-FILE` stores every answer via `import_briefs`. `--missing` and `--archetype`
+FILE` stores every answer via `import_briefs`.
+The Guide's coverage card saves the same answer pasted into its box
+(`PUT /api/guide/{key}/coverage`), every brief through `import_briefs`;
+an archetype with no consensus is skipped, and when every one is, the
+answer is refused (409) and nothing is stored. `--missing` and `--archetype`
 are mutually exclusive on the same `brief` subcommand. No consensus for
 *any* missing/stale archetype prints "No field consensus for any
 missing/stale archetype yet." rather than naming which ones — the same

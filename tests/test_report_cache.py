@@ -209,6 +209,26 @@ def test_report_inputs_token_moves_when_only_an_override_archetype_key_changes(c
     assert before != after
 
 
+def test_report_inputs_token_moves_when_a_format_inference_changes(conn):
+    """An MTGO match's format (v_match_format) comes from match_format_inference; a
+    changed inference must miss the cache even though no digested match,
+    game or deck column moved."""
+    _insert_match(conn, "m1")
+    conn.execute(
+        "INSERT INTO match_format_inference (match_id, format, reason) "
+        "VALUES ('m1', NULL, 'ambiguous')"
+    )
+    conn.commit()
+
+    before = _report_inputs_token(conn)
+    conn.execute(
+        "UPDATE match_format_inference SET format = 'Modern', reason = 'fit' "
+        "WHERE match_id = 'm1'"
+    )
+    conn.commit()
+    assert before != _report_inputs_token(conn)
+
+
 def test_report_inputs_token_carries_the_corpus_token(conn):
     """A dedup/reclassification pass moves the corpus, not any of the
     match-scoped tables above -- the report cache still needs to see it,

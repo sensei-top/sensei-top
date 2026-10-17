@@ -144,13 +144,18 @@ type ReportFacts = {
   label: string
   costUsd: number | null | undefined
   searches: number | null | undefined
+  /** The report's model is the sentinel for a pasted answer
+   *  (`isPasted`): `label` is then never shown. */
+  pasted?: boolean
 }
 
 /** Who wrote the report, then what it cost and how often it searched the
  *  web: "Written by Opus 5.5. It cost $1.038 and searched the web 8
  *  times." A search count of null or 0 is no searches, and says nothing;
- *  one search is "once". */
-export function reportByline({ label, costUsd, searches }: ReportFacts, t: TFunction): string {
+ *  one search is "once". A pasted report says "Pasted in." and nothing
+ *  more: it has no model, cost or searches to name. */
+export function reportByline({ label, costUsd, searches, pasted }: ReportFacts, t: TFunction): string {
+  if (pasted) return t('coach.report.byline.pasted')
   const n = searches ?? 0
   const times = t('coach.report.times', { count: n, n })
   if (costUsd != null) {
@@ -165,9 +170,9 @@ export function reportByline({ label, costUsd, searches }: ReportFacts, t: TFunc
  *  search" for one. A part with no value (a null cost or search count) is
  *  left out with its separator; a count of 0 is a value and reads "0 web
  *  searches". */
-export function historyDetail({ label, costUsd, searches }: ReportFacts, t: TFunction): string {
+export function historyDetail({ label, costUsd, searches, pasted }: ReportFacts, t: TFunction): string {
   return [
-    label,
+    pasted ? t('decks.written.pasted') : label,
     costUsd != null ? formatDollars(costUsd) : null,
     searches != null ? t('coach.report.searches', { count: searches, n: searches }) : null,
   ]

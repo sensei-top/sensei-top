@@ -225,7 +225,7 @@ section > p:last-child, section > ul:last-child, section > ol:last-child { margi
 }
 .site-footer p { color: var(--muted); }
 
-/* The landing (docs/frontend.md, "The site"): wider than the reading pages, a
+/* The landing (docs/frontend-site.md, "The site"): wider than the reading pages, a
    hero beside its image, feature rows that alternate sides. The classes
    below exist only on the landing; every rule that overrides a selector the
    other pages share is scoped under body.landing, so the help, privacy and

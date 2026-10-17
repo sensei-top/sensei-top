@@ -1,6 +1,6 @@
 """The static site in `site/` keeps the promises its own copy makes.
 
-Seven hand-written pages, no build step (`docs/frontend.md`, "The site"). The
+Seven hand-written pages, no build step (`docs/frontend-site.md`, "The site"). The
 checks read the HTML with the standard library's parser: the pages are small
 enough that a structural slip (a second script, a refresh, a link to the wrong
 repository, a drifted Fan Content notice) is the realistic failure, and none of

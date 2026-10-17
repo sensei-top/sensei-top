@@ -58,5 +58,7 @@ get names. It reads the card database your Arena install already ships, and
 falls back to downloading Scryfall's if Arena is not installed here. The
 deck guide also needs rules text and format legality, which only Scryfall
 has: run `uv run sensei-top cards --scryfall` at least once.
+The installed app does this on its own the first time it finds no
+rules text.
 
 Next: [the dashboard](dashboard.md).

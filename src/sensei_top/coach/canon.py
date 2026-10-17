@@ -218,6 +218,8 @@ BROAD_TAGS = frozenset({
 # (redirects to tcgplayer.com), cardkingdom.com (no Standard content), melee.gg
 # (results data, no prose). magic.wizards.com publishes no strategy any more
 # but is the source of record for banned-and-restricted announcements.
+# mtgazone.com and mtgdecks.net stay though metagame/ never fetches them:
+# docs/coach.md, "The domain allowlist".
 ALLOWED_DOMAINS: tuple[str, ...] = (
     "magic.wizards.com",
     "tcgplayer.com",

@@ -17,8 +17,8 @@ const pairingHeading = (key: string, matches: Match[], label?: string | null) =>
 const lastMetLine = (matches: Match[], now: number) => lastMetOf(matches, now, t)
 const pairingTiles = (row: MatchupRow, field: Map<string, FieldRecord>) => tilesOf(row, field, t)
 
-// Every row, key and name is invented. Timestamps are bare, so UTC, and at
-// midday, so that no zone moves the day.
+// Every row, key and name is invented. Timestamps are bare, the log's own
+// local clock, and at midday, so that no zone moves the day.
 
 /** A row of `/api/matches` with only what these functions read. */
 function match(matchId: string, rest: Partial<Match> = {}): Match {
@@ -262,8 +262,8 @@ describe('briefState', () => {
 })
 
 describe('lastMetLine', () => {
-  // Sep 20 at noon, UTC as the bare timestamps are.
-  const now = Date.parse('2026-09-20T12:00:00Z')
+  // Sep 20 at noon on the log's own clock, as the bare timestamps are.
+  const now = new Date(2026, 8, 20, 12, 0, 0).getTime()
 
   it('says how long ago the newest match with a start was', () => {
     // The newest is b (Sep 17), three days before now.

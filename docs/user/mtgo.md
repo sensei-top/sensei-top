@@ -15,6 +15,17 @@ that needs it, then a `MTGO_LOG_DIR` environment variable, then the
 `config --set-mtgo-dir` value. With none of the three set, MTGO logs are
 never read at all.
 
+MTGO's deck exports are optional: point Sensei Top at the folder you
+export `.dek` files to, and each list there is read with the game
+logs, so **Pick MTGO decks** can match your games to it:
+
+    sensei-top config --set-mtgo-deck-dir DIR
+
+It resolves the same way: `--deck-dir` on `ingest-mtgo` or
+`--mtgo-deck-dir` on the watch commands, then `MTGO_DECK_DIR`, then
+the `config --set-mtgo-deck-dir` value. The installed app's first-run
+setup and Settings ask for it as "Folder of decks".
+
 On Windows, `serve` and `ingest-mtgo` look for the folder MTGO is writing
 now and print the command that sets it, when nothing is set or the folder
 set is out of date: MTGO moves it on every update.

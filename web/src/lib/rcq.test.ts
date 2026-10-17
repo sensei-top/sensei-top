@@ -82,7 +82,7 @@ describe('previewKey', () => {
 describe('freshnessSentence', () => {
   it('names the newest day and how long since the fetch', () => {
     expect(
-      freshnessSentence({ source: 'mtgo.com', newest_event: '2026-10-03', fetched_at: '2026-10-03T10:00:00' }, now, t),
+      freshnessSentence({ source: 'mtgo.com', newest_event: '2026-10-03', fetched_at: '2026-10-03T10:00:00Z' }, now, t),
     ).toBe('mtgo.com: newest event Oct 3, fetched 2h ago')
   })
 

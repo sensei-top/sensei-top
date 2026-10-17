@@ -6,7 +6,15 @@
     "showPrompt": "Mostrar o prompt",
     "hidePrompt": "Ocultar o prompt",
     "thenSave": "Depois salve a resposta com este comando:",
-    "copyCommand": "Copiar o comando"
+    "copyCommand": "Copiar o comando",
+    "thenPaste": "Depois cole aqui a resposta do assistente e salve-a.",
+    "pasteLabel": "A resposta do assistente",
+    "pastePlaceholder": "Cole a resposta inteira, exatamente como o assistente a deu.",
+    "save": "Salvar a resposta",
+    "saving": "Salvando…",
+    "notSaved": "A resposta não foi salva.",
+    "notSavedOffline": "O tracker não respondeu, então a resposta não foi salva. Ela continua na caixa.",
+    "orCommand": "Ou salve-a com este comando:"
   },
   "generate": {
     "emptyNote": "Nada escrito ainda.",

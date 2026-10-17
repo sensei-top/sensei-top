@@ -29,8 +29,8 @@ fall back, never an exception a backup run would have to catch. An invalid
 silently turn backups off. An invalid ``--keep`` on the command line is a
 different case argparse rejects before this module ever sees it
 (``cli._positive_int``) — the two are handled in different places on
-purpose, matching ``docs/architecture.md``'s ``_resolve_watch_mtgo_dir`` rule
-that an explicit flag naming something invalid is an error, not a fallback.
+purpose, matching ``cli._resolve_watch_mtgo_dir``'s rule that an explicit
+flag naming something invalid is an error, not a fallback.
 """
 
 from __future__ import annotations

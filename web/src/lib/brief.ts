@@ -2,7 +2,7 @@ import type { CoverageOut, CoveragePromptOut, CoverageRowOut, CurrentMatch } fro
 import type { TFunction } from '../i18n'
 import { archetypeName } from './decks'
 import type { TileText } from './matchups'
-import { formatCount, formatPercent } from './time'
+import { formatCount, formatPercent, parseTimestamp } from './time'
 
 /** A row a prompt can close: its brief `missing` or `stale`. A row
  *  `no_consensus` is not one: too few tournament lists to write from. */
@@ -120,7 +120,7 @@ export function coveragePromptNotes(
  *  Exported: SideboardPlanCard's own provenance footer (the break card)
  *  reuses this for the exact same reason. */
 export function ageText(iso: string, t: TFunction): string {
-  const ms = Date.now() - new Date(iso).getTime()
+  const ms = Date.now() - (parseTimestamp(iso) ?? Number.NaN)
   const hours = ms / 3_600_000
   if (hours < 1) return t('matchups.age.now')
   if (hours < 24) return t('matchups.age.hours', { count: Math.round(hours) })

@@ -17,6 +17,13 @@ saves, so only what is genuinely identical across all three routes —
 ``require_credential``'s 503 and ``run_authored_write``'s transaction — is
 shared with it too.
 
+**The paste helpers**: every ``PUT`` that stores a pasted answer (the
+match report, the leak finder, the coach, the deck guide, a brief, the
+coverage card and the RCQ guide) shares ``refusal``, ``check_pasted_length``,
+``read_pasted``, ``read_pasted_prose`` (the three prose cards) and
+``unreadable_answer``, so each refuses an answer with the same status and
+the same keyed sentence, and none calls a model.
+
 **Why no response model lives here**: ``NarrativeResponse`` and
 ``GuideNarrativeResponse`` stay defined in ``api/app.py`` (Step 5 of the
 architecture-remediation plan relocates them). Importing either here would
@@ -45,6 +52,14 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from sensei_top.answers import (
+    Answer,
+    AnswerError,
+    check_length,
+    prose_of,
+    read_answer,
+    unreadable,
+)
 from sensei_top.i18n import N_, _
 from sensei_top.llm import client as llm_client
 from sensei_top.llm import config as llm_config
@@ -58,6 +73,47 @@ def no_credential_detail() -> str:
     than wrapping the constant, which a module that only imports it cannot
     do."""
     return _(NO_CREDENTIAL_DETAIL)
+
+
+def refusal(exc: AnswerError) -> HTTPException:
+    """The HTTP refusal for an answer that cannot be stored: 422, or 413 for
+    one over the size limit. The detail is the sentence in the request's
+    language; nothing is stored."""
+    return HTTPException(status_code=exc.status, detail=exc.message)
+
+
+def check_pasted_length(raw: str) -> None:
+    """413 for a body over ``MAX_ANSWER_BYTES``; first, before any lookup."""
+    try:
+        check_length(raw)
+    except AnswerError as exc:
+        raise refusal(exc) from exc
+
+
+def read_pasted(raw: str, expected_for: str) -> Answer:
+    """A pasted answer read through the contract, header required (the
+    dashboard's; the CLI imports accept an older answer without one)."""
+    try:
+        return read_answer(raw, expected_for, require_header=True)
+    except AnswerError as exc:
+        raise refusal(exc) from exc
+
+
+def read_pasted_prose(raw: str, expected_for: str) -> tuple[Answer, str]:
+    """A pasted answer for a prose card (match report, training plan,
+    coach) and its prose: ``read_pasted``'s refusals, then 422 for a body
+    with no ``"prose"`` string or with only whitespace in it."""
+    answer = read_pasted(raw, expected_for)
+    try:
+        return answer, prose_of(answer)
+    except AnswerError as exc:
+        raise refusal(exc) from exc
+
+
+def unreadable_answer(exc: Exception) -> HTTPException:
+    """422 for a body its card's own parser rejected, with the parser's
+    message (English, as on the CLI) under the keyed sentence."""
+    return refusal(unreadable(str(exc)))
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,7 +165,9 @@ def run_authored_write(conn: sqlite3.Connection, write: Callable[[], None]) -> N
 @dataclass(frozen=True, slots=True)
 class NarrativeSpec:
     """Everything a prose narrative route (the match report, the leak
-    finder) needs beyond the shared control flow below. Built fresh per
+    finder) needs beyond the shared control flow below. ``full_prompt`` is
+    what ``POST`` sends the model; ``copied_prompt`` is what ``GET`` offers
+    to copy, the same text plus the answer contract. Built fresh per
     request by a small helper in ``app.py`` that closes over that request's
     own ``conn`` and path params, so this stays a plain function rather than
     a FastAPI dependency.
@@ -117,6 +175,7 @@ class NarrativeSpec:
 
     build_context: Callable[[], Any]
     full_prompt: Callable[[Any], str]
+    copied_prompt: Callable[[Any], str]
     read_stored: Callable[[], Any]
     context_hash: Callable[[Any], str]
     no_context_detail: str
@@ -125,12 +184,13 @@ class NarrativeSpec:
 
 def narrative_get(spec: NarrativeSpec) -> NarrativeEnvelope:
     """``GET .../narrative``: the stored prose plus the prompt to (re)write
-    it from, always a 200 — 'nothing to narrate' and 'nothing stored yet'
-    are both ordinary outcomes for an opt-in feature, never errors."""
+    it from (the copyable one, with the answer contract), always a 200 —
+    'nothing to narrate' and 'nothing stored yet' are both ordinary
+    outcomes for an opt-in feature, never errors."""
     context = spec.build_context()
     if context is None:
         return NarrativeEnvelope(status="no_report")
-    prompt = spec.full_prompt(context)
+    prompt = spec.copied_prompt(context)
     stored = spec.read_stored()
     if stored is None:
         return NarrativeEnvelope(status="prompt", prompt=prompt)
@@ -148,10 +208,11 @@ def narrative_post(
     write: Callable[[str, Completion, Any], None],
 ) -> NarrativeEnvelope:
     """``POST .../narrative``: write this route's evidence through
-    ``llm.write_prose`` and store the answer. Shared verbatim by the
-    match-report and leak-finder routes — neither varies the call itself,
-    only what evidence goes in and where the prose lands, both carried by
-    ``spec`` and ``write``.
+    ``llm.write_prose`` and store the answer. It sends ``spec.full_prompt``,
+    never the copyable prompt: no answer contract, the reply is prose.
+    Shared verbatim by the match-report and leak-finder routes — neither
+    varies the call itself, only what evidence goes in and where the prose
+    lands, both carried by ``spec`` and ``write``.
     """
     cfg = require_credential()
     context = spec.build_context()

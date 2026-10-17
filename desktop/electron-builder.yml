@@ -10,9 +10,8 @@ files:
   - "!dist/notices/**"
   - package.json
 npmRebuild: false
-# Placeholder feed, like installer.nsh's URLs: plan 9 phase 1 puts the releases,
-# tagged `vX.Y.Z`, on the public repository. Until then a check fails with a
-# 404, which the shell logs. The github provider, not a generic `latest/download`
+# The feed is the public repository's releases, tagged `vX.Y.Z` (the first,
+# v0.7.0, on 2026-10-12; plan 9). The github provider, not a generic `latest/download`
 # URL: differential download fetches the installed version's blockmap from that
 # version's own release, which `latest/download` cannot serve.
 publish:

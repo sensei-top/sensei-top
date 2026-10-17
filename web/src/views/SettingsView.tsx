@@ -39,6 +39,13 @@ export function SettingsView({
             save={(change) => shell.save({ sources: change })}
             pickFolder={() => shell.pickFolder()}
             showDataFolder={shell.app && (() => shell.app!.showDataFolder())}
+            app={
+              shell.app && {
+                rulesText: shell.app.settings.rulesText,
+                firstData: shell.app.settings.firstData,
+                startFirstData: () => shell.app!.firstData(),
+              }
+            }
           />
         </SettingsSection>
       )}

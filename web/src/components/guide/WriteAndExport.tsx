@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useGenerateGuideNarrative, useGuideMarkdown, useLLMStatus } from '../../api'
+import { useGenerateGuideNarrative, useGuideMarkdown, useLLMStatus, usePasteGuideNarrative } from '../../api'
 import type { GuideNarrativeResponse } from '../../api'
 import { useCopied } from '../../lib/clipboard'
 import { writerFrom } from '../../lib/writer'
@@ -8,8 +8,9 @@ import { Button, Card, Loading, TextBlock } from '../ui'
 import { GenerateCard } from '../GenerateCard'
 
 /** Write and export: the card that writes the guide (with Claude when a
- *  credential is configured, `docs/llm.md`, or through the prompt and the
- *  import command otherwise), and the guide's evidence as Markdown. */
+ *  credential is configured, `docs/llm.md`, or through the prompt and an
+ *  answer pasted into the card and saved there otherwise; the import
+ *  command shows only in a browser with no desktop shell), and the guide's evidence as Markdown. */
 export function NarrativeAndExport({
   guideKey,
   response,
@@ -23,6 +24,7 @@ export function NarrativeAndExport({
   const markdownCopy = useCopied()
   const llmStatus = useLLMStatus()
   const generate = useGenerateGuideNarrative()
+  const paste = usePasteGuideNarrative()
 
   const importCommand = `sensei-top guide --deck "${guideKey}" --import guide.json`
 
@@ -49,6 +51,7 @@ export function NarrativeAndExport({
         generating={generate.isPending}
         generateError={generate.error?.message}
         importCommand={importCommand}
+        save={(answer) => paste.mutateAsync({ key: guideKey, answer })}
       />
 
       <Card title={t('decks.guide.export.title')} subtitle={t('decks.guide.export.subtitle')}>

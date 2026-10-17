@@ -18,7 +18,7 @@ import {
 const t = translator('en')
 
 // The zone is America/New_York (vitest.config.ts). Every timestamp below is
-// bare, so UTC. Names, keys and ids are invented.
+// bare, so the log's own local clock. Names, keys and ids are invented.
 
 /** A row of `/api/guide/decks` with only what these functions read. */
 function identity(key: string, deckIds: string[], rest: Partial<DeckIdentityOut> = {}): DeckIdentityOut {
@@ -172,10 +172,10 @@ describe('fieldNameLine', () => {
 })
 
 describe('deckLine', () => {
-  const now = Date.UTC(2026, 8, 28, 12, 0, 0)
+  const now = new Date(2026, 8, 28, 12, 0, 0).getTime()
 
   it('joins the format, every match and its wins, and the last played', () => {
-    // 2026-09-27 12:00 UTC is 24 hours before now: "1d ago".
+    // 12:00 on the log's own clock, 24 hours before now: "1d ago".
     const deck = identity('guid:kites', ['v1'], {
       format: 'TraditionalStandard',
       matches: 64,
@@ -265,7 +265,7 @@ describe('decksTiles', () => {
       name: 'Azure Kites',
       finished: 9,
       wins: 6,
-      lastPlayed: Date.UTC(2026, 8, 27, 20, 0, 0),
+      lastPlayed: new Date(2026, 8, 27, 20, 0, 0).getTime(),
       detail: 'Standard, best of three · 2\u00a0versions',
     })
   })

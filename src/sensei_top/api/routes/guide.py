@@ -9,6 +9,7 @@ import sqlite3
 
 from fastapi import APIRouter, HTTPException, Request
 
+from sensei_top.answers import PASTED_AUTHOR, brief_for, coverage_for, guide_for
 from sensei_top.api.convert import (
     _coverage_out,
     _deck_guide_out,
@@ -17,7 +18,7 @@ from sensei_top.api.convert import (
     _matchup_brief_out,
 )
 from sensei_top.api.deps import Conn, WritableConn
-from sensei_top.api.models.common import MatchupBriefOut
+from sensei_top.api.models.common import MatchupBriefOut, PastedAnswerIn
 from sensei_top.api.models.guide import (
     BriefPromptOut,
     CoverageOut,
@@ -27,7 +28,13 @@ from sensei_top.api.models.guide import (
     GuideMarkdownOut,
     GuideNarrativeResponse,
 )
-from sensei_top.api.routes.narrative import require_credential, run_authored_write
+from sensei_top.api.routes.narrative import (
+    check_pasted_length,
+    read_pasted,
+    require_credential,
+    run_authored_write,
+    unreadable_answer,
+)
 from sensei_top.api.sql import _shared_report_cache
 from sensei_top.brief.coverage import build_coverage
 from sensei_top.brief.store import briefs_for_deck, corpus_commit, list_hash
@@ -44,6 +51,16 @@ router = APIRouter()
 def _no_deck(key: str) -> HTTPException:
     return HTTPException(
         status_code=404, detail=_("No deck for key {key}.").format(key=repr(key)),
+    )
+
+
+def _no_format() -> HTTPException:
+    return HTTPException(
+        status_code=409,
+        detail=_(
+            "This deck's format is not known yet, so there is no field to anchor "
+            "a brief to."
+        ),
     )
 
 
@@ -72,18 +89,22 @@ def guide(key: str, request: Request, conn: Conn) -> DeckGuideOut:
 
 @english()
 def _guide_and_prompt(
-    request: Request, conn: sqlite3.Connection, key: str,
+    request: Request, conn: sqlite3.Connection, key: str, *, answer_contract: bool,
 ) -> tuple[DeckGuide | None, str | None]:
     """The deck guide and its prompt, both built in English. The guide is
     built here, before ``full_prompt`` runs, and its findings and caveats are
     what the prompt quotes — so the build has to be inside ``english()``
     too, not just the serializer (the same reason ``matches.py``'s and
     ``review.py``'s ``build_context`` closures are). ``(None, None)`` is an
-    unknown deck."""
+    unknown deck. ``answer_contract`` is the copied prompt's ending
+    (``answers.answer_format``); the generate path asks for its schema
+    through structured outputs instead, so it passes ``False``."""
     deck_guide = build_deck_guide(conn, key, report_cache=_shared_report_cache(request, conn))
     if deck_guide is None:
         return None, None
-    return deck_guide, guide_narrative.full_prompt(deck_guide, conn=conn)
+    return deck_guide, guide_narrative.full_prompt(
+        deck_guide, conn=conn, answer_contract=answer_contract,
+    )
 
 
 @router.get(
@@ -104,11 +125,19 @@ def guide_narrative_route(key: str, request: Request, conn: Conn) -> GuideNarrat
     deck may no longer hold, which is worth flagging loudly rather than
     rendering as current.
     """
-    from sensei_top.guide.authored import narrative_for
-
-    deck_guide, prompt = _guide_and_prompt(request, conn, key)
+    deck_guide, prompt = _guide_and_prompt(request, conn, key, answer_contract=True)
     if deck_guide is None:
         raise _no_deck(key)
+    return _stored_guide_response(conn, deck_guide, prompt)
+
+
+def _stored_guide_response(
+    conn: sqlite3.Connection, deck_guide: DeckGuide, prompt: str | None,
+) -> GuideNarrativeResponse:
+    """What the ``GET`` answers for a deck whose guide and copied prompt are
+    already built — shared with the ``PUT``, which builds them once too."""
+    from sensei_top.guide.authored import narrative_for
+
     if prompt is None:
         return GuideNarrativeResponse(status="no_report")
 
@@ -136,9 +165,10 @@ def generate_guide_narrative(
 ) -> GuideNarrativeResponse:
     """Write this deck's guide narrative with Claude, and store it.
 
-    Sends the same ``full_prompt`` the copy-prompt path has always
-    served, but requests the answer via structured outputs against
-    ``_GUIDE_TOOL``'s own schema — the same shape ``sensei-top guide
+    Sends the same ``full_prompt`` the copy-prompt path serves, minus the
+    answer contract that ends a copied prompt (``answers.answer_format``):
+    the answer is requested via structured outputs against
+    ``_GUIDE_TOOL``'s own schema instead — the same shape ``sensei-top guide
     --import`` already parses (``guide_narrative_from_json``), so the
     generate path and the hand-import path converge on one validator.
     Also fills every matchup plan the guide covers into
@@ -154,7 +184,7 @@ def generate_guide_narrative(
         guide_narrative_from_json,
     )
 
-    deck_guide, prompt = _guide_and_prompt(request, conn, key)
+    deck_guide, prompt = _guide_and_prompt(request, conn, key, answer_contract=False)
     if deck_guide is None:
         raise _no_deck(key)
 
@@ -214,6 +244,62 @@ def generate_guide_narrative(
         cost_usd=authored.cost_usd,
         stale=False,
     )
+
+
+@router.put(
+    "/api/guide/{key}/narrative", response_model=GuideNarrativeResponse, tags=["guide"]
+)
+def paste_guide_narrative(
+    key: str, body: PastedAnswerIn, request: Request, conn: WritableConn
+) -> GuideNarrativeResponse:
+    """Store an answer pasted into the deck guide's card — the dashboard's
+    way into what ``sensei-top guide --deck KEY --import FILE`` stores.
+
+    Makes no model call. The answer is read through the answer contract
+    (``answers.read_answer``, header required): 422 when it is another
+    card's or another deck's, is not JSON, or does not parse as a guide, and
+    nothing is stored; 413 over 256 KB. It is stored with the 75 its
+    ``context`` says it was written for, so one written for an older list
+    reads as stale; the author is the sentinel ``pasted``, tokens and cost
+    ``NULL``. Every matchup plan lands in ``matchup_brief`` in the same
+    transaction, as for the CLI. Returns what ``GET`` on this path returns.
+    """
+    from sensei_top.brief.from_guide import store_guide_matchups
+    from sensei_top.guide.authored import write_narrative
+    from sensei_top.guide.narrative import NarrativeError, guide_narrative_from_json
+
+    check_pasted_length(body.answer)
+    deck_guide, prompt = _guide_and_prompt(request, conn, key, answer_contract=True)
+    if deck_guide is None:
+        raise _no_deck(key)
+    if prompt is None:
+        raise HTTPException(
+            status_code=404, detail=_("Nothing to write about for this deck yet.")
+        )
+
+    identity = deck_guide.provenance.deck
+    answer = read_pasted(body.answer, guide_for(identity.key))
+    try:
+        # English: the plan problems it finds are stored with the narrative.
+        with english():
+            narrative = guide_narrative_from_json(answer.body, deck_guide)
+    except NarrativeError as exc:
+        raise unreadable_answer(exc) from exc
+
+    def write() -> None:
+        write_narrative(
+            conn, identity.key, narrative,
+            list_hash=answer.context,
+            prompt=prompt,
+            author=PASTED_AUTHOR,
+            corpus_commit=corpus_commit(conn),
+        )
+        store_guide_matchups(
+            conn, deck_guide, narrative, model=PASTED_AUTHOR, list_hash=answer.context,
+        )
+
+    run_authored_write(conn, write)
+    return _stored_guide_response(conn, deck_guide, prompt)
 
 
 @router.get("/api/guide/{key}/markdown", response_model=GuideMarkdownOut, tags=["guide"])
@@ -348,3 +434,109 @@ def guide_coverage_prompt(key: str, conn: Conn) -> CoveragePromptOut:
         status="ok", prompt=built.prompt, included=list(built.included),
         no_consensus=list(built.no_consensus), deferred=list(built.deferred),
     )
+
+
+@router.put(
+    "/api/guide/{key}/briefs/{archetype_key}", response_model=MatchupBriefOut, tags=["guide"],
+)
+def paste_brief(
+    key: str, archetype_key: str, body: PastedAnswerIn, conn: WritableConn
+) -> MatchupBriefOut:
+    """Store an answer pasted into one matchup brief's card — what
+    ``sensei-top brief --deck KEY --archetype KEY --import FILE`` stores.
+    Makes no model call.
+
+    Same refusals as the guide's: 422 for another card's or an unreadable
+    answer (nothing stored), 413 over 256 KB. 409 where the CLI stops with a
+    ``LookupError``: the deck has no format, or the archetype has no field
+    consensus to anchor the brief to (a keyed sentence for each). A sideboard
+    plan that does not balance is stored with the problem recorded, as on the CLI. Stored with the
+    ``context`` hash the answer carries and the sentinel author ``pasted``.
+    """
+    from sensei_top.brief.importer import import_brief
+    from sensei_top.brief.narrative import NarrativeError
+
+    check_pasted_length(body.answer)
+    identity = resolve(conn, key)
+    if identity is None:
+        raise _no_deck(key)
+    answer = read_pasted(body.answer, brief_for(identity.key, archetype_key))
+
+    if identity_format(conn, identity) is None:
+        raise _no_format()
+    label = next(
+        (r.label for r in build_coverage(conn, identity).rows
+         if r.archetype_key == archetype_key),
+        None,
+    ) or archetype_key
+    stored: list = []
+    try:
+        with english():
+            run_authored_write(
+                conn,
+                lambda: stored.append(import_brief(
+                    conn, identity, archetype_key, label, answer.body,
+                    author=PASTED_AUTHOR, written_for=answer.context,
+                )),
+            )
+    except NarrativeError as exc:
+        raise unreadable_answer(exc) from exc
+    except LookupError as exc:
+        # The format is known (checked above), so this is the importer's
+        # other refusal: no field consensus for the archetype.
+        raise HTTPException(
+            status_code=409,
+            detail=_(
+                "The field has no consensus list for {archetype} yet, so there is "
+                "nothing to anchor a brief to."
+            ).format(archetype=label),
+        ) from exc
+    return _matchup_brief_out(stored[0])
+
+
+@router.put("/api/guide/{key}/coverage", response_model=CoverageOut, tags=["guide"])
+def paste_coverage(key: str, body: PastedAnswerIn, conn: WritableConn) -> CoverageOut:
+    """Store the answer pasted into the matchup-coverage card — every brief
+    in it, what ``sensei-top brief --deck KEY --missing --import FILE``
+    stores. Makes no model call. Returns what ``GET`` on this path returns.
+
+    422 and 413 as for one brief; the batch is all-or-nothing on its JSON.
+    An archetype with no field consensus is skipped, as on the CLI, and the
+    row stays ``no_consensus``; 409 only when nothing could be stored
+    because no item had a field consensus; 409 as well for a deck with no
+    format.
+    """
+    from sensei_top.brief.importer import import_briefs
+    from sensei_top.brief.narrative import NarrativeError
+
+    check_pasted_length(body.answer)
+    identity = resolve(conn, key)
+    if identity is None:
+        raise _no_deck(key)
+    answer = read_pasted(body.answer, coverage_for(identity.key))
+
+    if identity_format(conn, identity) is None:
+        raise _no_format()
+    labels = {r.archetype_key: r.label for r in build_coverage(conn, identity).rows}
+    result: list = []
+    try:
+        with english():
+            run_authored_write(
+                conn,
+                lambda: result.append(import_briefs(
+                    conn, identity, answer.body, author=PASTED_AUTHOR, labels=labels,
+                    written_for=answer.context,
+                )),
+            )
+    except NarrativeError as exc:
+        raise unreadable_answer(exc) from exc
+    stored, skipped = result[0]
+    if not stored and skipped:
+        raise HTTPException(
+            status_code=409,
+            detail=_(
+                "The field has no consensus list yet for any archetype in this answer, "
+                "so none of its briefs could be stored."
+            ),
+        )
+    return _coverage_out(build_coverage(conn, identity))

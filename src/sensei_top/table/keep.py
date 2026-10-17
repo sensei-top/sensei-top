@@ -282,7 +282,11 @@ def _maindeck_land_counts(
 
 
 def build_keep_guide(
-    conn: sqlite3.Connection, deck_id: str | None, *, maindeck: Sequence[int] | None = None
+    conn: sqlite3.Connection,
+    deck_id: str | None,
+    *,
+    maindeck: Sequence[int] | None = None,
+    boarded: bool = False,
 ) -> KeepGuide | None:
     """The keep guide for one deck, or ``None`` when there is no deck to
     build one from (no ``deck_id``, or an empty/unknown maindeck).
@@ -297,11 +301,18 @@ def build_keep_guide(
     there is no ``decks`` row to join the view against yet), and ignored
     once a ``v_deck_land_count`` row exists — every existing caller keeps
     reading the projected numbers it always has.
+
+    ``boarded`` (the replay saw a SubmitDeckResp, so ``maindeck`` is the list
+    held after a sideboarding break) makes ``maindeck`` the source of every
+    list-derived number and the per-card loop, even when a ``decks`` row
+    exists: that row is game 1's. The mulligan record still reads by
+    ``deck_id``, game 1's deck.
     """
     if deck_id is None:
         return None
 
-    land_row = conn.execute(
+    use_maindeck = boarded and bool(maindeck)
+    land_row = None if use_maindeck else conn.execute(
         "SELECT maindeck_size, land_count, unnamed_count FROM v_deck_land_count "
         "WHERE deck_id = ?",
         (deck_id,),
@@ -317,9 +328,13 @@ def build_keep_guide(
     else:
         return None
 
-    deck_row = conn.execute(
-        "SELECT cards_json FROM decks WHERE deck_id = ?", (deck_id,)
-    ).fetchone()
+    deck_row = (
+        None
+        if use_maindeck
+        else conn.execute(
+            "SELECT cards_json FROM decks WHERE deck_id = ?", (deck_id,)
+        ).fetchone()
+    )
     if deck_row is not None:
         maindeck_grp_ids = json.loads(deck_row["cards_json"]).get("maindeck") or []
     else:

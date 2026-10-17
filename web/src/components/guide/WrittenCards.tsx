@@ -49,9 +49,7 @@ export function HowItWorksCard({
           </Callout>
         </div>
       )}
-      <div className="max-w-prose">
-        <Prose text={guide.engine} />
-      </div>
+      <Prose text={guide.engine} />
     </Card>
   )
 }
@@ -112,7 +110,7 @@ export function PlanBody({
           </Callout>
         )}
       </div>
-      <div className="min-w-0 max-w-prose lg:col-start-1 lg:row-start-1">
+      <div className="min-w-0 lg:col-start-1 lg:row-start-1">
         <Prose text={prose} />
       </div>
     </div>
@@ -167,7 +165,7 @@ export function BetweenRoundsCard({ guide }: { guide: GuideNarrativeOut }) {
   const { t } = useTranslation()
   return (
     <Card title={t('decks.guide.sections.betweenRounds')}>
-      <ol className="max-w-prose list-decimal space-y-2 pl-5 text-body text-ink2">
+      <ol className="list-decimal space-y-2 pl-5 text-body text-ink2">
         {guide.checklist.map((item, i) => (
           <li key={i}>{item}</li>
         ))}

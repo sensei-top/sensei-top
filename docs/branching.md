@@ -12,12 +12,11 @@ request.
 | `release/<X.Y.Z>` | `develop` | `main`, then back into `develop` | A release being stabilized: fixes, documentation and the version number, nothing new. |
 | `hotfix/<topic>` | `main` | `main`, then back into `develop` | A fix to what is released that cannot wait for the next release. |
 
-No release has been cut yet and no tag exists. Until the first `release/`
-branch merges, `main` stays where it was when `develop` was cut from it.
-Nothing waits on it moving: there is no deployment pipeline, because there
-is nowhere to deploy to yet.
+`main` holds the newest tag (`v0.7.0`, cut 2026-10-12, was the first) and
+`develop` runs ahead of it. Pushing a `v*` tag runs the release job in
+`.github/workflows/desktop.yml`; "A release" below is the sequence.
 
-The release roadmap numbers its plans "release 1" to "release 11", and the
+The release roadmap numbers its plans "release 1" onward, and the
 first two ran on branches named `release-1` and `release-2`, which the log's
 merge commits still name. In this model those were feature branches. A
 plan's branch is `feature/<plan>`; the `release/` prefix is only ever
@@ -160,7 +159,8 @@ at the time, the hotfix is merged into it as well.
 
 - **The subject is `type(scope): summary`**: `fix(cli): describe the
   configured MTGO directory, not the removed share`. The types in use are
-  `feat`, `fix`, `docs`, `chore`, `test`, `refactor` and `perf`. The scope is
+  `feat`, `fix`, `docs`, `chore`, `test`, `refactor`, `perf`, `build`, `ci`
+  and `release` (the version commit, `release: 0.7.2`). The scope is
   the package or area the change touches (`guide`, `llm`, `web`,
   `current-match`) and is left out when there is no single one. The summary
   is in the imperative, lowercase, with no full stop. Older commits do not
@@ -176,17 +176,9 @@ at the time, the hotfix is merged into it as well.
 ## Who pushes and who merges
 
 Merging into `develop` and `main` is the maintainer's. An agent working in
-this repository commits on its own branch. It pushes, opens a pull request
-or changes anything on GitHub only when asked to, and says what it is about
-to do before doing it.
-
-The one exception is an unattended run the maintainer starts on purpose
-(`.claude/overnight/run.sh`, described in the running-a-plan skill).
-Starting it is the word: the driver pushes, opens and merges each pull
-request on the maintainer's behalf, only after running the checks and the
-privacy scan itself, and leaves a note per merge for the maintainer to read
-afterwards. A session the driver starts still never pushes or merges on its
-own.
+this repository commits on its own branch. Every push, pull request and
+change on GitHub waits for the maintainer's word, and the agent says what
+it is about to do before doing it.
 
 ## The public repository
 

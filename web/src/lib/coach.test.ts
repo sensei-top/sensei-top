@@ -129,14 +129,15 @@ describe('reportTitle', () => {
   const now = Date.parse('2026-09-29T12:00:00Z')
 
   it('is the format and the short day in this year', () => {
+    // generated_at is the server's own UTC stamp, so it carries Z.
     // 18:00 UTC is 14:00 in New York, the same day.
-    expect(reportTitle('Modern', '2026-09-22T18:00:00', now, t)).toBe('Modern report of Sep 22')
+    expect(reportTitle('Modern', '2026-09-22T18:00:00Z', now, t)).toBe('Modern report of Sep 22')
     // 02:00 UTC on the 23rd is 22:00 on the 22nd in New York.
-    expect(reportTitle('Standard', '2026-09-23T02:00:00', now, t)).toBe('Standard report of Sep 22')
+    expect(reportTitle('Standard', '2026-09-23T02:00:00Z', now, t)).toBe('Standard report of Sep 22')
   })
 
   it('adds the year in another year', () => {
-    expect(reportTitle('Modern', '2025-09-22T18:00:00', now, t)).toBe('Modern report of Sep 22, 2025')
+    expect(reportTitle('Modern', '2025-09-22T18:00:00Z', now, t)).toBe('Modern report of Sep 22, 2025')
   })
 
   it('is "{format} report" when the day cannot be read', () => {
@@ -220,6 +221,10 @@ describe('the format of a report and its page', () => {
 describe('reportByline', () => {
   const label = 'Opus 5.5'
 
+  it('says a pasted report was pasted in, never its stored word', () => {
+    expect(reportByline({ label: 'pasted', costUsd: null, searches: null, pasted: true }, t)).toBe('Pasted in.')
+  })
+
   it('says the cost and the searches', () => {
     expect(reportByline({ label, costUsd: 1.038, searches: 8 }, t)).toBe(
       'Written by Opus 5.5. It cost $1.038 and searched the web 8 times.',
@@ -250,6 +255,10 @@ describe('reportByline', () => {
 
 describe('historyDetail', () => {
   const label = 'Opus 5.5'
+
+  it('never shows the stored word for a pasted report', () => {
+    expect(historyDetail({ label: 'pasted', costUsd: null, searches: null, pasted: true }, t)).toBe('Pasted in.')
+  })
 
   it('is the label, the cost and the searches', () => {
     expect(historyDetail({ label, costUsd: 1.038, searches: 8 }, t)).toBe('Opus 5.5 · $1.038 · 8 web searches')
@@ -395,8 +404,10 @@ describe('coachDay and profileCaption', () => {
 
   it('reads a bare date from its own parts, and a timestamp in the zone', () => {
     expect(coachDay('2026-08-11', now)).toBe('Aug 11')
+    // A bare as_of is the log's own clock: 02:00 on the 12th stays the 12th.
+    expect(coachDay('2026-08-12T02:00:00', now)).toBe('Aug 12')
     // 02:00 UTC on the 12th is 22:00 on the 11th in New York.
-    expect(coachDay('2026-08-12T02:00:00', now)).toBe('Aug 11')
+    expect(coachDay('2026-08-12T02:00:00Z', now)).toBe('Aug 11')
     expect(coachDay('not a day', now)).toBeNull()
     expect(coachDay(null, now)).toBeNull()
   })

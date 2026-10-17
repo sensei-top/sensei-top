@@ -5,8 +5,9 @@
  *
  * A finished match is one whose result is `win`, `loss` or `draw`. Every
  * timestamp is read through `lib/time.ts`'s `parseTimestamp`, which takes a
- * bare one as UTC; weeks and days are the viewer's own.
+ * bare one as the log's local clock; weeks and days are the viewer's own.
  */
+import type { ShellSettings } from '../bridge'
 import type { TFunction } from '../i18n'
 import type { DeckIdentityOut, LeakOut, Match, MetaPresence } from '../api'
 import { parseTimestamp } from './time'
@@ -74,6 +75,19 @@ function tally(matches: Match[]): Tally {
   return out
 }
 
+/* ------------------------------------------------------- detailed logs */
+
+/** Whether Home asks the user to turn on Detailed Logs: they play Arena (a
+ *  missing `plays` reads as both), the shell found or was given Arena's log,
+ *  and doctor does not read the setting as on. */
+export function detailedLogsNag(
+  sources: Pick<ShellSettings['sources'], 'arenaLog'>,
+  plays: ('arena' | 'mtgo')[] | undefined,
+): boolean {
+  const { path, detailedLogs } = sources.arenaLog
+  return (plays ?? ['arena', 'mtgo']).includes('arena') && path !== null && detailedLogs !== 'enabled'
+}
+
 /* ------------------------------------------------------------ first run */
 
 /** First run: no match from any source. */
@@ -85,11 +99,23 @@ export type StepState = 'done' | 'next' | 'later'
 
 /** The three first-run steps, read from the heartbeat: watching, then one
  *  event or more, then a match (never done on that screen). The first step
- *  not done is the next one; any other not done is later. */
-export function firstRunSteps(live: { watching: boolean; events: number } | undefined): StepState[] {
-  const done = [Boolean(live?.watching), (live?.events ?? 0) >= 1, false]
+ *  not done is the next one; any other not done is later. For a player of
+ *  Magic Online alone (`mtgoOnly`) the second step is a folder being
+ *  watched, since MTGO's events arrive only when a game ends. */
+export function firstRunSteps(
+  live: { watching: boolean; events: number; mtgo_watching?: boolean } | undefined,
+  mtgoOnly = false,
+): StepState[] {
+  const second = mtgoOnly ? Boolean(live?.mtgo_watching) : (live?.events ?? 0) >= 1
+  const done = [Boolean(live?.watching), second, false]
   const next = done.indexOf(false)
   return done.map((isDone, index) => (isDone ? 'done' : index === next ? 'next' : 'later'))
+}
+
+/** Whether the user plays Magic Online alone; a missing `plays` reads as
+ *  both. */
+export function mtgoOnly(plays: ('arena' | 'mtgo')[] | undefined): boolean {
+  return plays !== undefined && plays.length === 1 && plays[0] === 'mtgo'
 }
 
 /* -------------------------------------------------------------- session */
@@ -403,11 +429,12 @@ export type Field = {
   artMatchId: string | null
 }
 
-/** The window's start: the format's reset (a bare date, taken at 00:00
- *  UTC, as the server compares it), else 90 days before `now`. */
+/** The window's start: the format's reset (a bare date, taken at the
+ *  viewer's local midnight, since match starts are the log's local clock),
+ *  else 90 days before `now`. */
 export function fieldWindowStart(resetStart: string | null, now: number): number {
   const parts = resetStart ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(resetStart) : null
-  if (parts) return Date.UTC(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]))
+  if (parts) return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3])).getTime()
   return now - 90 * DAY
 }
 
@@ -501,7 +528,9 @@ export function homeField(
     topTwo: record(rows.slice(0, 2).map((row) => row.presence)),
     listShort: listFull && oldest != null && (startOf(oldest) ?? 0) > windowStart,
     artMatchId: firstKey
-      ? (finishedNewestFirst(inFormat).find((match) => match.opponent_key === firstKey)?.match_id ?? null)
+      ? (finishedNewestFirst(inFormat).find(
+          (match) => match.opponent_key === firstKey && match.opponent_label === rows[0].presence.label,
+        )?.match_id ?? null)
       : null,
   }
 }

@@ -62,6 +62,7 @@ import {
   type FindingWeight,
 } from '../components/ui'
 import { castCards, takeUnused, type ArtCard } from '../lib/matchArt'
+import { NBSP } from '../lib/matchups'
 import { placeById } from '../shell/places'
 import { useTokens } from '../theme'
 
@@ -498,7 +499,7 @@ const DECK_TILES = [
     name: 'Azure Kites',
     figure: '61%',
     line: 'won 14 of 23',
-    detail: 'Standard, best of three · 4\u00a0versions',
+    detail: `Standard, best of three · 4${NBSP}versions`,
     lastPlayed: 'last played Sep 12',
   },
   { name: 'Ember Choir', figure: '4 of 7', line: 'matches won', detail: 'Standard', lastPlayed: 'last played Sep 9' },

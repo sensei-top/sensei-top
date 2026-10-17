@@ -27,7 +27,8 @@ CREATE INDEX idx_rank_snapshot_observed ON rank_snapshot (observed_at);
 
 -- One winrate metric, conditioned on rank — the one rank-aggregated view
 -- this round adds (deliberately not threading a rank filter through every
--- existing metric view, per the scope note in docs/architecture.md). Same
+-- existing metric view; docs/architecture.md, "Two retroactive projections:
+-- rank and sideboarding"). Same
 -- shape as v_deck_winrate (001_init.sql): grouped, with matches_completed
 -- always alongside a count so a percentage never appears without one.
 --

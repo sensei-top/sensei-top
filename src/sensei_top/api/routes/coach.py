@@ -2,7 +2,7 @@
 constructed match — ``/api/coach*`` (``docs/coach.md``).
 
 ``GET /api/coach`` is free and local — the evidence for the tab's own
-profile tables, plus every report ever written. The three
+profile tables, plus every report ever written. The
 ``.../narrative`` routes are shaped like ``api/routes/narrative.py``'s
 three pairs, but this one can't reuse ``narrative_get``/``narrative_post``:
 those are hardwired to a single current row (``write_prose`` plus one
@@ -11,13 +11,15 @@ stored slot a regenerate overwrites), while a coach report is history
 ``llm.write_report`` — the web-search entry point, not ``write_prose`` —
 and resolves its credential through ``load_coach()`` rather than
 ``load()``. What *is* shared: ``no_credential_detail()`` and
-``run_authored_write``'s transaction wrapper. ``POST`` takes an optional
+``run_authored_write``'s transaction wrapper, and the paste helpers
+(``check_pasted_length``, ``read_pasted_prose``). ``POST`` takes an optional
 body picking the model from the Coach tab's dropdown (one of
 ``llm_client.REPORT_MODELS``); left out, it writes with the configured
-coach model.
+coach model. ``PUT`` on the same path stores an answer pasted into the card
+instead, as a new row like any other report, and calls no model.
 
 A report is for one format (plan 13, D12). ``GET /api/coach`` and the
-latest-report and generate routes take an optional ``format`` query
+latest-report, generate and paste routes take an optional ``format`` query
 parameter (``CoachFormatParam``, the same vocabulary as the metagame
 routes' ``FormatParam`` with its own description); omitted,
 they use ``api/sql.py::default_format`` (D13), and every response says
@@ -34,6 +36,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from sensei_top.answers import PASTED_AUTHOR, coach_for
 from sensei_top.api.deps import Conn, WritableConn
 from sensei_top.api.models.coach import (
     CoachEvidenceModel,
@@ -51,8 +54,14 @@ from sensei_top.api.models.coach import (
     RateModel,
     TurningBucketOut,
 )
+from sensei_top.api.models.common import PastedAnswerIn
 from sensei_top.api.models.metagame import FormatName
-from sensei_top.api.routes.narrative import no_credential_detail, run_authored_write
+from sensei_top.api.routes.narrative import (
+    check_pasted_length,
+    no_credential_detail,
+    read_pasted_prose,
+    run_authored_write,
+)
 from sensei_top.api.sql import _shared_report_cache, default_format
 from sensei_top.coach.canon import ALLOWED_DOMAINS, CANON
 from sensei_top.coach.evidence import (
@@ -229,14 +238,14 @@ def _sources_out(sources: list, prose: str) -> list[CoachSource]:
 
 
 def _report_out(report: CoachReport, *, prompt: str | None, stale: bool) -> CoachNarrativeResponse:
-    """The one conversion both GET routes and the POST route build their
-    response from — see the module docstring for why this can't be
+    """The one conversion both GET routes, the POST route and the PUT route
+    build their response from — see the module docstring for why this can't be
     ``narrative.narrative_get``/``narrative_post``'s ``NarrativeEnvelope``
     instead (a coach report carries fields — ``id``, ``effort``, token
     counts, resolved sources — that shape has no room for). ``clean_report``
     strips any narration a report's own call left before its first
     heading (1a) — stored prose stays verbatim, so this runs here, the one
-    place all three routes pass their prose through.
+    place all four routes pass their prose through.
     """
     return CoachNarrativeResponse(
         status="ok",
@@ -255,6 +264,18 @@ def _report_out(report: CoachReport, *, prompt: str | None, stale: bool) -> Coac
         web_search_requests=report.web_search_requests,
         sources=_sources_out(report.sources, report.prose),
         stale=stale,
+    )
+
+
+def _too_few_matches() -> HTTPException:
+    """The 404 both writing routes answer with below the leak finder's
+    minimum sample: there is no prompt, so nothing to write or paste."""
+    return HTTPException(
+        status_code=404,
+        detail=_(
+            "Not enough completed constructed matches yet — the coach needs at least "
+            "{minimum}."
+        ).format(minimum=MIN_SAMPLE),
     )
 
 
@@ -308,9 +329,9 @@ def coach_narrative(
     latest = latest_coach_report(conn, fmt)
     if latest is not None:
         stale = p is not None and latest.context_hash != p.context_hash
-        return _report_out(latest, prompt=p.prompt if p is not None else None, stale=stale)
+        return _report_out(latest, prompt=p.copied if p is not None else None, stale=stale)
     if p is not None:
-        return CoachNarrativeResponse(status="prompt", format=fmt, prompt=p.prompt)
+        return CoachNarrativeResponse(status="prompt", format=fmt, prompt=p.copied)
     return CoachNarrativeResponse(status="no_report", format=fmt)
 
 
@@ -366,13 +387,7 @@ def generate_coach_narrative(
     fmt = fmt or default_format(conn)
     p = build_coach_prompt(conn, fmt=fmt, report_cache=_shared_report_cache(request, conn))
     if p is None:
-        raise HTTPException(
-            status_code=404,
-            detail=_(
-                "Not enough completed constructed matches yet — the coach needs at least "
-                "{minimum}."
-            ).format(minimum=MIN_SAMPLE),
-        )
+        raise _too_few_matches()
 
     try:
         completion = llm_client.write_report(
@@ -410,3 +425,56 @@ def generate_coach_narrative(
     stored = read_coach_report(conn, new_id[0])
     assert stored is not None
     return _report_out(stored, prompt=p.prompt, stale=False)
+
+
+@router.put("/api/coach/narrative", response_model=CoachNarrativeResponse, tags=["coach"])
+def paste_coach_narrative(
+    request: Request,
+    body: PastedAnswerIn,
+    conn: WritableConn,
+    fmt: CoachFormatParam = None,
+) -> CoachNarrativeResponse:
+    """Store an answer pasted into the Coach card as a new report for
+    ``fmt`` (the ``format`` query parameter, else ``default_format``, as for
+    ``GET``) — a new row, never an upsert, like a generated report.
+
+    Makes no model call. The answer is read through the answer contract
+    (``answers.read_answer``, header required): 422 when it is another
+    card's or another format's, is not JSON, or carries no prose, and
+    nothing is stored; 413 over 256 KB, before anything else; 404 below the
+    minimum sample, as for ``POST``. Stored with the context its header
+    says it was written for (so one written for older evidence reads as
+    stale), the copyable prompt and the metrics snapshot as of now, and the
+    reading-list ids the prose cites; the model is the sentinel ``pasted``,
+    effort, tokens, web searches and cost ``NULL``. Returns the stored
+    report as ``GET`` does, with the prompt it stored (as ``POST`` returns
+    the one it sent): the next ``GET``'s prompt names this report as the
+    previous one.
+    """
+    check_pasted_length(body.answer)
+    fmt = fmt or default_format(conn)
+    p = build_coach_prompt(conn, fmt=fmt, report_cache=_shared_report_cache(request, conn))
+    if p is None:
+        raise _too_few_matches()
+    answer, prose = read_pasted_prose(body.answer, coach_for(fmt))
+
+    new_id: list[int] = []
+
+    def write() -> None:
+        new_id.append(
+            write_coach_report(
+                conn,
+                format=fmt,
+                prose=prose, prompt=p.copied, model=PASTED_AUTHOR,
+                sources=list(cited_ids(prose, p.entries)), metrics=p.metrics,
+                context_hash=answer.context,
+            )
+        )
+
+    run_authored_write(conn, write)
+
+    stored = read_coach_report(conn, new_id[0])
+    assert stored is not None
+    return _report_out(
+        stored, prompt=p.copied, stale=stored.context_hash != p.context_hash,
+    )

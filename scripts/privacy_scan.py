@@ -1,27 +1,54 @@
-"""Scan the tracked git tree -- and, on request, the whole history -- for
-this machine's own identifiers, without ever printing one.
+"""Scan the tracked git tree -- or, on request, the whole history, the
+commits a push sends, or one file of text -- for this machine's own
+identifiers, without ever printing one.
 
 Every term this checks for is derived at run time from local sources: an
 Arena database's own auth events and opponent list, every handle its MTGO
 game logs name (`mtgo-player`), this machine's MTGO/
 Claude/TopDeck config, git identity and remote, the OS user, the home
-directory, and the Steam library. None of it is hard-coded here, because a
-hard-coded identifier in this file would be exactly the leak the file exists
-to catch.
+directory, the Steam library, and `privacy-terms.tsv` in the same config
+directory as the MTGO/Claude/TopDeck config, read the way --terms-file is
+when it exists. That file is where a term no other source can still derive
+lives -- the personal account, once `origin` names the organisation instead.
+None of it is hard-coded here, because a hard-coded identifier in this file
+would be exactly the leak the file exists to catch.
+
+Four modes, one set of terms:
+
+- the default scans every tracked file in the working tree;
+- --history adds every blob and path reachable from any ref, and every
+  commit's identity fields and message (`rev-list --all`, `log --all`);
+- --pre-push REMOTE reads git's pre-push lines on stdin and scans exactly
+  what the push sends: for each ref it updates, the commits
+  `rev-list <local sha> --not --remotes=REMOTE` names, their blobs and
+  paths, identity fields and messages -- the same walk and the same log read
+  as --history, over that range instead of `--all`. The working tree is not
+  scanned, since it is not what is pushed. A deleted ref, or a tag on a
+  commit the remote already holds, sends nothing to scan. It refuses, exit
+  1, a repository with no `user.name` of its own, since that clone would
+  commit under the global name;
+- --text FILE scans one file's text, for a pull-request body or a comment
+  before it is sent.
 
 Output is categories, paths and counts only: one line per (category, path)
 hit on stdout, `<category>\\t<path>\\t<count>`, then a summary line on stderr
-with the number of terms checked (broken down by category), files (and,
-under --history, blobs) scanned, how many tracked files were missing from
-the working tree, and how many candidate terms were dropped and why. The
+with the number of terms checked (broken down by category), what was
+scanned (files, plus blobs under --history; commits, blobs and tags under
+--pre-push; one text under --text), how many tracked files were missing
+from the working tree, how many candidate terms were dropped and why, and
+what the log read set aside (below), as counts. The
 identifier value itself, and any line it matched, are never printed on any
 path -- including inside a path. A directory or file named after a handle
 would otherwise print the handle just by being listed as a hit's own
 location, so every printed path -- a live tracked path or a
 `history:<path>@<blob7>` -- has every term masked out of it first (as
 `[redacted]`), and a path's own name is itself a scan target, reported as
-`name:<masked path>` (or, under --history, `history:name:<masked path>`). A
-bad --terms-file line is reported by line number, never by its content or
+`name:<masked path>` (or, under --history, `history:name:<masked path>`).
+Under --pre-push the same labels start `push:` instead of `history:`
+(`push:<path>@<blob7>`, `push:name:<path>`, `push:log`). Under --text a hit
+is `<category>\\ttext\\t<count>`: the file's own path is never printed, since a
+scratch file's path can name the home directory. A bad --terms-file or
+`privacy-terms.tsv` line is reported by line number, never by its content or
 the file's own path.
 
 Two decodings, always: UTF-8 (errors="replace"), which reads a plain source
@@ -47,15 +74,19 @@ own gitlink) is skipped with no count; anything else that fails to read is a
 fatal, exit-2 error, since silently skipping it would let a scan finish
 "clean" without ever having read every tracked file.
 
---no-local skips every automatic source, including the default --db
-(<repo>/data/sensei-top.db); a --db passed explicitly is still read, and a missing
-explicit --db is an error while a missing default one is silently skipped.
-That is what makes a hermetic run possible: pass --no-local and supply
-synthetic terms with --terms-file or a throwaway --db instead of this
-machine's own. Run without --no-local, this process also silences the
-local-source loaders' own `logging` warnings and Python's `warnings` for the
-run (both restored before returning, however it returns), since either could
-otherwise print an absolute path naming this machine's own home directory or
+--no-local skips every automatic source, including `privacy-terms.tsv` and
+the default --db (<repo>/data/sensei-top.db); a --db passed explicitly is
+still read, and a missing explicit --db is an error while a missing default
+one is silently skipped. That is what makes a hermetic run possible: pass
+--no-local and supply synthetic terms with --terms-file or a throwaway --db
+instead of this machine's own. What only narrows is still read, and used
+only to set log fields aside, never as a term: the clone's declared
+identity, and under --history or --pre-push the global `user.email` to
+accept (below), so a hermetic run points `GIT_CONFIG_GLOBAL` at a file of
+its own. Run without --no-local, this process also silences the local-source
+loaders' own `logging` warnings and Python's `warnings` for the run (both
+restored before returning, however it returns), since either could otherwise
+print an absolute path naming this machine's own home directory or
 OS user -- exactly what this script exists to avoid printing in the first
 place.
 
@@ -71,22 +102,46 @@ too -- the public clone's declared name is the handle, and AUTHORS is where
 the handle lives. The global, personal name gets no such pass: only the
 declared value, only in AUTHORS, only those two categories.
 
-The git identity is read twice: the repository's effective `user.name` /
-`user.email` and the global ones (`git config --global`). The public
-repository's clone sets a public identity in its own configuration, which
-hides the global one from a plain `git config`, and the global one is the
-personal address that must stay a term there. That clone's local identity
-(`git config --local`), when one is set, is the *declared* identity: under
---history, a commit's author or committer name or email that equals it
-exactly is set aside before `history:log` is scanned, because every commit
-the public repository holds carries it by design. Only those four fields,
-and only on an exact match: the same value in a message body, a blob, a
+The git name is read twice: the repository's effective `user.name` and the
+global one (`git config --global`). The public repository's clone sets a
+public identity in its own configuration, which hides the global one from a
+plain `git config`, and the global name is the personal one that must stay a
+term there (`git-name`, and its first word `git-first-name`). No email is
+derived: the personal address is already public, so `user.email` is never a
+term of its own -- a `git-email` line in a terms file still is. That clone's
+local identity (`git config --local`), when one is set, is the *declared*
+identity: under --history and --pre-push, a commit's author or committer
+name or email that equals it exactly is set aside before `history:log` (or
+`push:log`) is scanned, because every commit the public repository holds
+carries it by design. Only those four fields (and an annotated tag's
+tagger, two more), on an exact match, and a `Signed-off-by:` or
+`Co-Authored-By:` trailer line (key in any case, at a line's start) whose
+whole name part -- before ` <`, trimmed -- equals the declared name, since
+`git commit -s` writes it there: a trailer naming someone whose name merely
+starts with it, the same name elsewhere in a message body, in a blob, a
 tracked file or a field that merely contains it is still a hit. The summary
 line says which of the two it set aside ("declared identity accepted in
-history:log: name, email"), so a run says what it let through. The working
-repository gets no exemption of its own from this: a local identity there
-would be the personal one, set aside the same way and reported the same
-way, and that repository is never published.
+history:log: name, email"), so a run says what it let through.
+
+Two addresses are *accepted* in the log read: the declared `user.email` and
+the global one, case-insensitively, each only if it is a bare address
+(letters, digits and `_.%+-`, one `@`, then letters, digits and `_.-`, at
+least as long as a term may be -- no space, angle brackets or name); one
+that is not is not accepted, and the summary says so ("global email
+not accepted: not an address") without the value. Every occurrence of an
+accepted one as a whole address -- no address character beside it, so one
+inside a longer address-like token is still matched -- is set aside
+before `history:log` or `push:log` is matched -- identity fields, message
+bodies, `Signed-off-by` and `Co-Authored-By` trailers, tag messages --
+because the personal address contains the account and the first name, which
+stay terms, and a GitHub merge carries it as its author's email. The
+summary counts them by source ("accepted emails set aside in push:log:
+global 2"), never the value. The global name gets no such pass, and blob text none at
+all: the same address in a file is matched like any other text, by whatever
+terms it contains. The working repository gets no exemption of
+its own from this: a local identity there would be the personal one, set
+aside the same way and reported the same way, and that repository is never
+published.
 
 The project's own name, `sensei-top`, is a generic word: it is the public
 repository's owner, so a clone of it would otherwise make every mention of
@@ -99,7 +154,7 @@ that is also a card name would otherwise flood the result with matches no
 text search can tell apart from a real leak. The user's own terms (every
 other category) are never filtered this way.
 
-    uv run python scripts/privacy_scan.py [--history]
+    uv run python scripts/privacy_scan.py [--history | --pre-push REMOTE | --text FILE]
 """
 
 from __future__ import annotations
@@ -115,7 +170,7 @@ import sys
 import traceback
 import warnings
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 
@@ -128,6 +183,13 @@ _PUBLIC_IDENTITY = {"AUTHORS": frozenset({"git-account"})}
 _DECLARED_NAME_CATEGORIES = frozenset({"git-name", "git-first-name"})
 # Other players' names, checked against card-name words first (module docstring).
 _CARD_WORD_FILTERED = frozenset({"opponent", "mtgo-player"})
+# Read beside config.toml when it exists, in the --terms-file format (module docstring).
+_PRIVACY_TERMS_FILE = "privacy-terms.tsv"
+# What a revision range's labels start with: `history:` under --history, `push:` under --pre-push.
+_HISTORY_LABEL = "history"
+_PUSH_LABEL = "push"
+# A pre-push line's object name: hex only, so nothing on stdin can reach git as an option.
+_OBJECT_NAME = re.compile(r"[0-9a-f]{40}(?:[0-9a-f]{24})?")
 
 
 class MatchKind(StrEnum):
@@ -146,7 +208,9 @@ class Term:
 class DeclaredIdentity:
     """The scanned repository's own local ``user.name`` / ``user.email``,
     either ``None`` when unset. Never a term source: it only sets fields
-    aside in ``history:log``, and its name aside in ``AUTHORS``."""
+    aside in ``history:log`` and ``push:log`` (its email anywhere in them,
+    as an accepted email), and its name aside in ``AUTHORS``. Under
+    --pre-push, a ``None`` name refuses the push."""
 
     name: str | None
     email: str | None
@@ -191,11 +255,14 @@ class PrivacyScanError(Exception):
     value, a matched line, or a path -- a path can itself contain this
     machine's own home directory or OS user, which is exactly what this
     script exists to avoid printing. It names the flag whose argument caused
-    the error (--repo, --db, --terms-file) instead, plus a line number for a
-    malformed --terms-file line. The one exception is an unreadable tracked
-    file: that message carries its own path, repo-relative and masked the
-    same way any printed path is, never absolute -- that path is the user's
-    own repository content, not a location on this machine."""
+    the error (--repo, --db, --terms-file, --text) instead, plus a line
+    number for a malformed --terms-file or ``privacy-terms.tsv`` line or
+    --pre-push stdin line, or the git command that failed in a history or
+    push walk (``rev-list``, ``log``, ``cat-file``). The one exception is
+    an unreadable tracked file: that message carries its own path,
+    repo-relative and masked the same way any printed path is, never
+    absolute -- that path is the user's own repository content, not a
+    location on this machine."""
 
 
 def _term(category: str, value: str, match: MatchKind) -> Term | None:
@@ -254,10 +321,11 @@ def _terms_from_home() -> list[Term]:
 
 
 def _terms_from_git_identity(repo: Path) -> list[Term]:
-    """The effective identity and the global one: a clone with a local
-    identity answers a plain ``git config`` with the local values, which
-    would otherwise drop the personal address from the terms entirely.
-    Where the two agree, ``_filter_terms`` keeps one of each."""
+    """The effective name and the global one: a clone with a local identity
+    answers a plain ``git config`` with the local value, which would
+    otherwise drop the personal name from the terms entirely. Where the two
+    agree, ``_filter_terms`` keeps one of each. No ``user.email``: the
+    personal address is public (module docstring)."""
     terms: list[Term] = []
     for scope in ((), ("--global",)):
         name = _git_config_value(repo, "user.name", *scope)
@@ -266,16 +334,14 @@ def _terms_from_git_identity(repo: Path) -> list[Term]:
             tokens = name.split()
             if tokens:
                 terms += _terms([("git-first-name", tokens[0], MatchKind.WORD)])
-        email = _git_config_value(repo, "user.email", *scope)
-        if email:
-            terms += _terms([("git-email", email, MatchKind.SUBSTRING)])
     return terms
 
 
 def _declared_identity(repo: Path) -> DeclaredIdentity:
     """Read whether or not --no-local is given: it is the scanned
     repository's own configuration, not this machine's, and it can only
-    narrow ``history:log``, never add a term."""
+    narrow ``history:log`` and ``push:log``, or refuse a push, never add a
+    term."""
     return DeclaredIdentity(
         name=_git_config_value(repo, "user.name", "--local"),
         email=_git_config_value(repo, "user.email", "--local"),
@@ -338,6 +404,18 @@ def _terms_from_backup_dir(db_path: Path) -> list[Term]:
         # nothing "home" doesn't already cover (amendment 4).
         return []
     return _terms([("backup-dir", str(config.directory), MatchKind.SUBSTRING)])
+
+
+def _terms_from_privacy_terms_file() -> list[Term]:
+    """``privacy-terms.tsv`` beside the config file the MTGO, Claude and
+    TopDeck loaders read, resolved the same way; absent, nothing. Its errors
+    name the file by that bare name, never by its path."""
+    from sensei_top.llm.config import config_path
+
+    path = config_path().with_name(_PRIVACY_TERMS_FILE)
+    if not path.exists():
+        return []
+    return _read_terms_file(path, _PRIVACY_TERMS_FILE)
 
 
 def _terms_from_steam_library() -> list[Term]:
@@ -551,18 +629,18 @@ def _card_words(conn: sqlite3.Connection) -> frozenset[str]:
 # --- --terms-file -------------------------------------------------------
 
 
-def _read_terms_file(path: Path) -> list[Term]:
+def _read_terms_file(path: Path, source: str = "--terms-file") -> list[Term]:
     """``label<TAB>value`` lines, always matched as a substring -- the most
     inclusive of the two kinds, since a hand-added past handle or second
     account has no automatic-source category telling this script which of
     the two it should be. Never echoes a line, and never echoes the path
-    either (amendment G): a bad one is named by --terms-file and a line
-    number only."""
+    either (amendment G): a bad one is named by ``source`` (--terms-file, or
+    ``privacy-terms.tsv``) and a line number only."""
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
         raise PrivacyScanError(
-            f"--terms-file could not be read ({exc.__class__.__name__})"
+            f"{source} could not be read ({exc.__class__.__name__})"
         ) from exc
 
     terms: list[Term] = []
@@ -570,12 +648,12 @@ def _read_terms_file(path: Path) -> list[Term]:
         if not line.strip():
             continue
         if "\t" not in line:
-            raise PrivacyScanError(f"--terms-file line {lineno}: expected label<TAB>value")
+            raise PrivacyScanError(f"{source} line {lineno}: expected label<TAB>value")
         label, _sep, value = line.partition("\t")
         label = label.strip()
         value = value.strip()
         if not label or not value:
-            raise PrivacyScanError(f"--terms-file line {lineno}: empty label or value")
+            raise PrivacyScanError(f"{source} line {lineno}: empty label or value")
         built = _term(label, value, MatchKind.SUBSTRING)
         if built is not None:
             terms.append(built)
@@ -710,8 +788,8 @@ def _accumulate_path_name_hits(
     C): a directory or file named after a handle would otherwise never be
     caught at all, since content scanning never looks at the name a file is
     stored under. Reported under the masked path itself, prefixed ``name:``
-    for a live tracked path or ``history:name:`` for a historical one, via
-    ``prefix``."""
+    for a live tracked path, ``history:name:`` for a historical one or
+    ``push:name:`` for one a push sends, via ``prefix``."""
     lowered = path_text.lower()
     for candidate, value_lower, pattern in compiled:
         if value_lower not in lowered:
@@ -833,16 +911,150 @@ def _unreadable_tracked_file_error(
     return PrivacyScanError(f"could not read tracked file {masked} ({exc.__class__.__name__})")
 
 
-# --- history ---------------------------------------------------------------
+# --- history and pushes: one walk over a revision range ----------------------
+#
+# ``revs`` is what ``git rev-list`` and ``git log`` are given: ``["--all"]``
+# under --history, ``[<sha>..., "--not", "--remotes=<remote>"]`` under
+# --pre-push. ``label`` is the printed prefix, ``history`` or ``push``. A git
+# failure here is fatal rather than an empty result -- a non-zero exit, or a
+# ``cat-file`` that answers for fewer objects than it was asked for: a range
+# that silently read less than it named would let a scan, or a push, pass
+# "clean".
 
 
-def _log_all_paths(repo: Path) -> set[str]:
-    """Every path in any commit's diff, from every ref, with rename
+@dataclass(frozen=True, slots=True)
+class AcceptedEmail:
+    """An address set aside wherever it appears in ``<label>:log``:
+    ``source`` is ``declared`` (the repository's local ``user.email``) or
+    ``global`` (``git config --global``). Never a term, never printed."""
+
+    source: str
+    value: str
+
+
+@dataclass(slots=True)
+class RangeScan:
+    """What one walk read, for the summary line: blobs, commits and
+    annotated tags; which declared parts it set aside in identity fields
+    (``name``, ``email``); and how many accepted-email occurrences it set
+    aside in the log, by source; and which sources' ``user.email`` was not
+    accepted, because it does not look like an address."""
+
+    blobs: int = 0
+    commits: int = 0
+    tags: int = 0
+    declared_parts: list[str] = field(default_factory=list)
+    emails: Counter[str] = field(default_factory=Counter)
+    refused_emails: list[str] = field(default_factory=list)
+
+
+# A bare address and nothing else: no space, no angle brackets, no name.
+_BARE_ADDRESS = re.compile(r"[\w.%+-]+@[\w.-]+")
+
+
+def _looks_like_address(value: str) -> bool:
+    """A bare address -- address characters, one ``@``, address characters
+    -- no shorter than a term may be. A one-letter or handle-shaped
+    ``user.email`` accepted as is would set aside every occurrence of that
+    text in the log, and one written ``Name <address>`` would set aside the
+    name with it, in the very trailer GitHub writes."""
+    return len(value) >= _MIN_TERM_LENGTH and _BARE_ADDRESS.fullmatch(value) is not None
+
+
+def _accepted_emails(
+    repo: Path, declared: DeclaredIdentity
+) -> tuple[list[AcceptedEmail], list[str]]:
+    """The declared address and the global one, longest first so neither
+    masks part of the other, one entry per address (case-insensitively),
+    credited to ``declared`` when both agree; and the sources whose value is
+    set but does not look like an address, so is not accepted (the summary
+    says so, never the value). Read whether or not --no-local is given, like
+    the declared identity: an accepted address only narrows the log, never
+    adds a term. Read only when a range is walked, so a tree scan never
+    consults the global configuration for it."""
+    found: list[AcceptedEmail] = []
+    refused: list[str] = []
+    seen: set[str] = set()
+    global_email = _git_config_value(repo, "user.email", "--global")
+    for source, value in (("declared", declared.email), ("global", global_email)):
+        if not value or value.lower() in seen:
+            continue
+        if not _looks_like_address(value):
+            refused.append(source)
+            continue
+        seen.add(value.lower())
+        found.append(AcceptedEmail(source=source, value=value))
+    return sorted(found, key=lambda email: len(email.value), reverse=True), refused
+
+
+# What may sit inside an address: an accepted one is masked only with none of these beside it.
+# `\w` rather than ASCII letters, so a non-ASCII letter beside an address is no boundary.
+_ADDRESS_CHARS = r"\w.%+@\-"
+_ADDRESS_CHARS_BUT_DOT = r"\w%+@\-"
+
+
+def _mask_accepted_emails(
+    text: str, emails: list[AcceptedEmail], counts: Counter[str]
+) -> str:
+    """Every case-insensitive occurrence of each accepted address, as a
+    whole address only -- no address character either side, so one inside
+    a longer address-like token is left to match; the one exception is a
+    full stop after it that nothing address-like follows, since an address
+    never ends in one and a sentence often does -- replaced by a newline (a
+    separator, so the text either side never joins into a word a term could
+    match), and counted under its source."""
+    for email in emails:
+        pattern = (
+            rf"(?<![{_ADDRESS_CHARS}]){re.escape(email.value)}"
+            rf"(?![{_ADDRESS_CHARS_BUT_DOT}])(?!\.[{_ADDRESS_CHARS}])"
+        )
+        text, replaced = re.subn(pattern, "\n", text, flags=re.IGNORECASE)
+        if replaced:
+            counts[email.source] += replaced
+    return text
+
+
+def _git_range(repo: Path, args: list[str]) -> bytes:
+    result = _git(repo, args)
+    if result.returncode != 0:
+        raise PrivacyScanError(f"git {args[0]} failed")
+    return result.stdout
+
+
+def _object_types(repo: Path, shas: list[str]) -> dict[str, str]:
+    """``cat-file --batch-check``: each object's type. A missing object
+    answers ``<sha> missing``, which parses as nothing, so a short answer is
+    caught by the count."""
+    result = _git(
+        repo, ["cat-file", "--batch-check"], input_bytes=("\n".join(shas) + "\n").encode("utf-8")
+    )
+    types: dict[str, str] = {}
+    for line in result.stdout.decode("utf-8", errors="replace").splitlines():
+        parts = line.split(" ")
+        if len(parts) >= 3:
+            types[parts[0]] = parts[1]
+    if result.returncode != 0 or len(types) < len(set(shas)):
+        raise PrivacyScanError("git cat-file --batch-check failed")
+    return types
+
+
+def _object_contents(repo: Path, shas: list[str]) -> dict[str, bytes]:
+    result = _git(
+        repo, ["cat-file", "--batch"], input_bytes=("\n".join(shas) + "\n").encode("utf-8")
+    )
+    contents = _parse_batch_output(result.stdout)
+    if result.returncode != 0 or len(contents) < len(set(shas)):
+        raise PrivacyScanError("git cat-file --batch failed")
+    return contents
+
+
+def _log_all_paths(repo: Path, revs: list[str]) -> set[str]:
+    """Every path in any commit's diff in ``revs``, with rename
     detection turned off -- a companion to ``rev-list --objects`` for path
-    *name* coverage under --history (amendment C), covering exactly what
-    that command misses. ``rev-list --objects`` lists each blob or tree
-    object once, under only the first path it happens to see it at during
-    traversal; a file renamed with unchanged content keeps the same blob, so
+    *name* coverage under --history and --pre-push (amendment C), covering
+    exactly what that command misses. ``rev-list --objects`` lists each blob
+    or tree object once, under only the first path it happens to see it at
+    during traversal; a file renamed with unchanged content keeps the same blob, so
     that command can drop its old, possibly leaky name entirely once the new
     name is the one attached to the object. ``--no-renames`` makes a rename
     show up as a delete of the old path plus an add of the new one instead
@@ -852,10 +1064,10 @@ def _log_all_paths(repo: Path) -> set[str]:
     missed. The output is NUL-separated paths with no separator between
     commits (``--format=`` empties the log message itself), so this splits
     on NUL and drops the empty strings a commit boundary produces."""
-    result = _git(repo, ["log", "--all", "-m", "--no-renames", "--name-only", "--format=", "-z"])
-    if result.returncode != 0:
-        return set()
-    return {path for path in result.stdout.decode("utf-8", errors="replace").split("\0") if path}
+    output = _git_range(
+        repo, ["log", "-m", "--no-renames", "--name-only", "--format=", "-z", *revs]
+    )
+    return {path for path in output.decode("utf-8", errors="replace").split("\0") if path}
 
 
 def _scan_history_blobs(
@@ -863,53 +1075,45 @@ def _scan_history_blobs(
     compiled: list[tuple[Term, str, re.Pattern[str]]],
     hits: dict[tuple[str, str], int],
     declared: DeclaredIdentity,
-) -> int:
-    """Every unique blob reachable from any ref, reported as
-    ``history:<path>@<blob7>`` -- including a file that was committed and
+    revs: list[str],
+    label: str,
+) -> tuple[int, list[str]]:
+    """Every unique blob reachable from ``revs``, reported as
+    ``<label>:<path>@<blob7>`` -- including a file that was committed and
     later removed, which ``git ls-files`` alone would never surface. Every
     distinct path recorded anywhere in history, blob or tree, is also
     checked by name (amendment C): a renamed or removed directory is still
     worth checking, the same as a file's own current path. That path set is
     the union of ``rev-list --objects``' own paths with ``_log_all_paths``,
     not ``rev-list --objects`` alone -- see that function's docstring for
-    why one alone under-reports a rename."""
-    objects_result = _git(repo, ["rev-list", "--all", "--objects"])
-    if objects_result.returncode != 0:
-        return 0
+    why one alone under-reports a rename. ``rev-list --objects`` names an
+    annotated tag object by its tag name, so that name is checked too, and
+    the tag objects found are returned for ``_scan_history_log``, beside how
+    many blobs were read."""
+    objects = _git_range(repo, ["rev-list", "--objects", *revs])
 
     entries: list[tuple[str, str]] = []
-    for line in objects_result.stdout.decode("utf-8", errors="replace").splitlines():
+    for line in objects.decode("utf-8", errors="replace").splitlines():
         if not line:
             continue
         sha, _sep, path = line.partition(" ")
-        if path:  # commits carry no path; only trees and blobs do
+        if path:  # commits carry no path; trees, blobs and tags do
             entries.append((sha, path))
 
-    all_paths = {path for _sha, path in entries} | _log_all_paths(repo)
+    all_paths = {path for _sha, path in entries} | _log_all_paths(repo, revs)
     for path in sorted(all_paths):
-        _accumulate_path_name_hits(hits, path, "history:", compiled)
+        _accumulate_path_name_hits(hits, path, f"{label}:", compiled)
 
     if not entries:
-        return 0
+        return 0, []
 
-    shas = [sha for sha, _path in entries]
-    check_result = _git(
-        repo, ["cat-file", "--batch-check"], input_bytes=("\n".join(shas) + "\n").encode("utf-8")
-    )
-    blob_shas: set[str] = set()
-    for line in check_result.stdout.decode("utf-8", errors="replace").splitlines():
-        parts = line.split(" ")
-        if len(parts) >= 3 and parts[1] == "blob":
-            blob_shas.add(parts[0])
-    if not blob_shas:
-        return 0
+    types = _object_types(repo, [sha for sha, _path in entries])
+    tags = [sha for sha, _path in entries if types.get(sha) == "tag"]
+    blob_paths = {sha: path for sha, path in entries if types.get(sha) == "blob"}
+    if not blob_paths:
+        return 0, tags
 
-    blob_paths = {sha: path for sha, path in entries if sha in blob_shas}
-    batch_result = _git(
-        repo, ["cat-file", "--batch"], input_bytes=("\n".join(blob_paths) + "\n").encode("utf-8")
-    )
-    contents = _parse_batch_output(batch_result.stdout)
-
+    contents = _object_contents(repo, list(blob_paths))
     for sha, data in contents.items():
         path = blob_paths.get(sha)
         if path is None:
@@ -917,8 +1121,8 @@ def _scan_history_blobs(
         # rev-list names each blob once, so a byte-identical copy of AUTHORS
         # elsewhere passes too: harmless, it carries only AUTHORS's own text.
         exempt = _exemption(path, declared)
-        _accumulate_hits(hits, f"history:{path}@{sha[:7]}", data, compiled, exempt)
-    return len(contents)
+        _accumulate_hits(hits, f"{label}:{path}@{sha[:7]}", data, compiled, exempt)
+    return len(contents), tags
 
 
 def _parse_batch_output(data: bytes) -> dict[str, bytes]:
@@ -926,7 +1130,9 @@ def _parse_batch_output(data: bytes) -> dict[str, bytes]:
     header line, then exactly ``size`` content bytes, then a trailing
     newline, repeated once per requested object. Byte-precise on purpose --
     file content can (and for the MTGO fixture's own format, does) contain
-    anything, including bytes that would confuse a line-oriented read."""
+    anything, including bytes that would confuse a line-oriented read. Stops
+    at the first header it cannot read, or a body shorter than its header
+    says; the caller compares the count against what it asked for."""
     contents: dict[str, bytes] = {}
     pos = 0
     end_of_data = len(data)
@@ -936,14 +1142,63 @@ def _parse_batch_output(data: bytes) -> dict[str, bytes]:
             break
         header = data[pos:newline].decode("ascii", errors="replace")
         parts = header.split(" ")
-        if len(parts) < 3:
+        if len(parts) < 3 or not parts[2].isdigit():
             break  # unexpected framing; stop rather than misparse the rest
         sha, size = parts[0], parts[2]
         start = newline + 1
         stop = start + int(size)
+        if stop > end_of_data:
+            break
         contents[sha] = data[start:stop]
         pos = stop + 1  # the trailing newline after this object's content
     return contents
+
+
+_TAGGER = re.compile(r"tagger (.*) <(.*)> \d+ [+-]\d{4}")
+# A sign-off or co-author trailer: the key at the start of a message line, any
+# case, then the name part, then (optionally) ` <address>` and anything after it.
+_TRAILER = re.compile(
+    r"^(?P<key>signed-off-by|co-authored-by):(?P<name>[^\n]*?)(?P<rest> <[^\n]*)?$",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def _mask_declared_name_in_trailers(text: str, name: str | None) -> tuple[str, int]:
+    """The declared name set aside in a trailer line whose whole name part
+    -- after the key and colon, before `` <``, trimmed -- equals it,
+    case-insensitively, the way an author field must equal it whole:
+    `git commit -s` writes it there, and a contributor's declared name is
+    often their global one, a term. Never as a substring, so a co-author
+    whose name merely starts with it is still matched. The address after it
+    stays, for the accepted-email rule. Returns the text and how many
+    trailers were set aside; the same name anywhere else in a message is
+    left to match."""
+    if not name:
+        return text, 0
+    wanted = name.strip().casefold()
+    replaced = 0
+
+    def _mask(line: re.Match[str]) -> str:
+        nonlocal replaced
+        if line.group("name").strip().casefold() != wanted:
+            return line.group(0)
+        replaced += 1
+        return f"{line.group('key')}:{line.group('rest') or ''}"
+
+    return _TRAILER.sub(_mask, text), replaced
+
+
+def _tag_fields(data: bytes) -> tuple[list[str], str]:
+    """An annotated tag object's tagger name and email (none for a tag made
+    without one) and its message, signature included: the headers end at
+    the first blank line."""
+    text = data.decode("utf-8", errors="replace")
+    headers, _sep, message = text.partition("\n\n")
+    for line in headers.splitlines():
+        tagger = _TAGGER.fullmatch(line)
+        if tagger:
+            return [tagger.group(1), tagger.group(2)], message
+    return [], message
 
 
 def _scan_history_log(
@@ -951,27 +1206,48 @@ def _scan_history_log(
     compiled: list[tuple[Term, str, re.Pattern[str]]],
     hits: dict[tuple[str, str], int],
     declared: DeclaredIdentity,
-) -> list[str]:
+    emails: list[AcceptedEmail],
+    revs: list[str],
+    tags: list[str],
+    label: str,
+    scan: RangeScan,
+) -> None:
     """Every commit's author/committer name and email, and its full message
-    body, reachable from any ref -- one aggregate scan target, reported as
-    ``history:log`` (amendment: "plus git log --all ... reported as
-    history:log", not one line per commit).
+    body, reachable from ``revs``, and every annotated tag's tagger and
+    message -- one aggregate scan target, reported as ``<label>:log``
+    (amendment: "plus git log --all ... reported as history:log", not one
+    line per commit).
 
     Two ``git log`` passes, not one: the identity fields are NUL-separated
     so each can be compared whole against the declared identity, and a
     message body is free text that could hold any separator. A field equal
     to the declared value is left out of the scanned text; the body never
-    is. Returns which declared parts were set aside, ``"name"`` and/or
-    ``"email"``, for the summary line."""
-    identities = _git(repo, ["log", "--all", "--format=%an%x00%ae%x00%cn%x00%ce"])
-    bodies = _git(repo, ["log", "--all", "--format=%B%x00"])
-    if identities.returncode != 0 or bodies.returncode != 0 or not identities.stdout:
-        return []
+    is. A tagger is two fields more, under the same rule. The declared name
+    is also set aside inside a ``Signed-off-by`` or ``Co-Authored-By``
+    trailer line, and nowhere else in a message. Then every accepted
+    address is set aside wherever it is left -- a field, a body, a trailer,
+    a tag message -- while no other name is. Fills
+    ``scan`` with the commits and tags read, the declared parts set aside
+    and the accepted-email count."""
+    identities = _git_range(repo, ["log", "--format=%an%x00%ae%x00%cn%x00%ce", *revs])
+    bodies = _git_range(repo, ["log", "--format=%B%x00", *revs])
+    tag_objects = _object_contents(repo, tags) if tags else {}
+    if not identities and not tag_objects:
+        return
 
     accepted: set[str] = set()
     kept: list[str] = []
-    for line in identities.stdout.decode("utf-8", errors="replace").splitlines():
-        fields = line.split("\0")
+    messages = [bodies.decode("utf-8", errors="replace")]
+    commit_lines = identities.decode("utf-8", errors="replace").splitlines()
+    field_groups = [line.split("\0") for line in commit_lines]
+    scan.commits = len(field_groups)
+    for data in tag_objects.values():
+        tagger, message = _tag_fields(data)
+        field_groups.append(tagger)
+        messages.append(message)
+    scan.tags = len(tag_objects)
+
+    for fields in field_groups:
         for index, value in enumerate(fields):
             part, declared_value = (
                 ("name", declared.name) if index % 2 == 0 else ("email", declared.email)
@@ -981,9 +1257,69 @@ def _scan_history_log(
             else:
                 kept.append(value)
 
-    text = ("\n".join(kept) + "\n").encode("utf-8") + bodies.stdout
-    _accumulate_hits(hits, "history:log", text, compiled)
-    return [part for part in ("name", "email") if part in accepted]
+    message_text, trailer_names = _mask_declared_name_in_trailers(
+        "\n".join(messages), declared.name
+    )
+    if trailer_names:
+        accepted.add("name")
+    text = "\n".join(kept) + "\n" + message_text
+    text = _mask_accepted_emails(text, emails, scan.emails)
+    _accumulate_hits(hits, f"{label}:log", text.encode("utf-8"), compiled)
+    scan.declared_parts = [part for part in ("name", "email") if part in accepted]
+
+
+def _scan_range(
+    repo: Path,
+    compiled: list[tuple[Term, str, re.Pattern[str]]],
+    hits: dict[tuple[str, str], int],
+    declared: DeclaredIdentity,
+    revs: list[str],
+    label: str,
+) -> RangeScan:
+    """The one walk --history and --pre-push share: the blobs and paths,
+    then the log and the tags."""
+    scan = RangeScan()
+    scan.blobs, tags = _scan_history_blobs(repo, compiled, hits, declared, revs, label)
+    emails, scan.refused_emails = _accepted_emails(repo, declared)
+    _scan_history_log(repo, compiled, hits, declared, emails, revs, tags, label, scan)
+    return scan
+
+
+# --- --pre-push and --text ---------------------------------------------------
+
+
+def _pushed_shas(stdin_text: str) -> list[str]:
+    """The local object names of git's pre-push lines, ``<local ref> <local
+    sha> <remote ref> <remote sha>`` each, leaving out a deletion (an
+    all-zero local sha), which sends nothing. Split from the right, so a
+    local ref with a space in it still parses. A malformed line is named by
+    its number only."""
+    shas: list[str] = []
+    for lineno, line in enumerate(stdin_text.splitlines(), start=1):
+        if not line.strip():
+            continue
+        # From the right: the local ref is what the user typed, and may hold a space.
+        fields = line.rsplit(" ", 3)
+        if len(fields) != 4 or not all(_OBJECT_NAME.fullmatch(f) for f in fields[1::2]):
+            raise PrivacyScanError(f"--pre-push stdin line {lineno}: expected four fields")
+        local_sha = fields[1]
+        if set(local_sha) != {"0"} and local_sha not in shas:
+            shas.append(local_sha)
+    return shas
+
+
+def _push_revs(shas: list[str], remote: str) -> list[str]:
+    """Everything the remote doesn't already hold, as far as this clone
+    knows it: a new branch, whose remote sha is zero, is measured against
+    every branch of that remote, not against nothing."""
+    return [*shas, "--not", f"--remotes={remote}"]
+
+
+def _read_text_file(path: Path) -> bytes:
+    try:
+        return path.read_bytes()
+    except OSError as exc:
+        raise PrivacyScanError(f"--text could not be read ({exc.__class__.__name__})") from exc
 
 
 # --- orchestration -----------------------------------------------------
@@ -1007,6 +1343,7 @@ def _gather_terms(args: argparse.Namespace, repo: Path) -> tuple[list[Term], fro
         terms += _terms_from_mtgo_dir()
         terms += _terms_from_arena_log_dir()
         terms += _terms_from_steam_library()
+        terms += _terms_from_privacy_terms_file()
 
     db_explicit = args.db is not None
     db_path = Path(args.db) if db_explicit else (repo / "data" / "sensei-top.db")
@@ -1050,6 +1387,19 @@ def terms_for_demo(db: Path) -> list[Term]:
 def _run(args: argparse.Namespace) -> int:
     repo = Path(args.repo)
     _check_git_repo(repo)
+    declared = _declared_identity(repo)
+
+    pushed: list[str] = []
+    if args.pre_push is not None:
+        pushed = _pushed_shas(sys.stdin.read())
+        if not declared.name:
+            print(
+                "error: --pre-push needs a user.name in this repository's own "
+                "configuration (git config --local user.name), so nothing is "
+                "pushed under the global one",
+                file=sys.stderr,
+            )
+            return 1
 
     terms, card_words = _gather_terms(args, repo)
     dropped = {"short": 0, "generic": 0, "card-word": 0}
@@ -1058,21 +1408,33 @@ def _run(args: argparse.Namespace) -> int:
 
     hits: dict[tuple[str, str], int] = {}
     counts = {"missing": 0}
-    declared = _declared_identity(repo)
-    tracked = _list_tracked_files(repo)
-    prefix = _repo_prefix(repo)
-    for rel_path in tracked:
-        label = rel_path.as_posix()
-        _accumulate_path_name_hits(hits, label, "", compiled)
-        data = _tracked_file_content(repo / rel_path, label, compiled, counts)
-        if data is not None:
-            _accumulate_hits(hits, label, data, compiled, _exemption(prefix + label, declared))
+    scan = RangeScan()
+    log_label = _HISTORY_LABEL
 
-    blobs_scanned = 0
-    accepted: list[str] = []
-    if args.history:
-        blobs_scanned = _scan_history_blobs(repo, compiled, hits, declared)
-        accepted = _scan_history_log(repo, compiled, hits, declared)
+    if args.text is not None:
+        _accumulate_hits(hits, "text", _read_text_file(Path(args.text)), compiled)
+        scanned = "1 text"
+    elif args.pre_push is not None:
+        log_label = _PUSH_LABEL
+        if pushed:
+            revs = _push_revs(pushed, args.pre_push)
+            scan = _scan_range(repo, compiled, hits, declared, revs, log_label)
+        scanned = (
+            f"{scan.commits} pushed commits, {scan.blobs} pushed blobs, {scan.tags} pushed tags"
+        )
+    else:
+        tracked = _list_tracked_files(repo)
+        prefix = _repo_prefix(repo)
+        for rel_path in tracked:
+            label = rel_path.as_posix()
+            _accumulate_path_name_hits(hits, label, "", compiled)
+            data = _tracked_file_content(repo / rel_path, label, compiled, counts)
+            if data is not None:
+                _accumulate_hits(hits, label, data, compiled, _exemption(prefix + label, declared))
+        scanned = f"{len(tracked)} files"
+        if args.history:
+            scan = _scan_range(repo, compiled, hits, declared, ["--all"], log_label)
+            scanned += f", {scan.blobs} history blobs"
 
     for (category, path), count in sorted(hits.items()):
         print(f"{category}\t{path}\t{count}")
@@ -1084,16 +1446,23 @@ def _run(args: argparse.Namespace) -> int:
     else:
         terms_desc = f"{len(terms)} terms checked"
 
-    scanned = f"{len(tracked)} files"
-    if args.history:
-        scanned += f", {blobs_scanned} history blobs"
-
     missing_clause = ""
     if counts["missing"] > 0:
         missing_clause = f"; {counts['missing']} missing from the working tree"
     accepted_clause = ""
-    if accepted:
-        accepted_clause = f"; declared identity accepted in history:log: {', '.join(accepted)}"
+    if scan.declared_parts:
+        accepted_clause = (
+            f"; declared identity accepted in {log_label}:log: {', '.join(scan.declared_parts)}"
+        )
+    if scan.emails:
+        by_source = ", ".join(
+            f"{source} {scan.emails[source]}"
+            for source in ("declared", "global")
+            if scan.emails[source]
+        )
+        accepted_clause += f"; accepted emails set aside in {log_label}:log: {by_source}"
+    for source in scan.refused_emails:
+        accepted_clause += f"; {source} email not accepted: not an address"
 
     print(
         f"privacy_scan: {terms_desc}, {scanned} scanned; "
@@ -1126,19 +1495,44 @@ def _build_parser() -> argparse.ArgumentParser:
         "--no-local",
         action="store_true",
         help=(
-            "skip every automatic local source (this machine's config, git "
-            "identity, the default database); --terms-file and an explicit "
-            "--db still apply"
+            "skip every automatic local source of terms (this machine's config, "
+            "git identity, the default database); --terms-file and an explicit "
+            "--db still apply. Still read, only to set log fields aside and "
+            "never as terms: the clone's declared identity, and under --history "
+            "or --pre-push the global user.email"
         ),
     )
-    parser.add_argument(
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
         "--history",
         action="store_true",
         help=(
             "also scan every blob reachable from any ref, plus commit "
             "authors/committers/messages -- much slower; an author or "
             "committer field equal to the repository's local user.name or "
-            "user.email is set aside, and the summary says so"
+            "user.email is set aside, as is the local or global user.email "
+            "anywhere in the log, and the summary says so"
+        ),
+    )
+    mode.add_argument(
+        "--pre-push",
+        metavar="REMOTE",
+        default=None,
+        help=(
+            "read git's pre-push lines on stdin and scan only what the push "
+            "sends: the commits REMOTE's branches don't hold, their blobs, "
+            "paths, identities and messages, as --history does; the working "
+            "tree is not scanned, and a repository with no local user.name "
+            "is refused"
+        ),
+    )
+    mode.add_argument(
+        "--text",
+        metavar="FILE",
+        default=None,
+        help=(
+            "scan one file's text instead of the tree (a pull-request body, a "
+            "comment); a hit prints as <category> text <count>, never the path"
         ),
     )
     return parser

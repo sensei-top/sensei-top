@@ -98,6 +98,8 @@
     "byOn": "Escrito em {{day}} por {{author}}.",
     "by": "Escrito por {{author}}.",
     "on": "Escrito em {{day}}, sem autor registrado.",
+    "pastedOn": "Colado em {{day}}.",
+    "pasted": "Colado.",
     "cost": "Custou {{cost}}.",
     "staleDefault": "As evidências mudaram desde então."
   },

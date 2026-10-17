@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   useGenerateRcq,
+  usePasteRcq,
   useGuide,
   useLLMStatus,
   useMetaPresence,
@@ -37,9 +38,12 @@ import { writerFrom } from '../lib/writer'
  *  it. The preview is asked once the inputs stand still for
  *  `PREVIEW_DEBOUNCE_MS`. The write sends the list as typed with the
  *  expected keys and the chosen archetype the shown preview read, so the
- *  prompt shown is the prompt sent; it is offered only while that preview
- *  is of the current inputs, and while a newer one is on its way the
- *  button waits. */
+ *  prompt shown is built from the same inputs as the one sent. They
+ *  differ only in where the answer's shape is given: the shown one ends
+ *  with the answer contract, which carries the schema; the sent one gives
+ *  the schema before the evidence. The write is offered only while that
+ *  preview is of the current inputs, and while a newer one is on its way
+ *  the button waits. */
 /** How far back the expected-archetype chips read the field. */
 const CHIP_WINDOW_DAYS = 14
 
@@ -49,6 +53,7 @@ export function RcqView({ deckKey }: { deckKey: string }) {
   const stored = useRcqGuide(deckKey)
   const llmStatus = useLLMStatus()
   const generate = useGenerateRcq()
+  const paste = usePasteRcq()
 
   // The field the chips offer: the last two weeks of the deck's format, the
   // field a store's players will have netdecked from. Nothing is asked
@@ -85,6 +90,9 @@ export function RcqView({ deckKey }: { deckKey: string }) {
   if (guide.error) return <ErrorNote error={guide.error} />
 
   const response = stored.data?.status === 'ok' ? stored.data : undefined
+  // What the write and the pasted answer both send: the list as typed with the
+  // settled preview's keys.
+  const sent = { decklist: inputs.decklist, expected: settled.expected, own: settled.own }
   const showOwnPicker = inputs.own != null || (current && preview.data?.own_archetype_key == null)
   const changed = response?.decklist_text != null && response.decklist_text.trim() !== inputs.decklist.trim()
   const names: Record<string, string> = Object.fromEntries(
@@ -135,11 +143,18 @@ export function RcqView({ deckKey }: { deckKey: string }) {
         onGenerate={() =>
           generate.mutate({
             key: deckKey,
-            body: { decklist: inputs.decklist, expected: settled.expected, own: settled.own },
+            body: sent,
           })
         }
         generating={generate.isPending}
         generateError={generate.error?.message}
+        save={(answer) =>
+          paste.mutateAsync({
+            key: deckKey,
+            inputs: sent,
+            answer,
+          })
+        }
       />
 
       {stored.error ? (

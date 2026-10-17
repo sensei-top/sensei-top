@@ -71,6 +71,16 @@ class RcqGenerateIn(BaseModel):
     own: str | None = None
 
 
+class RcqPasteIn(RcqGenerateIn):
+    """A pasted RCQ answer, with the list it was written for: the same
+    fields the preview and generate take, since the guide is stored beside
+    the 75 and the picks it was written from."""
+
+    answer: str = Field(
+        description="the assistant's answer exactly as it gave it; over 256 KB is a 413"
+    )
+
+
 class RcqMatchupOut(BaseModel):
     archetype: str
     prose: str

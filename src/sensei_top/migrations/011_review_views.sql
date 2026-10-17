@@ -4,15 +4,15 @@
 -- DELETE set and nothing for it to rebuild. src/sensei_top/review/ (the
 -- analyzers behind GET /api/matches/{id}/report) reads these on every
 -- request rather than storing their output, for the same reason
--- v_match_opponent is a view and not a column (docs/architecture.md,
+-- v_match_opponent is a view and not a column (docs/opponent-deck.md,
 -- "Naming the opponent's deck"): several of these views join `cards` and
 -- `decks`, neither of which the projector owns, and both of which the user
 -- may populate (`sensei-top cards`) long after a match was projected. A
 -- stored table would read wrong — not merely stale — for every match
 -- projected before that; a view is always current.
 --
--- The SQL-aggregation rule still holds ("Metrics live in SQL" in
--- docs/architecture.md): these views do the counting and windowing, and the
+-- The SQL-aggregation rule still holds (docs/architecture.md, "Aggregation:
+-- views versus Python"): these views do the counting and windowing, and the
 -- Python analyzers only apply thresholds and build Finding objects from
 -- numbers a view already produced.
 

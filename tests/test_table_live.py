@@ -16,18 +16,22 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import Counter
+from pathlib import Path
 
 import pytest
 
 from sensei_top.db import open_database
 from sensei_top.projector.game_state import ZoneCard
-from sensei_top.projector.live_state import LiveState
+from sensei_top.projector.live_state import LiveState, MulliganOffer, replay_live_state
+from sensei_top.reader.ingest import ingest_file
+from sensei_top.table.keep import build_keep_guide
 from sensei_top.table.live import (
     _DECK_MESSAGE_LOOKBACK,
     build_library_remaining,
     find_anchor,
     replay_from_anchor,
 )
+from sensei_top.table.opening_hand import build_opening_hand_read
 
 ISLAND_GRP = 1
 BEAR_GRP = 2
@@ -381,3 +385,188 @@ def test_deck_maindeck_lookback_reaches_exactly_the_configured_bound(conn):
     # connect_id one past the bound — excluded.
     anchor = _build(_DECK_MESSAGE_LOOKBACK)
     assert replay_from_anchor(conn, anchor).deck_maindeck is None
+
+
+# --- the boarded deck, from a SubmitDeckResp -----------------------------
+
+INTERMISSION_FIXTURE = Path(__file__).parent / "fixtures" / "intermission_session.log"
+
+# fixture_peek.py entry 39 of intermission_session.log (ClientToGremessage,
+# ClientMessageType_SubmitDeckResp): submitDeckResp.deck.deckCards, in file
+# order, 60 cards.
+_BOARDED_DECK = (
+    95638, 95638, 95638, 95638, 68735, 68735, 68735, 68735, 95549, 95549,
+    95549, 87145, 87145, 95066, 95066, 95066, 95066, 96722, 96722, 96722,
+    96722, 97998, 97998, 97998, 97998, 102474, 102474, 103489, 103489, 103489,
+    103489, 96608, 96608, 96608, 96608, 95788, 95788, 95788, 95788, 75864,
+    75864, 75864, 75864, 95631, 95631, 95631, 97303, 97303, 97303, 97303,
+    70501, 70504, 95520, 95520, 95520, 95520, 87435, 87435, 90479, 90479,
+)
+
+
+def _fixture_payloads(tmp_path, through_entry: int) -> list[str]:
+    c = open_database(tmp_path / "f.db")
+    try:
+        ingest_file(c, INTERMISSION_FIXTURE, locale_hint="mdy")
+        c.commit()
+        # raw_events.id is the 0-based entry index plus one on an empty
+        # table (tests/test_intermission.py::_payloads_through).
+        rows = c.execute(
+            "SELECT payload FROM raw_events WHERE id <= ? ORDER BY id",
+            (through_entry + 1,),
+        ).fetchall()
+        return [r["payload"] for r in rows]
+    finally:
+        c.close()
+
+
+# fixture_peek.py entry 2 of intermission_session.log (the game-1 connectResp):
+# connectResp.deckMessage.deckCards, in file order, 60 cards.
+_GAME_ONE_DECK = (
+    95638, 95638, 95638, 95638, 68735, 68735, 68735, 68735, 95549, 95549,
+    95549, 95758, 95758, 95066, 95066, 95066, 95066, 96722, 96722, 96722,
+    96722, 97998, 97998, 97998, 97998, 102474, 102474, 103489, 103489, 103489,
+    103489, 102793, 102793, 102793, 102793, 95788, 95788, 95788, 95788, 75864,
+    75864, 75864, 75864, 95631, 95631, 95631, 97303, 97303, 97303, 97303,
+    70501, 70504, 95520, 95520, 95520, 95520, 87435, 87435, 90479, 90479,
+)
+
+
+def _submit_deck_resp_payload(deck_cards) -> str:
+    return json.dumps(
+        {
+            "payload": {
+                "type": "ClientMessageType_SubmitDeckResp",
+                "submitDeckResp": {"deck": {"deckCards": list(deck_cards)}},
+            }
+        }
+    )
+
+
+def test_deck_maindeck_is_the_boarded_list_once_a_submitdeckresp_was_seen(tmp_path):
+    """Entry 39 is the SubmitDeckResp: before it the replay carries game 1's
+    connectResp list, after it the boarded one. deck_id stays game 1's."""
+    before = replay_live_state(_fixture_payloads(tmp_path, 38))
+    after = replay_live_state(_fixture_payloads(tmp_path, 39))
+    assert before.deck_maindeck == _GAME_ONE_DECK
+    assert before.deck_maindeck != _BOARDED_DECK
+    assert after.deck_maindeck == _BOARDED_DECK
+    assert after.deck_id == _expected_deck_id(_GAME_ONE_DECK)
+
+
+def test_deck_maindeck_is_the_latest_submitdeckresp_of_the_match(tmp_path):
+    second = [7] * 60
+    payloads = _fixture_payloads(tmp_path, 39)
+    payloads.append(_submit_deck_resp_payload(second))
+    state = replay_live_state(payloads)
+    assert state.deck_maindeck == tuple(second)
+    assert state.deck_id == _expected_deck_id(_GAME_ONE_DECK)
+
+
+def test_a_submitdeckresp_before_the_anchor_is_not_read():
+    """Before the anchor a SubmitDeckResp is an earlier match's: the lookback
+    resolves the connectResp list after it."""
+    state = replay_live_state(
+        [],
+        pre_anchor_payloads=[
+            _submit_deck_resp_payload([8] * 60),
+            _connect_resp_payload([1, 1, 2]),
+        ],
+    )
+    assert state.deck_maindeck == (1, 1, 2)
+    assert state.deck_id == _expected_deck_id([1, 1, 2])
+
+
+def test_a_lookback_holding_only_a_submitdeckresp_resolves_no_deck():
+    state = replay_live_state(
+        [], pre_anchor_payloads=[_submit_deck_resp_payload([8] * 60)]
+    )
+    assert state.deck_maindeck is None
+    assert state.deck_id is None
+
+
+def test_a_connectresp_after_a_submitdeckresp_does_not_replace_the_boarded_list(tmp_path):
+    payloads = _fixture_payloads(tmp_path, 39)
+    payloads.append(_connect_resp_payload([9] * 60))
+    assert replay_live_state(payloads).deck_maindeck == _BOARDED_DECK
+
+
+# --- the live reads follow the boarded list ------------------------------
+#
+# In intermission_session.log the game-1 connectResp (entry 2) and the
+# SubmitDeckResp (entry 39) differ in four card kinds: 95758 x2 and 102793
+# x4 are only in game 1's list, 87145 x2 and 96608 x4 only in the boarded one.
+# The three seeded `cards` rows are typed as basic lands only to serve as
+# markers: they make the land count tell the two lists apart.
+
+
+def _seed_game_one_deck(conn, state):
+    """The decks row project() would write for game 1's list, under the
+    replay's own deck_id, plus the card rows the checks below read."""
+    _insert_deck(conn, state.deck_id, list(_GAME_ONE_DECK))
+    for grp in (95758, 102793, 87145):
+        conn.execute(
+            "INSERT INTO cards (grp_id, name, mana_cost, type_line) "
+            "VALUES (?, ?, NULL, 'Basic Land — Island')",
+            (grp, f"Land {grp}"),
+        )
+    # One finished game under game 1's deck_id, mulliganed once, so the
+    # mulligan record has a row to carry.
+    conn.execute("INSERT INTO matches (match_id, deck_id) VALUES ('m1', ?)", (state.deck_id,))
+    conn.execute(
+        "INSERT INTO games (match_id, game_number, result, self_mulligans) "
+        "VALUES ('m1', 1, 'win', 1)"
+    )
+    conn.commit()
+
+
+def test_library_panel_counts_the_boarded_list_after_entry_39(tmp_path, conn):
+    before = replay_live_state(_fixture_payloads(tmp_path, 38))
+    after = replay_live_state(_fixture_payloads(tmp_path, 39))
+    _seed_game_one_deck(conn, before)
+    assert before.deck_boarded is False and after.deck_boarded is True
+
+    first = {c.grp_id: c for c in build_library_remaining(conn, before.deck_id, before)}
+    assert first[95758].quantity == 2
+    assert 87145 not in first
+
+    boarded = {c.grp_id: c for c in build_library_remaining(conn, after.deck_id, after)}
+    assert boarded[87145].quantity == 2
+    assert 95758 not in boarded and 102793 not in boarded
+
+
+def test_keep_guide_counts_the_boarded_list_after_entry_39(tmp_path, conn):
+    before = replay_live_state(_fixture_payloads(tmp_path, 38))
+    after = replay_live_state(_fixture_payloads(tmp_path, 39))
+    _seed_game_one_deck(conn, before)
+
+    first = build_keep_guide(
+        conn, before.deck_id, maindeck=before.deck_maindeck, boarded=before.deck_boarded
+    )
+    boarded = build_keep_guide(
+        conn, after.deck_id, maindeck=after.deck_maindeck, boarded=after.deck_boarded
+    )
+    assert first is not None and boarded is not None
+    assert first.land_count == 6  # 95758 x2 + 102793 x4
+    assert boarded.land_count == 2  # 87145 x2
+    assert boarded.deck_id == before.deck_id
+    # the mulligan record stays game 1's: its one game is still there
+    assert [(r.mulligans, r.games, r.wins) for r in boarded.mulligan_record] == [(1, 1, 1)]
+
+
+def test_opening_hand_read_forwards_boarded_to_the_keep_guide(tmp_path, conn):
+    before = replay_live_state(_fixture_payloads(tmp_path, 38))
+    after = replay_live_state(_fixture_payloads(tmp_path, 39))
+    _seed_game_one_deck(conn, before)
+    offer = MulliganOffer(seat=1, cards=(), mulligan_count=0, active_player=None)
+
+    first = build_opening_hand_read(
+        conn, deck_id=before.deck_id, offer=offer,
+        maindeck=before.deck_maindeck, boarded=before.deck_boarded,
+    )
+    boarded = build_opening_hand_read(
+        conn, deck_id=after.deck_id, offer=offer,
+        maindeck=after.deck_maindeck, boarded=after.deck_boarded,
+    )
+    assert first.keep_guide.land_count == 6
+    assert boarded.keep_guide.land_count == 2

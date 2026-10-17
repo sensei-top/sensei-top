@@ -96,6 +96,9 @@ def _run_scan(
 
     env = dict(os.environ)
     env["XDG_CONFIG_HOME"] = str(repo.parent / "unused-xdg-config")
+    # A range scan reads the global user.email to set it aside: never the real one.
+    env["GIT_CONFIG_GLOBAL"] = os.devnull
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
     for key in (
         "MTGO_LOG_DIR", "MTGO_HANDLE", "ANTHROPIC_API_KEY",
         "TOPDECK_API_KEY", "MTGA_LOG", "SENSEI_TOP_BACKUP_DIR",
@@ -1029,6 +1032,7 @@ def test_unexpected_exception_exits_2_without_a_traceback_or_absolute_paths(
             raise RuntimeError("synthetic failure QzxCrashTermJKL for the crash-handling test")
 
         monkeypatch.setattr(module, "_gather_terms", _boom)
+        monkeypatch.setenv("GIT_CONFIG_GLOBAL", os.devnull)
         exit_code = module.main(["--repo", str(repo)])
         assert logging.root.manager.disable == logging.INFO
     finally:
@@ -1171,6 +1175,7 @@ def _global_config(tmp_path: Path) -> Path:
 def _identity_env(tmp_path: Path) -> dict[str, str]:
     env = dict(os.environ)
     env["HOME"] = str(tmp_path / "home")
+    env["USERPROFILE"] = str(tmp_path / "home")
     env["XDG_CONFIG_HOME"] = str(tmp_path / "xdg-config")
     env["USER"] = "synthuser"
     env["LOGNAME"] = "synthuser"
@@ -1218,6 +1223,14 @@ def _scan_with_identity(repo: Path, env: dict[str, str], *args: str):
     )
 
 
+def _email_terms(tmp_path: Path, email: str) -> Path:
+    """No email is derived from git's configuration any more: a `git-email`
+    term comes from a terms file, where the label is still valid."""
+    path = tmp_path / "email-terms.tsv"
+    path.write_text(f"git-email\t{email}\n", encoding="utf-8")
+    return path
+
+
 def _assert_no_identity_echoed(result: subprocess.CompletedProcess[str]) -> None:
     for value in (_DECLARED_NAME, _DECLARED_EMAIL, _GLOBAL_NAME, _GLOBAL_EMAIL, "qzxdeclhandle"):
         assert value not in result.stdout
@@ -1227,13 +1240,15 @@ def _assert_no_identity_echoed(result: subprocess.CompletedProcess[str]) -> None
 def test_declared_identity_is_accepted_in_history_log_fields_and_nowhere_else(tmp_path):
     """Every commit of the public repository carries the declared identity
     as author and committer, so those four fields are set aside. The same
-    email in a tracked file, its history blob and a message body is still a
-    finding: one body mention, not three, in history:log."""
+    email, a term through a terms file, is still a finding in a tracked file
+    and its history blob; in the message body it is an accepted email, set
+    aside wherever the log carries it, and counted once."""
     repo, env = _declared_repo(tmp_path)
     _write(repo, "notes/contact.txt", f"write to {_DECLARED_EMAIL} for help\n")
     _commit_as_declared(repo, env, f"Release v1.0.0\n\nAsk {_DECLARED_EMAIL}.")
 
-    result = _scan_with_identity(repo, env, "--history")
+    terms_file = _email_terms(tmp_path, _DECLARED_EMAIL)
+    result = _scan_with_identity(repo, env, "--history", "--terms-file", str(terms_file))
     assert result.returncode == 1
     lines = result.stdout.splitlines()
     assert "git-email\tnotes/contact.txt\t1" in lines
@@ -1241,30 +1256,36 @@ def test_declared_identity_is_accepted_in_history_log_fields_and_nowhere_else(tm
         line.startswith("git-email\thistory:notes/contact.txt@") and line.endswith("\t1")
         for line in lines
     )
-    assert "git-email\thistory:log\t1" in lines
+    assert not [line for line in lines if "history:log" in line]
     assert not [line for line in lines if line.startswith(("git-name\t", "git-first-name\t"))]
     assert "declared identity accepted in history:log: name, email" in result.stderr
+    assert "accepted emails set aside in history:log: declared 1" in result.stderr
     _assert_no_identity_echoed(result)
 
 
-def test_history_log_field_that_only_contains_the_declared_email_still_counts(tmp_path):
-    """Exact equality only: a commit made under an address that merely
-    contains the declared one is scanned like any other field, and the
-    summary names only what it set aside -- here, the name."""
+def test_history_log_field_that_only_contains_the_declared_email_still_hits(tmp_path):
+    """A field set aside whole needs exact equality: an address that merely
+    contains the declared one is not, so the summary's declared parts name
+    only the name. Nor is the declared address inside it accepted: an
+    accepted address is set aside only whole, and here an address character
+    comes before it, so the term hits in both fields."""
     repo, env = _declared_repo(tmp_path)
     _write(repo, "README.md", "nothing personal\n")
     _commit_as_declared(repo, env, "chore: start", "-c", f"user.email=x-{_DECLARED_EMAIL}")
 
-    result = _scan_with_identity(repo, env, "--history")
+    terms_file = _email_terms(tmp_path, _DECLARED_EMAIL)
+    result = _scan_with_identity(repo, env, "--history", "--terms-file", str(terms_file))
     assert result.returncode == 1
     assert result.stdout.splitlines() == ["git-email\thistory:log\t2"]
     assert "declared identity accepted in history:log: name\n" in result.stderr
+    assert "accepted emails set aside" not in result.stderr
     _assert_no_identity_echoed(result)
 
 
-def test_global_identity_is_a_term_even_when_a_local_one_is_set(tmp_path):
+def test_global_name_is_a_term_even_when_a_local_one_is_set(tmp_path):
     """The clone's local identity hides the global one from `git config`;
-    the global one is the personal address, so it must still be a term."""
+    the global name is the personal one, so it must still be a term. Its
+    address beside it is not: the personal address is public."""
     repo, env = _declared_repo(tmp_path)
     _write(repo, "docs/credits.md", f"Thanks to {_GLOBAL_NAME} <{_GLOBAL_EMAIL}>.\n")
     _commit_as_declared(repo, env, "docs: credits")
@@ -1272,11 +1293,26 @@ def test_global_identity_is_a_term_even_when_a_local_one_is_set(tmp_path):
     result = _scan_with_identity(repo, env)
     assert result.returncode == 1
     assert sorted(result.stdout.splitlines()) == [
-        "git-email\tdocs/credits.md\t1",
         "git-first-name\tdocs/credits.md\t1",
         "git-name\tdocs/credits.md\t1",
     ]
     assert "declared identity" not in result.stderr
+    _assert_no_identity_echoed(result)
+
+
+def test_no_git_email_term_is_derived_from_either_identity(tmp_path):
+    """Both the effective (here, declared) and the global `user.email` are
+    set, and neither becomes a term: a file carrying both addresses is
+    clean, and the summary counts no git-email term."""
+    repo, env = _declared_repo(tmp_path)
+    _write(repo, "docs/contact.md", f"{_DECLARED_EMAIL}\n{_GLOBAL_EMAIL}\n")
+    _commit_as_declared(repo, env, "docs: contact")
+
+    result = _scan_with_identity(repo, env)
+    assert result.returncode == 0
+    assert result.stdout == ""
+    assert "git-email" not in result.stderr
+    assert "git-name 2" in result.stderr
     _assert_no_identity_echoed(result)
 
 
@@ -1344,3 +1380,698 @@ def test_declared_first_name_in_root_authors_is_not_a_finding(tmp_path):
     assert result.returncode == 1
     assert result.stdout.splitlines() == ["git-first-name\tREADME.md\t1"]
     assert "Qzxdecl" not in result.stdout
+
+
+# --- --pre-push: only what a push sends ---------------------------------------
+
+_ZERO_SHA = "0" * 40
+
+
+def _git_env(repo: Path, env: dict[str, str], *args: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(repo), *args], check=True, capture_output=True, text=True, env=env
+    )
+    return result.stdout.strip()
+
+
+def _pushed_repo(tmp_path: Path) -> tuple[Path, dict[str, str]]:
+    """A declared clone whose `origin` is a local bare repository, holding
+    one pushed commit on `main`; the synthetic global configuration of
+    `_identity_env` is the only one git ever reads here."""
+    repo, env = _declared_repo(tmp_path)
+    remote = tmp_path / "remote.git"
+    subprocess.run(
+        ["git", "init", "-q", "--bare", str(remote)], check=True, capture_output=True, env=env
+    )
+    _git_env(repo, env, "remote", "add", "origin", str(remote))
+    _write(repo, "README.md", "start\n")
+    _commit_as_declared(repo, env, "chore: start")
+    _git_env(repo, env, "push", "-q", "origin", "main")
+    return repo, env
+
+
+def _push_terms(tmp_path: Path, *lines: str) -> Path:
+    path = tmp_path / "push-terms.tsv"
+    path.write_text("".join(f"{line}\n" for line in lines), encoding="utf-8")
+    return path
+
+
+def _scan_push(
+    repo: Path, env: dict[str, str], stdin: str, terms_file: Path
+) -> subprocess.CompletedProcess[str]:
+    """`--no-local` with a terms file, as the hermetic tree tests run, and
+    git's pre-push lines on stdin; the declared identity is read anyway,
+    since it is the scanned repository's own configuration."""
+    return subprocess.run(
+        [
+            sys.executable, str(SCRIPT), "--repo", str(repo), "--no-local",
+            "--terms-file", str(terms_file), "--pre-push", "origin",
+        ],
+        cwd=str(REPO_ROOT), input=stdin, capture_output=True, text=True, env=env, timeout=60,
+    )
+
+
+def _push_line(repo: Path, env: dict[str, str], branch: str, remote_sha: str) -> str:
+    local_sha = _git_env(repo, env, "rev-parse", branch)
+    return f"refs/heads/{branch} {local_sha} refs/heads/{branch} {remote_sha}\n"
+
+
+def test_pre_push_finds_a_term_in_a_blob_the_push_adds_and_not_one_the_remote_holds(tmp_path):
+    """The added file sits in a directory named after the term, so its
+    content hit, its name and its directory's name all print masked. Once
+    that commit is pushed, the next push carries a new file only, and the
+    term still in the tree is not part of it."""
+    repo, env = _pushed_repo(tmp_path)
+    terms_file = _push_terms(tmp_path, "mtgo-handle\tQzxPushTermABC")
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+    _write(repo, "notes/QzxPushTermABC/a.txt", "QzxPushTermABC was here\n")
+    _commit_as_declared(repo, env, "docs: a note")
+    blob = _git_env(repo, env, "rev-parse", "HEAD:notes/QzxPushTermABC/a.txt")
+
+    result = _scan_push(repo, env, _push_line(repo, env, "main", remote_sha), terms_file)
+    assert result.returncode == 1
+    assert sorted(result.stdout.splitlines()) == [
+        "mtgo-handle\tpush:name:notes/[redacted]\t1",
+        "mtgo-handle\tpush:name:notes/[redacted]/a.txt\t1",
+        f"mtgo-handle\tpush:notes/[redacted]/a.txt@{blob[:7]}\t1",
+    ]
+    assert "QzxPushTermABC" not in result.stdout + result.stderr
+
+    _git_env(repo, env, "push", "-q", "origin", "main")
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+    _write(repo, "notes/other.txt", "nothing personal\n")
+    _commit_as_declared(repo, env, "docs: another note")
+
+    result = _scan_push(repo, env, _push_line(repo, env, "main", remote_sha), terms_file)
+    assert result.returncode == 0
+    assert result.stdout == ""
+    assert "1 pushed commits" in result.stderr
+
+
+def test_pre_push_scans_new_messages_and_authors_and_sets_the_declared_identity_aside(tmp_path):
+    """Two new commits: one by the declared identity whose message carries
+    a term, one whose author and committer name is a term. The declared
+    name is a term too, and is set aside only in the identity fields."""
+    repo, env = _pushed_repo(tmp_path)
+    terms_file = _push_terms(
+        tmp_path,
+        "mtgo-handle\tQzxPushMessageTerm",
+        f"git-name\t{_DECLARED_NAME}",
+        "git-name\tQzxOtherAuthorName",
+    )
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+    _write(repo, "a.txt", "one\n")
+    _commit_as_declared(repo, env, "fix: seen with QzxPushMessageTerm")
+    _write(repo, "b.txt", "two\n")
+    _commit_as_declared(repo, env, "fix: two", "-c", "user.name=QzxOtherAuthorName")
+
+    result = _scan_push(repo, env, _push_line(repo, env, "main", remote_sha), terms_file)
+    assert result.returncode == 1
+    assert sorted(result.stdout.splitlines()) == [
+        "git-name\tpush:log\t2",
+        "mtgo-handle\tpush:log\t1",
+    ]
+    assert "declared identity accepted in push:log: name, email" in result.stderr
+    assert "2 pushed commits" in result.stderr
+    for value in ("QzxPushMessageTerm", "QzxOtherAuthorName", _DECLARED_NAME):
+        assert value not in result.stdout + result.stderr
+
+
+def test_pre_push_new_branch_scans_only_commits_on_no_remote_branch(tmp_path):
+    """A new branch (remote sha zero) cut from a pushed branch other than
+    main: that branch's commit carries one term and is already on the
+    remote, so only the new branch's own commit, carrying another, is
+    scanned."""
+    repo, env = _pushed_repo(tmp_path)
+    terms_file = _push_terms(
+        tmp_path, "mtgo-player\tQzxAlreadyPushedTerm", "mtgo-handle\tQzxNewBranchTerm"
+    )
+    _git_env(repo, env, "checkout", "-q", "-b", "other")
+    _write(repo, "other.txt", "QzxAlreadyPushedTerm\n")
+    _commit_as_declared(repo, env, "feat: other")
+    _git_env(repo, env, "push", "-q", "origin", "other")
+    _git_env(repo, env, "checkout", "-q", "-b", "feature")
+    _write(repo, "feature.txt", "QzxNewBranchTerm\n")
+    _commit_as_declared(repo, env, "feat: feature")
+
+    result = _scan_push(repo, env, _push_line(repo, env, "feature", _ZERO_SHA), terms_file)
+    assert result.returncode == 1
+    lines = result.stdout.splitlines()
+    assert len(lines) == 1
+    assert lines[0].startswith("mtgo-handle\tpush:feature.txt@")
+    assert "1 pushed commits, 1 pushed blobs" in result.stderr
+
+
+def test_pre_push_deletion_scans_nothing(tmp_path):
+    """A deleted ref has an all-zero local sha and sends nothing, even with
+    an unpushed commit carrying a term at HEAD."""
+    repo, env = _pushed_repo(tmp_path)
+    terms_file = _push_terms(tmp_path, "mtgo-handle\tQzxUnpushedTerm")
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+    _write(repo, "secret.txt", "QzxUnpushedTerm\n")
+    _commit_as_declared(repo, env, "chore: QzxUnpushedTerm")
+
+    stdin = f"(delete) {_ZERO_SHA} refs/heads/gone {remote_sha}\n"
+    result = _scan_push(repo, env, stdin, terms_file)
+    assert result.returncode == 0
+    assert result.stdout == ""
+    assert "0 pushed commits, 0 pushed blobs" in result.stderr
+
+
+def test_pre_push_refuses_a_repository_without_its_own_user_name(tmp_path):
+    """The global identity is set; the repository's own is not, so a
+    commit there would carry the global name. The refusal names the
+    setting, never a value."""
+    repo, env = _pushed_repo(tmp_path)
+    _git_env(repo, env, "config", "--local", "--unset", "user.name")
+    terms_file = _push_terms(tmp_path, "mtgo-handle\tQzxUnusedTerm")
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+
+    result = _scan_push(repo, env, _push_line(repo, env, "main", remote_sha), terms_file)
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert "user.name" in result.stderr
+    _assert_no_identity_echoed(result)
+
+
+def test_pre_push_accepts_a_declared_name_with_an_ordinary_email(tmp_path):
+    """No no-reply requirement on the declared address: the personal one
+    is public."""
+    repo, env = _pushed_repo(tmp_path)
+    _git_env(repo, env, "config", "--local", "user.email", "qzxperson@example.invalid")
+    terms_file = _push_terms(tmp_path, "mtgo-handle\tQzxUnusedTerm")
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+    _write(repo, "a.txt", "fine\n")
+    _commit_as_declared(repo, env, "chore: fine")
+
+    result = _scan_push(repo, env, _push_line(repo, env, "main", remote_sha), terms_file)
+    assert result.returncode == 0
+    assert result.stdout == ""
+
+
+# --- --text: one file, never its path -----------------------------------------
+
+
+def test_text_reports_a_hit_and_a_miss_and_never_the_files_path(tmp_path):
+    """The tracked tree carries the term too, and is not scanned: the clean
+    body passes."""
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    _write(repo, "README.md", "QzxTextTermABC\n")
+    _commit_all(repo)
+    terms_file = tmp_path / "terms.tsv"
+    terms_file.write_text("mtgo-handle\tQzxTextTermABC\n", encoding="utf-8")
+    drafts = tmp_path / "qzxdraftsdir"
+    drafts.mkdir()
+    leaky = drafts / "body-qzxfilename.md"
+    leaky.write_text("Thanks QzxTextTermABC, and qzxtexttermabc again.\n", encoding="utf-8")
+    clean = drafts / "clean-qzxfilename.md"
+    clean.write_text("A plain pull-request body.\n", encoding="utf-8")
+
+    hit = _run_scan(repo, "--text", str(leaky), terms_file=terms_file)
+    assert hit.returncode == 1
+    assert hit.stdout.splitlines() == ["mtgo-handle\ttext\t2"]
+
+    miss = _run_scan(repo, "--text", str(clean), terms_file=terms_file)
+    assert miss.returncode == 0
+    assert miss.stdout == ""
+
+    for result in (hit, miss):
+        output = result.stdout + result.stderr
+        for value in ("QzxTextTermABC", "qzxfilename", "qzxdraftsdir", str(tmp_path)):
+            assert value not in output
+
+
+# --- privacy-terms.tsv: read automatically, beside config.toml ----------------
+
+
+def _privacy_terms_repo(tmp_path: Path, content: str) -> tuple[Path, dict[str, str]]:
+    """A clone with a tracked mention of a synthetic account, and the
+    terms file in `_identity_env`'s temporary config directory."""
+    repo, env = _declared_repo(tmp_path)
+    _write(repo, "README.md", "Made by QzxAutoAccount.\n")
+    _commit_as_declared(repo, env, "docs: readme")
+    config_dir = Path(env["XDG_CONFIG_HOME"]) / "sensei-top"
+    config_dir.mkdir(parents=True)
+    (config_dir / "privacy-terms.tsv").write_text(content, encoding="utf-8")
+    return repo, env
+
+
+def test_privacy_terms_file_is_read_when_present(tmp_path):
+    """After the switch `origin` names the organisation, so the personal
+    account has no automatic source left but this file: a hand-run scan
+    that forgot a --terms-file flag must still find it, and count it under
+    its label in the summary."""
+    repo, env = _privacy_terms_repo(tmp_path, "git-account\tQzxAutoAccount\n")
+
+    result = _scan_with_identity(repo, env)
+    assert result.returncode == 1
+    assert result.stdout.splitlines() == ["git-account\tREADME.md\t1"]
+    assert "git-account 1" in result.stderr
+    assert "QzxAutoAccount" not in result.stdout + result.stderr
+
+
+def test_privacy_terms_file_is_skipped_under_no_local(tmp_path):
+    """--no-local is what makes a run hermetic; a terms file it still read
+    would make every hermetic test depend on the machine running it."""
+    repo, env = _privacy_terms_repo(tmp_path, "git-account\tQzxAutoAccount\n")
+
+    result = _scan_with_identity(repo, env, "--no-local")
+    assert result.returncode == 0
+    assert result.stdout == ""
+    assert "git-account" not in result.stderr
+
+
+def test_privacy_terms_file_bad_line_is_named_by_number_only(tmp_path):
+    """The file holds real identifiers and sits under the home directory,
+    so an error that quoted the line or the path would print exactly what
+    the scan exists to keep out of output."""
+    repo, env = _privacy_terms_repo(
+        tmp_path, "git-account\tQzxAutoAccount\nQzxNoTabOnThisLine\n"
+    )
+
+    result = _scan_with_identity(repo, env)
+    assert result.returncode == 2
+    assert result.stdout == ""
+    assert "privacy-terms.tsv line 2" in result.stderr
+    for value in ("QzxNoTabOnThisLine", "QzxAutoAccount", env["XDG_CONFIG_HOME"]):
+        assert value not in result.stderr
+
+
+def test_pre_push_parses_a_local_ref_with_a_space(tmp_path):
+    """The line is split from the right: the three fields git writes there
+    never hold a space, the local ref is the one free-form field. A term in
+    the pushed commit proves the line was read and its range scanned."""
+    repo, env = _pushed_repo(tmp_path)
+    terms_file = _push_terms(tmp_path, "mtgo-handle\tQzxSpacedRefTerm")
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+    _write(repo, "a.txt", "QzxSpacedRefTerm\n")
+    _commit_as_declared(repo, env, "docs: a")
+    local_sha = _git_env(repo, env, "rev-parse", "main")
+
+    stdin = f"HEAD with a space {local_sha} refs/heads/main {remote_sha}\n"
+    result = _scan_push(repo, env, stdin, terms_file)
+    assert result.returncode == 1
+    lines = result.stdout.splitlines()
+    assert len(lines) == 1
+    assert lines[0].startswith("mtgo-handle\tpush:a.txt@")
+
+
+# --- annotated tags: tagger and message, in both modes ------------------------
+
+
+def test_history_scans_an_annotated_tag_message(tmp_path):
+    """A tag message is text that leaves the machine with the tag, and no
+    commit or blob carries it."""
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    _write(repo, "README.md", "initial\n")
+    _commit_all(repo)
+    _git(repo, "tag", "-a", "v1.0.0", "-m", "Release notes thanking QzxTagMessageTerm")
+    terms_file = tmp_path / "terms.tsv"
+    terms_file.write_text("mtgo-handle\tQzxTagMessageTerm\n", encoding="utf-8")
+
+    result = _run_scan(repo, "--history", terms_file=terms_file)
+    assert result.returncode == 1
+    assert result.stdout.splitlines() == ["mtgo-handle\thistory:log\t1"]
+    assert "QzxTagMessageTerm" not in result.stdout + result.stderr
+
+
+def test_pre_push_scans_a_new_tag_on_a_pushed_commit(tmp_path):
+    """The commit is already on the remote, but the tag object is not: its
+    message is scanned, and its tagger, the declared identity, is set aside
+    the way a commit's author is, though the declared name is a term."""
+    repo, env = _pushed_repo(tmp_path)
+    terms_file = _push_terms(
+        tmp_path, "mtgo-handle\tQzxPushTagTerm", f"git-name\t{_DECLARED_NAME}"
+    )
+    _git_env(repo, env, "tag", "-a", "v1.0.0", "-m", "Thanks QzxPushTagTerm")
+    tag_sha = _git_env(repo, env, "rev-parse", "v1.0.0")
+
+    stdin = f"refs/tags/v1.0.0 {tag_sha} refs/tags/v1.0.0 {_ZERO_SHA}\n"
+    result = _scan_push(repo, env, stdin, terms_file)
+    assert result.returncode == 1
+    assert result.stdout.splitlines() == ["mtgo-handle\tpush:log\t1"]
+    assert "0 pushed commits, 0 pushed blobs, 1 pushed tags" in result.stderr
+    assert "declared identity accepted in push:log: name, email" in result.stderr
+    for value in ("QzxPushTagTerm", _DECLARED_NAME):
+        assert value not in result.stdout + result.stderr
+
+
+# --- a failed cat-file is fatal ------------------------------------------------
+
+
+def test_history_exits_2_on_a_truncated_loose_object(tmp_path):
+    """A blob git cannot read back whole must not count as a clean blob:
+    `rev-list` and the path log never open a blob's content, so only
+    `cat-file` meets the damage, and it has to stop the scan."""
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    _write(repo, "big.txt", os.urandom(20000).hex() + "\n")
+    _commit_all(repo)
+    blob = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD:big.txt"],
+        check=True, capture_output=True, text=True,
+    ).stdout.strip()
+    loose = repo / ".git" / "objects" / blob[:2] / blob[2:]
+    loose.chmod(0o644)
+    loose.write_bytes(loose.read_bytes()[: loose.stat().st_size // 2])
+    terms_file = tmp_path / "terms.tsv"
+    terms_file.write_text("mtgo-handle\tQzxUnusedTermXYZ\n", encoding="utf-8")
+
+    result = _run_scan(repo, "--history", terms_file=terms_file)
+    assert result.returncode == 2
+    assert result.stdout == ""
+    assert "cat-file" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert str(tmp_path) not in result.stderr
+
+
+# --- accepted emails: the declared and the global address, in the log only ----
+
+_PERSONAL_NAME = "Qzxpersfirst Qzxperslast"
+_PERSONAL_EMAIL = "qzxpersfirst.qzxpersacct@example.invalid"
+
+
+def _personal_identity(tmp_path: Path, env: dict[str, str]) -> Path:
+    """The synthetic global identity becomes one whose address holds the
+    account and the first name, as the real personal one does; the terms
+    file names all three, as the derived names and privacy-terms.tsv
+    would."""
+    Path(env["GIT_CONFIG_GLOBAL"]).write_text(
+        f"[user]\n\tname = {_PERSONAL_NAME}\n\temail = {_PERSONAL_EMAIL}\n"
+        "[commit]\n\tgpgsign = false\n[init]\n\tdefaultBranch = main\n",
+        encoding="utf-8",
+    )
+    return _push_terms(
+        tmp_path,
+        "git-account\tqzxpersacct",
+        "git-first-name\tQzxpersfirst",
+        f"git-name\t{_PERSONAL_NAME}",
+    )
+
+
+def _assert_no_personal_value(result: subprocess.CompletedProcess[str]) -> None:
+    output = result.stdout + result.stderr
+    for value in ("qzxpersacct", "qzxpersfirst", "Qzxperslast", _DECLARED_NAME):
+        assert value.lower() not in output.lower()
+
+
+def test_a_button_merge_by_the_personal_address_passes_in_both_modes(tmp_path):
+    """GitHub's merge button authors the merge with the profile's name and
+    the personal address, and commits it as GitHub. The name is the
+    declared one here (S3 checks the real one is no term); the address is
+    accepted, so the account and first name inside it are no hit."""
+    repo, env = _pushed_repo(tmp_path)
+    terms_file = _personal_identity(tmp_path, env)
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+    _git_env(repo, env, "checkout", "-q", "-b", "feature")
+    _write(repo, "feature.txt", "a feature\n")
+    _commit_as_declared(repo, env, "feat: a feature")
+    _git_env(repo, env, "checkout", "-q", "main")
+    merge_env = {
+        **env,
+        "GIT_AUTHOR_NAME": _DECLARED_NAME,
+        "GIT_AUTHOR_EMAIL": _PERSONAL_EMAIL,
+        "GIT_COMMITTER_NAME": "GitHub",
+        "GIT_COMMITTER_EMAIL": "noreply@github.com",
+    }
+    _git_env(
+        repo, merge_env, "merge", "-q", "--no-ff", "-m",
+        "Merge pull request #1 from sensei-top/feature", "feature",
+    )
+
+    pushed = _scan_push(repo, env, _push_line(repo, env, "main", remote_sha), terms_file)
+    assert pushed.returncode == 0
+    assert pushed.stdout == ""
+    assert "2 pushed commits" in pushed.stderr
+    assert "accepted emails set aside in push:log: global 1" in pushed.stderr
+
+    history = subprocess.run(
+        [
+            sys.executable, str(SCRIPT), "--repo", str(repo), "--no-local",
+            "--terms-file", str(terms_file), "--history",
+        ],
+        cwd=str(REPO_ROOT), capture_output=True, text=True, env=env, timeout=60,
+    )
+    assert history.returncode == 0
+    assert history.stdout == ""
+    assert "accepted emails set aside in history:log: global 1" in history.stderr
+    for result in (pushed, history):
+        _assert_no_personal_value(result)
+
+
+def test_a_signed_off_by_trailer_with_the_personal_address_passes(tmp_path):
+    """A trailer is message text, and the address is set aside there too,
+    whatever its case. The declared name beside it is no term in this run:
+    under --no-local only the terms file makes one, and it names the
+    personal name, not the declared one."""
+    repo, env = _pushed_repo(tmp_path)
+    terms_file = _personal_identity(tmp_path, env)
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+    _write(repo, "a.txt", "a fix\n")
+    _commit_as_declared(
+        repo, env, f"fix: a\n\nSigned-off-by: {_DECLARED_NAME} <{_PERSONAL_EMAIL.upper()}>"
+    )
+
+    result = _scan_push(repo, env, _push_line(repo, env, "main", remote_sha), terms_file)
+    assert result.returncode == 0
+    assert result.stdout == ""
+    assert "accepted emails set aside in push:log: global 1" in result.stderr
+    _assert_no_personal_value(result)
+
+
+def test_the_personal_name_in_an_author_field_and_the_address_in_a_blob_still_hit(tmp_path):
+    """Only the address is accepted, and only in the log: the personal name
+    as an author is a hit, and the address in a file is matched like any
+    text, by the account and first name it holds."""
+    repo, env = _pushed_repo(tmp_path)
+    terms_file = _personal_identity(tmp_path, env)
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+    _write(repo, "contact.txt", f"{_PERSONAL_EMAIL}\n")
+    author_env = {**env, "GIT_AUTHOR_NAME": _PERSONAL_NAME, "GIT_AUTHOR_EMAIL": _PERSONAL_EMAIL}
+    _commit_as_declared(repo, author_env, "docs: contact")
+    blob = _git_env(repo, env, "rev-parse", "HEAD:contact.txt")
+
+    result = _scan_push(repo, env, _push_line(repo, env, "main", remote_sha), terms_file)
+    assert result.returncode == 1
+    assert sorted(result.stdout.splitlines()) == [
+        f"git-account\tpush:contact.txt@{blob[:7]}\t1",
+        f"git-first-name\tpush:contact.txt@{blob[:7]}\t1",
+        "git-first-name\tpush:log\t1",
+        "git-name\tpush:log\t1",
+    ]
+    assert "accepted emails set aside in push:log: global 1" in result.stderr
+    _assert_no_personal_value(result)
+
+
+# --- the declared name in a sign-off trailer ----------------------------------
+
+
+def _contributor_repo(tmp_path: Path) -> tuple[Path, dict[str, str], str]:
+    """A contributor's clone: the declared name equals the global one, so
+    without --no-local it is a git-name term. Pushed once, so a further
+    commit is what a push sends."""
+    repo, env = _pushed_repo(tmp_path)
+    _git_env(repo, env, "config", "--local", "user.name", _GLOBAL_NAME)
+    return repo, env, _git_env(repo, env, "rev-parse", "origin/main")
+
+
+def _scan_push_local(repo: Path, env: dict[str, str], stdin: str):
+    """--pre-push without --no-local: the names come from git's
+    configuration, every other local source from `_identity_env`'s
+    temporary directories."""
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), "--repo", str(repo), "--pre-push", "origin"],
+        cwd=str(REPO_ROOT), input=stdin, capture_output=True, text=True, env=env, timeout=60,
+    )
+
+
+def test_a_sign_off_by_the_declared_name_passes_pre_push(tmp_path):
+    """CONTRIBUTING asks for `git commit -s`: a sign-off, in either trailer
+    and any key case, must not refuse every push a contributor makes."""
+    repo, env, remote_sha = _contributor_repo(tmp_path)
+    _write(repo, "a.txt", "a fix\n")
+    _commit_as_declared(
+        repo, env,
+        f"fix: a\n\nSigned-off-by: {_GLOBAL_NAME} <{_GLOBAL_EMAIL}>\n"
+        f"co-authored-by: {_GLOBAL_NAME} <{_GLOBAL_EMAIL}>",
+    )
+
+    result = _scan_push_local(repo, env, _push_line(repo, env, "main", remote_sha))
+    assert result.returncode == 0
+    assert result.stdout == ""
+    assert "declared identity accepted in push:log: name, email" in result.stderr
+    assert "accepted emails set aside in push:log: global 2" in result.stderr
+    _assert_no_identity_echoed(result)
+
+
+def test_the_declared_name_in_message_text_still_hits_pre_push(tmp_path):
+    """The trailer is the only place in a message the name is set aside:
+    the same name in the subject is a hit, beside a sign-off that is not."""
+    repo, env, remote_sha = _contributor_repo(tmp_path)
+    _write(repo, "a.txt", "a fix\n")
+    _commit_as_declared(
+        repo, env, f"fix: thanks {_GLOBAL_NAME}\n\nSigned-off-by: {_GLOBAL_NAME} <{_GLOBAL_EMAIL}>"
+    )
+
+    result = _scan_push_local(repo, env, _push_line(repo, env, "main", remote_sha))
+    assert result.returncode == 1
+    assert sorted(result.stdout.splitlines()) == [
+        "git-first-name\tpush:log\t1",
+        "git-name\tpush:log\t1",
+    ]
+    _assert_no_identity_echoed(result)
+
+
+def test_a_co_author_whose_name_starts_with_the_declared_name_still_hits(tmp_path):
+    """A trailer is set aside only when its whole name part is the declared
+    name: a co-author with a surname after it is someone else, and the
+    declared name inside it is still a term (git-name, and as one word its
+    own git-first-name)."""
+    repo, env, remote_sha = _contributor_repo(tmp_path)
+    _write(repo, "a.txt", "a fix\n")
+    _commit_as_declared(
+        repo, env,
+        f"fix: a\n\nCo-Authored-By: {_GLOBAL_NAME} Qzxsurname <qzxother@example.invalid>",
+    )
+
+    result = _scan_push_local(repo, env, _push_line(repo, env, "main", remote_sha))
+    assert result.returncode == 1
+    assert sorted(result.stdout.splitlines()) == [
+        "git-first-name\tpush:log\t1",
+        "git-name\tpush:log\t1",
+    ]
+    _assert_no_identity_echoed(result)
+
+
+def test_a_trailer_naming_exactly_the_declared_name_in_another_case_passes(tmp_path):
+    """The name part is compared whole, trimmed and case-insensitively, as
+    an author field is compared whole."""
+    repo, env, remote_sha = _contributor_repo(tmp_path)
+    _write(repo, "a.txt", "a fix\n")
+    _commit_as_declared(
+        repo, env, f"fix: a\n\nCo-Authored-By:   {_GLOBAL_NAME.upper()}   <{_GLOBAL_EMAIL}>"
+    )
+
+    result = _scan_push_local(repo, env, _push_line(repo, env, "main", remote_sha))
+    assert result.returncode == 0
+    assert result.stdout == ""
+    assert "declared identity accepted in push:log: name, email" in result.stderr
+    _assert_no_identity_echoed(result)
+
+
+# --- an accepted email must be an address, and is masked only whole -----------
+
+
+def _set_global_email(env: dict[str, str], email: str) -> None:
+    Path(env["GIT_CONFIG_GLOBAL"]).write_text(
+        f"[user]\n\tname = {_GLOBAL_NAME}\n\temail = {email}\n"
+        "[commit]\n\tgpgsign = false\n[init]\n\tdefaultBranch = main\n",
+        encoding="utf-8",
+    )
+
+
+def test_a_one_character_global_email_is_not_accepted(tmp_path):
+    """Accepted, `Q` would be set aside wherever it stands alone, and split
+    the name term it begins; it is no address, so it is not accepted, and
+    the summary says so without the value."""
+    repo, env = _pushed_repo(tmp_path)
+    _set_global_email(env, "Q")
+    terms_file = _push_terms(tmp_path, "git-name\tQ Qzxlastname")
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+    _write(repo, "a.txt", "a fix\n")
+    _commit_as_declared(repo, env, "fix: thanks Q Qzxlastname")
+
+    result = _scan_push(repo, env, _push_line(repo, env, "main", remote_sha), terms_file)
+    assert result.returncode == 1
+    assert result.stdout.splitlines() == ["git-name\tpush:log\t1"]
+    assert "global email not accepted: not an address" in result.stderr
+    assert "accepted emails set aside" not in result.stderr
+    assert "Qzxlastname" not in result.stdout + result.stderr
+
+
+def test_a_handle_shaped_global_email_is_not_accepted(tmp_path):
+    """A `user.email` with no `@` is a handle, not an address: accepted, it
+    would set aside the very account term it is."""
+    repo, env = _pushed_repo(tmp_path)
+    _set_global_email(env, "qzxhandleonly")
+    terms_file = _push_terms(tmp_path, "git-account\tqzxhandleonly")
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+    _write(repo, "a.txt", "a fix\n")
+    _commit_as_declared(repo, env, "fix: thanks qzxhandleonly")
+
+    result = _scan_push(repo, env, _push_line(repo, env, "main", remote_sha), terms_file)
+    assert result.returncode == 1
+    assert result.stdout.splitlines() == ["git-account\tpush:log\t1"]
+    assert "global email not accepted: not an address" in result.stderr
+    assert "qzxhandleonly" not in (result.stdout + result.stderr).lower()
+
+
+def test_an_accepted_address_inside_a_longer_address_like_token_still_hits(tmp_path):
+    """Only the whole address is set aside: with an address character
+    before it or after it, it is part of another token, and the account in
+    it is matched -- a full stop after it included, when more of an address
+    follows. The ones standing alone, one closing a sentence, are the ones
+    counted."""
+    repo, env = _pushed_repo(tmp_path)
+    terms_file = _push_terms(tmp_path, "git-account\tqzxglobal")
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+    _write(repo, "a.txt", "a fix\n")
+    _commit_as_declared(
+        repo, env,
+        f"fix: a\n\nsee x.{_GLOBAL_EMAIL} and {_GLOBAL_EMAIL}.evil\n"
+        f"Reported-by: someone <{_GLOBAL_EMAIL}>, or write to {_GLOBAL_EMAIL}.",
+    )
+
+    result = _scan_push(repo, env, _push_line(repo, env, "main", remote_sha), terms_file)
+    assert result.returncode == 1
+    assert result.stdout.splitlines() == ["git-account\tpush:log\t2"]
+    assert "accepted emails set aside in push:log: global 2" in result.stderr
+    assert "qzxglobal" not in (result.stdout + result.stderr).lower()
+
+
+def test_a_global_email_written_with_a_name_is_not_accepted(tmp_path):
+    """`Name <address>` has one `@`, but it is no bare address: accepted, it
+    would set aside the whole of GitHub's own co-author trailer, name and
+    all. Refused, the name in that trailer is a hit in both modes."""
+    repo, env = _pushed_repo(tmp_path)
+    terms_file = _personal_identity(tmp_path, env)
+    named = f"{_PERSONAL_NAME} <{_PERSONAL_EMAIL}>"
+    _set_global_email(env, named)
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+    _write(repo, "a.txt", "a fix\n")
+    _commit_as_declared(repo, env, f"fix: a\n\nCo-Authored-By: {named}")
+
+    pushed = _scan_push(repo, env, _push_line(repo, env, "main", remote_sha), terms_file)
+    history = subprocess.run(
+        [
+            sys.executable, str(SCRIPT), "--repo", str(repo), "--no-local",
+            "--terms-file", str(terms_file), "--history",
+        ],
+        cwd=str(REPO_ROOT), capture_output=True, text=True, env=env, timeout=60,
+    )
+    for result, label in ((pushed, "push"), (history, "history")):
+        assert result.returncode == 1
+        assert f"git-name\t{label}:log\t1" in result.stdout.splitlines()
+        assert "global email not accepted: not an address" in result.stderr
+        assert "accepted emails set aside" not in result.stderr
+        _assert_no_personal_value(result)
+
+
+def test_an_accepted_address_beside_a_non_ascii_letter_still_hits(tmp_path):
+    """A non-ASCII letter is an address character too: an address glued to
+    one, on either side, is part of a longer token and is not set aside."""
+    repo, env = _pushed_repo(tmp_path)
+    terms_file = _push_terms(tmp_path, "git-account\tqzxglobal")
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+    _write(repo, "a.txt", "a fix\n")
+    _commit_as_declared(
+        repo, env, f"fix: a\n\nsee é{_GLOBAL_EMAIL} and {_GLOBAL_EMAIL}ñ"
+    )
+
+    result = _scan_push(repo, env, _push_line(repo, env, "main", remote_sha), terms_file)
+    assert result.returncode == 1
+    assert result.stdout.splitlines() == ["git-account\tpush:log\t2"]
+    assert "accepted emails set aside" not in result.stderr
+    assert "qzxglobal" not in (result.stdout + result.stderr).lower()

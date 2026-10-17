@@ -160,8 +160,9 @@ export interface paths {
         };
         /**
          * Current Match Brief
-         * @description The stored matchup brief for the match in progress, and always the
-         *     prompt to write one from — see ``brief/__init__.py`` and
+         * @description The stored matchup brief for the match in progress, and the prompt
+         *     to write one from — except an ``ok`` with no format, which has none (a
+         *     prompt needs a format to name its corpus). See ``brief/__init__.py`` and
          *     ``docs/brief.md``.
          *
          *     Deliberately has no generate route of its own, unlike the match
@@ -823,14 +824,28 @@ export interface paths {
          *     report is an ordinary outcome, not an error. Always a 200.
          */
         get: operations["match_report_narrative_api_matches__match_id__report_narrative_get"];
-        put?: never;
+        /**
+         * Paste Match Report Narrative
+         * @description Store an answer pasted into this match's "Coach's summary" card.
+         *
+         *     Makes no model call. The answer is read through the answer contract
+         *     (``answers.read_answer``, header required): 422 when it is another
+         *     card's or another match's, is not JSON, or carries no prose, and nothing
+         *     is stored; 413 over 256 KB, before anything else; 404 for an unknown
+         *     match, as for ``GET``. It is stored with the context its header says it
+         *     was written for, so one written for older evidence reads as stale, and
+         *     beside the copyable prompt rebuilt now; the model is the sentinel
+         *     ``pasted``, tokens and cost ``NULL``. Returns what ``GET`` on this path
+         *     returns.
+         */
+        put: operations["paste_match_report_narrative_api_matches__match_id__report_narrative_put"];
         /**
          * Generate Match Report Narrative
          * @description Write this match's "Coach's summary" with Claude, and store it.
          *
-         *     Sends exactly the evidence ``GET`` on this same path already builds
-         *     and has always served as copyable text (``review/narrative.py`` —
-         *     no prompt text changes for this feature, only who sends it). 503
+         *     Sends ``full_prompt`` (``review/narrative.py``): the evidence ``GET``
+         *     on this same path builds, without the answer contract that ``GET``'s
+         *     ``copied_prompt`` adds, since the reply is prose. 503
          *     with no credential configured (``sensei-top config --set-key``) —
          *     the dashboard falls back to the copy-prompt path automatically. 502
          *     wraps whatever the Claude API itself objected to.
@@ -963,7 +978,14 @@ export interface paths {
          *     posture as the per-match narrative route.
          */
         get: operations["review_leaks_narrative_route_api_review_leaks_narrative_get"];
-        put?: never;
+        /**
+         * Paste Leaks Narrative
+         * @description Store an answer pasted into the training plan's card. Makes no model
+         *     call; same refusals, storage and response as the per-match paste route
+         *     (422 for another card's answer or one with no prose, 413 over 256 KB,
+         *     the header's context stored, the model ``pasted``).
+         */
+        put: operations["paste_leaks_narrative_api_review_leaks_narrative_put"];
         /**
          * Generate Leaks Narrative
          * @description Write a training plan over the leak finder's own ranked output
@@ -1047,14 +1069,29 @@ export interface paths {
          *     rendering as current.
          */
         get: operations["guide_narrative_route_api_guide__key__narrative_get"];
-        put?: never;
+        /**
+         * Paste Guide Narrative
+         * @description Store an answer pasted into the deck guide's card — the dashboard's
+         *     way into what ``sensei-top guide --deck KEY --import FILE`` stores.
+         *
+         *     Makes no model call. The answer is read through the answer contract
+         *     (``answers.read_answer``, header required): 422 when it is another
+         *     card's or another deck's, is not JSON, or does not parse as a guide, and
+         *     nothing is stored; 413 over 256 KB. It is stored with the 75 its
+         *     ``context`` says it was written for, so one written for an older list
+         *     reads as stale; the author is the sentinel ``pasted``, tokens and cost
+         *     ``NULL``. Every matchup plan lands in ``matchup_brief`` in the same
+         *     transaction, as for the CLI. Returns what ``GET`` on this path returns.
+         */
+        put: operations["paste_guide_narrative_api_guide__key__narrative_put"];
         /**
          * Generate Guide Narrative
          * @description Write this deck's guide narrative with Claude, and store it.
          *
-         *     Sends the same ``full_prompt`` the copy-prompt path has always
-         *     served, but requests the answer via structured outputs against
-         *     ``_GUIDE_TOOL``'s own schema — the same shape ``sensei-top guide
+         *     Sends the same ``full_prompt`` the copy-prompt path serves, minus the
+         *     answer contract that ends a copied prompt (``answers.answer_format``):
+         *     the answer is requested via structured outputs against
+         *     ``_GUIDE_TOOL``'s own schema instead — the same shape ``sensei-top guide
          *     --import`` already parses (``guide_narrative_from_json``), so the
          *     generate path and the hand-import path converge on one validator.
          *     Also fills every matchup plan the guide covers into
@@ -1133,7 +1170,19 @@ export interface paths {
          *     resolves to nothing is a missing resource.
          */
         get: operations["guide_coverage_api_guide__key__coverage_get"];
-        put?: never;
+        /**
+         * Paste Coverage
+         * @description Store the answer pasted into the matchup-coverage card — every brief
+         *     in it, what ``sensei-top brief --deck KEY --missing --import FILE``
+         *     stores. Makes no model call. Returns what ``GET`` on this path returns.
+         *
+         *     422 and 413 as for one brief; the batch is all-or-nothing on its JSON.
+         *     An archetype with no field consensus is skipped, as on the CLI, and the
+         *     row stays ``no_consensus``; 409 only when nothing could be stored
+         *     because no item had a field consensus; 409 as well for a deck with no
+         *     format.
+         */
+        put: operations["paste_coverage_api_guide__key__coverage_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1205,6 +1254,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/guide/{key}/briefs/{archetype_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Paste Brief
+         * @description Store an answer pasted into one matchup brief's card — what
+         *     ``sensei-top brief --deck KEY --archetype KEY --import FILE`` stores.
+         *     Makes no model call.
+         *
+         *     Same refusals as the guide's: 422 for another card's or an unreadable
+         *     answer (nothing stored), 413 over 256 KB. 409 where the CLI stops with a
+         *     ``LookupError``: the deck has no format, or the archetype has no field
+         *     consensus to anchor the brief to (a keyed sentence for each). A sideboard
+         *     plan that does not balance is stored with the problem recorded, as on the CLI. Stored with the
+         *     ``context`` hash the answer carries and the sentinel author ``pasted``.
+         */
+        put: operations["paste_brief_api_guide__key__briefs__archetype_key__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/guide/{key}/rcq/preview": {
         parameters: {
             query?: never;
@@ -1234,7 +1312,21 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put?: never;
+        /**
+         * Paste Rcq
+         * @description Store an answer pasted into the RCQ guide's card — what ``sensei-top
+         *     rcq --deck KEY --import FILE`` stores. Makes no model call. The body
+         *     carries the same list fields the preview and generate routes take, since
+         *     the guide is checked against that 75 and stored beside it.
+         *
+         *     422 for another card's or an unreadable answer, nothing stored (a flex
+         *     note role other than core, flex or risk is refused as on the CLI); 413
+         *     over 256 KB; 404 an unknown deck. The RCQ prompt carries no context
+         *     hash, so the header is ``for`` alone. Stored with the sentinel model
+         *     ``pasted``, no tokens, no cost. Every paste keeps its own row, like a
+         *     generation.
+         */
+        put: operations["paste_rcq_api_guide__key__rcq_narrative_put"];
         /**
          * Generate Rcq
          * @description Write the RCQ guide with Claude, and store it (every generation keeps
@@ -1329,7 +1421,26 @@ export interface paths {
          *     one here, so another format's report can never read as current.
          */
         get: operations["coach_narrative_api_coach_narrative_get"];
-        put?: never;
+        /**
+         * Paste Coach Narrative
+         * @description Store an answer pasted into the Coach card as a new report for
+         *     ``fmt`` (the ``format`` query parameter, else ``default_format``, as for
+         *     ``GET``) — a new row, never an upsert, like a generated report.
+         *
+         *     Makes no model call. The answer is read through the answer contract
+         *     (``answers.read_answer``, header required): 422 when it is another
+         *     card's or another format's, is not JSON, or carries no prose, and
+         *     nothing is stored; 413 over 256 KB, before anything else; 404 below the
+         *     minimum sample, as for ``POST``. Stored with the context its header
+         *     says it was written for (so one written for older evidence reads as
+         *     stale), the copyable prompt and the metrics snapshot as of now, and the
+         *     reading-list ids the prose cites; the model is the sentinel ``pasted``,
+         *     effort, tokens, web searches and cost ``NULL``. Returns the stored
+         *     report as ``GET`` does, with the prompt it stored (as ``POST`` returns
+         *     the one it sent): the next ``GET``'s prompt names this report as the
+         *     previous one.
+         */
+        put: operations["paste_coach_narrative_api_coach_narrative_put"];
         /**
          * Generate Coach Narrative
          * @description Write a fresh coach report with Claude and store it as a new row —
@@ -1384,16 +1495,16 @@ export interface paths {
         /**
          * Card Image
          * @description A card's picture, from the on-disk cache, fetched from Scryfall on
-         *     first miss (AGENTS.md rule 5's third sanctioned download). The one
-         *     read this route does — the card's own name, so Arena-exclusive
-         *     printings with no Scryfall arena_id can still be found by name (see
-         *     card_images.py) — stays inside query_only; the cache itself is plain
-         *     files beside the database, so that pragma is still the whole story
-         *     for what can write to SQLite. 404 covers "Scryfall has no image for
-         *     this id under any name we tried" and "offline right now" alike; the
-         *     dashboard falls back to the card's name either way. Sync def on
-         *     purpose: FastAPI runs it in a threadpool, so the blocking download
-         *     cannot stall the event loop.
+         *     first miss (AGENTS.md rule 5's third sanctioned download). The reads
+         *     this route does — the card's own name, so Arena-exclusive printings
+         *     with no Scryfall arena_id can still be found by name (see
+         *     card_images.py), and its other face's (``_other_face``) — stay inside
+         *     query_only; the cache itself is plain files beside the database, so
+         *     that pragma is still the whole story for what can write to SQLite.
+         *     404 covers "Scryfall has no image for this id under any name we
+         *     tried" and "offline right now" alike; the dashboard falls back to
+         *     the card's name either way. Sync def on purpose: FastAPI runs it in a
+         *     threadpool, so the blocking download cannot stall the event loop.
          */
         get: operations["card_image_api_cards__grp_id__image_get"];
         put?: never;
@@ -1414,8 +1525,8 @@ export interface paths {
         /**
          * Card Art
          * @description A card's art alone, from its own on-disk cache, fetched from Scryfall
-         *     on first miss. The image route's twin: the same one database read (the
-         *     card's name, for the retry by name), the same plain files beside the
+         *     on first miss. The image route's twin: the same database reads (the
+         *     card's name and its other face's), the same plain files beside the
          *     database, the same 404 for "Scryfall has no such picture" and "offline
          *     right now" alike, the same sync def. Only what it serves differs,
          *     Scryfall's ``art_crop`` in place of the whole card, and the two caches
@@ -4354,6 +4465,19 @@ export interface components {
             /** Games */
             games: components["schemas"]["PastBoardingGameOut"][];
         };
+        /**
+         * PastedAnswerIn
+         * @description A pasted answer: the whole text the assistant gave back, header and
+         *     all (``answers.read_answer``). Read, never sent anywhere: a ``PUT`` that
+         *     takes this makes no model call.
+         */
+        PastedAnswerIn: {
+            /**
+             * Answer
+             * @description the assistant's answer exactly as it gave it, from the prompt's answer contract; over 256 KB is a 413
+             */
+            answer: string;
+        };
         /** PersonalRateOut */
         PersonalRateOut: {
             /** Archetype */
@@ -4626,6 +4750,28 @@ export interface components {
             checklist: string[];
             /** Problems */
             problems: components["schemas"]["PlanProblemOut"][];
+        };
+        /**
+         * RcqPasteIn
+         * @description A pasted RCQ answer, with the list it was written for: the same
+         *     fields the preview and generate take, since the guide is stored beside
+         *     the 75 and the picks it was written from.
+         */
+        RcqPasteIn: {
+            /** Decklist */
+            decklist: string;
+            /**
+             * Expected
+             * @default []
+             */
+            expected: string[];
+            /** Own */
+            own?: string | null;
+            /**
+             * Answer
+             * @description the assistant's answer exactly as it gave it; over 256 KB is a 413
+             */
+            answer: string;
         };
         /** RcqPreviewOut */
         RcqPreviewOut: {
@@ -5919,6 +6065,41 @@ export interface operations {
             };
         };
     };
+    paste_match_report_narrative_api_matches__match_id__report_narrative_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PastedAnswerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     generate_match_report_narrative_api_matches__match_id__report_narrative_post: {
         parameters: {
             query?: never;
@@ -6077,6 +6258,39 @@ export interface operations {
             };
         };
     };
+    paste_leaks_narrative_api_review_leaks_narrative_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PastedAnswerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     generate_leaks_narrative_api_review_leaks_narrative_post: {
         parameters: {
             query?: never;
@@ -6158,6 +6372,41 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideNarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paste_guide_narrative_api_guide__key__narrative_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PastedAnswerIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -6303,6 +6552,41 @@ export interface operations {
             };
         };
     };
+    paste_coverage_api_guide__key__coverage_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PastedAnswerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     guide_brief_prompt_api_guide__key__briefs__archetype_key__prompt_get: {
         parameters: {
             query?: never;
@@ -6366,6 +6650,42 @@ export interface operations {
             };
         };
     };
+    paste_brief_api_guide__key__briefs__archetype_key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+                archetype_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PastedAnswerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchupBriefOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     rcq_preview_api_guide__key__rcq_preview_get: {
         parameters: {
             query?: {
@@ -6388,6 +6708,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RcqPreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paste_rcq_api_guide__key__rcq_narrative_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcqPasteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RcqGuideOut"];
                 };
             };
             /** @description Validation Error */
@@ -6541,6 +6896,42 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachNarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paste_coach_narrative_api_coach_narrative_put: {
+        parameters: {
+            query?: {
+                /** @description which format the report is for; omitted, the default /api/formats reports */
+                format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PastedAnswerIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

@@ -67,7 +67,18 @@
     "yourNameHint": "The game's log never says which player is you.",
     "logsFolder": "Folder of game logs",
     "logsFolderNone": "Nothing is read from Magic Online until a folder is set.",
-    "logsFolderSet": "Each game is read once it ends."
+    "logsFolderSet": "Each game is read once it ends.",
+    "decksFolder": "Folder of decks",
+    "decksFolderNone": "Your .dek exports are not read until a folder is set.",
+    "decksFolderSet": "Each .dek export here is read with the game logs.",
+    "cardData": {
+      "title": "Card data",
+      "count": "Rules text for {{n}} cards.",
+      "none": "No card data yet. The deck guides need it.",
+      "unknown": "Not known yet.",
+      "download": "Download card data",
+      "downloadAgain": "Download again"
+    }
   },
   "backup": {
     "subtitle": "A copy of your matches, made once a day and checked after it is made.",
@@ -113,7 +124,7 @@
     "exportDiagnostics": "Export diagnostics",
     "exporting": "Exporting",
     "exportNote": "Export diagnostics makes a zip of the logs and the app's settings, with every key removed, to attach to a bug report. Your matches are never in it.",
-    "welcomeSteps": "The welcome steps: the language, Arena's log, card data and Magic Online.",
+    "welcomeSteps": "The welcome steps: the language, which you play, and Arena's or Magic Online's setup.",
     "welcomeAgain": "Go through them again",
     "update": {
       "store": "The Microsoft Store keeps this copy up to date.",

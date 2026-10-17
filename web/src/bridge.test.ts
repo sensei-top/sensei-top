@@ -10,6 +10,7 @@ function settings(version: string, model = 'm'): BridgeSettings {
       dateOrder: 'auto',
       mtgoHandle: null,
       mtgoDir: null,
+      mtgoDeckDir: null,
       mtgoFound: null,
       dataDir: '/d',
     },

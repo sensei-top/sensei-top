@@ -1,6 +1,6 @@
 [project]
 name = "sensei-top"
-version = "0.7.2"
+version = "1.0.0"
 description = "Fully local MTG Arena match analytics: log parser, SQLite store, dashboard"
 requires-python = ">=3.12"
 license = "AGPL-3.0-only"

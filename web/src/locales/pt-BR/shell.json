@@ -18,7 +18,7 @@
   "skipLink": "Pular para a página",
   "trackerDown": "O tracker não está rodando, então nada de novo pode ser carregado. O que está na tela é o que foi carregado por último. Este aviso some quando o tracker voltar a responder.",
   "footer": {
-    "local": "Lê um banco de dados SQLite local. Sem conta, sem upload.",
+    "local": "Seu histórico de partidas fica guardado neste computador. Não é preciso ter conta.",
     "credits": "Créditos"
   },
   "nav": {

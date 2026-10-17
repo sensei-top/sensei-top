@@ -7,6 +7,7 @@ import type {
   PastBoardingGameOut,
   PastBoardingOut,
 } from '../api'
+import { usePasteBrief } from '../api'
 import type { TFunction } from '../i18n'
 import { seenOpponentCards } from '../lib/brief'
 import { cardName } from '../lib/cards'
@@ -154,6 +155,7 @@ export function SideboardPlanCard({
   match: CurrentMatch | null
 }) {
   const { t } = useTranslation()
+  const paste = usePasteBrief()
   const seen = seenOpponentCards(match)
   const title = headline(intermission, t)
   // `alternatives`/`past_boarding` default to `[]` server-side
@@ -202,6 +204,16 @@ export function SideboardPlanCard({
           intermission.deck_key && intermission.opponent?.archetype_key
             ? `sensei-top brief --deck "${intermission.deck_key}" ` +
               `--archetype "${intermission.opponent.archetype_key}" --import brief.json`
+            : undefined
+        }
+        save={
+          intermission.deck_key && intermission.opponent?.archetype_key
+            ? (answer) =>
+                paste.mutateAsync({
+                  key: intermission.deck_key!,
+                  archetypeKey: intermission.opponent!.archetype_key!,
+                  answer,
+                })
             : undefined
         }
       >

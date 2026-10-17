@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { type MatchupBriefOut, useGuideBriefPrompt, useGuideBriefs, useGuideCoverage } from '../api'
+import { type MatchupBriefOut, useGuideBriefPrompt, useGuideBriefs, useGuideCoverage, usePasteBrief } from '../api'
 import { problemSentence } from '../lib/guide'
 import { archetypeKeyOf } from '../lib/matchups'
 import { briefState } from '../lib/pairing'
@@ -65,6 +65,7 @@ export function PairingBrief({ deckKey, opponentKey }: { deckKey: string; oppone
   const formatUnknown = t('matchups.brief.formatUnknown')
   const coverage = useGuideCoverage(deckKey)
   const briefs = useGuideBriefs(deckKey)
+  const paste = usePasteBrief()
   // Set by a press of "Build the prompt" or "Write it again": the prompt
   // is fetched then, never on the page's load.
   const [open, setOpen] = useState(false)
@@ -98,6 +99,7 @@ export function PairingBrief({ deckKey, opponentKey }: { deckKey: string; oppone
             : undefined)
       }
       importCommand={`sensei-top brief --deck "${deckKey}" --archetype "${state.archetype}" --import brief.json`}
+      save={(answer) => paste.mutateAsync({ key: deckKey, archetypeKey: state.archetype, answer })}
     />
   )
   let body

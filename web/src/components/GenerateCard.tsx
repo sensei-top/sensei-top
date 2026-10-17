@@ -4,18 +4,20 @@ import { useNow } from '../lib/time'
 import type { Writer } from '../lib/writer'
 import { writtenNote } from '../lib/written'
 import { Button, Card, Prose, TextBlock } from './ui'
-import { CopyPromptCard } from './CopyPromptCard'
+import { CopyPromptCard, type SaveAnswer } from './CopyPromptCard'
 
 /** A report's card, drawn by who writes the report (`writer`), the
  *  generate-button half of the round trip described in `docs/llm.md`.
  *
  *  When nobody writes it, this renders `CopyPromptCard`, and hands it the
- *  same written note and stored prose the writing branch shows, so a
- *  stored artifact and who wrote it stay visible whoever writes. When a
- *  key of the viewer's writes, it offers a button that calls the matching
+ *  same written note and stored prose the writing branch shows, and the
+ *  card's `save`, so a stored artifact and who wrote it stay visible
+ *  whoever writes, and a pasted answer can be stored. When a key of the
+ *  viewer's writes, it offers a button that calls the matching
  *  `POST .../narrative` route and shows the result, with the same prompt
- *  disclosure `CopyPromptCard` always had, so the user can still see
- *  exactly what got sent. */
+ *  disclosure `CopyPromptCard` has. What it shows is the prompt as copied:
+ *  the one sent is the same but for the closing answer contract, which
+ *  only an assistant pasting its answer back needs. */
 export function GenerateCard({
   title,
   subtitle,
@@ -33,6 +35,7 @@ export function GenerateCard({
   generating = false,
   generateError,
   importCommand,
+  save,
   accent = false,
   controls,
   emptyNote,
@@ -57,6 +60,9 @@ export function GenerateCard({
   generating?: boolean
   generateError?: string | null
   importCommand?: string
+  /** The card's `PUT` for a pasted answer, handed to `CopyPromptCard` when
+   *  nobody writes the report; the writing branch draws no box. */
+  save?: SaveAnswer
   /** A written narrative is an authored/metered artefact — accent border
    *  tint, with who-wrote-it/when/cost moved into the card's own header
    *  rather than buried in the body. */
@@ -124,6 +130,7 @@ export function GenerateCard({
         loading={loading}
         error={error}
         importCommand={importCommand}
+        save={save}
         accent={accent}
       >
         {body}

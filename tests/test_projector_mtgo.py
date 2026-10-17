@@ -349,6 +349,57 @@ def test_handle_ending_in_a_hyphen_is_one_handle_in_both_begins_shapes():
     assert parsed.games[1].mulligans_by_handle == {"Player1": 0, "Player2000-": 0}
 
 
+@pytest.mark.parametrize("digits", ["\u0663", "9" * 5000])
+def test_turn_line_not_ascii_digits_or_too_long_is_skipped_with_a_warning(digits):
+    """``\\d`` matches non-ASCII digits: ``\u0663`` is read as 3 by ``int()``
+    but is refused by the guard, and ``int()`` refuses 5,000 digits; neither
+    may raise (non-negotiable #4)."""
+    parsed = parse_strings(
+        [
+            "Player1 joined the game.",
+            "Player1 chooses to play first.",
+            f"Turn {digits}: Player1",
+            "Turn 1: Player1",
+        ]
+    )
+    assert len(parsed.games) == 1
+    assert parsed.games[0].turn_count == 1
+    assert len(parsed.warnings) == 1
+    assert "turn number" in parsed.warnings[0]
+
+
+@pytest.mark.parametrize("digits", ["\u0663", "9" * 5000])
+def test_match_score_line_not_ascii_digits_or_too_long_is_skipped_with_a_warning(digits):
+    parsed = parse_strings(
+        [
+            "Player1 joined the game.",
+            f"Player1 leads the match {digits}-0",
+        ]
+    )
+    assert parsed.score_line is None
+    assert len(parsed.warnings) == 1
+    assert "match score" in parsed.warnings[0]
+
+
+@pytest.mark.parametrize(
+    "count",
+    ["\u00b2", "\u0663", "9" * 5000],
+    ids=["superscript", "arabic-indic", "5000-digits"],
+)
+def test_mulligan_count_not_ascii_digits_or_too_long_warns_and_records_nothing(count):
+    """A superscript or Arabic-Indic digit passes ``str.isdigit`` (``int()``
+    even reads the latter as 3, so the ASCII check refuses it), and 5,000
+    digits pass both but ``int()`` refuses them (ValueError): the ASCII check
+    and the try/except each catch their own."""
+    parsed = parse_strings(
+        ["Player1 joined the game.", f"Player1 mulligans to {count} cards."]
+    )
+    assert len([w for w in parsed.warnings if "mulligan count" in w]) == 1
+    # No count was read, so none is recorded: a stored 0 would be a guess.
+    assert len(parsed.games) == 1
+    assert parsed.games[0].mulligans_by_handle == {}
+
+
 def test_bare_turn_one_with_no_start_block_starts_a_new_game_and_warns():
     strings = ["Turn 1: Player1"]
     parsed = parse_strings(strings)
@@ -480,15 +531,30 @@ def test_last_game_decided_is_false_with_no_game():
     assert last_game_decided(FIXTURE_BYTES[: _DIE_ROLL[1]]) is False
 
 
-def test_last_game_decided_never_raises_on_a_number_python_refuses(caplog):
+def test_last_game_decided_never_raises_on_a_number_not_ascii_digits_or_too_long():
     """parse_strings turns a ``Turn <n>:`` capture into an int, and Python
     refuses to convert more than 4,300 digits (ValueError). No real log holds
-    one, but garbage can decode to one: it reads as undecided, with a
-    warning, rather than raising into the watcher's poll loop."""
+    one, but garbage can decode to one: ``parse_strings`` skips the line with
+    a warning, so the file reads as undecided rather than raising into the
+    watcher's poll loop (``last_game_decided``'s own handler is the net
+    behind that)."""
     data = _framed("Turn " + "1" * 5000 + ": Player1")
+    assert last_game_decided(data) is False
+
+
+def test_last_game_decided_logs_and_reads_undecided_when_parsing_raises(
+    monkeypatch, caplog
+):
+    def boom(strings):
+        raise ValueError("boom")
+
+    monkeypatch.setattr("sensei_top.projector.mtgo.parse.parse_strings", boom)
     with caplog.at_level(logging.WARNING):
-        assert last_game_decided(data) is False
-    assert any("last game" in message for message in caplog.messages)
+        assert last_game_decided(_framed("Turn 1: Player1")) is False
+    assert any(
+        r.levelno == logging.WARNING and "last game" in r.getMessage()
+        for r in caplog.records
+    )
 
 
 # --- project -------------------------------------------------------------

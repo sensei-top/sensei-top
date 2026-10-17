@@ -60,7 +60,7 @@ function FlexCard({ guide }: { guide: RcqNarrativeOut }) {
   const { t } = useTranslation()
   return (
     <Card title={t('rcq.result.flexTitle')}>
-      <ul className="max-w-prose space-y-3">
+      <ul className="space-y-3">
         {guide.flex_notes.map((note, i) => (
           <li key={`${i}-${note.card}`}>
             <p className="flex flex-wrap items-center gap-2">
@@ -83,7 +83,7 @@ function ChecklistCard({ guide }: { guide: RcqNarrativeOut }) {
   const { t } = useTranslation()
   return (
     <Card title={t('rcq.result.betweenRounds')}>
-      <ol className="max-w-prose list-decimal space-y-2 pl-5 text-body text-ink2">
+      <ol className="list-decimal space-y-2 pl-5 text-body text-ink2">
         {guide.checklist.map((item, i) => (
           <li key={i}>{item}</li>
         ))}
@@ -140,14 +140,10 @@ export function RcqResult({ deckKey, response }: { deckKey: string; response: Rc
   return (
     <div className="space-y-6">
       <Card title={t('rcq.result.gamePlan')} subtitle={line ?? undefined}>
-        <div className="max-w-prose">
-          <Prose text={guide.game_plan} />
-        </div>
+        <Prose text={guide.game_plan} />
       </Card>
       <Card title={t('rcq.result.field')}>
-        <div className="max-w-prose">
-          <Prose text={guide.expected_field} />
-        </div>
+        <Prose text={guide.expected_field} />
       </Card>
       {(guide.matchups.length > 0 || guide.problems.length > 0) && <MatchupsCard guide={guide} />}
       {guide.flex_notes.length > 0 && <FlexCard guide={guide} />}

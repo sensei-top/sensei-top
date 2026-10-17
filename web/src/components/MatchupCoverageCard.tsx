@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useGuideCoverage, useGuideCoveragePrompt } from '../api'
+import { useGuideCoverage, useGuideCoveragePrompt, usePasteCoverage } from '../api'
 import {
   coverageName,
   coveragePromptNotes,
@@ -32,6 +32,7 @@ export function MatchupCoverageCard({ guideKey }: { guideKey: string }) {
   const coverage = useGuideCoverage(guideKey)
   const [multiOpen, setMultiOpen] = useState(false)
   const coveragePrompt = useGuideCoveragePrompt(guideKey, multiOpen)
+  const paste = usePasteCoverage()
 
   if (coverage.error) return <ErrorNote error={coverage.error} />
   if (coverage.isPending) {
@@ -101,6 +102,7 @@ export function MatchupCoverageCard({ guideKey }: { guideKey: string }) {
                         : undefined)
                 }
                 importCommand={`sensei-top brief --deck "${guideKey}" --missing --import briefs.json`}
+                save={(answer) => paste.mutateAsync({ key: guideKey, answer })}
               >
                 {multi &&
                   coveragePromptNotes(multi, data.rows, t).map((note) => (

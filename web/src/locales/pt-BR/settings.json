@@ -67,7 +67,18 @@
     "yourNameHint": "O log do jogo nunca diz qual jogador é você.",
     "logsFolder": "Pasta dos logs de jogo",
     "logsFolderNone": "Nada é lido do Magic Online até que uma pasta seja definida.",
-    "logsFolderSet": "Cada jogo é lido quando termina."
+    "logsFolderSet": "Cada jogo é lido quando termina.",
+    "decksFolder": "Pasta dos decks",
+    "decksFolderNone": "Suas exportações .dek não são lidas até que uma pasta seja definida.",
+    "decksFolderSet": "Cada exportação .dek desta pasta é lida junto com os logs de jogo.",
+    "cardData": {
+      "title": "Dados dos cards",
+      "count": "Texto de regras de {{n}} cards.",
+      "none": "Ainda não há dados dos cards. Os guias de deck precisam deles.",
+      "unknown": "Ainda não se sabe.",
+      "download": "Baixar dados dos cards",
+      "downloadAgain": "Baixar de novo"
+    }
   },
   "backup": {
     "subtitle": "Uma cópia das suas partidas, feita uma vez por dia e conferida depois de feita.",
@@ -113,7 +124,7 @@
     "exportDiagnostics": "Exportar diagnóstico",
     "exporting": "Exportando",
     "exportNote": "Exportar diagnóstico gera um zip com os logs e as configurações do aplicativo, com todas as chaves removidas, para anexar a um relatório de bug. Suas partidas nunca vão nele.",
-    "welcomeSteps": "Os passos de boas-vindas: o idioma, o log do Arena, os dados dos cards e o Magic Online.",
+    "welcomeSteps": "Os passos de boas-vindas: o idioma, onde você joga e a configuração do Arena ou do Magic Online.",
     "welcomeAgain": "Passar por eles de novo",
     "update": {
       "store": "A Microsoft Store mantém esta cópia atualizada.",

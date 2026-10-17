@@ -81,6 +81,29 @@ captured log goes into a commit:
 - run `uv run python scripts/privacy_scan.py`, which reports categories,
   paths and counts and never prints an identifier.
 
+The same scan can run on every push. Point git at the repository's hooks
+once, in your clone, and give the clone its own name:
+
+    git config core.hooksPath scripts/git-hooks
+    git config user.name "<the name your commits should carry>"
+
+The `pre-push` hook then scans what a push sends: the files, messages and
+author fields of every commit the remote doesn't have yet. It refuses the
+push if one of your own identifiers is in them. It finds those identifiers
+on your machine, as the tree scan does, and prints only categories, paths
+and counts. Some of them you chose to publish, and the scan lets those
+through where they belong: the name in the clone's own config in author and
+committer fields, in sign-off and co-author lines and in `AUTHORS`; your
+GitHub account in `AUTHORS`; and your git email addresses anywhere in a
+commit's fields or message. Elsewhere the name and the account still count,
+and an email address in a file counts through the name or account inside
+it. The scan learns your account from the address of `origin`, so it knows
+it only in a clone of your own fork. In a clone of this repository, add a
+`git-account<TAB><your account>` line to `privacy-terms.tsv`, beside the
+app's `config.toml`. Without a name in the clone's config the hook refuses
+every push rather than guess. The hook is optional for contributors; the
+maintainer's clone runs it on every push.
+
 Never attach your database, your `Player.log` or your config file to an
 issue. The config file can hold an API key.
 

@@ -51,7 +51,8 @@ import sqlite3
 from collections import Counter
 from dataclasses import dataclass
 
-from sensei_top.brief.store import PlayAround, Staple
+from sensei_top.answers import brief_for, coverage_for
+from sensei_top.brief.store import PlayAround, Staple, list_hash
 from sensei_top.guide.deck import DeckIdentity, identity_format
 from sensei_top.guide.field import _classified_deck_total, field_window, personal_rate
 from sensei_top.guide.narrative import (
@@ -469,6 +470,8 @@ def full_multi_prompt(
     ``archetypes``, in the caller's order (most important first — the
     caller's ranking decides what ``limit`` defers, not this function).
     The player's 75 and its card text appear once, not once per matchup.
+    It ends with the answer contract for the deck's coverage card
+    (``answers.coverage_for``) and the 75 it is written for.
     ``None`` when not one archetype has a consensus to write from.
 
     Each section is built by the same ``_opponent_section`` the single-brief
@@ -527,7 +530,9 @@ def full_multi_prompt(
         "briefs are about decklists and the field, not a specific game.",
     ]
     prompt = _wrap_json_prompt(
-        MULTI_SYSTEM_PROMPT, _MULTI_BRIEF_TOOL["input_schema"], "\n".join(lines)
+        MULTI_SYSTEM_PROMPT, _MULTI_BRIEF_TOOL["input_schema"], "\n".join(lines),
+        answer_for=coverage_for(identity.key),
+        written_for=list_hash(identity.current_cards),
     )
     return MultiBriefPrompt(
         prompt=prompt,
@@ -576,15 +581,21 @@ def full_prompt(
     conn: sqlite3.Connection, identity: DeckIdentity, archetype_key: str,
     archetype_label: str | None, **kwargs,
 ) -> tuple[str, BriefFacts] | None:
-    """The complete text to hand an assistant, plus the structured facts to
-    store beside whatever it writes. ``None`` when there is no consensus for
+    """The complete text to hand an assistant, ending with the answer
+    contract (``answers.py``) for this deck and archetype and the 75 it is
+    written for, plus the structured facts to store beside whatever it
+    writes. ``None`` when there is no consensus for
     the archetype, or the deck's format is unknown — a real gap, never guessed
     around."""
     built = build_brief_context(conn, identity, archetype_key, archetype_label, **kwargs)
     if built is None:
         return None
     context, facts = built
-    prompt = _wrap_json_prompt(SYSTEM_PROMPT, _BRIEF_TOOL["input_schema"], context)
+    prompt = _wrap_json_prompt(
+        SYSTEM_PROMPT, _BRIEF_TOOL["input_schema"], context,
+        answer_for=brief_for(identity.key, archetype_key),
+        written_for=list_hash(identity.current_cards),
+    )
     return prompt, facts
 
 

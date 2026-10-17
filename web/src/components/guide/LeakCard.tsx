@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { useGenerateLeaksNarrative, useLeaksNarrative, useLLMStatus } from '../../api'
+import { useGenerateLeaksNarrative, useLeaksNarrative, useLLMStatus, usePasteLeaksNarrative } from '../../api'
 import type { LeakOut } from '../../api'
 import { gapPoints, leakCategoryLabel, winsOf } from '../../lib/guide'
 import { patternSentence, patternWords } from '../../lib/patterns'
@@ -80,6 +80,7 @@ export function LeaksNarrativeCard() {
   const response = useLeaksNarrative()
   const llmStatus = useLLMStatus()
   const generate = useGenerateLeaksNarrative()
+  const paste = usePasteLeaksNarrative()
 
   const body = response.data
   if (response.isSuccess && body?.status === 'no_report') return null
@@ -101,6 +102,7 @@ export function LeaksNarrativeCard() {
       onGenerate={() => generate.mutate()}
       generating={generate.isPending}
       generateError={generate.error?.message}
+      save={(answer) => paste.mutateAsync({ answer })}
     />
   )
 }

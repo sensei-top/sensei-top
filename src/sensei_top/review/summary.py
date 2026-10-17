@@ -28,7 +28,7 @@ _MAX_BEATS_PER_GAME = 3
 
 # Which per-game finding codes are worth surfacing as a compact "beat", and
 # the short left-column label each one gets — deliberately a small, curated
-# set (docs/frontend.md's own "digest, not a second copy of every card").
+# set (docs/review.md, "The match summary": up to three beats a game).
 _GAME_BEAT_LABELS: dict[str, str] = {
     "race_ahead": N_("Race"),
     "race_behind": N_("Race"),

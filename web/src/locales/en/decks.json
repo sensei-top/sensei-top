@@ -98,6 +98,8 @@
     "byOn": "Written by {{author}} on {{day}}.",
     "by": "Written by {{author}}.",
     "on": "Written on {{day}}.",
+    "pastedOn": "Pasted in on {{day}}.",
+    "pasted": "Pasted in.",
     "cost": "It cost {{cost}}.",
     "staleDefault": "The evidence has changed since."
   },

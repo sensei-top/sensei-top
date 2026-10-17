@@ -62,18 +62,33 @@ def _brief_response(
     identity = next((i for i in list_identities(conn) if deck_id in i.deck_ids), None)
     if identity is None:
         return MatchupBriefResponse(status="no_match")
-    if identity_format(conn, identity) is None:
-        # Before ``unclassified`` and any consensus: the classifier never names
-        # an opponent in a match with no format, so "unclassified" would
-        # promise a read that never comes.
-        return MatchupBriefResponse(status="format_unknown")
-
+    no_format = identity_format(conn, identity) is None
     opp_row = _cached_match_opponent(request, conn, match_id)
     opponent_key = opp_row["opponent_key"] if opp_row else None
     if not opponent_key or not opponent_key.startswith("archetype:"):
-        return MatchupBriefResponse(status="unclassified")
+        # Before ``unclassified``: the classifier never names an opponent in
+        # a match with no format, so "unclassified" would promise a read that
+        # never comes.
+        return MatchupBriefResponse(
+            status="format_unknown" if no_format else "unclassified"
+        )
     archetype_key = opponent_key.removeprefix("archetype:")
     archetype_label = opp_row["opponent_label"]
+
+    if no_format:
+        # A brief stored while the deck had a format is still the user's:
+        # returned first, with no prompt (none can be built without a
+        # format). Only when nothing is stored is the format the answer.
+        stored = read_brief(conn, identity.key, archetype_key)
+        if stored is None:
+            return MatchupBriefResponse(status="format_unknown")
+        return MatchupBriefResponse(
+            status="ok", brief=_matchup_brief_out(stored),
+            deck_key=identity.key, archetype_key=archetype_key,
+            stale=is_stale(
+                conn, stored, current_list_hash=list_hash(identity.current_cards)
+            ),
+        )
 
     built = brief_narrative.full_prompt(conn, identity, archetype_key, archetype_label)
     if built is None:
@@ -179,8 +194,9 @@ def current_match(request: Request, conn: Conn) -> CurrentMatch | None:
 
 @router.get("/api/current-match/brief", response_model=MatchupBriefResponse, tags=["matches"])
 def current_match_brief(request: Request, conn: Conn) -> MatchupBriefResponse:
-    """The stored matchup brief for the match in progress, and always the
-    prompt to write one from — see ``brief/__init__.py`` and
+    """The stored matchup brief for the match in progress, and the prompt
+    to write one from — except an ``ok`` with no format, which has none (a
+    prompt needs a format to name its corpus). See ``brief/__init__.py`` and
     ``docs/brief.md``.
 
     Deliberately has no generate route of its own, unlike the match
@@ -280,6 +296,7 @@ def current_match_read(request: Request, conn: Conn) -> CurrentMatchRead:
         deck_id=deck_id,
         offer=live_state.offer if live_state is not None else None,
         maindeck=maindeck,
+        boarded=live_state.deck_boarded if live_state is not None else False,
     )
     opening_hand_out = _opening_hand_out(opening_hand) if opening_hand is not None else None
 
@@ -300,7 +317,12 @@ def current_match_read(request: Request, conn: Conn) -> CurrentMatchRead:
     if opening_hand is not None and deck_id is not None:
         keep = opening_hand.keep_guide
     else:
-        keep = build_keep_guide(conn, deck_id, maindeck=maindeck)
+        keep = build_keep_guide(
+            conn,
+            deck_id,
+            maindeck=maindeck,
+            boarded=live_state.deck_boarded if live_state is not None else False,
+        )
     keep_out = _keep_guide_out(keep)
 
     game_row = conn.execute(

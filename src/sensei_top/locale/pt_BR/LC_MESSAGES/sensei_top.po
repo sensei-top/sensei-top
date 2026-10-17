@@ -952,6 +952,51 @@ msgstr "T7-8"
 msgid "T9+"
 msgstr "T9+"
 
+#: sensei_top/answers.py
+#, python-brace-format
+msgid "The answer could not be read: {detail}"
+msgstr "A resposta não pôde ser lida: {detail}"
+
+#: sensei_top/answers.py
+msgid "The answer has its \"for\" line but no \"answer\" object after it."
+msgstr "A resposta tem a linha \"for\", mas nenhum objeto \"answer\" depois dela."
+
+#: sensei_top/answers.py
+msgid ""
+"The answer has no \"for\" line, so there is no telling where it belongs. "
+"Copy the prompt here again and paste the new answer."
+msgstr ""
+"A resposta não tem a linha \"for\", então não há como saber a qual quadro "
+"ela pertence. Copie de novo o prompt deste quadro e cole a nova resposta."
+
+#: sensei_top/answers.py
+msgid "The answer has no text in it."
+msgstr "A resposta não tem nenhum texto."
+
+#: sensei_top/answers.py
+msgid ""
+"The answer is longer than any answer here needs to be. Check that only the "
+"answer was pasted."
+msgstr ""
+"A resposta é maior do que a resposta de qualquer quadro precisa ser. Confira"
+" se só a resposta foi colada."
+
+#: sensei_top/answers.py
+msgid ""
+"The answer is not a JSON object. Paste the whole answer, from its first `{{`"
+" to its last `}}`."
+msgstr ""
+"A resposta não é um objeto JSON. Cole a resposta inteira, do primeiro `{{` "
+"ao último `}}`."
+
+#: sensei_top/answers.py
+msgid ""
+"The answer's \"context\" line was changed. It has to be copied back exactly "
+"as the prompt gave it."
+msgstr ""
+"A linha \"context\" da resposta foi alterada. Ela tem que ser copiada de "
+"volta exatamente como veio no prompt."
+
 #: sensei_top/guide/rcq.py
 msgid ""
 "The archetype definitions name no archetype this 75 clearly fits; pick one to"
@@ -975,6 +1020,23 @@ msgid ""
 msgstr ""
 "O formato do deck é desconhecido, então estes 75 não foram classificados: as "
 "definições de arquétipos são mantidas por formato."
+
+#: sensei_top/api/routes/guide.py
+#, python-brace-format
+msgid ""
+"The field has no consensus list for {archetype} yet, so there is nothing to "
+"anchor a brief to."
+msgstr ""
+"O meta ainda não tem uma lista de consenso de {archetype}, então não há nada "
+"em que ancorar um briefing."
+
+#: sensei_top/api/routes/guide.py
+msgid ""
+"The field has no consensus list yet for any archetype in this answer, so "
+"none of its briefs could be stored."
+msgstr ""
+"O meta ainda não tem uma lista de consenso de nenhum arquétipo desta "
+"resposta, então nenhum dos briefings dela pôde ser salvo."
 
 #: sensei_top/review/analyzers/baseline.py
 #, python-brace-format
@@ -1085,6 +1147,24 @@ msgstr ""
 "que não se converte em dano, de qualquer lado, é um card perdendo esta "
 "corrida em particular."
 
+#: sensei_top/answers.py
+msgid ""
+"This answer has no \"for\" line, so it was read as one saved before answers "
+"carried it."
+msgstr ""
+"Esta resposta não tem a linha \"for\", então foi lida como uma resposta "
+"salva antes de as respostas passarem a trazê-la."
+
+#: sensei_top/answers.py
+#, python-brace-format
+msgid "This answer is for {card} of {subject}. Paste it there."
+msgstr "Esta resposta é para {card} de {subject}. Cole-a lá."
+
+#: sensei_top/answers.py
+#, python-brace-format
+msgid "This answer is for {card}, not this one. Paste it there."
+msgstr "Esta resposta é para {card}, não para este quadro. Cole-a lá."
+
 #: sensei_top/review/analyzers/clock.py
 msgid ""
 "This counts damage dealt to a player only — creature-versus-creature combat "
@@ -1119,6 +1199,14 @@ msgstr[1] ""
 #: sensei_top/review/analyzers/baseline.py
 msgid "This deck's average"
 msgstr "Média deste deck"
+
+#: sensei_top/api/routes/guide.py
+msgid ""
+"This deck's format is not known yet, so there is no field to anchor a brief "
+"to."
+msgstr ""
+"O formato deste deck ainda não é conhecido, então não há meta em que ancorar "
+"um briefing."
 
 #: sensei_top/guide/bundle.py
 msgid ""
@@ -1531,9 +1619,29 @@ msgstr "Seu turno no ponto alto"
 msgid "Your turn at the low point"
 msgstr "Seu turno no ponto baixo"
 
+#: sensei_top/answers.py
+msgid "a coach report"
+msgstr "um relatório do treinador"
+
 #: sensei_top/review/position.py
 msgid "a decisive swing"
 msgstr "uma virada decisiva"
+
+#: sensei_top/answers.py
+msgid "a deck guide"
+msgstr "um guia de deck"
+
+#: sensei_top/answers.py
+msgid "a match report"
+msgstr "um relatório de partida"
+
+#: sensei_top/answers.py
+msgid "a matchup brief"
+msgstr "um briefing de matchup"
+
+#: sensei_top/answers.py
+msgid "a matchup coverage"
+msgstr "uma cobertura de matchups"
 
 #: sensei_top/review/position.py
 msgid "a notable swing"
@@ -1543,9 +1651,29 @@ msgstr "uma virada notável"
 msgid "a small swing"
 msgstr "uma virada pequena"
 
+#: sensei_top/answers.py
+msgid "an RCQ guide"
+msgstr "um guia de RCQ"
+
 #: sensei_top/review/summary.py
 msgid "an unidentified opponent"
 msgstr "um oponente não identificado"
+
+#: sensei_top/answers.py
+msgid "another deck"
+msgstr "outro deck"
+
+#: sensei_top/answers.py
+msgid "another deck or opponent"
+msgstr "outro deck ou oponente"
+
+#: sensei_top/answers.py
+msgid "another format"
+msgstr "outro formato"
+
+#: sensei_top/answers.py
+msgid "another match"
+msgstr "outra partida"
 
 #: sensei_top/api/routes/matches.py
 msgid "archetype_key requires a non-empty label."
@@ -1666,6 +1794,10 @@ msgstr[1] "jogadas de 1 a 3 de mana"
 #: sensei_top/review/analyzers/baseline.py
 msgid "players"
 msgstr "jogadores"
+
+#: sensei_top/answers.py
+msgid "the training plan"
+msgstr "o plano de treino"
 
 #: sensei_top/review/analyzers/baseline.py
 #: sensei_top/review/analyzers/information.py

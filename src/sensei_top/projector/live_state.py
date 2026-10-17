@@ -112,16 +112,22 @@ class LiveState:
     # LiveState(...) call sites elsewhere (tests, mostly) that predate this
     # field keep constructing without it.
     intermission: Intermission | None = None
-    # The maindeck this replay resolved from the newest
-    # connectResp.deckMessage it saw — this window itself, or (when this
-    # window carried none) a small pre-anchor lookback table/live.py supplies
-    # via replay_live_state's pre_anchor_payloads. None when neither found
-    # one (rule 4: unknown means None, never a guess pulled from a stale
-    # decks/matches row elsewhere). deck_id is the same hash
-    # projector.matches.deck_identity would assign the identical maindeck,
-    # so a deck resolved this way lands on project()'s own deck_id.
+    # deck_maindeck is the latest SubmitDeckResp's maindeck of this match once
+    # the replay has seen one (the deck held for the game after a sideboarding
+    # break), else the newest connectResp.deckMessage — this window itself, or
+    # (when this window carried none) a small pre-anchor lookback
+    # table/live.py supplies via replay_live_state's pre_anchor_payloads. None
+    # when neither found one (rule 4: unknown means None, never a guess pulled
+    # from a stale decks/matches row elsewhere). deck_id hashes the connectResp
+    # list only, game 1's, never the boarded one: it is the same hash
+    # projector.matches.deck_identity assigns that list, so it lands on
+    # project()'s own deck_id, which is what the match's identity is keyed on.
     deck_maindeck: tuple[int, ...] | None = None
     deck_id: str | None = None
+    # True when deck_maindeck came from a SubmitDeckResp of this match: the
+    # live reads (library panel, keep guide) then count that list, not the
+    # decks row deck_id points at, which is game 1's.
+    deck_boarded: bool = False
     # The queue this match was played in, from the room-start event's
     # reservedPlayers[].eventId, read the way projector/matches.py reads it
     # for matches.event_id. None when the window carried no room-start event
@@ -255,11 +261,37 @@ def _deck_maindeck_from_message(message: dict[str, Any]) -> tuple[int, ...] | No
     return tuple(maindeck)
 
 
+def _submitted_deck_from_payload(payload: dict[str, Any]) -> tuple[int, ...] | None:
+    """The maindeck of a ``ClientMessageType_SubmitDeckResp`` — the deck held
+    for the game that follows a sideboarding break. Content-based, like
+    ``_is_our_decision``: the message sits at the payload's own top level
+    (``payload.submitDeckResp.deck``), never inside ``greToClientMessages[]``.
+    ``None`` for any other payload or an absent or empty ``deckCards``
+    (rule 4)."""
+    inner = payload.get("payload")
+    if not isinstance(inner, dict) or inner.get("type") != "ClientMessageType_SubmitDeckResp":
+        return None
+    resp = inner.get("submitDeckResp")
+    deck = resp.get("deck") if isinstance(resp, dict) else None
+    if not isinstance(deck, dict):
+        return None
+    cards = deck.get("deckCards")
+    if not isinstance(cards, list):
+        return None
+    try:
+        maindeck = tuple(int(g) for g in cards)
+    except (TypeError, ValueError):
+        return None
+    return maindeck or None
+
+
 def _deck_maindeck_from_payloads(payloads: Iterable[str]) -> tuple[int, ...] | None:
     """Scans a small, already-materialized payload list (``table/live.py``'s
     pre-anchor lookback window) for the newest ``connectResp.deckMessage`` —
     "last one found wins", the same rule the main replay loop below uses,
-    since a payload list is handed in rather than a single known message."""
+    since a payload list is handed in rather than a single known message.
+    A SubmitDeckResp is not read here: before the room-opening anchor it is
+    always an earlier match's."""
     found: tuple[int, ...] | None = None
     for payload_text in payloads:
         try:
@@ -325,8 +357,11 @@ def replay_live_state(
     (measured against a real database: the nearest connectResp to every
     room-opening row landed one row before or one row after it, never
     further — see ``table/live.py``'s ``_DECK_MESSAGE_LOOKBACK``). Only
-    consulted when ``payloads`` itself carried no connectResp — a mid-match
-    reconnect's own deck message, inside the main window, always wins.
+    consulted when ``payloads`` itself carried no connectResp; a connectResp
+    inside the main window wins over it. A SubmitDeckResp inside the main
+    window sets ``deck_maindeck`` (the latest one wins, and a later connectResp
+    does not take it back) but never ``deck_id``, which stays the connectResp
+    list's.
     """
     tracker = GameStateTracker(mana_source_grp_ids=mana_source_grp_ids)
     pending: dict[int, int] = {}
@@ -336,6 +371,8 @@ def replay_live_state(
     team_by_seat: dict[int, int] = {}
     intermission: Intermission | None = None
     deck_maindeck: tuple[int, ...] | None = None
+    connect_deck: tuple[int, ...] | None = None  # newest connectResp list
+    submitted_deck: tuple[int, ...] | None = None  # newest SubmitDeckResp list
     event_id: str | None = None
 
     for payload_text in payloads:
@@ -349,6 +386,11 @@ def replay_live_state(
         if event_id is None:
             event_id = _room_event_id(payload)
 
+        submitted = _submitted_deck_from_payload(payload)
+        if submitted is not None:
+            submitted_deck = submitted
+            continue
+
         if _is_our_decision(payload):
             if self_seat is not None:
                 pending.pop(self_seat, None)
@@ -358,10 +400,11 @@ def replay_live_state(
             # Checked on every message, not only ones with a gameStateMessage:
             # connectResp is a sibling message type in the same
             # greToClientMessages list, never nested inside one. "Last one
-            # found wins" (mid-match reconnect resending its own deck).
+            # found wins" (mid-match reconnect resending its own deck). Kept
+            # apart from submitted_deck: deck_id hashes this one only.
             maindeck = _deck_maindeck_from_message(message)
             if maindeck is not None:
-                deck_maindeck = maindeck
+                connect_deck = maindeck
 
             gsm = message.get("gameStateMessage")
             if not isinstance(gsm, dict):
@@ -429,11 +472,12 @@ def replay_live_state(
         else None
     )
 
-    if deck_maindeck is None:
-        deck_maindeck = _deck_maindeck_from_payloads(pre_anchor_payloads)
+    if connect_deck is None:
+        connect_deck = _deck_maindeck_from_payloads(pre_anchor_payloads)
+    deck_maindeck = submitted_deck if submitted_deck is not None else connect_deck
 
     deck_id: str | None = None
-    if deck_maindeck is not None:
+    if connect_deck is not None:
         # Local import: projector/matches.py imports this module's own
         # _game_result_entry at module level, so a module-level import back
         # here would be a true circular import — fails regardless of which
@@ -442,7 +486,7 @@ def replay_live_state(
         # import costs nothing worth avoiding.
         from sensei_top.projector.matches import deck_identity
 
-        deck_id, _ = deck_identity(list(deck_maindeck))
+        deck_id, _ = deck_identity(list(connect_deck))
 
     snapshot = tracker.snapshot_now()
     return LiveState(
@@ -461,5 +505,6 @@ def replay_live_state(
         intermission=intermission,
         deck_maindeck=deck_maindeck,
         deck_id=deck_id,
+        deck_boarded=submitted_deck is not None,
         event_id=event_id,
     )

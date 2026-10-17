@@ -10,40 +10,38 @@ The tracker is free and needs no account, now and later: your match
 history, your record in every matchup, the leak finder, the turn-by-turn
 replay, and written guides through a prompt you paste into any assistant
 or through a key of your own. Two paid things are planned, and neither
-takes any of that away. At release, the Microsoft Store build is the
-same app as the free download, sold for anyone who would rather support
-the project that way. Later, an [optional paid tier](#later) adds deeper
+takes any of that away. The Microsoft Store build is the same app as the
+free download, listed free at release and priced later, for anyone who
+would rather support the project that way. Later, an [optional paid tier](#later) adds deeper
 features and a monthly allowance of written reports, and it is the only
 thing that asks for an account. If the tracker earns a place in your
 routine, [donations](#donations) keep it maintained.
 
-## Now: before the first release
+## Now: before 1.0.0
 
-- **Windows and Linux installers.** A desktop window around the tracker,
-  a setup that finds Arena's log and asks where MTGO keeps its own, updates
-  that apply themselves. On Windows, a free installer and a paid
-  Microsoft Store build of the same app; the Store signs its build. The
-  direct download stays unsigned for now: the open-source signing
-  programme asks for more public use first, and the application goes in
-  again after the launch. On Linux, an AppImage, with steps in
-  `INSTALL.md` for Arch-based distributions, Ubuntu and SteamOS's
-  desktop mode, tried on a Steam Deck before the release. No Flatpak, AUR
-  or `.deb` package.
-- **The source goes public** under the AGPL-3.0, on GitHub, as a fresh
-  one-commit snapshot. The history before it was written against the
-  maintainer's own match data and is not published.
-- **Brazilian Portuguese**, alongside English: the first testers are
-  Brazilian, and the first community asked is LigaMagic's. Every text in
-  the app already has a key, so the next language is a catalogue, not a
-  rewrite. Card, deck and archetype names stay in English.
-- **A landing page**, one screen: what it shows, where to download it,
-  what never leaves your machine, what is not planned, where to donate.
-- **A version check**, once a day, against this project's releases on
-  GitHub. It sends nothing about your games, it is written in `INSTALL.md`
-  and on the first setup page, and a switch in Settings turns it off.
-- **A diagnostics bundle.** A file you make yourself when something breaks,
-  redacted before it is written, that you attach to a bug report by hand.
-  Nothing is ever sent on its own.
+The 0.7.x beta already ships the rest of what was planned for the first
+release: the Windows installer and the Linux AppImage (no Flatpak, AUR or
+`.deb` package), with updates that apply themselves; the source on GitHub
+under the AGPL-3.0, one fresh snapshot commit per release; Brazilian
+Portuguese beside English; the landing page at
+[senseitop.com](https://senseitop.com); a daily version check that a
+switch in Settings turns off; and a diagnostics bundle you make and attach
+by hand. What is left:
+
+- **The Microsoft Store build** of the same app, which the Store signs.
+  It is listed free at first and priced once Microsoft confirms an
+  individual developer may sell. The direct download stays unsigned for
+  now: the open-source signing programme asks for more public use first,
+  and the application goes in again after the launch.
+- **A lighter first run.** Fewer words in the welcome steps, a picture
+  guide to turning on Arena's Detailed Logs, a tour of the dashboard, and
+  where MTGO keeps your deck exports.
+- **Saving a pasted answer in the app.** Without a key, the answer you
+  get from your own assistant is pasted back into the dashboard, instead
+  of saved with a command the installed app doesn't put in reach.
+- **The deck guide and the RCQ guide as files**, in Markdown or PDF, to
+  read on your phone or print for the event.
+- **A round of fixes** from the backlog.
 
 ## Next: the first releases after launch
 
@@ -82,6 +80,9 @@ In this order, unless Discussions says otherwise.
   play. It is the only thing that asks for an account, made when you
   subscribe: a code sent to your email, or Google, Discord or X. The free
   tracker, the copy prompt and your own key stay as they are.
+- **Historic, Explorer and Timeless**, the Arena-only formats other than
+  Alchemy and Brawl, with the field data and format features the MTGO
+  formats have.
 
 ## Never
 
@@ -105,9 +106,8 @@ These are decisions, not gaps. Each one was considered and refused.
   makes on its own
   are reference downloads (card data, images, archetype definitions,
   tournament results) and the daily version check above.
-- **Arena-only formats** (Historic, Explorer, Timeless, Alchemy, Brawl).
-  Games in them still appear in your history, but no field data or
-  format-specific feature is built for them.
+- **Alchemy and Brawl.** Games in them still appear in your history, but
+  no field data or format-specific feature is built for them.
 
 ## How fixes ship
 

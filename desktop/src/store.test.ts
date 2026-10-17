@@ -44,6 +44,19 @@ describe('parsing shell.json', () => {
     expect(prefs).toEqual({ autostart: true });
   });
 
+  it('keeps plays, drops unknown entries with a warning, reads empty or missing as absent', () => {
+    expect(parseShellJson(JSON.stringify({ plays: ['mtgo'] }))).toEqual({ prefs: { plays: ['mtgo'] }, dropped: [] });
+    expect(parseShellJson(JSON.stringify({ plays: ['mtgo', 'arena'] })).prefs.plays).toEqual(['arena', 'mtgo']);
+    const junk = parseShellJson(JSON.stringify({ plays: ['arena', 'paper', 3] }));
+    expect(junk.prefs.plays).toEqual(['arena']);
+    expect(junk.dropped).toEqual(['plays']);
+    const allJunk = parseShellJson(JSON.stringify({ plays: 'arena' }));
+    expect(allJunk.prefs).toEqual({});
+    expect(allJunk.dropped).toEqual(['plays']);
+    expect(parseShellJson(JSON.stringify({ plays: [] }))).toEqual({ prefs: {}, dropped: [] });
+    expect(parseShellJson('{}').prefs.plays).toBeUndefined();
+  });
+
   it('keeps each of the three languages', () => {
     for (const language of ['system', 'en', 'pt-BR']) {
       const { prefs, dropped } = parseShellJson(JSON.stringify({ language }));
@@ -109,6 +122,11 @@ describe('the store on disk', () => {
   });
   afterEach(() => {
     fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('round-trips plays through the store', () => {
+    expect(ShellStore.load(dir).update({ plays: ['mtgo'] })).toBe(true);
+    expect(ShellStore.load(dir).get().plays).toEqual(['mtgo']);
   });
 
   it('starts empty when there is no file, and silently', () => {

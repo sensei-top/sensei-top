@@ -17,7 +17,8 @@ storage:
    With none configured, a human — or a Claude Code session on a
    subscription that is already paid for — writes the prose from the same
    prompt, and ``sensei-top guide --deck KEY --import FILE`` reads it back
-   through the exact same parser.
+   through the exact same parser, once ``answers.read_answer`` has checked
+   the header the copied prompt asks for and unwrapped the body.
 3. Either way the result lands the same two places: the deck-level half in
    ``deck_narrative``, and every matchup plan in ``matchup_brief``, so one
    write lights up both the Deck guide tab and the live matchup brief on the
@@ -52,6 +53,7 @@ from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from sensei_top.answers import answer_format, guide_for
 from sensei_top.guide.bundle import DeckGuide
 from sensei_top.guide.field import archetype_key_by_name, faced_archetypes
 from sensei_top.guide.list_diff import ListDiff
@@ -401,11 +403,25 @@ def _guide_narrative_from_tool_input(raw: dict, guide: DeckGuide) -> GuideNarrat
     )
 
 
-def _wrap_json_prompt(system_prompt: str, schema: dict, context: str) -> str:
-    """The framing-then-schema-then-evidence shape every JSON-schema-flavoured
-    ``full_prompt`` in this project uses. Shared with
-    ``brief/narrative.py`` — the same idiom, a different ``SYSTEM_PROMPT``
-    and tool schema."""
+def _wrap_json_prompt(
+    system_prompt: str, schema: dict, context: str, *,
+    answer_for: str | None = None, written_for: str | None = None,
+) -> str:
+    """The shape every JSON-schema-flavoured ``full_prompt`` in this project
+    uses. Shared with ``brief/narrative.py`` and ``guide/rcq.py`` — the same
+    idiom, a different ``SYSTEM_PROMPT`` and tool schema.
+
+    With ``answer_for`` (a copied prompt): framing, ``---``, evidence,
+    ``---``, then ``answers.answer_format``'s contract, last, where the
+    assistant reads it just before answering; ``written_for`` is the
+    staleness hash the answer copies back. Without it (the generate path,
+    whose structured-output request already fixes the shape): framing, the
+    schema, then the evidence, as before the contract."""
+    if answer_for is not None:
+        return (
+            f"{system_prompt}\n\n---\n\n{context}\n\n---\n\n"
+            f"{answer_format(answer_for, written_for, schema)}"
+        )
     return (
         f"{system_prompt}\n\n"
         f"Answer as a single JSON object matching this schema, and nothing else:\n"
@@ -428,14 +444,25 @@ def _parse_json_object(raw: str | dict) -> dict:
 
 
 @english()
-def full_prompt(guide: DeckGuide, *, conn) -> str | None:
+def full_prompt(guide: DeckGuide, *, conn, answer_contract: bool = True) -> str | None:
     """The complete text to hand an assistant: the framing, then the
-    evidence. ``None`` when there is nothing to write about, same as
-    ``build_guide_context``."""
+    evidence, then the answer contract (``answers.py``) naming this deck's
+    guide and the 75 it is written for. ``answer_contract=False`` is the
+    generate route's prompt, which leaves the contract out. ``None`` when
+    there is nothing to write about, same as ``build_guide_context``."""
     context = build_guide_context(guide, conn=conn)
     if context is None:
         return None
-    return _wrap_json_prompt(SYSTEM_PROMPT, _GUIDE_TOOL["input_schema"], context)
+    if not answer_contract:
+        return _wrap_json_prompt(SYSTEM_PROMPT, _GUIDE_TOOL["input_schema"], context)
+    # Imported here: brief/store.py imports this module.
+    from sensei_top.brief.store import list_hash
+
+    deck = guide.provenance.deck
+    return _wrap_json_prompt(
+        SYSTEM_PROMPT, _GUIDE_TOOL["input_schema"], context,
+        answer_for=guide_for(deck.key), written_for=list_hash(deck.current_cards),
+    )
 
 
 def guide_narrative_from_json(raw: str | dict, guide: DeckGuide) -> GuideNarrative:

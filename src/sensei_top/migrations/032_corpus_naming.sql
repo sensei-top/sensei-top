@@ -2,7 +2,7 @@
 -- opponent's deck: archetypes/corpus.py's naive-Bayes read over the
 -- metagame corpus's own classified decklists, combined with (never
 -- replacing) the rule engine's verdict in classify.py's classify_matches().
--- See that module's docstring and docs/architecture.md's "Naming the
+-- See that module's docstring and docs/opponent-deck.md's "Naming the
 -- opponent's deck" section for why a second source exists at all: the rule
 -- engine is silent on any archetype nobody has written a definition for yet
 -- (a brand-new set, until archetypes/source.py's downloaded corpus catches

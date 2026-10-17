@@ -29,6 +29,9 @@ export interface Bounds {
 export const LANGUAGE_CHOICES = ['system', 'en', 'pt-BR'] as const;
 export type LanguageChoice = (typeof LANGUAGE_CHOICES)[number];
 
+export const PLAY_CHOICES = ['arena', 'mtgo'] as const;
+export type Play = (typeof PLAY_CHOICES)[number];
+
 /** Every key the shell knows. All optional: absent means "not chosen yet". */
 export interface ShellPrefs {
   /** D5: the port asked for at every launch, re-picked only when taken. */
@@ -47,6 +50,8 @@ export interface ShellPrefs {
   onboarded?: boolean;
   /** D4 of plan 18: the language the shell and the page read in; absent means system. */
   language?: LanguageChoice;
+  /** Plan 23: which clients the user plays; absent means both. */
+  plays?: Play[];
 }
 
 /** What is on disk: the known keys plus whatever else was there. */
@@ -103,6 +108,13 @@ export function parseShellJson(text: string): { prefs: ShellJson; dropped: strin
   if ('language' in prefs && !(LANGUAGE_CHOICES as readonly unknown[]).includes(prefs.language)) {
     delete prefs.language;
     dropped.push('language');
+  }
+  if ('plays' in prefs) {
+    const list = Array.isArray(prefs.plays) ? (prefs.plays as unknown[]) : null;
+    const kept = list ? PLAY_CHOICES.filter((choice) => list.includes(choice)) : [];
+    if (!list || kept.length < new Set(list).size) dropped.push('plays');
+    if (kept.length > 0) prefs.plays = [...kept];
+    else delete prefs.plays;
   }
   return { prefs, dropped };
 }

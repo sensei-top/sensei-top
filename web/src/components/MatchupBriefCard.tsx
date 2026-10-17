@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import { useCurrentMatchBrief } from '../api'
+import { useCurrentMatchBrief, usePasteBrief } from '../api'
 import type { BoardCardOut, CurrentMatch, MatchupBriefOut, PlanProblemOut, PlayAroundOut } from '../api'
 import type { TFunction } from '../i18n'
 import { ageText, seenOpponentCards } from '../lib/brief'
+import { isPasted } from '../lib/written'
 import { CopyPromptCard } from './CopyPromptCard'
 import { Card, Chip, EmptyState, Loading, Prose, SectionLabel } from './ui'
 import { percent } from '../theme'
@@ -135,7 +136,11 @@ export function BriefProvenance({ brief }: { brief: MatchupBriefOut }) {
   const { t } = useTranslation()
   return (
     <div className="flex flex-wrap items-center gap-3 border-t border-edge pt-2 text-caption text-muted">
-      <span>{t('matchups.briefCard.writtenBy', { model: brief.model })}</span>
+      <span>
+        {isPasted(brief.model)
+          ? t('matchups.briefCard.pasted')
+          : t('matchups.briefCard.writtenBy', { model: brief.model })}
+      </span>
       <span>{ageText(brief.generated_at, t)}</span>
       {brief.source === 'guide' && <span>{t('matchups.briefCard.fromGuideRun')}</span>}
     </div>
@@ -190,6 +195,7 @@ export function MatchupBriefCard({ match }: { match: CurrentMatch }) {
   const { t } = useTranslation()
   const title = t('matchups.brief.title')
   const brief = useCurrentMatchBrief()
+  const paste = usePasteBrief()
 
   if (brief.isPending) return <Loading />
   if (brief.error) return null // fail-soft: OpponentRead and the keep guide still stand below
@@ -245,6 +251,12 @@ export function MatchupBriefCard({ match }: { match: CurrentMatch }) {
         data.deck_key && data.archetype_key
           ? `sensei-top brief --deck "${data.deck_key}" ` +
             `--archetype "${data.archetype_key}" --import brief.json`
+          : undefined
+      }
+      save={
+        data.deck_key && data.archetype_key
+          ? (answer) =>
+              paste.mutateAsync({ key: data.deck_key!, archetypeKey: data.archetype_key!, answer })
           : undefined
       }
     />

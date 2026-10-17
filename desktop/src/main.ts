@@ -541,9 +541,18 @@ function run(): void {
     // The first page load reads the settings synchronously, so they come first.
     const settingsLoaded = settings.refresh();
     let previous: ServerState['kind'] = server.state.kind;
+    let firstDataChecked = false;
     server.on('state', (state: ServerState) => {
       tray?.setServer(state);
-      if (state.kind === 'ready') void settingsLoaded.then(() => window?.serverReady(state.port));
+      if (state.kind === 'ready') {
+        void settingsLoaded.then(() => {
+          window?.serverReady(state.port);
+          if (!firstDataChecked) {
+            firstDataChecked = true;
+            void settings.startFirstDataIfMissing();
+          }
+        });
+      }
       // The reason is already in the log (`server.ts`); the page names the file.
       else if (state.kind === 'failed') window?.showError(shellLog.scrub(logPath(dataDir)));
       else if (state.kind === 'starting' && previous === 'failed') window?.showLoading();

@@ -9,10 +9,11 @@ Like every other Claude-facing module in this project, this one **never
 makes the call itself** — only ``sensei_top.llm.client`` imports
 ``anthropic`` (AGENTS.md non-negotiable #5). ``build_leaks_context``
 assembles the evidence and ``full_prompt`` wraps it with the framing;
-``GET /api/review/leaks/narrative`` serves that text, ``POST`` on the same
-path sends it through ``llm.write_prose`` and stores the answer
+``GET /api/review/leaks/narrative`` serves ``copied_prompt`` (that text plus
+the answer contract), ``POST`` on the same path sends ``full_prompt``, with
+no contract, through ``llm.write_prose`` and stores the answer
 (``review/leaks_store.py``) when a credential is configured, and with none
-configured the dashboard offers the same text as something to copy into an
+configured the dashboard offers the copyable prompt to paste into an
 assistant the user already pays for — see ``docs/llm.md``.
 
 What it describes is aggregate: pattern codes, sample sizes, win rates and
@@ -24,6 +25,7 @@ every leak is about this player's own patterns across their own matches.
 
 from __future__ import annotations
 
+from sensei_top.answers import answer_format, prose_schema
 from sensei_top.i18n import english
 from sensei_top.review.leaks import Leak
 from sensei_top.review.narrative import NarrativeError, _wrap_prompt
@@ -31,6 +33,7 @@ from sensei_top.review.narrative import NarrativeError, _wrap_prompt
 __all__ = [
     "NarrativeError",
     "build_leaks_context",
+    "copied_prompt",
     "full_prompt",
 ]
 
@@ -74,3 +77,13 @@ def full_prompt(context: str) -> str:
     """The complete text to hand an assistant: this module's framing, then
     the evidence. The replacement for the call this module used to make."""
     return _wrap_prompt(SYSTEM_PROMPT, context)
+
+
+@english()
+def copied_prompt(context: str, *, answer_for: str, context_hash: str) -> str:
+    """``full_prompt`` plus the answer contract, for the prompt the card
+    offers to copy; the generate path keeps ``full_prompt``."""
+    return (
+        f"{full_prompt(context)}\n\n---\n\n"
+        f"{answer_format(answer_for, context_hash, prose_schema('plain prose'))}"
+    )

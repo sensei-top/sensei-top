@@ -11,13 +11,12 @@ mechanism:
    ``finally`` cannot: uvicorn 0.52's ``capture_signals`` re-raises SIGTERM
    once its shutdown is done, and the default action ends the process before
    anything after ``server.run`` runs. That orphaned the watcher on every
-   ``kill``. A SIGTERM to the whole process group (``kill -TERM -- -<pgid>``,
-   what the overnight driver sends) ends the child too, at the same moment,
-   so the lifespan's stop finds it already dead, as it does a child that
-   died alone. That stop used to hang ``serve`` forever: the stop signal was
-   a ``multiprocessing.Event``, whose ``set()`` waits for a sleeper the dead
-   child can no longer wake. It is a pipe now, which a dead reader cannot
-   block (``live._run_watcher``).
+   ``kill``. A SIGTERM to the whole process group (``kill -TERM -- -<pgid>``)
+   ends the child too, at the same moment, so the lifespan's stop finds it
+   already dead, as it does a child that died alone. That stop used to hang
+   ``serve`` forever: the stop signal was a ``multiprocessing.Event``, whose
+   ``set()`` waits for a sleeper the dead child can no longer wake. It is a
+   pipe now, which a dead reader cannot block (``live._run_watcher``).
 2. **Killed outright on Linux**: SIGKILL, the OOM killer, a crash. Nothing in
    ``serve`` runs, so the child asks the kernel itself: ``die_with_parent``
    sets ``PR_SET_PDEATHSIG``.

@@ -1,5 +1,6 @@
 """The RCQ guide: preview (read-only), generate (the opt-in Claude call),
-the latest stored guide and its Markdown export — ``/api/guide/{key}/rcq*``
+paste (``PUT``, stores a pasted answer, no call), the latest stored guide and
+its Markdown export — ``/api/guide/{key}/rcq*``
 (``docs/guide.md``).
 """
 
@@ -10,6 +11,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from sensei_top.answers import PASTED_AUTHOR, rcq_for
 from sensei_top.api.convert import _list_diff_out
 from sensei_top.api.deps import Conn, WritableConn
 from sensei_top.api.models.common import BoardCardOut, PlanProblemOut
@@ -22,11 +24,18 @@ from sensei_top.api.models.rcq import (
     RcqMarkdownOut,
     RcqMatchupOut,
     RcqNarrativeOut,
+    RcqPasteIn,
     RcqPreviewOut,
     RcqRecentEventOut,
     RcqRecentShareOut,
 )
-from sensei_top.api.routes.narrative import require_credential, run_authored_write
+from sensei_top.api.routes.narrative import (
+    check_pasted_length,
+    read_pasted,
+    require_credential,
+    run_authored_write,
+    unreadable_answer,
+)
 from sensei_top.api.sql import _shared_report_cache
 from sensei_top.guide.decklist import parse_decklist
 from sensei_top.guide.rcq import (
@@ -90,6 +99,25 @@ def _no_deck(key: str) -> HTTPException:
     return HTTPException(
         status_code=404, detail=_("No deck for key {key}.").format(key=repr(key)),
     )
+
+
+@english()
+def _evidence_and_prompt(
+    request: Request, conn: sqlite3.Connection, key: str, body: RcqGenerateIn,
+    *, answer_contract: bool,
+) -> tuple[RcqEvidence | None, str | None]:
+    """The RCQ evidence for a pasted 75 and the prompt built from it, in
+    English throughout, not just the prompt: the evidence is built here,
+    before ``rcq_prompt`` runs, and its text is what the prompt quotes.
+    ``answer_contract`` is the copied prompt's ending; the generate route
+    passes ``False``. Shared by the generate and paste routes."""
+    evidence = build_rcq(
+        conn, key, body.decklist, body.expected, body.own,
+        report_cache=_shared_report_cache(request, conn),
+    )
+    if evidence is None:
+        return None, None
+    return evidence, rcq_prompt(evidence, conn=conn, answer_contract=answer_contract)
 
 
 def _preview(evidence: RcqEvidence, conn: sqlite3.Connection, prompt: str) -> RcqPreviewOut:
@@ -180,14 +208,10 @@ def generate_rcq(
     """Write the RCQ guide with Claude, and store it (every generation keeps
     its own row). Same posture as the deck guide's route: 503 with no
     credential, 502 when the call or its answer fails."""
-    # English throughout, not just the prompt: the evidence is built here,
-    # before rcq_prompt runs, and its text is what the prompt quotes.
-    with english():
-        evidence = build_rcq(
-            conn, key, body.decklist, body.expected, body.own,
-            report_cache=_shared_report_cache(request, conn),
-        )
-        prompt = rcq_prompt(evidence, conn=conn) if evidence is not None else None
+    # Structured outputs carry the schema, so no copied-prompt contract.
+    evidence, prompt = _evidence_and_prompt(
+        request, conn, key, body, answer_contract=False,
+    )
     if evidence is None or prompt is None:
         raise _no_deck(key)
 
@@ -217,6 +241,52 @@ def generate_rcq(
             prompt=prompt, corpus_latest_event=_newest_event(evidence),
             input_tokens=completion.input_tokens, output_tokens=completion.output_tokens,
             cost_usd=completion.cost_usd, effort=cfg.effort,
+        ),
+    )
+    stored = latest_rcq(conn, key)
+    assert stored is not None
+    return _guide_out(stored)
+
+
+@router.put("/api/guide/{key}/rcq/narrative", response_model=RcqGuideOut, tags=["guide"])
+def paste_rcq(
+    key: str, body: RcqPasteIn, request: Request, conn: WritableConn
+) -> RcqGuideOut:
+    """Store an answer pasted into the RCQ guide's card — what ``sensei-top
+    rcq --deck KEY --import FILE`` stores. Makes no model call. The body
+    carries the same list fields the preview and generate routes take, since
+    the guide is checked against that 75 and stored beside it.
+
+    422 for another card's or an unreadable answer, nothing stored (a flex
+    note role other than core, flex or risk is refused as on the CLI); 413
+    over 256 KB; 404 an unknown deck. The RCQ prompt carries no context
+    hash, so the header is ``for`` alone. Stored with the sentinel model
+    ``pasted``, no tokens, no cost. Every paste keeps its own row, like a
+    generation.
+    """
+    check_pasted_length(body.answer)
+    evidence, prompt = _evidence_and_prompt(request, conn, key, body, answer_contract=True)
+    if evidence is None or prompt is None:
+        raise _no_deck(key)
+    answer = read_pasted(body.answer, rcq_for(evidence.guide.provenance.deck.key))
+    try:
+        with english():
+            narrative = rcq_from_json(answer.body, evidence)
+    except NarrativeError as exc:
+        raise unreadable_answer(exc) from exc
+    for note in narrative.flex_notes:
+        if note.role not in ("core", "flex", "risk"):
+            raise unreadable_answer(ValueError(
+                f"flex note role {note.role!r} is not core, flex or risk"
+            ))
+
+    run_authored_write(
+        conn,
+        lambda: write_rcq(
+            conn, key, narrative,
+            model=PASTED_AUTHOR, decklist_text=body.decklist,
+            expected=list(evidence.expected_keys), own_archetype_key=body.own,
+            prompt=prompt, corpus_latest_event=_newest_event(evidence),
         ),
     )
     stored = latest_rcq(conn, key)

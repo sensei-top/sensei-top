@@ -887,6 +887,20 @@ def test_config_is_re_resolved_every_check(tmp_path, monkeypatch):
     scheduler = BackupScheduler(
         db_path=db_path, dir_override=str(first_dir), startup_delay=0.0, check_interval=0.02
     )
+    # A check reads dir_override when it resolves the config and the
+    # freshness gate a moment later. The test's two edits below must land
+    # between whole checks: one landing in that gap backs up into the first
+    # directory with the backdated gate, and every later check reads fresh.
+    # The lock also holds the edits until the first check has recorded its
+    # run, which happens after the file is published.
+    between_checks = threading.Lock()
+    check_once = scheduler._check_once
+
+    def whole_check() -> None:
+        with between_checks:
+            check_once()
+
+    scheduler._check_once = whole_check
     scheduler.start()
     first_backup = first_dir / f"{db_path.name}.backup"
     deadline = time.monotonic() + 5
@@ -897,11 +911,14 @@ def test_config_is_re_resolved_every_check(tmp_path, monkeypatch):
     # Force a second run despite the freshness gate: rewrite backup_state's
     # last_backup_at to look like yesterday, then repoint the scheduler's
     # own directory the way editing config.toml would.
-    yesterday = (datetime.now(UTC) - timedelta(hours=25)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    conn2 = db.connect(db_path)
-    conn2.execute("UPDATE backup_state SET last_backup_at = ? WHERE id = 1", (yesterday,))
-    conn2.close()
-    scheduler.dir_override = str(second_dir)
+    with between_checks:
+        conn = db.connect(db_path)
+        state = backup_run.read_state(conn)
+        assert state is not None and state["last_backup_at"] is not None, "run never recorded"
+        yesterday = (datetime.now(UTC) - timedelta(hours=25)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        conn.execute("UPDATE backup_state SET last_backup_at = ? WHERE id = 1", (yesterday,))
+        conn.close()
+        scheduler.dir_override = str(second_dir)
 
     second_backup = second_dir / f"{db_path.name}.backup"
     deadline = time.monotonic() + 5

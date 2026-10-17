@@ -4,12 +4,19 @@ The deck guide, matchup briefs, match reports, the leak finder, the RCQ
 guide and the Coach each come with a prompt. Two ways to turn it into
 prose, both yours:
 
-- **Copy the prompt** into an assistant you already use, and import the
-  answer. The dashboard's card copies the prompt and shows the command
-  that reads the answer back, such as `guide --deck KEY --import FILE`;
-  `guide` and `brief` also print the prompt with `--prompt`.
+- **Copy the prompt** into an assistant you already use, then paste its
+  whole answer into the box under the prompt and press **Save the
+  answer**. The answer starts with a `for` line naming the card it was
+  written for, so an answer pasted into the wrong card is refused, with a
+  sentence saying where it belongs, and nothing is stored; if the line is
+  missing, copy that card's prompt again. A pasted answer shows as
+  "Pasted in." and costs nothing. Running from source, the guide and
+  brief cards also show the command that saves an answer from a file,
+  such as `guide --deck KEY --import FILE`; `guide` and `brief` print the
+  prompt with `--prompt`.
 - **Set your own Anthropic API key** and press the dashboard's generate
-  button instead:
+  button instead. A matchup brief has no button of its own: generating
+  its deck's guide writes the deck's briefs too.
 
       sensei-top config --set-key -
 

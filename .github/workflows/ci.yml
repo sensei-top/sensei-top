@@ -1,9 +1,14 @@
 name: CI
 
-# Pull requests only, plus by hand: the repo is private and minutes are
-# metered (docs/testing.md, "CI").
+# Two repositories hold this file. The private one runs pull requests and
+# hand runs only, because its minutes are metered. The public one,
+# sensei-top/sensei-top, also runs every push to develop and main, where
+# minutes are unmetered; each job's `if:` keeps push jobs off the private one
+# (docs/testing.md, "CI").
 on:
   pull_request:
+    branches: [develop, main]
+  push:
     branches: [develop, main]
   workflow_dispatch:
 
@@ -16,6 +21,7 @@ env:
 
 jobs:
   linux:
+    if: github.event_name != 'push' || github.repository == 'sensei-top/sensei-top'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -51,6 +57,7 @@ jobs:
       - run: git diff --exit-code
 
   windows:
+    if: github.event_name != 'push' || github.repository == 'sensei-top/sensei-top'
     runs-on: windows-latest
     timeout-minutes: 30
     steps:

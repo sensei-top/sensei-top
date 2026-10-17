@@ -7,6 +7,7 @@
  */
 import type { MetaSourceHold } from '../api'
 import type { TFunction } from '../i18n'
+import { parseTimestamp } from './time'
 
 /** The fetchers that keep a hold: `mtgo` and `topdeck`. */
 export type HoldSource = 'mtgo' | 'topdeck'
@@ -20,7 +21,7 @@ const pad = (n: number): string => String(n).padStart(2, '0')
 const dateOf = (t: Date): string => `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`
 
 /** A stored UTC stamp as the time it names. */
-const parse = (stamp: string): Date => new Date(stamp)
+const parse = (stamp: string): Date => new Date(parseTimestamp(stamp) ?? Number.NaN)
 
 /** A time as `HH:MM UTC`, rounded up to the minute, with its date in front
  *  when that date differs from the current UTC date. */

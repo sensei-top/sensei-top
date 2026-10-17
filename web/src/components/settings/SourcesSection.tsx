@@ -1,8 +1,10 @@
-import type { DateOrder, DeepPartial, Saved, ShellSettings } from '../../bridge'
+import type { AppSettings, DateOrder, DeepPartial, Saved, ShellSettings } from '../../bridge'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from '../../i18n'
 import { failureOf, settle, useRestart, useTextSave } from '../../lib/settings'
+import { formatCount } from '../../lib/time'
+import { CardDataProgress } from '../onboarding/CardDataProgress'
 import { Card, Field } from '../ui'
 import { FolderField, PressButton, RestartNote, SaveButton, SavingSelect } from './SaveButton'
 
@@ -13,8 +15,9 @@ const MAGIC_ONLINE = 'Magic Online'
 type Sources = ShellSettings['sources']
 type SaveSources = (change: DeepPartial<Sources>) => Promise<Saved>
 
-/** What the app reads: the two games' logs, in a card each, then the
- *  folder where the matches are kept. Only a shell knows any of it, so with
+/** What the app reads: the two games' logs, in a card each, then the card
+ *  data (drawn only when the shell passes its app part), then the folder
+ *  where the matches are kept. Only a shell knows any of it, so with
  *  no shell the page does not draw this section at all. With a shell and no
  *  `save`, every value is text and nothing can be changed. */
 export function SourcesSection({
@@ -22,16 +25,20 @@ export function SourcesSection({
   save,
   pickFolder,
   showDataFolder,
+  app,
 }: {
   sources: Sources
   save?: SaveSources
   pickFolder?: () => Promise<string | null>
   showDataFolder?: () => Promise<Saved>
+  /** The shell's app state; with none, the Card data card is not drawn. */
+  app?: Pick<AppSettings, 'rulesText' | 'firstData'> & { startFirstData(): Promise<Saved> }
 }) {
   return (
     <div className="max-w-3xl space-y-6">
       <ArenaCard sources={sources} save={save} />
       <MagicOnlineCard sources={sources} save={save} pickFolder={pickFolder} />
+      {app && <CardDataCard app={app} />}
       <DataFolderCard dataDir={sources.dataDir} showDataFolder={showDataFolder} />
     </div>
   )
@@ -121,7 +128,7 @@ function MagicOnlineCard({
   const { t } = useTranslation()
   const { restart, watch } = useRestart()
   const text = useTextSave(
-    { mtgoHandle: sources.mtgoHandle, mtgoDir: sources.mtgoDir },
+    { mtgoHandle: sources.mtgoHandle, mtgoDir: sources.mtgoDir, mtgoDeckDir: sources.mtgoDeckDir },
     save && ((change) => watch(save(change))),
   )
   return (
@@ -146,8 +153,62 @@ function MagicOnlineCard({
           }
           error={text.errorOf('mtgoDir')}
         />
+        <FolderField
+          label={t('settings.sources.decksFolder')}
+          value={save ? text.typed.mtgoDeckDir : (sources.mtgoDeckDir ?? '')}
+          onChange={save && ((value) => text.type('mtgoDeckDir', value))}
+          onPick={pickFolder}
+          hint={
+            sources.mtgoDeckDir === null
+              ? t('settings.sources.decksFolderNone')
+              : t('settings.sources.decksFolderSet')
+          }
+          error={text.errorOf('mtgoDeckDir')}
+        />
         {save && <SaveButton dirty={text.dirty} onSave={text.submit} />}
         <RestartNote show={restart} />
+      </div>
+    </Card>
+  )
+}
+
+/** What card data the app holds: the count, a button that starts the
+ *  download, and the download's own states once it has started. */
+function CardDataCard({ app }: { app: NonNullable<Parameters<typeof SourcesSection>[0]['app']> }) {
+  const { t } = useTranslation()
+  const [failure, setFailure] = useState<string | null>(null)
+  const { rulesText: count, firstData: state } = app
+  const start = async (): Promise<boolean> => {
+    setFailure(null)
+    const sentence = failureOf(await settle(app.startFirstData(), t), t)
+    setFailure(sentence)
+    return sentence === null
+  }
+  // Only a refusal, which comes back while the state is idle or done, stays.
+  if (state.state === 'running' && failure !== null) setFailure(null)
+  const idle = state.state === 'idle'
+  const line =
+    count === null
+      ? t('settings.sources.cardData.unknown')
+      : count > 0
+        ? t('settings.sources.cardData.count', { n: formatCount(count) })
+        : t('settings.sources.cardData.none')
+  const button = idle || state.state === 'done'
+  return (
+    <Card title={t('settings.sources.cardData.title')}>
+      <div className="space-y-3">
+        {idle && <p className="text-body text-ink2">{line}</p>}
+        <CardDataProgress state={state} count={count} retry={app.startFirstData} />
+        {button && (
+          <PressButton
+            variant={count || !idle ? 'quiet' : 'primary'}
+            label={count || !idle ? t('settings.sources.cardData.downloadAgain') : t('settings.sources.cardData.download')}
+            workingLabel={t('common.cardData.starting')}
+            doneLabel={null}
+            onPress={start}
+          />
+        )}
+        {button && failure && <p className="break-words text-caption text-loss">{failure}</p>}
       </div>
     </Card>
   )

@@ -1,26 +1,26 @@
 import { describe, expect, it } from 'vitest'
 import { translator } from '../i18n'
-import { writtenLine, writtenNote } from './written'
+import { isPasted, writtenLine, writtenNote } from './written'
 
 const t = translator('en')
 
-// Midday in UTC, a bare timestamp as the API sends it: the morning of the
+// Midday in UTC, as the API sends it: the morning of the
 // same day in New York.
 const now = Date.parse('2026-09-29T12:00:00Z')
 
 describe('writtenLine', () => {
   it('names the author and the day', () => {
-    expect(writtenLine('claude-opus-5', '2026-09-18T12:00:00', now, t)).toBe('Written by claude-opus-5 on Sep 18.')
+    expect(writtenLine('claude-opus-5', '2026-09-18T12:00:00Z', now, t)).toBe('Written by claude-opus-5 on Sep 18.')
   })
 
   it('adds the year to a day of another year', () => {
-    expect(writtenLine('claude-opus-5', '2025-09-18T12:00:00', now, t)).toBe(
+    expect(writtenLine('claude-opus-5', '2025-09-18T12:00:00Z', now, t)).toBe(
       'Written by claude-opus-5 on Sep 18, 2025.',
     )
   })
 
   it('reads the day alone with no author', () => {
-    expect(writtenLine(null, '2026-09-18T12:00:00', now, t)).toBe('Written on Sep 18.')
+    expect(writtenLine(null, '2026-09-18T12:00:00Z', now, t)).toBe('Written on Sep 18.')
   })
 
   it('reads the author alone with no day', () => {
@@ -35,6 +35,36 @@ describe('writtenLine', () => {
     expect(writtenLine(null, null, now, t)).toBeNull()
     expect(writtenLine(undefined, 'not a day', now, t)).toBeNull()
   })
+
+  it('reads a pasted answer as pasted in on its day, never the stored word', () => {
+    expect(writtenLine('pasted', '2026-09-18T12:00:00Z', now, t)).toBe('Pasted in on Sep 18.')
+    expect(writtenLine('pasted', '2025-09-18T12:00:00Z', now, t)).toBe('Pasted in on Sep 18, 2025.')
+  })
+
+  it('reads a pasted answer with no day, or one that cannot be read, as pasted in', () => {
+    expect(writtenLine('pasted', null, now, t)).toBe('Pasted in.')
+    expect(writtenLine('pasted', 'not a day', now, t)).toBe('Pasted in.')
+  })
+
+  it('reads a pasted answer in Portuguese', () => {
+    const pt = translator('pt-BR')
+    expect(writtenLine('pasted', null, now, pt)).toBe('Colado.')
+    expect(writtenLine('pasted', '2026-09-18T12:00:00Z', now, pt)).toMatch(/^Colado em .+\.$/)
+  })
+
+  it('shows an author that only contains the word as stored', () => {
+    expect(writtenLine('hand-written', null, now, t)).toBe('Written by hand-written.')
+    expect(writtenLine('Pasted', null, now, t)).toBe('Written by Pasted.')
+  })
+})
+
+describe('isPasted', () => {
+  it('is true for the sentinel alone', () => {
+    expect(isPasted('pasted')).toBe(true)
+    expect(isPasted('claude-opus-5')).toBe(false)
+    expect(isPasted(null)).toBe(false)
+    expect(isPasted(undefined)).toBe(false)
+  })
 })
 
 describe('writtenNote', () => {
@@ -42,7 +72,7 @@ describe('writtenNote', () => {
     expect(
       writtenNote({
         author: 'claude-opus-5',
-        authoredAt: '2026-09-18T12:00:00',
+        authoredAt: '2026-09-18T12:00:00Z',
         costUsd: 0.539,
         stale: true,
         staleNote: 'The list has changed since.',
@@ -55,7 +85,7 @@ describe('writtenNote', () => {
     expect(
       writtenNote({
         author: 'claude-opus-5',
-        authoredAt: '2025-09-18T12:00:00',
+        authoredAt: '2025-09-18T12:00:00Z',
         costUsd: null,
         stale: true,
         staleNote: undefined,
@@ -74,7 +104,7 @@ describe('writtenNote', () => {
     expect(
       writtenNote({
         author: null,
-        authoredAt: '2026-09-18T12:00:00',
+        authoredAt: '2026-09-18T12:00:00Z',
         costUsd: null,
         stale: false,
         staleNote: undefined,
@@ -84,7 +114,7 @@ describe('writtenNote', () => {
     expect(
       writtenNote({
         author: null,
-        authoredAt: '2026-09-18T12:00:00',
+        authoredAt: '2026-09-18T12:00:00Z',
         costUsd: undefined,
         stale: false,
         staleNote: undefined,
@@ -110,6 +140,19 @@ describe('writtenNote', () => {
     expect(
       writtenNote({ author: null, authoredAt: null, costUsd: 0.004, stale: false, staleNote: undefined, now }, t),
     ).toBe('It cost $0.004.')
+  })
+
+  it('joins a pasted answer\'s line with the stale sentence and no cost', () => {
+    expect(
+      writtenNote({
+        author: 'pasted',
+        authoredAt: '2026-09-18T12:00:00Z',
+        costUsd: null,
+        stale: true,
+        staleNote: undefined,
+        now,
+      }, t),
+    ).toBe('Pasted in on Sep 18. The evidence has changed since.')
   })
 
   it('is null when there is nothing to say', () => {

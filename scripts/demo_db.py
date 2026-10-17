@@ -6,7 +6,7 @@ rewritten, for the screenshots the site and the README show.
 
 Every screenshot in ``site/img/`` and ``docs/images/`` comes from a database
 this script wrote, and nothing captured from the real database goes into a
-tracked file (``docs/frontend.md``, "The demo database").
+tracked file (``docs/frontend-site.md``, "The demo database").
 
 **The copy.** ``--to`` must not exist, must not be ``--from``, must not sit
 under the repository's ``data/``, and must be gitignored if it is inside the

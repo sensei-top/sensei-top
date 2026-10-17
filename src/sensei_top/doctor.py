@@ -17,7 +17,7 @@ is safe beside a running ``serve``:
   answer is ``unknown`` for any log that carries neither line.
 
 The keys of the dict ``report()`` returns are a contract: the desktop shell
-reads ``doctor --json`` (``docs/architecture.md``, "Support commands").
+reads ``doctor --json`` (``docs/desktop.md``, "Support commands").
 ``mtgo.discovered`` is the folder ``mtgo/discover.py`` finds (Windows only,
 ``None`` elsewhere): a suggestion for onboarding, never a configured value.
 """

@@ -1,63 +1,87 @@
 import { describe, expect, it } from 'vitest'
-import { translator } from '../i18n'
-import { WELCOME_STEPS, agePhrase, neighbour, stepHref, stepNumber, stepOf, withStop } from './welcome'
+import { WELCOME_STEPS, neighbour, stepHref, stepNumber, stepOf, stepsFor, withStop } from './welcome'
 
 describe('stepOf', () => {
   it('reads each step the address can name', () => {
-    expect(stepOf('language')).toBe('language')
-    expect(stepOf('welcome')).toBe('welcome')
+    expect(stepOf('start')).toBe('start')
+    expect(stepOf('plays')).toBe('plays')
     expect(stepOf('arena')).toBe('arena')
-    expect(stepOf('cards')).toBe('cards')
     expect(stepOf('mtgo')).toBe('mtgo')
     expect(stepOf('done')).toBe('done')
   })
 
-  it('shows step 1 for a missing or unknown value', () => {
-    expect(stepOf(null)).toBe('language')
-    expect(stepOf('')).toBe('language')
-    expect(stepOf('Arena')).toBe('language')
-    expect(stepOf('7')).toBe('language')
+  it('shows Start for a missing or unknown value', () => {
+    expect(stepOf(null)).toBe('start')
+    expect(stepOf('')).toBe('start')
+    expect(stepOf('Arena')).toBe('start')
+    expect(stepOf('7')).toBe('start')
+  })
+
+  it('shows Start for an address the old steps used', () => {
+    expect(stepOf('cards')).toBe('start')
+    expect(stepOf('language')).toBe('start')
+    expect(stepOf('welcome')).toBe('start')
+  })
+})
+
+describe('stepsFor', () => {
+  it('shows only Arena\'s setup to an Arena player', () => {
+    expect(stepsFor(['arena'])).toEqual(['start', 'plays', 'arena', 'done'])
+  })
+
+  it('shows only Magic Online\'s setup to a Magic Online player', () => {
+    expect(stepsFor(['mtgo'])).toEqual(['start', 'plays', 'mtgo', 'done'])
+  })
+
+  it('shows both to a player of both, in the same order whatever the stored order', () => {
+    expect(stepsFor(['arena', 'mtgo'])).toEqual(['start', 'plays', 'arena', 'mtgo', 'done'])
+    expect(stepsFor(['mtgo', 'arena'])).toEqual(['start', 'plays', 'arena', 'mtgo', 'done'])
+  })
+
+  it('reads no choice as both', () => {
+    expect(stepsFor(undefined)).toEqual([...WELCOME_STEPS])
+    expect(stepsFor([])).toEqual([...WELCOME_STEPS])
+  })
+
+  it('keeps the step on show in its place when the choice leaves it out', () => {
+    expect(stepsFor(['arena'], 'mtgo')).toEqual(['start', 'plays', 'arena', 'mtgo', 'done'])
+    expect(stepsFor(['mtgo'], 'arena')).toEqual(['start', 'plays', 'arena', 'mtgo', 'done'])
+    expect(stepsFor(['arena'], 'done')).toEqual(['start', 'plays', 'arena', 'done'])
   })
 })
 
 describe('the run of steps', () => {
-  it('numbers them from 1 and links each by its address', () => {
-    expect(WELCOME_STEPS).toHaveLength(6)
-    expect(WELCOME_STEPS[0]).toBe('language')
-    expect(stepNumber('language')).toBe(1)
-    expect(stepNumber('welcome')).toBe(2)
-    expect(stepNumber('done')).toBe(6)
-    expect(stepHref('cards')).toBe('/welcome?step=cards')
+  it('numbers only the steps shown, from 1', () => {
+    const arena = stepsFor(['arena'])
+    expect(stepNumber('start', arena)).toBe(1)
+    expect(stepNumber('arena', arena)).toBe(3)
+    expect(stepNumber('done', arena)).toBe(4)
+    const mtgo = stepsFor(['mtgo'])
+    expect(stepNumber('mtgo', mtgo)).toBe(3)
+    expect(stepNumber('done', mtgo)).toBe(4)
+    const both = stepsFor(undefined)
+    expect(stepNumber('mtgo', both)).toBe(4)
+    expect(stepNumber('done', both)).toBe(5)
+  })
+
+  it('goes from the choice to the first setup chosen, and on to Ready', () => {
+    expect(neighbour('plays', 1, stepsFor(['mtgo']))).toBe('mtgo')
+    expect(neighbour('mtgo', -1, stepsFor(['mtgo']))).toBe('plays')
+    expect(neighbour('arena', 1, stepsFor(['arena']))).toBe('done')
+    expect(neighbour('done', -1, stepsFor(['arena']))).toBe('arena')
+    expect(neighbour('arena', 1, stepsFor(['arena', 'mtgo']))).toBe('mtgo')
+    expect(neighbour('done', -1, stepsFor(['arena', 'mtgo']))).toBe('mtgo')
   })
 
   it('has no step before the first or after the last', () => {
-    expect(neighbour('language', -1)).toBeNull()
-    expect(neighbour('language', 1)).toBe('welcome')
-    expect(neighbour('welcome', -1)).toBe('language')
-    expect(neighbour('done', 1)).toBeNull()
-    expect(neighbour('arena', -1)).toBe('welcome')
-    expect(neighbour('arena', 1)).toBe('cards')
-  })
-})
-
-describe('agePhrase', () => {
-  const t = translator('en')
-
-  it('says less than an hour under an hour', () => {
-    expect(agePhrase(0, t)).toBe('less than an hour')
-    expect(agePhrase(0.9, t)).toBe('less than an hour')
+    const steps = stepsFor(undefined)
+    expect(neighbour('start', -1, steps)).toBeNull()
+    expect(neighbour('start', 1, steps)).toBe('plays')
+    expect(neighbour('done', 1, steps)).toBeNull()
   })
 
-  it('counts hours under 48, one hour in the singular', () => {
-    expect(agePhrase(1, t)).toBe('1 hour')
-    expect(agePhrase(1.9, t)).toBe('1 hour')
-    expect(agePhrase(5, t)).toBe('5 hours')
-    expect(agePhrase(47.9, t)).toBe('47 hours')
-  })
-
-  it('counts days from 48 hours', () => {
-    expect(agePhrase(48, t)).toBe('2 days')
-    expect(agePhrase(100, t)).toBe('4 days')
+  it('links each step by its address', () => {
+    expect(stepHref('plays')).toBe('/welcome?step=plays')
   })
 })
 

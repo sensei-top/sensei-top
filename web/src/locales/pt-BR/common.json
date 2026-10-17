@@ -51,5 +51,17 @@
     "everyVersion": "Todas as versões",
     "matches_one": "{{count}} partida",
     "matches_other": "{{count}} partidas"
+  },
+  "cardData": {
+    "meterLabel": "Download dos dados dos cards",
+    "starting": "Iniciando",
+    "progressStart": "Iniciando o download.",
+    "progressSoFar": "Baixando dados dos cards: {{done}} MB até agora.",
+    "progressOf": "Baixando dados dos cards: {{done}} de {{total}} MB.",
+    "progressSave": "Salvando os cards no banco de dados. Isso leva alguns minutos.",
+    "done": "Dados dos cards recebidos: texto de regras de {{n}} cards.",
+    "doneEmpty": "Dados dos cards recebidos.",
+    "failed": "O download dos dados dos cards falhou: {{reason}}",
+    "tryAgain": "Tentar de novo"
   }
 }

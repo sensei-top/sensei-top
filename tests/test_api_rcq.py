@@ -122,9 +122,11 @@ def test_latest_is_none_before_any_generation(client, key):
 def test_generate_stores_every_row_and_serves_the_latest(monkeypatch, client, key, known):
     monkeypatch.setattr(llm_config_module, "load", lambda: LLMConfig(api_key="k"))
     calls = []
+    prompts = []
 
     def fake(prompt, schema, *, cfg, label):
         calls.append(label)
+        prompts.append(prompt)
         return Completion(
             text=json.dumps(_answer()), model="claude-opus-5",
             input_tokens=10, output_tokens=20, cost_usd=0.5,
@@ -136,6 +138,16 @@ def test_generate_stores_every_row_and_serves_the_latest(monkeypatch, client, ke
     assert first.status_code == 200
     out = first.json()
     assert calls == ["rcq"]
+    # The generate path keeps its own prompt (plan 24, D12): structured
+    # outputs carry the schema, and the copied prompt's answer contract is
+    # the preview's alone.
+    assert "Answer as a single JSON object matching this schema" in prompts[0]
+    assert "Answer with exactly one JSON object" not in prompts[0]
+    copied = client.get(
+        f"/api/guide/{key}/rcq/preview", params={"decklist": PASTED, "expected": [known]},
+    ).json()["prompt"]
+    assert "Answer with exactly one JSON object" in copied
+    assert "Answer as a single JSON object matching this schema" not in copied
     assert out["status"] == "ok"
     assert out["cost_usd"] == pytest.approx(0.5)
     assert out["decklist_text"] == PASTED

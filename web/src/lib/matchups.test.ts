@@ -8,15 +8,13 @@ import {
   fieldRecordsByKey,
   matchupName as nameOf,
   matchupRows,
+  NBSP,
   matchupTiles as tilesOf,
   type MatchupRow,
 } from './matchups'
 
-// Every row and name is invented. Timestamps are bare, so UTC; only their
-// order matters here. The no-break space is written as an escape, as the
-// source writes it.
-
-const NBSP = '\u00a0'
+// Every row and name is invented. Timestamps are bare, the log's own local
+// clock; only their order matters here. The no-break space is the source's own `NBSP`.
 
 const t = translator('en')
 const matchupName = (row: Parameters<typeof nameOf>[0]) => nameOf(row, t)

@@ -1,3 +1,5 @@
 # Fixtures are raw client captures: keep them byte-exact on every checkout
 # (Git for Windows defaults to core.autocrlf=true).
 tests/fixtures/** -text
+# The hooks run under sh: CRLF would make the remote name arrive as `origin\r`.
+scripts/git-hooks/* text eol=lf
