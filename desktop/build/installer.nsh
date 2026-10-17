@@ -5,11 +5,11 @@
 ; BOM. The script itself holds accented text (the LangStrings below), which
 ; makensis reads as UTF-8 because electron-builder passes -INPUTCHARSET UTF8.
 
-; The Apoia.se page is live (2026-10-12); the other two are placeholders
-; until the public repository and GitHub Sponsors exist (memory: one-commit
-; snapshot at publication). Change them here only.
+; Change them here only. The second donation link is the site's Donate
+; section, not a platform: a shipped installer can't change its links, and
+; 1.0.0's pointed at a GitHub Sponsors page GitHub had not approved yet.
 !define SENSEI_TOP_SOURCE_URL "https://github.com/sensei-top/sensei-top"
-!define SENSEI_TOP_SPONSORS_URL "https://github.com/sponsors/sensei-top"
+!define SENSEI_TOP_DONATE_URL "https://senseitop.com/#donate"
 !define SENSEI_TOP_APOIASE_URL "https://apoia.se/senseitop"
 ; MUI's own link colour (MUI_FINISHPAGE_LINK_COLOR's default).
 !define SENSEI_TOP_LINK_COLOR "000080"
@@ -47,8 +47,8 @@
   LangString SenseiTopDonationNote ${LANG_ENGLISH} "Sensei Top is free: no ads, nothing to buy. Donations alone keep it maintained. If it helps your games, support it on:"
   LangString SenseiTopDonationNote ${LANG_PORTUGUESEBR} "O Sensei Top é gratuito: sem anúncios, nada a comprar. Só as doações o mantêm. Se ele ajuda nas suas partidas, apoie em:"
 
-  LangString SenseiTopSponsorsLink ${LANG_ENGLISH} "GitHub Sponsors"
-  LangString SenseiTopSponsorsLink ${LANG_PORTUGUESEBR} "GitHub Sponsors"
+  LangString SenseiTopDonateLink ${LANG_ENGLISH} "Other ways to donate"
+  LangString SenseiTopDonateLink ${LANG_PORTUGUESEBR} "Outras formas de doar"
 
   LangString SenseiTopApoiaseLink ${LANG_ENGLISH} "Apoia.se (Brazil)"
   LangString SenseiTopApoiaseLink ${LANG_PORTUGUESEBR} "Apoia.se (Brasil)"
@@ -95,9 +95,9 @@
 ; autostart choice: unticked. The choice is recorded in the page's leave hook,
 ; not in the readme box's function: MUI runs the Run box's function first, and
 ; the app it launches reads first-run.json at once. Below the boxes, the show
-; hook adds the donation note and one link per platform (ROADMAP.md,
-; "Donations"); MUI's single link slot would sit under them at 175u, so it is
-; left unused.
+; hook adds the donation note, a link to the site's Donate section and one
+; to Apoia.se (ROADMAP.md, "Donations"); MUI's single link slot would sit
+; under them at 175u, so it is left unused.
 !macro customFinishPage
   !ifndef HIDE_RUN_AFTER_FINISH
     Function StartApp
@@ -128,10 +128,10 @@
     Pop $0
     SetCtlColors $0 "${MUI_TEXTCOLOR}" "${MUI_BGCOLOR}"
 
-    ${NSD_CreateLink} 120u 162u 100u 10u "$(SenseiTopSponsorsLink)"
+    ${NSD_CreateLink} 120u 162u 150u 10u "$(SenseiTopDonateLink)"
     Pop $0
     SetCtlColors $0 "${SENSEI_TOP_LINK_COLOR}" "${MUI_BGCOLOR}"
-    ${NSD_OnClick} $0 SenseiTopOpenSponsors
+    ${NSD_OnClick} $0 SenseiTopOpenDonate
 
     ${NSD_CreateLink} 120u 175u 100u 10u "$(SenseiTopApoiaseLink)"
     Pop $0
@@ -139,9 +139,9 @@
     ${NSD_OnClick} $0 SenseiTopOpenApoiase
   FunctionEnd
 
-  Function SenseiTopOpenSponsors
+  Function SenseiTopOpenDonate
     Pop $0
-    ExecShell open "${SENSEI_TOP_SPONSORS_URL}"
+    ExecShell open "${SENSEI_TOP_DONATE_URL}"
   FunctionEnd
 
   Function SenseiTopOpenApoiase
