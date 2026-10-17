@@ -21,8 +21,18 @@ from fastapi import Depends, HTTPException, Query, Request
 from sensei_top.i18n import _
 
 __all__ = [
-    "Conn", "DeckFilter", "SourceFilter", "WritableConn", "get_conn", "get_writable_conn",
+    "WRITE_BUSY_TIMEOUT_MS", "Conn", "DeckFilter", "SourceFilter", "WritableConn",
+    "get_conn", "get_writable_conn",
 ]
+
+# How long a write waits for the watcher's rebuild to release the database.
+# project()'s write transaction covers the Arena writes and the whole MTGO
+# projection; measured at 5.7 s when live.py's ingest connection was given
+# its 30 s, it outlasted the 5 s every other connection waits on 2026-10-17
+# and a saved pick failed mid-rebuild with "database is locked". A minute
+# leaves room for the database to keep growing; a wait that still runs out
+# is answered 503 by ``api/app.py::database_busy``.
+WRITE_BUSY_TIMEOUT_MS = 60_000
 
 
 def get_conn(request: Request) -> Iterator[sqlite3.Connection]:
@@ -89,7 +99,7 @@ def get_writable_conn(request: Request) -> Iterator[sqlite3.Connection]:
     conn = sqlite3.connect(database, isolation_level=None, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
-    conn.execute("PRAGMA busy_timeout=5000")
+    conn.execute(f"PRAGMA busy_timeout={WRITE_BUSY_TIMEOUT_MS}")
     try:
         yield conn
     finally:
