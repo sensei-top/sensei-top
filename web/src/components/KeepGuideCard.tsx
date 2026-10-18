@@ -176,7 +176,7 @@ export function KeepGuideCard({
               m.games >= RATE_MIN_MATCHES ? (
                 formatPercent(m.wins / m.games)
               ) : (
-                <span key="rate" className="text-muted">{t('common.sample.tooFewCellGames')}</span>
+                <span key="rate" className="whitespace-nowrap text-muted">{t('common.sample.tooFewCellGames')}</span>
               ),
             ])}
           />

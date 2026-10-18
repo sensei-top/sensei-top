@@ -61,6 +61,7 @@ import {
   type ChipVariant,
   type FindingWeight,
 } from '../components/ui'
+import { formatPercent } from '../lib/format'
 import { castCards, takeUnused, type ArtCard } from '../lib/matchArt'
 import { NBSP } from '../lib/matchups'
 import { placeById } from '../shell/places'
@@ -465,9 +466,10 @@ function StatTiles() {
   return (
     <Section id="stat-tiles" title="Stat tiles">
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatTile label="Match win rate" value="58.3%" detail="21–15 over 36 matches" />
-        <StatTile label="On the play" value="62.0%" detail="31 games" />
+        <StatTile label="Match win rate" value="58%" detail="21–15 over 36 matches" />
+        <StatTile label="On the play" value="62%" detail="31 games" />
         <StatTile label="Mulligans" value="0.4" />
+        <StatTile label="Matches" value="5–4" detail={`too few for a rate, under 10${NBSP}matches`} muted />
       </div>
     </Section>
   )
@@ -921,7 +923,7 @@ function Meters() {
             <li key={color} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_3rem] items-center gap-3">
               <span className="text-caption text-ink2">{label}</span>
               <Meter fraction={fraction} color={color} />
-              <span className="text-right text-caption text-muted">{Math.round(fraction * 100)}%</span>
+              <span className="text-right text-caption text-muted">{formatPercent(fraction)}</span>
             </li>
           ))}
           <li className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_3rem] items-center gap-3">
@@ -1074,7 +1076,7 @@ const WIN_RATE = [
 
 function BarChartSection() {
   const t = useTokens()
-  const format = (value: number) => `${value.toFixed(1)}%`
+  const format = (value: number) => formatPercent(value / 100)
   return (
     <Section id="bar-chart" title="Bar chart">
       <Card title="Win rate by opponent deck" subtitle="Radius 4 on the value end">

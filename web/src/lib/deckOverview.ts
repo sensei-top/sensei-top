@@ -91,8 +91,8 @@ export function versionLabel(
   return `${versionDays(deck, now, t) ?? t('decks.overview.undated')} · ${matchesWord(deck.matches_played, t)}`
 }
 
-/** A match's wins and losses, draws and matches in progress aside (R2:
- *  a draw is never a loss). */
+/** A match's wins and losses, draws and matches in progress aside
+ *  (`docs/design-system.md`, "Numbers": a draw is never a loss). */
 function matchRecord(matches: Match[]): { wins: number; losses: number } {
   let wins = 0
   let losses = 0
@@ -139,9 +139,10 @@ function sidePercent(side: PlayDrawSide): number | null {
 /** A side as the play/draw line names it: its rate from ten games, its
  *  record under ten, "no games" with none. */
 function sideValue(side: PlayDrawSide, t: TFunction): string {
-  // Debt (R2): the play-draw route counts draws in `games_completed` and has
-  // no losses field, so a draw lowers a side's rate, counts toward its ten
-  // games and toward the gap, and reads as a loss in its record.
+  // Debt (`docs/design-system.md`, "Numbers"): the play-draw route counts
+  // draws in `games_completed` and has no losses field, so a draw lowers a
+  // side's rate, counts toward its ten games and toward the gap, and reads
+  // as a loss in its record.
   if (side.games >= RATE_MIN_MATCHES) return formatPercent(side.won / side.games)
   if (side.games > 0) return formatRecord(side.won, side.games - side.won)
   return t('decks.strip.sideNone')

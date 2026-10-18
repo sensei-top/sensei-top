@@ -34,7 +34,7 @@ type Point = { label: string; rate: number | null; decided: number }
 function weekRate(week: Week, t: TFunction): ReactNode {
   const decided = week.won + week.losses
   if (week.rate == null) return '—'
-  if (decided < RATE_MIN_MATCHES) return <span className="text-muted">{t('common.sample.tooFewCellMatches')}</span>
+  if (decided < RATE_MIN_MATCHES) return <span className="whitespace-nowrap text-muted">{t('common.sample.tooFewCellMatches')}</span>
   return formatPercent(week.rate)
 }
 

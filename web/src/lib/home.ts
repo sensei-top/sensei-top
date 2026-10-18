@@ -23,9 +23,6 @@ export const SESSION_GAP_MS = 3 * HOUR
  *  far as a count needs. */
 export const HOME_MATCH_LIMIT = 500
 
-// Re-exported so importers need not change yet; the threshold lives in `lib/sample.ts` (plan 26, phase 10 removes this).
-export { RATE_MIN_MATCHES } from './sample'
-
 export type LiveState = 'down' | 'stopped' | 'match' | 'watching' | 'idle'
 
 /** The status pill's state, the first that holds: the heartbeat failed, the

@@ -47,11 +47,5 @@ export function useTokens(): Tokens {
   return DARK
 }
 
-export const percent = (value: number | null | undefined): string =>
-  value == null ? '—' : `${formatFixed(value * 100, 1)}%`
-
-// Re-exported so importers need not change yet; the threshold lives in `lib/sample.ts` (plan 26, phase 10 removes this).
-export { MIN_TRUSTED_FIELD_SAMPLE } from './lib/sample'
-
 export const decimal = (value: number | null | undefined): string =>
   value == null ? '—' : formatFixed(value, 1)

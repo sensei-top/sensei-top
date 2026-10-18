@@ -24,8 +24,9 @@ export type RateOrRecord = { figure: string | null; line: string; thin: boolean 
  *  (`RATE_MIN_MATCHES`): the rate as the figure, the record as the line.
  *  One to nine: the record as the figure, the "too few" line, `thin`. None:
  *  no figure, and the "no finished ..." line. The caller passes losses with
- *  draws left out (R2), so the threshold and the rate are over wins plus
- *  losses. `unit` picks the words, matches or games. */
+ *  draws left out (`docs/design-system.md`, "Numbers"), so the threshold and
+ *  the rate are over wins plus losses. `unit` picks the words, matches or
+ *  games. */
 export function rateOrRecord(
   { wins, losses }: { wins: number; losses: number },
   t: TFunction,

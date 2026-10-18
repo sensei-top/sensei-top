@@ -30,7 +30,7 @@ export type MatchupRow = {
   colors: string | null
   matches: number
   won: number
-  /** Matches lost. A draw is neither this nor a win (R2). */
+  /** Matches lost. A draw is neither this nor a win (`docs/design-system.md`, "Numbers"). */
   lost: number
   gamesWon: number
   gamesLost: number

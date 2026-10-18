@@ -8,8 +8,9 @@ type Counts = { won: number; lost: number; gamesWon: number; gamesLost: number }
 
 /** Counted over every match in hand, not only the rows shown, so the band
  *  and the list never disagree. Matches are the wins and the losses among
- *  the finished ones: a draw is neither (R2). Games are each row's own games
- *  won and lost, finished match or not. */
+ *  the finished ones: a draw is neither (`docs/design-system.md`,
+ *  "Numbers"). Games are each row's own games won and lost, finished match
+ *  or not. */
 function count(matches: Match[]): Counts {
   const counts: Counts = { won: 0, lost: 0, gamesWon: 0, gamesLost: 0 }
   for (const match of matches) {

@@ -78,7 +78,7 @@ export function DeckOverviewView({
                 formatCount(row.matches),
                 row.record,
                 row.thin ? (
-                  <span key="rate" className="text-muted">
+                  <span key="rate" className="whitespace-nowrap text-muted">
                     {row.rate}
                   </span>
                 ) : (

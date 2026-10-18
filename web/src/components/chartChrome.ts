@@ -1,5 +1,5 @@
 import type { Tokens } from '../theme'
-import { formatFixed } from '../lib/format'
+import { formatPercent } from '../lib/format'
 
 /** Shared chart chrome: ticks at 12 px in the muted text colour, the grid a
  *  solid hairline in `grid`, the axis line in `axis` — never dashed, which
@@ -20,4 +20,4 @@ export const gridProps = (t: Tokens) => ({
 /** recharts hands label formatters a `RenderableText`, so this accepts the
  *  widened type and narrows it itself. */
 export const percentLabel = (value: unknown): string =>
-  typeof value === 'number' ? `${formatFixed(value, 1)}%` : ''
+  typeof value === 'number' ? formatPercent(value / 100) : ''
