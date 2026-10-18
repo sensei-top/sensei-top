@@ -46,7 +46,7 @@
     "noVersionTitle": "Nenhuma partida contra ele com esta versão",
     "noMatchTitle": "Nenhuma partida contra ele ainda",
     "noMatchMessage": "Quando você jogar uma, ela é contada aqui.",
-    "record": "Retrospecto",
+    "record": "Histórico",
     "wonOf": "venceu {{won}} de {{matches}}",
     "matchesWon": "partidas vencidas",
     "games": "Jogos",
@@ -74,8 +74,8 @@
     "writeAgain": "Escrever de novo"
   },
   "briefCard": {
-    "record_one": "Seu retrospecto: {{record}} em {{count}} partida",
-    "record_other": "Seu retrospecto: {{record}} em {{count}} partidas",
+    "record_one": "Seu histórico: {{record}} em {{count}} partida",
+    "record_other": "Seu histórico: {{record}} em {{count}} partidas",
     "writtenBy": "escrito por {{model}}",
     "pasted": "colado",
     "fromGuideRun": "de uma rodada completa do guia",

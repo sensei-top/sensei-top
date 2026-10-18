@@ -36,7 +36,7 @@
   LangString SenseiTopWelcomeTitle ${LANG_PORTUGUESEBR} "Bem-vindo ao Sensei Top"
 
   LangString SenseiTopWelcomeText ${LANG_ENGLISH} "Sensei Top turns the logs that Magic: The Gathering Arena and Magic Online already write on this computer into match history, matchup records and post-game reviews.$\r$\n$\r$\nIt is free software under the GNU Affero General Public License, version 3: you may use, study, change and share it. No account, no ads, nothing to buy.$\r$\n$\r$\nClick Next to continue."
-  LangString SenseiTopWelcomeText ${LANG_PORTUGUESEBR} "O Sensei Top transforma os logs que o Magic: The Gathering Arena e o Magic Online já escrevem neste computador em histórico de partidas, retrospecto por matchup e relatórios pós-jogo.$\r$\n$\r$\nÉ software livre sob a GNU Affero General Public License, versão 3: você pode usar, estudar, alterar e compartilhar. Sem conta, sem anúncios, nada a comprar.$\r$\n$\r$\nClique em Avançar para continuar."
+  LangString SenseiTopWelcomeText ${LANG_PORTUGUESEBR} "O Sensei Top transforma os logs que o Magic: The Gathering Arena e o Magic Online já escrevem neste computador em histórico de partidas e de matchups e em relatórios pós-jogo.$\r$\n$\r$\nÉ software livre sob a GNU Affero General Public License, versão 3: você pode usar, estudar, alterar e compartilhar. Sem conta, sem anúncios, nada a comprar.$\r$\n$\r$\nClique em Avançar para continuar."
 
   LangString SenseiTopSourceLink ${LANG_ENGLISH} "Source code: ${SENSEI_TOP_SOURCE_URL}"
   LangString SenseiTopSourceLink ${LANG_PORTUGUESEBR} "Código-fonte: ${SENSEI_TOP_SOURCE_URL}"

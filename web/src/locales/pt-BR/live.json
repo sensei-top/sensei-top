@@ -59,7 +59,7 @@
     "untagged_one": "{{count}} card ainda não tem texto de regras registrado, então não é contado como interação acima.",
     "untagged_other": "{{count}} cards ainda não têm texto de regras registrado, então não são contados como interação acima.",
     "landBand": "Só pelos terrenos, <strong>{{rate}}</strong> das suas mãos iniciais de sete caem na faixa de {{min}} a {{max}} terrenos.",
-    "mulliganRecord": "Retrospecto de mulligans",
+    "mulliganRecord": "Histórico de mulligans",
     "hand": "Mão",
     "games": "Jogos",
     "winRate": "Taxa de vitórias",
@@ -68,7 +68,7 @@
     "needs": "O que este deck precisa",
     "keyPlay": "Jogada-chave",
     "bestWindow": "Melhor janela",
-    "record": "Retrospecto",
+    "record": "Histórico",
     "neverResolved": "Nunca resolveu",
     "cost": "Manteve 7: <strong>{{kept}}</strong> contra com mulligan: <strong>{{mull}}</strong>."
   },
@@ -90,7 +90,7 @@
     "band": "faixa de {{min}} a {{max}}",
     "keeping7": "mantendo 7",
     "mull": "mull {{n}}",
-    "deckRecord": "o retrospecto deste deck é {{record}} {{label}}"
+    "deckRecord": "o histórico deste deck é {{record}} {{label}}"
   },
   "opponentHand": {
     "title": "Mão do oponente",
