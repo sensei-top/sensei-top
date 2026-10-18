@@ -10,7 +10,7 @@
     "columns": {
       "archetype": "Arquétipo",
       "matches": "Partidas",
-      "won": "Vitórias",
+      "record": "Histórico",
       "rate": "Taxa"
     }
   },
@@ -23,8 +23,7 @@
     "oneSoFar": "um arquétipo enfrentado {{min}} vezes até agora",
     "best": "Melhor matchup",
     "worst": "Pior matchup",
-    "rankedRate": "venceu {{won}} de {{matches}} contra {{against}}",
-    "rankedCount": "venceu contra {{against}}",
+    "rankedRate": "{{record}} contra {{against}}",
     "countOf": "{{won}} de {{matches}}"
   },
   "name": {
@@ -34,11 +33,11 @@
     "unknownInSentence": "um deck desconhecido"
   },
   "fieldLine": {
-    "games": "Jogos {{won}}–{{lost}}",
-    "record_one": "Jogos {{won}}–{{lost}} · vence {{rate}}% em torneios, {{n}} participação",
-    "record_other": "Jogos {{won}}–{{lost}} · vence {{rate}}% em torneios, {{n}} participações",
-    "recordThin_one": "Jogos {{won}}–{{lost}} · vence {{rate}}% em torneios, {{n}} participação, poucas para confiar",
-    "recordThin_other": "Jogos {{won}}–{{lost}} · vence {{rate}}% em torneios, {{n}} participações, poucas para confiar"
+    "games": "Jogos {{record}}",
+    "record_one": "Jogos {{record}} · vence {{rate}} em torneios, {{n}} participação",
+    "record_other": "Jogos {{record}} · vence {{rate}} em torneios, {{n}} participações",
+    "recordThin_one": "Jogos {{record}} · vence {{rate}} em torneios, {{n}} participação, poucas para confiar",
+    "recordThin_other": "Jogos {{record}} · vence {{rate}} em torneios, {{n}} participações, poucas para confiar"
   },
   "pairing": {
     "allMatchups": "Todos os matchups",
@@ -179,7 +178,7 @@
       "clause": "em que você tinha a mesa mais forte e não atacou"
     },
     "genericClause": "em que isso aconteceu",
-    "sentence": "Você venceu {{wins}} das {{n}} partidas {{clause}}, e {{otherWins}} das outras {{otherN}}."
+    "sentence": "Seu histórico é {{recordWith}} nas partidas {{clause}}, e {{recordWithout}} nas demais."
   },
   "sideboard": {
     "thisOpponent": "este oponente",

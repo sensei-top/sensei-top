@@ -5,19 +5,40 @@ import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } fr
 import { VersionSwitcher } from '../components/VersionSwitcher'
 import { Button, Card, DataTable, EmptyState, ErrorNote, Loading, ManaPips, StatTile, TextLink } from '../components/ui'
 import { mergeNewestFirst } from '../lib/deckOverview'
-import { archetypeKeyOf, fieldLine, matchupName, matchupRows, matchupTiles } from '../lib/matchups'
-import { RATE_MIN_MATCHES } from '../lib/home'
+import {
+  archetypeKeyOf,
+  fieldLine,
+  matchupName,
+  type MatchupRow,
+  matchupRows,
+  matchupTiles,
+} from '../lib/matchups'
+import { formatPercent, formatRecord } from '../lib/format'
 import { pairingAddress, withVersion } from '../lib/pairing'
-import { formatCount, formatPercent, useNow } from '../lib/time'
+import { RATE_MIN_MATCHES } from '../lib/sample'
+import { formatCount, useNow } from '../lib/time'
 import { placeById } from '../shell/places'
 
 const MINUTE = 60_000
+
+/** A row's Rate cell: the rate from ten finished matches (a draw is neither
+ *  won nor lost); under ten the "too few" word, muted, the record being the
+ *  column beside it; an em dash only when no match was won or lost. */
+function RateCell({ row }: { row: MatchupRow }) {
+  const { t } = useTranslation()
+  const finished = row.won + row.lost
+  if (finished === 0) return <>—</>
+  if (finished < RATE_MIN_MATCHES) {
+    return <span className="whitespace-nowrap text-muted">{t('common.sample.tooFewCellMatches')}</span>
+  }
+  return <>{formatPercent(row.won / finished)}</>
+}
 
 /** A deck's Matchups, over the versions the address chose (`versionIds`,
  *  every version when `version` is `null`), counted from the matches in
  *  hand, top to bottom: the version switcher when the deck has more than
  *  one; three tiles, the archetypes met and the best and worst of those met
- *  five times or more; and every archetype met, one row each, whichever
+ *  ten times or more; and every archetype met, one row each, whichever
  *  version met it, its name a link to the pairing's page carrying the
  *  version chosen. Finished matches only.
  *  Each version is read on its own and the page waits for every one; one
@@ -90,7 +111,7 @@ export function MatchupsView({
             columns={[
               t('matchups.view.columns.archetype'),
               t('matchups.view.columns.matches'),
-              t('matchups.view.columns.won'),
+              t('matchups.view.columns.record'),
               t('matchups.view.columns.rate'),
             ]}
             rows={rows.map((row) => {
@@ -116,8 +137,8 @@ export function MatchupsView({
                   </div>
                 </div>,
                 formatCount(row.matches),
-                formatCount(row.won),
-                row.matches >= RATE_MIN_MATCHES ? `${formatPercent(row.won / row.matches)}%` : '—',
+                formatRecord(row.won, row.lost),
+                <RateCell key="rate" row={row} />,
               ]
             })}
           />

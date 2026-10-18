@@ -10,7 +10,7 @@
     "columns": {
       "archetype": "Archetype",
       "matches": "Matches",
-      "won": "Won",
+      "record": "Record",
       "rate": "Rate"
     }
   },
@@ -23,8 +23,7 @@
     "oneSoFar": "one archetype met {{min}}\u00a0times so far",
     "best": "Best matchup",
     "worst": "Worst matchup",
-    "rankedRate": "won {{won}} of {{matches}} against {{against}}",
-    "rankedCount": "won against {{against}}",
+    "rankedRate": "{{record}} against {{against}}",
     "countOf": "{{won}} of {{matches}}"
   },
   "name": {
@@ -34,11 +33,11 @@
     "unknownInSentence": "an unknown deck"
   },
   "fieldLine": {
-    "games": "Games {{won}}–{{lost}}",
-    "record_one": "Games {{won}}–{{lost}} · wins {{rate}}% in tournaments, {{n}}\u00a0entry",
-    "record_other": "Games {{won}}–{{lost}} · wins {{rate}}% in tournaments, {{n}}\u00a0entries",
-    "recordThin_one": "Games {{won}}–{{lost}} · wins {{rate}}% in tournaments, {{n}}\u00a0entry, too few to trust",
-    "recordThin_other": "Games {{won}}–{{lost}} · wins {{rate}}% in tournaments, {{n}}\u00a0entries, too few to trust"
+    "games": "Games {{record}}",
+    "record_one": "Games {{record}} · wins {{rate}} in tournaments, {{n}}\u00a0entry",
+    "record_other": "Games {{record}} · wins {{rate}} in tournaments, {{n}}\u00a0entries",
+    "recordThin_one": "Games {{record}} · wins {{rate}} in tournaments, {{n}}\u00a0entry, too few to trust",
+    "recordThin_other": "Games {{record}} · wins {{rate}} in tournaments, {{n}}\u00a0entries, too few to trust"
   },
   "pairing": {
     "allMatchups": "All matchups",
@@ -179,7 +178,7 @@
       "clause": "where you had the stronger board and did not attack"
     },
     "genericClause": "where this happened",
-    "sentence": "You won {{wins}} of the {{n}}\u00a0matches {{clause}}, and {{otherWins}} of the other {{otherN}}."
+    "sentence": "You are {{recordWith}} in the matches {{clause}}, and {{recordWithout}} in the rest."
   },
   "sideboard": {
     "thisOpponent": "this opponent",
