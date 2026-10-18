@@ -2,36 +2,13 @@ import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useOpponentDeckCandidates, useSetOpponentDeck } from '../api'
 import type { CurrentMatch, OpponentDeckCandidate } from '../api'
-import type { TFunction } from '../i18n'
-import { confidenceLabel } from '../lib/opponent'
+import { formatList, formatPercent } from '../lib/format'
 import { DeckPicker } from './OpponentDeckLabel'
 import { Button, Card, Disclosure, Meter } from './ui'
 
 // Enough to show real disagreement without turning into the full candidate
 // list — rank_candidates() already orders these best-fit first.
 const SHORTLIST_SIZE = 3
-
-function headerText(match: CurrentMatch, t: TFunction): string {
-  const label = match.opponent_label ?? t('common.unknownDeck')
-  if (match.opponent_source === 'manual') return t('live.opponent.picked', { label })
-  // 'corpus' is classify.py's second evidence source (archetypes/corpus.py)
-  // naming the same way an 'archetype'/'fallback' rule verdict does —
-  // confidence means the same thing across all three, so it reads the same.
-  if (
-    match.opponent_source === 'archetype' ||
-    match.opponent_source === 'fallback' ||
-    match.opponent_source === 'corpus'
-  ) {
-    return t('live.opponent.withConfidence', {
-      label,
-      confidence: confidenceLabel(match.opponent_confidence ?? 'unknown', t),
-    })
-  }
-  // No candidate cleared the naming bar (see classify.py's choose()): the
-  // label here is only the colours-and-signature-card fallback, so it is
-  // shown as exactly that, not dressed up as a settled answer.
-  return t('live.opponent.unclear', { label })
-}
 
 function unclearDetail(match: CurrentMatch): string | null {
   if (match.opponent_source === 'manual') return null
@@ -43,40 +20,35 @@ function unclearDetail(match: CurrentMatch): string | null {
     return null
   }
   // Genuinely unnamed: say more than "Unknown deck" when there is more to
-  // say — the colours already shown, and up to three real cards, rather
-  // than nothing.
+  // say — the real cards seen, rather than nothing. The colours are the
+  // strip's, drawn once as pips.
   const cards = match.opponent_signature_cards ?? []
-  if (!match.opponent_colors && cards.length === 0) return null
-  const bits: string[] = []
-  if (match.opponent_colors) bits.push(match.opponent_colors)
-  if (cards.length > 0) bits.push(cards.join(', '))
-  return bits.join(' · ')
+  return cards.length > 0 ? formatList(cards) : null
 }
 
 function CandidateLine({ candidate }: { candidate: OpponentDeckCandidate }) {
   const { t } = useTranslation()
   const unseen = (candidate.signature_cards ?? []).filter((s) => !s.seen).map((s) => s.name)
   const reasons = candidate.reasons ?? []
-  const fitPct = Math.round(candidate.fit * 100)
   return (
     <div className="py-2">
       <div className="flex items-center justify-between gap-3">
         <span className="truncate text-body text-ink">{candidate.label}</span>
-        <span className="shrink-0 text-caption tabular-nums text-muted">{t('live.opponent.fit', { pct: fitPct })}</span>
+        <span className="shrink-0 text-caption tabular-nums text-muted">{t('live.opponent.fit', { pct: formatPercent(candidate.fit) })}</span>
       </div>
       <Meter fraction={candidate.fit} color="s1" className="mt-1" />
       {reasons.length > 0 && <p className="mt-1 text-caption text-muted">{reasons.join('; ')}</p>}
-      {unseen.length > 0 && <p className="text-caption text-ink2">{t('live.opponent.stillUnseen', { cards: unseen.join(', ') })}</p>}
+      {unseen.length > 0 && <p className="text-caption text-ink2">{t('live.opponent.stillUnseen', { cards: formatList(unseen) })}</p>}
     </div>
   )
 }
 
 /**
- * The opponent's deck read for the match in progress: a state-dependent
- * headline (picked by you / a settled name at some confidence / unclear),
- * the "pick this deck" affordance always available beside it, and — while
- * nothing has clearly won yet — the field of close candidates instead of a
- * single guess dressed up as an answer.
+ * The opponent's deck read for the match in progress: the cards behind an
+ * unnamed deck (the name, its confidence, the colours and how many cards
+ * were seen are the status strip's alone), the "pick this deck" affordance
+ * always available beside it, and — while nothing has clearly won yet — the
+ * field of close candidates instead of a single guess dressed up as an answer.
  *
  * Replaces the old "Not sure what they are playing" card, which only
  * appeared below 'medium' confidence and, once shown, offered no more than
@@ -87,9 +59,8 @@ function CandidateLine({ candidate }: { candidate: OpponentDeckCandidate }) {
  * of hiding it behind one confident-looking label.
  *
  * `dense` puts the candidate shortlist behind a disclosure for the closing
- * three-card grid — the headline and the "pick this deck" popover (already
- * `fixed`-positioned, so it never clips inside a height-capped rail) stay
- * exactly as they are.
+ * three-card grid; the "pick this deck" popover (already `fixed`-positioned,
+ * so it never clips inside a height-capped rail) is the same either way.
  */
 export function OpponentRead({
   match,
@@ -126,13 +97,14 @@ export function OpponentRead({
   return (
     <Card
       title={t('live.opponent.title')}
-      subtitle={t('live.cardsSeen', { count: match.opponent_cards_seen })}
       elevation={dense ? 2 : 1}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="font-display text-title text-ink">{headerText(match, t)}</p>
-          {detail && <p className="mt-1 text-caption text-muted">{detail}</p>}
+          {match.opponent_source === 'manual' && (
+            <p className="text-body text-ink2">{t('live.picker.pickedMark')}</p>
+          )}
+          {detail && <p className="text-caption text-muted">{detail}</p>}
         </div>
         <Button ref={buttonRef} size="sm" onClick={() => setOpen(true)}>
           {t('live.opponent.pick')}

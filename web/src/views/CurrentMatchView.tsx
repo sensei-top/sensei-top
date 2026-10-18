@@ -9,7 +9,7 @@ import { OpeningHandCard } from '../components/OpeningHandCard'
 import { OpponentHandCard } from '../components/OpponentHandCard'
 import { OpponentRead } from '../components/OpponentRead'
 import { SideboardOpponentRail, SideboardPlanCard } from '../components/SideboardPlanCard'
-import { Callout, Chip, Disclosure, EmptyState, ErrorNote, Loading, ManaPips, StatTile } from '../components/ui'
+import { Callout, Chip, Disclosure, EmptyState, ErrorNote, Loading, ManaPips } from '../components/ui'
 import { isLikelyAbandoned } from '../lib/liveMatch'
 import { type LivePanel, livePanels } from '../lib/livePanels'
 import { confidenceLabel, opponentLabelText } from '../lib/opponent'
@@ -28,20 +28,6 @@ const CONFIDENCE_CHIP_VARIANT: Record<string, 'neutral' | 'warn'> = {
 const timesPhrase = (n: number, t: TFunction): string =>
   n === 1 ? t('live.times.once') : n === 2 ? t('live.times.twice') : t('live.times.many', { n })
 
-// Mirrors OpponentRead.tsx's headerText: a real name from any of the four
-// sources (manual pick, rule archetype/fallback, or the corpus evidence
-// source) reads as itself; anything else is only the colours-and-signature
-// fallback, so it says so instead of a name that sounds settled.
-function opponentDeckValue(match: CurrentMatch, t: TFunction): string {
-  const label = match.opponent_label ?? t('common.unknownDeck')
-  const named =
-    match.opponent_source === 'manual' ||
-    match.opponent_source === 'archetype' ||
-    match.opponent_source === 'fallback' ||
-    match.opponent_source === 'corpus'
-  return named ? label : t('live.opponent.unclear', { label })
-}
-
 /** The band at the page's top: game and turn as big display numerals under
  *  small sentence-case labels (the two facts worth reading at a glance from
  *  second-monitor distance), the `·`-joined facts beside them, and the
@@ -49,10 +35,10 @@ function opponentDeckValue(match: CurrentMatch, t: TFunction): string {
  *  up that is one line, the facts cut to fit. Under 48rem it is two: game,
  *  turn, pips and confidence on the first; the opponent's name and the
  *  facts on the second, wrapping, none cut. Reads `openingHand` over
- *  `match` for the game/turn phrase whenever a decision is pending — that
- *  can be true even before `match` exists at all, since the read comes
- *  straight from a live replay (table/opening_hand.py) and does not wait
- *  on a projected match row. The rail stays beside the page in focus mode
+ *  `match` for the phase phrase and for play or draw whenever a decision
+ *  is pending — that can be true even before `match` exists at all, since
+ *  the read comes straight from a live replay (table/opening_hand.py) and
+ *  does not wait on a projected match row. The rail stays beside the page in focus mode
  *  (`shell/Shell.tsx`), so this strip carries no escape hatch of its own.
  *  A match `lib/liveMatch.ts` calls likely abandoned says so here rather
  *  than rendering under a pulsing "live" dot indefinitely.
@@ -83,6 +69,9 @@ function MatchStatusStrip({
   // rather than showing nothing while turns hasn't been written yet — true
   // for Arena in the gap right after a game starts.
   const turnNumber = latest?.turn_number ?? game?.turn_count ?? null
+  // A pending hand's own read is the live value: `game` is the last
+  // projected game, which lags in a game 2 or 3 hand.
+  const onPlay = openingHand ? openingHand.on_the_play : (game?.on_play ?? null)
   const likelyAbandoned = isLikelyAbandoned(match?.started_at, now)
 
   // The turn number now has its own numeral below, so the phase phrase only
@@ -105,7 +94,7 @@ function MatchStatusStrip({
     match
       ? t('live.strip.record', { won: match.games_won ?? 0, lost: match.games_lost ?? 0 })
       : null,
-    game?.on_play == null ? null : game.on_play ? t('live.onPlay') : t('live.onDraw'),
+    onPlay == null ? null : onPlay ? t('live.onPlay') : t('live.onDraw'),
     phase,
     adviceOff ? t('live.strip.rankedAdviceOff') : null,
     match ? t('live.cardsSeen', { count: match.opponent_cards_seen }) : null,
@@ -164,51 +153,20 @@ function MatchStatusStrip({
   )
 }
 
-/** The matchup brief and the four stat tiles — everything demoted off the
- *  base render so the live read fits one screen. Each is a `Disclosure`
- *  that opens over its own content, independently, and scrolls inside
- *  itself rather than the page. The brief has no other
- *  home in the dashboard yet (the deck guide tab doesn't render it), so it
- *  stays here rather than being cut along with the rest of this bar. */
+/** The matchup brief, behind a `Disclosure` so the live read fits one
+ *  screen: it opens over its own content and scrolls inside itself. The
+ *  match's facts (the opponent's deck, the game, play or draw, the turn)
+ *  are the status strip's alone. The pairing page shows the brief too;
+ *  here it sits beside the game it is for. */
 function DisclosureBar({ match, advice }: { match: CurrentMatch; advice: boolean }) {
   const { t } = useTranslation()
-  const game = match.game
-  const latest = match.turns.at(-1)
+  // The brief's play-arounds are advice: off during a ranked game.
+  if (!advice) return null
   return (
     <div className="flex shrink-0 flex-wrap gap-4 border-t border-edge pt-2 text-caption">
-      {/* The brief's play-arounds are advice: off during a ranked game. */}
-      {advice && (
-        <Disclosure summary={t('live.bar.brief')}>
-          <div className="max-h-[55vh] w-[min(28rem,90vw)] overflow-y-auto">
-            <MatchupBriefCard match={match} />
-          </div>
-        </Disclosure>
-      )}
-      <Disclosure summary={t('live.bar.details')}>
-        <div className="grid max-h-[55vh] w-[min(40rem,90vw)] grid-cols-2 gap-3 overflow-y-auto sm:grid-cols-4">
-          <StatTile
-            label={t('live.bar.opponentDeck')}
-            value={opponentDeckValue(match, t)}
-            detail={t('live.bar.seenEvent', {
-              n: match.opponent_cards_seen,
-              event: match.event_id ?? t('live.bar.eventUnknown'),
-            })}
-          />
-          <StatTile
-            label={t('live.bar.game')}
-            value={game ? String(game.game_number) : '—'}
-            detail={t('live.bar.matchScore', { won: match.games_won ?? 0, lost: match.games_lost ?? 0 })}
-          />
-          <StatTile
-            label={t('live.bar.playDraw')}
-            value={game?.on_play == null ? '—' : game.on_play ? t('live.bar.play') : t('live.bar.draw')}
-            detail={game?.on_play == null ? t('live.bar.undetermined') : t('live.bar.thisGame')}
-          />
-          <StatTile
-            label={t('live.bar.turn')}
-            value={latest ? String(latest.turn_number) : '—'}
-            detail={t('live.bar.turnNote')}
-          />
+      <Disclosure summary={t('live.bar.brief')}>
+        <div className="max-h-[55vh] w-[min(28rem,90vw)] overflow-y-auto">
+          <MatchupBriefCard match={match} />
         </div>
       </Disclosure>
     </div>
@@ -315,17 +273,19 @@ export function CurrentMatchView() {
 
   const oppMulliganPhrase =
     game?.opp_mulligans == null ? t('live.times.unknown') : timesPhrase(game.opp_mulligans, t)
-  const keepGuideSubtitle = !game
-    ? t('live.keepSubtitle.waiting')
-    : [
-        turns.length === 0 ? t('live.keepSubtitle.firstTurn') : null,
-        game.self_mulligans
-          ? t('live.keepSubtitle.mulliganed', { times: timesPhrase(game.self_mulligans, t) })
-          : t('live.keepSubtitle.kept'),
-        t('live.keepSubtitle.opponentMulliganed', { times: oppMulliganPhrase }),
-      ]
-        .filter((part): part is string => part != null)
-        .join(' · ')
+  // Nothing while the hand is pending: until it is kept, the opponent's
+  // mulligan count is the last projected game's, or not settled yet. After
+  // that, the strip has said the rest (waiting, first turn, own mulligans),
+  // and this keeps what it does not.
+  const keepGuideSubtitle =
+    !game || openingHand
+      ? undefined
+      : [
+          game.self_mulligans
+            ? t('live.keepSubtitle.mulliganed', { times: timesPhrase(game.self_mulligans, t) })
+            : t('live.keepSubtitle.kept'),
+          t('live.keepSubtitle.opponentMulliganed', { times: oppMulliganPhrase }),
+        ].join(' · ')
 
   const panels = livePanels({
     decisionPending: openingHand != null,

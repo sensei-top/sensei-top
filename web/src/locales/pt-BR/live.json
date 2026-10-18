@@ -41,24 +41,9 @@
     "abandoned": "provavelmente abandonada, nenhum resultado chegou"
   },
   "bar": {
-    "brief": "Briefing do matchup",
-    "details": "Detalhes da partida",
-    "opponentDeck": "Deck do oponente",
-    "game": "Jogo",
-    "playDraw": "Play / draw",
-    "play": "Play",
-    "draw": "Draw",
-    "turn": "Turno",
-    "seenEvent": "{{n}} cards vistos · {{event}}",
-    "eventUnknown": "evento desconhecido",
-    "matchScore": "partida {{won}}–{{lost}}",
-    "undetermined": "indeterminado",
-    "thisGame": "este jogo",
-    "turnNote": "o turno de cada jogador conta como um"
+    "brief": "Briefing do matchup"
   },
   "keepSubtitle": {
-    "waiting": "Aguardando o primeiro estado do jogo vindo do Arena.",
-    "firstTurn": "O primeiro turno não começou",
     "mulliganed": "Você fez mulligan {{times}}",
     "kept": "Você manteve sua mão",
     "opponentMulliganed": "o oponente fez mulligan {{times}}"
@@ -103,10 +88,9 @@
     "lands_one": "{{count}} terreno",
     "lands_other": "{{count}} terrenos",
     "band": "faixa de {{min}} a {{max}}",
-    "mulligan": "mulligan {{n}}",
     "keeping7": "mantendo 7",
     "mull": "mull {{n}}",
-    "deckRecord": "este deck está {{wins}}-{{losses}} {{label}}"
+    "deckRecord": "o retrospecto deste deck é {{record}} {{label}}"
   },
   "opponentHand": {
     "title": "Mão do oponente",
@@ -141,13 +125,10 @@
   },
   "opponent": {
     "title": "Deck do oponente",
-    "picked": "Você escolheu: {{label}}",
-    "withConfidence": "{{label}} · confiança {{confidence}}",
-    "unclear": "{{label}} — incerto",
     "pick": "escolher este deck",
     "candidates_one": "{{count}} candidato próximo",
     "candidates_other": "{{count}} candidatos próximos",
-    "fit": "{{pct}}% de encaixe",
+    "fit": "{{pct}} de encaixe",
     "stillUnseen": "ainda não vistos: {{cards}}"
   },
   "picker": {

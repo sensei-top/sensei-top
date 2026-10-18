@@ -3,9 +3,9 @@
   "textUnknown": "Text unknown",
   "onPlay": "on the play",
   "onDraw": "on the draw",
-  "cardsSeen_one": "{{count}} cards seen",
+  "cardsSeen_one": "{{count}} card seen",
   "cardsSeen_other": "{{count}} cards seen",
-  "cardsLeft_one": "{{count}} cards left",
+  "cardsLeft_one": "{{count}} card left",
   "cardsLeft_other": "{{count}} cards left",
   "confidence": {
     "high": "high",
@@ -41,24 +41,9 @@
     "abandoned": "likely abandoned, no result arrived"
   },
   "bar": {
-    "brief": "Matchup brief",
-    "details": "Match details",
-    "opponentDeck": "Opponent deck",
-    "game": "Game",
-    "playDraw": "Play / draw",
-    "play": "Play",
-    "draw": "Draw",
-    "turn": "Turn",
-    "seenEvent": "{{n}} cards seen · {{event}}",
-    "eventUnknown": "event unknown",
-    "matchScore": "match {{won}}–{{lost}}",
-    "undetermined": "undetermined",
-    "thisGame": "this game",
-    "turnNote": "each player's turn counts as one"
+    "brief": "Matchup brief"
   },
   "keepSubtitle": {
-    "waiting": "Waiting for the first game state from Arena.",
-    "firstTurn": "The first turn has not started",
     "mulliganed": "You mulliganed {{times}}",
     "kept": "You kept your hand",
     "opponentMulliganed": "opponent mulliganed {{times}}"
@@ -67,7 +52,7 @@
     "title": "Keepable seven",
     "lands": "{{lands}} lands / {{size}}",
     "avgMv": "avg MV {{value}}",
-    "creatures_one": "{{count}} creatures",
+    "creatures_one": "{{count}} creature",
     "creatures_other": "{{count}} creatures",
     "interaction_one": "{{count}} interaction",
     "interaction_other": "{{count}} interaction",
@@ -103,10 +88,9 @@
     "lands_one": "{{count}} land",
     "lands_other": "{{count}} lands",
     "band": "band {{min}}-{{max}}",
-    "mulligan": "mulligan {{n}}",
     "keeping7": "keeping 7",
     "mull": "mull {{n}}",
-    "deckRecord": "this deck is {{wins}}-{{losses}} {{label}}"
+    "deckRecord": "this deck is {{record}} {{label}}"
   },
   "opponentHand": {
     "title": "Opponent's hand",
@@ -121,11 +105,11 @@
     "couldBeHolding": "Could be holding",
     "chanceInHand": "The number is the chance the card is in their hand.",
     "nowNote": "Now marks an instant they can cast with the mana they have open.",
-    "cards_one": "{{count}} cards",
+    "cards_one": "{{count}} card",
     "cards_other": "{{count}} cards",
     "untappedLands": "{{open}} untapped lands +{{other}} other",
     "untapped": "{{open}} untapped",
-    "held_one": "held {{count}} turns",
+    "held_one": "held {{count}} turn",
     "held_other": "held {{count}} turns"
   },
   "library": {
@@ -141,13 +125,10 @@
   },
   "opponent": {
     "title": "Opponent deck",
-    "picked": "You picked: {{label}}",
-    "withConfidence": "{{label}} · {{confidence}} confidence",
-    "unclear": "{{label}} — unclear",
     "pick": "pick this deck",
     "candidates_one": "{{count}} close candidate",
     "candidates_other": "{{count}} close candidates",
-    "fit": "{{pct}}% fit",
+    "fit": "{{pct}} fit",
     "stillUnseen": "still unseen: {{cards}}"
   },
   "picker": {
