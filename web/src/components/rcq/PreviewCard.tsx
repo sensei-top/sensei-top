@@ -2,7 +2,8 @@ import { Trans, useTranslation } from 'react-i18next'
 import type { RcqPreviewOut } from '../../api'
 import { archetypeName } from '../../lib/decks'
 import { freshnessSentence, type RcqInputs } from '../../lib/rcq'
-import { formatIsoDateShort, formatPercent, useNow } from '../../lib/time'
+import { formatPercent, formatRecord } from '../../lib/format'
+import { formatIsoDateShort, useNow } from '../../lib/time'
 import { Callout, Card, Disclosure, ErrorNote, Loading } from '../ui'
 
 /** `text` as a sentence of its own: trimmed, its first letter a capital,
@@ -21,8 +22,7 @@ function ExpectedLine({ each }: { each: RcqPreviewOut['expected'][number] }) {
   const values = {
     name: archetypeName(each.name),
     pct: each.share != null ? formatPercent(each.share) : '',
-    wins: each.wins ?? 0,
-    losses: each.losses ?? 0,
+    record: formatRecord(each.wins ?? 0, each.losses ?? 0),
   }
   const components = { name: <span className="text-ink" /> }
   const record = each.wins == null || each.losses == null ? 'none' : each.wins + each.losses > 0 ? 'record' : 'unplayed'
