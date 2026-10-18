@@ -290,27 +290,39 @@ describe('pairingTiles', () => {
   const draw = (id: string) => match(id, { result: 'draw', games_won: 1, games_lost: 1 })
   const none = new Map<string, FieldRecord>()
 
-  it('at one finished match writes the count, the unfinished left out', () => {
-    const [record, games] = pairingTiles(matchupRows([win('a'), match('b', { result: null, games_won: 1 })])[0], none)
-    expect(record).toEqual({ label: 'Record', value: '1 of 1', detail: 'matches won' })
-    expect(games).toEqual({ label: 'Games', value: '2–1', detail: 'yours first' })
+  /** A record as `formatRecord` writes it: a word joiner each side of the dash. */
+  const record = (wins: number, losses: number) => `${wins}\u2060–\u2060${losses}`
+  const tooFew = `too few for a rate, under 10${NBSP}matches`
+
+  it('at one finished match writes the record, muted, the unfinished left out', () => {
+    const [tile, games] = pairingTiles(matchupRows([win('a'), match('b', { result: null, games_won: 1 })])[0], none)
+    expect(tile).toEqual({ label: 'Record', value: record(1, 0), detail: tooFew, muted: true })
+    expect(games).toEqual({ label: 'Games', value: '2\u2060–\u20601', detail: 'yours first' })
   })
 
-  it('at nine, a draw among them, writes the count', () => {
-    // Five wins, three losses, one draw: nine matches, five won. Games:
+  it('at nine finished, a draw among them, writes the record of wins and losses', () => {
+    // Five wins, three losses, one draw: 5–3, eight rated matches. Games:
     // 5×2 + 3×1 + 1 = 14 won, 5×1 + 3×2 + 1 = 12 lost.
     const nine = [win('a'), win('b'), win('c'), win('d'), win('e'), loss('f'), loss('g'), loss('h'), draw('i')]
-    const [record, games] = pairingTiles(matchupRows(nine)[0], none)
-    expect(record).toEqual({ label: 'Record', value: '5 of 9', detail: 'matches won' })
-    expect(games).toEqual({ label: 'Games', value: '14–12', detail: 'yours first' })
+    const [tile, games] = pairingTiles(matchupRows(nine)[0], none)
+    expect(tile).toEqual({ label: 'Record', value: record(5, 3), detail: tooFew, muted: true })
+    expect(games).toEqual({ label: 'Games', value: '14\u2060–\u206012', detail: 'yours first' })
   })
 
-  it('at ten, a draw among them, writes the rate over every finished match', () => {
-    // Seven wins, two losses, one draw: 7 of 10 is 70% (7 of 9, draws
-    // aside, would be 78%).
-    const ten = [win('a'), win('b'), win('c'), win('d'), win('e'), win('f'), win('g'), loss('h'), loss('i'), draw('j')]
-    const [record] = pairingTiles(matchupRows(ten)[0], none)
-    expect(record).toEqual({ label: 'Record', value: '70%', detail: 'won 7 of 10' })
+  it('at ten wins plus losses, a draw aside, writes the rate over them, as Matchups does', () => {
+    // Seven wins, three losses and a draw: 7 of 10 is 70%; the draw is
+    // neither. With the draw among the ten (7–2 and a draw) it would be
+    // nine rated and a record.
+    const ten = [win('a'), win('b'), win('c'), win('d'), win('e'), win('f'), win('g'), loss('h'), loss('i'), loss('j'), draw('k')]
+    const [tile] = pairingTiles(matchupRows(ten)[0], none)
+    expect(tile).toEqual({ label: 'Record', value: '70%', detail: record(7, 3) })
+    const nine = [...ten.slice(0, 9), draw('l')]
+    expect(pairingTiles(matchupRows(nine)[0], none)[0]).toEqual({
+      label: 'Record',
+      value: record(7, 2),
+      detail: tooFew,
+      muted: true,
+    })
   })
 
   it('writes the field’s rate over its entries, and says under five are too few', () => {

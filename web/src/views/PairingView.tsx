@@ -110,7 +110,7 @@ export function PairingView({
     body = row ? (
       <div className="grid gap-4 md:grid-cols-3">
         {pairingTiles(row, fieldByKey, t).map((tile) => (
-          <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} />
+          <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} muted={tile.muted} />
         ))}
       </div>
     ) : (

@@ -23,8 +23,7 @@
     "oneSoFar": "one archetype met {{min}}\u00a0times so far",
     "best": "Best matchup",
     "worst": "Worst matchup",
-    "rankedRate": "{{record}} against {{against}}",
-    "countOf": "{{won}} of {{matches}}"
+    "rankedRate": "{{record}} against {{against}}"
   },
   "name": {
     "unrecognized": "Unrecognized deck",
@@ -46,8 +45,6 @@
     "noMatchTitle": "No match against it yet",
     "noMatchMessage": "Once you play one, it is counted here.",
     "record": "Record",
-    "wonOf": "won {{won}} of {{matches}}",
-    "matchesWon": "matches won",
     "games": "Games",
     "yoursFirst": "yours first",
     "inTournaments": "In tournaments",

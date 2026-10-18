@@ -72,13 +72,10 @@
     "onDraw": "On the draw"
   },
   "rate": {
-    "record": "{{wins}} of {{n}}",
-    "nonePlayed": "None played",
-    "won": "{{record}} won",
-    "wonRange": "{{record}} won · {{range}}"
+    "nonePlayed": "None played"
   },
   "table": {
-    "won": "Won",
+    "record": "Record",
     "rate": "Rate",
     "archetype": "Archetype",
     "share": "Share"

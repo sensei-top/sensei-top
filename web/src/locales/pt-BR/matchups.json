@@ -23,8 +23,7 @@
     "oneSoFar": "um arquétipo enfrentado {{min}} vezes até agora",
     "best": "Melhor matchup",
     "worst": "Pior matchup",
-    "rankedRate": "{{record}} contra {{against}}",
-    "countOf": "{{won}} de {{matches}}"
+    "rankedRate": "{{record}} contra {{against}}"
   },
   "name": {
     "unrecognized": "Deck não reconhecido",
@@ -46,8 +45,6 @@
     "noMatchTitle": "Nenhuma partida contra ele ainda",
     "noMatchMessage": "Quando você jogar uma, ela é contada aqui.",
     "record": "Histórico",
-    "wonOf": "venceu {{won}} de {{matches}}",
-    "matchesWon": "partidas vencidas",
     "games": "Jogos",
     "yoursFirst": "os seus primeiro",
     "inTournaments": "Em torneios",

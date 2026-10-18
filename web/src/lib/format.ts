@@ -53,7 +53,9 @@ export function formatPercent(fraction: number, options?: Intl.NumberFormatOptio
   return format(fraction)
 }
 
-const WORD_JOINER = String.fromCharCode(0x2060)
+/** The word joiner (U+2060): no line may break on either side of it. Built
+ *  in code, never typed, like `NBSP`. */
+export const WORD_JOINER = String.fromCharCode(0x2060)
 
 /** A record, wins then losses, with an en dash: "6–3". A word joiner each
  *  side of the dash, so a record never wraps at it. */
