@@ -70,7 +70,7 @@
     "bestWindow": "Melhor janela",
     "record": "Retrospecto",
     "neverResolved": "Nunca resolveu",
-    "cost": "Manteve 7: <strong>{{keptRate}}</strong> ({{keptWins}}-{{keptLosses}} em {{keptGames}}) contra com mulligan: <strong>{{mullRate}}</strong> ({{mullWins}}-{{mullLosses}} em {{mullGames}})."
+    "cost": "Manteve 7: <strong>{{kept}}</strong> contra com mulligan: <strong>{{mull}}</strong>."
   },
   "hand": {
     "verdict": {

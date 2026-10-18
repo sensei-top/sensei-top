@@ -75,8 +75,8 @@
     "writeAgain": "Write it again"
   },
   "briefCard": {
-    "record_one": "Your record: {{wins}}-{{losses}} in {{count}} matches",
-    "record_other": "Your record: {{wins}}-{{losses}} in {{count}} matches",
+    "record_one": "Your record: {{record}} in {{count}} match",
+    "record_other": "Your record: {{record}} in {{count}} matches",
     "writtenBy": "written by {{model}}",
     "pasted": "pasted in",
     "fromGuideRun": "from a full guide run",
@@ -216,14 +216,14 @@
     "opponent": "Opponent",
     "formatUnknown": "No tournament format is known for this match, so the opponent's deck can't be named from the cards seen.",
     "unclassified": "Opponent not identified yet.",
-    "cardsSeen_one": "{{count}} cards seen",
+    "cardsSeen_one": "{{count}} card seen",
     "cardsSeen_other": "{{count}} cards seen",
-    "cardsSeenFrom_one": "{{count}} cards seen · {{source}}",
+    "cardsSeenFrom_one": "{{count}} card seen · {{source}}",
     "cardsSeenFrom_other": "{{count}} cards seen · {{source}}",
     "yourPick": "your pick",
     "liveRead": "live read",
     "otherPlans": "Other written plans",
-    "alternative": "{{label}} · {{fit}}% fit · {{confidence}}"
+    "alternative": "{{label}} · {{fit}} fit · {{confidence}}"
   },
   "position": {
     "turnLabel": "Turn {{turn}}",

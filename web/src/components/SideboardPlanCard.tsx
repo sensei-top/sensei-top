@@ -14,7 +14,8 @@ import { cardName } from '../lib/cards'
 import { confidenceLabel } from '../lib/opponent'
 import { BoardPlan, BriefProvenance, PlayAroundList } from './MatchupBriefCard'
 import { CopyPromptCard } from './CopyPromptCard'
-import { Card, Chip, Disclosure, EmptyState, Meter, Prose, SectionLabel } from './ui'
+import { formatPercent } from '../lib/format'
+import { Card, Chip, Disclosure, EmptyState, Prose, SectionLabel } from './ui'
 
 /** Arena's own `ResultReason_*` spelling, humanised the same way for every
  *  value it sends — the fixture only shows `ResultReason_Concede`
@@ -313,12 +314,11 @@ export function SideboardOpponentRail({
                 <Disclosure
                   summary={t('matchups.sideboard.alternative', {
                     label: alt.label,
-                    fit: Math.round(alt.fit * 100),
+                    fit: formatPercent(alt.fit),
                     confidence: confidenceLabel(alt.confidence, t),
                   })}
                 >
                   <div className="space-y-3">
-                    <Meter fraction={alt.fit} color="s1" />
                     <BoardPlan
                       boardIn={alt.brief.board_in}
                       boardOut={alt.brief.board_out}

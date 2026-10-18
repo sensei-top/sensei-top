@@ -75,8 +75,8 @@
     "writeAgain": "Escrever de novo"
   },
   "briefCard": {
-    "record_one": "Seu retrospecto: {{wins}}-{{losses}} em {{count}} partida",
-    "record_other": "Seu retrospecto: {{wins}}-{{losses}} em {{count}} partidas",
+    "record_one": "Seu retrospecto: {{record}} em {{count}} partida",
+    "record_other": "Seu retrospecto: {{record}} em {{count}} partidas",
     "writtenBy": "escrito por {{model}}",
     "pasted": "colado",
     "fromGuideRun": "de uma rodada completa do guia",
@@ -223,7 +223,7 @@
     "yourPick": "sua escolha",
     "liveRead": "leitura ao vivo",
     "otherPlans": "Outros planos escritos",
-    "alternative": "{{label}} · {{fit}}% de encaixe · {{confidence}}"
+    "alternative": "{{label}} · {{fit}} de encaixe · {{confidence}}"
   },
   "position": {
     "turnLabel": "Turno {{turn}}",

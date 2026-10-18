@@ -70,7 +70,7 @@
     "bestWindow": "Best window",
     "record": "Record",
     "neverResolved": "Never resolved",
-    "cost": "Kept 7: <strong>{{keptRate}}</strong> ({{keptWins}}-{{keptLosses}} in {{keptGames}}) vs. mulliganed: <strong>{{mullRate}}</strong> ({{mullWins}}-{{mullLosses}} in {{mullGames}})."
+    "cost": "Kept 7: <strong>{{kept}}</strong> vs. mulliganed: <strong>{{mull}}</strong>."
   },
   "hand": {
     "verdict": {

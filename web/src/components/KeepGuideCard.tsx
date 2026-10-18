@@ -1,7 +1,7 @@
 import { Trans, useTranslation } from 'react-i18next'
 import type { HandSlotOut, KeepGuideOut, KeyPlayOut } from '../api'
-import { formatFixed } from '../lib/format'
-import { percent } from '../theme'
+import { formatFixed, formatPercent, formatRecord } from '../lib/format'
+import { RATE_MIN_MATCHES, rateAndRecordLine } from '../lib/sample'
 import { Card, Chip, DataTable, Meter, SectionLabel } from './ui'
 
 function IdealHandChips({ idealHand }: { idealHand: HandSlotOut[] }) {
@@ -42,7 +42,7 @@ function LandOddsBars({ keep }: { keep: KeepGuideOut }) {
               className="flex-1"
             />
             <span className="w-10 text-right text-caption tabular-nums text-ink2">
-              {formatFixed(p * 100, 0)}%
+              {formatPercent(p)}
             </span>
           </div>
         )
@@ -77,8 +77,8 @@ function WhatThisDeckNeeds({ keep }: { keep: KeepGuideOut }) {
           rows={keyPlays.map((kp: KeyPlayOut) => [
             kp.card,
             kp.best_band,
-            `${kp.best_band_wins}-${kp.best_band_losses}`,
-            `${kp.never_resolved_wins}-${kp.never_resolved_losses}`,
+            formatRecord(kp.best_band_wins, kp.best_band_losses),
+            formatRecord(kp.never_resolved_wins, kp.never_resolved_losses),
           ])}
         />
       )}
@@ -87,14 +87,8 @@ function WhatThisDeckNeeds({ keep }: { keep: KeepGuideOut }) {
           <Trans
             i18nKey="live.keep.cost"
             values={{
-              keptRate: percent(cost.kept_seven_games > 0 ? cost.kept_seven_wins / cost.kept_seven_games : null),
-              keptWins: cost.kept_seven_wins,
-              keptLosses: cost.kept_seven_losses,
-              keptGames: cost.kept_seven_games,
-              mullRate: percent(cost.mulliganed_games > 0 ? cost.mulliganed_wins / cost.mulliganed_games : null),
-              mullWins: cost.mulliganed_wins,
-              mullLosses: cost.mulliganed_losses,
-              mullGames: cost.mulliganed_games,
+              kept: rateAndRecordLine({ wins: cost.kept_seven_wins, losses: cost.kept_seven_losses }) ?? '—',
+              mull: rateAndRecordLine({ wins: cost.mulliganed_wins, losses: cost.mulliganed_losses }) ?? '—',
             }}
             components={{ strong: <span className="font-medium text-ink" /> }}
           />
@@ -162,7 +156,7 @@ export function KeepGuideCard({
         <p className="mt-3 text-body text-ink2">
           <Trans
             i18nKey="live.keep.landBand"
-            values={{ rate: percent(keep.keep_rate), min: keep.land_min, max: keep.land_max }}
+            values={{ rate: formatPercent(keep.keep_rate), min: keep.land_min, max: keep.land_max }}
             components={{ strong: <span className="font-medium text-ink" /> }}
           />
         </p>
@@ -174,11 +168,16 @@ export function KeepGuideCard({
         <div className="mt-4 border-t border-edge pt-3">
           <SectionLabel as="h4">{t('live.keep.mulliganRecord')}</SectionLabel>
           <DataTable
-            columns={[t('live.keep.hand'), t('live.keep.games'), t('live.keep.winRate')]}
+            columns={[t('live.keep.hand'), t('live.keep.games'), t('live.keep.record'), t('live.keep.winRate')]}
             rows={mulliganRecord.map((m) => [
               m.mulligans === 0 ? t('live.keep.kept7') : t('live.keep.mullTo', { n: 7 - m.mulligans }),
               String(m.games),
-              percent(m.games > 0 ? m.wins / m.games : null),
+              formatRecord(m.wins, m.games - m.wins),
+              m.games >= RATE_MIN_MATCHES ? (
+                formatPercent(m.wins / m.games)
+              ) : (
+                <span key="rate" className="text-muted">{t('common.sample.tooFewCellGames')}</span>
+              ),
             ])}
           />
         </div>
