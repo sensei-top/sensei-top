@@ -2,9 +2,9 @@ import { useTranslation } from 'react-i18next'
 import type { DeckGuideOut, PersonalRateOut } from '../../api'
 import { archetypeName } from '../../lib/decks'
 import { fieldCaption } from '../../lib/guide'
+import { formatPercent, formatRecord } from '../../lib/format'
 import { formatCount } from '../../lib/time'
 import { placeById } from '../../shell/places'
-import { percent } from '../../theme'
 import { Card, DataTable, EmptyState, StatTile } from '../ui'
 
 /** The tournament field the deck plays into, since the format reset when
@@ -70,21 +70,22 @@ export function FieldCard({ guide }: { guide: DeckGuideOut }) {
   const columns = withBefore
     ? [
         t('decks.guide.field.columns.archetype'),
+        t('decks.guide.field.columns.you'),
         t('decks.guide.field.columns.share'),
         t('decks.guide.field.columns.before'),
-        t('decks.guide.field.columns.you'),
       ]
     : [
         t('decks.guide.field.columns.archetype'),
-        t('decks.guide.field.columns.share'),
         t('decks.guide.field.columns.you'),
+        t('decks.guide.field.columns.share'),
       ]
 
   return (
     <Card title={t('decks.guide.field.title')} subtitle={subtitle}>
       <div className={`grid gap-4 ${reset ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
-        <StatTile label={t('decks.guide.field.yourArchetype')} value={own ? percent(own.win_rate) : '—'} detail={ownDetail} />
-        <StatTile label={t('decks.guide.field.mostPlayed')} value={percent(top.share)} detail={archetypeName(top.archetype)} />
+        <StatTile label={t('decks.guide.field.yourArchetype')} value={own?.win_rate == null ? '—' : formatPercent(own.win_rate)} detail={ownDetail} />
+        <StatTile label={t('decks.guide.field.mostPlayed')} value={archetypeName(top.archetype)}
+          detail={t('field.tiles.mostPlayedDetail', { pct: formatPercent(top.share) })} />
         {reset && <StatTile label={t('decks.guide.field.changedAtReset')} value={formatCount(changed)} detail={shown} />}
       </div>
       <div className="mt-5">
@@ -104,22 +105,22 @@ export function FieldCard({ guide }: { guide: DeckGuideOut }) {
             )
             const you = personal ? (
               <span key="you" className={`whitespace-nowrap ${voided ? 'text-muted' : ''}`}>
-                {formatCount(personal.wins)}–{formatCount(personal.losses)}
+                {formatRecord(personal.wins, personal.losses)}
               </span>
             ) : (
               '—'
             )
             const share = (
               <span key="share" className="whitespace-nowrap">
-                {percent(s.share)}
+                {formatPercent(s.share)}
               </span>
             )
             const before = (
               <span key="before" className="whitespace-nowrap">
-                {percent(s.share_before_reset)}
+                {s.share_before_reset == null ? '—' : formatPercent(s.share_before_reset)}
               </span>
             )
-            return withBefore ? [name, share, before, you] : [name, share, you]
+            return withBefore ? [name, you, share, before] : [name, you, share]
           })}
         />
       </div>

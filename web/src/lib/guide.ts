@@ -1,7 +1,7 @@
 import type { ArchetypeChangeOut, ArchetypeShareOut, CardVerdictOut, Match, MatchupPlanOut, PlanProblemOut } from '../api'
 import type { TFunction } from '../i18n'
-import { formatFixed } from './format'
-import { MIN_TRUSTED_FIELD_SAMPLE, percent } from '../theme'
+import { formatFixed, formatPercent, formatRecord } from './format'
+import { MIN_TRUSTED_FIELD_SAMPLE } from './sample'
 import { archetypeName } from './decks'
 import { startOf } from './home'
 import { formatCount } from './time'
@@ -252,7 +252,7 @@ export function timingLabel(bucket: string, t: TFunction): string {
 /** A key card timing bucket's win-loss record, wins first, en dash; a dash
  *  alone for a bucket with no games in it at all. */
 export function timingRecord(bucket: TimingBucket | undefined): string {
-  return bucket ? `${bucket.w}–${bucket.l}` : '—'
+  return bucket ? formatRecord(bucket.w, bucket.l) : '—'
 }
 
 /** A pattern's own `match_ids_with`, resolved against the match list Home
@@ -321,7 +321,7 @@ export function copiesLine(card: CardVerdictOut, t: TFunction): string {
   if (card.consensus_copies == null || card.consensus_share == null) {
     return card.yours === 0 ? t('decks.guide.copies.noneNone') : t('decks.guide.copies.playNone', { n })
   }
-  const field = { copies: formatFixed(card.consensus_copies, 1), share: percent(card.consensus_share) }
+  const field = { copies: formatFixed(card.consensus_copies, 1), share: formatPercent(card.consensus_share) }
   return card.yours === 0 ? t('decks.guide.copies.nonePlays', field) : t('decks.guide.copies.playPlays', { n, ...field })
 }
 

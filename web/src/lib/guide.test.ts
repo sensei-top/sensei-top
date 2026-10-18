@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { translator } from '../i18n'
+import { WORD_JOINER } from './format'
 import type {
   ArchetypeChangeOut,
   ArchetypeShareOut,
@@ -163,7 +164,7 @@ describe('timingLabel', () => {
 
 describe('timingRecord', () => {
   it('is wins-losses, wins first, en dash', () => {
-    expect(timingRecord({ w: 40, l: 36 })).toBe('40–36')
+    expect(timingRecord({ w: 40, l: 36 })).toBe(`40${WORD_JOINER}–${WORD_JOINER}36`)
   })
 
   it('is a dash alone for no record', () => {
@@ -260,13 +261,13 @@ describe('listGroups', () => {
 
 describe('copiesLine', () => {
   it('reads a card the viewer plays once, which every list plays', () => {
-    expect(copiesLine(verdictCard('a', 'add', 1, 4.6, 1), t)).toBe('You play 1 · the field 4.6, in 100.0% of its lists')
+    expect(copiesLine(verdictCard('a', 'add', 1, 4.6, 1), t)).toBe('You play 1 · the field 4.6, in 100% of its lists')
   })
 
   it('reads a card the viewer does not play', () => {
-    // 0.575 of the lists is 57.5%.
+    // 0.575 of the lists is 58% (whole, D5).
     expect(copiesLine(verdictCard('a', 'add', 0, 2.8, 0.575), t)).toBe(
-      'You play none · the field 2.8, in 57.5% of its lists',
+      'You play none · the field 2.8, in 58% of its lists',
     )
   })
 
@@ -274,8 +275,8 @@ describe('copiesLine', () => {
     expect(copiesLine(verdictCard('a', 'flex', 1, null, null), t)).toBe('You play 1 · no list of the field plays it')
   })
 
-  it('writes a share of 0.025 with its decimal', () => {
-    expect(copiesLine(verdictCard('a', 'trim', 2, 1, 0.025), t)).toBe('You play 2 · the field 1.0, in 2.5% of its lists')
+  it('writes a share of 0.025 as a whole percent', () => {
+    expect(copiesLine(verdictCard('a', 'trim', 2, 1, 0.025), t)).toBe('You play 2 · the field 1.0, in 3% of its lists')
   })
 })
 

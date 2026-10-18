@@ -6,8 +6,6 @@
   "count": {
     "matches_one": "{{n}}\u00a0match",
     "matches_other": "{{n}}\u00a0matches",
-    "games_one": "{{n}}\u00a0game",
-    "games_other": "{{n}}\u00a0games",
     "lists_one": "{{n}}\u00a0list",
     "lists_other": "{{n}}\u00a0lists"
   },

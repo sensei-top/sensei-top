@@ -6,8 +6,6 @@
   "count": {
     "matches_one": "{{n}} partida",
     "matches_other": "{{n}} partidas",
-    "games_one": "{{n}} jogo",
-    "games_other": "{{n}} jogos",
     "lists_one": "{{n}} lista",
     "lists_other": "{{n}} listas"
   },
