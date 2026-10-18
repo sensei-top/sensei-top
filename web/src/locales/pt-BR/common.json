@@ -52,6 +52,14 @@
     "matches_one": "{{count}} partida",
     "matches_other": "{{count}} partidas"
   },
+  "sample": {
+    "tooFewMatches": "poucas para uma taxa, menos de {{min}}\u00a0partidas",
+    "tooFewGames": "poucos para uma taxa, menos de {{min}}\u00a0jogos",
+    "tooFewCellMatches": "poucas",
+    "tooFewCellGames": "poucos",
+    "noMatch": "nenhuma partida terminada ainda",
+    "noGame": "nenhum jogo terminado ainda"
+  },
   "cardData": {
     "meterLabel": "Download dos dados dos cards",
     "starting": "Iniciando",

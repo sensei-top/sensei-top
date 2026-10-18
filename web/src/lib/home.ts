@@ -23,8 +23,8 @@ export const SESSION_GAP_MS = 3 * HOUR
  *  far as a count needs. */
 export const HOME_MATCH_LIMIT = 500
 
-/** Below this many finished matches, a record is a count, not a rate. */
-export const RATE_MIN_MATCHES = 10
+// Re-exported so importers need not change yet; the threshold lives in `lib/sample.ts` (plan 26, phase 10 removes this).
+export { RATE_MIN_MATCHES } from './sample'
 
 export type LiveState = 'down' | 'stopped' | 'match' | 'watching' | 'idle'
 

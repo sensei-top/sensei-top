@@ -50,13 +50,8 @@ export function useTokens(): Tokens {
 export const percent = (value: number | null | undefined): string =>
   value == null ? '—' : `${formatFixed(value * 100, 1)}%`
 
-/** Below this many corpus entries (tournament decks, matches), a field-derived
- *  rate is real but too thin to trust as a measurement — see docs/metagame.md's
- *  evidence tiers. Shared by the line under each archetype on a deck's
- *  Matchups (lib/matchups.ts, "too few to trust"), the Guide's field-share
- *  column (components/guide/FieldCard.tsx) and CoachView's field numbers,
- *  so the same line means the same thing in every place. */
-export const MIN_TRUSTED_FIELD_SAMPLE = 5
+// Re-exported so importers need not change yet; the threshold lives in `lib/sample.ts` (plan 26, phase 10 removes this).
+export { MIN_TRUSTED_FIELD_SAMPLE } from './lib/sample'
 
 export const decimal = (value: number | null | undefined): string =>
   value == null ? '—' : formatFixed(value, 1)
