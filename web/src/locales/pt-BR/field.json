@@ -58,7 +58,6 @@
     "league": "Uma liga publica só as listas invictas, então isto é o que vence ligas, não tudo o que é jogado."
   },
   "row": {
-    "won": "venceu {{won}} de {{played}}",
     "lists_one": "{{n}} lista",
     "lists_other": "{{n}} listas"
   },
@@ -66,11 +65,10 @@
     "listsRead": "Listas lidas",
     "listsDetail": "{{kind}} {{when}}",
     "mostPlayed": "Mais jogado",
-    "mostPlayedDetail": "{{pct}}% dessas listas",
+    "mostPlayedDetail": "{{pct}} dessas listas",
     "againstOne": "Você contra o mais jogado",
     "againstTwo": "Você contra os dois mais jogados",
-    "recordValue": "{{won}} de {{played}}",
-    "wonDetail": "partidas vencidas, com qualquer deck seu",
+    "wonDetail": "com qualquer deck seu",
     "notMet": "não enfrentado {{when}}"
   },
   "showAll": "Mostrar todos os {{n}}",

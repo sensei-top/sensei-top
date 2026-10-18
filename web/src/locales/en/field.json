@@ -58,7 +58,6 @@
     "league": "A league publishes only its undefeated lists, so this is what wins leagues, not all that is played."
   },
   "row": {
-    "won": "won {{won}} of {{played}}",
     "lists_one": "{{n}}\u00a0list",
     "lists_other": "{{n}}\u00a0lists"
   },
@@ -66,11 +65,10 @@
     "listsRead": "Lists read",
     "listsDetail": "{{kind}} {{when}}",
     "mostPlayed": "Most played",
-    "mostPlayedDetail": "{{pct}}% of those lists",
+    "mostPlayedDetail": "{{pct}} of those lists",
     "againstOne": "You against the most played",
     "againstTwo": "You against the top two",
-    "recordValue": "{{won}} of {{played}}",
-    "wonDetail": "matches won, with any of your decks",
+    "wonDetail": "with any of your decks",
     "notMet": "not met {{when}}"
   },
   "showAll": "Show all {{n}}",

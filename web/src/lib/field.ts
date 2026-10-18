@@ -21,7 +21,6 @@ import type {
   MetagameStatus,
 } from '../api'
 import type { TFunction } from '../i18n'
-import { MIN_TRUSTED_FIELD_SAMPLE } from '../theme'
 import type { FieldRecord, Tier } from './home'
 import {
   HOME_MATCH_LIMIT,
@@ -33,6 +32,7 @@ import {
   recordAgainst,
   startOf,
 } from './home'
+import { WINRATE_MIN_MATCHES, rateAndRecordLine, rateOrRecord } from './sample'
 import { type HoldSource, holdLine } from './sources'
 import { formatCount, formatIsoDateShort } from './time'
 
@@ -299,12 +299,6 @@ export function shownRows<T>(rows: T[], limit: number, all: boolean): T[] {
   return all ? rows : rows.slice(0, limit)
 }
 
-/** A win rate needs this many finished matches to be listed. */
-export const WINRATE_MIN_MATCHES = 2
-
-/** Below this many matches, a matchup's rate is muted. */
-export const MATCHUP_THIN = MIN_TRUSTED_FIELD_SAMPLE
-
 const byName = (a: string, b: string) => a.localeCompare(b, 'en')
 
 /** The tier's rows with lists, the most played first, then by name. */
@@ -434,4 +428,27 @@ export function holdLines(status: MetagameStatus, which: 'paused' | 'waiting', n
     if (line != null) lines.push(line)
   }
   return lines
+}
+
+/** The "against the top two" tile: the value, whether it is muted, and its
+ *  line. Nothing played: a dash and the not-met line. Only draws: a dash and
+ *  "no finished match yet". Otherwise `rateOrRecord`, its line followed by
+ *  where the record comes from. */
+export function topTwoTile(
+  record: FieldRecord,
+  when: string,
+  t: TFunction,
+): { value: string; muted: boolean; detail: string } {
+  if (record.played === 0) return { value: '—', muted: false, detail: t('field.tiles.notMet', { when }) }
+  const result = rateOrRecord({ wins: record.won, losses: record.losses }, t)
+  if (result.figure == null) return { value: '—', muted: false, detail: result.line }
+  return { value: result.figure, muted: result.thin, detail: `${result.line} · ${t('field.tiles.wonDetail')}` }
+}
+
+/** A field row's caption: the one-line form of the record ("58% · 35–25"
+ *  or "6–3"), `notPlayed` when no match was played, "no finished match
+ *  yet" when every one was a draw. */
+export function rowCaption(record: FieldRecord, notPlayed: string, t: TFunction): string {
+  if (record.played === 0) return notPlayed
+  return rateAndRecordLine({ wins: record.won, losses: record.losses }) ?? t('common.sample.noMatch')
 }
