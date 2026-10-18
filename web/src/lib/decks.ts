@@ -101,21 +101,13 @@ export function fieldNameLine(
   return t('decks.fieldName', { name: spaced })
 }
 
-/** The line under a deck's title on its own pages: the format in words,
- *  every match of the deck (finished or not) and its wins, and when it was
- *  last played, joined by a middle dot. A part is left out when it is
- *  unknown, never padded with a dash. */
+/** The line under a deck's title on its own pages: the format in words and
+ *  when it was last played, joined by a middle dot. A part is left out when
+ *  it is unknown, never padded with a dash, so the line can be empty. The
+ *  deck's record is the strip's under it, not this line's. */
 export function deckLine(identity: DeckIdentityOut, now: number, t: TFunction): string {
   const played = ago(identity.last_played, now)
-  return [
-    formatName(identity.format, t),
-    t('decks.line.matches', {
-      count: identity.matches,
-      n: formatCount(identity.matches),
-      won: formatCount(identity.match_wins),
-    }),
-    played && t('decks.line.lastPlayed', { ago: played }),
-  ]
+  return [formatName(identity.format, t), played && t('decks.line.lastPlayed', { ago: played })]
     .filter(Boolean)
     .join(' · ')
 }

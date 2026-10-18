@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Navigate, NavLink, Outlet, useLocation, useParams, useSearchParams } from 'react-router'
 import { useDecks, useGuide, useGuideDecks } from '../api'
 import type { TFunction } from '../i18n'
+import { DeckKeyNumbers } from '../components/DeckKeyNumbers'
 import { BackLink, Button, EmptyState, ErrorNote, Loading } from '../components/ui'
 import { chosenVersion } from '../lib/deckOverview'
 import { deckLine, deckRedirect, fieldNameLine, newestVersion, resolveDeck } from '../lib/decks'
@@ -32,9 +33,11 @@ export type DeckOutletContext = {
 
 /** The layout a deck's three pages share: the way back to every deck, the
  *  deck's name as typed (muted "Unnamed deck" without one), the field's name
- *  for it when the guide gives one that differs, the deck's line over the
- *  whole deck (every version, whichever the address chose), and the
- *  navigation between Overview, Matchups and Guide.
+ *  for it when the guide gives one that differs, the deck's line (its
+ *  format and when it was last played), the deck strip over the versions
+ *  the tab reads (`DeckKeyNumbers`; on the Guide, which drops `?version=`,
+ *  every version), and the navigation between Overview, Matchups and
+ *  Guide.
  *
  *  `:id` is a deck's key, its colon written bare (`lib/decks.ts`'s
  *  `deckAddress`). An address that names one of a deck's versions instead,
@@ -91,6 +94,7 @@ export function DeckLayout() {
   const fieldName = guide.data ? fieldNameLine(guide.data.list_diff?.archetype_name, identity.name, t) : null
   const context: DeckOutletContext = { deckKey: identity.key, deckId, versionIds, version }
   const versionSearch = version ? `?${new URLSearchParams({ version })}` : ''
+  const line = deckLine(identity, now, t)
 
   return (
     <div className="space-y-6">
@@ -104,7 +108,8 @@ export function DeckLayout() {
           </h2>
           {fieldName && <p className="text-body text-ink2">{fieldName}</p>}
         </div>
-        <p className="text-caption text-muted">{deckLine(identity, now, t)}</p>
+        {line && <p className="text-caption text-muted">{line}</p>}
+        <DeckKeyNumbers versionIds={versionIds} />
         <nav aria-label={t('decks.layout.nav')} className="flex flex-wrap gap-1 pt-1">
           {deckTabs(t).map((tab) => (
             // NavLink marks the current one with aria-current="page" itself.

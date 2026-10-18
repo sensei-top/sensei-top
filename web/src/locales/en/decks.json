@@ -12,8 +12,6 @@
     "lists_other": "{{n}}\u00a0lists"
   },
   "line": {
-    "matches_one": "{{n}} match, {{won}} won",
-    "matches_other": "{{n}} matches, {{won}} won",
     "lastPlayed": "last played {{ago}}"
   },
   "record": {
@@ -50,6 +48,16 @@
       "guide": "Guide"
     }
   },
+  "strip": {
+    "matches": "Matches",
+    "games": "Games",
+    "playDraw": "Play vs draw",
+    "points_one": "{{sign}}{{n}}\u00a0point",
+    "points_other": "{{sign}}{{n}}\u00a0points",
+    "onPlay": "{{value}} on the play",
+    "onDraw": "{{value}} on the draw",
+    "sideNone": "no games"
+  },
   "overview": {
     "daysWithinMonth": "{{from}} to {{to}}",
     "dayWithYear": "{{day}}, {{year}}",
@@ -71,27 +79,12 @@
       "subtitle": "Your rank when each match was played. Finished matches only.",
       "rank": "Rank",
       "matches": "Matches",
-      "won": "Won",
+      "record": "Record",
       "rate": "Rate"
     },
     "versions": {
       "title": "Versions",
       "subtitle": "A change to the list starts a new version. Pick one to read it alone."
-    },
-    "tiles": {
-      "onPlay": "On the play",
-      "onDraw": "On the draw",
-      "wonOfGames": "won {{won}} of {{games}}\u00a0games",
-      "gamesWon": "games won",
-      "noGamePlay": "no game on the play yet",
-      "noGameDraw": "no game on the draw yet",
-      "playAgainstDraw": "Play against draw",
-      "tooFew": "too few games to compare",
-      "points_one": "{{sign}}{{n}}\u00a0point",
-      "points_other": "{{sign}}{{n}}\u00a0points",
-      "betterPlay": "better on the play",
-      "betterDraw": "better on the draw",
-      "noDifference": "no difference"
     }
   },
   "written": {
@@ -186,7 +179,6 @@
       "olderMatches_one": "{{n}} of your matches is older",
       "olderMatches_other": "{{n}} of your matches are older",
       "noReset": "no format reset found",
-      "record": "Record",
       "tournamentLists": "Tournament lists",
       "rulesText": "Rules text",
       "fieldSince": "Field since",

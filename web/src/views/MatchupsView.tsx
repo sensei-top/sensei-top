@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router'
-import { DECK_MATCH_LIMIT, useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } from '../api'
+import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } from '../api'
 import { VersionSwitcher } from '../components/VersionSwitcher'
 import { Button, Card, DataTable, EmptyState, ErrorNote, Loading, ManaPips, StatTile, TextLink } from '../components/ui'
 import { mergeNewestFirst } from '../lib/deckOverview'
@@ -17,10 +17,9 @@ const MINUTE = 60_000
  *  every version when `version` is `null`), counted from the matches in
  *  hand, top to bottom: the version switcher when the deck has more than
  *  one; three tiles, the archetypes met and the best and worst of those met
- *  five times or more, and under them, when a version's list is cut at the
- *  route's maximum, how many matches were counted; and every archetype
- *  met, one row each, whichever version met it, its name a link to the
- *  pairing's page carrying the version chosen. Finished matches only.
+ *  five times or more; and every archetype met, one row each, whichever
+ *  version met it, its name a link to the pairing's page carrying the
+ *  version chosen. Finished matches only.
  *  Each version is read on its own and the page waits for every one; one
  *  failure is the page's error. The field's numbers never hold the page:
  *  until they come, or when they fail, the line under a name is the games
@@ -78,20 +77,12 @@ export function MatchupsView({
       />
     )
   } else {
-    const full = (matches.data ?? []).some((list) => list.length >= DECK_MATCH_LIMIT)
     body = (
       <>
-        <div className="space-y-2">
-          <div className="grid gap-4 md:grid-cols-3">
-            {tiles.map((tile) => (
-              <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} />
-            ))}
-          </div>
-          {full && (
-            <p className="text-caption text-muted">
-              {t('matchups.view.countedOver', { n: formatCount(inHand.length) })}
-            </p>
-          )}
+        <div className="grid gap-4 md:grid-cols-3">
+          {tiles.map((tile) => (
+            <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} />
+          ))}
         </div>
 
         <Card title={t('matchups.view.archetypesMet')} subtitle={t('matchups.view.archetypesMetSubtitle')}>

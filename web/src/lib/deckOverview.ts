@@ -1,18 +1,19 @@
 /**
- * What a deck's Overview reads, as pure functions of the API's rows and a
- * clock (`now`, milliseconds since the epoch). A version is a row of
- * `/api/decks`; a deck lists its versions in its identity's `deck_ids`. The
- * page reads the matches and the games on the play and on the draw one
- * version at a time, and these add them up.
+ * What a deck's Overview and the strip over every deck tab read, as pure
+ * functions of the API's rows and a clock (`now`, milliseconds since the
+ * epoch). A version is a row of `/api/decks`; a deck lists its versions in
+ * its identity's `deck_ids`. The pages read the matches and the games on the
+ * play and on the draw one version at a time, and these add them up.
  *
- * A finished match is a win, a loss or a draw (`isFinished`), as the band
- * above them counts it.
+ * A finished match is a win, a loss or a draw (`isFinished`). A record and
+ * a rate are over wins and losses alone: a draw is never a loss.
  */
 import type { Deck, Match, PlayDrawWinrate } from '../api'
 import type { TFunction } from '../i18n'
-import { formatDate } from './format'
-import { isFinished, RATE_MIN_MATCHES, startOf } from './home'
-import { formatCount, formatPercent, formatShortDay, parseTimestamp } from './time'
+import { formatDate, formatPercent, formatRecord } from './format'
+import { isFinished, startOf } from './home'
+import { RATE_MIN_MATCHES, rateAndRecordLine, rateOrRecord } from './sample'
+import { formatCount, formatShortDay, parseTimestamp } from './time'
 
 /** For a sort, newest first: a time that cannot be read comes last. */
 function newestFirst(a: number | null, b: number | null): number {
@@ -90,16 +91,24 @@ export function versionLabel(
   return `${versionDays(deck, now, t) ?? t('decks.overview.undated')} · ${matchesWord(deck.matches_played, t)}`
 }
 
-/** The second line of a version's row, over that version's matches: from
- *  ten finished a rate, "57% · won 21 of 37"; one to nine the count, "won 3
- *  of 7"; none, "no finished match yet". */
+/** A match's wins and losses, draws and matches in progress aside (R2:
+ *  a draw is never a loss). */
+function matchRecord(matches: Match[]): { wins: number; losses: number } {
+  let wins = 0
+  let losses = 0
+  for (const match of matches) {
+    if (match.result === 'win') wins += 1
+    else if (match.result === 'loss') losses += 1
+  }
+  return { wins, losses }
+}
+
+/** The second line of a version's row, over that version's matches, in the
+ *  one-line form: from ten finished a rate and the record, "57% · 21–16";
+ *  one to nine the record alone, "3–3"; none, "no finished match yet". A
+ *  draw counts toward neither. */
 export function versionRecord(matches: Match[], t: TFunction): string {
-  const finished = matches.filter(isFinished)
-  const wins = finished.filter((match) => match.result === 'win').length
-  const count = t('decks.record.wonOf', { wins: formatCount(wins), finished: formatCount(finished.length) })
-  if (finished.length >= RATE_MIN_MATCHES) return `${formatPercent(wins / finished.length)}% · ${count}`
-  if (finished.length > 0) return count
-  return t('decks.record.none')
+  return rateAndRecordLine(matchRecord(matches)) ?? t('common.sample.noMatch')
 }
 
 /* -------------------------------------------------- on the play and draw */
@@ -118,59 +127,76 @@ export function playDrawTotals(rows: PlayDrawWinrate[]): PlayDrawTotals {
   return totals
 }
 
-/** What a `StatTile` says. */
-export type TileText = { label: string; value: string; detail: string }
+/** What a `StatTile` says. `thin` is a figure drawn muted: a record, or
+ *  "too few", where there are too few for a rate. */
+export type KeyTile = { label: string; value: string; detail: string; thin: boolean }
 
-/** A whole percentage, 0..100, of a side with at least ten games; `null`
- *  under ten, where no rate is shown. */
+/** A side's whole percentage, 0..100, from ten games; `null` under ten. */
 function sidePercent(side: PlayDrawSide): number | null {
   return side.games >= RATE_MIN_MATCHES ? Math.round((side.won / side.games) * 100) : null
 }
 
-function sideTile(side: PlayDrawSide, where: 'play' | 'draw', t: TFunction): TileText {
-  const label = where === 'play' ? t('decks.overview.tiles.onPlay') : t('decks.overview.tiles.onDraw')
-  const percent = sidePercent(side)
-  if (percent != null) {
-    return {
-      label,
-      value: `${percent}%`,
-      detail: t('decks.overview.tiles.wonOfGames', { won: formatCount(side.won), games: formatCount(side.games) }),
-    }
-  }
-  if (side.games > 0) {
-    return {
-      label,
-      value: t('decks.record.figureOf', { wins: formatCount(side.won), finished: formatCount(side.games) }),
-      detail: t('decks.overview.tiles.gamesWon'),
-    }
-  }
-  return {
-    label,
-    value: '—',
-    detail: where === 'play' ? t('decks.overview.tiles.noGamePlay') : t('decks.overview.tiles.noGameDraw'),
-  }
+/** A side as the play/draw line names it: its rate from ten games, its
+ *  record under ten, "no games" with none. */
+function sideValue(side: PlayDrawSide, t: TFunction): string {
+  // Debt (R2): the play-draw route counts draws in `games_completed` and has
+  // no losses field, so a draw lowers a side's rate, counts toward its ten
+  // games and toward the gap, and reads as a loss in its record.
+  if (side.games >= RATE_MIN_MATCHES) return formatPercent(side.won / side.games)
+  if (side.games > 0) return formatRecord(side.won, side.games - side.won)
+  return t('decks.strip.sideNone')
 }
 
-/** The three tiles: on the play, on the draw, and the one against the
- *  other. A side under ten games (`RATE_MIN_MATCHES`) shows its count, not
- *  a rate, and the third tile compares only when both sides have ten: the
- *  two whole percentages subtracted, so the three agree. */
-export function playDrawTiles(totals: PlayDrawTotals, t: TFunction): [TileText, TileText, TileText] {
+/** The deck strip's three tiles, over the versions a tab reads.
+ *
+ *  Matches: the small-sample rule over the finished matches' wins and
+ *  losses, a draw counting toward neither. Games: the same over every
+ *  match's games won and lost, finished match or not. Play vs draw: with
+ *  ten games on each side the gap in points, the two whole percentages
+ *  subtracted so the figure and the line agree; with fewer on either side
+ *  "too few", muted; with no game on either, an em dash. Its line names
+ *  both sides, the play first. */
+export function deckKeyNumbers(
+  matches: Match[],
+  totals: PlayDrawTotals,
+  t: TFunction,
+): [KeyTile, KeyTile, KeyTile] {
+  let gamesWon = 0
+  let gamesLost = 0
+  for (const match of matches) {
+    gamesWon += match.games_won ?? 0
+    gamesLost += match.games_lost ?? 0
+  }
+  const tile = (label: string, record: { wins: number; losses: number }, unit: 'matches' | 'games'): KeyTile => {
+    const { figure, line, thin } = rateOrRecord(record, t, unit)
+    return { label, value: figure ?? '—', detail: line, thin }
+  }
+
   const play = sidePercent(totals.play)
   const draw = sidePercent(totals.draw)
-  const label = t('decks.overview.tiles.playAgainstDraw')
-  let difference: TileText
-  if (play == null || draw == null) {
-    difference = { label, value: '—', detail: t('decks.overview.tiles.tooFew') }
-  } else {
+  let value: string
+  let thin = false
+  if (play != null && draw != null) {
     const points = play - draw
     const size = Math.abs(points)
-    const word = (sign: string) => t('decks.overview.tiles.points', { count: size, n: size, sign })
-    if (points > 0) difference = { label, value: word('+'), detail: t('decks.overview.tiles.betterPlay') }
-    else if (points < 0) difference = { label, value: word('\u2212'), detail: t('decks.overview.tiles.betterDraw') }
-    else difference = { label, value: word(''), detail: t('decks.overview.tiles.noDifference') }
+    const sign = points > 0 ? '+' : points < 0 ? '\u2212' : ''
+    value = t('decks.strip.points', { count: size, n: formatCount(size), sign })
+  } else if (totals.play.games > 0 || totals.draw.games > 0) {
+    value = t('common.sample.tooFewCellGames')
+    thin = true
+  } else {
+    value = '—'
   }
-  return [sideTile(totals.play, 'play', t), sideTile(totals.draw, 'draw', t), difference]
+  const detail = [
+    t('decks.strip.onPlay', { value: sideValue(totals.play, t) }),
+    t('decks.strip.onDraw', { value: sideValue(totals.draw, t) }),
+  ].join(' · ')
+
+  return [
+    tile(t('decks.strip.matches'), matchRecord(matches), 'matches'),
+    tile(t('decks.strip.games'), { wins: gamesWon, losses: gamesLost }, 'games'),
+    { label: t('decks.strip.playDraw'), value, detail, thin },
+  ]
 }
 
 /* ---------------------------------------------------------------- by rank */
@@ -178,9 +204,10 @@ export function playDrawTiles(totals: PlayDrawTotals, t: TFunction): [TileText, 
 /** The ladder's classes, best first. */
 const LADDER = ['Mythic', 'Diamond', 'Platinum', 'Gold', 'Silver', 'Bronze']
 
-export type RankRow = { rank: string; matches: number; won: number; rate: string }
+/** `record` is wins–losses; `thin` is a `rate` drawn muted, "too few". */
+export type RankRow = { rank: string; matches: number; record: string; rate: string; thin: boolean }
 
-type RankGroup = { rankClass: string | null; level: number | null; matches: number; won: number }
+type RankGroup = { rankClass: string | null; level: number | null; matches: number; wins: number; losses: number }
 
 /** Where a class sits: its place on the ladder, a class not on it after
  *  every one that is, no rank last. */
@@ -194,7 +221,10 @@ function classPlace(rankClass: string | null): number {
  *  order: Mythic, Diamond, Platinum, Gold, Silver, Bronze, level 1 before
  *  4 within a class and a class's row with no level after its levels; a
  *  class not on the ladder after them by name; matches with no rank last.
- *  The rate is an em dash under ten matches. */
+ *  Matches counts every finished match, a draw too; the record and the
+ *  rate are over wins and losses, a draw counting toward neither. The rate
+ *  is "too few", muted, from one to nine of them, and an em dash with none
+ *  (a row of draws alone). */
 export function rankRows(matches: Match[], t: TFunction): RankRow[] {
   const groups = new Map<string, RankGroup>()
   for (const match of matches) {
@@ -202,9 +232,10 @@ export function rankRows(matches: Match[], t: TFunction): RankRow[] {
     const rankClass = match.rank_class ?? null
     const level = rankClass != null ? (match.rank_level ?? null) : null
     const key = `${rankClass ?? ''}\u0000${level ?? ''}`
-    const group = groups.get(key) ?? { rankClass, level, matches: 0, won: 0 }
+    const group = groups.get(key) ?? { rankClass, level, matches: 0, wins: 0, losses: 0 }
     group.matches += 1
-    if (match.result === 'win') group.won += 1
+    if (match.result === 'win') group.wins += 1
+    else if (match.result === 'loss') group.losses += 1
     groups.set(key, group)
   }
   return [...groups.values()]
@@ -214,17 +245,28 @@ export function rankRows(matches: Match[], t: TFunction): RankRow[] {
       if (a.rankClass !== b.rankClass) return (a.rankClass ?? '') < (b.rankClass ?? '') ? -1 : 1
       return (a.level ?? Infinity) - (b.level ?? Infinity)
     })
-    .map((group) => ({
-      rank:
-        group.rankClass == null
-          ? t('decks.overview.noRank')
-          : group.level != null
-            ? `${group.rankClass} ${group.level}`
-            : group.rankClass,
-      matches: group.matches,
-      won: group.won,
-      rate: group.matches >= RATE_MIN_MATCHES ? `${formatPercent(group.won / group.matches)}%` : '—',
-    }))
+    .map((group) => {
+      const finished = group.wins + group.losses
+      const thin = finished > 0 && finished < RATE_MIN_MATCHES
+      const rate =
+        finished >= RATE_MIN_MATCHES
+          ? formatPercent(group.wins / finished)
+          : thin
+            ? t('common.sample.tooFewCellMatches')
+            : '—'
+      return {
+        rank:
+          group.rankClass == null
+            ? t('decks.overview.noRank')
+            : group.level != null
+              ? `${group.rankClass} ${group.level}`
+              : group.rankClass,
+        matches: group.matches,
+        record: formatRecord(group.wins, group.losses),
+        rate,
+        thin,
+      }
+    })
 }
 
 /* ------------------------------------------------------------ the matches */

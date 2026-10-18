@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router'
-import { DECK_MATCH_LIMIT, useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } from '../api'
+import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } from '../api'
 import { DeckMatchesCard } from '../components/DeckMatchesCard'
 import { PairingBrief } from '../components/PairingBrief'
 import { VersionSwitcher } from '../components/VersionSwitcher'
@@ -16,7 +16,7 @@ import {
   pairingTiles,
   withVersion,
 } from '../lib/pairing'
-import { formatCount, useNow } from '../lib/time'
+import { useNow } from '../lib/time'
 import { placeById } from '../shell/places'
 
 const MINUTE = 60_000
@@ -28,10 +28,9 @@ const MINUTE = 60_000
  *  the opponent's deck, its pips and name as a Matchups row draws them,
  *  and when it was last met; the version switcher when the deck has more
  *  than one; three tiles over the finished matches, the record, the games
- *  and the field's record in tournaments, and under them, when a version's
- *  list is cut at the route's maximum, how many matches were counted; the
- *  brief against it (`PairingBrief`), whatever the state of the matches;
- *  and every match against it, finished or not, newest first. Each version
+ *  and the field's record in tournaments; the brief against it
+ *  (`PairingBrief`), whatever the state of the matches; and every match
+ *  against it, finished or not, newest first. Each version
  *  is read on its own and the page waits for every one; one failure is the
  *  page's error. The field's numbers never hold the page: until they come,
  *  or when they fail, the third tile says there are none. With no match
@@ -108,18 +107,11 @@ export function PairingView({
       />
     )
   } else {
-    const inHand = (matches.data ?? []).reduce((count, list) => count + list.length, 0)
-    const full = (matches.data ?? []).some((list) => list.length >= DECK_MATCH_LIMIT)
     body = row ? (
-      <div className="space-y-2">
-        <div className="grid gap-4 md:grid-cols-3">
-          {pairingTiles(row, fieldByKey, t).map((tile) => (
-            <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} />
-          ))}
-        </div>
-        {full && (
-          <p className="text-caption text-muted">{t('matchups.view.countedOver', { n: formatCount(inHand) })}</p>
-        )}
+      <div className="grid gap-4 md:grid-cols-3">
+        {pairingTiles(row, fieldByKey, t).map((tile) => (
+          <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} />
+        ))}
       </div>
     ) : (
       <EmptyState

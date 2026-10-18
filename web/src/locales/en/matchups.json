@@ -5,7 +5,6 @@
     "everyVersion": "Every version",
     "noFinishedTitle": "No finished match yet",
     "noFinishedMessage": "Matchups are counted once a match has ended.",
-    "countedOver": "Counted over the {{n}} newest matches.",
     "archetypesMet": "Archetypes met",
     "archetypesMetSubtitle": "Finished matches only, most met first. A rate needs ten matches.",
     "columns": {

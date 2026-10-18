@@ -174,7 +174,7 @@ describe('fieldNameLine', () => {
 describe('deckLine', () => {
   const now = new Date(2026, 8, 28, 12, 0, 0).getTime()
 
-  it('joins the format, every match and its wins, and the last played', () => {
+  it('joins the format and the last played, and leaves out the match count', () => {
     // 12:00 on the log's own clock, 24 hours before now: "1d ago".
     const deck = identity('guid:kites', ['v1'], {
       format: 'TraditionalStandard',
@@ -183,22 +183,17 @@ describe('deckLine', () => {
       match_losses: 33,
       last_played: '2026-09-27T12:00:00',
     })
-    expect(deckLine(deck, now, t)).toBe('Standard, best of three · 64 matches, 30 won · last played 1d ago')
-  })
-
-  it('says one match in the singular', () => {
-    const deck = identity('guid:kites', ['v1'], { format: 'Standard', matches: 1, last_played: '2026-09-25T12:00:00' })
-    expect(deckLine(deck, now, t)).toBe('Standard · 1 match, 0 won · last played 3d ago')
+    expect(deckLine(deck, now, t)).toBe('Standard, best of three · last played 1d ago')
   })
 
   it('leaves out a format it does not know, with no dash', () => {
     const deck = identity('guid:kites', ['v1'], { matches: 2, last_played: '2026-09-13T12:00:00' })
-    expect(deckLine(deck, now, t)).toBe('2 matches, 0 won · last played 15d ago')
+    expect(deckLine(deck, now, t)).toBe('last played 15d ago')
   })
 
   it('leaves out a last played it does not know', () => {
     const deck = identity('guid:kites', ['v1'], { format: 'Draft', matches: 2, match_wins: 1 })
-    expect(deckLine(deck, now, t)).toBe('Draft · 2 matches, 1 won')
+    expect(deckLine(deck, now, t)).toBe('Draft')
   })
 })
 

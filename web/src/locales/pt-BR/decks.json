@@ -12,8 +12,6 @@
     "lists_other": "{{n}} listas"
   },
   "line": {
-    "matches_one": "{{n}} partida, {{won}} vencida",
-    "matches_other": "{{n}} partidas, {{won}} vencidas",
     "lastPlayed": "jogado pela última vez {{ago}}"
   },
   "record": {
@@ -50,6 +48,16 @@
       "guide": "Guia"
     }
   },
+  "strip": {
+    "matches": "Partidas",
+    "games": "Jogos",
+    "playDraw": "Play contra draw",
+    "points_one": "{{sign}}{{n}} ponto",
+    "points_other": "{{sign}}{{n}} pontos",
+    "onPlay": "{{value}} no play",
+    "onDraw": "{{value}} no draw",
+    "sideNone": "nenhum jogo"
+  },
   "overview": {
     "daysWithinMonth": "{{from}} a {{to}}",
     "dayWithYear": "{{day}} de {{year}}",
@@ -71,27 +79,12 @@
       "subtitle": "Sua classificação quando cada partida foi jogada. Só partidas terminadas.",
       "rank": "Classificação",
       "matches": "Partidas",
-      "won": "Vitórias",
+      "record": "Retrospecto",
       "rate": "Taxa"
     },
     "versions": {
       "title": "Versões",
       "subtitle": "Uma mudança na lista começa uma nova versão. Escolha uma para lê-la sozinha."
-    },
-    "tiles": {
-      "onPlay": "No play",
-      "onDraw": "No draw",
-      "wonOfGames": "venceu {{won}} de {{games}} jogos",
-      "gamesWon": "jogos vencidos",
-      "noGamePlay": "nenhum jogo no play ainda",
-      "noGameDraw": "nenhum jogo no draw ainda",
-      "playAgainstDraw": "Play contra draw",
-      "tooFew": "poucos jogos para comparar",
-      "points_one": "{{sign}}{{n}} ponto",
-      "points_other": "{{sign}}{{n}} pontos",
-      "betterPlay": "melhor no play",
-      "betterDraw": "melhor no draw",
-      "noDifference": "sem diferença"
     }
   },
   "written": {
@@ -186,7 +179,6 @@
       "olderMatches_one": "{{n}} das suas partidas é mais antiga",
       "olderMatches_other": "{{n}} das suas partidas são mais antigas",
       "noReset": "nenhum reinício do formato encontrado",
-      "record": "Retrospecto",
       "tournamentLists": "Listas de torneio",
       "rulesText": "Texto de regras",
       "fieldSince": "Meta desde",

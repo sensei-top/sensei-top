@@ -5,7 +5,6 @@
     "everyVersion": "Todas as versões",
     "noFinishedTitle": "Nenhuma partida terminada ainda",
     "noFinishedMessage": "Os matchups são contados quando uma partida termina.",
-    "countedOver": "Contado sobre as {{n}} partidas mais recentes.",
     "archetypesMet": "Arquétipos enfrentados",
     "archetypesMetSubtitle": "Só partidas terminadas, os mais enfrentados primeiro. Uma taxa precisa de dez partidas.",
     "columns": {

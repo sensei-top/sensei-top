@@ -1,12 +1,11 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router'
-import { DECK_MATCH_LIMIT, useDeckMatches, useDeckPlayDraw, useDeckVersions, type Match } from '../api'
+import { useDeckMatches, useDeckVersions, type Match } from '../api'
 import { DeckMatchesCard } from '../components/DeckMatchesCard'
-import { MatchesSummary } from '../components/MatchesSummary'
 import { VersionSwitcher } from '../components/VersionSwitcher'
-import { Button, Card, Chip, DataTable, EmptyState, ErrorNote, Loading, StatTile } from '../components/ui'
-import { mergeNewestFirst, playDrawTiles, playDrawTotals, rankRows, versionDays, versionRecord } from '../lib/deckOverview'
+import { Button, Card, Chip, DataTable, EmptyState, ErrorNote, Loading } from '../components/ui'
+import { mergeNewestFirst, rankRows, versionDays, versionRecord } from '../lib/deckOverview'
 import { formatCount, useNow } from '../lib/time'
 import { placeById } from '../shell/places'
 
@@ -14,10 +13,9 @@ const MINUTE = 60_000
 
 /** A deck's Overview, over the versions the address chose (`versionIds`,
  *  every version when `version` is `null`), top to bottom: the version
- *  switcher when the deck has more than one; Matches' band over the matches
- *  in hand; the games on the play and on the draw as three tiles; the
- *  finished matches by the rank they were played at, when there are two
- *  ranks; under every version, each version as a way to read it alone; and
+ *  switcher when the deck has more than one; the finished matches by the
+ *  rank they were played at, when there are two ranks; under every version,
+ *  each version as a way to read it alone; and
  *  the matches themselves, newest first, ten at first and fifty more a
  *  press. Each version is read on its own and the page adds them up, and it
  *  waits for every one; one failure is the page's error. A chosen version
@@ -38,7 +36,6 @@ export function DeckOverviewView({
   const { pathname } = useLocation()
   const { deckIds, versions } = useDeckVersions(deckKey, versionIds)
   const matches = useDeckMatches(versionIds)
-  const playDraw = useDeckPlayDraw(versionIds)
   const now = useNow()
   // The days move with the minute, not with every second's re-render.
   const minute = Math.floor(now / MINUTE) * MINUTE
@@ -49,17 +46,12 @@ export function DeckOverviewView({
     [versionIds, matches.data],
   )
   const ranks = useMemo(() => rankRows(inHand, t), [inHand, t])
-  const tiles = useMemo(
-    () => (playDraw.data ? playDrawTiles(playDrawTotals(playDraw.data.flat()), t) : null),
-    [playDraw.data, t],
-  )
 
   const switcher = deckIds.length > 1 && <VersionSwitcher versions={versions} value={version} now={minute} />
 
-  const error = matches.error ?? playDraw.error
   let body
-  if (error) body = <ErrorNote error={error} />
-  else if (matches.isPending || playDraw.isPending || !tiles) body = <Loading />
+  if (matches.error) body = <ErrorNote error={matches.error} />
+  else if (matches.isPending) body = <Loading />
   else if (inHand.length === 0 && version != null) {
     body = (
       <EmptyState
@@ -70,30 +62,29 @@ export function DeckOverviewView({
       />
     )
   } else {
-    const full = (matches.data ?? []).some((list) => list.length >= DECK_MATCH_LIMIT)
     body = (
       <>
-        <MatchesSummary matches={inHand} full={full} />
-
-        <div className="space-y-2">
-          <p className="text-caption text-muted">{t('decks.overview.playDrawNote')}</p>
-          <div className="grid gap-4 md:grid-cols-3">
-            {tiles.map((tile) => (
-              <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} />
-            ))}
-          </div>
-        </div>
-
         {ranks.length >= 2 && (
           <Card title={t('decks.overview.rank.title')} subtitle={t('decks.overview.rank.subtitle')}>
             <DataTable
               columns={[
                 t('decks.overview.rank.rank'),
                 t('decks.overview.rank.matches'),
-                t('decks.overview.rank.won'),
+                t('decks.overview.rank.record'),
                 t('decks.overview.rank.rate'),
               ]}
-              rows={ranks.map((row) => [row.rank, formatCount(row.matches), formatCount(row.won), row.rate])}
+              rows={ranks.map((row) => [
+                row.rank,
+                formatCount(row.matches),
+                row.record,
+                row.thin ? (
+                  <span key="rate" className="text-muted">
+                    {row.rate}
+                  </span>
+                ) : (
+                  row.rate
+                ),
+              ])}
             />
           </Card>
         )}
