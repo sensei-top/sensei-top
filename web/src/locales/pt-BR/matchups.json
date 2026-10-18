@@ -186,14 +186,12 @@
     "thisOpponent": "este oponente",
     "thisArchetype": "este arquétipo",
     "headline": {
-      "noResult": "Trocas para o jogo {{next}} vs {{label}}",
-      "won": "Venceu o jogo {{game}} — trocas para o jogo {{next}} vs {{label}}",
-      "wonReason": "Venceu o jogo {{game}} ({{reason}}) — trocas para o jogo {{next}} vs {{label}}",
-      "lost": "Perdeu o jogo {{game}} — trocas para o jogo {{next}} vs {{label}}",
-      "lostReason": "Perdeu o jogo {{game}} ({{reason}}) — trocas para o jogo {{next}} vs {{label}}"
+      "noResult": "Plano de sideboard",
+      "won": "Venceu o jogo {{game}}",
+      "wonReason": "Venceu o jogo {{game}} ({{reason}})",
+      "lost": "Perdeu o jogo {{game}}",
+      "lostReason": "Perdeu o jogo {{game}} ({{reason}})"
     },
-    "youPicked": "Você escolheu: {{label}}",
-    "opponentConfidence": "{{label}} · confiança {{confidence}}",
     "result": {
       "win": "venceu",
       "loss": "perdeu",
@@ -211,17 +209,8 @@
     "closest": "Nenhum plano escrito para {{label}} — plano escrito mais próximo: {{closest}}",
     "stale": "Desatualizado",
     "staleMessage": "O meta ou os seus 75 atuais mudaram desde que este plano foi escrito.",
-    "boardFor": "Trocas para o jogo {{next}}",
+    "boarding": "Trocas",
     "fullWriteup": "Texto completo",
-    "opponent": "Oponente",
-    "formatUnknown": "Nenhum formato de torneio é conhecido para esta partida, então o deck do oponente não pode ser nomeado pelos cards vistos.",
-    "unclassified": "Oponente ainda não identificado.",
-    "cardsSeen_one": "{{count}} card visto",
-    "cardsSeen_other": "{{count}} cards vistos",
-    "cardsSeenFrom_one": "{{count}} card visto · {{source}}",
-    "cardsSeenFrom_other": "{{count}} cards vistos · {{source}}",
-    "yourPick": "sua escolha",
-    "liveRead": "leitura ao vivo",
     "otherPlans": "Outros planos escritos",
     "alternative": "{{label}} · {{fit}} de encaixe · {{confidence}}"
   },

@@ -11,7 +11,7 @@ import { OpponentRead } from '../components/OpponentRead'
 import { SideboardOpponentRail, SideboardPlanCard } from '../components/SideboardPlanCard'
 import { Callout, Chip, Disclosure, EmptyState, ErrorNote, Loading, ManaPips } from '../components/ui'
 import { isLikelyAbandoned } from '../lib/liveMatch'
-import { type LivePanel, livePanels } from '../lib/livePanels'
+import { type LivePanel, livePanels, railAlternatives } from '../lib/livePanels'
 import { confidenceLabel, opponentLabelText } from '../lib/opponent'
 import { ago, useNow } from '../lib/time'
 import { placeById } from '../shell/places'
@@ -31,15 +31,19 @@ const timesPhrase = (n: number, t: TFunction): string =>
 /** The band at the page's top: game and turn as big display numerals under
  *  small sentence-case labels (the two facts worth reading at a glance from
  *  second-monitor distance), the `·`-joined facts beside them, and the
- *  opponent's identity (pips, name, confidence) at the far end. From 48rem
+ *  opponent's identity (pips, name, chip) at the far end. From 48rem
  *  up that is one line, the facts cut to fit. Under 48rem it is two: game,
- *  turn, pips and confidence on the first; the opponent's name and the
+ *  turn, pips and chip on the first; the opponent's name and the
  *  facts on the second, wrapping, none cut. Reads `openingHand` over
  *  `match` for the phase phrase and for play or draw whenever a decision
  *  is pending — that can be true even before `match` exists at all, since
  *  the read comes straight from a live replay (table/opening_hand.py) and
- *  does not wait on a projected match row. The rail stays beside the page in focus mode
- *  (`shell/Shell.tsx`), so this strip carries no escape hatch of its own.
+ *  does not wait on a projected match row. During the break between games
+ *  the name, the chip (the confidence, or "picked" for a manual pick) and
+ *  the cards seen come from `intermission`, the break's own live read;
+ *  the pips stay the match's colours. The rail stays beside the page in
+ *  focus mode (`shell/Shell.tsx`), so this strip carries no escape hatch
+ *  of its own.
  *  A match `lib/liveMatch.ts` calls likely abandoned says so here rather
  *  than rendering under a pulsing "live" dot indefinitely.
  */
@@ -58,7 +62,8 @@ function MatchStatusStrip({
   /** Between-games break (S8): takes precedence over every other phase
    *  phrase below, including a pending mulligan decision — Arena cannot
    *  raise both at once, since the next game's opening hand doesn't exist
-   *  until sideboarding ends. */
+   *  until sideboarding ends. It also supplies the opponent's name, chip
+   *  and cards seen, in place of the projected match's. */
   intermission?: IntermissionOut | null
 }) {
   const { t } = useTranslation()
@@ -90,6 +95,8 @@ function MatchStatusStrip({
             ? t('live.strip.waiting')
             : null
 
+  const cardsSeen = intermission ? intermission.cards_seen : (match?.opponent_cards_seen ?? null)
+
   const parts = [
     match
       ? t('live.strip.record', { won: match.games_won ?? 0, lost: match.games_lost ?? 0 })
@@ -97,14 +104,30 @@ function MatchStatusStrip({
     onPlay == null ? null : onPlay ? t('live.onPlay') : t('live.onDraw'),
     phase,
     adviceOff ? t('live.strip.rankedAdviceOff') : null,
-    match ? t('live.cardsSeen', { count: match.opponent_cards_seen }) : null,
+    cardsSeen == null ? null : t('live.cardsSeen', { count: cardsSeen }),
     match?.started_at ? t('live.strip.seen', { ago: ago(match.started_at, now) }) : null,
     likelyAbandoned ? t('live.strip.abandoned') : null,
   ].filter((part): part is string => part != null)
 
-  const opponentName = match?.opponent_label
-    ? opponentLabelText(match.opponent_label, match.opponent_colors)
-    : null
+  // During the break the opponent is the break's own live read (or the
+  // user's pick), which can be ahead of the projected match.
+  const opponentLabel = intermission ? (intermission.opponent?.label ?? null) : (match?.opponent_label ?? null)
+  const opponentName = opponentLabel ? opponentLabelText(opponentLabel, match?.opponent_colors) : null
+  const opponentChip = intermission
+    ? intermission.opponent
+      ? intermission.opponent.source === 'manual'
+        ? { variant: 'neutral' as const, text: t('live.picker.pickedMark') }
+        : {
+            variant: CONFIDENCE_CHIP_VARIANT[intermission.opponent.confidence] ?? 'neutral',
+            text: confidenceLabel(intermission.opponent.confidence, t),
+          }
+      : null
+    : match?.opponent_confidence
+      ? {
+          variant: CONFIDENCE_CHIP_VARIANT[match.opponent_confidence] ?? 'neutral',
+          text: confidenceLabel(match.opponent_confidence, t),
+        }
+      : null
   const facts = parts.join(' · ') || t('live.title')
   // Under 48rem the name leaves the far end and leads the facts' line.
   const narrowFacts = [opponentName, ...parts].filter((part) => part != null).join(' · ') || t('live.title')
@@ -138,15 +161,11 @@ function MatchStatusStrip({
         <span className="hidden truncate md:inline">{facts}</span>
       </div>
 
-      {match?.opponent_label && (
+      {opponentLabel && (
         <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-0">
-          <ManaPips colors={match.opponent_colors} size="lg" />
+          <ManaPips colors={match?.opponent_colors} size="lg" />
           <span className="hidden truncate text-body text-ink2 md:inline">{opponentName}</span>
-          {match.opponent_confidence && (
-            <Chip variant={CONFIDENCE_CHIP_VARIANT[match.opponent_confidence] ?? 'neutral'}>
-              {confidenceLabel(match.opponent_confidence, t)}
-            </Chip>
-          )}
+          {opponentChip && <Chip variant={opponentChip.variant}>{opponentChip.text}</Chip>}
         </div>
       )}
     </div>
@@ -252,17 +271,24 @@ export function CurrentMatchView() {
   // precedence — there is no board to show, no keep guide to run, and no
   // hand to read until the next game's opening hand actually exists.
   if (intermission) {
+    const hasRail = railAlternatives(intermission).length > 0
     return (
       <div className="flex h-full min-h-0 flex-col gap-3">
         {stopped}
         <MatchStatusStrip match={match} openingHand={null} intermission={intermission} />
-        <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto sm:grid-cols-[1fr_360px]">
+        <div
+          className={`grid min-h-0 flex-1 gap-3 overflow-y-auto ${
+            hasRail ? 'sm:grid-cols-[1fr_360px]' : ''
+          }`}
+        >
           <div className="min-h-0">
             <SideboardPlanCard intermission={intermission} match={match} />
           </div>
-          <div className="min-h-0">
-            <SideboardOpponentRail intermission={intermission} match={match} />
-          </div>
+          {hasRail && (
+            <div className="min-h-0">
+              <SideboardOpponentRail intermission={intermission} match={match} />
+            </div>
+          )}
         </div>
       </div>
     )
