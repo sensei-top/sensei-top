@@ -10,7 +10,6 @@
     "shareNote": "A chip's share is of the Tier {{tier}} decks of the last {{days}} days; the smaller archetypes are under \"Other\"."
   },
   "view": {
-    "back": "The guide",
     "write": "Write the RCQ guide",
     "writeAgain": "Write the RCQ guide again",
     "subtitle": "A game plan, the field you will meet, a plan for each matchup checked against your 75, the flex slots and a checklist between rounds.",

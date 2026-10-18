@@ -10,7 +10,6 @@
     "shareNote": "A fatia de um chip é sobre os decks de Tier {{tier}} dos últimos {{days}} dias; os arquétipos menores estão em \"Outros\"."
   },
   "view": {
-    "back": "O guia",
     "write": "Escrever o guia de RCQ",
     "writeAgain": "Escrever o guia de RCQ de novo",
     "subtitle": "Um plano de jogo, o meta que você vai encontrar, um plano para cada matchup conferido contra seus 75, os slots flex e um checklist entre rodadas.",

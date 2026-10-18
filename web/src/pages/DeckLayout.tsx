@@ -10,13 +10,14 @@ import { deckLine, deckRedirect, fieldNameLine, newestVersion, resolveDeck } fro
 import { useNow } from '../lib/time'
 
 /** The deck's tabs. Overview and Matchups read the version the address
- *  chose, so their links keep it; the Guide reads the deck whole, and
- *  its link drops it. */
+ *  chose, so their links keep it; the Guide and RCQ read the deck whole,
+ *  and their links drop it. */
 function deckTabs(t: TFunction) {
   return [
     { to: '.', label: t('decks.layout.tabs.overview'), end: true, keepsVersion: true },
     { to: 'matchups', label: t('decks.layout.tabs.matchups'), end: false, keepsVersion: true },
     { to: 'guide', label: t('decks.layout.tabs.guide'), end: false, keepsVersion: false },
+    { to: 'rcq', label: t('decks.layout.tabs.rcq'), end: false, keepsVersion: false },
   ]
 }
 
@@ -31,25 +32,25 @@ export type DeckOutletContext = {
   version: string | null
 }
 
-/** The layout a deck's three pages share: the way back to every deck, the
+/** The layout a deck's four pages share: the way back to every deck, the
  *  deck's name as typed (muted "Unnamed deck" without one), the field's name
  *  for it when the guide gives one that differs, the deck's line (its
  *  format and when it was last played), the deck strip over the versions
- *  the tab reads (`DeckKeyNumbers`; on the Guide, which drops `?version=`,
- *  every version), and the navigation between Overview, Matchups and
- *  Guide.
+ *  the tab reads (`DeckKeyNumbers`; on the Guide and RCQ, which drop `?version=`,
+ *  every version), and the navigation between Overview, Matchups, Guide
+ *  and RCQ.
  *
  *  `:id` is a deck's key, its colon written bare (`lib/decks.ts`'s
  *  `deckAddress`). An address that names one of a deck's versions instead,
  *  as addresses did before, or spells the key's colon `%3A`, is sent on to
  *  the deck's own, the page under it, the query and the hash kept, in
  *  place of the history entry. An id that names no deck says so and
- *  renders none of the three.
+ *  renders none of the four.
  *
  *  `?version=` names one of the deck's versions to read alone; absent, or
  *  a value that is not one of the deck's versions, or on a deck of one
  *  version, it is every version. The Overview and Matchups tabs carry a
- *  chosen version to each other; the Guide's tab leaves it behind. */
+ *  chosen version to each other; the Guide and RCQ tabs leave it behind. */
 export function DeckLayout() {
   const { t } = useTranslation()
   const { id } = useParams()

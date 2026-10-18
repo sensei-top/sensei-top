@@ -45,7 +45,8 @@
     "tabs": {
       "overview": "Visão geral",
       "matchups": "Matchups",
-      "guide": "Guia"
+      "guide": "Guia",
+      "rcq": "RCQ"
     }
   },
   "strip": {
@@ -97,7 +98,6 @@
     "staleDefault": "As evidências mudaram desde então."
   },
   "guide": {
-    "prepareRcq": "Preparar para um RCQ",
     "sectionsNav": "Seções do guia",
     "problemOrphan": "{{archetype}}: {{message}}",
     "sections": {

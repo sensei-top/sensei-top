@@ -45,7 +45,8 @@
     "tabs": {
       "overview": "Overview",
       "matchups": "Matchups",
-      "guide": "Guide"
+      "guide": "Guide",
+      "rcq": "RCQ"
     }
   },
   "strip": {
@@ -97,7 +98,6 @@
     "staleDefault": "The evidence has changed since."
   },
   "guide": {
-    "prepareRcq": "Prepare for an RCQ",
     "sectionsNav": "Guide sections",
     "problemOrphan": "{{archetype}}: {{message}}",
     "sections": {
