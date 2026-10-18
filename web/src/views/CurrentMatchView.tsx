@@ -349,7 +349,7 @@ export function CurrentMatchView() {
             key={name}
             cards={read.data?.library}
             libraryCount={read.data?.library_count}
-            keep={read.data?.keep}
+            deckLands={read.data?.keep?.land_count}
           />
         )
       case 'opponent-hand':
