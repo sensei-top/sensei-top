@@ -25,10 +25,11 @@ fetch. TanStack Query stays the only data layer.
 | `/matches/:id` | `MatchPage` | `MatchDetailView`: that match's report |
 | `/matches/:id/replay` | `MatchReplayPage` | `MatchReplayView`: that match turn by turn, one game and one turn at a time |
 | `/decks` | `DecksPage` | every deck, one tile each, last played first |
-| `/decks/:id` | `DeckOverviewPage` | `DeckOverviewView`: that deck's record, play and draw, and its matches |
+| `/decks/:id` | `DeckOverviewPage` | `DeckOverviewView`: that deck's rank table, its versions and its matches, under the deck strip every tab shows |
 | `/decks/:id/matchups` | `DeckMatchupsPage` | `MatchupsView`: one row per archetype it has met |
 | `/decks/:id/matchups/:opponent` | `DeckPairingPage` | `PairingView`: that deck against one opponent's deck |
 | `/decks/:id/guide` | `DeckGuidePage` | `GuideView` for that deck |
+| `/decks/:id/rcq` | `DeckRcqPage` | `RcqView`: the RCQ prep for that deck; `/decks/:id/guide/rcq`, its 1.0.x address, redirects here |
 | `/field` | `FieldPage` | `FieldView`: what is played in tournaments, and your record against it |
 | `/field/events/*` | `FieldEventPage` | `FieldEventView`: one tournament event, every deck with its standing, archetype and decklist, and where its results were published |
 | `/coach` | `CoachPage` | `CoachView`: the latest report, the way to write the next one, and your numbers |
@@ -147,14 +148,16 @@ answer names.
 
 ### A deck's pages
 
-`/decks/:id` and the three addresses under it share
+`/decks/:id` and the four addresses under it share
 `pages/DeckLayout.tsx`: the link back to `/decks`, the deck's name as
 typed ("Unnamed deck", muted, when it has none), the field's name for
 it under that once the guide names an archetype whose spaced name
 differs from the typed one (`fieldNameLine`), one more line under both
-(`lib/decks.ts`'s `deckLine`: the format in words, the whole deck's
-match count and wins, when it was last played) and the navigation
-between Overview, Matchups and Guide.
+(`lib/decks.ts`'s `deckLine`: the format in words and when it was last
+played, joined by `·` and left out part by part when unknown), the deck
+strip (`components/DeckKeyNumbers.tsx`: Matches, Games and Play vs draw
+over the versions the tab reads, `docs/frontend-pages.md`, "Decks") and
+the navigation between Overview, Matchups, Guide and RCQ.
 
 `:id` is the deck's identity key (`guid:<arena_deck_id>` or
 `deck:<deck_id>`, `/api/guide/decks`' own `key`), its colon written
@@ -176,7 +179,7 @@ a page reads, every one of the deck's or the one `?version=` chose;
 `version`, that chosen one or `null`. `?version=` is read by
 `chosenVersion` (`lib/deckOverview.ts`) and written by
 `VersionSwitcher`. Overview and Matchups carry it in their own links and
-each other's; Guide drops it, since it reads the deck whole.
+each other's; Guide and RCQ drop it, since they read the deck whole.
 
 ### The live status
 
@@ -573,7 +576,8 @@ One file per primitive, all re-exported from `index.ts`, so every
 
 - **Surfaces.** `Card` (title, subtitle, the `action` slot, the `art`
   slot, `elevation`, `tone`), `StatTile` (a label, a value, one line of
-  detail), `DeckTile` (one of the viewer's decks: a card's art, then
+  detail, and `muted`, which draws the value muted for a figure too thin
+  to read as a rate), `DeckTile` (one of the viewer's decks: a card's art, then
   the deck's name, its record and when it was last played; the words
   under the art are the way into the deck's page), `Finding` (one
   finding as a nested block: its weight as a chip, where it happened, a
@@ -798,13 +802,12 @@ texts, as the code carries them:
 | `rcq/PreviewCard` | the preview's `format` is null | "No tournament format is known for this deck, so there is no tournament field to show." |
 | `guide/FieldCard` | the guide's `field.fmt` is null | "No tournament format is known for this deck, so there is no tournament field to show." |
 | `SideboardPlanCard` | `IntermissionOut.fmt` is null, with no plan, no prompt and no opponent | "No tournament format is known for this match, so the opponent's deck can't be named from the cards seen, and there is no plan to show." |
-| `SideboardOpponentRail` (`SideboardPlanCard.tsx`) | `IntermissionOut.fmt` is null and no opponent is named | "No tournament format is known for this match, so the opponent's deck can't be named from the cards seen." |
 
 A brief already stored for a pairing is drawn even when the deck has no
 format (`briefState`, `lib/pairing.ts`): it is the user's own authored
 text, and the missing format only stops a new one from being written.
 `IntermissionOut.fmt` null means the break attempts no live read of the
-opponent at all, which is why the break's two texts say the opponent's
+opponent at all, which is why the break's text says the opponent's
 deck can't be named rather than that lists are missing.
 
 ## Card images

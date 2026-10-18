@@ -402,11 +402,12 @@ prompt of its own: one archetype's prompt is on its pairing's page
 
 ## The RCQ guide
 
-`/decks/:id/guide/rcq` ("Prepare for an RCQ", linked from the Guide's
-header) writes one document for one event: the exact 75 the player is about
-to register, against the field of that week. It is its own address, not a
-section of the Guide, because the Guide's sections are the deck's evidence
-and this is a single event's plan. Code: `guide/rcq.py` (evidence and
+`/decks/:id/rcq`, the "RCQ" tab beside "Guide" on a deck's page, writes one
+document for one event: the exact 75 the player is about to register,
+against the field of that week. It is its own tab, not a section of the
+Guide, because the Guide's sections are the deck's evidence and this is a
+single event's plan. Its address in 1.0.x, `/decks/:id/guide/rcq`, still
+opens it. Code: `guide/rcq.py` (evidence and
 prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
 (storage), `guide/rcq_markdown.py` (the export), `api/routes/rcq.py`.
 

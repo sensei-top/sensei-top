@@ -603,12 +603,77 @@ what the rule replaces:
 Each is replaced when its component is next rebuilt. None of them is a
 pattern to copy.
 
+## Numbers
+
+Every percent, record and small sample on the dashboard is written one
+way, by the helpers in `lib/format.ts` and `lib/sample.ts`. A page that
+writes its own is the thing this section exists to stop: before it, the
+same win rate read "57.5%" on one page, "58" on the next and "won 23 of
+40" on a third.
+
+**A percent is a whole number with its sign.** `lib/format.ts`'s
+`formatPercent` takes a fraction and writes it through `Intl` in the
+reader's language: "58%", "58 %" where the language puts a space there.
+A fraction strictly between 0 and 0.01 reads "<1%", and one strictly
+between 0.99 and 1 reads ">99%", so a card that is not certain never
+reads as certain and a card that is possible never reads as impossible.
+No decimal: the samples behind these numbers are a few dozen matches,
+and a tenth of a point would claim a precision they do not have. A
+catalogue string never writes `%` after `{{pct}}`; the formatter writes
+it. A points figure (a gap between two rates, a movement since a reset)
+is not a percent and keeps its own form: the Guide's movement since a
+reset keeps one decimal ("up 14.0 points") beside whole-number shares,
+so it can differ by a point from the difference the two shares show.
+
+**A record is wins–losses.** `formatRecord(wins, losses)` writes "6–3",
+with an en dash held to its numbers by word joiners so a line never
+breaks inside it. Never "won 6 of 9": that form hides the losses
+behind a subtraction. A share of a corpus is not a record and stays
+"N of M lists".
+
+**A draw is never a loss.** A record counts wins and losses; a draw is
+neither, and neither is a match still in progress. Where a caller has
+only a count played and a count won, losses are played minus won minus
+draws, never played minus won. One known gap: `/api/metrics/play-draw`
+has no losses field and counts draws in `games_completed`, so the deck
+strip's Play vs draw side record still writes a drawn game as a loss,
+listed in `docs/status.md`.
+
+**Ten finished matches before a rate.** A personal record has one
+threshold, `RATE_MIN_MATCHES` (10), over matches, or over games for a
+games figure. From ten up, a tile's figure is the rate and its line is
+the record. Under ten, the figure is the record, drawn muted, and its
+line says it is too few for a rate. A table's Rate cell under ten says
+"too few", muted and on one line (`whitespace-nowrap`), beside the
+record its own column already has. A row is never left out for being
+small, since a missing row reads as a matchup never played; an em dash
+means nothing at all, never "too few". `rateOrRecord` in `lib/sample.ts`
+makes the choice, so no component branches on the count. Where only one
+line is free (a version's row, a field row's caption, the keep-cost
+sentence) the line is "58% · 35–25" from ten up and the record alone
+under it. A chart keeps its hollow dot for a thin point, since a chart
+cannot draw a record.
+
+Field evidence is not a personal record. It measures other people's
+lists, so it keeps the corpus thresholds in `docs/metagame.md`
+(`MIN_TRUSTED_FIELD_SAMPLE`, `WINRATE_MIN_MATCHES`), from the same
+`lib/sample.ts`.
+
+**A record table's columns come in one order.** Name · Matches ·
+Record · Rate, then any split (G1 · Post-board, then Play · Draw), then
+the field's columns (Share, Field rate). A table without a column skips
+it and keeps the rest in this order, so a reader who learned one table
+reads every other one without looking.
+
 ## Rules a new component follows
 
 - **Tokens only.** A color is a CSS custom property or a `Tokens` slot,
   never a hex literal typed at the call site (chart marks are the one place
   a literal hex is unavoidable, and even there it comes from `theme.ts`'s
   `Tokens`, not a fresh value).
+- **A number is written by `lib/format.ts` and `lib/sample.ts`**: a
+  percent, a record, a rate under ten and a record table's column order
+  follow "Numbers" above, never a format chosen per component.
 - **The accent is never data**, and `--on-accent` is the only text on it.
 - **Semantic type utilities only.** `text-body`, `text-caption`, etc. — never
   a default Tailwind size class, never an arbitrary `text-[Npx]`. A step

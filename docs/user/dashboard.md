@@ -12,8 +12,8 @@ so a page can be bookmarked, linked to and reloaded as it is:
   and a turn-by-turn replay of its games.
 - **Decks** — a page for each of your decks: its record over every version
   or one, its record against each opponent archetype with the matchup brief
-  once one is written, and a guide that sets your list and results against
-  the field.
+  once one is written, a guide that sets your list and results against
+  the field, and an RCQ tab that prepares one event.
 - **Field** — the metagame from real MTGO and paper tournament results
   (never Arena).
 - **Coach** — a dated report across every deck, each one kept and measured
