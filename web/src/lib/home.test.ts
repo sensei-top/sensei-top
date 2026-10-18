@@ -137,12 +137,12 @@ describe('lastThirtyDays', () => {
   ]
 
   it('counts the finished matches that started in the window, its first instant included', () => {
-    expect(lastThirtyDays(rows, lastSession(rows), now)).toEqual({ played: 2, won: 1, outsideSession: true })
+    expect(lastThirtyDays(rows, lastSession(rows), now)).toEqual({ played: 2, won: 1, losses: 1, outsideSession: true })
   })
 
   it('says when the session is the whole window', () => {
     const only = rows.slice(0, 1)
-    expect(lastThirtyDays(only, lastSession(only), now)).toEqual({ played: 1, won: 1, outsideSession: false })
+    expect(lastThirtyDays(only, lastSession(only), now)).toEqual({ played: 1, won: 1, losses: 0, outsideSession: false })
   })
 })
 
@@ -263,11 +263,12 @@ describe('weekStart', () => {
 })
 
 describe('weeklyWinrate', () => {
-  const week = (start: number, played: number, won: number) => ({
+  const week = (start: number, played: number, won: number, losses: number) => ({
     start,
     played,
     won,
-    rate: played > 0 ? won / played : null,
+    losses,
+    rate: won + losses > 0 ? won / (won + losses) : null,
   })
   const monday14 = Date.UTC(2026, 8, 14, 4, 0, 0)
   const monday21 = Date.UTC(2026, 8, 21, 4, 0, 0)
@@ -285,14 +286,19 @@ describe('weeklyWinrate', () => {
 
   it('runs from the first week with a match to the newest, a week with none between them', () => {
     expect(weeklyWinrate(rows, false)).toEqual({
-      weeks: [week(monday14, 2, 1), week(monday21, 0, 0), week(monday28, 1, 1)],
+      weeks: [week(monday14, 2, 1, 1), week(monday21, 0, 0, 0), week(monday28, 1, 1, 0)],
       truncated: false,
     })
   })
 
-  it('counts a draw as played and not won', () => {
+  it('counts a draw as played, and as neither a win nor a loss', () => {
     const withDraw = [...rows, match('d', '2026-09-30T18:00:00', 'draw')]
-    expect(weeklyWinrate(withDraw, false).weeks.at(-1)).toEqual(week(monday28, 2, 1))
+    expect(weeklyWinrate(withDraw, false).weeks.at(-1)).toEqual(week(monday28, 2, 1, 0))
+  })
+
+  it('has no rate for a week of draws alone', () => {
+    const drawn = [match('d', '2026-09-29T18:00:00', 'draw')]
+    expect(weeklyWinrate(drawn, false).weeks).toEqual([week(monday28, 1, 0, 0)])
   })
 
   it('holds twelve weeks at most', () => {
@@ -305,14 +311,14 @@ describe('weeklyWinrate', () => {
     ]
     const { weeks, truncated } = weeklyWinrate(long, false)
     expect(weeks).toHaveLength(12)
-    expect(weeks[0]).toEqual(week(Date.UTC(2026, 6, 13, 4, 0, 0), 1, 0))
+    expect(weeks[0]).toEqual(week(Date.UTC(2026, 6, 13, 4, 0, 0), 1, 0, 1))
     expect(truncated).toBe(false)
   })
 
   it('leaves out the oldest week of a full list, which holds only part of its matches', () => {
     const full = [...rows, match('d', '2026-09-22T18:00:00', 'loss')]
     expect(weeklyWinrate(full, true)).toEqual({
-      weeks: [week(monday21, 1, 0), week(monday28, 1, 1)],
+      weeks: [week(monday21, 1, 0, 1), week(monday28, 1, 1, 0)],
       truncated: true,
     })
   })
@@ -320,7 +326,7 @@ describe('weeklyWinrate', () => {
   it('cuts nothing from a full list whose oldest week is before the twelve', () => {
     const full = [match('thirteenth', '2026-07-08T18:00:00', 'win'), ...rows]
     expect(weeklyWinrate(full, true)).toEqual({
-      weeks: [week(monday14, 2, 1), week(monday21, 0, 0), week(monday28, 1, 1)],
+      weeks: [week(monday14, 2, 1, 1), week(monday21, 0, 0, 0), week(monday28, 1, 1, 0)],
       truncated: false,
     })
   })
@@ -330,8 +336,8 @@ describe('weeklyWinrate', () => {
     // at 04:00 UTC, the Monday after it at 05:00.
     const autumn = [match('before', '2026-10-27T18:00:00', 'win'), match('after', '2026-11-03T18:00:00', 'loss')]
     expect(weeklyWinrate(autumn, false).weeks).toEqual([
-      week(Date.UTC(2026, 9, 26, 4, 0, 0), 1, 1),
-      week(Date.UTC(2026, 10, 2, 5, 0, 0), 1, 0),
+      week(Date.UTC(2026, 9, 26, 4, 0, 0), 1, 1, 0),
+      week(Date.UTC(2026, 10, 2, 5, 0, 0), 1, 0, 1),
     ])
   })
 })
@@ -442,8 +448,8 @@ describe('homeField', () => {
     const other = { ...against('7', '2026-09-28T10:00:00', 'loss', 'b1', 'big'), format: 'Modern' as const }
     const field = homeField(presence, [other, ...matches], identities, '2026-09-01', false, now, 'Standard')!
     expect(field.deck).toEqual({ name: 'Izzet', deckIds: new Set(['a1', 'a2']) })
-    expect(field.rows[0].record).toEqual({ played: 2, won: 1 })
-    expect(field.topTwo).toEqual({ played: 3, won: 2 })
+    expect(field.rows[0].record).toEqual({ played: 2, won: 1, losses: 1 })
+    expect(field.topTwo).toEqual({ played: 3, won: 2, losses: 1 })
     expect(field.artMatchId).toBe('1')
   })
 
@@ -477,9 +483,9 @@ describe('homeField', () => {
     // Against "big": matches 1 and 2. Match 4 was another deck's, 5 began
     // 23:59:59 local the day before the reset (one second outside the
     // window), 6 is not finished.
-    expect(field.rows[0].record).toEqual({ played: 2, won: 1 })
-    expect(field.rows[1].record).toEqual({ played: 1, won: 1 })
-    expect(field.topTwo).toEqual({ played: 3, won: 2 })
+    expect(field.rows[0].record).toEqual({ played: 2, won: 1, losses: 1 })
+    expect(field.rows[1].record).toEqual({ played: 1, won: 1, losses: 0 })
+    expect(field.topTwo).toEqual({ played: 3, won: 2, losses: 1 })
     expect(field.windowStart).toBe(new Date(2026, 8, 1).getTime())
     expect(field.reset).toBe('2026-09-01')
   })
@@ -488,14 +494,14 @@ describe('homeField', () => {
     const field = homeField(presence, matches, identities, null, false, now, 'Standard')!
     expect(field.reset).toBeNull()
     expect(field.windowStart).toBe(now - 90 * DAY)
-    expect(field.rows[0].record).toEqual({ played: 3, won: 2 })
+    expect(field.rows[0].record).toEqual({ played: 3, won: 2, losses: 1 })
   })
 
   it('counts every deck’s matches when no match has a deck', () => {
     const deckless = matches.map((entry) => ({ ...entry, deck_id: null }))
     const field = homeField(presence, deckless, identities, '2026-09-01', false, now, 'Standard')!
     expect(field.deck).toBeNull()
-    expect(field.rows[0].record).toEqual({ played: 3, won: 2 })
+    expect(field.rows[0].record).toEqual({ played: 3, won: 2, losses: 1 })
   })
 
   it('takes a deck of no identity by its own id and name', () => {

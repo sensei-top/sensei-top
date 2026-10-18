@@ -14,12 +14,6 @@
   "line": {
     "lastPlayed": "last played {{ago}}"
   },
-  "record": {
-    "wonOf": "won {{wins}} of {{finished}}",
-    "figureOf": "{{wins}} of {{finished}}",
-    "matchesWon": "matches won",
-    "none": "no finished match yet"
-  },
   "tile": {
     "versions_one": "{{n}}\u00a0versions",
     "versions_other": "{{n}}\u00a0versions",

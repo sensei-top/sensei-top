@@ -343,16 +343,24 @@ describe('the record against a row', () => {
   ]
 
   it('counts every deck of the viewer\'s in the window, and nothing before it', () => {
-    expect(recordAgainstRows(matches, [tempo], start)).toEqual({ played: 3, won: 2 })
+    expect(recordAgainstRows(matches, [tempo], start)).toEqual({ played: 3, won: 2, losses: 1 })
+  })
+
+  it('counts a draw as played and in neither wins nor losses', () => {
+    const drawn = [
+      match('w', '2026-09-01T20:00:00', 'win', vs('ramp', 'Gruul Ramp')),
+      match('x', '2026-09-02T20:00:00', 'draw', vs('ramp', 'Gruul Ramp')),
+    ]
+    expect(recordAgainstRows(drawn, [ramp], start)).toEqual({ played: 2, won: 1, losses: 0 })
   })
 
   it('counts the top two together', () => {
-    expect(recordAgainstRows(matches, [tempo, ramp], start)).toEqual({ played: 4, won: 3 })
+    expect(recordAgainstRows(matches, [tempo, ramp], start)).toEqual({ played: 4, won: 3, losses: 1 })
   })
 
   it('counts a match at the window\'s first moment', () => {
     const edge = [match('e', '2026-08-11T00:00:00', 'loss', vs('ramp', 'Gruul Ramp'))]
-    expect(recordAgainstRows(edge, [ramp], start)).toEqual({ played: 1, won: 0 })
+    expect(recordAgainstRows(edge, [ramp], start)).toEqual({ played: 1, won: 0, losses: 1 })
   })
 
   it('tells apart two rows of one key by their labels', () => {
@@ -367,9 +375,9 @@ describe('the record against a row', () => {
       // No label at all: counts for neither.
       match('n1', '2026-09-05T20:00:00', 'win', { opponent_key: 'archetype:Control' }),
     ]
-    expect(recordAgainstRows(control, [jeskai], start)).toEqual({ played: 2, won: 2 })
-    expect(recordAgainstRows(control, [sultai], start)).toEqual({ played: 1, won: 0 })
-    expect(recordAgainstRows(control, [jeskai, sultai], start)).toEqual({ played: 3, won: 2 })
+    expect(recordAgainstRows(control, [jeskai], start)).toEqual({ played: 2, won: 2, losses: 0 })
+    expect(recordAgainstRows(control, [sultai], start)).toEqual({ played: 1, won: 0, losses: 1 })
+    expect(recordAgainstRows(control, [jeskai, sultai], start)).toEqual({ played: 3, won: 2, losses: 1 })
   })
 })
 
@@ -398,8 +406,8 @@ describe('the viewer\'s own counts', () => {
       match('n', '2026-09-03T20:00:00', 'win', { format: null, ...vs }),
     ]
     const counts = ownCounts(rows, [tempo], 'Standard', start, undefined)
-    expect(counts.records).toEqual([{ played: 1, won: 1 }])
-    expect(counts.topTwo).toEqual({ played: 1, won: 1 })
+    expect(counts.records).toEqual([{ played: 1, won: 1, losses: 0 }])
+    expect(counts.topTwo).toEqual({ played: 1, won: 1, losses: 0 })
   })
 
   it('is short for a full list of mixed formats none of which is before the window', () => {

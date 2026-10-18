@@ -55,7 +55,7 @@ export function DecksPage() {
   return (
     <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-5">
       {tiles.map((tile) => {
-        const { figure, line } = deckRecord(tile, t)
+        const { figure, line, thin } = deckRecord(tile, t)
         const detail = tile.artMatchId ? details.get(tile.artMatchId) : undefined
         return (
           <li key={tile.key} className="min-w-0">
@@ -63,6 +63,7 @@ export function DecksPage() {
               name={tile.name}
               href={deckAddress(tile.key)}
               figure={figure}
+              muted={thin}
               line={line}
               detail={tile.detail}
               lastPlayed={tile.lastPlayed != null ? t('decks.tile.lastPlayed', { day: formatShortDay(tile.lastPlayed, minute) }) : null}

@@ -29,9 +29,9 @@
     "noteLast90": "{{kind}}, últimos 90 dias",
     "notPlayedSince": "não jogado desde {{since}}",
     "notPlayedLast90": "não jogado nos últimos 90 dias",
-    "barsWithDeck": "As barras são a fatia de cada deck em {{lists}} listas de torneio. A linha sob cada uma é o seu retrospecto com {{deck}} no mesmo período.",
-    "barsNoDeck": "As barras são a fatia de cada deck em {{lists}} listas de torneio. A linha sob cada uma é o seu retrospecto no mesmo período.",
-    "listShort": "Seu retrospecto é contado sobre suas últimas 500 partidas.",
+    "barsWithDeck": "As barras são a fatia de cada deck em {{lists}} listas de torneio. A linha sob cada uma é o seu histórico com {{deck}} no mesmo período.",
+    "barsNoDeck": "As barras são a fatia de cada deck em {{lists}} listas de torneio. A linha sob cada uma é o seu histórico no mesmo período.",
+    "listShort": "Seu histórico é contado sobre suas últimas 500 partidas.",
     "sinceDate": "desde {{since}}",
     "last90": "nos últimos 90 dias"
   },
@@ -44,7 +44,7 @@
     "playTitle": "Jogue uma partida",
     "playDetail": "O tracker consegue ver o Arena. Jogue uma partida, e ela aparece aqui quando termina.",
     "willAppear": "O que vai aparecer aqui",
-    "appear1": "Sua última sessão em uma linha, e seu retrospecto nos últimos 30 dias.",
+    "appear1": "Sua última sessão em uma linha, e seu histórico de vitórias e derrotas nos últimos 30 dias.",
     "appear2": "Três coisas que valem uma olhada: sua última partida, um padrão entre suas partidas, e o meta.",
     "appear3": "Suas partidas recentes, sua taxa de vitórias por semana e seus decks.",
     "mtgoLead": "O Sensei Top lê os logs de jogo que o Magic Online escreve enquanto você joga. Nada foi registrado ainda.",
@@ -79,7 +79,8 @@
   },
   "session": {
     "last": "Última sessão · {{day}}",
-    "thirtyDays": "Nos últimos 30 dias você venceu <strong>{{won}}</strong> de <strong>{{played}}</strong> partidas, ou <strong>{{rate}}</strong>.",
+    "thirtyDays": "Nos últimos 30 dias seu histórico é <strong>{{record}}</strong>, ou <strong>{{rate}}</strong>.",
+    "thirtyDaysFew": "Nos últimos 30 dias seu histórico é <strong>{{record}}</strong>.",
     "matches_one": "{{n}} partida",
     "matches_other": "{{n}} partidas"
   },
@@ -92,7 +93,7 @@
     "readReport": "Ler o relatório",
     "seePatterns": "Ver todos os padrões",
     "openField": "Abrir o meta",
-    "patternBody": "Você venceu {{won}} das {{with}} partidas {{clause}}, e {{wonOther}} das outras {{without}}.",
+    "patternBody": "Seu histórico é {{recordWith}} nas partidas {{clause}}, e {{recordWithout}} nas demais.",
     "wonScore": "Venceu {{opponent}} por {{score}}",
     "won": "Venceu {{opponent}}",
     "lostScore": "Perdeu por {{score}} para {{opponent}}",
@@ -106,23 +107,22 @@
     "pair": "{{first}} e {{second}}.",
     "record": {
       "pair": {
-        "deckPlayed": "Com {{deck}} você venceu {{tally}} contra eles.",
+        "deckPlayed": "Com {{deck}} seu histórico contra eles é {{record}}.",
         "deckNone": "Você não jogou {{deck}} contra nenhum dos dois {{when}}.",
-        "noDeckPlayed": "Você venceu {{tally}} contra eles.",
+        "noDeckPlayed": "Seu histórico contra eles é {{record}}.",
         "noDeckNone": "Você não jogou contra eles {{when}}."
       },
       "single": {
-        "deckPlayed": "Com {{deck}} você venceu {{tally}} contra ele.",
+        "deckPlayed": "Com {{deck}} seu histórico contra ele é {{record}}.",
         "deckNone": "Você não jogou {{deck}} contra ele {{when}}.",
-        "noDeckPlayed": "Você venceu {{tally}} contra ele.",
+        "noDeckPlayed": "Seu histórico contra ele é {{record}}.",
         "noDeckNone": "Você não jogou contra ele {{when}}."
       }
-    },
-    "tally": "{{won}} de {{played}}"
+    }
   },
   "weekly": {
     "title": "Taxa de vitórias por semana",
-    "single": "Você venceu {{won}} de {{played}} partidas na semana de {{week}}. O gráfico começa com uma segunda semana.",
+    "single": "Seu histórico na semana de {{week}} foi {{record}}. O gráfico começa com uma segunda semana.",
     "even": "empate",
     "weekOf": "Semana de",
     "weekOfLabel": "Semana de {{week}}",
@@ -131,7 +131,7 @@
     "truncated": "Contado sobre suas últimas 500 partidas.",
     "showNumbers": "Mostrar os números",
     "matches": "Partidas",
-    "won": "Vitórias"
+    "record": "Histórico"
   },
   "detailedLogs": {
     "title": "Ligue os Registros detalhados no Arena",

@@ -198,19 +198,20 @@ describe('deckLine', () => {
 })
 
 describe('deckRecord', () => {
-  it('is a rate from ten finished matches', () => {
-    // 35 / 60 = 0.583…, 58%.
-    expect(deckRecord({ finished: 60, wins: 35 }, t)).toEqual({ figure: '58%', line: 'won 35 of 60' })
-    expect(deckRecord({ finished: 10, wins: 5 }, t)).toEqual({ figure: '50%', line: 'won 5 of 10' })
+  it('is a rate from ten finished matches, with the record under it', () => {
+    // 35 / 60 = 0.583…, 58%; the losses are 60 - 35.
+    expect(deckRecord({ finished: 60, wins: 35 }, t)).toEqual({ figure: '58%', line: '35\u2060–\u206025', thin: false })
+    expect(deckRecord({ finished: 10, wins: 5 }, t)).toEqual({ figure: '50%', line: '5\u2060–\u20605', thin: false })
   })
 
-  it('is a count from one to nine', () => {
-    expect(deckRecord({ finished: 9, wins: 6 }, t)).toEqual({ figure: '6 of 9', line: 'matches won' })
-    expect(deckRecord({ finished: 1, wins: 0 }, t)).toEqual({ figure: '0 of 1', line: 'matches won' })
+  it('is the record, muted, from one to nine', () => {
+    const line = 'too few for a rate, under 10\u00a0matches'
+    expect(deckRecord({ finished: 9, wins: 6 }, t)).toEqual({ figure: '6\u2060–\u20603', line, thin: true })
+    expect(deckRecord({ finished: 1, wins: 0 }, t)).toEqual({ figure: '0\u2060–\u20601', line, thin: true })
   })
 
   it('has no figure with no finished match', () => {
-    expect(deckRecord({ finished: 0, wins: 0 }, t)).toEqual({ figure: null, line: 'no finished match yet' })
+    expect(deckRecord({ finished: 0, wins: 0 }, t)).toEqual({ figure: null, line: 'no finished match yet', thin: false })
   })
 })
 

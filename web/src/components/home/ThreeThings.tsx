@@ -7,7 +7,8 @@ import { opponentNamed, winnerScore } from '../../lib/home'
 import type { ArtCard } from '../../lib/matchArt'
 import { opponentLabelText } from '../../lib/opponent'
 import { patternWords } from '../../lib/patterns'
-import { ago, formatCount, formatIsoDateShort, formatPercent } from '../../lib/time'
+import { formatPercent, formatRecord } from '../../lib/format'
+import { ago, formatIsoDateShort } from '../../lib/time'
 import { Button, CardArt, ErrorNote, SectionLabel, Skeleton } from '../ui'
 
 /** One of Home's three cards, or the failure of the request one needed. */
@@ -104,11 +105,9 @@ function thingWords(
         body: (
           <p>
             {t('home.things.patternBody', {
-              won: formatCount(wonWith),
-              with: formatCount(leak.n_with),
+              recordWith: formatRecord(wonWith, leak.n_with - wonWith),
               clause: words.clause,
-              wonOther: formatCount(wonWithout),
-              without: formatCount(leak.n_without),
+              recordWithout: formatRecord(wonWithout, leak.n_without - wonWithout),
             })}
           </p>
         ),
@@ -152,12 +151,12 @@ function matchBody(match: Match, now: number, t: TFunction): string | null {
 function fieldTitle(field: Field, t: TFunction): string {
   const [first, second] = field.rows
   if (second) {
-    const share = `${formatPercent(first.presence.share + second.presence.share)}%`
+    const share = formatPercent(first.presence.share + second.presence.share)
     return t('home.things.fieldTwo', { share, format: field.format })
   }
   return t('home.things.fieldOne', {
     label: first.presence.label,
-    share: `${formatPercent(first.presence.share)}%`,
+    share: formatPercent(first.presence.share),
     format: field.format,
   })
 }
@@ -166,32 +165,32 @@ function FieldBody({ field, now }: { field: Field; now: number }) {
   const { t } = useTranslation()
   const [first, second] = field.rows
   const since = field.reset ? formatIsoDateShort(field.reset, now) : null
-  const { played, won } = field.topTwo
+  const { played, won, losses } = field.topTwo
   // With one deck in the field the title names it, and the record is
   // against "it"; with two, against "them" (or "either").
   const when = since ? t('home.field.sinceDate', { since }) : t('home.field.last90')
-  const tally = t('home.things.tally', { won: formatCount(won), played: formatCount(played) })
+  const score = formatRecord(won, losses)
   let record: string
   if (field.deck) {
     const deck = field.deck.name ?? t('home.unnamedDeckInSentence')
     if (second) {
       record =
         played > 0
-          ? t('home.things.record.pair.deckPlayed', { deck, tally })
+          ? t('home.things.record.pair.deckPlayed', { deck, record: score })
           : t('home.things.record.pair.deckNone', { deck, when })
     } else {
       record =
         played > 0
-          ? t('home.things.record.single.deckPlayed', { deck, tally })
+          ? t('home.things.record.single.deckPlayed', { deck, record: score })
           : t('home.things.record.single.deckNone', { deck, when })
     }
   } else if (second) {
     record =
-      played > 0 ? t('home.things.record.pair.noDeckPlayed', { tally }) : t('home.things.record.pair.noDeckNone', { when })
+      played > 0 ? t('home.things.record.pair.noDeckPlayed', { record: score }) : t('home.things.record.pair.noDeckNone', { when })
   } else {
     record =
       played > 0
-        ? t('home.things.record.single.noDeckPlayed', { tally })
+        ? t('home.things.record.single.noDeckPlayed', { record: score })
         : t('home.things.record.single.noDeckNone', { when })
   }
   return (

@@ -14,12 +14,6 @@
   "line": {
     "lastPlayed": "jogado pela última vez {{ago}}"
   },
-  "record": {
-    "wonOf": "venceu {{wins}} de {{finished}}",
-    "figureOf": "{{wins}} de {{finished}}",
-    "matchesWon": "partidas vencidas",
-    "none": "nenhuma partida terminada ainda"
-  },
   "tile": {
     "versions_one": "{{n}} versão",
     "versions_other": "{{n}} versões",
@@ -28,7 +22,7 @@
   "list": {
     "empty": {
       "title": "Nenhum deck ainda",
-      "message": "Um deck aparece aqui na primeira vez que você joga uma partida com ele, com seu retrospecto, seus matchups e seu guia."
+      "message": "Um deck aparece aqui na primeira vez que você joga uma partida com ele, com seu histórico, seus matchups e seu guia."
     }
   },
   "matches": {
@@ -80,7 +74,7 @@
       "subtitle": "Sua classificação quando cada partida foi jogada. Só partidas terminadas.",
       "rank": "Classificação",
       "matches": "Partidas",
-      "record": "Retrospecto",
+      "record": "Histórico",
       "rate": "Taxa"
     },
     "versions": {
@@ -194,7 +188,7 @@
       },
       "noResults": {
         "title": "Nenhum resultado de torneio ainda",
-        "message": "Esta página mostra o que está sendo jogado em torneios e o seu retrospecto contra cada deck. Ela se preenche quando os resultados de torneios são baixados, o que esta versão faz só pela linha de comando."
+        "message": "Esta página mostra o que está sendo jogado em torneios e o seu histórico contra cada deck. Ela se preenche quando os resultados de torneios são baixados, o que esta versão faz só pela linha de comando."
       },
       "ownDetail_one": "{{wins}}–{{losses}} sobre {{n}} lista",
       "ownDetail_other": "{{wins}}–{{losses}} sobre {{n}} listas",
@@ -210,7 +204,7 @@
       "yourArchetype": "Seu arquétipo",
       "mostPlayed": "Mais jogado",
       "changedAtReset": "Mudou no reinício",
-      "noCarryOver": "Seu retrospecto não é carregado adiante."
+      "noCarryOver": "Seu histórico não é carregado adiante."
     },
     "list": {
       "title": "A lista",

@@ -33,13 +33,14 @@ export function HomeDecks({
       </div>
       <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-5">
         {decks.map((deck) => {
-          const { figure, line } = deckRecord(deck, t)
+          const { figure, line, thin } = deckRecord(deck, t)
           return (
             <li key={deck.key} className="min-w-0">
               <DeckTile
                 name={deck.name}
                 href={deckAddress(deck.key)}
                 figure={figure}
+                muted={thin}
                 line={line}
                 lastPlayed={deck.lastPlayed != null ? t('home.decks.lastPlayed', { day: formatShortDay(deck.lastPlayed, now) }) : null}
                 art={art.get(deck.key) ?? null}

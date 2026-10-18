@@ -79,7 +79,8 @@
   },
   "session": {
     "last": "Last session · {{day}}",
-    "thirtyDays": "Over the last 30 days you have won <strong>{{won}}</strong> of <strong>{{played}}</strong> matches, or <strong>{{rate}}</strong>.",
+    "thirtyDays": "Over the last 30 days you are <strong>{{record}}</strong>, or <strong>{{rate}}</strong>.",
+    "thirtyDaysFew": "Over the last 30 days you are <strong>{{record}}</strong>.",
     "matches_one": "{{n}} match",
     "matches_other": "{{n}} matches"
   },
@@ -92,7 +93,7 @@
     "readReport": "Read the report",
     "seePatterns": "See every pattern",
     "openField": "Open the field",
-    "patternBody": "You won {{won}} of the {{with}} matches {{clause}}, and {{wonOther}} of the other {{without}}.",
+    "patternBody": "You are {{recordWith}} in the matches {{clause}}, and {{recordWithout}} in the rest.",
     "wonScore": "Won {{score}} against {{opponent}}",
     "won": "Won against {{opponent}}",
     "lostScore": "Lost {{score}} to {{opponent}}",
@@ -106,23 +107,22 @@
     "pair": "{{first}} and {{second}}.",
     "record": {
       "pair": {
-        "deckPlayed": "With {{deck}} you have won {{tally}} against them.",
+        "deckPlayed": "With {{deck}} you are {{record}} against them.",
         "deckNone": "You have not played {{deck}} against either {{when}}.",
-        "noDeckPlayed": "You have won {{tally}} against them.",
+        "noDeckPlayed": "You are {{record}} against them.",
         "noDeckNone": "You have not played against them {{when}}."
       },
       "single": {
-        "deckPlayed": "With {{deck}} you have won {{tally}} against it.",
+        "deckPlayed": "With {{deck}} you are {{record}} against it.",
         "deckNone": "You have not played {{deck}} against it {{when}}.",
-        "noDeckPlayed": "You have won {{tally}} against it.",
+        "noDeckPlayed": "You are {{record}} against it.",
         "noDeckNone": "You have not played against it {{when}}."
       }
-    },
-    "tally": "{{won}} of {{played}}"
+    }
   },
   "weekly": {
     "title": "Win rate by week",
-    "single": "You won {{won}} of {{played}} matches in the week of {{week}}. The chart starts with a second week.",
+    "single": "You went {{record}} in the week of {{week}}. The chart starts with a second week.",
     "even": "even",
     "weekOf": "Week of",
     "weekOfLabel": "Week of {{week}}",
@@ -131,7 +131,7 @@
     "truncated": "Counted over your last 500 matches.",
     "showNumbers": "Show the numbers",
     "matches": "Matches",
-    "won": "Won"
+    "record": "Record"
   },
   "detailedLogs": {
     "title": "Turn on Detailed Logs in Arena",
