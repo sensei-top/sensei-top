@@ -271,8 +271,20 @@ class Projector:
                 self._handle_submit_deck(inner.get("submitDeckResp", {}).get("deck"))
                 return
 
+        # One try per message, not per event: a batch carries several state
+        # messages and a failure in one must not cost the siblings after it
+        # (the game's result can ride in a later one).
         for message in _messages(payload):
-            self._handle_gre_message(message, logged_at)
+            try:
+                self._handle_gre_message(message, logged_at)
+            except Exception as exc:  # never let one bad message halt ingestion (brief §6)
+                gsm = message.get("gameStateMessage") if isinstance(message, dict) else None
+                state_id = gsm.get("gameStateId") if isinstance(gsm, dict) else None
+                kind_of = message.get("type") if isinstance(message, dict) else None
+                self._warn(
+                    f"projection error on GRE message {kind_of!r} "
+                    f"(gameStateId {state_id!r}): {exc}"
+                )
 
     def _handle_room_state(self, event: dict[str, Any], logged_at: str | None) -> None:
         info = event.get("gameRoomInfo", {})
