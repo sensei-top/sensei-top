@@ -57,9 +57,12 @@ the other notices section "Software in the installed app" lists.
 ## Software in the installed app
 
 The desktop app and the dashboard are built from other people's software.
-Each work ships with its licence texts, collected when the build runs, and
-a build fails when one is missing. The dashboard's credits view lists the
-same works, under "Software it is built on".
+Each work's notices and licence texts ship with every copy, as its licence
+asks: the build collects them and fails when one is missing, and the last
+column says where they land. The dashboard's credits view, under "Software
+it is built on", is a courtesy, not an obligation: it names the main works
+by group, so a part that ships inside one of them, such as libgcc or the
+libraries compiled into CPython, has no entry of its own.
 
 | Work | Ships in | Licence | Where its texts are |
 |---|---|---|---|
