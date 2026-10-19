@@ -282,10 +282,10 @@ instant/sorcery in the graveyard; Hearth Elemental (`{5}{R}` on its front
 face) has the same "per card in graveyard" shape; Sunderflock (`{7}{U}{U}`,
 mana value 9) instead costs `{X}` less, where X is the greatest mana value
 among Elementals already on the battlefield — a board-state lookup, not a
-per-card count, so it is approximated as "one Elemental resolved = the cost
-drops by that Elemental's own mana value," which can only ever be
-conservative, never optimistic (`_reduced_castable_turn_board_elemental`'s
-own docstring). `reduced_castable_turn` is the earliest turn this hand's own
+per-card count, so it is approximated as the turn after the hand's earliest
+other Elemental is castable, with no mana arithmetic, and withheld when the
+hand holds no other Elemental (`_reduced_castable_turn_board_elemental`).
+`reduced_castable_turn` is the earliest turn this hand's own
 lands *and its own in-hand fuel* (instants/sorceries already drawn, for the
 graveyard-count shape) or an already-resolved Elemental (for Sunderflock's
 shape) can pay for it — computed only when the printed-cost search above
@@ -328,7 +328,7 @@ split (a hand can meet the land/curve cutoffs and still be missing the one
 card the deck actually wins with). **In band, early plays short:** no
 pressure normally proceeds straight to "mulligan," but a `mulligan_cost`
 (below) with at least a 13-point gap between this deck's kept-seven and
-mulliganed-to-six win rates acts as a brake — the downgrade stops at
+mulliganed (any number) win rates acts as a brake — the downgrade stops at
 "marginal" instead, with a reason naming the cost, since shipping a hand
 costs a measured, wide amount for this deck specifically. Only measured
 evidence moves the verdict this way: with no `key_plays` at all (below the
@@ -388,18 +388,17 @@ content-hash `deck_id` this Arena deck has ever had into one `DeckIdentity`,
 (≥3 copies, ranked by finisher-ness then mana value) by the player-turn it
 first resolved into "by T4" / "T5-6" / "T7-8" / "T9+" / "never resolved,"
 and `guide/play.mulligan_record` splits win rate by kept-seven vs.
-mulliganed. `key_plays` picks each key card's *best-sampled* turn band (at
-least 10 decided games in that band when any band qualifies, else the best
-raw win rate among what exists) — a single lucky one-game spike in "by T4"
-never outranks a real 19-game sample in "T5-6" — and reports that band's
+mulliganed. `key_plays` picks each key card's turn band with the best win
+rate among those with at least 10 decided games, else among all bands —
+a single lucky one-game spike in "by T4" never outranks a real 19-game sample in "T5-6" — and reports that band's
 win-loss record alongside the "never resolved" record for contrast.
-`mulligan_cost` pairs the kept-seven and mulliganed-to-six `MulliganBucket`s
-directly. Both are gated on the same floor: at least 10 total decided games
+`mulligan_cost` pairs the kept-seven and mulliganed (any number)
+`MulliganBucket`s directly. Both are gated on the same floor: at least 10 total decided games
 for the identity, below which `key_plays` comes back empty and
 `mulligan_cost` comes back `None` rather than publishing a split too thin to
 mean anything — a note names the actual game count when this happens. On
 the real Spellementals deck (283 decided games on file), this surfaces
-Sunderflock at 40-20 in its best-sampled T5-6 window (72-89 when it never
+Sunderflock at 40-20 in its best T5-6 window (72-89 when it never
 resolves), Eddymurk Crab at 26-9 by T4, and a kept-seven/mulliganed gap wide
 enough (57.9% vs. 44.6%, a 13.2-point gap) to engage the mulligan-cost brake
 described above.
@@ -461,7 +460,7 @@ so the tab can show a picture — `null` only when the name never matched a
 | `no_consensus` | the archetype resolved, but `build_consensus` is below its `min_decks` gate | same observed facts as above |
 | `ok` | a consensus exists | the observed facts, plus the ranked interaction list |
 
-Every non-`no_game` result also carries the standing caveat: the card list
+An `ok` result also carries the standing caveat: the card list
 is the field's *typical* decklist for this archetype, not the opponent's
 actual 60, which this reader never sees — the same sentence
 `review/analyzers/frame.py` uses for its own opponent-side comparison.
@@ -545,14 +544,18 @@ makes for the ordinary in-game brief). Past boarding is not a fourth linear
 tier in the data itself — it is a supplementary field the frontend positions
 differently depending on which of the other three fired (below the plan
 when exact, above the "closest" warning when closest, or as the only
-content alongside the prompt when neither exists). No archetype named at
-all (a game 1 conceded before a card was seen, or a match with no format),
-or no identity for the player's own deck: `plan` and `prompt` both come back
-`None`, and the UI says so rather than rendering dead buttons (rule 4). The
+content alongside the prompt when neither exists). No identity for
+the player's own deck: `plan` and `prompt` both come back `None`, and the UI
+says so rather than rendering dead buttons (rule 4). No archetype named at
+all (a game 1 conceded before a card was seen, or a match with no format):
+`prompt` comes back `None`, but the alternatives still run, so the top one
+can still show as a "closest" plan, and past boarding reads that same
+alternative (`intermission.py`, step 5b). The
 prompt is `full_prompt`'s, so it is `None` too when the player's own deck has
 no format (`docs/brief.md`).
 
-**Degradation.** Unknown opponent → no plan and no prompt; no format → no
+**Degradation.** Unknown opponent → no prompt, though a "closest" plan
+from the alternatives may still show; no format → no
 live read, so the same unless the user picked the opponent's deck; `stale`
 flags a plan whose brief predates the current field or the current 75
 (`brief.store.is_stale`) without withholding it — a stale plan is still the
@@ -885,7 +888,7 @@ and back, and gave the land chance in more than one form. Feedback on
 the 1.0.1 announcement named this card first when it called the
 dashboard's information randomly spread, so the card now asks one
 question, three draws ahead, and answers it on every row. The API's
-`is_interaction` stays, since `KeepGuideCard` still reads it.
+`is_interaction` stays, though no dashboard component reads it.
 
 The groups keep mana value, the shape a player already holds their own
 60 in memory in, and rows sort by name within a group, not by copies

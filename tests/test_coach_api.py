@@ -106,7 +106,7 @@ def test_coach_narrative_by_id_404s_on_empty_db(empty_client):
 
 
 def test_no_credential_means_no_client_is_constructed(monkeypatch, client):
-    """The same guarantee tests/test_llm.py pins for the other three
+    """The same guarantee tests/test_llm.py pins for the other four
     routes: with nothing configured, the route may not even try to build
     an Anthropic client."""
     monkeypatch.setattr(llm_config_module, "load_coach", lambda: None)

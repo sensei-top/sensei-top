@@ -34,9 +34,10 @@ would-be twin to agree not just on every player's decklist and record, but
 on every round pairing too.
 
 **The survivor.** `keep = min(event_id)` in each group. `event_id` is the
-file's own path, which sorts by date folder first, so this is always the
-group's earliest publication — deterministic without needing to know which
-copy the source repository considers canonical.
+file's own path, which sorts by source folder, then date: within one source
+the survivor is the group's earliest publication, and across sources it is
+the copy whose source folder sorts first. Either way it is deterministic,
+without needing to know which copy the source repository considers canonical.
 """
 
 from __future__ import annotations

@@ -289,8 +289,8 @@ says what will appear and what causes it:
   report written before, and only once the coach has answered: a
   request that failed says it failed. A report written before is
   still shown when the matches are too few.
-- **Field** says that tournament results are downloaded from the command
-  line, because nothing in the app starts that download yet.
+- **Field** says that the server downloads tournament results on its own
+  while it runs, and that `sensei-top meta` does it from the command line.
 
 ## Matches
 
@@ -629,8 +629,9 @@ say why advice is given after a match and not during one.
 
 **The hero** (`components/match/MatchHero.tsx`) has Home's shape: the
 art at the right with a fade to the left, on top with a fade down under
-48rem, and no word on the picture. The art is the first card the
-opponent cast (`castCards`, `lib/matchArt.ts`), or the viewer's own when
+48rem, and no word on the picture. The art is a card the opponent cast:
+the one whose first cast came latest in the match, as on Home
+(`castCards`, `lib/matchArt.ts`), or the viewer's own when
 the opponent cast nothing, or none. The words are a label line (the
 event in words, when), the report's headline and subhead, then the two
 decks: the viewer's as `MatchRow` writes it, the opponent's as
@@ -696,7 +697,7 @@ stood out" heads the narrow one (`GapsLead`). The cards are one grid's
 children at every width, so a card keeps its state when the window
 crosses 64rem. With no gaps either, the report is one column.
 
-`ReportNarrativeCard` starts closed behind a "Show coach's summary"
+`ReportNarrativeCard` starts closed behind a "Show the coach's summary"
 button, since building the prompt means building the whole report's
 context, which is not worth doing each time a match is opened. Open, it
 is a `GenerateCard` that carries the game's turn-by-turn shape beside

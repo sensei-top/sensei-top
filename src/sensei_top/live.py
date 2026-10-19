@@ -296,8 +296,8 @@ class LiveIngester:
     # watcher would otherwise run back-to-back forever (it did, measured at
     # 16.2 s a rebuild against a 5 s project_every on a 238k-event database —
     # every dirty poll found elapsed >= project_every already true). The gate
-    # in poll_once instead holds the watcher to roughly a 1/duty_factor duty
-    # cycle: sleep duty_factor times as long as the *last* rebuild took, so
+    # in project_if_due instead holds the watcher to roughly a 1/(1+duty_factor)
+    # duty cycle: sleep duty_factor times as long as the *last* rebuild took, so
     # its cost stays a fixed fraction of wall time as history grows, rather
     # than consuming a whole core continuously. 1.0 is a ~50% duty cycle.
     duty_factor: float = 1.0
@@ -654,7 +654,7 @@ class LiveIngester:
         # 238k-event database — every dirty poll already found elapsed >=
         # project_every true). Sleeping duty_factor times the *last*
         # rebuild's own duration instead holds the watcher to roughly a
-        # 1/duty_factor duty cycle, so its cost stays a fixed fraction of
+        # 1/(1+duty_factor) duty cycle, so its cost stays a fixed fraction of
         # wall time as history grows rather than consuming a whole core
         # continuously. Before the first rebuild, _last_duration is 0.0 and
         # this falls back to the project_every floor, same as before.

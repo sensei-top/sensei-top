@@ -74,8 +74,9 @@ is then renumbered it runs a second time under the new number.
   ([architecture.md](architecture.md), "Adding a migration": an applied
   migration is never edited). That branch merges first, and the other one
   renumbers.
-- Applying one is easy to do by accident. Every CLI subcommand applies the
-  pending migrations as it opens the database, `serve` included, so a
+- Applying one is easy to do by accident. Every CLI subcommand but `doctor`,
+  `diagnostics` and `config` applies the pending migrations as it opens the
+  database, `serve` included, so a
   command run from a feature branch against `data/sensei-top.db` applies
   that branch's migrations to it. Use a scratch `--db` unless applying them
   is the point.
@@ -121,21 +122,7 @@ branch stops.
 4. The tag `vX.Y.Z` on that merge commit, pushed.
 5. `main` merged back into `develop`, so that a fix made on the release
    branch is not lost and the tag is reachable from `develop`.
-6. The snapshot, run by the maintainer, into a clone of the public
-   repository whose own configuration sets the public identity ("The public
-   repository" below). Twice:
-
-       uv run python scripts/publish_snapshot.py --tag vX.Y.Z --public <clone>
-       uv run python scripts/publish_snapshot.py --tag vX.Y.Z --public <clone> --push
-
-   The first is a dry run: it commits the tag's tree to the clone as one
-   commit, tags it, and runs `scripts/privacy_scan.py` on the clone's tree
-   and then with `--history`; it pushes nothing. Read that commit, then run
-   the second, which scans the same commit again and pushes `main` and the
-   tag. A finding stops either run before a push. The script refuses a tag
-   that is not on `main`, a clone that is not clean, and a clone without
-   its own `user.name` and a `@users.noreply.github.com` `user.email`.
-7. The tag push starts the release job (`release` in
+6. The tag push starts the release job (`release` in
    `.github/workflows/desktop.yml`) on the public repository, and only
    there. Watch it finish, then check that the release holds `latest.yml`
    and `latest-linux.yml`: they are what an installed copy's updater reads,
@@ -152,7 +139,7 @@ branch stops.
     git switch -c hotfix/<topic>
 
 The fix arrives with its fixture-backed test (non-negotiable 7) and a patch
-version, then follows steps 2 to 7 of a release. If a release branch is open
+version, then follows steps 2 to 6 of a release. If a release branch is open
 at the time, the hotfix is merged into it as well.
 
 ## Commits
@@ -182,16 +169,16 @@ it is about to do before doing it.
 
 ## The public repository
 
-This repository's history is not going to be published
-([status.md](status.md), "Waiting on the user"). The public repository
-starts as a new repository holding a one-commit snapshot of the tree, and
-its `main` and `develop` both start at that commit. It cannot be this
-repository with its branches rewritten: GitHub keeps the commits of every
-pull request under `refs/pull/*`, where a force-push does not reach them.
+Since 2026-10-17 development happens in the public repository itself,
+`github.com/sensei-top/sensei-top`: its branches, pull requests and
+releases are this model's. The pre-public history stays private. The public
+history starts at a snapshot: releases up to 1.0.0 arrived there as
+one-commit snapshots of the tree, and everything after is ordinary commits
+and merges.
 
 Its commits identify the maintainer, by decision: the name git records
 today, and GitHub's no-reply address for the maintainer's account in place
-of a personal inbox. Both are set in that clone's own configuration
+of a personal inbox. Both are set in the public clone's own configuration
 (`git config user.email`, without `--global`), so the working repository
 keeps its own. The rule for a tracked file does not change: the identity
 goes in the log, never in a file.

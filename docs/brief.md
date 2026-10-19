@@ -50,9 +50,10 @@ generates a standalone brief on its own. The round trip:
    `for: brief:{deck key}:{archetype key}` line must name this deck and
    opponent, then validated against your real 75 and stored.
 
-**Most briefs never need step 1 or 3 individually.** A generated or imported
-deck guide (`POST /api/guide/{key}/narrative` or `guide --deck KEY --import
-FILE`) writes a brief for every matchup that narrative covers, via
+**Most briefs never need step 1 or 3 individually.** A generated, pasted or
+imported deck guide (`POST` or `PUT /api/guide/{key}/narrative`, or
+`guide --deck KEY --import FILE`) writes a brief for every matchup that
+narrative covers, via
 `from_guide.py` — so one guide lights up the whole Live page. This is
 exactly why a generate button here would mostly duplicate a call the guide
 already made; per-matchup imports are for filling a gap the guide missed.
@@ -62,11 +63,14 @@ A plan that does not balance, or that names a card the deck does not hold, is
 repaired (`guide/plans.py`) — the dashboard shows the problem next to the
 plan, and `tests/test_brief_importer.py` pins that.
 
-## The one authored-and-persisted table in this project
+## Why a brief is persisted
 
 `guide/__init__.py` and `review/__init__.py` both refuse to persist their
-output, because both packages compute *derivations* of the current database
-that a later rebuild could silently disagree with. A brief is different: it
+evidence, because both packages compute *derivations* of the current database
+that a later rebuild could silently disagree with; only their authored
+narratives are stored (`deck_narrative`, `rcq_guide`, `match_narrative`,
+`leaks_narrative`). `brief/` persists one authored artifact per `(deck,
+archetype)`, in `matchup_brief`. A brief is different from a derivation: it
 is prose written once from a decklist and a corpus snapshot, both stamped
 beside it (`matchup_brief.list_hash`, `.corpus_commit`), so a stored brief
 cannot go silently wrong the same way — the two things that would make it
@@ -130,8 +134,8 @@ answered properly.
 
 An earlier version of this package ran a second daemon thread that polled for
 a live, unbriefed opponent and made an API call to fill the gap. That thread
-is gone with the call. Nothing in `brief/` runs on a timer, and `serve
---watch` starts exactly one background thread again (`LiveIngester`).
+is gone with the call. Nothing in `brief/` runs on a timer, and no thread
+`serve --watch` starts ever writes a brief or calls a model.
 
 What survives from that design is the guard order it needed, now
 inside the API route (`api/routes/current_match.py::_brief_response`):
@@ -316,9 +320,10 @@ sweep. `sensei-top guide --deck KEY --import FILE` drives this.
 - It does not write anything by itself, and has no generate button — unlike
   the match report and the deck guide (`docs/llm.md`). The dashboard offers
   the prompt and the import command; the writing happens wherever the user
-  chooses, or as a side effect of generating a deck guide, and a standalone
-  brief import is still a CLI job (non-negotiable #6's authored-artifact
-  allowlist covers the guide's own write route, not this one).
+  chooses, or as a side effect of generating a deck guide. The brief card
+  saves a pasted brief through `PUT /api/guide/{key}/briefs/{archetype_key}`,
+  on non-negotiable #6's authored-artifact allowlist, and `brief --import`
+  is the terminal equivalent.
 - It does not compute `structural_change`'s per-archetype "changed/gone"
   verdict. That is a real, small gap (see above), acceptable because the
   Live page's own field-share number is windowed correctly regardless, and

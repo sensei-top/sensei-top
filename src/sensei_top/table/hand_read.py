@@ -43,9 +43,9 @@ from sensei_top.review import effects
 from sensei_top.review.consensus import ArchetypeConsensus
 
 # The field's consensus decklist stands in for a real 60 we never see — every
-# read here inherits that gap, so every non-"ok" and "ok" result alike carries
-# this caveat (the same sentence review/analyzers/frame.py uses for its own
-# opponent-side comparison).
+# read here inherits that gap, so every "ok" result carries this caveat (the
+# same sentence review/analyzers/frame.py uses for its own opponent-side
+# comparison).
 _CONSENSUS_CAVEAT = N_(
     "The card list is the field's typical decklist for this archetype, not their "
     "actual 60 cards, which this reader never sees."

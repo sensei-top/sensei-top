@@ -1344,7 +1344,7 @@ def guide_key(client):
 
 def test_no_credential_means_no_client_is_constructed(monkeypatch, client, guide_key):
     """The guarantee AGENTS.md non-negotiable #5 now rests on: with nothing
-    configured, none of the three generate routes may even try to build an
+    configured, none of the four generate routes may even try to build an
     Anthropic client, let alone open a socket."""
     monkeypatch.setattr(llm_config_module, "load", lambda: None)
 

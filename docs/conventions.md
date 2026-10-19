@@ -12,14 +12,13 @@ module.
 - **Module-level constants for magic values** (`WIN`, `LOSS`, `_CHUNK_BYTES`,
   `UNITY_PREFIX`), never inline literals repeated across functions.
 - **Leading underscore for module-private helpers** (`_outcome`, `_messages`,
-  `_rows`, `_now`).
+  `_rows`, `_now_iso`).
 - **Type hints everywhere**, including return types. `X | None`, not `Optional`.
 
 ### Transactions
 
-Every connection in the project uses `isolation_level=None` — `db.py`'s
-`connect()` and the API's own `get_conn`/`get_writable_conn` alike — so
-sqlite3 never opens an implicit transaction and every write block is explicit:
+Every connection that can write uses `isolation_level=None` — `db.py`'s
+`connect()` and the API's `get_writable_conn` alike — so sqlite3 never opens an implicit transaction and every write block is explicit:
 
 ```python
 conn.execute("BEGIN")
@@ -37,7 +36,7 @@ generate route writes `deck_narrative` *and* `matchup_brief`) would commit the
 first even when the second raised — and the next request would read the
 half-written result as complete rather than retrying.
 
-`PRAGMA foreign_keys=ON` is set on every connection for the same reason: a
+`PRAGMA foreign_keys=ON` is set on both for the same reason: a
 connection that enforces less than the rest of the project is a difference that
 surfaces as a corrupted row much later, not as a failing test now.
 
@@ -130,7 +129,8 @@ FastAPI, built by `create_app(db_path, watcher=None)`.
   route reaches answers in it; the server stores no language. A field the
   dashboard turns into its own sentence is a code, not prose (a `kind`,
   a `status`), and the dashboard keys the words.
-- **Read-only, enforced**: every connection sets `PRAGMA query_only=ON`.
+- **Read-only, enforced**: every connection sets `PRAGMA query_only=ON`, except
+  `get_writable_conn`, used only by rule 6's authored-artifact routes.
 - **Check the path before connecting.** `sqlite3.connect()` *creates* a missing
   file; an empty database renders identically to "no games played yet", hiding
   a wrong `--db`. Missing means 503 with the fix in the message.
@@ -163,9 +163,12 @@ FastAPI, built by `create_app(db_path, watcher=None)`.
 ## Dependencies
 
 Prefer the standard library. Every dependency added so far earns its place:
-`fastapi`/`uvicorn` for the API, `pydantic` for the schema contract, `pytest`
-and `ruff` for development. Log tailing is a plain polling loop on purpose —
-`watchdog` misbehaves on the virtiofs and network mounts this log may live on,
+`fastapi`/`uvicorn` for the API, `pydantic` for the schema contract, `orjson`
+for parsing the log's payloads, `polib` for the API's translation catalogues,
+`keyring` for keys kept in the system keyring, and `anthropic` for the opt-in
+call in `llm/client.py`; for development, `pytest` and `ruff`, `httpx2` for
+FastAPI's `TestClient`, and `pyinstaller` for the frozen server. Log tailing
+is a plain polling loop on purpose — `watchdog` misbehaves on the virtiofs and network mounts this log may live on,
 and two seconds of latency is irrelevant for a dashboard.
 
 Keep pins current rather than frozen; the project targets latest stable.
