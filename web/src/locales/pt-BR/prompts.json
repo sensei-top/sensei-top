@@ -58,7 +58,7 @@
       "sideboard": "Sideboard",
       "noDeck": "Nenhum deck foi lido do log.",
       "games": "Os jogos",
-      "record": "Retrospecto: {{record}}",
+      "record": "Histórico: {{record}}",
       "cards_one": "{{count}} card",
       "cards_other": "{{count}} cards",
       "pickUnknown": "Escolha {{pick}}: o card pego não é conhecido, de {{from}}",

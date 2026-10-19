@@ -115,7 +115,8 @@ and dedupe permanently.
 **Day and month.** `06/10/2026` is the 6th of October in a Spanish header and
 would be the 10th of June in an English one, and both can sit in one
 `Player.log`, so no single order fits a file, let alone a machine. The CLI's
-`--locale` is `auto` by default; `mdy` and `dmy` are overrides that read
+`--locale` defaults to `[arena] date_order` in `config.toml` (`config
+--set-date-order`), else `auto`; `mdy` and `dmy` are overrides that read
 every non-year-first header that way and warn once per shape when a date is
 impossible in that order. The library functions (`ingest_file`, `live.py`)
 default to `None`, which dates year-first shapes only, and pass the string
@@ -173,10 +174,15 @@ player took 12 turns reports `turnNumber: 24`, and `players[].turnNumber` in
 that same message reads 12. Game "length" is therefore roughly twice the round
 count — label it as player-turns in any UI, or the numbers look absurd.
 
-**6. Full snapshots and diffs carry no distinguishing flag.** Merge incoming
-fields into running state and purge anything in `diffDeletedInstanceIds`, or
-the board fills with phantom cards. On one real session, diffs outnumbered full
-snapshots 206 to 1.
+**6. Full snapshots and diffs look alike, but `type` tells them apart.** A
+`GameStateMessage` with `type: GameStateType_Full` is the whole board and
+replaces what came before; `GameStateType_Diff` carries only what changed.
+Merge a diff's fields into running state and purge anything in its
+`diffDeletedInstanceIds`, or the board fills with phantom cards. On one real
+session, diffs outnumbered full snapshots 206 to 1. A full snapshot whose
+`update` is `GameStateUpdate_Undo` is not a fresh start but a rewind (trap 16).
+This trap once said no flag existed; the projector branched on `type` all
+along.
 
 **7. `AnnotationType_ObjectIdChanged` re-keys objects.** A resolving spell gets
 a new `instanceId`; without re-keying, battlefield counts double-count. One
@@ -236,6 +242,17 @@ The break ends on the first of two things, in message order: a
 greater than the game that opened it — `projector/live_state.py`'s
 `replay_live_state` clears `LiveState.intermission` on either, and never on
 `SubmitDeckConfirmation`.
+
+**11d. A match's best-of is in `gameInfo.matchWinCondition`, on every game's
+state messages.** `MatchWinCondition_Best2of3` is a best of three and
+`MatchWinCondition_SingleElimination` a best of one; a real history holds
+nothing else. The value is the match's, not the game's: a Bo1 carries
+`SingleElimination` on its one game, a Bo3 `Best2of3` on all of them. Neither
+the queue nor the event id says which: `DirectGame` is either. The projector
+keeps the first value it sees as `matches.best_of` (3 or 1); an unknown value
+is NULL and warns, a later different value warns and changes nothing, and a
+match whose log never shows a `gameInfo` (`sample_player.log`'s) is NULL with
+no warning of its own.
 
 **12. The `name` field on a game object is a numeric ID, not a string.** Card
 names require a `grpId` lookup against Scryfall data.
@@ -311,8 +328,7 @@ itself is a `ClientToGREMessage` with `payload.type ==
 relays the opponent's decision only as its *effect* on shared state, never
 the outgoing message. Verified against 503 real decisions in a live capture:
 every offer resolves to exactly 7 cards (Magic's own London mulligan rule),
-zero failures — see `projector/mulligan.py`'s module docstring for two more
-traps hit getting there:
+zero failures. Two more traps hit getting there:
 
 - A follow-up diff regularly re-affirms `pendingMessageType` without
   resending `gameObjects` — a single message cannot always be parsed alone.
@@ -344,9 +360,50 @@ capture, the outer keys are only `CurrentModule`, `DTO_InventoryInfo`,
 `Payload`, `id`, `request`, none of them a draft-instance id. Nothing
 parses a draft today — the draft assistant was deleted on 2026-10-01 and
 the segmenter only labels these entries, so they stay in `raw_events` — but
-`docs/draft.md` and `projector/draft.py` at the `archive/draft` tag hold
-the full protocol and how `draft_id` was synthesized, for whoever brings
+`docs/draft.md` and `projector/draft.py` at the `archive/draft` tag, in
+the project's pre-public history rather than this repository, hold the
+full protocol and how `draft_id` was synthesized, for whoever brings
 drafts back.
+
+**16. A player can undo an action, and the log rewinds with it.** Arena
+sends a `GameStateType_Full` state whose `update` is `GameStateUpdate_Undo`
+and whose `prevGameStateId` names the state the game returns to. The states
+in between never happened: a spell cast in them was not cast. Only the
+user's own undos reach the log (211 in the real history as of 2026-10-19;
+the 76 that cancelled something cancelled the user's own cast or
+sacrifice). The projector drops the `card_events` recorded after the named
+state, by the order states were applied, not by comparing ids: 16 of 923
+real games carry `gameStateId`s that are not monotonic. An undo naming a
+state never applied in that game drops nothing and warns. Arena also
+rewinds its annotation ids: the cast that follows an undo can reuse the
+cancelled cast's annotation and instance ids while moving a different
+card, so the ids of the dropped rows are forgotten too, or the real cast
+would look like a re-broadcast. `tests/fixtures/undo_session.log` holds one
+(Undo at state 101, back to 99).
+
+**17. `GREMessageType_QueuedGameStateMessage` is a state message too.** It
+carries a `gameStateMessage` like `GREMessageType_GameStateMessage` does,
+and its zone changes are real: apply it once, like any other. In the real
+history (2026-10-19), 7,772 queued states and none of them arrived again as
+a plain one, so nothing is applied twice. A queued and a plain message can
+share one event: `tests/fixtures/undo_session.log` has queued states 96 and
+97 beside plain 98 and 99.
+
+**18. Arena can replace an oversized message with a summary.** Other
+projects document a `[Message summarized because one or more
+GameStateMessages exceeded the 50 GameObject or 50 Annotation limit.]` line
+followed by lines opening with three or two colons that give the counts,
+in place of the message itself. None has appeared in the user's logs (2026-10-19). The segmenter
+recognises the block, warns once per block with its counts, and stores
+nothing: the state it replaced is lost, and that game's replay is missing
+it. A block that is the very last thing in a file that never grows again
+does not warn (`docs/status.md`, "Correctness").
+
+**19. One bad message must not cost its neighbours.** An event batches many
+messages (trap 3), the game's result often among them. The projector
+catches an exception per message, warns with the message's `type` and
+`gameStateId` and applies the rest; before, one failure lost the whole
+event, `GameOver` included.
 
 ## Deriving the two hardest fields
 

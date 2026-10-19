@@ -34,8 +34,8 @@ projected tables instead.
   anything already confirmed in their hand.
 - ``live.py`` — the fresh, request-time replay behind the two reads above
   and the tab's own remaining-library panel.
-- ``ranked.py`` — the ranked-play rule: which queues keep the advice above
-  off the page while a game is under way.
+- ``queues.py`` — the event rule: which queues allow the advice above on
+  the page while a game is under way.
 """
 
 from sensei_top.table.hand_read import HandCard, HandRead, RevealedCard, build_hand_read
@@ -46,7 +46,7 @@ from sensei_top.table.opening_hand import (
     OpeningHandRead,
     build_opening_hand_read,
 )
-from sensei_top.table.ranked import is_ranked
+from sensei_top.table.queues import allows_advice
 
 __all__ = [
     "HandCard",
@@ -58,10 +58,10 @@ __all__ = [
     "OpeningHandCard",
     "OpeningHandRead",
     "RevealedCard",
+    "allows_advice",
     "build_hand_read",
     "build_keep_guide",
     "build_library_remaining",
     "build_live_state",
     "build_opening_hand_read",
-    "is_ranked",
 ]

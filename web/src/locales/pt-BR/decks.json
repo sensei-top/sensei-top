@@ -6,21 +6,11 @@
   "count": {
     "matches_one": "{{n}} partida",
     "matches_other": "{{n}} partidas",
-    "games_one": "{{n}} jogo",
-    "games_other": "{{n}} jogos",
     "lists_one": "{{n}} lista",
     "lists_other": "{{n}} listas"
   },
   "line": {
-    "matches_one": "{{n}} partida, {{won}} vencida",
-    "matches_other": "{{n}} partidas, {{won}} vencidas",
     "lastPlayed": "jogado pela última vez {{ago}}"
-  },
-  "record": {
-    "wonOf": "venceu {{wins}} de {{finished}}",
-    "figureOf": "{{wins}} de {{finished}}",
-    "matchesWon": "partidas vencidas",
-    "none": "nenhuma partida terminada ainda"
   },
   "tile": {
     "versions_one": "{{n}} versão",
@@ -30,7 +20,7 @@
   "list": {
     "empty": {
       "title": "Nenhum deck ainda",
-      "message": "Um deck aparece aqui na primeira vez que você joga uma partida com ele, com seu retrospecto, seus matchups e seu guia."
+      "message": "Um deck aparece aqui na primeira vez que você joga uma partida com ele, com seu histórico, seus matchups e seu guia."
     }
   },
   "matches": {
@@ -47,8 +37,19 @@
     "tabs": {
       "overview": "Visão geral",
       "matchups": "Matchups",
-      "guide": "Guia"
+      "guide": "Guia",
+      "rcq": "RCQ"
     }
+  },
+  "strip": {
+    "matches": "Partidas",
+    "games": "Jogos",
+    "playDraw": "Play contra draw",
+    "points_one": "{{sign}}{{n}} ponto",
+    "points_other": "{{sign}}{{n}} pontos",
+    "onPlay": "{{value}} no play",
+    "onDraw": "{{value}} no draw",
+    "sideNone": "nenhum jogo"
   },
   "overview": {
     "daysWithinMonth": "{{from}} a {{to}}",
@@ -71,27 +72,12 @@
       "subtitle": "Sua classificação quando cada partida foi jogada. Só partidas terminadas.",
       "rank": "Classificação",
       "matches": "Partidas",
-      "won": "Vitórias",
+      "record": "Histórico",
       "rate": "Taxa"
     },
     "versions": {
       "title": "Versões",
       "subtitle": "Uma mudança na lista começa uma nova versão. Escolha uma para lê-la sozinha."
-    },
-    "tiles": {
-      "onPlay": "No play",
-      "onDraw": "No draw",
-      "wonOfGames": "venceu {{won}} de {{games}} jogos",
-      "gamesWon": "jogos vencidos",
-      "noGamePlay": "nenhum jogo no play ainda",
-      "noGameDraw": "nenhum jogo no draw ainda",
-      "playAgainstDraw": "Play contra draw",
-      "tooFew": "poucos jogos para comparar",
-      "points_one": "{{sign}}{{n}} ponto",
-      "points_other": "{{sign}}{{n}} pontos",
-      "betterPlay": "melhor no play",
-      "betterDraw": "melhor no draw",
-      "noDifference": "sem diferença"
     }
   },
   "written": {
@@ -104,7 +90,6 @@
     "staleDefault": "As evidências mudaram desde então."
   },
   "guide": {
-    "prepareRcq": "Preparar para um RCQ",
     "sectionsNav": "Seções do guia",
     "problemOrphan": "{{archetype}}: {{message}}",
     "sections": {
@@ -186,7 +171,6 @@
       "olderMatches_one": "{{n}} das suas partidas é mais antiga",
       "olderMatches_other": "{{n}} das suas partidas são mais antigas",
       "noReset": "nenhum reinício do formato encontrado",
-      "record": "Retrospecto",
       "tournamentLists": "Listas de torneio",
       "rulesText": "Texto de regras",
       "fieldSince": "Meta desde",
@@ -202,7 +186,7 @@
       },
       "noResults": {
         "title": "Nenhum resultado de torneio ainda",
-        "message": "Esta página mostra o que está sendo jogado em torneios e o seu retrospecto contra cada deck. Ela se preenche quando os resultados de torneios são baixados, o que esta versão faz só pela linha de comando."
+        "message": "Esta página mostra o que está sendo jogado em torneios e o seu histórico contra cada deck. Ela se preenche quando os resultados de torneios são baixados, o que esta versão faz só pela linha de comando."
       },
       "ownDetail_one": "{{wins}}–{{losses}} sobre {{n}} lista",
       "ownDetail_other": "{{wins}}–{{losses}} sobre {{n}} listas",
@@ -218,7 +202,7 @@
       "yourArchetype": "Seu arquétipo",
       "mostPlayed": "Mais jogado",
       "changedAtReset": "Mudou no reinício",
-      "noCarryOver": "Seu retrospecto não é carregado adiante."
+      "noCarryOver": "Seu histórico não é carregado adiante."
     },
     "list": {
       "title": "A lista",

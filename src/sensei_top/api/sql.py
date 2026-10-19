@@ -367,11 +367,12 @@ def _cached_break_read(
     ``build_break_read``'s own slower loads live in a second dict this
     function keeps across polls and hands in as ``caches``: the classifier's
     ``definitions``/``colors_by_name``/``prior`` and, per match, the brief
-    prompt and past boarding (``table/intermission.py`` says why those two
-    hold still for a whole match). That dict is keyed on the reference data
-    alone — the corpus fetch, its classification stamp, the stored
-    archetype definitions and the card database — so a reprojection during
-    the break (the watcher rebuilds on every intermission event) re-runs
+    prompt, past boarding and the post-board record (``table/intermission.py``
+    says why those three hold still for a whole match). That dict is keyed
+    on the reference data alone — the corpus fetch, its classification stamp,
+    the stored archetype definitions and the card database — so a
+    reprojection during the break (the watcher rebuilds on every
+    intermission event) re-runs
     only the cheap classification above, measured ~0.1s against ~2s cold,
     while a ``meta``/``archetypes``/``cards`` refresh still takes effect
     without a restart.

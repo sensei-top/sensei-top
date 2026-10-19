@@ -108,6 +108,69 @@ def test_ladder_matches_are_standard(db):
     assert match(db, MATCH_LOSS)["format"] == "Standard"
 
 
+def test_best_of_three_matches_project_best_of_3(db):
+    # match_session.log's gameInfo carries MatchWinCondition_Best2of3 throughout.
+    assert match(db, MATCH_LOSS)["best_of"] == 3
+    assert match(db, MATCH_WIN)["best_of"] == 3
+
+
+def test_single_elimination_match_projects_best_of_1(tmp_path):
+    # bo1_session.log: fixture_peek entries 1 and 4 name the match in
+    # gameRoomConfig.matchId; entries 2 and 3 carry gameInfo.matchID and
+    # MatchWinCondition_SingleElimination (show --max-depth 7).
+    conn = open_database(tmp_path / "bo1.db")
+    ingest_file(conn, FIXTURE.with_name("bo1_session.log"), locale_hint="mdy")
+    project(conn)
+    assert [tuple(r) for r in conn.execute("SELECT match_id, best_of FROM matches")] == [
+        ("801ebc43-c204-4cb4-856c-00b22837087b", 1)
+    ]
+    conn.close()
+
+
+def test_unknown_win_condition_is_null_and_warns(tmp_path, caplog):
+    conn, counts = _reproject_with(
+        tmp_path, [("MatchWinCondition_Best2of3", "MatchWinCondition_Mystery")], caplog
+    )
+    assert [r[0] for r in conn.execute("SELECT best_of FROM matches")] == [None, None]
+    assert sum("MatchWinCondition_Mystery" in r.getMessage() for r in caplog.records) == 2
+    assert counts["warnings"] == 2
+    conn.close()
+
+
+def test_later_different_win_condition_warns_once_and_changes_nothing(caplog):
+    # Synthetic: tests the keep-the-first rule, not Arena's format.
+    p = Projector()
+    p.feed(
+        "event",
+        None,
+        '{"matchGameRoomStateChangedEvent": {"gameRoomInfo": {'
+        '"gameRoomConfig": {"matchId": "m1", "reservedPlayers": ['
+        '{"userId": "A", "systemSeatId": 1, "teamId": 1}]},'
+        '"stateType": "MatchGameRoomStateType_Playing"}}}',
+        None,
+    )
+    before = p.warnings
+    for condition in (
+        "MatchWinCondition_Best2of3",
+        "MatchWinCondition_SingleElimination",
+        "MatchWinCondition_SingleElimination",
+    ):
+        p._handle_gre_message(
+            {"gameStateMessage": {"gameInfo": {"matchID": "m1", "matchWinCondition": condition}}},
+            None,
+        )
+    assert p.matches["m1"].best_of == 3
+    assert p.warnings - before == 1
+
+
+def test_best_of_is_stable_across_a_second_project(db):
+    first = [tuple(r) for r in db.execute("SELECT match_id, best_of FROM matches ORDER BY 1")]
+    project(db)
+    second = [tuple(r) for r in db.execute("SELECT match_id, best_of FROM matches ORDER BY 1")]
+    assert first == second
+    assert {b for _, b in second} == {3}
+
+
 def _reproject_with(tmp_path, replacements, caplog):
     """Rewrite raw_events payloads, project, return (conn, project()'s counts).
     The fixture's two matches share one event id, Traditional_Ladder."""
@@ -622,6 +685,115 @@ def test_project_warns_once_per_malformed_row(tmp_path):
     assert result["warnings"] == 1
     # The rest of the fixture still projects normally around the bad row.
     assert conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0] == 2
+    conn.close()
+
+
+def test_one_bad_message_in_a_gre_event_costs_only_itself(tmp_path, caplog):
+    """A GreToClientEvent carries several messages. In match_session.log the
+    event holding states 388 and 389 (``fixture_peek.py grep``) is the first
+    game's end: state 388 is ``GameStage_GameOver`` / ``MatchState_GameComplete``
+    with winning team 1 -- a loss for MATCH_LOSS, where the user is team 2
+    (``test_match_results`` reads the same match). A malformed copy of state
+    389 is put in front of it, in memory only: ``gameObjects`` an int reaches
+    the tracker's loop and raises. The game's result must still land, and the
+    failure must warn once, naming the message type and state id.
+
+    The match's closing ``MatchGameRoomStateChangedEvent`` also lists the
+    game results (``finalMatchResult``), so that row is deleted from the copy:
+    state 388 is then the only source of game 1's result."""
+    conn = open_database(tmp_path / "t.db")
+    ingest_file(conn, FIXTURE, locale_hint="mdy")
+    deleted = conn.execute(
+        "DELETE FROM raw_events WHERE label = 'MatchGameRoomStateChangedEvent' "
+        "AND payload LIKE '%MatchGameRoomStateType_MatchCompleted%' AND payload LIKE ?",
+        (f"%{MATCH_LOSS}%",),
+    ).rowcount
+    assert deleted == 1
+    row = None
+    for candidate in conn.execute(
+        "SELECT id, payload FROM raw_events WHERE label = 'GreToClientEvent'"
+    ).fetchall():
+        parsed = json.loads(candidate["payload"])
+        msgs = parsed["greToClientEvent"]["greToClientMessages"]
+        ids = [(m.get("gameStateMessage") or {}).get("gameStateId") for m in msgs]
+        if 388 in ids and 389 in ids:
+            row = (candidate["id"], parsed)
+            break
+    assert row is not None
+    row_id, payload = row
+    msgs = payload["greToClientEvent"]["greToClientMessages"]
+    bad = json.loads(json.dumps(next(
+        m for m in msgs if (m.get("gameStateMessage") or {}).get("gameStateId") == 389
+    )))
+    bad["gameStateMessage"]["gameObjects"] = 5
+    msgs.insert(0, bad)
+    conn.execute(
+        "UPDATE raw_events SET payload = ? WHERE id = ?", (json.dumps(payload), row_id)
+    )
+    with caplog.at_level(logging.WARNING):
+        counts = project(conn)
+    assert games(conn, MATCH_LOSS)[1]["result"] == "loss"
+    assert counts["warnings"] == 1
+    hits = [
+        r.getMessage() for r in caplog.records
+        if "GREMessageType_GameStateMessage" in r.getMessage()
+    ]
+    assert len(hits) == 1
+    assert "389" in hits[0]
+    conn.close()
+
+
+UNDO_FIXTURE = Path(__file__).parent / "fixtures" / "undo_session.log"
+
+
+def test_a_queued_state_messages_zone_change_applies(tmp_path):
+    """undo_session.log carries state 96 only as a ``QueuedGameStateMessage``
+    (``fixture_peek.py grep --type GREMessageType_QueuedGameStateMessage``);
+    its ZoneTransfer moves instance 269 (grpId 106296) from zone 31, seat 1's
+    hand, to zone 27, the stack, as a ``CastSpell``. No plain message repeats
+    it, so the row exists only if a queued message is applied."""
+    conn = open_database(tmp_path / "u.db")
+    ingest_file(conn, UNDO_FIXTURE, locale_hint="mdy")
+    project(conn)
+    rows = conn.execute(
+        "SELECT * FROM card_events WHERE grp_id = 106296 AND category = 'CastSpell'"
+    ).fetchall()
+    assert len(rows) == 1
+    assert (rows[0]["seat"], rows[0]["zone_src"], rows[0]["zone_dest"]) == (
+        1, "ZoneType_Hand", "ZoneType_Stack",
+    )
+    conn.close()
+
+
+def test_a_trackers_warning_is_counted_by_the_projection(tmp_path):
+    """The tracker collects its warnings instead of logging them (the Live
+    replay runs it at 1 Hz); ``project()`` forwards each through
+    ``Projector._warn`` so it is counted. undo_session.log with state 99's
+    message removed in memory: state 101 undoes back to 99, which the game
+    never applied, and that is the fixture's only warning
+    (test_game_state.py asserts the same case on the tracker alone)."""
+    conn = open_database(tmp_path / "w.db")
+    ingest_file(conn, UNDO_FIXTURE, locale_hint="mdy")
+    assert project(conn)["warnings"] == 0
+    removed = 0
+    for row in conn.execute(
+        "SELECT id, payload FROM raw_events WHERE label = 'GreToClientEvent'"
+    ).fetchall():
+        parsed = json.loads(row["payload"])
+        msgs = parsed["greToClientEvent"]["greToClientMessages"]
+        kept = [
+            m for m in msgs
+            if (m.get("gameStateMessage") or {}).get("gameStateId") != 99
+        ]
+        if len(kept) != len(msgs):
+            removed += len(msgs) - len(kept)
+            parsed["greToClientEvent"]["greToClientMessages"] = kept
+            conn.execute(
+                "UPDATE raw_events SET payload = ? WHERE id = ?",
+                (json.dumps(parsed), row["id"]),
+            )
+    assert removed == 1
+    assert project(conn)["warnings"] == 1
     conn.close()
 
 

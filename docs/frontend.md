@@ -25,15 +25,17 @@ fetch. TanStack Query stays the only data layer.
 | `/matches/:id` | `MatchPage` | `MatchDetailView`: that match's report |
 | `/matches/:id/replay` | `MatchReplayPage` | `MatchReplayView`: that match turn by turn, one game and one turn at a time |
 | `/decks` | `DecksPage` | every deck, one tile each, last played first |
-| `/decks/:id` | `DeckOverviewPage` | `DeckOverviewView`: that deck's record, play and draw, and its matches |
+| `/decks/:id` | `DeckOverviewPage` | `DeckOverviewView`: that deck's rank table, its versions and its matches, under the deck strip every tab shows |
 | `/decks/:id/matchups` | `DeckMatchupsPage` | `MatchupsView`: one row per archetype it has met |
 | `/decks/:id/matchups/:opponent` | `DeckPairingPage` | `PairingView`: that deck against one opponent's deck |
 | `/decks/:id/guide` | `DeckGuidePage` | `GuideView` for that deck |
+| `/decks/:id/rcq` | `DeckRcqPage` | `RcqView`: the RCQ prep for that deck; `/decks/:id/guide/rcq`, its 1.0.x address, redirects here |
 | `/field` | `FieldPage` | `FieldView`: what is played in tournaments, and your record against it |
 | `/field/events/*` | `FieldEventPage` | `FieldEventView`: one tournament event, every deck with its standing, archetype and decklist, and where its results were published |
 | `/coach` | `CoachPage` | `CoachView`: the latest report, the way to write the next one, and your numbers |
 | `/coach/:id` | `CoachPage` | `CoachView`: one earlier report, as it was written |
-| `/settings` | `SettingsPage` | `SettingsView`: what a desktop shell hands over, how reports get written, the density control, then the credits |
+| `/mtgo/picks` | `MtgoPicksPage` | "Pick MTGO decks": not a place in the rail; Home's "Needs a deck" card links to it |
+| `/settings` | `SettingsPage` | `SettingsView`: what a desktop shell hands over, how reports get written, the density control, the Live page's advice switch, then the credits |
 | `/welcome` | `WelcomePage` | `WelcomeView`: the first-run steps, four or five by which clients the user plays, the step in `?step=`; a desktop shell only, else `NotFoundPage` |
 | `/design` | `DesignPage` | the design system's reference page, outside the shell |
 | `/design/surfaces` | `DesignSurfacesPage` | `SurfacesView`: the second reference page, Settings and a report's card, drawn with invented values; outside the shell |
@@ -61,6 +63,22 @@ event's page, under `/field/events/`, is in Field.
 `placeById(id)` answers a place by its id, for a page that needs the
 place's own icon: a place's empty state takes its icon from there, so
 the icon is named once.
+
+### Widths
+
+The dashboard is a desktop app, never a phone one (`ROADMAP.md`, "Never").
+A view is designed, reviewed and screenshotted at 1008 px and up, the
+common floor for a responsive desktop app, and the shell's window cannot
+be made narrower (`MIN_SIZE` in `desktop/src/window.ts`). Nothing new is
+built for a phone's width, and no test pins one. The layouts that already
+exist under 48rem (the strip and bottom bar below, the compact density in
+`docs/design-system.md`, "Density", and the narrow forms some pages
+describe in `docs/frontend-pages.md`) stay as they are; one is removed
+only when a change touches it anyway. A browser tab can still be made
+narrower than 1008 px; what it shows there works but is not designed.
+
+The static site in `site/` is the exception: it is opened on phones from
+posts and links, so it stays responsive (`docs/frontend-site.md`).
 
 ### The layout
 
@@ -97,8 +115,9 @@ page", out of sight until it holds focus. It moves focus to
 **The document's title** is the place's name and the product's, "Matches ·
 Sensei Top", and the product's name alone at Home and at an address that
 is no place (`documentTitle` in `shell/places.ts`). An address that is no
-place but has a name of its own, `/welcome`, takes it from its route's
-handle ("Welcome · Sensei Top"; `layoutName`, "Welcome").
+place but has a name of its own, `/welcome` or `/mtgo/picks`, takes it from
+its route's handle, a catalogue key `routeTitle` resolves ("Welcome · Sensei
+Top"; `layoutName`, "Welcome").
 
 **An address the router does not know** renders inside the shell: no place
 is current, and the `h1` is "No such page".
@@ -147,14 +166,16 @@ answer names.
 
 ### A deck's pages
 
-`/decks/:id` and the three addresses under it share
+`/decks/:id` and the four addresses under it share
 `pages/DeckLayout.tsx`: the link back to `/decks`, the deck's name as
 typed ("Unnamed deck", muted, when it has none), the field's name for
 it under that once the guide names an archetype whose spaced name
 differs from the typed one (`fieldNameLine`), one more line under both
-(`lib/decks.ts`'s `deckLine`: the format in words, the whole deck's
-match count and wins, when it was last played) and the navigation
-between Overview, Matchups and Guide.
+(`lib/decks.ts`'s `deckLine`: the format in words and when it was last
+played, joined by `·` and left out part by part when unknown), the deck
+strip (`components/DeckKeyNumbers.tsx`: Matches, Games and Play vs draw
+over the versions the tab reads, `docs/frontend-pages.md`, "Decks") and
+the navigation between Overview, Matchups, Guide and RCQ.
 
 `:id` is the deck's identity key (`guid:<arena_deck_id>` or
 `deck:<deck_id>`, `/api/guide/decks`' own `key`), its colon written
@@ -176,7 +197,7 @@ a page reads, every one of the deck's or the one `?version=` chose;
 `version`, that chosen one or `null`. `?version=` is read by
 `chosenVersion` (`lib/deckOverview.ts`) and written by
 `VersionSwitcher`. Overview and Matchups carry it in their own links and
-each other's; Guide drops it, since it reads the deck whole.
+each other's; Guide and RCQ drop it, since they read the deck whole.
 
 ### The live status
 
@@ -261,8 +282,8 @@ same change.
 ### Settings
 
 `/settings` is `pages/SettingsPage.tsx` over `views/SettingsView.tsx`.
-The page reads three things, `useShell()`, `useLLMStatus()` and the
-density, and draws its own Language section, which reads
+The page reads four things, `useShell()`, `useLLMStatus()`, the
+density and the Live advice switch, and draws its own Language section, which reads
 `useLanguage()`, first, above the view; the view then draws the
 sections in this order, each an `h2` over its cards, with an id an
 address can name:
@@ -276,11 +297,12 @@ address can name:
 | App | `app` | `settings/AppSection.tsx` | a desktop shell |
 | Draft data | `draft-data` | `settings/SharingSection.tsx` | a desktop shell that offers sharing |
 | Appearance | `appearance` | the page's own | always |
+| Live | `live-settings` | the page's own | always |
 | About and credits | `credits` | `CreditsView` | always |
 
-Language, Appearance and About and credits are drawn with or without
-a shell. Language is drawn by the page above the view; Appearance and
-About and credits reach the view as its children. Language is a
+Language, Appearance, Live and About and credits are drawn with or
+without a shell. Language is drawn by the page above the view;
+Appearance, Live and About and credits reach the view as its children. Language is a
 `Segmented` (System, English, Português (Brasil)) over `i18n.ts`'s
 `useLanguage`. The choice is kept in a shell's `shell.json` (written
 through `app.set({ language })`, and the shell's publish of it wins at
@@ -290,10 +312,13 @@ when there is none (`i18n.ts`'s `systemLanguage`); `docs/i18n.md`,
 "The language, from setting to sentence", has the same facts beside the
 server's half. Appearance is the density control, a `Segmented` (Comfortable,
 Compact); `docs/design-system.md`'s "Density" says what it changes and
-where the choice is kept.
+where the choice is kept. Live is one `Switch`, "Advice during a game",
+on by default and kept in the browser's own storage
+(`shell/liveAdvice.ts`); `docs/current-match.md`, "The event rule", says
+what it hides and why the server never sees it.
 
-**In a browser, `/settings` is Language, Writing, Appearance and About
-and credits.** Writing is then one card of sentences from
+**In a browser, `/settings` is Language, Writing, Appearance, Live and
+About and credits.** Writing is then one card of sentences from
 `GET /api/llm/status`: a Claude key is set and which model writes, by
 its id as the API gives it; or none is set, and what the app does then
 (the prompt is copied, the answer pasted back). Nothing in it can be
@@ -439,10 +464,11 @@ sent with "Undo", or removed). No address draws any of the three, so
 they are drawn only on `/design/surfaces`.
 
 **Draft data and `components/sharing/` describe drafts, which the app no
-longer reads** (the draft assistant was deleted on 2026-10-01). They are
-kept on purpose: plan 10's match-data contribution reworks them for
-finished matches rather than starting again (`docs/status.md`). The
-Overlay section went with the pivot, since no overlay is planned.
+longer reads** (the draft assistant was deleted on 2026-10-01). They were
+kept for plan 10's match-data contribution, which was refused on
+2026-10-19 (`ROADMAP.md`, "Never"), so their removal is owed
+(`docs/status.md`). The Overlay section went with the pivot, since no
+overlay is planned.
 
 **Inside the desktop shell** every section above is drawn but Draft
 data, which waits for a shell that offers sharing. The first-run steps
@@ -458,8 +484,9 @@ for the name) are the two callers of `useShell()` here; the view takes the shell
 `WelcomeActions` of its functions as props, so it is drawn to static
 markup in its test with no shell. **With no shell the address is
 `NotFoundPage`:** a browser has nothing to set up. The route's handle,
-`{ title: 'Welcome', needsShell: true }`, is how the layout names it:
-"Welcome" as the `h1` and "Welcome · Sensei Top" as the document's title
+`{ title: 'welcome', needsShell: true }`, is how the layout names it,
+its `title` a catalogue key `routeTitle` resolves: "Welcome" as the `h1`
+and "Welcome · Sensei Top" as the document's title
 (`places.ts`'s `layoutName`), and with no shell "No such page", matching
 the page.
 
@@ -573,7 +600,8 @@ One file per primitive, all re-exported from `index.ts`, so every
 
 - **Surfaces.** `Card` (title, subtitle, the `action` slot, the `art`
   slot, `elevation`, `tone`), `StatTile` (a label, a value, one line of
-  detail), `DeckTile` (one of the viewer's decks: a card's art, then
+  detail, and `muted`, which draws the value muted for a figure too thin
+  to read as a rate), `DeckTile` (one of the viewer's decks: a card's art, then
   the deck's name, its record and when it was last played; the words
   under the art are the way into the deck's page), `Finding` (one
   finding as a nested block: its weight as a chip, where it happened, a
@@ -725,16 +753,17 @@ assistant was deleted, 2026-10-01.)
 
 **Every `GET` hook here is a `useQuery` — the split between query and
 mutation now tracks who does the writing, not just "does this cost money".**
-`useReportNarrativePrompt`, `useLeaksNarrative` and `useGuideNarrative` stay
-plain queries: they always return the stored prose (or the prompt to write
-one) and cost nothing to read, so riding the heartbeat is not just safe but
-useful — a narrative written from any source shows up in the tab within a
+`useReportNarrativePrompt`, `useLeaksNarrative`, `useGuideNarrative`,
+`useRcqGuide` and `useCoachNarrative` stay plain queries: they always
+return the stored prose (or the prompt to write one) and cost nothing to
+read, so riding the heartbeat is not just safe but useful — a narrative written from any source shows up in the tab within a
 beat, whether it arrived via a CLI import or the generate button.
-`useSetOpponentDeck` and the three generate mutations —
+`useSetOpponentDeck` and the five generate mutations —
 `useGenerateMatchReportNarrative`, `useGenerateLeaksNarrative`,
-`useGenerateGuideNarrative` — are `useMutation`s because they genuinely
-write, and the last three do so via an opt-in Claude call (AGENTS.md
-non-negotiable #5, `docs/llm.md`) that must never fire on a timer. Each
+`useGenerateGuideNarrative`, `useGenerateRcq`, `useGenerateCoachNarrative` —
+are `useMutation`s because they genuinely write, and the last five do so
+via an opt-in Claude call (AGENTS.md non-negotiable #5, `docs/llm.md`)
+that must never fire on a timer. Each
 invalidates its own query key on success for the same reason
 `useSetOpponentDeck` already did: the heartbeat's revision is built from row
 counts, and a stored narrative changes none of them.
@@ -798,13 +827,12 @@ texts, as the code carries them:
 | `rcq/PreviewCard` | the preview's `format` is null | "No tournament format is known for this deck, so there is no tournament field to show." |
 | `guide/FieldCard` | the guide's `field.fmt` is null | "No tournament format is known for this deck, so there is no tournament field to show." |
 | `SideboardPlanCard` | `IntermissionOut.fmt` is null, with no plan, no prompt and no opponent | "No tournament format is known for this match, so the opponent's deck can't be named from the cards seen, and there is no plan to show." |
-| `SideboardOpponentRail` (`SideboardPlanCard.tsx`) | `IntermissionOut.fmt` is null and no opponent is named | "No tournament format is known for this match, so the opponent's deck can't be named from the cards seen." |
 
 A brief already stored for a pairing is drawn even when the deck has no
 format (`briefState`, `lib/pairing.ts`): it is the user's own authored
 text, and the missing format only stops a new one from being written.
 `IntermissionOut.fmt` null means the break attempts no live read of the
-opponent at all, which is why the break's two texts say the opponent's
+opponent at all, which is why the break's text says the opponent's
 deck can't be named rather than that lists are missing.
 
 ## Card images
@@ -898,8 +926,8 @@ badge or a price, and the button's words do not change with the writer.
 The `POST .../narrative` routes answer 503 with no key configured.
 
 The deck guide's narrative is structured rather than a prose blob, so
-its caller (`WriteAndExport.tsx`) passes no `narrative` and lets `model`
-and `generatedAt` alone say that something is stored (`GenerateCard`'s
+its caller (`WriteAndExport.tsx`) passes no `narrative` and lets
+`generatedAt` alone say that something is stored (`GenerateCard`'s
 `hasContent`); the match report's summary and the training plan pass
 their prose directly.
 
@@ -1071,7 +1099,9 @@ What is tested is what counts, not what draws: the pure functions under
 them). They take the API's rows and a clock and return what a component
 shows, so a test needs no browser, no DOM and no server; `vitest.config.ts`
 runs them in Node and loads neither the React nor the Tailwind plugin. The
-layout's naming rule (`shell/places.test.ts`) is pure and tested too.
+layout's naming rule (`shell/places.test.ts`) is pure and tested too, and so
+are `src/api.test.ts` (`pasteRequest`) and `src/bridge.test.ts` (the shell
+bridge: `readShellGlobal`, `shellStore`).
 `views/WelcomeView.tsx` has a test, drawn to static markup with
 `react-dom/server` and a fake shell's settings, as `*.test.ts` with
 `createElement` (the config includes no `.tsx`), so it pins what each state

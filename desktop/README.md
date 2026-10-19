@@ -74,19 +74,22 @@ with `--verbose`.
 
 | File | What it does |
 |---|---|
-| `src/main.ts` | The main process, and the only file that loads Electron: single instance, signals, quitting in order, wiring the rest together |
+| `src/main.ts` | The main process, and the only main-process file that loads Electron: single instance, signals, quitting in order, wiring the rest together |
 | `src/server.ts` | Finds `sensei-top`, picks the data directory and the port, runs `serve` and any other subcommand, restarts |
 | `src/window.ts` | The window: isolation, bounds, the loading and error page, navigation, the close rule |
 | `src/tray.ts` | The tray: the tracker's state from `GET /api/live` every 5 s, and the menu |
 | `src/autostart.ts` | Start with the system: the login item on Windows and Linux, and the installer's `first-run.json` choice |
 | `src/log.ts` | `shell.log` |
 | `src/store.ts` | `shell.json`, the shell's own preferences, in Electron's `userData` |
+| `src/preload.ts` | The preload script: `window.senseiTopShell`, the bridge the dashboard reads, over `ipcRenderer`. It runs in the renderer and imports `electron` itself |
+| `src/settings.ts` | The Settings bridge, shell side: what the dashboard's Settings page reads and writes, mapped to `config --json` and `config --set-…` and to `shell.json` |
+| `src/updater.ts` | Updates: a check 30 s after launch and every 24 h while the switch is on, and "Restart to update" |
 | `src/i18n.ts` | The shell's own catalogue, `src/locales/<language>.json`: the tray, the app menu, the loading page and every sentence a dialog or the page shows, in `shell.json`'s language |
 | `scripts/notices.ts` | The third-party notices for the shell's npm packages, written to `dist/notices/` before packaging; fails when a package names no licence |
 | `server/` | The PyInstaller build of the server (`uv run python scripts/build_server.py`) |
 
-Everything but `main.ts` takes Electron's classes as arguments, so the tests
-run under plain Node.
+Everything but `main.ts` and `preload.ts` takes Electron's classes as
+arguments, so the tests run under plain Node. `preload.ts` has no test.
 
 ## Checks
 

@@ -7,8 +7,10 @@
  */
 import type { Deck, DeckIdentityOut, Match } from '../api'
 import type { TFunction } from '../i18n'
-import { isFinished, RATE_MIN_MATCHES, startOf } from './home'
-import { ago, formatCount, formatPercent, parseTimestamp } from './time'
+import { isFinished, startOf } from './home'
+import type { RateOrRecord } from './sample'
+import { rateOrRecord } from './sample'
+import { ago, formatCount, parseTimestamp } from './time'
 
 /** A key as an address spells it in one segment (a deck's, `guid:…`,
  *  `deck:…`, or an opponent's, `archetype:…`): encoded, but with its colon
@@ -101,42 +103,25 @@ export function fieldNameLine(
   return t('decks.fieldName', { name: spaced })
 }
 
-/** The line under a deck's title on its own pages: the format in words,
- *  every match of the deck (finished or not) and its wins, and when it was
- *  last played, joined by a middle dot. A part is left out when it is
- *  unknown, never padded with a dash. */
+/** The line under a deck's title on its own pages: the format in words and
+ *  when it was last played, joined by a middle dot. A part is left out when
+ *  it is unknown, never padded with a dash, so the line can be empty. The
+ *  deck's record is the strip's under it, not this line's. */
 export function deckLine(identity: DeckIdentityOut, now: number, t: TFunction): string {
   const played = ago(identity.last_played, now)
-  return [
-    formatName(identity.format, t),
-    t('decks.line.matches', {
-      count: identity.matches,
-      n: formatCount(identity.matches),
-      won: formatCount(identity.match_wins),
-    }),
-    played && t('decks.line.lastPlayed', { ago: played }),
-  ]
+  return [formatName(identity.format, t), played && t('decks.line.lastPlayed', { ago: played })]
     .filter(Boolean)
     .join(' · ')
 }
 
-/** A tile's record: `figure`, the large number, and `line`, the words
- *  under it. From ten finished matches (`RATE_MIN_MATCHES`) a rate, "58%"
- *  and "won 35 of 60"; one to nine a count, "6 of 9" and "matches won";
- *  none, no figure. `finished` counts wins and losses, draws aside. */
-export function deckRecord(
-  { finished, wins }: { finished: number; wins: number },
-  t: TFunction,
-): {
-  figure: string | null
-  line: string
-} {
-  const counts = { wins: formatCount(wins), finished: formatCount(finished) }
-  if (finished >= RATE_MIN_MATCHES) {
-    return { figure: `${formatPercent(wins / finished)}%`, line: t('decks.record.wonOf', counts) }
-  }
-  if (finished > 0) return { figure: t('decks.record.figureOf', counts), line: t('decks.record.matchesWon') }
-  return { figure: null, line: t('decks.record.none') }
+/** A tile's record by the small-sample rule (`rateOrRecord`): from ten
+ *  finished matches a rate with the record under it, "58%" and "35–25";
+ *  five to nine the rate, `thin`, over the record and "rough"; one to four
+ *  the record as the figure, `thin`, with the "too few" line; none, no
+ *  figure. `finished` counts wins and losses, draws aside, so the losses
+ *  are `finished - wins`. */
+export function deckRecord({ finished, wins }: { finished: number; wins: number }, t: TFunction): RateOrRecord {
+  return rateOrRecord({ wins, losses: finished - wins }, t)
 }
 
 /** A tile's line on `/decks` under its record: the format in words, and how

@@ -3,9 +3,9 @@
   "textUnknown": "Text unknown",
   "onPlay": "on the play",
   "onDraw": "on the draw",
-  "cardsSeen_one": "{{count}} cards seen",
+  "cardsSeen_one": "{{count}} card seen",
   "cardsSeen_other": "{{count}} cards seen",
-  "cardsLeft_one": "{{count}} cards left",
+  "cardsLeft_one": "{{count}} card left",
   "cardsLeft_other": "{{count}} cards left",
   "confidence": {
     "high": "high",
@@ -21,11 +21,13 @@
   },
   "empty": {
     "title": "No match in progress",
-    "message": "Start a match in Arena and this page follows it: what is left in your library, the opponent's cards and deck, and in unranked games a keep guide for your opening hand and what the opponent may be holding. Live follows Arena only; an MTGO match appears under Matches."
+    "message": "Start a match in Arena and this page follows it: what is left in your library, the opponent's cards and deck, and, outside events, a keep guide for your opening hand and what the opponent may be holding. Live follows Arena only; an MTGO match appears under Matches."
   },
-  "ranked": {
-    "title": "Ranked game",
-    "message": "No keep advice in a ranked game. Your library and the opponent's cards appear as soon as Arena starts the game."
+  "noAdvice": {
+    "eventTitle": "Event game",
+    "eventMessage": "No keep advice in an event's game. Your library and the opponent's cards appear as soon as Arena starts the game.",
+    "switchTitle": "Advice off",
+    "switchMessage": "You turned advice off in Settings. Your library and the opponent's cards appear as soon as Arena starts the game."
   },
   "strip": {
     "game": "Game",
@@ -36,29 +38,15 @@
     "mulliganPhase": "Mulligan phase",
     "waiting": "Waiting for the first game state",
     "record": "{{won}}–{{lost}} in the match",
-    "rankedAdviceOff": "ranked, advice off",
+    "eventAdviceOff": "event, advice off",
+    "adviceSwitchedOff": "advice off in Settings",
     "seen": "seen {{ago}}",
     "abandoned": "likely abandoned, no result arrived"
   },
   "bar": {
-    "brief": "Matchup brief",
-    "details": "Match details",
-    "opponentDeck": "Opponent deck",
-    "game": "Game",
-    "playDraw": "Play / draw",
-    "play": "Play",
-    "draw": "Draw",
-    "turn": "Turn",
-    "seenEvent": "{{n}} cards seen · {{event}}",
-    "eventUnknown": "event unknown",
-    "matchScore": "match {{won}}–{{lost}}",
-    "undetermined": "undetermined",
-    "thisGame": "this game",
-    "turnNote": "each player's turn counts as one"
+    "brief": "Matchup brief"
   },
   "keepSubtitle": {
-    "waiting": "Waiting for the first game state from Arena.",
-    "firstTurn": "The first turn has not started",
     "mulliganed": "You mulliganed {{times}}",
     "kept": "You kept your hand",
     "opponentMulliganed": "opponent mulliganed {{times}}"
@@ -67,7 +55,7 @@
     "title": "Keepable seven",
     "lands": "{{lands}} lands / {{size}}",
     "avgMv": "avg MV {{value}}",
-    "creatures_one": "{{count}} creatures",
+    "creatures_one": "{{count}} creature",
     "creatures_other": "{{count}} creatures",
     "interaction_one": "{{count}} interaction",
     "interaction_other": "{{count}} interaction",
@@ -85,7 +73,7 @@
     "bestWindow": "Best window",
     "record": "Record",
     "neverResolved": "Never resolved",
-    "cost": "Kept 7: <strong>{{keptRate}}</strong> ({{keptWins}}-{{keptLosses}} in {{keptGames}}) vs. mulliganed: <strong>{{mullRate}}</strong> ({{mullWins}}-{{mullLosses}} in {{mullGames}})."
+    "cost": "Kept 7: <strong>{{kept}}</strong> vs. mulliganed: <strong>{{mull}}</strong>."
   },
   "hand": {
     "verdict": {
@@ -103,14 +91,14 @@
     "lands_one": "{{count}} land",
     "lands_other": "{{count}} lands",
     "band": "band {{min}}-{{max}}",
-    "mulligan": "mulligan {{n}}",
     "keeping7": "keeping 7",
     "mull": "mull {{n}}",
-    "deckRecord": "this deck is {{wins}}-{{losses}} {{label}}"
+    "deckRecord": "this deck is {{record}} {{label}}"
   },
   "opponentHand": {
     "title": "Opponent's hand",
     "revealedInHand": "Revealed in hand",
+    "mulliganed": "mulliganed {{times}}",
     "shownSoFar": "Shown so far",
     "unclassified": "Opponent's deck hasn't been identified yet — no card-by-card read until it is.",
     "noConsensus": "The tournament corpus has too few decks of this archetype to estimate specific cards.",
@@ -121,46 +109,33 @@
     "couldBeHolding": "Could be holding",
     "chanceInHand": "The number is the chance the card is in their hand.",
     "nowNote": "Now marks an instant they can cast with the mana they have open.",
-    "cards_one": "{{count}} cards",
+    "cards_one": "{{count}} card",
     "cards_other": "{{count}} cards",
     "untappedLands": "{{open}} untapped lands +{{other}} other",
     "untapped": "{{open}} untapped",
-    "held_one": "held {{count}} turns",
+    "held_one": "held {{count}} turn",
     "held_other": "held {{count}} turns"
   },
   "library": {
     "title": "Your library",
     "empty": "Nothing left to draw, or the library count isn't known yet.",
-    "landLabel": "Land · next draw",
-    "topCard": "on the top card",
-    "withinThree": "within three draws",
-    "landFoot_one": "{{count}} land among {{total}} cards",
-    "landFoot_other": "{{count}} lands among {{total}} cards",
-    "interactionLabel": "Interaction · next draw",
-    "interactionFoot_one": "{{count}} removal, counter and bounce left",
-    "interactionFoot_other": "{{count}} removal, counters and bounce left",
-    "noRulesText_one": "{{count}} with no rules text yet",
-    "noRulesText_other": "{{count}} with no rules text yet",
-    "floodLabel": "Flood and screw",
-    "leftIsLand": "of what is left is land",
-    "ofDeck": "of the deck you built",
-    "trueToDeck": "Running true to the deck.",
-    "landLight": "{{points}} points land-light — you have drawn your share.",
-    "landHeavy": "{{points}} points land-heavy — the lands are still in there.",
     "costUnknown": "Cost unknown",
     "mana": "{{mv}} mana",
-    "unknownCard": "Unknown card",
-    "note": "Percentages are the odds of drawing at least one copy within three draws."
+    "lands": "Lands",
+    "colLeft": "Left",
+    "colCost": "Cost",
+    "next": "Next",
+    "within": "Within {{n}}",
+    "colCard": "Card",
+    "colChance": "Next draw",
+    "unknownCard": "Unknown card"
   },
   "opponent": {
     "title": "Opponent deck",
-    "picked": "You picked: {{label}}",
-    "withConfidence": "{{label}} · {{confidence}} confidence",
-    "unclear": "{{label}} — unclear",
     "pick": "pick this deck",
     "candidates_one": "{{count}} close candidate",
     "candidates_other": "{{count}} close candidates",
-    "fit": "{{pct}}% fit",
+    "fit": "{{pct}} fit",
     "stillUnseen": "still unseen: {{cards}}"
   },
   "picker": {

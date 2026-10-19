@@ -310,8 +310,8 @@ class HandReadOut(BaseModel):
 class LibraryCardOut(BaseModel):
     """One maindeck card and how many copies are still unaccounted for in
     the library this game — the tab's primary panel once a game is under
-    way (``table/live.py``). ``left`` is never negative and this list omits
-    a card once ``left`` reaches 0."""
+    way (``table/live.py``). ``left`` is never negative, and a card stays in
+    the list at 0 once every copy is seen."""
 
     grp_id: int
     name: str | None = None
@@ -433,6 +433,11 @@ class PastBoardingOut(BaseModel):
     games: list[PastBoardingGameOut]
 
 
+class PostboardRecordOut(BaseModel):
+    won: int = Field(description="Games won.")
+    lost: int = Field(description="Games lost.")
+
+
 class IntermissionOut(BaseModel):
     """The Bo3 break card: the game that just ended, who the opponent looks
     like from whatever has been revealed so far, the stored matchup plan for
@@ -453,6 +458,14 @@ class IntermissionOut(BaseModel):
     stale: bool = Field(False, description="the corpus or the 75 has moved since plan was written")
     alternatives: list[AlternativePlanOut] = Field(default_factory=list)
     past_boarding: list[PastBoardingOut] = Field(default_factory=list)
+    postboard_record: PostboardRecordOut | None = Field(
+        None,
+        description=(
+            "This deck identity's earlier games 2 and 3 against the named or picked "
+            "archetype, best-of-three matches only, the current match excluded; null when "
+            "there is no archetype, no identity, or no such game."
+        ),
+    )
     prompt: str | None = Field(
         None, description="text to write an exact plan from, when none exists yet"
     )
@@ -501,15 +514,11 @@ class CurrentMatchRead(BaseModel):
         description="the Bo3 break card — set only between games, never mid-game "
         "(table/intermission.py)",
     )
-    ranked: bool = Field(
-        True,
-        description="the match is in a ranked or competitive queue, or its queue is unknown "
-        "(table/ranked.py)",
-    )
     advice: bool = Field(
         False,
         description="the page may show advice now: the keep verdict and keep guide, the "
-        "opponent-hand estimate, the matchup brief. False during a ranked game, true in an "
-        "unranked one and between games (table/ranked.py). The dashboard obeys it and never "
-        "re-derives it",
+        "opponent-hand estimate, the matchup brief. False during a game in an event or an "
+        "unknown queue, true in a casual or ladder one and between games (table/queues.py). "
+        "The dashboard obeys it and never re-derives it; the user's own Settings switch can "
+        "only hide more",
     )

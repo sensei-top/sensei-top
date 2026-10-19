@@ -1,7 +1,8 @@
 import { Trans, useTranslation } from 'react-i18next'
 import type { HandSlotOut, KeepGuideOut, KeyPlayOut } from '../api'
-import { formatFixed } from '../lib/format'
-import { percent } from '../theme'
+import { formatFixed, formatPercent, formatRecord } from '../lib/format'
+import { rateAndRecordLine } from '../lib/sample'
+import { RateCell } from './RateCell'
 import { Card, Chip, DataTable, Meter, SectionLabel } from './ui'
 
 function IdealHandChips({ idealHand }: { idealHand: HandSlotOut[] }) {
@@ -42,7 +43,7 @@ function LandOddsBars({ keep }: { keep: KeepGuideOut }) {
               className="flex-1"
             />
             <span className="w-10 text-right text-caption tabular-nums text-ink2">
-              {formatFixed(p * 100, 0)}%
+              {formatPercent(p)}
             </span>
           </div>
         )
@@ -77,8 +78,8 @@ function WhatThisDeckNeeds({ keep }: { keep: KeepGuideOut }) {
           rows={keyPlays.map((kp: KeyPlayOut) => [
             kp.card,
             kp.best_band,
-            `${kp.best_band_wins}-${kp.best_band_losses}`,
-            `${kp.never_resolved_wins}-${kp.never_resolved_losses}`,
+            formatRecord(kp.best_band_wins, kp.best_band_losses),
+            formatRecord(kp.never_resolved_wins, kp.never_resolved_losses),
           ])}
         />
       )}
@@ -87,14 +88,8 @@ function WhatThisDeckNeeds({ keep }: { keep: KeepGuideOut }) {
           <Trans
             i18nKey="live.keep.cost"
             values={{
-              keptRate: percent(cost.kept_seven_games > 0 ? cost.kept_seven_wins / cost.kept_seven_games : null),
-              keptWins: cost.kept_seven_wins,
-              keptLosses: cost.kept_seven_losses,
-              keptGames: cost.kept_seven_games,
-              mullRate: percent(cost.mulliganed_games > 0 ? cost.mulliganed_wins / cost.mulliganed_games : null),
-              mullWins: cost.mulliganed_wins,
-              mullLosses: cost.mulliganed_losses,
-              mullGames: cost.mulliganed_games,
+              kept: rateAndRecordLine({ wins: cost.kept_seven_wins, losses: cost.kept_seven_losses }) ?? '—',
+              mull: rateAndRecordLine({ wins: cost.mulliganed_wins, losses: cost.mulliganed_losses }) ?? '—',
             }}
             components={{ strong: <span className="font-medium text-ink" /> }}
           />
@@ -110,20 +105,15 @@ function WhatThisDeckNeeds({ keep }: { keep: KeepGuideOut }) {
  *  this game's own mulligan status (kept / mulliganed N times), which
  *  belongs beside the deck's general mulligan record rather than on its own
  *  card (see CurrentMatchView, which used to put it on a plain scoreboard).
- *
- *  `dense` drops the land-odds bars and the mulligan-record table — the two
- *  tallest blocks, ~220px together — for the closing three-card grid once a
- *  game is under way. The mulligan phase itself always renders full: that is
- *  the one moment this card *is* the screen.
+ *  Drawn only before the first turn: once a game is under way the rail is
+ *  the opponent's (`lib/livePanels.ts`).
  */
 export function KeepGuideCard({
   keep,
   subtitle,
-  dense = false,
 }: {
   keep: KeepGuideOut | null | undefined
   subtitle?: string
-  dense?: boolean
 }) {
   const { t } = useTranslation()
   if (!keep) return null
@@ -144,7 +134,7 @@ export function KeepGuideCard({
     .join(' · ')
 
   return (
-    <Card title={t('live.keep.title')} subtitle={subtitle} elevation={dense ? 2 : 1}>
+    <Card title={t('live.keep.title')} subtitle={subtitle}>
       <p className="text-caption text-muted">{summary}</p>
       {keep.untagged_count > 0 && (
         <p className="mt-1 text-caption text-ink2">
@@ -162,23 +152,24 @@ export function KeepGuideCard({
         <p className="mt-3 text-body text-ink2">
           <Trans
             i18nKey="live.keep.landBand"
-            values={{ rate: percent(keep.keep_rate), min: keep.land_min, max: keep.land_max }}
+            values={{ rate: formatPercent(keep.keep_rate), min: keep.land_min, max: keep.land_max }}
             components={{ strong: <span className="font-medium text-ink" /> }}
           />
         </p>
       )}
 
-      {!dense && <LandOddsBars keep={keep} />}
+      <LandOddsBars keep={keep} />
 
-      {!dense && mulliganRecord.length > 0 && (
+      {mulliganRecord.length > 0 && (
         <div className="mt-4 border-t border-edge pt-3">
           <SectionLabel as="h4">{t('live.keep.mulliganRecord')}</SectionLabel>
           <DataTable
-            columns={[t('live.keep.hand'), t('live.keep.games'), t('live.keep.winRate')]}
+            columns={[t('live.keep.hand'), t('live.keep.games'), t('live.keep.record'), t('live.keep.winRate')]}
             rows={mulliganRecord.map((m) => [
               m.mulligans === 0 ? t('live.keep.kept7') : t('live.keep.mullTo', { n: 7 - m.mulligans }),
               String(m.games),
-              percent(m.games > 0 ? m.wins / m.games : null),
+              formatRecord(m.wins, m.games - m.wins),
+              <RateCell key="rate" wins={m.wins} losses={m.games - m.wins} games />,
             ])}
           />
         </div>
@@ -188,7 +179,7 @@ export function KeepGuideCard({
         <p className="mt-3 text-caption text-muted">{notes[0]}</p>
       )}
 
-      {!dense && <WhatThisDeckNeeds keep={keep} />}
+      <WhatThisDeckNeeds keep={keep} />
     </Card>
   )
 }

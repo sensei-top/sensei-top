@@ -1,19 +1,63 @@
 import { useTranslation } from 'react-i18next'
 import type { FieldLineOut, MatchupLineOut, RateModel } from '../../api'
-import { coachDay, listsWords, mulliganRates, roleRates, variantsWords, type LabelledRate } from '../../lib/coach'
+import {
+  coachDay,
+  listsWords,
+  mulliganRates,
+  rateWords,
+  roleRates,
+  variantsWords,
+  type LabelledRate,
+} from '../../lib/coach'
 import { archetypeName } from '../../lib/decks'
-import { formatPercent } from '../../lib/time'
-import { MIN_TRUSTED_FIELD_SAMPLE } from '../../theme'
+import { formatPercent } from '../../lib/format'
+import { MIN_TRUSTED_FIELD_SAMPLE } from '../../lib/sample'
 import { Card, DataTable } from '../ui'
-import { RateCell, WonCell } from './RateCells'
 
-/** A card of three columns: the row's word, "Won" and "Rate". */
+/** A table's Record cell (D6): wins then losses, "174–211"; a dash with no
+ *  match. */
+function RecordCell({ rate }: { rate: RateModel }) {
+  const { record } = rateWords(rate)
+  return <span className="whitespace-nowrap">{record ?? '—'}</span>
+}
+
+/** A table's Rate cell (D7): the percent over its range in caption, or the
+ *  percent alone when `withRange` is false; under ten the "too few" word,
+ *  muted, the record being the column beside it; a dash only with no match
+ *  at all. */
+function RateCell({
+  rate,
+  withRange = true,
+  games = false,
+}: {
+  rate: RateModel
+  withRange?: boolean
+  games?: boolean
+}) {
+  const { t } = useTranslation()
+  const words = rateWords(rate)
+  if (words.record == null) return <span>—</span>
+  if (words.percent == null) {
+    const key = games ? 'common.sample.tooFewCellGames' : 'common.sample.tooFewCellMatches'
+    return <span className="whitespace-nowrap text-muted">{t(key)}</span>
+  }
+  return (
+    <span className="inline-flex flex-col items-end">
+      <span className="whitespace-nowrap">{words.percent}</span>
+      {withRange && <span className="whitespace-nowrap text-caption text-muted">{words.range}</span>}
+    </span>
+  )
+}
+
+/** A card of three columns: the row's word, "Record" and "Rate". */
 function LabelledRatesCard({
+  games = false,
   title,
   subtitle,
   first,
   rows,
 }: {
+  games?: boolean
   title: string
   subtitle: string
   first: string
@@ -23,13 +67,13 @@ function LabelledRatesCard({
   return (
     <Card title={title} subtitle={subtitle}>
       <DataTable
-        columns={[first, t('coach.table.won'), t('coach.table.rate')]}
+        columns={[first, t('coach.table.record'), t('coach.table.rate')]}
         rows={rows.map((row) => [
           <span key="label" className="wrap-anywhere">
             {row.label}
           </span>,
-          <WonCell key="won" rate={row.rate} />,
-          <RateCell key="rate" rate={row.rate} />,
+          <RecordCell key="record" rate={row.rate} />,
+          <RateCell key="rate" rate={row.rate} games={games} />,
         ])}
       />
     </Card>
@@ -60,6 +104,7 @@ export function RolesAndMulligans({
       )}
       {hands.length > 0 && (
         <LabelledRatesCard
+          games
           title={t('coach.mulligans.title')}
           subtitle={t('coach.mulligans.subtitle')}
           first={t('coach.mulligans.first')}
@@ -108,10 +153,10 @@ export function DecksMetCard({
       subtitle={day ? t('coach.decksMet.since', { day }) : t('coach.decksMet.sinceReset')}
     >
       <DataTable
-        columns={[t('coach.table.archetype'), t('coach.table.won'), t('coach.table.rate')]}
+        columns={[t('coach.table.archetype'), t('coach.table.record'), t('coach.table.rate')]}
         rows={matchups.map((m) => [
           <ArchetypeCell key="archetype" archetype={m.archetype} lines={[variantsWords(m.variants, t)]} />,
-          <WonCell key="won" rate={m.rate} />,
+          <RecordCell key="record" rate={m.rate} />,
           <RateCell key="rate" rate={m.rate} />,
         ])}
       />
@@ -119,8 +164,8 @@ export function DecksMetCard({
   )
 }
 
-/** "The field": each archetype's share of the tournament lists and your
- *  own record against it. Four columns that fit 360 px, so no range. A
+/** "The field": your own record against each archetype, then its share of
+ *  the tournament lists (D8). Four columns that fit 360 px, so no range. A
  *  share over fewer than `MIN_TRUSTED_FIELD_SAMPLE` lists is muted. */
 export function FieldRatesCard({
   field,
@@ -140,18 +185,18 @@ export function FieldRatesCard({
       subtitle={day ? t('coach.field.to', { day }) : t('coach.field.plain')}
     >
       <DataTable
-        columns={[t('coach.table.archetype'), t('coach.table.share'), t('coach.table.won'), t('coach.table.rate')]}
+        columns={[t('coach.table.archetype'), t('coach.table.record'), t('coach.table.rate'), t('coach.table.share')]}
         rows={field.map((f) => [
           <ArchetypeCell
             key="archetype"
             archetype={f.archetype}
             lines={[listsWords(f.decks, t), variantsWords(f.variants, t)]}
           />,
-          <span key="share" className={`whitespace-nowrap ${f.decks < MIN_TRUSTED_FIELD_SAMPLE ? 'text-muted' : ''}`}>
-            {formatPercent(f.share)}%
-          </span>,
-          <WonCell key="won" rate={f.your_rate} />,
+          <RecordCell key="record" rate={f.your_rate} />,
           <RateCell key="rate" rate={f.your_rate} withRange={false} />,
+          <span key="share" className={`whitespace-nowrap ${f.decks < MIN_TRUSTED_FIELD_SAMPLE ? 'text-muted' : ''}`}>
+            {formatPercent(f.share)}
+          </span>,
         ])}
       />
     </Card>

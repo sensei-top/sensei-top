@@ -3,9 +3,9 @@ import { translator } from '../i18n'
 import type { Deck, Match, PlayDrawWinrate } from '../api'
 import {
   chosenVersion,
+  deckKeyNumbers,
   matchesCaption,
   mergeNewestFirst,
-  playDrawTiles,
   playDrawTotals,
   rankRows,
   versionDays,
@@ -23,6 +23,10 @@ const t = translator('en')
 // source's own `NBSP`.
 
 const MINUS = '\u2212'
+
+/** A record as D6 writes it, wins–losses with an en dash, a word joiner
+ *  each side so it never wraps at the dash. */
+const rec = (wins: number, losses: number) => `${wins}\u2060–\u2060${losses}`
 const NOW = Date.parse('2026-09-29T16:00:00Z')
 
 /** A row of `/api/decks` with only what these functions read. */
@@ -143,15 +147,15 @@ describe('versionDays', () => {
 })
 
 describe('versionRecord', () => {
-  it('gives a rate from ten finished matches', () => {
+  it('gives the rate and the record from ten finished matches', () => {
     // 21 of 37 is 0.5676, 57 in whole percent.
     const matches = [...results('w', 'win', 21), ...results('l', 'loss', 16)]
-    expect(versionRecord(matches, t)).toBe('57% · won 21 of 37')
+    expect(versionRecord(matches, t)).toBe(`57% · ${rec(21, 16)}`)
   })
 
-  it('gives the count from one to nine, a draw finished and a match in progress not', () => {
+  it('gives the record alone from one to nine, a draw and a match in progress counting toward neither', () => {
     const matches = [...results('w', 'win', 3), ...results('l', 'loss', 3), ...results('d', 'draw', 1), match('open')]
-    expect(versionRecord(matches, t)).toBe('won 3 of 7')
+    expect(versionRecord(matches, t)).toBe(rec(3, 3))
   })
 
   it('says so with no finished match', () => {
@@ -167,61 +171,79 @@ describe('playDrawTotals', () => {
   })
 })
 
-describe('playDrawTiles', () => {
-  it('gives both rates and the play ahead when both sides have ten games', () => {
-    // 47 of 81 is 0.580, 58; 40 of 77 is 0.519, 52; 58 - 52 = 6.
-    const tiles = playDrawTiles({ play: { games: 81, won: 47 }, draw: { games: 77, won: 40 } }, t)
-    expect(tiles).toEqual([
-      { label: 'On the play', value: '58%', detail: `won 47 of 81${NBSP}games` },
-      { label: 'On the draw', value: '52%', detail: `won 40 of 77${NBSP}games` },
-      { label: 'Play against draw', value: `+6${NBSP}points`, detail: 'better on the play' },
+describe('deckKeyNumbers', () => {
+  it('gives rates, records and the gap on thick sides', () => {
+    // Matches: 21 won, 16 lost, the draw neither; 21 of 37 is 0.5676, 57.
+    // Games: 42 + 16 + 1 won and 21 + 32 + 1 lost, 59 of 113 is 0.522, 52.
+    // Play 47 of 81 is 0.580, 58; draw 40 of 77 is 0.519, 52; 58 - 52 = 6.
+    const matches = [
+      ...results('w', 'win', 21, { games_won: 2, games_lost: 1 }),
+      ...results('l', 'loss', 16, { games_won: 1, games_lost: 2 }),
+      ...results('d', 'draw', 1, { games_won: 1, games_lost: 1 }),
+    ]
+    const totals = { play: { games: 81, won: 47 }, draw: { games: 77, won: 40 } }
+    expect(deckKeyNumbers(matches, totals, t)).toEqual([
+      { label: 'Matches', value: '57%', detail: rec(21, 16), thin: false },
+      { label: 'Games', value: '52%', detail: rec(59, 54), thin: false },
+      { label: 'Play vs draw', value: `+6${NBSP}points`, detail: '58% on the play · 52% on the draw', thin: false },
     ])
+  })
+
+  it('gives records, muted, on a thin side', () => {
+    // Six won, three lost, a draw and a match in progress, which counts
+    // toward neither, though its one game won counts. Nine matches is a
+    // rough rate, 6 of 9 is 0.667, 67; one game is too few for one. Play
+    // has nine games, too few for the play/draw line's rate: its record, 6
+    // won and 3 not; draw 7 of 12 is 58.
+    const matches = [
+      ...results('w', 'win', 6),
+      ...results('l', 'loss', 3),
+      ...results('d', 'draw', 1),
+      match('open', { games_won: 1, games_lost: 0 }),
+    ]
+    const totals = { play: { games: 9, won: 6 }, draw: { games: 12, won: 7 } }
+    expect(deckKeyNumbers(matches, totals, t)).toEqual([
+      { label: 'Matches', value: '67%', detail: `${rec(6, 3)} · rough, under 10${NBSP}matches`, thin: true },
+      { label: 'Games', value: rec(1, 0), detail: `too few for a rate, under 5${NBSP}games`, thin: true },
+      { label: 'Play vs draw', value: 'too few', detail: `${rec(6, 3)} on the play · 58% on the draw`, thin: true },
+    ])
+  })
+
+  it('says so with no games at all', () => {
+    expect(deckKeyNumbers([], playDrawTotals([]), t)).toEqual([
+      { label: 'Matches', value: '—', detail: 'no finished match yet', thin: false },
+      { label: 'Games', value: '—', detail: 'no finished game yet', thin: false },
+      { label: 'Play vs draw', value: '—', detail: 'no games on the play · no games on the draw', thin: false },
+    ])
+  })
+
+  it('names a side with no game beside one with games', () => {
+    const [, , playDraw] = deckKeyNumbers([], { play: { games: 4, won: 3 }, draw: { games: 0, won: 0 } }, t)
+    expect(playDraw).toEqual({
+      label: 'Play vs draw',
+      value: 'too few',
+      detail: `${rec(3, 1)} on the play · no games on the draw`,
+      thin: true,
+    })
   })
 
   it('gives the draw ahead with a minus sign', () => {
     // 5 of 10 is 50, 6 of 10 is 60.
-    const [, , difference] = playDrawTiles({ play: { games: 10, won: 5 }, draw: { games: 10, won: 6 } }, t)
-    expect(difference).toEqual({ label: 'Play against draw', value: `${MINUS}10${NBSP}points`, detail: 'better on the draw' })
+    const [, , playDraw] = deckKeyNumbers([], { play: { games: 10, won: 5 }, draw: { games: 10, won: 6 } }, t)
+    expect(playDraw.value).toBe(`${MINUS}10${NBSP}points`)
+    expect(playDraw.detail).toBe('50% on the play · 60% on the draw')
   })
 
-  it('subtracts the whole percentages, so two that round alike are no difference', () => {
+  it('subtracts the whole percentages, so two that round alike are no gap', () => {
     // 11 of 20 is 55; 6 of 11 is 54.5, 55 in whole percent.
-    const [, , difference] = playDrawTiles({ play: { games: 20, won: 11 }, draw: { games: 11, won: 6 } }, t)
-    expect(difference).toEqual({ label: 'Play against draw', value: `0${NBSP}points`, detail: 'no difference' })
+    const [, , playDraw] = deckKeyNumbers([], { play: { games: 20, won: 11 }, draw: { games: 11, won: 6 } }, t)
+    expect(playDraw.value).toBe(`0${NBSP}points`)
   })
 
   it('says one point in the singular', () => {
     // 6 of 10 is 60; 10 of 17 is 58.8, 59.
-    const [, , difference] = playDrawTiles({ play: { games: 10, won: 6 }, draw: { games: 17, won: 10 } }, t)
-    expect(difference.value).toBe(`+1${NBSP}point`)
-  })
-
-  it('gives a count for a side under ten games, and compares nothing', () => {
-    // 7 of 12 is 58.3, 58.
-    const tiles = playDrawTiles({ play: { games: 9, won: 6 }, draw: { games: 12, won: 7 } }, t)
-    expect(tiles).toEqual([
-      { label: 'On the play', value: '6 of 9', detail: 'games won' },
-      { label: 'On the draw', value: '58%', detail: `won 7 of 12${NBSP}games` },
-      { label: 'Play against draw', value: '—', detail: 'too few games to compare' },
-    ])
-  })
-
-  it('says so for a side with no game', () => {
-    const tiles = playDrawTiles({ play: { games: 4, won: 3 }, draw: { games: 0, won: 0 } }, t)
-    expect(tiles).toEqual([
-      { label: 'On the play', value: '3 of 4', detail: 'games won' },
-      { label: 'On the draw', value: '—', detail: 'no game on the draw yet' },
-      { label: 'Play against draw', value: '—', detail: 'too few games to compare' },
-    ])
-  })
-
-  it('says so for both sides with no game at all', () => {
-    const tiles = playDrawTiles(playDrawTotals([]), t)
-    expect(tiles).toEqual([
-      { label: 'On the play', value: '—', detail: 'no game on the play yet' },
-      { label: 'On the draw', value: '—', detail: 'no game on the draw yet' },
-      { label: 'Play against draw', value: '—', detail: 'too few games to compare' },
-    ])
+    const [, , playDraw] = deckKeyNumbers([], { play: { games: 10, won: 6 }, draw: { games: 17, won: 10 } }, t)
+    expect(playDraw.value).toBe(`+1${NBSP}point`)
   })
 })
 
@@ -242,31 +264,38 @@ describe('rankRows', () => {
       // Not finished: no Silver row at all.
       match('silver', { rank_class: 'Silver', rank_level: 1 }),
     ]
+    // One to nine wins and losses: "too few"; a row of draws alone has none
+    // and reads an em dash.
+    const few = { rate: 'too few', thin: true }
     expect(rankRows(matches, t)).toEqual([
-      { rank: 'Mythic', matches: 1, won: 1, rate: '—' },
-      { rank: 'Diamond 3', matches: 1, won: 0, rate: '—' },
-      { rank: 'Diamond', matches: 1, won: 1, rate: '—' },
-      { rank: 'Platinum 1', matches: 1, won: 0, rate: '—' },
-      { rank: 'Platinum 4', matches: 1, won: 1, rate: '—' },
-      { rank: 'Gold 2', matches: 2, won: 1, rate: '—' },
-      { rank: 'Bronze 1', matches: 1, won: 0, rate: '—' },
-      { rank: 'Apprentice 2', matches: 1, won: 0, rate: '—' },
-      { rank: 'Spark 1', matches: 1, won: 1, rate: '—' },
-      { rank: 'No rank recorded', matches: 1, won: 1, rate: '—' },
+      { rank: 'Mythic', matches: 1, record: rec(1, 0), ...few },
+      { rank: 'Diamond 3', matches: 1, record: rec(0, 0), rate: '—', thin: false },
+      { rank: 'Diamond', matches: 1, record: rec(1, 0), ...few },
+      { rank: 'Platinum 1', matches: 1, record: rec(0, 1), ...few },
+      { rank: 'Platinum 4', matches: 1, record: rec(1, 0), ...few },
+      { rank: 'Gold 2', matches: 2, record: rec(1, 1), ...few },
+      { rank: 'Bronze 1', matches: 1, record: rec(0, 1), ...few },
+      { rank: 'Apprentice 2', matches: 1, record: rec(0, 1), ...few },
+      { rank: 'Spark 1', matches: 1, record: rec(1, 0), ...few },
+      { rank: 'No rank recorded', matches: 1, record: rec(1, 0), ...few },
     ])
   })
 
-  it('gives a rate from ten matches, an em dash under', () => {
-    // 7 of 12 is 58.3, 58; the draw is finished and counted, not won.
+  it('gives a rate from ten wins and losses, muted from five, "too few" under, a draw counting toward neither', () => {
+    // 7 won and 4 lost is 11, 7 of 11 is 0.636, 64; the draw is a finished
+    // match, in Matches, but in neither the record nor the rate. Nine won
+    // is a rough 100%, muted; two won is too few.
     const matches = [
       ...results('p-w', 'win', 7, { rank_class: 'Platinum', rank_level: 2 }),
       ...results('p-l', 'loss', 4, { rank_class: 'Platinum', rank_level: 2 }),
       ...results('p-d', 'draw', 1, { rank_class: 'Platinum', rank_level: 2 }),
       ...results('g-w', 'win', 9, { rank_class: 'Gold', rank_level: 1 }),
+      ...results('s-w', 'win', 2, { rank_class: 'Silver', rank_level: 1 }),
     ]
     expect(rankRows(matches, t)).toEqual([
-      { rank: 'Platinum 2', matches: 12, won: 7, rate: '58%' },
-      { rank: 'Gold 1', matches: 9, won: 9, rate: '—' },
+      { rank: 'Platinum 2', matches: 12, record: rec(7, 4), rate: '64%', thin: false },
+      { rank: 'Gold 1', matches: 9, record: rec(9, 0), rate: '100%', thin: true },
+      { rank: 'Silver 1', matches: 2, record: rec(2, 0), rate: 'too few', thin: true },
     ])
   })
 })

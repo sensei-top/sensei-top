@@ -106,10 +106,10 @@ was measured taking 5.7 s on a real database — now two threads, not one:
   the ~16 s rebuild running at the duty cycle's pace for the whole session,
   for a source the Live page does not show (migration 040). So the leg checks
   the folder every ``MTGO_POLL_SECONDS`` and holds a changed file back until
-  its last game names a winner (the projector's answer,
+  its last game names a winner, a loser or a draw (the projector's answer,
   ``projector/mtgo/parse.py::last_game_decided``) and it has been quiet 5 s,
   or until it has been quiet 10 minutes, whatever its last game says: a
-  disconnect, a crash or a game that ends with no winner line still lands.
+  disconnect, a crash or an ending line the parser doesn't know still lands.
   Quiet alone cannot tell a finished game from a long think (one measured
   mid-game pause lasted 36 s, the gap between games 46 s). Quiet is measured
   on the watcher's own clock (``mtgo_clock``), from the check that first saw
@@ -163,6 +163,7 @@ from sensei_top import arena_config, procs
 from sensei_top.archetypes import classify_matches
 from sensei_top.db import connect, open_database
 from sensei_top.llm.provenance import now_iso as _now
+from sensei_top.projector import PROJECTOR_VERSION
 from sensei_top.projector.matches import has_match_boundary, project
 from sensei_top.projector.mtgo.parse import last_game_decided
 from sensei_top.reader.ingest import default_log_path, ingest_file, ingest_with_recovery
@@ -192,9 +193,10 @@ DECK_POLL_SECONDS = 30.0
 MTGO_POLL_SECONDS = 2.0
 
 # How long a changed game log stays unchanged, on the watcher's own clock,
-# before it is stored (plan 3, D2): 5 s once its last game names a winner, so a
-# row does not catch a write half done (MTGO's own, or a copy's); 10 minutes
-# whatever its last game says, for a game that ends with no winner line.
+# before it is stored (plan 3, D2): 5 s once its last game names a winner, a
+# loser or a draw, so a row does not catch a write half done (MTGO's own, or
+# a copy's); 10 minutes whatever its last game says, for a game that ends
+# with none of those lines.
 _DECIDED_QUIET_SECONDS = 5.0
 _FALLBACK_QUIET_SECONDS = 600.0
 
@@ -296,8 +298,8 @@ class LiveIngester:
     # watcher would otherwise run back-to-back forever (it did, measured at
     # 16.2 s a rebuild against a 5 s project_every on a 238k-event database —
     # every dirty poll found elapsed >= project_every already true). The gate
-    # in poll_once instead holds the watcher to roughly a 1/duty_factor duty
-    # cycle: sleep duty_factor times as long as the *last* rebuild took, so
+    # in project_if_due instead holds the watcher to roughly a 1/(1+duty_factor)
+    # duty cycle: sleep duty_factor times as long as the *last* rebuild took, so
     # its cost stays a fixed fraction of wall time as history grows, rather
     # than consuming a whole core continuously. 1.0 is a ~50% duty cycle.
     duty_factor: float = 1.0
@@ -352,8 +354,6 @@ class LiveIngester:
     # do — there is only ever one thread touching it in a test, so the lock
     # is never contended there.
     _dirty_lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
-
-    # -- one pass ----------------------------------------------------------
 
     def _poll_mtgo(self, conn: sqlite3.Connection) -> int:
         """Store MTGO's game logs as their games end (module docstring; plan
@@ -420,7 +420,7 @@ class LiveIngester:
         """One check after the catch-up: store each changed game log whose
         game has ended, and remember the rest. Returns the rows inserted.
 
-        A file is stored when its last game names a winner
+        A file is stored when its last game names a winner, a loser or a draw
         (``last_game_decided``) and its identity (``GameLogFile``: size, mtime
         and inode) has not moved for ``_DECIDED_QUIET_SECONDS``, or when it
         has not moved for ``_FALLBACK_QUIET_SECONDS``, whatever its last game
@@ -602,14 +602,21 @@ class LiveIngester:
             # starting every restart back at 0: has_match_boundary below
             # LIKE-scans every raw_events row *after* this id, and 0 means
             # "all of them" on a database that may hold hundreds of
-            # thousands. sqlite3.OperationalError covers a pre-034 database
-            # that hasn't been migrated yet on this first poll.
+            # thousands. sqlite3.OperationalError covers a database missing
+            # either column (pre-034 or pre-065) on this first poll.
             try:
                 row = conn.execute(
-                    "SELECT projected_through_id FROM projection_state WHERE id = 1"
+                    "SELECT projected_through_id, projector_version"
+                    " FROM projection_state WHERE id = 1"
                 ).fetchone()
                 if row is not None and row[0] is not None:
                     self._projected_through = row[0]
+                    # Rows a different projector wrote (or one that never
+                    # recorded its version) are stale however far the
+                    # watermark got: rebuild once, on this first poll.
+                    if row[1] != PROJECTOR_VERSION:
+                        with self._dirty_lock:
+                            self._dirty = True
             except sqlite3.OperationalError:
                 pass
             self._watermark_loaded = True
@@ -654,7 +661,7 @@ class LiveIngester:
         # 238k-event database — every dirty poll already found elapsed >=
         # project_every true). Sleeping duty_factor times the *last*
         # rebuild's own duration instead holds the watcher to roughly a
-        # 1/duty_factor duty cycle, so its cost stays a fixed fraction of
+        # 1/(1+duty_factor) duty cycle, so its cost stays a fixed fraction of
         # wall time as history grows rather than consuming a whole core
         # continuously. Before the first rebuild, _last_duration is 0.0 and
         # this falls back to the project_every floor, same as before.
@@ -699,15 +706,17 @@ class LiveIngester:
         conn.execute(
             """
             INSERT INTO projection_state
-                (id, last_projection_at, projections, projected_through_id, updated_at)
-            VALUES (1, ?, 1, ?, ?)
+                (id, last_projection_at, projections, projected_through_id,
+                 projector_version, updated_at)
+            VALUES (1, ?, 1, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 last_projection_at = excluded.last_projection_at,
                 projections = projection_state.projections + 1,
                 projected_through_id = excluded.projected_through_id,
+                projector_version = excluded.projector_version,
                 updated_at = excluded.updated_at
             """,
-            (now, self._projected_through, now),
+            (now, self._projected_through, PROJECTOR_VERSION, now),
         )
         return True
 
@@ -724,8 +733,6 @@ class LiveIngester:
         inserted = self.ingest_once(conn)
         rebuilt = self.project_if_due(conn, force_project=force_project)
         return rebuilt or bool(inserted)
-
-    # -- loops -------------------------------------------------------------
 
     def _ingest_loop(self) -> None:
         """The ingest thread's own loop, on its own connection.
@@ -825,8 +832,6 @@ class LiveIngester:
         has."""
         return self.stats.running
 
-
-# -- separate-process watcher --------------------------------------------
 
 def _run_watcher(
     *,

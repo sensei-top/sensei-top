@@ -93,8 +93,8 @@ describe('SITE_VIEWS', () => {
 })
 
 describe('the screenshots views kept by the move', () => {
-  it('still hold the eighteen views, each with an id and an address', () => {
-    expect(VIEWS).toHaveLength(18)
+  it('still hold the nineteen views, each with an id and an address', () => {
+    expect(VIEWS).toHaveLength(19)
     for (const view of VIEWS) {
       expect(view.id).toBeTruthy()
       expect(view.path.startsWith('/')).toBe(true)

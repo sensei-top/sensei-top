@@ -43,7 +43,7 @@ export function Profile({ evidence, now }: { evidence: CoachEvidenceModel; now: 
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         {overallTiles(evidence, t).map((tile) => (
-          <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} />
+          <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} muted={tile.muted} />
         ))}
       </div>
       <DecksCard decks={evidence.by_deck} />

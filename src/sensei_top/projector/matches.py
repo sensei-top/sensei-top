@@ -18,6 +18,8 @@ Field paths verified against client 2026.62.10 (see brief §6):
   submitted deck for the match (``deckCards`` / ``sideboardCards``, grpIds).
 * ``…[].gameStateMessage.gameInfo`` — per-game result at
   ``stage == GameStage_GameOver``.
+* ``…[].gameStateMessage.gameInfo.matchWinCondition`` — the match's best-of
+  (``Best2of3`` → 3, ``SingleElimination`` → 1), first value kept.
 * ``…[].gameStateMessage.turnInfo`` — sibling of ``gameInfo``; ``turnNumber``
   and ``activePlayer`` drive on-play detection and turn counts.
 * requests ``DeckUpsertDeckV3`` (deck edited) and ``EventSetDeckV3`` (deck
@@ -65,8 +67,8 @@ from sensei_top.formats import _NOT_CONSTRUCTED_STANDARD, arena_format
 from sensei_top.mtgo.config import load_handle as mtgo_load_handle
 from sensei_top.projector.game_state import GameStateTracker
 from sensei_top.projector.live_state import _game_result_entry
-from sensei_top.projector.mtgo.decks import project_mtgo_decks
-from sensei_top.projector.mtgo.project import project_mtgo
+from sensei_top.projector.mtgo.decks import read_mtgo_decks, write_mtgo_decks
+from sensei_top.projector.mtgo.project import read_mtgo, write_mtgo
 
 log = logging.getLogger(__name__)
 
@@ -136,9 +138,20 @@ class MatchState:
     # Projector._handle_submit_deck); a Bo3 that boarded gets rows for 2
     # and/or 3 here, game 1's own deck staying in `deck_cards` above.
     submitted_decks: dict[int, dict[str, list[int]]] = field(default_factory=dict)
+    # gameInfo.matchWinCondition: the first value seen for the match, raw, and
+    # the best-of it maps to (3, 1, or None for a value this code doesn't know).
+    win_condition: str | None = None
+    best_of: int | None = None
+    _warned_win_conditions: set[str] = field(default_factory=set)
 
     def game(self, number: int) -> GameState:
         return self.games.setdefault(number, GameState(game_number=number))
+
+
+_BEST_OF_BY_WIN_CONDITION = {
+    "MatchWinCondition_Best2of3": 3,
+    "MatchWinCondition_SingleElimination": 1,
+}
 
 
 def _outcome(winning_team: int | None, self_team: int | None) -> str:
@@ -177,6 +190,16 @@ class Projector:
         # event, so the deck has to be parked until a match exists to own it.
         self._pending_deck: tuple[str, dict[str, list[int]]] | None = None
         self.warnings: int = 0
+        # Events each handler acted on (past its own early returns), keyed by
+        # what routed them there: the payload key for the authenticate and
+        # room-state events, the label for the deck, rank and submit-deck
+        # handlers. A GRE message routes on its ``gameStateMessage`` or its
+        # ``connectResp.deckMessage``; its ``type`` is only the key it is
+        # counted under. Nothing reads it in production; tests/
+        # test_label_ratchet.py reads it, so a handler that stops matching
+        # (an unseen rename in Arena's log) fails a test instead of silently
+        # projecting less.
+        self.handled: Counter[str] = Counter()
         # (observed_at, class, level, step, season, wins, losses) — one row
         # per RankGetCombinedRankInfo *response*, in the order raw_events was
         # replayed. Not match-scoped: Arena polls this on its own schedule,
@@ -187,8 +210,6 @@ class Projector:
         # message that says which game it was held for — see
         # _handle_submit_deck. Cleared the moment it is claimed.
         self._pending_sideboard_deck: dict[str, list[int]] | None = None
-
-    # -- entry points -------------------------------------------------------
 
     def feed(self, kind: str, label: str | None, payload_text: str, logged_at: str | None) -> None:
         try:
@@ -225,6 +246,12 @@ class Projector:
         for state in self.matches.values():
             for game in state.games.values():
                 game.tracker.flush_trailing()
+                # Collected, not logged, by the tracker (the Live replay runs
+                # it at 1 Hz); counted here like every other warning.
+                for warning in game.tracker.warnings:
+                    self._warn(
+                        f"match {state.match_id} game {game.game_number}: {warning}"
+                    )
 
     def _warn(self, message: str) -> None:
         self.warnings += 1
@@ -234,6 +261,8 @@ class Projector:
         if "authenticateResponse" in payload:
             auth = payload["authenticateResponse"]
             self.self_user_id = auth.get("clientId") or auth.get("userId")
+            if self.self_user_id:
+                self.handled["authenticateResponse"] += 1
             return
 
         if "matchGameRoomStateChangedEvent" in payload:
@@ -241,11 +270,13 @@ class Projector:
             return
 
         if kind == "request" and label in ("DeckUpsertDeckV3", "EventSetDeckV3"):
-            self._handle_deck_request(payload, logged_at)
+            if self._handle_deck_request(payload, logged_at):
+                self.handled[label] += 1
             return
 
         if kind == "response" and label == "RankGetCombinedRankInfo":
-            self._handle_rank_response(payload, logged_at)
+            if self._handle_rank_response(payload, logged_at):
+                self.handled[label] += 1
             return
 
         # A client-outbound message, not a greToClientEvent batch: unlike
@@ -257,13 +288,24 @@ class Projector:
         if kind == "event" and label == "ClientToGremessage":
             inner = payload.get("payload")
             if isinstance(inner, dict) and inner.get("type") == "ClientMessageType_SubmitDeckResp":
-                self._handle_submit_deck(inner.get("submitDeckResp", {}).get("deck"))
+                if self._handle_submit_deck(inner.get("submitDeckResp", {}).get("deck")):
+                    self.handled[label] += 1
                 return
 
+        # One try per message, not per event: a batch carries several state
+        # messages and a failure in one must not cost the siblings after it
+        # (the game's result can ride in a later one).
         for message in _messages(payload):
-            self._handle_gre_message(message, logged_at)
-
-    # -- handlers -----------------------------------------------------------
+            try:
+                self._handle_gre_message(message, logged_at)
+            except Exception as exc:  # never let one bad message halt ingestion (brief §6)
+                gsm = message.get("gameStateMessage") if isinstance(message, dict) else None
+                state_id = gsm.get("gameStateId") if isinstance(gsm, dict) else None
+                kind_of = message.get("type") if isinstance(message, dict) else None
+                self._warn(
+                    f"projection error on GRE message {kind_of!r} "
+                    f"(gameStateId {state_id!r}): {exc}"
+                )
 
     def _handle_room_state(self, event: dict[str, Any], logged_at: str | None) -> None:
         info = event.get("gameRoomInfo", {})
@@ -275,6 +317,7 @@ class Projector:
         state_type = info.get("stateType")
 
         if state_type == "MatchGameRoomStateType_Playing":
+            self.handled["matchGameRoomStateChangedEvent"] += 1
             self._active = state
             state.started_at = state.started_at or logged_at
             players = config.get("reservedPlayers") or []
@@ -305,6 +348,7 @@ class Projector:
                 self._warn(f"self seat unresolved for match {match_id}")
 
         elif state_type == "MatchGameRoomStateType_MatchCompleted":
+            self.handled["matchGameRoomStateChangedEvent"] += 1
             state.ended_at = logged_at
             final = info.get("finalMatchResult", {})
             state.completed_reason = final.get("matchCompletedReason")
@@ -324,7 +368,7 @@ class Projector:
             if self._active is state:
                 self._active = None
 
-    def _handle_deck_request(self, payload: dict[str, Any], logged_at: str | None) -> None:
+    def _handle_deck_request(self, payload: dict[str, Any], logged_at: str | None) -> bool:
         """Learn a deck's name, format and Arena GUID from a deck request.
 
         Two requests carry the same summary: ``DeckUpsertDeckV3`` when a deck is
@@ -335,7 +379,7 @@ class Projector:
         """
         raw = payload.get("request")
         if not isinstance(raw, str):
-            return
+            return False
         # A bad payload here is caught by _dispatch's broad except (above),
         # same as every other dispatch path, so this stays unguarded.
         inner = orjson.loads(raw)
@@ -344,7 +388,7 @@ class Projector:
         for card in maindeck:
             grp_ids.extend([card["cardId"]] * int(card.get("quantity", 0)))
         if not grp_ids:
-            return  # no card list, so nothing to attach the metadata to
+            return False  # no card list, so nothing to attach the metadata to
         deck_id, _ = deck_identity(grp_ids)
 
         summary = inner.get("Summary") or {}
@@ -363,8 +407,9 @@ class Projector:
                 attributes.get("Format"),
                 logged_at,
             )
+        return True
 
-    def _handle_rank_response(self, payload: dict[str, Any], logged_at: str | None) -> None:
+    def _handle_rank_response(self, payload: dict[str, Any], logged_at: str | None) -> bool:
         """One bare observation from a ``RankGetCombinedRankInfo`` response —
         not match-scoped, so it is simply appended in replay order rather than
         attached to ``self._active``. ``observed_at`` withheld (``None``, never
@@ -375,7 +420,7 @@ class Projector:
         """
         if logged_at is None:
             self._warn("RankGetCombinedRankInfo with no resolved timestamp, dropped")
-            return
+            return False
 
         def _int(key: str) -> int | None:
             value = payload.get(key)
@@ -391,11 +436,32 @@ class Projector:
             _int("constructedMatchesWon"),
             _int("constructedMatchesLost"),
         ))
+        return True
+
+    def _handle_win_condition(self, state: MatchState, value: str) -> None:
+        """The match's best-of, from the first matchWinCondition seen (never overwritten)."""
+        if state.win_condition is None:
+            state.win_condition = value
+            state.best_of = _BEST_OF_BY_WIN_CONDITION.get(value)
+            if state.best_of is None:
+                state._warned_win_conditions.add(value)
+                self._warn(f"unknown matchWinCondition {value!r} in match {state.match_id}")
+        elif value != state.win_condition and value not in state._warned_win_conditions:
+            state._warned_win_conditions.add(value)
+            self._warn(
+                f"matchWinCondition changed from {state.win_condition!r} to {value!r} "
+                f"in match {state.match_id}; keeping the first"
+            )
 
     def _handle_gre_message(self, message: dict[str, Any], logged_at: str | None) -> None:
+        message_type = message.get("type")
         connect = message.get("connectResp")
-        if isinstance(connect, dict) and "deckMessage" in connect:
-            self._handle_deck_message(connect["deckMessage"])
+        if (
+            isinstance(connect, dict)
+            and "deckMessage" in connect
+            and self._handle_deck_message(connect["deckMessage"])
+        ):
+            self.handled[message_type] += 1
 
         gsm = message.get("gameStateMessage")
         if not isinstance(gsm, dict):
@@ -421,6 +487,10 @@ class Projector:
                     self._pending_sideboard_deck = None
         if state is None:
             return
+        self.handled[message_type] += 1
+
+        if isinstance(info, dict) and isinstance(info.get("matchWinCondition"), str):
+            self._handle_win_condition(state, info["matchWinCondition"])
 
         game = state.game(state.current_game)
         # Apply this message's own state changes before deciding whether it's
@@ -456,7 +526,7 @@ class Projector:
             if count is not None:
                 game.mulligans[seat] = max(game.mulligans[seat], count)
 
-    def _handle_submit_deck(self, deck: dict[str, Any] | None) -> None:
+    def _handle_submit_deck(self, deck: dict[str, Any] | None) -> bool:
         """``ClientMessageType_SubmitDeckResp`` — the deck actually held for
         the game that follows, i.e. Bo3 sideboarding as played. It carries no
         ``matchID`` and no ``gameNumber`` of its own (verified against a real
@@ -468,16 +538,17 @@ class Projector:
         ``connectResp.deckMessage`` already covers that one.
         """
         if not isinstance(deck, dict):
-            return
+            return False
         maindeck = [int(g) for g in deck.get("deckCards") or []]
         if not maindeck:
-            return
+            return False
         self._pending_sideboard_deck = {
             "maindeck": sorted(maindeck),
             "sideboard": sorted(int(g) for g in deck.get("sideboardCards") or []),
         }
+        return True
 
-    def _handle_deck_message(self, deck: dict[str, Any]) -> None:
+    def _handle_deck_message(self, deck: dict[str, Any]) -> bool:
         """connectResp.deckMessage is only ever sent to us, so it is our deck.
 
         It arrives on connecting to the game room, which is *before* the
@@ -487,7 +558,7 @@ class Projector:
         """
         maindeck = [int(g) for g in deck.get("deckCards") or []]
         if not maindeck:
-            return
+            return False
         deck_id, _ = deck_identity(maindeck)
         cards = {
             "maindeck": sorted(maindeck),
@@ -496,6 +567,7 @@ class Projector:
         self._pending_deck = (deck_id, cards)
         if self._active is not None:
             self._active.deck_id, self._active.deck_cards = deck_id, cards
+        return True
 
     def _handle_game_over(self, state: MatchState, info: dict[str, Any]) -> None:
         if info.get("stage") != "GameStage_GameOver":
@@ -642,6 +714,22 @@ def project(conn: sqlite3.Connection) -> dict[str, int]:
         projector.feed_parsed(row["kind"], row["label"], payload, logged_at)
     projector.finish()
 
+    # Everything the transaction below writes is built first, while no write
+    # lock is held: the live watcher's ingest thread appends to raw_events on
+    # its own connection and waits out this lock, so every second spent
+    # reading or parsing inside it is a second the Live page stops moving
+    # (docs/architecture.md, "Live mode's two cadences"). Measured on a real
+    # 2.4 GB database, the lock went from ~15 s to the inserts alone.
+    rows, counts = _arena_rows(projector, duplicate_requests)
+    # MTGO: a second source, same tables, same full-rebuild pass, entirely
+    # independent of the Arena replay above (which is itself scoped to
+    # source='arena' at its own SELECT); see projector/mtgo/project.py's
+    # module docstring.
+    mtgo_rows = read_mtgo(conn, mtgo_load_handle())
+    # MTGO's exported deck files, into the same `decks` table. Not tied to any
+    # match: `matches.deck_id` stays NULL for MTGO — see projector/mtgo/decks.py.
+    mtgo_deck_rows = read_mtgo_decks(conn)
+
     conn.execute("BEGIN")
     try:
         # Children before parents, for the foreign keys. Absent on purpose:
@@ -663,306 +751,18 @@ def project(conn: sqlite3.Connection) -> dict[str, int]:
         conn.execute("DELETE FROM decks")
         conn.execute("DELETE FROM rank_snapshot")
 
-        conn.executemany(
-            """
-            INSERT INTO rank_snapshot
-                 (observed_at, constructed_class, constructed_level, constructed_step,
-                  constructed_season, constructed_matches_won, constructed_matches_lost)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            projector.rank_observations,
-        )
+        # Parents before children, the reverse of the deletes.
+        for table, sql in _ARENA_INSERTS.items():
+            conn.executemany(sql, rows[table])
 
-        counts = {
-            "decks": 0, "matches": 0, "games": 0, "turns": 0, "turn_zones": 0,
-            "card_events": 0, "deck_guids": 0, "combat_attacks": 0,
-            "combat_blocks": 0, "damage_events": 0, "life_events": 0,
-            "game_decks": 0,
-            "rank_observations": len(projector.rank_observations),
-            "warnings": projector.warnings,
-            # Old poll-boundary twins skipped this run — see
-            # _first_request_occurrences. Zero on a database ingested
-            # entirely under migration 042's fix.
-            "duplicate_requests": duplicate_requests,
-        }
-        seen_decks: set[str] = set()
-        unmapped_event_ids: set[str] = set()
-
-        for state in projector.matches.values():
-            if state.deck_id and state.deck_id not in seen_decks:
-                seen_decks.add(state.deck_id)
-                conn.execute(
-                    """
-                    INSERT INTO decks (deck_id, name, format, cards_json, first_seen, last_seen)
-                         VALUES (?, ?, ?, ?, ?, ?)
-                    ON CONFLICT (deck_id) DO UPDATE SET
-                         last_seen = MAX(COALESCE(excluded.last_seen, ''), COALESCE(last_seen, '')),
-                         name = COALESCE(excluded.name, name)
-                    """,
-                    (
-                        state.deck_id,
-                        projector.deck_names.get(state.deck_id),
-                        projector.deck_formats.get(state.deck_id),
-                        json.dumps(state.deck_cards or {}),
-                        state.started_at,
-                        state.ended_at or state.started_at,
-                    ),
-                )
-                counts["decks"] += 1
-
-            games = sorted(state.games.values(), key=lambda g: g.game_number)
-            won = sum(1 for g in games if g.result == WIN)
-            lost = sum(1 for g in games if g.result == LOSS)
-            deck_format = projector.deck_formats.get(state.deck_id) if state.deck_id else None
-            match_format = arena_format(deck_format, state.event_id)
-            if (
-                match_format is None
-                and state.event_id
-                and not any(w in state.event_id.lower() for w in _NOT_CONSTRUCTED_STANDARD)
-                and not any(w in (deck_format or "").lower() for w in _NOT_CONSTRUCTED_STANDARD)
-                and state.event_id not in unmapped_event_ids
-            ):
-                # Limited and Arena-only queues are NULL by design (D8); only an
-                # event id that looks constructed and still maps to nothing is
-                # news, and once per id rather than once per match.
-                unmapped_event_ids.add(state.event_id)
-                log.warning("no format for constructed event id %r", state.event_id)
-                counts["warnings"] += 1
-            conn.execute(
-                """
-                INSERT INTO matches (match_id, event_id, deck_id, self_seat, opponent_seat,
-                                     opponent_user_id, opponent_name, started_at, ended_at,
-                                     result, games_won, games_lost, completed_reason, format)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    state.match_id, state.event_id, state.deck_id, state.self_seat,
-                    state.opponent_seat, state.opponent_user_id, state.opponent_name,
-                    state.started_at, state.ended_at, state.result, won, lost,
-                    state.completed_reason, match_format,
-                ),
-            )
-            counts["matches"] += 1
-
-            for game_number, cards in state.submitted_decks.items():
-                conn.execute(
-                    """
-                    INSERT INTO game_decks
-                         (match_id, game_number, deck_cards_json, sideboard_cards_json)
-                         VALUES (?, ?, ?, ?)
-                    """,
-                    (
-                        state.match_id, game_number,
-                        json.dumps(cards["maindeck"]),
-                        json.dumps(cards["sideboard"]),
-                    ),
-                )
-                counts["game_decks"] += 1
-
-            for game in games:
-                conn.execute(
-                    """
-                    INSERT INTO games (match_id, game_number, on_play, result, result_reason,
-                                       turn_count, self_mulligans, opp_mulligans)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        state.match_id, game.game_number,
-                        None if game.on_play is None else int(game.on_play),
-                        game.result or INCOMPLETE, game.result_reason,
-                        game.turn_count or None,
-                        game.mulligans.get(state.self_seat),
-                        game.mulligans.get(state.opponent_seat),
-                    ),
-                )
-                counts["games"] += 1
-
-                # Card events keep Arena's raw seat, so unlike turns they stay
-                # meaningful without a resolved self seat: v_card_events maps
-                # the seat, and reports NULL when it cannot.
-                for event in game.tracker.card_events:
-                    conn.execute(
-                        """
-                        INSERT INTO card_events (match_id, game_number, seq, turn_number,
-                                                 seat, grp_id, category, zone_src, zone_dest)
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            state.match_id, game.game_number, event.seq, event.turn_number,
-                            event.seat, event.grp_id, event.category,
-                            event.zone_src, event.zone_dest,
-                        ),
-                    )
-                    counts["card_events"] += 1
-
-                # Combat and damage keep Arena's raw seat too, same reason as
-                # card_events: meaningful even without a resolved self seat.
-                for atk in game.tracker.attacks:
-                    conn.execute(
-                        """
-                        INSERT INTO combat_attacks (match_id, game_number, turn_number,
-                                                    attacker_seat, instance_id, grp_id,
-                                                    target_id, blocked)
-                             VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
-                        """,
-                        (
-                            state.match_id, game.game_number, atk.turn_number,
-                            atk.seat, atk.instance_id, atk.grp_id, atk.target_id,
-                        ),
-                    )
-                    counts["combat_attacks"] += 1
-
-                for blk in game.tracker.blocks:
-                    conn.execute(
-                        """
-                        INSERT INTO combat_blocks (match_id, game_number, turn_number,
-                                                   blocker_seat, blocker_instance_id,
-                                                   blocker_grp_id, attacker_instance_id)
-                             VALUES (?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            state.match_id, game.game_number, blk.turn_number,
-                            blk.seat, blk.blocker_instance_id, blk.blocker_grp_id,
-                            blk.attacker_instance_id,
-                        ),
-                    )
-                    counts["combat_blocks"] += 1
-                    # An attacker with an observed block is no longer
-                    # "unknown whether blocked" (rule 4) — see
-                    # migrations/014_combat.sql for why the reverse (marking
-                    # an attack unblocked on the absence of a block row) is
-                    # not done.
-                    conn.execute(
-                        """
-                        UPDATE combat_attacks SET blocked = 1
-                         WHERE match_id = ? AND game_number = ? AND turn_number = ?
-                               AND instance_id = ?
-                        """,
-                        (state.match_id, game.game_number, blk.turn_number,
-                         blk.attacker_instance_id),
-                    )
-
-                for dmg in game.tracker.damage_events:
-                    conn.execute(
-                        """
-                        INSERT INTO damage_events (match_id, game_number, annotation_id,
-                                                   turn_number, source_instance_id,
-                                                   source_grp_id, source_seat,
-                                                   target_instance_id, target_grp_id,
-                                                   target_seat, amount, damage_type)
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            state.match_id, game.game_number, dmg.annotation_id,
-                            dmg.turn_number, dmg.source_instance_id, dmg.source_grp_id,
-                            dmg.source_seat, dmg.target_instance_id, dmg.target_grp_id,
-                            dmg.target_seat, dmg.amount, dmg.damage_type,
-                        ),
-                    )
-                    counts["damage_events"] += 1
-
-                for life in game.tracker.life_events:
-                    conn.execute(
-                        """
-                        INSERT INTO life_events (match_id, game_number, annotation_id,
-                                                 turn_number, seat, delta,
-                                                 affector_instance_id, affector_grp_id)
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            state.match_id, game.game_number, life.annotation_id,
-                            life.turn_number, life.seat, life.delta,
-                            life.affector_instance_id, life.affector_grp_id,
-                        ),
-                    )
-                    counts["life_events"] += 1
-
-                # Zone contents keep Arena's raw seat too, for the same reason
-                # card_events does: a truncated session without a resolved
-                # self seat still gets meaningful per-turn board state, even
-                # though the turns row it would otherwise sit beside is absent.
-                for turn in game.tracker.turns.values():
-                    for zc in turn.cards:
-                        conn.execute(
-                            """
-                            INSERT INTO turn_zones (match_id, game_number, turn_number, seat,
-                                                    zone, idx, instance_id, grp_id, card_types,
-                                                    drawn_on_turn,
-                                                    is_tapped, power, toughness)
-                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                            """,
-                            (
-                                state.match_id, game.game_number, turn.turn_number, zc.seat,
-                                zc.zone, zc.idx, zc.instance_id, zc.grp_id, zc.card_types,
-                                zc.drawn_on_turn,
-                                zc.is_tapped, zc.power, zc.toughness,
-                            ),
-                        )
-                        counts["turn_zones"] += 1
-
-                # self/opp columns would be meaningless without a resolved self
-                # seat, so an unresolved match (already warned about above) gets
-                # no turns rows rather than nulls masquerading as data.
-                if state.self_seat is None:
-                    continue
-                for turn in sorted(game.tracker.turns.values(), key=lambda t: t.turn_number):
-                    conn.execute(
-                        """
-                        INSERT INTO turns (match_id, game_number, turn_number, active_seat,
-                                           self_life, opp_life, self_hand, opp_hand,
-                                           self_lands, self_permanents, opp_permanents,
-                                           self_library, opp_library,
-                                           self_graveyard, opp_graveyard,
-                                           self_open_mana, opp_open_mana)
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (
-                            state.match_id, game.game_number, turn.turn_number, turn.active_seat,
-                            turn.life.get(state.self_seat), turn.life.get(state.opponent_seat),
-                            turn.hand.get(state.self_seat), turn.hand.get(state.opponent_seat),
-                            turn.lands.get(state.self_seat),
-                            turn.permanents.get(state.self_seat),
-                            turn.permanents.get(state.opponent_seat),
-                            turn.library.get(state.self_seat),
-                            turn.library.get(state.opponent_seat),
-                            turn.graveyard.get(state.self_seat),
-                            turn.graveyard.get(state.opponent_seat),
-                            turn.open_mana.get(state.self_seat),
-                            turn.open_mana.get(state.opponent_seat),
-                        ),
-                    )
-                    counts["turns"] += 1
-
-        # Only for Arena decks that were actually played: until the MTGO decks
-        # are written below, `decks` holds played Arena decks alone, and this
-        # table points at it.
-        for deck_id, guids in projector.deck_guids.items():
-            if deck_id not in seen_decks:
-                continue
-            for arena_deck_id, (version, fmt, last_seen) in guids.items():
-                conn.execute(
-                    """
-                    INSERT INTO deck_guids (deck_id, arena_deck_id, version, format, last_seen)
-                         VALUES (?, ?, ?, ?, ?)
-                    """,
-                    (deck_id, arena_deck_id, version, fmt, last_seen),
-                )
-                counts["deck_guids"] += 1
-
-        # MTGO: a second source, same tables, same full-rebuild pass, entirely
-        # independent of the Arena replay above (which is itself scoped to
-        # source='arena' at its own SELECT). Runs inside this same transaction
-        # rather than opening its own — see projector/mtgo/project.py's
-        # module docstring.
-        mtgo_counts = project_mtgo(conn, mtgo_load_handle())
+        # The MTGO decks after the Arena ones: until they are written, `decks`
+        # holds played Arena decks alone, which `deck_guids` points at.
+        mtgo_counts = write_mtgo(conn, mtgo_rows)
         for key in ("matches", "games", "card_events"):
             counts[key] += mtgo_counts[key]
         counts["warnings"] += mtgo_counts["warnings"]
 
-        # MTGO's exported deck files, into the same `decks` table and the same
-        # transaction. Not tied to any match: `matches.deck_id` stays NULL for
-        # MTGO — see projector/mtgo/decks.py.
-        deck_counts = project_mtgo_decks(conn)
+        deck_counts = write_mtgo_decks(conn, mtgo_deck_rows)
         counts["decks"] += deck_counts["decks"]
         counts["warnings"] += deck_counts["warnings"]
 
@@ -971,3 +771,293 @@ def project(conn: sqlite3.Connection) -> dict[str, int]:
         conn.execute("ROLLBACK")
         raise
     return counts
+
+
+# One INSERT per derived Arena table, in the order project() runs them: a
+# parent before its children, for the foreign keys. `_arena_rows` builds a
+# list of parameter tuples for each, in the order the old row-by-row loop
+# inserted them, so every table's rowids come out as they always did.
+_ARENA_INSERTS: dict[str, str] = {
+    "rank_snapshot": """
+        INSERT INTO rank_snapshot
+             (observed_at, constructed_class, constructed_level, constructed_step,
+              constructed_season, constructed_matches_won, constructed_matches_lost)
+             VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+    "decks": """
+        INSERT INTO decks (deck_id, name, format, cards_json, first_seen, last_seen)
+             VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT (deck_id) DO UPDATE SET
+             last_seen = MAX(COALESCE(excluded.last_seen, ''), COALESCE(last_seen, '')),
+             name = COALESCE(excluded.name, name)
+        """,
+    "matches": """
+        INSERT INTO matches (match_id, event_id, deck_id, self_seat, opponent_seat,
+                             opponent_user_id, opponent_name, started_at, ended_at,
+                             result, games_won, games_lost, completed_reason, format,
+                             best_of)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+    "game_decks": """
+        INSERT INTO game_decks
+             (match_id, game_number, deck_cards_json, sideboard_cards_json)
+             VALUES (?, ?, ?, ?)
+        """,
+    "games": """
+        INSERT INTO games (match_id, game_number, on_play, result, result_reason,
+                           turn_count, self_mulligans, opp_mulligans)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+    "card_events": """
+        INSERT INTO card_events (match_id, game_number, seq, turn_number,
+                                 seat, grp_id, category, zone_src, zone_dest)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+    "combat_attacks": """
+        INSERT INTO combat_attacks (match_id, game_number, turn_number,
+                                    attacker_seat, instance_id, grp_id,
+                                    target_id, blocked)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+    "combat_blocks": """
+        INSERT INTO combat_blocks (match_id, game_number, turn_number,
+                                   blocker_seat, blocker_instance_id,
+                                   blocker_grp_id, attacker_instance_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+    "damage_events": """
+        INSERT INTO damage_events (match_id, game_number, annotation_id,
+                                   turn_number, source_instance_id,
+                                   source_grp_id, source_seat,
+                                   target_instance_id, target_grp_id,
+                                   target_seat, amount, damage_type)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+    "life_events": """
+        INSERT INTO life_events (match_id, game_number, annotation_id,
+                                 turn_number, seat, delta,
+                                 affector_instance_id, affector_grp_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+    "turn_zones": """
+        INSERT INTO turn_zones (match_id, game_number, turn_number, seat,
+                                zone, idx, instance_id, grp_id, card_types,
+                                drawn_on_turn,
+                                is_tapped, power, toughness)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+    "turns": """
+        INSERT INTO turns (match_id, game_number, turn_number, active_seat,
+                           self_life, opp_life, self_hand, opp_hand,
+                           self_lands, self_permanents, opp_permanents,
+                           self_library, opp_library,
+                           self_graveyard, opp_graveyard,
+                           self_open_mana, opp_open_mana)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+    "deck_guids": """
+        INSERT INTO deck_guids (deck_id, arena_deck_id, version, format, last_seen)
+             VALUES (?, ?, ?, ?, ?)
+        """,
+}
+
+
+def _arena_rows(
+    projector: Projector, duplicate_requests: int
+) -> tuple[dict[str, list[tuple]], dict[str, int]]:
+    """The parameter tuples for every ``_ARENA_INSERTS`` table, and
+    ``project()``'s counts. Reads nothing and writes nothing, so it runs
+    before the rebuild's transaction opens."""
+    rows: dict[str, list[tuple]] = {table: [] for table in _ARENA_INSERTS}
+    rows["rank_snapshot"] = list(projector.rank_observations)
+
+    counts = {
+        "decks": 0, "matches": 0, "games": 0, "turns": 0, "turn_zones": 0,
+        "card_events": 0, "deck_guids": 0, "combat_attacks": 0,
+        "combat_blocks": 0, "damage_events": 0, "life_events": 0,
+        "game_decks": 0,
+        "rank_observations": len(projector.rank_observations),
+        "warnings": projector.warnings,
+        # Old poll-boundary twins skipped this run — see
+        # _first_request_occurrences. Zero on a database ingested
+        # entirely under migration 042's fix.
+        "duplicate_requests": duplicate_requests,
+    }
+    seen_decks: set[str] = set()
+    unmapped_event_ids: set[str] = set()
+
+    for state in projector.matches.values():
+        if state.deck_id and state.deck_id not in seen_decks:
+            seen_decks.add(state.deck_id)
+            rows["decks"].append(
+                (
+                    state.deck_id,
+                    projector.deck_names.get(state.deck_id),
+                    projector.deck_formats.get(state.deck_id),
+                    json.dumps(state.deck_cards or {}),
+                    state.started_at,
+                    state.ended_at or state.started_at,
+                )
+            )
+
+        games = sorted(state.games.values(), key=lambda g: g.game_number)
+        won = sum(1 for g in games if g.result == WIN)
+        lost = sum(1 for g in games if g.result == LOSS)
+        deck_format = projector.deck_formats.get(state.deck_id) if state.deck_id else None
+        match_format = arena_format(deck_format, state.event_id)
+        if (
+            match_format is None
+            and state.event_id
+            and not any(w in state.event_id.lower() for w in _NOT_CONSTRUCTED_STANDARD)
+            and not any(w in (deck_format or "").lower() for w in _NOT_CONSTRUCTED_STANDARD)
+            and state.event_id not in unmapped_event_ids
+        ):
+            # Limited and Arena-only queues are NULL by design (D8); only an
+            # event id that looks constructed and still maps to nothing is
+            # news, and once per id rather than once per match.
+            unmapped_event_ids.add(state.event_id)
+            log.warning("no format for constructed event id %r", state.event_id)
+            counts["warnings"] += 1
+        rows["matches"].append(
+            (
+                state.match_id, state.event_id, state.deck_id, state.self_seat,
+                state.opponent_seat, state.opponent_user_id, state.opponent_name,
+                state.started_at, state.ended_at, state.result, won, lost,
+                state.completed_reason, match_format, state.best_of,
+            )
+        )
+
+        for game_number, cards in state.submitted_decks.items():
+            rows["game_decks"].append(
+                (
+                    state.match_id, game_number,
+                    json.dumps(cards["maindeck"]),
+                    json.dumps(cards["sideboard"]),
+                )
+            )
+
+        for game in games:
+            rows["games"].append(
+                (
+                    state.match_id, game.game_number,
+                    None if game.on_play is None else int(game.on_play),
+                    game.result or INCOMPLETE, game.result_reason,
+                    game.turn_count or None,
+                    game.mulligans.get(state.self_seat),
+                    game.mulligans.get(state.opponent_seat),
+                )
+            )
+
+            # Card events keep Arena's raw seat, so unlike turns they stay
+            # meaningful without a resolved self seat: v_card_events maps
+            # the seat, and reports NULL when it cannot.
+            for event in game.tracker.card_events:
+                rows["card_events"].append(
+                    (
+                        state.match_id, game.game_number, event.seq, event.turn_number,
+                        event.seat, event.grp_id, event.category,
+                        event.zone_src, event.zone_dest,
+                    )
+                )
+
+            # Combat and damage keep Arena's raw seat too, same reason as
+            # card_events: meaningful even without a resolved self seat.
+            # An attacker with an observed block is no longer "unknown
+            # whether blocked" (rule 4) — see migrations/014_combat.sql for
+            # why the reverse (marking an attack unblocked on the absence of
+            # a block row) is not done. The key is what the old
+            # `UPDATE ... WHERE turn_number = ? AND instance_id = ?` matched,
+            # and SQL's `=` never matches a NULL.
+            blocked = {
+                (blk.turn_number, blk.attacker_instance_id)
+                for blk in game.tracker.blocks
+                if blk.turn_number is not None and blk.attacker_instance_id is not None
+            }
+            for atk in game.tracker.attacks:
+                rows["combat_attacks"].append(
+                    (
+                        state.match_id, game.game_number, atk.turn_number,
+                        atk.seat, atk.instance_id, atk.grp_id, atk.target_id,
+                        1 if (atk.turn_number, atk.instance_id) in blocked else None,
+                    )
+                )
+
+            for blk in game.tracker.blocks:
+                rows["combat_blocks"].append(
+                    (
+                        state.match_id, game.game_number, blk.turn_number,
+                        blk.seat, blk.blocker_instance_id, blk.blocker_grp_id,
+                        blk.attacker_instance_id,
+                    )
+                )
+
+            for dmg in game.tracker.damage_events:
+                rows["damage_events"].append(
+                    (
+                        state.match_id, game.game_number, dmg.annotation_id,
+                        dmg.turn_number, dmg.source_instance_id, dmg.source_grp_id,
+                        dmg.source_seat, dmg.target_instance_id, dmg.target_grp_id,
+                        dmg.target_seat, dmg.amount, dmg.damage_type,
+                    )
+                )
+
+            for life in game.tracker.life_events:
+                rows["life_events"].append(
+                    (
+                        state.match_id, game.game_number, life.annotation_id,
+                        life.turn_number, life.seat, life.delta,
+                        life.affector_instance_id, life.affector_grp_id,
+                    )
+                )
+
+            # Zone contents keep Arena's raw seat too, for the same reason
+            # card_events does: a truncated session without a resolved
+            # self seat still gets meaningful per-turn board state, even
+            # though the turns row it would otherwise sit beside is absent.
+            for turn in game.tracker.turns.values():
+                for zc in turn.cards:
+                    rows["turn_zones"].append(
+                        (
+                            state.match_id, game.game_number, turn.turn_number, zc.seat,
+                            zc.zone, zc.idx, zc.instance_id, zc.grp_id, zc.card_types,
+                            zc.drawn_on_turn,
+                            zc.is_tapped, zc.power, zc.toughness,
+                        )
+                    )
+
+            # self/opp columns would be meaningless without a resolved self
+            # seat, so an unresolved match (already warned about above) gets
+            # no turns rows rather than nulls masquerading as data.
+            if state.self_seat is None:
+                continue
+            for turn in sorted(game.tracker.turns.values(), key=lambda t: t.turn_number):
+                rows["turns"].append(
+                    (
+                        state.match_id, game.game_number, turn.turn_number, turn.active_seat,
+                        turn.life.get(state.self_seat), turn.life.get(state.opponent_seat),
+                        turn.hand.get(state.self_seat), turn.hand.get(state.opponent_seat),
+                        turn.lands.get(state.self_seat),
+                        turn.permanents.get(state.self_seat),
+                        turn.permanents.get(state.opponent_seat),
+                        turn.library.get(state.self_seat),
+                        turn.library.get(state.opponent_seat),
+                        turn.graveyard.get(state.self_seat),
+                        turn.graveyard.get(state.opponent_seat),
+                        turn.open_mana.get(state.self_seat),
+                        turn.open_mana.get(state.opponent_seat),
+                    )
+                )
+
+    # Only for Arena decks that were actually played: until the MTGO decks
+    # are written, `decks` holds played Arena decks alone, and this table
+    # points at it.
+    for deck_id, guids in projector.deck_guids.items():
+        if deck_id not in seen_decks:
+            continue
+        for arena_deck_id, (version, fmt, last_seen) in guids.items():
+            rows["deck_guids"].append((deck_id, arena_deck_id, version, fmt, last_seen))
+
+    for table, table_rows in rows.items():
+        if table != "rank_snapshot":
+            counts[table] = len(table_rows)
+    return rows, counts

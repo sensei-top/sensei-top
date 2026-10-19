@@ -2,7 +2,7 @@ import type { RouteObject } from 'react-router'
 import { CoachPage } from './pages/CoachPage'
 import { DecksPage } from './pages/DecksPage'
 import { DeckLayout } from './pages/DeckLayout'
-import { DeckRcqPage } from './pages/DeckRcqPage'
+import { DeckRcqPage, RcqRedirect } from './pages/DeckRcqPage'
 import { DeckGuidePage, DeckMatchupsPage, DeckOverviewPage, DeckPairingPage } from './pages/DeckPages'
 import { DesignPage } from './pages/DesignPage'
 import { DesignSurfacesPage } from './pages/DesignSurfacesPage'
@@ -47,7 +47,8 @@ export const routes: RouteObject[] = [
           { path: 'matchups', Component: DeckMatchupsPage },
           { path: 'matchups/:opponent', Component: DeckPairingPage },
           { path: 'guide', Component: DeckGuidePage },
-          { path: 'guide/rcq', Component: DeckRcqPage },
+          { path: 'rcq', Component: DeckRcqPage },
+          { path: 'guide/rcq', Component: RcqRedirect },
         ],
       },
       { path: 'field', Component: FieldPage },

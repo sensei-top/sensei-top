@@ -53,7 +53,7 @@ One line each; the detail is in the doc named, and
 - `src/sensei_top/guide/` — the deck guide, built on `review/` rather than duplicating it, and the RCQ guide for one pasted 75 — `docs/guide.md`.
 - `src/sensei_top/brief/` — the live matchup brief, one per `(deck, archetype)`, persisted as an authored artifact; `coverage.py` reads which archetypes still lack one — `docs/brief.md`.
 - `src/sensei_top/coach/` — the dated cross-deck coach report, kept as history; reuses `review/` and `guide/` — `docs/coach.md`.
-- `src/sensei_top/table/` — the current-match reads: a request-time replay of `raw_events`, never stored. Arena-only. `ranked.py` is the ranked-play rule: no advice on Live during a ranked game — `docs/current-match.md`.
+- `src/sensei_top/table/` — the current-match reads: a request-time replay of `raw_events`, never stored. Arena-only. `queues.py` is the event rule: no advice on Live during an event's game — `docs/current-match.md`.
 - `src/sensei_top/archetypes/` — deck-archetype classification from revealed cards: a rule engine (`classify.py`) and a corpus read (`corpus.py`) — `docs/opponent-deck.md`, "Naming the opponent's deck".
 - `src/sensei_top/metagame/` — real tournament results, tiered by evidence quality — `docs/metagame.md`.
 - `src/sensei_top/backup/` — the daily verified database snapshot; imports neither `reader` nor `projector` — `docs/architecture.md`, "Backups".
@@ -67,7 +67,7 @@ One line each; the detail is in the doc named, and
 - `src/sensei_top/logs.py` — the log file under the `--db`'s `logs/` folder; `procs.py` — the watcher child dies with `serve` — `docs/architecture.md`, "The log file".
 - `src/sensei_top/db.py` — `open_database()`, the one place migrations are applied.
 - `web/src/` — React dashboard: `routes.tsx` is the table of addresses, `shell/` the layout, `pages/` read an address, `views/` and `components/` draw — `docs/frontend.md`, "The shell". Older docs call a view a tab; it is the same view, at its address.
-- `desktop/` — the Electron shell (TypeScript, its own `pnpm` project): `src/main.ts` is the only file that loads Electron; `server.ts` runs `serve` with its stdin as a lifeline, `window.ts`, `tray.ts`, `log.ts` (the server log's format, in `logs/shell.log`), `store.ts` (`shell.json`); `server/` freezes the server with PyInstaller — `desktop/README.md` for the build steps, `docs/desktop.md` for the design.
+- `desktop/` — the Electron shell (TypeScript, its own `pnpm` project): `src/main.ts` is the only main-process file that loads Electron; `server.ts` runs `serve` with its stdin as a lifeline, `window.ts`, `tray.ts`, `log.ts` (the server log's format, in `logs/shell.log`), `store.ts` (`shell.json`); `server/` freezes the server with PyInstaller — `desktop/README.md` for the build steps, `docs/desktop.md` for the design.
 - `site/` — the landing, help and privacy pages, plain HTML and CSS with no build step, served as a Cloudflare Worker's static assets from the public repository (`wrangler.json`), with one script, `worker/`, that redirects the Download buttons to the newest release's files and a visitor in Brazil to the Portuguese pages; `tests/test_site.py` pins the promises the copy makes — `docs/frontend-site.md`, "The site".
 - `tests/` — flat `tests/*.py`, all fixture-backed, no mocks of Arena. The dashboard's own tests sit beside what they test, `web/src/**/*.test.ts` and `web/scripts/*.test.ts` — `docs/frontend.md`, "Checks".
 - `src/sensei_top/migrations/NNN_*.sql` — applied only inside `open_database()`, at process startup: a one-shot command's, against the `--db` it is given, or `serve`'s. Everything `serve` opens later uses `connect()`, so a new migration is **pending** until `serve --watch` restarts — `docs/architecture.md`, "Storage". Check `SELECT MAX(version) FROM schema_version` on a read-only connection rather than assuming. The API never migrates.
@@ -134,7 +134,7 @@ One line each; the detail is in the doc named, and
    removed). The project stays free software (AGPL-3.0-only, `LICENSE`),
    and nothing free ever needs an account or a payment. Two paid things are
    planned. The Microsoft Store listing is the same build as the free
-   download, listed free at release and priced once the blockers
+   download, listed free when it goes up and priced once the blockers
    `docs/status.md` names clear. At around 3,000 monthly active users,
    an optional subscription gated by feature, never by the player's rank or
    event type, whose reports come from a monthly allowance inside it —
@@ -271,6 +271,9 @@ naming, but a location the user chooses is theirs to keep out of the tree.
   "I watched it work" are different claims.
 - **Correct yourself out loud.** If an earlier explanation was wrong, say so
   plainly and explain the real cause.
+- **The dashboard is desktop-only.** Design, review and screenshot a view
+  at 1008 px and up; build nothing for a phone's width. `site/` stays
+  responsive — `docs/frontend.md`, "Widths".
 - **One feature per branch, cut from `develop`.** `feature/<topic>`, merged
   back by pull request with a merge commit; `main` moves only on a release or
   a hotfix. Pushing, opening a pull request and merging wait for the user's

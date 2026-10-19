@@ -31,11 +31,12 @@ from every game the player has played and the freshest corpus, on demand.
 
 Each is a pure function of the projected DB (or, for `narrative.py` and
 `markdown.py`, of an already-built `DeckGuide`) — same discipline as
-`review/`: only the modules that say so touch `sqlite3`, and nothing here is
-ever persisted (a rebuild is one request; see `review/__init__.py`'s
+`review/`: only the modules that say so touch `sqlite3`, and the evidence
+bundle is never persisted (a rebuild is one request; see `review/__init__.py`'s
 reasoning, which applies here for the same cause — the corpus, the card
 database and the player's own decklist all change independently of any
-projector rebuild).
+projector rebuild). The authored narratives are: `authored.py` writes
+`deck_narrative` and `rcq_authored.py` writes `rcq_guide`.
 
 ### `deck.py` — deck identity, stitched across list edits
 
@@ -150,9 +151,12 @@ for the maindeck and the sideboard (`board="main"` / `board="side"`;
 `build_consensus` read only `mainboard_json` before this package needed
 sideboard consensus too, and comparing a sideboard against the field's
 *maindeck* staples recommended boarding in cards the player already ran —
-see that function's own docstring). Each card gets a verdict: `correct`,
-`add`, `trim`, `cut` is never assigned on absence alone, or `flex` for a
-card the corpus has simply never recorded.
+see that function's own docstring). Each card gets one of four verdicts:
+`flex` for a card the player runs that the corpus has simply never
+recorded; for one the field plays at or above `STAPLE_SHARE`, `correct` at
+the consensus count, `trim` above it and `add` below it; `correct` for one
+the field plays less often; and `add` for a staple the player doesn't run
+at all.
 
 `duplicate_warnings` is the fallback for one card counted under two names
 that `cards.oracle_id` canonicalisation didn't already catch (no
@@ -347,18 +351,23 @@ around it, rather than a Markdown-rendering dependency.
 
 ### `markdown.py` — the exported document
 
-`render(guide, narrative=None)` — one renderer, two callers: the export route
-and `narrative.py`'s own prompt (`narrative=None`, the evidence-only form).
+`render(guide, narrative=None)` — one renderer, used by the markdown route,
+`guide --markdown`, and the guide and RCQ prompts (`narrative.py`, `rcq.py`;
+`narrative=None`, the evidence-only form).
 Section order follows the hand-written guide this replaces: Scope → How it
 works → Your play (curves, then the leak finder and its fix, deck-scoped
 beside all-decks) → The list → The field → Matchups → Between rounds.
 
 ## API surface
 
-Every route here is `GET` except two — `POST /api/guide/{key}/narrative`
-and the RCQ guide's `POST /api/guide/{key}/rcq/narrative` (below), which
-call out only when a Claude credential is configured (`docs/llm.md`)
-and write only `deck_narrative` plus `matchup_brief` (the RCQ one writes
+Every route here is `GET` except two `POST`s and four `PUT`s, all writing
+authored artifacts only. The `POST`s — `POST /api/guide/{key}/narrative`
+and the RCQ guide's `POST /api/guide/{key}/rcq/narrative` (below) — call
+out only when a Claude credential is configured (`docs/llm.md`). The `PUT`s
+store a pasted answer with no model call: the guide's narrative, one brief,
+the multi-brief coverage answer, and the RCQ guide's
+`PUT /api/guide/{key}/rcq/narrative` (below). Between them they write only
+`deck_narrative` plus `matchup_brief` (the RCQ ones write
 `rcq_guide`), all on the
 authored-artifact allowlist `AGENTS.md` non-negotiable #6 now states;
 `tests/test_api.py::test_only_authored_artifact_routes_write` asserts the
@@ -370,8 +379,12 @@ exact set of writing routes.
 | `GET /api/guide/{key}` | the whole evidence bundle |
 | `GET /api/guide/{key}/narrative` | the stored narrative, and always the prompt to (re)write it from |
 | `POST /api/guide/{key}/narrative` | writes the narrative with Claude and stores it (503 with no credential configured) |
+| `PUT /api/guide/{key}/narrative` | stores a pasted narrative, and the briefs it covers, with no model call |
 | `GET /api/guide/{key}/markdown` | the evidence-only exported document |
+| `GET /api/guide/{key}/briefs` | every matchup brief cached for this deck |
+| `PUT /api/guide/{key}/briefs/{archetype_key}` | stores one pasted brief, with no model call |
 | `GET /api/guide/{key}/coverage` | how much of the field this deck's cached briefs cover (`brief/coverage.py`'s `Coverage`) |
+| `PUT /api/guide/{key}/coverage` | stores every brief in a pasted multi-brief answer, with no model call |
 | `GET /api/guide/{key}/briefs/{archetype_key}/prompt` | the single-brief prompt for one archetype, fetched on demand |
 | `GET /api/guide/{key}/coverage/prompt` | the multi-brief prompt for every `missing`/`stale` coverage row |
 
@@ -402,11 +415,12 @@ prompt of its own: one archetype's prompt is on its pairing's page
 
 ## The RCQ guide
 
-`/decks/:id/guide/rcq` ("Prepare for an RCQ", linked from the Guide's
-header) writes one document for one event: the exact 75 the player is about
-to register, against the field of that week. It is its own address, not a
-section of the Guide, because the Guide's sections are the deck's evidence
-and this is a single event's plan. Code: `guide/rcq.py` (evidence and
+`/decks/:id/rcq`, the "RCQ" tab beside "Guide" on a deck's page, writes one
+document for one event: the exact 75 the player is about to register,
+against the field of that week. It is its own tab, not a section of the
+Guide, because the Guide's sections are the deck's evidence and this is a
+single event's plan. Its address in 1.0.x, `/decks/:id/guide/rcq`, still
+opens it. Code: `guide/rcq.py` (evidence and
 prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
 (storage), `guide/rcq_markdown.py` (the export), `api/routes/rcq.py`.
 

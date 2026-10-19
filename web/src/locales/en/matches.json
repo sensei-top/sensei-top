@@ -62,14 +62,8 @@
     "showed": "showed {{card}}"
   },
   "summary": {
-    "matchesWon": "Matches won",
-    "matchesDetail_one": "{{won}} of {{n}} finished match",
-    "matchesDetail_other": "{{won}} of {{n}} finished matches",
-    "noMatches": "No finished matches",
-    "gamesWon": "Games won",
-    "gamesDetail_one": "{{won}} of {{n}} finished game",
-    "gamesDetail_other": "{{won}} of {{n}} finished games",
-    "noGames": "No finished games",
+    "matchesWon": "Matches",
+    "gamesWon": "Games",
     "counted": "Counted over the {{n}} newest matches."
   },
   "sideboarding": {

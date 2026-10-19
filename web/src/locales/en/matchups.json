@@ -5,14 +5,15 @@
     "everyVersion": "Every version",
     "noFinishedTitle": "No finished match yet",
     "noFinishedMessage": "Matchups are counted once a match has ended.",
-    "countedOver": "Counted over the {{n}} newest matches.",
     "archetypesMet": "Archetypes met",
-    "archetypesMetSubtitle": "Finished matches only, most met first. A rate needs ten matches.",
+    "archetypesMetSubtitle": "Finished matches only, most met first. A rate needs ten matches; from five it is shown muted, a rough one.",
     "columns": {
       "archetype": "Archetype",
       "matches": "Matches",
-      "won": "Won",
-      "rate": "Rate"
+      "record": "Record",
+      "rate": "Rate",
+      "game1": "Game 1",
+      "postboard": "Games 2–3"
     }
   },
   "tiles": {
@@ -24,9 +25,7 @@
     "oneSoFar": "one archetype met {{min}}\u00a0times so far",
     "best": "Best matchup",
     "worst": "Worst matchup",
-    "rankedRate": "won {{won}} of {{matches}} against {{against}}",
-    "rankedCount": "won against {{against}}",
-    "countOf": "{{won}} of {{matches}}"
+    "rankedRate": "{{record}} against {{against}}"
   },
   "name": {
     "unrecognized": "Unrecognized deck",
@@ -35,11 +34,11 @@
     "unknownInSentence": "an unknown deck"
   },
   "fieldLine": {
-    "games": "Games {{won}}–{{lost}}",
-    "record_one": "Games {{won}}–{{lost}} · wins {{rate}}% in tournaments, {{n}}\u00a0entry",
-    "record_other": "Games {{won}}–{{lost}} · wins {{rate}}% in tournaments, {{n}}\u00a0entries",
-    "recordThin_one": "Games {{won}}–{{lost}} · wins {{rate}}% in tournaments, {{n}}\u00a0entry, too few to trust",
-    "recordThin_other": "Games {{won}}–{{lost}} · wins {{rate}}% in tournaments, {{n}}\u00a0entries, too few to trust"
+    "games": "Games {{record}}",
+    "record_one": "Games {{record}} · wins {{rate}} in tournaments, {{n}}\u00a0entry",
+    "record_other": "Games {{record}} · wins {{rate}} in tournaments, {{n}}\u00a0entries",
+    "recordThin_one": "Games {{record}} · wins {{rate}} in tournaments, {{n}}\u00a0entry, too few to trust",
+    "recordThin_other": "Games {{record}} · wins {{rate}} in tournaments, {{n}}\u00a0entries, too few to trust"
   },
   "pairing": {
     "allMatchups": "All matchups",
@@ -48,10 +47,10 @@
     "noMatchTitle": "No match against it yet",
     "noMatchMessage": "Once you play one, it is counted here.",
     "record": "Record",
-    "wonOf": "won {{won}} of {{matches}}",
-    "matchesWon": "matches won",
     "games": "Games",
     "yoursFirst": "yours first",
+    "game1": "Game 1",
+    "postboard": "Games 2–3",
     "inTournaments": "In tournaments",
     "onlyNamed": "only a named archetype has results",
     "noResults": "no tournament results for it",
@@ -75,8 +74,8 @@
     "writeAgain": "Write it again"
   },
   "briefCard": {
-    "record_one": "Your record: {{wins}}-{{losses}} in {{count}} matches",
-    "record_other": "Your record: {{wins}}-{{losses}} in {{count}} matches",
+    "record_one": "Your record: {{record}} in {{count}} match",
+    "record_other": "Your record: {{record}} in {{count}} matches",
     "writtenBy": "written by {{model}}",
     "pasted": "pasted in",
     "fromGuideRun": "from a full guide run",
@@ -180,20 +179,19 @@
       "clause": "where you had the stronger board and did not attack"
     },
     "genericClause": "where this happened",
-    "sentence": "You won {{wins}} of the {{n}}\u00a0matches {{clause}}, and {{otherWins}} of the other {{otherN}}."
+    "sentence": "You are {{recordWith}} in the matches {{clause}}, and {{recordWithout}} in the rest."
   },
   "sideboard": {
     "thisOpponent": "this opponent",
     "thisArchetype": "this archetype",
+    "postboardRecord": "Your games 2–3 against it: {{record}}",
     "headline": {
-      "noResult": "Board for game {{next}} vs {{label}}",
-      "won": "Won game {{game}} — board for game {{next}} vs {{label}}",
-      "wonReason": "Won game {{game}} ({{reason}}) — board for game {{next}} vs {{label}}",
-      "lost": "Lost game {{game}} — board for game {{next}} vs {{label}}",
-      "lostReason": "Lost game {{game}} ({{reason}}) — board for game {{next}} vs {{label}}"
+      "noResult": "Sideboard plan",
+      "won": "Won game {{game}}",
+      "wonReason": "Won game {{game}} ({{reason}})",
+      "lost": "Lost game {{game}}",
+      "lostReason": "Lost game {{game}} ({{reason}})"
     },
-    "youPicked": "You picked: {{label}}",
-    "opponentConfidence": "{{label}} · {{confidence}} confidence",
     "result": {
       "win": "won",
       "loss": "lost",
@@ -211,19 +209,10 @@
     "closest": "No written plan for {{label}} — closest written plan: {{closest}}",
     "stale": "Stale",
     "staleMessage": "The field or your current 75 has moved since this plan was written.",
-    "boardFor": "Board for game {{next}}",
+    "boarding": "Boarding",
     "fullWriteup": "Full writeup",
-    "opponent": "Opponent",
-    "formatUnknown": "No tournament format is known for this match, so the opponent's deck can't be named from the cards seen.",
-    "unclassified": "Opponent not identified yet.",
-    "cardsSeen_one": "{{count}} cards seen",
-    "cardsSeen_other": "{{count}} cards seen",
-    "cardsSeenFrom_one": "{{count}} cards seen · {{source}}",
-    "cardsSeenFrom_other": "{{count}} cards seen · {{source}}",
-    "yourPick": "your pick",
-    "liveRead": "live read",
     "otherPlans": "Other written plans",
-    "alternative": "{{label}} · {{fit}}% fit · {{confidence}}"
+    "alternative": "{{label}} · {{fit}} fit · {{confidence}}"
   },
   "position": {
     "turnLabel": "Turn {{turn}}",

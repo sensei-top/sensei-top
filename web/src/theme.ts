@@ -47,16 +47,5 @@ export function useTokens(): Tokens {
   return DARK
 }
 
-export const percent = (value: number | null | undefined): string =>
-  value == null ? '—' : `${formatFixed(value * 100, 1)}%`
-
-/** Below this many corpus entries (tournament decks, matches), a field-derived
- *  rate is real but too thin to trust as a measurement — see docs/metagame.md's
- *  evidence tiers. Shared by the line under each archetype on a deck's
- *  Matchups (lib/matchups.ts, "too few to trust"), the Guide's field-share
- *  column (components/guide/FieldCard.tsx) and CoachView's field numbers,
- *  so the same line means the same thing in every place. */
-export const MIN_TRUSTED_FIELD_SAMPLE = 5
-
 export const decimal = (value: number | null | undefined): string =>
   value == null ? '—' : formatFixed(value, 1)

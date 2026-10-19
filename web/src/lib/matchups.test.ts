@@ -16,6 +16,9 @@ import {
 // Every row and name is invented. Timestamps are bare, the log's own local
 // clock; only their order matters here. The no-break space is the source's own `NBSP`.
 
+/** The word joiner a record keeps each side of its dash. */
+const WJ = '\u2060'
+
 const t = translator('en')
 const matchupName = (row: Parameters<typeof nameOf>[0]) => nameOf(row, t)
 const matchupTiles = (rows: MatchupRow[]) => tilesOf(rows, t)
@@ -51,8 +54,15 @@ function row(key: string, matches: number, won: number, rest: Partial<MatchupRow
     colors: null,
     matches,
     won,
+    // No draws unless a test says so.
+    lost: matches - won,
     gamesWon: 0,
     gamesLost: 0,
+    bo3Matches: 0,
+    game1Won: 0,
+    game1Lost: 0,
+    postboardWon: 0,
+    postboardLost: 0,
     ...rest,
   }
 }
@@ -67,7 +77,7 @@ describe('matchupRows', () => {
       match('d', { deck_id: 'v1', result: null, started_at: on(4), games_won: 1, games_lost: 0 }),
       match('e', { deck_id: 'v1', result: 'incomplete', started_at: on(5) }),
     ])
-    // Three finished (a, b, c); one win (a); games 2+0+1 won, 1+2+1 lost.
+    // Three finished (a, b, c); one win (a), one loss (b), one draw (c); games 2+0+1 won, 1+2+1 lost.
     expect(rows).toEqual([
       {
         key: 'archetype:dimir_midrange',
@@ -76,10 +86,72 @@ describe('matchupRows', () => {
         colors: 'UB',
         matches: 3,
         won: 1,
+        lost: 1,
         gamesWon: 3,
         gamesLost: 4,
+        // No match says it is a best of three.
+        bo3Matches: 0,
+        game1Won: 0,
+        game1Lost: 0,
+        postboardWon: 0,
+        postboardLost: 0,
       },
     ])
+  })
+
+  // The split's fields as `/api/matches` sends them: `game1_result`,
+  // `postboard_won` and `postboard_lost` are null unless `best_of` is 3, and
+  // the post-board counts already leave a drawn game out.
+  const split = (rows: MatchupRow[]) =>
+    rows.map((r) => [r.bo3Matches, r.game1Won, r.game1Lost, r.postboardWon, r.postboardLost])
+
+  it('splits a best-of-three match’s games into game 1 and games 2–3', () => {
+    const rows = matchupRows([
+      // Lost game 1, won games 2 and 3.
+      match('a', { result: 'win', best_of: 3, games_won: 2, games_lost: 1, game1_result: 'loss', postboard_won: 2, postboard_lost: 0 }),
+      // Won game 1, lost games 2 and 3.
+      match('b', { result: 'loss', best_of: 3, games_won: 1, games_lost: 2, game1_result: 'win', postboard_won: 0, postboard_lost: 2 }),
+      // Won game 1 and game 2.
+      match('c', { result: 'win', best_of: 3, games_won: 2, games_lost: 0, game1_result: 'win', postboard_won: 1, postboard_lost: 0 }),
+    ])
+    // Three best of three; game 1 won in b and c, lost in a: 2–1. Games 2–3:
+    // 2 + 0 + 1 won, 0 + 2 + 0 lost: 3–2.
+    expect(split(rows)).toEqual([[3, 2, 1, 3, 2]])
+  })
+
+  it('adds nothing to the split for a best-of-one match, or one whose best-of is unknown', () => {
+    const rows = matchupRows([
+      match('a', { result: 'win', best_of: 1, games_won: 1, games_lost: 0, game1_result: null }),
+      match('b', { result: 'loss', best_of: null, games_won: 1, games_lost: 2, game1_result: null }),
+      match('c', { result: 'loss', best_of: 3, games_won: 0, games_lost: 2, game1_result: 'loss', postboard_won: 0, postboard_lost: 1 }),
+    ])
+    // Only c is a best of three: game 1 lost, game 2 lost. The games of a and
+    // b still count in the row's own games: 1 + 1 + 0 won, 0 + 2 + 2 lost.
+    expect(split(rows)).toEqual([[1, 0, 1, 0, 1]])
+    expect([rows[0].gamesWon, rows[0].gamesLost]).toEqual([2, 4])
+  })
+
+  it('counts a drawn game 1 in neither number, and a drawn match’s decided games as they fell', () => {
+    const rows = matchupRows([
+      // Game 1 drawn, then games 2 and 3 won: the draw is neither.
+      match('a', { result: 'win', best_of: 3, games_won: 2, games_lost: 0, game1_result: 'draw', postboard_won: 2, postboard_lost: 0 }),
+      // A drawn match, 1–1: game 1 won, game 2 lost.
+      match('b', { result: 'draw', best_of: 3, games_won: 1, games_lost: 1, game1_result: 'win', postboard_won: 0, postboard_lost: 1 }),
+    ])
+    // Two best of three; game 1: b won, a drawn, so 1–0. Games 2–3: 2–0 from
+    // a, 0–1 from b, so 2–1.
+    expect(split(rows)).toEqual([[2, 1, 0, 2, 1]])
+  })
+
+  it('adds nothing to the split for an unfinished best-of-three match', () => {
+    const rows = matchupRows([
+      match('a', { result: 'win', best_of: 3, games_won: 2, games_lost: 1, game1_result: 'win', postboard_won: 1, postboard_lost: 1 }),
+      // Still being played: game 1 won, game 2 lost, game 3 not yet.
+      match('b', { result: null, best_of: 3, games_won: 1, games_lost: 1, game1_result: 'win', postboard_won: 0, postboard_lost: 1 }),
+      match('c', { result: 'incomplete', best_of: 3, game1_result: 'loss', postboard_won: 0, postboard_lost: 0 }),
+    ])
+    // Only a counts: game 1 won, games 2–3 one each.
+    expect(split(rows)).toEqual([[1, 1, 0, 1, 1]])
   })
 
   it('leaves out a key whose every match is unfinished', () => {
@@ -199,58 +271,60 @@ describe('matchupTiles', () => {
     })
   })
 
-  it('names neither best nor worst when no archetype was met five times', () => {
-    const [, best, worst] = matchupTiles([row('a', 4, 4), row('b', 4, 0), row('c', 1, 1)])
-    expect(best).toEqual({ label: 'Best matchup', value: '—', detail: `no archetype met 5${NBSP}times yet` })
-    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `no archetype met 5${NBSP}times yet` })
+  it('names neither best nor worst when no archetype was met ten times', () => {
+    const [, best, worst] = matchupTiles([row('a', 9, 9), row('b', 6, 0), row('c', 1, 1)])
+    expect(best).toEqual({ label: 'Best matchup', value: '—', detail: `no archetype met 10${NBSP}times yet` })
+    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `no archetype met 10${NBSP}times yet` })
   })
 
-  it('with one archetype met five times, it is the best and the worst says so', () => {
-    const [, best, worst] = matchupTiles([row('Solo', 5, 2), row('b', 4, 0)])
-    expect(best).toEqual({ label: 'Best matchup', value: '2 of 5', detail: 'won against Solo' })
-    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `one archetype met 5${NBSP}times so far` })
+  it('with one archetype met ten times, it is the best and the worst says so', () => {
+    const [, best, worst] = matchupTiles([row('Solo', 10, 4), row('b', 9, 0)])
+    expect(best).toEqual({ label: 'Best matchup', value: '40%', detail: `4${WJ}–${WJ}6 against Solo` })
+    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `one archetype met 10${NBSP}times so far` })
   })
 
-  it('writes a count at nine matches and a rate at ten', () => {
-    // 8 of 10 is 80%; 3 of 9 is a count. 1 of 4 is under five and left out.
+  it('leaves out an archetype met nine times and ranks one met ten', () => {
+    // 8 of 10 is 80%; 3 of 9 is left out however low.
     const [, best, worst] = matchupTiles([row('High', 10, 8), row('Low', 9, 3), row('Few', 4, 1)])
-    expect(best).toEqual({ label: 'Best matchup', value: '80%', detail: 'won 8 of 10 against High' })
-    expect(worst).toEqual({ label: 'Worst matchup', value: '3 of 9', detail: 'won against Low' })
+    expect(best).toEqual({ label: 'Best matchup', value: '80%', detail: `8${WJ}–${WJ}2 against High` })
+    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `one archetype met 10${NBSP}times so far` })
   })
 
-  it('writes a rate for the worst from ten and a count for the best under it', () => {
-    // 7 of 9 (78%) beats 4 of 11 (36%, rounded from 36.4).
-    const [, best, worst] = matchupTiles([row('Top', 9, 7), row('Bottom', 11, 4)])
-    expect(best).toEqual({ label: 'Best matchup', value: '7 of 9', detail: 'won against Top' })
-    expect(worst).toEqual({ label: 'Worst matchup', value: '36%', detail: 'won 4 of 11 against Bottom' })
+  it('ranks by wins over wins plus losses, a draw in neither', () => {
+    // Eleven matches with one draw: 6 won, 4 lost is 60%, over ten finished.
+    const [, best] = matchupTiles([row('Drawn', 11, 6, { lost: 4 })])
+    expect(best).toEqual({ label: 'Best matchup', value: '60%', detail: `6${WJ}–${WJ}4 against Drawn` })
+    // Ten matches with a draw leave nine to rate: left out.
+    const [, none] = matchupTiles([row('Short', 10, 5, { lost: 4 })])
+    expect(none.value).toBe('—')
   })
 
   it('among equal rates takes the row of more matches, for the best and the worst', () => {
-    // Best: 3 of 5 and 6 of 10 are both 60%, the ten taken. Worst: 1 of 5
-    // and 2 of 10 both 20%, the ten taken.
+    // Best: 6 of 10 and 12 of 20 are both 60%, the twenty taken. Worst: 2 of 10
+    // and 4 of 20 both 20%, the twenty taken.
     const [, best, worst] = matchupTiles([
-      row('BestFive', 5, 3),
       row('BestTen', 10, 6),
-      row('WorstFive', 5, 1),
+      row('BestTwenty', 20, 12),
       row('WorstTen', 10, 2),
+      row('WorstTwenty', 20, 4),
     ])
-    expect(best.detail).toBe('won 6 of 10 against Best Ten')
-    expect(worst.detail).toBe('won 2 of 10 against Worst Ten')
+    expect(best.detail).toBe(`12${WJ}–${WJ}8 against Best Twenty`)
+    expect(worst.detail).toBe(`4${WJ}–${WJ}16 against Worst Twenty`)
   })
 
   it('with two rows equal in rate and matches, the best takes the first and the worst the other', () => {
-    const [, best, worst] = matchupTiles([row('First', 6, 3), row('Second', 6, 3)])
-    expect(best.detail).toBe('won against First')
-    expect(worst.detail).toBe('won against Second')
+    const [, best, worst] = matchupTiles([row('First', 12, 6), row('Second', 12, 6)])
+    expect(best.detail).toBe(`6${WJ}–${WJ}6 against First`)
+    expect(worst.detail).toBe(`6${WJ}–${WJ}6 against Second`)
   })
 
   it('writes an archetype that is not named in the tile’s line', () => {
     const [, best, worst] = matchupTiles([
-      row('a', 5, 5, { kind: 'unrecognized', label: 'RG · Some Card', colors: 'RG' }),
-      row('b', 5, 0, { kind: 'unknown', label: null }),
+      row('a', 10, 10, { kind: 'unrecognized', label: 'RG · Some Card', colors: 'RG' }),
+      row('b', 10, 0, { kind: 'unknown', label: null }),
     ])
-    expect(best.detail).toBe('won against an unrecognized deck')
-    expect(worst.detail).toBe('won against an unknown deck')
+    expect(best.detail).toBe(`10${WJ}–${WJ}0 against an unrecognized deck`)
+    expect(worst.detail).toBe(`0${WJ}–${WJ}10 against an unknown deck`)
   })
 })
 
@@ -314,24 +388,24 @@ describe('fieldLine', () => {
   const games = { won: 17, lost: 4 }
 
   it('is the games alone when the field has no record, or no rate', () => {
-    expect(fieldLine(games, undefined)).toBe('Games 17–4')
-    expect(fieldLine(games, null)).toBe('Games 17–4')
-    expect(fieldLine(games, { winrate: null, entries: 12 })).toBe('Games 17–4')
+    expect(fieldLine(games, undefined)).toBe(`Games 17${WJ}–${WJ}4`)
+    expect(fieldLine(games, null)).toBe(`Games 17${WJ}–${WJ}4`)
+    expect(fieldLine(games, { winrate: null, entries: 12 })).toBe(`Games 17${WJ}–${WJ}4`)
   })
 
   it('adds the field’s rate and entries from five entries', () => {
     expect(fieldLine(games, { winrate: 0.6, entries: 140 })).toBe(
-      `Games 17–4 · wins 60% in tournaments, 140${NBSP}entries`,
+      `Games 17${WJ}–${WJ}4 · wins 60% in tournaments, 140${NBSP}entries`,
     )
-    expect(fieldLine(games, { winrate: 0.6, entries: 5 })).toBe(`Games 17–4 · wins 60% in tournaments, 5${NBSP}entries`)
+    expect(fieldLine(games, { winrate: 0.6, entries: 5 })).toBe(`Games 17${WJ}–${WJ}4 · wins 60% in tournaments, 5${NBSP}entries`)
   })
 
   it('says under five entries are too few to trust, one entry in the singular', () => {
     expect(fieldLine(games, { winrate: 0.5, entries: 1 })).toBe(
-      `Games 17–4 · wins 50% in tournaments, 1${NBSP}entry, too few to trust`,
+      `Games 17${WJ}–${WJ}4 · wins 50% in tournaments, 1${NBSP}entry, too few to trust`,
     )
     expect(fieldLine(games, { winrate: 0.25, entries: 4 })).toBe(
-      `Games 17–4 · wins 25% in tournaments, 4${NBSP}entries, too few to trust`,
+      `Games 17${WJ}–${WJ}4 · wins 25% in tournaments, 4${NBSP}entries, too few to trust`,
     )
   })
 })

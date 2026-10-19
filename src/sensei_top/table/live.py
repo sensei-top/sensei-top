@@ -175,6 +175,8 @@ def build_library_remaining(
     Once the replay has seen a SubmitDeckResp (``state.deck_boarded``) the
     subtraction runs against ``state.deck_maindeck``, the list held for the
     game after a sideboarding break, rather than the ``decks`` row (game 1's).
+    A card with every copy seen stays in, at ``left == 0``: the panel keeps
+    its row in place rather than reflowing the list mid-game.
     Empty when there is no deck, no live state, or self_seat is unresolved
     — never a guess at what's left (rule 4).
     """
@@ -216,8 +218,6 @@ def build_library_remaining(
     cards: list[LibraryCard] = []
     for grp_id, quantity in counts.items():
         left = max(0, quantity - len(seen.get(grp_id, ())))
-        if left <= 0:
-            continue
         row = by_id.get(grp_id)
         name = row["name"] if row else None
         mana_cost = row["mana_cost"] if row else None

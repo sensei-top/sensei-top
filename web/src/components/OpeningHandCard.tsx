@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { OpeningHandCardOut, OpeningHandOut } from '../api'
 import type { TFunction } from '../i18n'
+import { formatRecord } from '../lib/format'
 import { Card, CardTile } from './ui'
 
 /** The verdict's headline word; a verdict this table does not know reads
@@ -62,7 +63,9 @@ function mulliganRecordLine(hand: OpeningHandOut, t: TFunction): string | null {
     hand.mulligan_count === 0
       ? t('live.hand.keeping7')
       : t('live.hand.mull', { n: hand.mulligan_count })
-  return t('live.hand.deckRecord', { wins: record.wins, losses: record.games - record.wins, label })
+  // `games` counts finished wins and losses only (table/keep.py filters
+  // draws out), so the difference is the losses.
+  return t('live.hand.deckRecord', { record: formatRecord(record.wins, record.games - record.wins), label })
 }
 
 /** The hand actually dealt, read from the log before the keep/mulligan
@@ -108,12 +111,6 @@ export function OpeningHandCard({ hand }: { hand: OpeningHandOut | null | undefi
     hand.land_min != null && hand.land_max != null
       ? t('live.hand.band', { min: hand.land_min, max: hand.land_max })
       : null,
-    hand.on_the_play == null
-      ? null
-      : hand.on_the_play
-        ? t('live.onPlay')
-        : t('live.onDraw'),
-    hand.mulligan_count > 0 ? t('live.hand.mulligan', { n: hand.mulligan_count }) : null,
     mulliganRecordLine(hand, t),
   ]
     .filter((part): part is string => part != null)

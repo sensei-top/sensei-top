@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { useGenerateLeaksNarrative, useLeaksNarrative, useLLMStatus, usePasteLeaksNarrative } from '../../api'
 import type { LeakOut } from '../../api'
+import { formatPercent } from '../../lib/format'
 import { gapPoints, leakCategoryLabel, winsOf } from '../../lib/guide'
 import { patternSentence, patternWords } from '../../lib/patterns'
 import { formatCount } from '../../lib/time'
 import { writerFrom } from '../../lib/writer'
-import { percent } from '../../theme'
 import { Card, Chip, Disclosure, IntervalBar } from '../ui'
 import { GenerateCard } from '../GenerateCard'
 import { PatternMatches } from './PatternMatches'
@@ -44,7 +44,7 @@ export function LeakCard({ leak, withDeck }: { leak: LeakOut; withDeck: boolean 
           <div className="mb-1 flex items-center justify-between text-caption text-muted">
             <span>{t('decks.guide.leak.withIt')}</span>
             <span className="tabular-nums">
-              {percent(leak.win_rate_with)} ({percent(leak.ci_with[0])}–{percent(leak.ci_with[1])})
+              {formatPercent(leak.win_rate_with)} ({formatPercent(leak.ci_with[0])}–{formatPercent(leak.ci_with[1])})
             </span>
           </div>
           <IntervalBar rate={leak.win_rate_with} ci={leak.ci_with} colorClass="s1" />
@@ -53,8 +53,8 @@ export function LeakCard({ leak, withDeck }: { leak: LeakOut; withDeck: boolean 
           <div className="mb-1 flex items-center justify-between text-caption text-muted">
             <span>{t('decks.guide.leak.withoutIt')}</span>
             <span className="tabular-nums">
-              {percent(leak.win_rate_without)} ({percent(leak.ci_without[0])}–
-              {percent(leak.ci_without[1])})
+              {formatPercent(leak.win_rate_without)} ({formatPercent(leak.ci_without[0])}–
+              {formatPercent(leak.ci_without[1])})
             </span>
           </div>
           <IntervalBar rate={leak.win_rate_without} ci={leak.ci_without} colorClass="s2" />

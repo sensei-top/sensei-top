@@ -33,19 +33,21 @@ over the entire history — every match ever recorded — by re-running one comm
 | `brief/` | One `(deck, archetype)` pairing | Any board state, any game in progress |
 | `table/` | The match in progress, via one replay | Writing anything; any completed match |
 | `metagame/` | Tournament results, evidence tiers | `Player.log`, `reader/`, `projector/` |
+| `coach/` | `review/`, `guide/`, every deck's projected matches | `reader/`, `raw_events`, files |
+| `archetypes/` | Revealed cards, archetype definitions, the corpus | `reader/`, `raw_events`, files |
 | `api/app.py` | SQL over views; the feature packages' public API | How anything was produced |
 
 If you find yourself importing the projector from the reader, the design has
 been violated. `live.py` exists precisely so neither has to know the other.
 
-The six feature packages below the pipeline share one rule the pipeline rows
+The seven feature packages below the pipeline share one rule the pipeline rows
 do not: **they are pure functions of an already-projected database.** None of
 them imports `reader/`, none reads `raw_events`, and none writes anything the
 projector could rebuild. Each states its own charter in its `__init__.py` —
 read those first; they are a few hundred tokens each and they explain the
 boundary this table can only name.
 
-Two exceptions, both deliberate and both documented at the site:
+Three exceptions, all deliberate and all documented at the site:
 
 - **`table/` reads `raw_events` directly.** It replays the current match at
   request time rather than reading `turns`, because a full `project()` rebuild
@@ -58,6 +60,13 @@ Two exceptions, both deliberate and both documented at the site:
 - **`brief/` and the narrative stores persist their output.** An authored
   narrative is not a derivation, so a rebuild cannot recompute it. See rule 6
   in AGENTS.md and the table ownership section below.
+- **`archetypes/` and `metagame/` write what they download, and
+  `archetypes/` finishes the rebuild.** Archetype definitions and the
+  tournament corpus are downloads, not derivations. `classify_matches()`
+  writes `opponent_archetype` and the format-inference tables right after
+  every `project()`, because the rebuild deletes them
+  ([opponent-deck.md](opponent-deck.md)). The table ownership section below
+  says who deletes each.
 
 ## Full rebuild, always
 
@@ -99,6 +108,15 @@ separate threads rather than one:
   blocking the next log line — the old single-loop design ran ingest and
   rebuild back-to-back on one thread, so a rebuild's write lock (or even just
   its lock-free parse phase) delayed every new line until it finished.
+  The thread split does not remove the lock itself: an ingest tick still
+  waits for the rebuild's `COMMIT` before it can append, so `project()`
+  builds every row before its `BEGIN` and holds the lock for the deletes
+  and inserts alone. It once read and decoded every stored MTGO game log
+  inside the transaction; with 365 of them, on a 2.4 GB database
+  (2026-10-19), the lock had grown to 15–18 s and the Live page stalled
+  that long once a rebuild, about every 75 s of a game. Built first, the
+  same rebuild's longest wait for a writer measured 1.8 s, with every
+  derived table byte-identical.
 - **Rebuild, gated to a duty cycle, `project_every` (default 5 s) as a
   floor.** New rows mark the projection dirty; a later tick does the work.
   Rebuilding on every ingest would be waste today and unaffordable after a
@@ -110,7 +128,7 @@ separate threads rather than one:
   `project_if_due` (`live.py`) instead gates on
   `max(project_every, _last_duration * duty_factor)` — `duty_factor`
   (default 1.0, CLI `--duty-factor`) holds the watcher to roughly a
-  `1/duty_factor` duty cycle (~50% at the default) measured off the
+  `1/(1+duty_factor)` duty cycle (~50% at the default) measured off the
   *previous* rebuild's own wall time, so the cost stays a fixed fraction of
   real time as history grows instead of consuming a whole core continuously.
   (The default was 4.0/~20% until the Current match tab went Arena-only —
@@ -162,16 +180,16 @@ a source the Live page does not show
 (`migrations/040_arena_only_current_match.sql`). So the leg checks the folder
 every 2 s and holds a changed file back until one of two things is true:
 
-- **Its last game names a winner and the file has been quiet 5 s.** Whether
-  the last game names a winner is the projector's answer
+- **Its last game names a winner, a loser or a draw and the file has been
+  quiet 5 s.** Whether the last game is decided is the projector's answer
   (`projector/mtgo/parse.py::last_game_decided`); the reader only reports
   which files moved and stores the one it is handed, and `live.py` combines
   the two (non-negotiable 1). The 5 s keeps a row from catching a write half
   done: MTGO's own, or a copy's when the folder is mirrored, as the author's
   is from a VM through a share `robocopy` fills.
 - **The file has been quiet 10 minutes**, whatever its last game says. A
-  disconnect, a crash or a game that ends with no winner line still lands, as
-  an unfinished game, which the projector already reads.
+  disconnect, a crash or an ending line the parser doesn't know still lands,
+  as an unfinished game, which the projector already reads.
 
 Quiet alone cannot tell a finished game from a long think: in the measured
 match one mid-game pause lasted 36 s and the gap between games 46 s, and a
@@ -186,14 +204,22 @@ forced one, went with the Current match tab's MTGO support).
 **A mirrored folder can fold two games into one row.** When the folder is a
 copy, as the author's is (a `robocopy` in the VM fills the share once a
 minute), a game's end and the next game's first line can reach the copy in
-the same pass. The copy then never holds a file whose last game names a
-winner, so that game gets no row of its own; the next row, at the next
+the same pass. The copy then never holds a file whose last game is
+decided, so that game gets no row of its own; the next row, at the next
 game's end, holds it, and nothing is lost. Measured on one real Bo3 (plan 3,
 phase 10): two rows for three games, each landing 6–7 s after the copy
 received the write. On such a setup a row lands up to about a minute after
 its game ends, the copy's own interval. Not yet run against MTGO's own
 folder, where the next game's first line is written only once that game
 starts (46 s after the previous one ended, in plan 12's measurement).
+
+**Two kinds of game log project no match, on purpose.** A match the user
+only watched: the configured handle writes `has started watching.` and
+plays in none of its games, so `projector/mtgo/project.py` skips the file
+with a debug line and no warning (plan 30, D6). And a game with more than
+one opponent, such as Commander, skipped with a warning, because a match
+row holds one opponent. On 2026-10-19 these were all 9 of the real
+history's 365 game logs that projected no match: 8 watched, 1 Commander.
 
 A file counts as read (`ingest_state`) only once it is stored, so a watcher
 stopped mid-game leaves it for the next one. Its identity token is
@@ -245,6 +271,20 @@ persisted to `projection_state.projected_through_id` so a process restart
 restores it instead of resetting to 0 — which would otherwise force the first
 boundary check after a restart to scan every row ever ingested rather than
 just the tail since the last rebuild.
+
+The watermark alone would leave a fixed projector's old rows in place: a
+watcher restarted after an upgrade restores it, finds nothing new past it,
+and never rebuilds until Arena or MTGO writes again. So the rebuild also
+stores `PROJECTOR_VERSION` (`projector/__init__.py`) in
+`projection_state.projector_version`, and a watcher that finds a different
+value, or `NULL`, treats its first poll as dirty and rebuilds once. Bump the
+constant by hand in any commit that changes what `project()` derives from
+the same `raw_events` — a parsing fix, a new derived column, a corrected
+rule — and leave it alone for a change that derives the same rows; the
+reviewer checks it. It is not the app's version: a release that touches
+only the dashboard rebuilds nothing. The one-shot `project` command does
+not write `projection_state`, so a watcher started after it rebuilds once
+more, which is harmless.
 
 A failing poll is recorded and the loop continues. A watcher that dies silently
 during a session is worse than one that logs an error and keeps going.
@@ -309,8 +349,8 @@ self-contained, compacted snapshot instead.
 - **Applied at a process's startup, never mid-run.** `open_database()` is for
   a one-shot command's connection and for `serve`'s startup, which migrates
   once before any thread or process starts. Everything `serve` opens after
-  that (the watcher's ingest thread, the backup check, the refresh loops, the
-  bulk-stats child) uses `connect()`. `serve` runs from the working tree, so
+  that (the watcher's ingest thread, the backup check, the refresh loops) uses
+  `connect()`. `serve` runs from the working tree, so
   a connection that migrated an hour in would apply whatever migration file
   had appeared since: uncommitted, unreviewed, under code that doesn't
   know the new schema. That happened once, to 047, through the backup
@@ -681,7 +721,8 @@ which the Decks page and every one of a deck's own pages resolve their
 address against (`docs/frontend.md`, "A deck's pages").
 `/api/metrics/winrate` reads the same view, though no page calls it, and
 adds one row with a null `deck_key` for every match no deck was recorded
-for, which takes in every MTGO match.
+for, which takes in every MTGO match the user has not picked a deck for
+(with `source=mtgo` or `all`; the default is `arena`).
 
 The line, stated as a rule:
 
@@ -696,8 +737,8 @@ What is legitimately Python, and why each one is:
 
 | Computation | Where | Why not a view |
 |---|---|---|
-| Wilson score intervals | `review/leaks.py:67` | Needs `sqrt` and a z-constant; SQLite has neither without an extension |
-| Hypergeometric PMF | `table/keep.py:98` | Needs `math.comb` over a loop |
+| Wilson score intervals | `review/leaks.py::_wilson` | Needs `sqrt` and a z-constant; SQLite has neither without an extension |
+| Hypergeometric PMF | `table/keep.py::_hypergeometric_pmf` | Needs `math.comb` over a loop |
 | Draw-odds complement | `table/hand_read.py` | Sequential product over a variable-length draw |
 | Medians and curve shapes | `guide/play.py` | SQLite has no median; the windowing is per-deck |
 | Field share, windowed to a format reset | `guide/field.py`, `brief/narrative.py` | The window start is computed from a detected ban date, not a literal |
@@ -712,16 +753,17 @@ formula is the one chosen.
 
 ## Who owns which table
 
-Three lifecycles, and confusing them is how data gets destroyed:
+Each table has one owner, and confusing their lifecycles is how data gets destroyed:
 
 | Owner | Tables | Rebuild behaviour |
 |---|---|---|
 | Reader | `raw_events`, `ingest_state`, `header_date_order` | `raw_events` append-only, the other two updated in place (`docs/arena-log.md`, "Timestamps", for the third); never deleted |
-| Projector | `decks`, `matches`, `games`, `turns`, `turn_zones`, `card_events`, `deck_guids`, `opponent_archetype`, `game_decks`, `rank_snapshot` | Deleted and recomputed by every `project()` |
+| Projector | `decks`, `matches`, `games`, `turns`, `turn_zones`, `card_events`, `deck_guids`, `opponent_archetype`, `game_decks`, `rank_snapshot`, `combat_attacks`, `combat_blocks`, `damage_events`, `life_events` | Deleted and recomputed by every `project()` |
 | Format inference | `match_format_fit`, `match_format_inference` | Deleted and recomputed by every `classify_matches()`, which runs right after `project()`; `project()` itself never touches them. MTGO matches only |
 | Downloaded reference | `cards`, `card_legality`, `mtgo_card`, `archetypes`, `archetype_fetch`, `meta_event`, `meta_fetch`, `meta_fetch_source`, `meta_deck`, `meta_round_match` | Never deleted — a rebuild must not throw away a fetch |
 | Metagame classifier | `meta_deck_archetype` | Deleted and recomputed by every `classify_meta_decks()`, same reasoning as `opponent_archetype` |
 | Corpus fetchers | `meta_fetch_hold` | Written only by the mtgo.com and TopDeck fetchers: a refusal, a 429 or a 503 writes the source's row, and a completed run deletes it. `project()` never reads it, and a rebuild leaves it alone |
+| Bookkeeping | `projection_state`, `backup_state` | Updated in place, by the watcher and by `backup/` respectively; never deleted — `project()` never touches them |
 | The user | `opponent_deck_override`, `mtgo_match_pick` | Never deleted — their own pick for their own match: the opponent's deck for either client, and the user's own deck and format for an MTGO match, which MTGO's log never names |
 | Authored prose | `deck_narrative`, `matchup_brief`, `match_narrative`, `leaks_narrative`, `coach_report`, `rcq_guide` | Never deleted by `project()` — written, not derived, so a rebuild could not recompute them |
 

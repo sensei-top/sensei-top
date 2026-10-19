@@ -143,8 +143,8 @@ def _best_key_play_band(bands: dict[str, WLTally]) -> tuple[str, WLTally] | None
     games — otherwise a single early fluky resolve (say 1-0 off one game)
     would out-rank a band actually played out hundreds of times, the exact
     failure the repo's MIN_SAMPLE/PLAY_DRAW_MIN_GAMES convention exists to
-    avoid elsewhere. Falls back to the most-sampled band when none of them
-    clear that bar, rather than naming no band at all for a card that
+    avoid elsewhere. Falls back to the best win rate among all bands when none
+    of them clear that bar, rather than naming no band at all for a card that
     otherwise qualified as one of this deck's key cards. Returns ``None``
     only when every band (bar "never resolved") is literally empty."""
     candidates = {band: tally for band, tally in bands.items() if band != "never resolved"}

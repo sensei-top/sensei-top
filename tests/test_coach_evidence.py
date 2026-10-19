@@ -162,7 +162,7 @@ def test_each_exclusion_reason_removes_the_match_and_reports_a_gap_line(conn):
 
 
 def test_a_pick_two_draft_event_is_limited(conn):
-    """A real Arena id (the same one tests/test_table_ranked.py carries)."""
+    """A real Arena id (the same one tests/test_table_queues.py carries)."""
     assert evidence_mod._is_limited_event("PickTwoDraft_FRA_20260929")
     _insert_match(conn, "pick2", "win", event_id="PickTwoDraft_FRA_20260929")
     conn.commit()

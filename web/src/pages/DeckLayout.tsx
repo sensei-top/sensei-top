@@ -3,19 +3,21 @@ import { useTranslation } from 'react-i18next'
 import { Navigate, NavLink, Outlet, useLocation, useParams, useSearchParams } from 'react-router'
 import { useDecks, useGuide, useGuideDecks } from '../api'
 import type { TFunction } from '../i18n'
+import { DeckKeyNumbers } from '../components/DeckKeyNumbers'
 import { BackLink, Button, EmptyState, ErrorNote, Loading } from '../components/ui'
 import { chosenVersion } from '../lib/deckOverview'
 import { deckLine, deckRedirect, fieldNameLine, newestVersion, resolveDeck } from '../lib/decks'
 import { useNow } from '../lib/time'
 
 /** The deck's tabs. Overview and Matchups read the version the address
- *  chose, so their links keep it; the Guide reads the deck whole, and
- *  its link drops it. */
+ *  chose, so their links keep it; the Guide and RCQ read the deck whole,
+ *  and their links drop it. */
 function deckTabs(t: TFunction) {
   return [
     { to: '.', label: t('decks.layout.tabs.overview'), end: true, keepsVersion: true },
     { to: 'matchups', label: t('decks.layout.tabs.matchups'), end: false, keepsVersion: true },
     { to: 'guide', label: t('decks.layout.tabs.guide'), end: false, keepsVersion: false },
+    { to: 'rcq', label: t('decks.layout.tabs.rcq'), end: false, keepsVersion: false },
   ]
 }
 
@@ -30,23 +32,25 @@ export type DeckOutletContext = {
   version: string | null
 }
 
-/** The layout a deck's three pages share: the way back to every deck, the
+/** The layout a deck's four pages share: the way back to every deck, the
  *  deck's name as typed (muted "Unnamed deck" without one), the field's name
- *  for it when the guide gives one that differs, the deck's line over the
- *  whole deck (every version, whichever the address chose), and the
- *  navigation between Overview, Matchups and Guide.
+ *  for it when the guide gives one that differs, the deck's line (its
+ *  format and when it was last played), the deck strip over the versions
+ *  the tab reads (`DeckKeyNumbers`; on the Guide and RCQ, which drop `?version=`,
+ *  every version), and the navigation between Overview, Matchups, Guide
+ *  and RCQ.
  *
  *  `:id` is a deck's key, its colon written bare (`lib/decks.ts`'s
  *  `deckAddress`). An address that names one of a deck's versions instead,
  *  as addresses did before, or spells the key's colon `%3A`, is sent on to
  *  the deck's own, the page under it, the query and the hash kept, in
  *  place of the history entry. An id that names no deck says so and
- *  renders none of the three.
+ *  renders none of the four.
  *
  *  `?version=` names one of the deck's versions to read alone; absent, or
  *  a value that is not one of the deck's versions, or on a deck of one
  *  version, it is every version. The Overview and Matchups tabs carry a
- *  chosen version to each other; the Guide's tab leaves it behind. */
+ *  chosen version to each other; the Guide and RCQ tabs leave it behind. */
 export function DeckLayout() {
   const { t } = useTranslation()
   const { id } = useParams()
@@ -91,6 +95,7 @@ export function DeckLayout() {
   const fieldName = guide.data ? fieldNameLine(guide.data.list_diff?.archetype_name, identity.name, t) : null
   const context: DeckOutletContext = { deckKey: identity.key, deckId, versionIds, version }
   const versionSearch = version ? `?${new URLSearchParams({ version })}` : ''
+  const line = deckLine(identity, now, t)
 
   return (
     <div className="space-y-6">
@@ -104,7 +109,8 @@ export function DeckLayout() {
           </h2>
           {fieldName && <p className="text-body text-ink2">{fieldName}</p>}
         </div>
-        <p className="text-caption text-muted">{deckLine(identity, now, t)}</p>
+        {line && <p className="text-caption text-muted">{line}</p>}
+        <DeckKeyNumbers versionIds={versionIds} />
         <nav aria-label={t('decks.layout.nav')} className="flex flex-wrap gap-1 pt-1">
           {deckTabs(t).map((tab) => (
             // NavLink marks the current one with aria-current="page" itself.

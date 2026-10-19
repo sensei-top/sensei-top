@@ -49,6 +49,7 @@ from pathlib import Path
 import pytest
 
 from sensei_top.api.convert import _intermission_out
+from sensei_top.api.models.current_match import PostboardRecordOut
 from sensei_top.api.sql import _cached_break_read
 from sensei_top.archetypes.corpus import MIN_CORPUS_DECKS
 from sensei_top.brief.store import Brief, write_brief
@@ -199,12 +200,15 @@ def _insert_deck(conn, deck_id, *, name=None, fmt="Standard", cards=None):
     )
 
 
-def _insert_match(conn, match_id, deck_id, result, started_at, *, event_id="Traditional_Ladder"):
+def _insert_match(
+    conn, match_id, deck_id, result, started_at, *, event_id="Traditional_Ladder", best_of=None
+):
     conn.execute(
         "INSERT INTO matches (match_id, event_id, deck_id, self_seat, opponent_seat, "
         "opponent_user_id, opponent_name, started_at, ended_at, result, games_won, "
-        "games_lost, completed_reason) VALUES (?, ?, ?, 1, 2, 'u', 'n', ?, ?, ?, 0, 0, 'r')",
-        (match_id, event_id, deck_id, started_at, started_at, result),
+        "games_lost, completed_reason, best_of) "
+        "VALUES (?, ?, ?, 1, 2, 'u', 'n', ?, ?, ?, 0, 0, 'r', ?)",
+        (match_id, event_id, deck_id, started_at, started_at, result, best_of),
     )
 
 
@@ -421,6 +425,90 @@ def test_past_boarding_diffs_against_that_matchs_own_game_1_maindeck(conn):
     assert [c.grp_id for c in game.board_in] == [301]
     assert game.board_in[0].card == "Outside Card"
     assert game.board_in[0].in_current_75 is False  # cut since, but still shown
+
+
+def _insert_games(conn, match_id, results):
+    for number, result in enumerate(results, start=1):
+        conn.execute(
+            "INSERT INTO games (match_id, game_number, result) VALUES (?, ?, ?)",
+            (match_id, number, result),
+        )
+
+
+def test_postboard_record_sums_games_2_and_3_of_earlier_best_of_three_matches(conn):
+    """Two earlier finished Bo3 matches against the archetype: games 2-3 are
+    win/loss and loss/draw, so 1 won, 2 lost (game 1s and the draw are out).
+    Excluded: the current match (own games 2-3), a Bo1 and an unfinished Bo3
+    against the same archetype, a Bo3 of the same deck against another
+    archetype, and a Bo3 of another deck against this archetype."""
+    deck_id = "deck-post"
+    _insert_deck(conn, deck_id, cards={"maindeck": [101], "sideboard": []})
+    _insert_deck(conn, "deck-other", cards={"maindeck": [999], "sideboard": []})
+    for match_id, deck, best_of, result, key, results in (
+        ("m-cur", deck_id, 3, "incomplete", "rogue-aggro", ["win", "win", "win"]),
+        ("m-a", deck_id, 3, "win", "rogue-aggro", ["win", "win", "loss"]),
+        ("m-b", deck_id, 3, "loss", "rogue-aggro", ["loss", "loss", "draw"]),
+        ("m-bo1", deck_id, 1, "win", "rogue-aggro", ["loss", "loss"]),
+        ("m-unfinished", deck_id, 3, "incomplete", "rogue-aggro", ["win", "loss", "loss"]),
+        ("m-other-arch", deck_id, 3, "win", "control", ["win", "loss", "loss"]),
+        ("m-other-deck", "deck-other", 3, "win", "rogue-aggro", ["win", "loss", "loss"]),
+    ):
+        started = "2026-09-20T00:00:00" if match_id == "m-cur" else "2026-09-10T00:00:00"
+        _insert_match(conn, match_id, deck, result, started, best_of=best_of)
+        _insert_override(conn, match_id, label=key, archetype_key=key)
+        _insert_games(conn, match_id, results)
+    conn.commit()
+
+    result = build_break_read(conn, "m-cur", deck_id, _live_at_break(), caches={}, names=[])
+
+    assert result is not None
+    assert result.postboard_record is not None
+    assert (result.postboard_record.won, result.postboard_record.lost) == (1, 2)
+    assert _intermission_out(result).postboard_record == PostboardRecordOut(won=1, lost=2)
+
+
+def test_postboard_record_is_none_without_a_named_archetype_or_a_game(conn):
+    """Nothing named: ``None`` even though a closest alternative exists and a
+    Bo3 was played against it (the record reads ``chosen_key`` only). Named,
+    but the only earlier match is a Bo1: ``None`` as well."""
+    deck_id = "deck-post-none"
+    _insert_deck(conn, deck_id, cards={"maindeck": [101], "sideboard": []})
+    _insert_match(conn, "m-cur", deck_id, "incomplete", "2026-09-20T00:00:00", best_of=3)
+    _insert_match(conn, "m-bo1", deck_id, "win", "2026-09-10T00:00:00", best_of=1)
+    _insert_override(conn, "m-bo1", label="Rogue Aggro", archetype_key="rogue-aggro")
+    _insert_games(conn, "m-bo1", ["loss", "loss"])
+    # Two fallbacks, each with two of its four cards revealed, tie at fit
+    # 0.25, so the margin
+    # (1.0, under MIN_MARGIN 1.5, as hand-computed in the closest-alternative
+    # test above) commits to neither: both rank as alternatives, nothing is
+    # named. A finished Bo3 was played against the first.
+    for source, name in (("fallback-a", "Fallback A"), ("fallback-b", "Fallback B")):
+        _insert_fallback(
+            conn, fmt="Standard", source=source, name=name,
+            common_cards=[f"Card {name[-1]}{i}" for i in range(1, 5)],
+        )
+    _insert_match(conn, "m-alt", deck_id, "win", "2026-09-11T00:00:00", best_of=3)
+    _insert_override(conn, "m-alt", label="Fallback A", archetype_key="fallback-a")
+    _insert_games(conn, "m-alt", ["win", "loss", "loss"])
+    conn.commit()
+    # An alternative is one with a stored brief.
+    identity = next(i for i in list_identities(conn) if deck_id in i.deck_ids)
+    write_brief(conn, _brief(identity.key, "fallback-a", archetype_label="Fallback A"))
+    conn.commit()
+
+    names = ["Card A1", "Card A2", "Card B1", "Card B2"]
+    unnamed = build_break_read(
+        conn, "m-cur", deck_id, _live_at_break(), caches={}, names=names
+    )
+    assert unnamed is not None
+    assert unnamed.opponent is None or unnamed.opponent.archetype_key is None
+    assert [a.archetype_key for a in unnamed.alternatives] == ["fallback-a"]
+    assert unnamed.postboard_record is None
+
+    _insert_override(conn, "m-cur", label="Rogue Aggro", archetype_key="rogue-aggro")
+    conn.commit()
+    named = build_break_read(conn, "m-cur", deck_id, _live_at_break(), caches={}, names=[])
+    assert named is not None and named.postboard_record is None
 
 
 class _FakeAppState:

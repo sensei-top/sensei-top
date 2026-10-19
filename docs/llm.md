@@ -21,7 +21,7 @@ Before this feature existed, "this app cannot spend money" was a *structural*
 fact — there was no HTTP client for Anthropic in the runtime dependency set at
 all. It is now a *configuration* fact: no key, no call. That is a genuinely
 weaker guarantee, and the three things that keep it honest are `llm/config.py`
-returning `None`, every caller checking for it, and the test named at the
+returning `None`, every caller checking for it, and the tests named at the
 bottom of this section.
 
 **There is no background worker, and that is load-bearing.** One used to exist
@@ -34,6 +34,13 @@ building it means revisiting rule 5, not extending it.
 evidence to Anthropic's API when — and only when — the user has configured a
 credential. That is the deliberate trade rule 5 makes. It does not extend to
 anything else this app fetches or sends.
+
+With no credential configured, none of the five routes may even build a
+client: `tests/test_llm.py::test_no_credential_means_no_client_is_constructed`
+pins it for the match report, the leak finder, the deck guide and the RCQ
+guide, and
+`tests/test_coach_api.py::test_no_credential_means_no_client_is_constructed`
+for the coach.
 
 ## The standard for the free downloads
 
@@ -276,11 +283,16 @@ answer in, one `{"prose": ...}` object for the prose cards. A generate
 call sends the prompt without that contract (`full_prompt`, the coach's
 `CoachPrompt.prompt`), because its reply is stored whole or read through
 the tool's own schema. The evidence is the same text either way, tested
-the same way: `test_narrative_prompt_carries_no_local_paths` and
-`test_context_never_carries_any_game_in_progress_signal` cover exactly
-what leaves the machine, and they are load-bearing now in a way they
-were only decorative before: a bug in one of those builders used to
-produce a prompt a human read before pasting anywhere; now it's a
+the same way, one route's builder at a time:
+`test_narrative_prompt_carries_no_local_paths` (`tests/test_api.py`,
+`tests/test_narrative.py`) for the match report,
+`test_leaks_context_carries_no_local_paths` for the leak finder,
+`test_build_guide_context_carries_no_local_paths` for the deck guide, and
+`test_build_coach_prompt_over_a_projected_database_no_privacy_leak` with
+`tests/test_coach_evidence.py`'s two `test_privacy_*` tests for the coach.
+The RCQ guide's prompt has no such test. These tests are load-bearing
+now in a way they were only decorative before: a bug in one of those
+builders used to produce a prompt a human read before pasting anywhere; now it's a
 prompt the API sends.
 
 The matchup brief (`GET /api/current-match/brief`) deliberately has **no**
@@ -317,7 +329,7 @@ The coach's cost adds one more term: each web search the model actually runs
 costs $10 per 1,000 searches (`_SEARCH_COST_PER_1000`, confirmed against
 Anthropic's live pricing 2026-09-18) — $0.01 a search — on top of its
 token cost, accumulated across every response in the call including any
-`pause_turn` continuation. The other three routes never search, so this term
+`pause_turn` continuation. The other four routes never search, so this term
 is always zero for them.
 
 **Prompt caching: the coach's loop only.** Every request in
@@ -352,7 +364,7 @@ fixture-backed scratch database used in `tests/test_llm.py`:
 
 | Feature | Measured cost | Notes |
 |---|---|---|
-| Match report (the `"Coach's summary"` card) | $0.098 | 500 input / 200 output tokens, a real 2-game match. The card predates the Coach tab and is unrelated to it — one match, not a cross-deck report |
+| Match report (the `"Coach's summary"` card) | $0.098 | A real 2-game match. The card predates the Coach tab and is unrelated to it — one match, not a cross-deck report |
 | Deck guide | $0.066 | Against the fixture's 2-match deck with **no card oracle text loaded** (`sensei-top cards --scryfall` never run on this scratch DB) — a real deck's guide, with oracle text for its own 75 and the field's top archetypes, will cost more; re-measure against a real `$MTGA_LOG` before trusting this number for planning |
 | Leak narrative | not yet measured | the fixture has only 2 matches — `leaks.MIN_SAMPLE` (10) can never clear on either side of any comparison, so there was nothing to generate a training plan from |
 | Coach report | $0.8482 | Before prompt caching. Opus 5 over a real 245-match database, 2026-09-20: 110,718 input / 9,384 output tokens and 6 web searches (6 × $0.01 = $0.06 of that total). Measured against `$MTGA_LOG`, not the fixture, which can't reach `MIN_SAMPLE` (10) constructed matches. **The prompt is only ~10k tokens**; the billed input is it re-sent on every `pause_turn` continuation, so searches drive this cost, not history size — `--coach-web-search off` takes it to a few cents. See `docs/coach.md` |
@@ -380,10 +392,10 @@ with Claude" once something is stored) and a "Show the prompt" toggle.
 While it writes, the button counts the seconds: these calls are slow,
 and a guide at `effort: high` can take minutes.
 
-A `writer` can also be a paid plan's, which only a desktop shell would
-know of; none exists, so every caller passes no plan and the app draws
-the two cases above (`docs/frontend.md`, "Writing prose"). Nothing here
-changes with it: with no credential configured, the `POST .../narrative`
+`Writer` has those two cases, nobody and a key (`docs/frontend.md`,
+"Writing prose"). A paid plan's writer, which only a desktop shell would
+know of, would be a third; it is not built. Nothing here would change
+with it: with no credential configured, the `POST .../narrative`
 routes still answer 503, and a plan's press would have to go through the
 desktop shell, never through this API.
 
@@ -413,10 +425,9 @@ copy as a service for others owes its users the source under AGPL
 section 13, which is the licence working as intended, not a case this
 project has to design for.
 
-The `writer` hook under "The fallback" above, a paid plan's writer that
-only the desktop shell would know of, is where the allowance would enter
-the dashboard; it is left over from the 2026-10-01 plan and draws nothing
-today.
+The `writer` under "The fallback" above is where the allowance would
+enter the dashboard, as a third case beside nobody and a key; it is not
+built.
 
 Apart from that planned proxy and the account service behind it, which
 holds an email, a sign-in identity and an entitlement and never a match,
@@ -436,7 +447,12 @@ account, no upload" in AGENTS.md's paragraph about the project, which the
 README and the dashboard's footer repeat; the fourth promise in
 `SECURITY.md`, that no match data leaves the machine except the prompt of
 a report the user asked for, and its third, that nothing calls a paid API
-without a configured key; and the claim under "What calls out, and what
-it sends" that two tests cover exactly what leaves the machine. Each stays
+without a configured key; the item about collecting or sharing matches
+under "Never" in `ROADMAP.md`; the first item of the "What never leaves
+your machine" card and the item about collecting or sharing matches in the
+"What is not planned" card, on
+the site's home page in both languages (`site/index.html`,
+`site/pt-br/index.html`); and the claim under "What calls out, and what
+it sends" that per-route tests cover what leaves the machine. Each stays
 true of the free app, so the rewrite adds the subscriber's case beside it
 rather than removing it.

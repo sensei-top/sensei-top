@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { memo, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -11,9 +12,11 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import type { Weeks } from '../../lib/home'
-import { RATE_MIN_MATCHES } from '../../lib/home'
-import { formatCount, formatPercent, formatShortDay } from '../../lib/time'
+import type { Week, Weeks } from '../../lib/home'
+import { RATE_MIN_MATCHES } from '../../lib/sample'
+import { RateCell } from '../RateCell'
+import { formatPercent, formatRecord } from '../../lib/format'
+import { formatCount, formatShortDay } from '../../lib/time'
 import { useTokens } from '../../theme'
 import { ChartTooltip } from '../ChartTooltip'
 import { axisProps, gridProps } from '../chartChrome'
@@ -24,7 +27,14 @@ import { Card, DataTable, Disclosure } from '../ui'
  *  leaves it, so the two cards end on one line. */
 const CHART_MIN_HEIGHT = 'min-h-[200px]'
 
-type Point = { label: string; rate: number | null; played: number; won: number }
+type Point = { label: string; rate: number | null; decided: number }
+
+/** A week's Win rate cell: a `RateCell` over its decided matches, an em
+ *  dash when the week has no rate. */
+function weekRate(week: Week): ReactNode {
+  if (week.rate == null) return '—'
+  return <RateCell key="rate" wins={week.won} losses={week.losses} />
+}
 
 /** Finished matches by week, as a line on 0 to 100%: a dashed line at 50%
  *  (a threshold, "even"), the last point labelled with its rate, a hollow
@@ -53,8 +63,7 @@ export const WeeklyWinrate = memo(function WeeklyWinrate({
       weeks.weeks.map((week) => ({
         label: formatShortDay(week.start, yearStart),
         rate: week.rate == null ? null : Math.round(week.rate * 100),
-        played: week.played,
-        won: week.won,
+        decided: week.won + week.losses,
       })),
     [weeks, yearStart],
   )
@@ -67,7 +76,7 @@ export const WeeklyWinrate = memo(function WeeklyWinrate({
   if (played.length === 0) return null
 
   const lastIndex = points.findLastIndex((point) => point.rate != null)
-  const thin = played.some((week) => week.played < RATE_MIN_MATCHES)
+  const thin = played.some((week) => week.won + week.losses < RATE_MIN_MATCHES)
 
   if (played.length === 1) {
     const [week] = played
@@ -75,8 +84,7 @@ export const WeeklyWinrate = memo(function WeeklyWinrate({
       <Card title={t('home.weekly.title')} className="h-full">
         <p className="text-body text-ink2">
           {t('home.weekly.single', {
-            won: formatCount(week.won),
-            played: formatCount(week.played),
+            record: formatRecord(week.won, week.losses),
             week: formatShortDay(week.start, yearStart),
           })}
         </p>
@@ -113,7 +121,7 @@ export const WeeklyWinrate = memo(function WeeklyWinrate({
                     payload={payload}
                     label={label}
                     labelFormat={(week) => t('home.weekly.weekOfLabel', { week })}
-                    format={(value) => `${value}%`}
+                    format={(value) => formatPercent(value / 100)}
                   />
                 )}
               />
@@ -126,7 +134,7 @@ export const WeeklyWinrate = memo(function WeeklyWinrate({
                 dot={(props: { cx?: number; cy?: number; index?: number; payload?: Point }) => {
                   const { cx, cy, index, payload } = props
                   if (cx == null || cy == null || payload?.rate == null) return <g key={`dot-${index}`} />
-                  const hollow = payload.played < RATE_MIN_MATCHES
+                  const hollow = payload.decided < RATE_MIN_MATCHES
                   return (
                     <circle
                       key={`dot-${index}`}
@@ -154,7 +162,7 @@ export const WeeklyWinrate = memo(function WeeklyWinrate({
                         fontSize={12}
                         fontWeight={600}
                       >
-                        {props.value}%
+                        {formatPercent(props.value / 100)}
                       </text>
                     )
                   }}
@@ -171,14 +179,14 @@ export const WeeklyWinrate = memo(function WeeklyWinrate({
       <div className="mt-3">
         <Disclosure summary={t('home.weekly.showNumbers')}>
           <DataTable
-            columns={[t('home.weekly.weekOf'), t('home.weekly.matches'), t('home.weekly.won'), t('home.weekly.winRate')]}
+            columns={[t('home.weekly.weekOf'), t('home.weekly.matches'), t('home.weekly.record'), t('home.weekly.winRate')]}
             rows={weeks.weeks
               .filter((week) => week.played > 0)
               .map((week) => [
                 formatShortDay(week.start, yearStart),
                 formatCount(week.played),
-                formatCount(week.won),
-                `${formatPercent(week.won / week.played)}%`,
+                formatRecord(week.won, week.losses),
+                weekRate(week),
               ])}
           />
         </Disclosure>

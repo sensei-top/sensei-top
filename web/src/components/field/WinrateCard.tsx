@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { MetaWinrate } from '../../api'
 import { WINRATE_SHOWN, matchesOf, shownRows } from '../../lib/field'
-import { formatCount, formatPercent } from '../../lib/time'
+import { formatPercent } from '../../lib/format'
+import { formatCount } from '../../lib/time'
 import { Card, DataTable, EmptyState, ManaPips } from '../ui'
 import { ShowAll } from './ShowAll'
 
@@ -30,8 +31,8 @@ export function WinrateCard({ rows, when, action }: { rows: MetaWinrate[]; when:
           <DataTable
             columns={[
               t('field.winrate.columns.archetype'),
-              t('field.winrate.columns.winRate'),
               t('field.winrate.columns.matches'),
+              t('field.winrate.columns.winRate'),
               t('field.winrate.columns.lists'),
             ]}
             rows={shown.map((row) => [
@@ -41,10 +42,10 @@ export function WinrateCard({ rows, when, action }: { rows: MetaWinrate[]; when:
                 <ManaPips colors={row.colors} />
                 <span className="min-w-0 wrap-anywhere">{row.label}</span>
               </div>,
-              <span key="rate" className="whitespace-nowrap">
-                {row.winrate != null ? `${formatPercent(row.winrate)}%` : null}
-              </span>,
               formatCount(matchesOf(row)),
+              <span key="rate" className="whitespace-nowrap">
+                {row.winrate != null ? formatPercent(row.winrate) : null}
+              </span>,
               formatCount(row.entries),
             ])}
           />

@@ -2,7 +2,9 @@ import { Trans, useTranslation } from 'react-i18next'
 import type { Session, ThirtyDays } from '../../lib/home'
 import { sessionHeadline } from '../../lib/home'
 import type { ArtCard } from '../../lib/matchArt'
-import { formatCount, formatLongDay, formatPercent } from '../../lib/time'
+import { formatPercent, formatRecord } from '../../lib/format'
+import { RATE_MIN_MATCHES } from '../../lib/sample'
+import { formatCount, formatLongDay } from '../../lib/time'
 import { CardArt, Chip, SectionLabel } from '../ui'
 
 /** The chips name two decks at most; the rest are counted. */
@@ -27,6 +29,7 @@ export function SessionHero({
   const shown = session.decks.slice(0, DECK_CHIPS)
   const more = session.decks.length - shown.length
   const count = session.matches.length
+  const decided = thirty.won + thirty.losses
   return (
     <section className="relative overflow-hidden rounded-hero border border-edge bg-surface shadow-lift [--art-surface:var(--surface-1)]">
       <CardArt grpId={art?.grpId ?? null} name={art?.name ?? null} fade="down" className="h-[170px] md:hidden" />
@@ -42,11 +45,10 @@ export function SessionHero({
         {thirty.outsideSession && (
           <p className="text-lead text-ink2">
             <Trans
-              i18nKey="home.session.thirtyDays"
+              i18nKey={decided >= RATE_MIN_MATCHES ? 'home.session.thirtyDays' : 'home.session.thirtyDaysFew'}
               values={{
-                won: formatCount(thirty.won),
-                played: formatCount(thirty.played),
-                rate: `${formatPercent(thirty.won / thirty.played)}%`,
+                record: formatRecord(thirty.won, thirty.losses),
+                rate: decided > 0 ? formatPercent(thirty.won / decided) : '',
               }}
               components={{ strong: <span className="font-semibold text-ink" /> }}
             />

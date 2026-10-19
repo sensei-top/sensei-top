@@ -40,7 +40,8 @@ import type { Logger } from './log';
 import type { Bounds, ShellStore } from './store';
 
 export const DEFAULT_SIZE = { width: 1280, height: 820 };
-export const MIN_SIZE = { width: 720, height: 480 };
+/** The narrowest window the dashboard is designed for: docs/frontend.md, "Widths". */
+export const MIN_SIZE = { width: 1008, height: 480 };
 /** How much of a remembered window must still be on a display to keep its place. */
 const MIN_VISIBLE = 64;
 const BACKGROUND = '#0b0c14';

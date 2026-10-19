@@ -292,9 +292,6 @@ def run_backup(
         )
 
 
-# -- claim + record -----------------------------------------------------
-
-
 def _claim(conn: sqlite3.Connection) -> tuple[bool, int | None]:
     """One atomic statement: autocommit means this is its own transaction,
     and SQLite serializes writers, so this is race-free without a lock
@@ -386,9 +383,6 @@ def _now_iso() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-# -- the copy -------------------------------------------------------------
-
-
 def _vacuum_into(db_path: Path, temp: Path, *, stop: threading.Event | None) -> None:
     """Runs ``VACUUM INTO`` on a connection of its own -- see this module's
     docstring for why that is the one non-negotiable part of this function.
@@ -464,9 +458,6 @@ def _verify(
                 raise BackupError(f"quick_check reported: {result}")
     finally:
         conn.close()
-
-
-# -- destination housekeeping ---------------------------------------------
 
 
 def _sweep_stale_temps(cfg: BackupConfig, db_path: Path) -> None:

@@ -59,9 +59,12 @@ reaches `raw_events` — and this replay — within one ingest tick even while a
 match-boundary rebuild is mid-flight on the other thread. Measured by
 replaying a match start into a 1.7 GB copy of the real database: the
 offers landed 0.13 s after they were written, against 16–22 s on the
-single-thread watcher. The one wait left is `project()`'s own commit
-(5.7 s measured), which the ingest connection's 30 s `busy_timeout` waits
-out rather than failing on. That split only
+single-thread watcher. The one wait left is `project()`'s own write
+transaction, which the ingest connection's 30 s `busy_timeout` waits out
+rather than failing on: 5.7 s when first measured, 15–18 s by 2026-10-19
+once it held the MTGO projection's parse, and 1.8 s since `project()`
+builds every row before it opens the transaction (`docs/architecture.md`,
+"Live mode's two cadences"). That split only
 buys back the *ingest* lag; the staleness this section is about (`turns`,
 `matches`, and anything the rebuild alone produces) is unchanged by it, which
 is exactly why this replay reads `raw_events` directly instead of waiting for
@@ -139,6 +142,8 @@ run client-side off a stale `turns` row, now server-side against the fresh
 replay. `library_count` (the population size for the tab's draw-odds math)
 comes from the same replay, not the projected `turns.self_library` — the two
 would otherwise disagree by however stale the projection is.
+A card whose every copy has been seen stays in the list at `left` 0,
+so the panel keeps its row instead of dropping it mid-game.
 
 Each nonland card also carries `is_interaction`: `True` when its oracle text
 matches one of `effects.classify`'s `spot_removal`, `sweeper` or
@@ -282,10 +287,10 @@ instant/sorcery in the graveyard; Hearth Elemental (`{5}{R}` on its front
 face) has the same "per card in graveyard" shape; Sunderflock (`{7}{U}{U}`,
 mana value 9) instead costs `{X}` less, where X is the greatest mana value
 among Elementals already on the battlefield — a board-state lookup, not a
-per-card count, so it is approximated as "one Elemental resolved = the cost
-drops by that Elemental's own mana value," which can only ever be
-conservative, never optimistic (`_reduced_castable_turn_board_elemental`'s
-own docstring). `reduced_castable_turn` is the earliest turn this hand's own
+per-card count, so it is approximated as the turn after the hand's earliest
+other Elemental is castable, with no mana arithmetic, and withheld when the
+hand holds no other Elemental (`_reduced_castable_turn_board_elemental`).
+`reduced_castable_turn` is the earliest turn this hand's own
 lands *and its own in-hand fuel* (instants/sorceries already drawn, for the
 graveyard-count shape) or an already-resolved Elemental (for Sunderflock's
 shape) can pay for it — computed only when the printed-cost search above
@@ -328,7 +333,7 @@ split (a hand can meet the land/curve cutoffs and still be missing the one
 card the deck actually wins with). **In band, early plays short:** no
 pressure normally proceeds straight to "mulligan," but a `mulligan_cost`
 (below) with at least a 13-point gap between this deck's kept-seven and
-mulliganed-to-six win rates acts as a brake — the downgrade stops at
+mulliganed (any number) win rates acts as a brake — the downgrade stops at
 "marginal" instead, with a reason naming the cost, since shipping a hand
 costs a measured, wide amount for this deck specifically. Only measured
 evidence moves the verdict this way: with no `key_plays` at all (below the
@@ -388,18 +393,17 @@ content-hash `deck_id` this Arena deck has ever had into one `DeckIdentity`,
 (≥3 copies, ranked by finisher-ness then mana value) by the player-turn it
 first resolved into "by T4" / "T5-6" / "T7-8" / "T9+" / "never resolved,"
 and `guide/play.mulligan_record` splits win rate by kept-seven vs.
-mulliganed. `key_plays` picks each key card's *best-sampled* turn band (at
-least 10 decided games in that band when any band qualifies, else the best
-raw win rate among what exists) — a single lucky one-game spike in "by T4"
-never outranks a real 19-game sample in "T5-6" — and reports that band's
+mulliganed. `key_plays` picks each key card's turn band with the best win
+rate among those with at least 10 decided games, else among all bands —
+a single lucky one-game spike in "by T4" never outranks a real 19-game sample in "T5-6" — and reports that band's
 win-loss record alongside the "never resolved" record for contrast.
-`mulligan_cost` pairs the kept-seven and mulliganed-to-six `MulliganBucket`s
-directly. Both are gated on the same floor: at least 10 total decided games
+`mulligan_cost` pairs the kept-seven and mulliganed (any number)
+`MulliganBucket`s directly. Both are gated on the same floor: at least 10 total decided games
 for the identity, below which `key_plays` comes back empty and
 `mulligan_cost` comes back `None` rather than publishing a split too thin to
 mean anything — a note names the actual game count when this happens. On
 the real Spellementals deck (283 decided games on file), this surfaces
-Sunderflock at 40-20 in its best-sampled T5-6 window (72-89 when it never
+Sunderflock at 40-20 in its best T5-6 window (72-89 when it never
 resolves), Eddymurk Crab at 26-9 by T4, and a kept-seven/mulliganed gap wide
 enough (57.9% vs. 44.6%, a 13.2-point gap) to engage the mulligan-cost brake
 described above.
@@ -461,7 +465,7 @@ so the tab can show a picture — `null` only when the name never matched a
 | `no_consensus` | the archetype resolved, but `build_consensus` is below its `min_decks` gate | same observed facts as above |
 | `ok` | a consensus exists | the observed facts, plus the ranked interaction list |
 
-Every non-`no_game` result also carries the standing caveat: the card list
+An `ok` result also carries the standing caveat: the card list
 is the field's *typical* decklist for this archetype, not the opponent's
 actual 60, which this reader never sees — the same sentence
 `review/analyzers/frame.py` uses for its own opponent-side comparison.
@@ -545,14 +549,30 @@ makes for the ordinary in-game brief). Past boarding is not a fourth linear
 tier in the data itself — it is a supplementary field the frontend positions
 differently depending on which of the other three fired (below the plan
 when exact, above the "closest" warning when closest, or as the only
-content alongside the prompt when neither exists). No archetype named at
-all (a game 1 conceded before a card was seen, or a match with no format),
-or no identity for the player's own deck: `plan` and `prompt` both come back
-`None`, and the UI says so rather than rendering dead buttons (rule 4). The
+content alongside the prompt when neither exists). No identity for
+the player's own deck: `plan` and `prompt` both come back `None`, and the UI
+says so rather than rendering dead buttons (rule 4). No archetype named at
+all (a game 1 conceded before a card was seen, or a match with no format):
+`prompt` comes back `None`, but the alternatives still run, so the top one
+can still show as a "closest" plan, and past boarding reads that same
+alternative (`intermission.py`, step 5b). The
 prompt is `full_prompt`'s, so it is `None` too when the player's own deck has
 no format (`docs/brief.md`).
 
-**Degradation.** Unknown opponent → no plan and no prompt; no format → no
+**Post-board record.** `postboard_record` (`{won, lost}`, or `None`) is this
+deck identity's games 2 and 3 against the archetype the read named or the
+user picked (`_postboard_record`): the same identity and exclusion as
+`_past_boarding`, over every earlier finished match with
+`matches.best_of = 3`, a drawn game counted in neither number. It reads only
+the named or picked archetype, never the "closest" alternative that past
+boarding falls back to: the card words it as a record against this
+opponent's deck, which a guess at a different archetype is not. `None` when
+no archetype is named or picked, when the identity is unknown, or when no
+such earlier game exists. Bo1 matches stay out: their games are not
+post-board games.
+
+**Degradation.** Unknown opponent → no prompt, though a "closest" plan
+from the alternatives may still show; no format → no
 live read, so the same unless the user picked the opponent's deck; `stale`
 flags a plan whose brief predates the current field or the current 75
 (`brief.store.is_stale`) without withholding it — a stale plan is still the
@@ -561,70 +581,112 @@ best evidence available, just labelled as possibly out of date.
 **Per-match memoization and cost.** `caches` is a plain dict the API layer
 owns across polls: `definitions`/`colors_by_name`/`prior` (the classifier's
 own slow loads, shared with the rest of the archetype-naming machinery) plus,
-per match, the brief `prompts` and `past_boarding` results — both keyed to
-include the match id, since nothing that feeds either one can change while
-*this* match is still being played (only past, completed matches and the
-corpus do). Measured on the real database: a cold `build_break_read` costs
-~2.0 s, almost all of it `full_prompt` (~1.05 s: `format_resets` ~0.75 s,
-the personal matchup-rate read ~0.27 s) plus `_past_boarding` (~0.27 s).
-Memoized, a reprojection mid-break (the watcher still rebuilds on every
+per match, the brief `prompts`, `past_boarding` and `postboard_record`
+results — all keyed to include the match id, since nothing that feeds any of
+them can change while *this* match is still being played (only past,
+completed matches and the corpus do). Measured on the real database: a cold
+`build_break_read` costs ~2.0 s, almost all of it `full_prompt` (~1.05 s:
+`format_resets` ~0.75 s, the personal matchup-rate read ~0.27 s) plus
+`_past_boarding` (~0.27 s). Memoized, a reprojection mid-break (the watcher still rebuilds on every
 match-boundary event) now costs ~70 ms instead of paying that ~2 s again,
 and an ordinary cache hit costs ~3 ms; only the first poll of a match's
 first break ever pays the full ~2 s. `api/sql.py`'s `_cached_break_read`
 owns the cache key (see Wiring, below).
 
 **Frontend.** `SideboardPlanCard` renders the headline ("Lost game 1
-(concede) — board for game 2 vs Boros Aggro"), the plan itself
-(`BoardPlan`/`PlayAroundList`, reused from `MatchupBriefCard` rather than
-forked), past boarding, and — when there is no plan at all — a
-`CopyPromptCard` carrying the prompt and the exact `brief --import` command
-to paste the answer back through. With neither a plan nor a prompt it says
-why instead: a match whose `fmt` is `null` gets its own sentence ("No
-tournament format is known for this match, so the opponent's deck can't be
-named from the cards seen, and there is no plan to show."), distinct from
-the unnamed-opponent one, and `SideboardOpponentRail`'s empty opponent says
-the same in its shorter form. `SideboardOpponentRail` shows who the
-live read currently thinks the opponent is (or "your pick" when it's a
-manual override) and, when there are any, the other archetypes with a
-written plan, each expandable to its own full board. In
-`CurrentMatchView.tsx`, the break phase takes precedence over every other
-phase — including a pending mulligan decision, which cannot actually
-co-occur with a break since the next game's opening hand doesn't exist
-until sideboarding ends — and `MatchStatusStrip` renders `"Sideboarding —
-game N next"` in place of the ordinary game/turn phase phrase.
+(concede)"), the plan itself (`BoardPlan`/`PlayAroundList`, reused from
+`MatchupBriefCard` rather than forked), past boarding, and — when there is
+no plan at all — a `CopyPromptCard` carrying the prompt and the exact `brief
+--import` command to paste the answer back through. With neither a plan nor
+a prompt it says why instead: a match whose `fmt` is `null` gets its own
+sentence ("No tournament format is known for this match, so the opponent's
+deck can't be named from the cards seen, and there is no plan to show."),
+distinct from the unnamed-opponent one. The opponent is the status strip's
+during the break, as at every other phase: its name, its chip (the
+confidence, or "picked" for a manual pick) and the cards seen come from
+`intermission.opponent` and `intermission.cards_seen`, the live read, not
+from the projected match, which can trail it. `SideboardOpponentRail` holds
+only the other archetypes with a written plan, each expandable to its own
+full board; with none it is not drawn, and the plan card takes the full
+width. The plan card's title is the result and its reason alone ("Lost game
+1 (concede)"), since the strip already says which game is next and against
+what. Under the title, one line gives this deck's own games 2 and 3 against
+the opponent's deck, from `intermission.postboard_record`: "Your games 2–3
+against it: 58% · 35–25" from ten games won or lost, the record alone under
+ten, and no line when the record is null or every earlier game 2 or 3 was a
+draw. In `CurrentMatchView.tsx`, the break phase takes precedence over every
+other phase — including a pending mulligan decision, which cannot actually
+co-occur with a break since the next game's opening hand doesn't exist until
+sideboarding ends — and `MatchStatusStrip` renders `"Sideboarding, game N
+next"` in place of the ordinary game/turn phase phrase.
 
-## The ranked-play rule (`table/ranked.py`)
+## The event rule (`table/queues.py`)
 
-During a ranked game the Live page shows what every tracker shows, and no
-advice. Wizards' Terms §2.2 forbid unauthorized third-party tools, trackers
-run on tolerance, and real-time coaching in ranked or competitive play is
-the line none of them crosses. The rule was planned for the overlay; when
-the pivot removed the overlay (2026-10-01), it moved here.
+During a game in an event the Live page shows what every tracker shows, and
+no advice. In casual queues and on the ranked ladder it shows everything,
+unless the user turned advice off in Settings.
 
-| | ranked game | unranked game, or between games |
+| | game in an event | casual or ladder game, or between games |
 |---|---|---|
-| remaining library and its odds band | shown | shown |
+| remaining library and its draw odds | shown | shown |
 | the opponent's revealed cards, hand size, open mana | shown | shown |
 | the archetype read (`OpponentRead`) | shown | shown |
 | the opening hand's verdict and evidence (`OpeningHandCard`) | hidden | shown |
-| the keep guide (`KeepGuideCard`), full and dense | hidden | shown |
+| the keep guide (`KeepGuideCard`) | hidden | shown |
 | "Could be holding" and its caveat (`OpponentHandCard`) | hidden | shown |
 | the matchup brief (the disclosure bar) | hidden | shown |
 | the sideboard plan (the break) | — | shown in every queue |
 
-The break is allowed in every queue: a written plan read between games is
-accepted practice in paper, and live prompting during a game is not.
+**Why the line sits there.** Magic's digital tournament documents are
+where a rule could reach a tracker, and they cover tournaments, not the
+ladder:
 
-**Ranked means everything but a short allowlist of casual queues.**
-`UNRANKED_EVENTS` holds `Play`, `Constructed_BestOf3`, `AIBotMatch` and
-`DualColorPrecons`, each read off a real database's `matches.event_id`. Any
-other id is ranked: the ladder, `Traditional_Cons_Event_*`, every draft and
-every event. So is a missing one (rule 4), which covers MTGO too: its
-matches carry no event id, and its leagues and challenges are what the rule
-is for. `DirectGame` is ranked on purpose (the user's decision,
-2026-10-01): community tournaments on Arena are played by Direct Challenge,
-and the log can't tell one from a game with a friend. A casual queue missing
-from the list costs only the advice in that queue until it is added.
+- The [Digital Tournament Rules](https://blogs.magicjudges.org/rules/dtr/)
+  let a player "take written notes during a match and may refer to those
+  notes" ([2.10](https://blogs.magicjudges.org/rules/dtr/2-10/); a LAN event
+  may restrict them). The sideboard plan read between games is that.
+- The [Digital Infraction Procedure Guide, 2.2 Outside
+  Assistance](https://blogs.magicjudges.org/rules/dipg/2-2/), allows "Deck
+  Tracking software … as long as they do not provide any Private
+  Information" in online events, and forbids software that shows what the
+  game client can't. Every read on this page is derived from what the
+  client shows. But its philosophy also says "any strategy advice, play
+  advice, or construction advice from an external source is considered
+  outside assistance". The sentence speaks of people, and a keep verdict is
+  not one; a judge could still read it as one, so an event's game gets no
+  advice.
+- The ladder is not a tournament: neither document reaches it. What does,
+  [Wizards' Terms](https://company.wizards.com/en/legal/terms) §2.2, treats
+  every third-party tool alike, whatever it shows.
+- The terms of Arena's own events (the
+  [Arena Open](https://magic.wizards.com/en/news/mtg-arena/arena-open-terms-and-conditions),
+  [Arena Direct](https://magic.wizards.com/en/news/mtg-arena/arena-direct-terms-and-conditions)
+  and the [Qualifiers](https://magic.gg/events/qualifier-play-in#rulesandpolicies))
+  have no clause on trackers, notes or advice; they forbid cheating and
+  modifying the client, and incorporate a Wizards Play Policy that could
+  not be fetched (2026-10-19) and is unread.
+
+Both rules documents are read from the judges' copies, effective June
+2020; no newer version was found (2026-10-19).
+
+**Advice means a short allowlist of casual and ladder queues.**
+`ADVICE_QUEUES` holds `Play`, `Constructed_BestOf3`, `AIBotMatch`,
+`DualColorPrecons`, `Ladder` and `Traditional_Ladder`, each read off a real
+database's `matches.event_id`. Any other id is an event:
+`Traditional_Cons_Event_*`, every draft, every Arena Open, Direct and
+Qualifier. So is a missing one (rule 4), which covers MTGO too: its matches
+carry no event id, and its leagues and challenges are what the rule is for.
+`DirectGame` is an event on purpose (the user's decision, 2026-10-01):
+community tournaments on Arena are played by Direct Challenge, and the log
+can't tell one from a game with a friend. A queue missing from the list
+costs only the advice in that queue until it is added.
+
+**The user's switch.** Settings' Live section has "Advice during a game",
+on by default. It is the browser's own (`web/src/shell/liveAdvice.ts`,
+`localStorage`, like the density control), since the API writes only
+authored artifacts (non-negotiable #6), and it can only hide more: off,
+every queue looks like an event's game, and the break still shows its
+sideboard plan. The server never sees it.
 
 **The queue comes from the live replay first.** `LiveState.event_id` is
 read from the room-start event that anchors the replay
@@ -632,14 +694,21 @@ read from the room-start event that anchors the replay
 `matches.event_id`), so the rule holds at the first mulligan of a match,
 before `project()` has written its row. The projected `event_id` is the
 fallback when the replay found none. `GET /api/current-match/read` returns
-`ranked` and `advice` (`not ranked`, or a break in progress), and the
-dashboard obeys `advice` without deriving it again. The server still builds
-every read: the rule decides what the page draws, and the route stays one
-shape in every queue.
+`advice` (the queue allows it, or a break is in progress), and the
+dashboard obeys it without deriving it again, then ands it with the switch.
+The server still builds every read: the rule decides what the page draws,
+and the route stays one shape in every queue.
 
 `web/src/lib/livePanels.ts` is the table of which panels each phase draws,
 with and without advice; `livePanels.test.ts` pins that no advice panel
-appears in any ranked phase.
+appears in any phase without it.
+
+Until this change (2026-10-19) the rule was the ranked-play rule, and
+this module was named for it: the ladder counted as ranked and showed no advice
+either, on the reading that real-time coaching in ranked play was a line no
+tracker crossed. Read against the documents above, that line is the
+tournaments', and the ladder is not one. The read also returned `ranked`,
+which only fed the strip's "ranked, advice off" and is gone.
 
 ## Wiring: one route
 
@@ -798,11 +867,12 @@ mismatch first.
 window's height instead of letting the page scroll — see
 `docs/frontend.md`'s "Focus mode".
 The base render is meant to fit a second monitor with nothing scrolled: a
-one-line status strip, a two-column grid (a primary read and a narrow rail),
-and a disclosure bar for everything demoted (the matchup brief, the four
-stat tiles) — each is a `Disclosure` that opens independently and
-scrolls inside itself rather than the page. Under 48rem there is no
-cap: the page is one column and scrolls, and the strip takes two lines
+one-line status strip, a two-column grid (a primary read and a rail, split 60/40),
+and a disclosure bar holding the matchup brief, a `Disclosure` that
+opens over the page and scrolls inside itself. The match's facts are
+the status strip's alone, so the bar repeats none of them, and without
+advice it is not drawn, since the brief is advice. Under 48rem there is no
+cap: the page scrolls, and the strip takes two lines
 ("The status strip", below).
 
 **Four phases**, driven by `read.data?.intermission`,
@@ -813,19 +883,21 @@ until the next game's opening hand exists:
 
 | phase | primary | rail |
 |---|---|---|
-| between games (Bo3 break) | `SideboardPlanCard` — headline, board plan or prompt, past boarding | `SideboardOpponentRail` — live opponent read, other written plans |
+| between games (Bo3 break) | `SideboardPlanCard` — headline, board plan or prompt, past boarding | `SideboardOpponentRail` — the other archetypes with a written plan; not drawn when there are none, and the plan card takes the full width |
 | a decision is pending | `OpeningHandCard` — the real 7 as images, verdict headline, evidence | `KeepGuideCard` (full) |
 | mulligan phase, no offer yet | `KeepGuideCard` (full) | `OpponentRead` |
-| game under way | `LibraryCard` — our own remaining deck, decklist order, no card cap | `OpponentHandCard`, `KeepGuideCard` (dense), `OpponentRead` (dense) |
+| game under way | `LibraryCard` — our own remaining deck, by mana value, no card cap | `OpponentHandCard`, `OpponentRead` (dense) |
 
-In a ranked game (`advice` false, "The ranked-play rule" above) a pending
+Without advice (an event's game or the switch off, "The event rule" above) a pending
 decision and the mulligan phase both draw `LibraryCard` with `OpponentRead`
 in the rail, and a game under way draws `LibraryCard` with
 `OpponentHandCard` (facts only, `estimate={false}`) and `OpponentRead`
-(dense). The status strip adds "ranked, advice off", so a missing keep guide
-never reads as a broken one. Before any match row exists, a ranked game's
-pending decision shows a "Ranked game" empty state instead of the opening
-hand. The rows above come from `lib/livePanels.ts`.
+(dense). Once a game is under way the keep guide is gone in every queue:
+it has said what it had to, and the rail is the opponent's. The status
+strip adds "event, advice off" or "advice off in Settings", so a missing
+keep guide before the first turn never reads as a broken one. Before any
+match row exists, such a game's pending decision shows an "Event game" or
+"Advice off" empty state instead of the opening hand. The rows above come from `lib/livePanels.ts`.
 
 A decision can be pending even before `current.data` (`/api/current-match`)
 exists at all — `opening_hand` does not wait on a projected match row — so
@@ -863,30 +935,45 @@ always visible). No card cap: the fresh live replay behind it costs the
 same either way, unlike the old client-side subtraction against a stale
 `turns` row.
 
-A header band of large odds readouts sits above the list — land odds,
-interaction odds (hidden when every nonland row's `is_interaction` is
-`None`), and a flood and screw comparison of the library's current land
-ratio against the deck's built ratio (`keep.land_count /
-keep.maindeck_size`, already on the same response). From 48rem up the
-tiles share a row; under it they stack, one to a row. In a tile each
-big number shares its line with its words and is never cut: the words
-wrap beside it. This replaced a fourth table column giving
-each row its own "next / in 3" percentage: P(next draw) is exactly
-`left ÷ library_count`, so every 4-of read the same percentage regardless of
-which 4-of it was — that column was `text-xs text-muted`, the smallest,
-dimmest type in the panel, spent on a number that mostly restated the `Left`
-column beside it. The band spends large type on the aggregate figures that
-actually vary game to game instead.
+The card is the decklist and nothing else. A strip on top answers
+the lands: how many are left out of the deck's land count (the land
+rows' summed quantity), then the chance of at least one on the next
+draw, within two draws and within three. Under it, one table: the
+cost (its header, "Cost", is for a screen reader; the pips say it),
+Card, Left and "Next draw", the chance the very next card is a copy.
+The header is the whole explanation, so there is no footnote. Rows are
+grouped by mana value; the cost is drawn as pips (`ManaCost`,
+`docs/design-system.md`'s "Mana pips"), each row's copies left out of
+its quantity beside it. The lands strip, the grouping and every
+chance are `lib/library.ts`.
 
-The list below the band keeps mana-value grouping — the shape a player
-already holds their own 60 in memory in — across auto-flowing columns
-(`[columns:21rem_3]`) rather than one full-width table, so a card's name and
-its own percentage sit within a few hundred pixels of each other instead of
-spanning the whole primary column. Rows sort by name within a group, not by
-copies left, so a row's position stays fixed as the game evolves rather than
-reshuffling on every draw. Lands collapse into the header band's own tile
-rather than a summary row in the list — that is where they were always the
-headline.
+Within a group the rows sort by copies left, most first, so the
+likeliest draw of each cost leads it, with the name as tie-break. A
+card with none left stays, dimmed, at the bottom of its group: the
+group does not lose a row mid-game, and a player looking for a card
+finds it gone rather than missing. The name column truncates rather
+than wrapping, and the header stays put while the list scrolls inside
+the card.
+
+Until 1.0.1 a band of three tiles sat above the list: land odds,
+interaction odds and a flood or screw comparison, with a footnote
+under them. Together they moved from the next draw to the next three
+and back, and gave the land chance in more than one form. Feedback on
+the 1.0.1 announcement named this card first when it called the
+dashboard's information randomly spread, so the card then asked one
+question, three draws ahead, and answered it on every row. The API's
+`is_interaction` stays, though no dashboard component reads it.
+
+Until this change every row carried that three-draw chance, the lands
+were a row like the others, rows sorted by name within a group, and a
+card with no copies left dropped out of the list. Three draws ahead on
+every row put a percentage everywhere that read the same at a glance;
+the next draw is the number every other tracker shows per card, so it
+is the one a row carries now, and the lands, the one count a player
+plans around, get the three horizons in a strip of their own. Sorting
+by name kept a row's place fixed as the game evolved; sorting by copies
+left reshuffles a group only when a draw changes its order, and puts the
+answer to "what am I likely to draw at this cost" first.
 
 **`OpponentHandCard` leads with facts, then demotes the estimate.** Order
 is hand size / open mana (plus any widened "+N other" sources) / held
@@ -901,12 +988,25 @@ list — a full-deck-minus-seen guess at cards not even confirmed in hand —
 is gone from the UI entirely: it was the least trustworthy number on the
 tab, and half of it used to be the opponent's own basic lands.
 
-`KeepGuideCard` and `OpponentRead` both take a `dense` prop rather than
-forking into separate components: dense `KeepGuideCard` skips the land-odds
-bars and the mulligan-record table (~220px together), keeping the summary
-line and the ideal-hand chips; dense `OpponentRead` puts the candidate
-shortlist behind a `Disclosure`, since its `DeckPicker` popover is already
-`fixed`-positioned and never clips inside the height-capped rail.
+`OpponentHandCard`'s subtitle says how many times the opponent
+mulliganed, when they did, and "Shown so far" is a row of small chips.
+
+`OpponentRead` takes a `dense` prop rather than forking into a second
+component: dense, it puts the candidate shortlist behind a `Disclosure`.
+With no shortlist and no unnamed-deck detail to show it draws nothing,
+rather than an empty card titled "Opponent deck". "Pick this deck"
+(`PickDeckButton`) is not on the card: it sits in the status strip,
+after the opponent's name it corrects, so it is there whenever a match
+is current, whether or not the card is drawn; its `DeckPicker`
+popover is `fixed`-positioned and never clips inside the strip. The
+strip's confidence reads "picked" once the user has picked. During the
+break the button is not drawn, since the sideboard plan has its own
+picker.
+
+Until this change the keep guide stayed in the rail once a game was
+under way, in a dense form without its land-odds bars or mulligan
+record, and "Pick this deck" lived on the opponent-deck card, which was
+therefore drawn, often empty, from the first turn.
 
 **The status strip** holds the game and the turn as large numerals,
 the facts joined by `·` (the games won and lost in the match, on the
@@ -916,7 +1016,10 @@ seen), and the opponent's identity: pips, name, confidence. From
 48rem up it is one line, and the facts are cut to fit it. Under 48rem
 it is two: game, turn, pips and confidence on the first; the
 opponent's name and then the facts on the second, wrapping, none cut.
-While sideboarding the phase reads "Sideboarding, game 2 next".
+While sideboarding the phase reads "Sideboarding, game 2 next", and the
+opponent's identity and cards seen come from the break read
+("The break read", above), so they agree with the plan card beside
+them.
 
 **The status strip flags a likely-abandoned match.** `v_current_match`
 stays current until the next match begins even if the current one never

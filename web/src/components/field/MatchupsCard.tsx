@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next'
 import type { TFunction } from '../../i18n'
 import type { MetaMatchup } from '../../api'
 import type { Pairs } from '../../lib/field'
-import { MATCHUPS_SHOWN, MATCHUP_THIN, PAIRS, noPairsMessage, pairsOption, shownRows } from '../../lib/field'
-import { formatCount, formatPercent } from '../../lib/time'
+import { MATCHUPS_SHOWN, PAIRS, noPairsMessage, pairsOption, shownRows } from '../../lib/field'
+import { formatPercent } from '../../lib/format'
+import { MIN_TRUSTED_FIELD_SAMPLE } from '../../lib/sample'
+import { formatCount } from '../../lib/time'
 import { Button, Card, DataTable, EmptyState, ErrorNote, Loading, Segmented } from '../ui'
 import { CONTROL_ROW, SEGMENTED_OPTIONS } from './FieldControls'
 import { ShowAll } from './ShowAll'
@@ -22,7 +24,7 @@ const score = (row: MetaMatchup) =>
  *  where the API sends none. */
 function Rate({ row }: { row: MetaMatchup }) {
   if (row.winrate == null) return null
-  return <span className={row.n < MATCHUP_THIN ? 'text-muted' : ''}>{`, ${formatPercent(row.winrate)}%`}</span>
+  return <span className={row.n < MIN_TRUSTED_FIELD_SAMPLE ? 'text-muted' : ''}>{`, ${formatPercent(row.winrate)}`}</span>
 }
 
 /** "Archetype against archetype": which tiers the rounds are counted over,

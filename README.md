@@ -23,8 +23,10 @@ computer and turns them into a dashboard: every match and game, turn by
 turn, your record with each deck and against each archetype, and what the
 real tournament metagame looks like next to it.
 
-- **Nothing leaves your computer.** No account, no upload; the dashboard
-  runs on your own machine and answers nobody else.
+- **Your matches stay on your computer.** No account, no upload; the
+  dashboard runs on your own machine and answers nobody else. The one
+  exception is a report you ask to generate with your own key, which
+  sends that match to the model you configured.
 - **Free, with no account.** The tracker is free now and later, and
   nothing free asks you to sign up. A Microsoft Store build of the same
   app, free at first and priced later, and, later still, an optional paid
@@ -55,6 +57,10 @@ inglês: são texto para o modelo, não para você.
 - **Coach**: a dated report across every deck, each one measured against the last.
 
 <p align="center">
+  <img src="docs/images/live.png" alt="The Live page during an unranked match: the lands left with the chance of drawing one, the rest of the library by mana value with the chance of each card on the next draw, and the opponent's hand: what they have shown and what they could be holding.">
+</p>
+
+<p align="center">
   <img src="docs/images/field.png" alt="The Field page: the Standard metagame from Magic Online Challenge lists since the format's last reset, archetype by archetype, with your record against each.">
 </p>
 
@@ -64,7 +70,7 @@ Sensei Top runs on Windows 10 and 11 (64-bit) and on 64-bit Linux. Get the
 Windows installer or the Linux AppImage from [senseitop.com](https://senseitop.com)
 or the [releases page](https://github.com/sensei-top/sensei-top/releases);
 [INSTALL.md](INSTALL.md) has the steps for each system. A Microsoft Store
-listing of the same app, free, is planned for the release.
+listing of the same app, free when it goes up, is planned.
 
 The one thing to change in Arena: turn on **Detailed Logs (Plugin
 Support)** under Options → Account, then restart it.

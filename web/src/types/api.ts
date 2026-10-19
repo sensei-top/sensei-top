@@ -2154,14 +2154,8 @@ export interface components {
             /** @description the Bo3 break card — set only between games, never mid-game (table/intermission.py) */
             intermission?: components["schemas"]["IntermissionOut"] | null;
             /**
-             * Ranked
-             * @description the match is in a ranked or competitive queue, or its queue is unknown (table/ranked.py)
-             * @default true
-             */
-            ranked: boolean;
-            /**
              * Advice
-             * @description the page may show advice now: the keep verdict and keep guide, the opponent-hand estimate, the matchup brief. False during a ranked game, true in an unranked one and between games (table/ranked.py). The dashboard obeys it and never re-derives it
+             * @description the page may show advice now: the keep verdict and keep guide, the opponent-hand estimate, the matchup brief. False during a game in an event or an unknown queue, true in a casual or ladder one and between games (table/queues.py). The dashboard obeys it and never re-derives it; the user's own Settings switch can only hide more
              * @default false
              */
             advice: boolean;
@@ -2744,6 +2738,8 @@ export interface components {
             alternatives?: components["schemas"]["AlternativePlanOut"][];
             /** Past Boarding */
             past_boarding?: components["schemas"]["PastBoardingOut"][];
+            /** @description This deck identity's earlier games 2 and 3 against the named or picked archetype, best-of-three matches only, the current match excluded; null when there is no archetype, no identity, or no such game. */
+            postboard_record?: components["schemas"]["PostboardRecordOut"] | null;
             /**
              * Prompt
              * @description text to write an exact plan from, when none exists yet
@@ -2957,8 +2953,8 @@ export interface components {
          * LibraryCardOut
          * @description One maindeck card and how many copies are still unaccounted for in
          *     the library this game — the tab's primary panel once a game is under
-         *     way (``table/live.py``). ``left`` is never negative and this list omits
-         *     a card once ``left`` reaches 0.
+         *     way (``table/live.py``). ``left`` is never negative, and a card stays in
+         *     the list at 0 once every copy is seen.
          */
         LibraryCardOut: {
             /** Grp Id */
@@ -3133,6 +3129,26 @@ export interface components {
             /** Games Lost */
             games_lost?: number | null;
             /**
+             * Best Of
+             * @description 3 for a best-of-three match, 1 for a best of one, null when the log never said (Arena's matchWinCondition; every MTGO match is 3).
+             */
+            best_of?: number | null;
+            /**
+             * Game1 Result
+             * @description Game 1's result ('win', 'loss' or 'draw') when the match is a best of three and game 1 finished; null otherwise.
+             */
+            game1_result?: string | null;
+            /**
+             * Postboard Won
+             * @description Games 2 and 3 won, for a best-of-three match; null otherwise.
+             */
+            postboard_won?: number | null;
+            /**
+             * Postboard Lost
+             * @description Games 2 and 3 lost, for a best-of-three match; null otherwise. A drawn game is in neither count.
+             */
+            postboard_lost?: number | null;
+            /**
              * Rank Class
              * @description constructed rank at the most recent snapshot at or before started_at (rank_snapshot); null when no snapshot precedes this match, and always null for an MTGO match, which has no Arena rank; never guessed
              */
@@ -3196,6 +3212,26 @@ export interface components {
             games_won?: number | null;
             /** Games Lost */
             games_lost?: number | null;
+            /**
+             * Best Of
+             * @description 3 for a best-of-three match, 1 for a best of one, null when the log never said (Arena's matchWinCondition; every MTGO match is 3).
+             */
+            best_of?: number | null;
+            /**
+             * Game1 Result
+             * @description Game 1's result ('win', 'loss' or 'draw') when the match is a best of three and game 1 finished; null otherwise.
+             */
+            game1_result?: string | null;
+            /**
+             * Postboard Won
+             * @description Games 2 and 3 won, for a best-of-three match; null otherwise.
+             */
+            postboard_won?: number | null;
+            /**
+             * Postboard Lost
+             * @description Games 2 and 3 lost, for a best-of-three match; null otherwise. A drawn game is in neither count.
+             */
+            postboard_lost?: number | null;
             /**
              * Rank Class
              * @description constructed rank at the most recent snapshot at or before started_at (rank_snapshot); null when no snapshot precedes this match, and always null for an MTGO match, which has no Arena rank; never guessed
@@ -4572,6 +4608,19 @@ export interface components {
             self_turn_index: number;
             /** Index */
             index: number;
+        };
+        /** PostboardRecordOut */
+        PostboardRecordOut: {
+            /**
+             * Won
+             * @description Games won.
+             */
+            won: number;
+            /**
+             * Lost
+             * @description Games lost.
+             */
+            lost: number;
         };
         /** ProvenanceOut */
         ProvenanceOut: {

@@ -3,18 +3,18 @@ import type { DeckGuideOut } from '../../api'
 import { formatCount, formatIsoDateShort, useNow } from '../../lib/time'
 import { Callout, Card, StatTile } from '../ui'
 
-/** The evidence's own provenance: the record it is drawn from, the
- *  tournament corpus's freshness, how much of the current 75 has rules
- *  text, and the window a detected format reset scopes everything else
- *  to. The page's title already names the deck, so this card's own title
- *  is just "Scope". Every gap `build_deck_guide` found is the server's own
+/** The evidence's own provenance: the tournament corpus's freshness, how
+ *  much of the current 75 has rules text, and the window a detected format
+ *  reset scopes everything else to. The deck's record is the strip's over
+ *  the tabs, not this card's. The page's title already names the deck, so
+ *  this card's own title is just "Scope". Every gap `build_deck_guide` found is the server's own
  *  sentence, shown as sent. */
 export function ScopeCard({ guide }: { guide: DeckGuideOut }) {
   const { t } = useTranslation()
   const now = useNow()
   const { provenance } = guide
   const [withText, totalCards] = provenance.oracle_coverage
-  const { deck, reset, matches_before_reset: before, classified_decks, corpus_latest_event } = provenance
+  const { reset, matches_before_reset: before, classified_decks, corpus_latest_event } = provenance
 
   const listsLine = corpus_latest_event
     ? t('decks.guide.scope.through', { date: formatIsoDateShort(corpus_latest_event, now) ?? corpus_latest_event })
@@ -37,12 +37,7 @@ export function ScopeCard({ guide }: { guide: DeckGuideOut }) {
 
   return (
     <Card title={t('decks.guide.scope.title')} subtitle={t('decks.guide.scope.subtitle')}>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile
-          label={t('decks.guide.scope.record')}
-          value={`${formatCount(deck.match_wins)}–${formatCount(deck.match_losses)}`}
-          detail={t('decks.count.matches', { count: deck.matches, n: formatCount(deck.matches) })}
-        />
+      <div className="grid gap-3 sm:grid-cols-3">
         <StatTile
           label={t('decks.guide.scope.tournamentLists')}
           value={formatCount(classified_decks)}

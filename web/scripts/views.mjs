@@ -30,6 +30,7 @@ export const VIEWS = [
   { id: 'deck-largest-matchups', path: '/decks/:largest/matchups' },
   { id: 'deck-matchups', path: '/decks/:deck/matchups' },
   { id: 'deck-guide', path: '/decks/:deck/guide' },
+  { id: 'deck-rcq', path: '/decks/:deck/rcq' },
   { id: 'field', path: '/field' },
   { id: 'field-event', path: '/field/events/:event' },
   { id: 'coach', path: '/coach' },

@@ -7,10 +7,8 @@
  */
 import type { CoverageOut, CoverageRowOut, Match, MatchupBriefOut } from '../api'
 import type { TFunction } from '../i18n'
-import { MIN_TRUSTED_FIELD_SAMPLE } from '../theme'
 import { mergeNewestFirst } from './deckOverview'
 import { addressSegment, archetypeName, deckAddress } from './decks'
-import { RATE_MIN_MATCHES } from './home'
 import {
   archetypeKeyOf,
   type FieldRecord,
@@ -19,7 +17,9 @@ import {
   opponentSeen,
   type TileText,
 } from './matchups'
-import { ago, formatCount, formatPercent } from './time'
+import { formatPercent, formatRecord } from './format'
+import { MIN_TRUSTED_FIELD_SAMPLE, rateOrRecord } from './sample'
+import { ago, formatCount } from './time'
 
 /** A pairing's page: the deck's address, `/matchups/`, and the opponent's
  *  key spelled in one segment (`addressSegment`: encoded, the colon bare,
@@ -121,7 +121,7 @@ export function lastMetLine(matches: Match[], now: number, t: TFunction): string
   return since ? t('matchups.pairing.lastMet', { since }) : null
 }
 
-/** The third tile: how the opponent's archetype wins in the field's
+/** The last tile: how the opponent's archetype wins in the field's
  *  tournaments, joined on its archetype key (`archetypeKeyOf`). A key that
  *  is not a named archetype has nothing to join; a named one the field has
  *  no rate for says so; under five entries (`MIN_TRUSTED_FIELD_SAMPLE`) the
@@ -135,7 +135,7 @@ function fieldTile(opponentKey: string, fieldByKey: Map<string, FieldRecord>, t:
   const values = { count: field.entries, n: formatCount(field.entries) }
   return {
     label,
-    value: `${formatPercent(field.winrate)}%`,
+    value: formatPercent(field.winrate),
     detail:
       field.entries < MIN_TRUSTED_FIELD_SAMPLE
         ? t('matchups.pairing.wonInTournamentsThin', values)
@@ -143,32 +143,51 @@ function fieldTile(opponentKey: string, fieldByKey: Map<string, FieldRecord>, t:
   }
 }
 
-/** The three tiles over the pairing's row of `matchupRows` (its finished
- *  matches: wins, losses and draws, a draw a match and not a win). Record:
- *  from ten matches (`RATE_MIN_MATCHES`) the rate, "73%" and "won 8 of 11";
- *  under it the count, "7 of 9" and "matches won". Games: own first,
- *  "17–4". In tournaments: `fieldTile` over `fieldByKey`, the field's
- *  records by archetype key, empty while they load or when they fail. */
+/** What a pairing's tile says: `muted` is a record drawn muted, too few
+ *  for a rate. */
+export type PairingTileText = TileText & { muted?: boolean }
+
+/** The tile of one split of the best-of-three games, Game 1 or Games 2–3,
+ *  drawn as Record is (`rateOrRecord`, over games), a drawn game in
+ *  neither number. */
+function splitTile(label: string, wins: number, losses: number, t: TFunction): PairingTileText {
+  const { figure, line, thin } = rateOrRecord({ wins, losses }, t, 'games')
+  const tile: PairingTileText = { label, value: figure ?? '—', detail: line }
+  if (thin) tile.muted = true
+  return tile
+}
+
+/** The tiles over the pairing's row of `matchupRows` (its finished
+ *  matches: wins, losses and draws, a draw neither won nor lost): three,
+ *  or five when the row has a best-of-three match (`bo3Matches`). Record,
+ *  as Matchups rates the same row (`rateOrRecord` over `won` and `lost`):
+ *  from ten won or lost the rate (a draw is not one of the ten), "73%",
+ *  over the record "8–3"; five to nine the rate, "71%", muted, over the
+ *  record and "rough"; under five the record, "3–1", muted, over the
+ *  "too few" line. Games: own first, "17–4". Then, with a best-of-three
+ *  match, Game 1 and Games 2–3 (`splitTile`), the split the Matchups row's
+ *  two columns show. Last, In tournaments: `fieldTile` over `fieldByKey`,
+ *  the field's records by archetype key, empty while they load or when
+ *  they fail. */
 export function pairingTiles(
   row: MatchupRow,
   fieldByKey: Map<string, FieldRecord>,
   t: TFunction,
-): [TileText, TileText, TileText] {
-  const label = t('matchups.pairing.record')
-  const won = formatCount(row.won)
-  const matches = formatCount(row.matches)
-  const record: TileText =
-    row.matches >= RATE_MIN_MATCHES
-      ? {
-          label,
-          value: `${formatPercent(row.won / row.matches)}%`,
-          detail: t('matchups.pairing.wonOf', { won, matches }),
-        }
-      : { label, value: t('matchups.tiles.countOf', { won, matches }), detail: t('matchups.pairing.matchesWon') }
-  const games: TileText = {
+): PairingTileText[] {
+  const { figure, line, thin } = rateOrRecord({ wins: row.won, losses: row.lost }, t)
+  const record: PairingTileText = { label: t('matchups.pairing.record'), value: figure ?? '—', detail: line }
+  if (thin) record.muted = true
+  const games: PairingTileText = {
     label: t('matchups.pairing.games'),
-    value: `${formatCount(row.gamesWon)}–${formatCount(row.gamesLost)}`,
+    value: formatRecord(row.gamesWon, row.gamesLost),
     detail: t('matchups.pairing.yoursFirst'),
   }
-  return [record, games, fieldTile(row.key, fieldByKey, t)]
+  const split =
+    row.bo3Matches > 0
+      ? [
+          splitTile(t('matchups.pairing.game1'), row.game1Won, row.game1Lost, t),
+          splitTile(t('matchups.pairing.postboard'), row.postboardWon, row.postboardLost, t),
+        ]
+      : []
+  return [record, games, ...split, fieldTile(row.key, fieldByKey, t)]
 }

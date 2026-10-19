@@ -68,8 +68,7 @@ Where it appears:
 - `Button variant="primary"`: the one call to action a card has.
 - `Chip variant="accent"`: the item a list leads with, or an authored
   artefact. Today: a `decisive` finding (through `severityChip`, the only
-  severity that takes it), the latest coach report, and a matchup whose
-  brief is written.
+  severity that takes it).
 - `Card tone="accent"`: a tinted border (`border-accent/30`) around an
   authored or metered artefact, such as a written narrative.
   `GenerateCard` and `CopyPromptCard` pass it from their own `accent`
@@ -256,7 +255,7 @@ of Home's three things, a `Dialog`.
 `Card` takes an `elevation` prop. `1` (the default) is a page's own
 top-level card: `surface-1`, `rounded-card`, a border in `edge`, and the
 lift. `2` is a block nested inside one of those (the deck guide's
-`LeakCard`/`MatchupCard`, the match report's per-finding cards):
+`LeakCard`/`PlanCard`, the match report's per-finding cards):
 `surface-2`, `rounded-block`, and neither border nor shadow. A nested block
 is set apart by its fill alone. `Finding` and `Callout` are nested blocks
 too.
@@ -287,8 +286,10 @@ table above).
 
 **Compact is both a choice and a width.** `:root[data-density="compact"]`
 is the choice. `@media (width < 48rem)` is the width: anything narrower
-than Tailwind's `md` breakpoint is compact without being asked, because a
-phone and a narrow panel have no room for anything else.
+than Tailwind's `md` breakpoint is compact without being asked. Nothing
+new is designed for that width any more (`docs/frontend.md`, "Widths"):
+the media query stays for a browser tab made that narrow, and for the
+layouts already built under it.
 
 The choice is persisted to `localStorage` (every read/write wrapped in
 `try/catch`: a private window or blocked storage must never break the
@@ -413,7 +414,9 @@ Sizes are upscaled for legibility at distance, revised once already (18px
 read as small at second-monitor distance at the first checkpoint):
 `--pip: max(18px, calc(22px * var(--d)))` default, `--pip-lg: max(22px,
 calc(28px * var(--d)))` for hero contexts (the current-match band's opponent
-identity). Compact density never shrinks a default pip below 18px.
+identity), and `--pip-sm: max(16px, calc(18px * var(--d)))` for a mana cost,
+which sits inside a line of body text and is no taller than it. Compact
+density never shrinks a default pip below 18px.
 
 `<ManaPips colors="UB" size="md" | "lg" />` takes a WUBRG string in any
 order and renders the letters present in canonical WUBRG order; a character
@@ -421,9 +424,23 @@ outside WUBRG is ignored; `null`/`undefined`/`''` renders nothing (rule 4:
 unknown means no render, never a guess — never the word "Colourless"
 either, since `''` covers both "revealed only colourless cards" and
 "revealed cards whose colours are unknown", which cannot be told apart).
-`role="img"` with an `aria-label` naming the colours in English
-(`"Revealed colours: blue, black"`) carries accessibility; each inner `svg`
-is `aria-hidden`.
+`role="img"` with an `aria-label` naming the colours in the dashboard's
+language (keyed, `common.revealedColours`: `"Revealed colours: blue,
+black"`) carries accessibility; each inner `svg` is `aria-hidden`.
+
+`<ManaCost cost="{1}{U/R}{U/R}" />`, from the same file, draws a card's
+mana cost as its printed symbols, at `--pip-sm`. A colour symbol is the
+colour's pip; a hybrid is a disc split on the diagonal, the first
+symbol upper-left, each half its own colour with its glyph small (a
+`2/W` half is the grey disc with a `2`); a Phyrexian symbol is its
+colour's disc carrying a Φ; generic, `X`, `C` and `S` are a grey disc,
+`--mana-c`, carrying the symbol's text in `--mana-glyph`. It draws the
+front face only (`costSymbols`, the same face `effects.mana_value`
+reads), and reads Arena's parenthesised hybrid, `{(U/B)}`, as `{U/B}`.
+A null or empty cost, a land's, renders nothing. The accessible label
+is the cost in braces (`common.manaCost`), since every symbol in it is
+drawn. `--mana-c` is in `scripts/validate_palette.py` with the five
+colours.
 
 **The boundary rule:** mana colours are identity chrome: beside a deck
 or archetype name, or as a table row's label. **They never colour a
@@ -560,7 +577,7 @@ Its sections: palette, type ramp, radii and elevation, buttons, links,
 chips, cards, stat tiles, deck tile, empty state, onboarding steps,
 findings, callouts, text block, disclosure, segmented control, fields,
 selects, switches, dialog, meters, bars, data table, line chart, bar
-chart, mana pips, glyph and wordmark, card tile, card art.
+chart, mana pips and costs, glyph and wordmark, card tile, card art.
 
 Its names and numbers are invented. The one real thing on it is its
 cards: three at most from the newest Arena match, chosen by
@@ -603,12 +620,88 @@ what the rule replaces:
 Each is replaced when its component is next rebuilt. None of them is a
 pattern to copy.
 
+## Numbers
+
+Every percent, record and small sample on the dashboard is written one
+way, by the helpers in `lib/format.ts` and `lib/sample.ts`. A page that
+writes its own is the thing this section exists to stop: before it, the
+same win rate read "57.5%" on one page, "58" on the next and "won 23 of
+40" on a third.
+
+**A percent is a whole number with its sign.** `lib/format.ts`'s
+`formatPercent` takes a fraction and writes it through `Intl` in the
+reader's language: "58%", "58 %" where the language puts a space there.
+A fraction strictly between 0 and 0.01 reads "<1%", and one strictly
+between 0.99 and 1 reads ">99%", so a card that is not certain never
+reads as certain and a card that is possible never reads as impossible.
+No decimal: the samples behind these numbers are a few dozen matches,
+and a tenth of a point would claim a precision they do not have. A
+catalogue string never writes `%` after `{{pct}}`; the formatter writes
+it. A points figure (a gap between two rates, a movement since a reset)
+is not a percent and keeps its own form: the Guide's movement since a
+reset keeps one decimal ("up 14.0 points") beside whole-number shares,
+so it can differ by a point from the difference the two shares show.
+
+**A record is wins–losses.** `formatRecord(wins, losses)` writes "6–3",
+with an en dash held to its numbers by word joiners so a line never
+breaks inside it. Never "won 6 of 9": that form hides the losses
+behind a subtraction. A share of a corpus is not a record and stays
+"N of M lists".
+
+**A draw is never a loss.** A record counts wins and losses; a draw is
+neither, and neither is a match still in progress. Where a caller has
+only a count played and a count won, losses are played minus won minus
+draws, never played minus won. One known gap: `/api/metrics/play-draw`
+has no losses field and counts draws in `games_completed`, so the deck
+strip's Play vs draw side record still writes a drawn game as a loss,
+listed in `docs/status.md`.
+
+**Ten finished matches before a rate, five before a rough one.** A
+personal record has two thresholds, `RATE_MIN_MATCHES` (10) and
+`ROUGH_RATE_MIN` (5), over matches, or over games for a games figure.
+From ten up, a tile's figure is the rate and its line is the record.
+From five to nine, the figure is the rate drawn muted, and its line is
+the record and "rough": a reader sees which way a matchup leans without
+reading it as a measurement. Under five, the figure is the record, drawn
+muted, and its line says it is too few for a rate. A table's Rate cell
+is the rate from ten, the rate muted from five to nine, and "too few",
+muted, under five, on one line (`whitespace-nowrap`), beside the record
+its own column already has. A row is never left out for being small,
+since a missing row reads as a matchup never played; an em dash means
+nothing at all, never "too few". `rateOrRecord` (a tile) and `rateCell`
+(a cell, drawn by `components/RateCell.tsx`) in `lib/sample.ts` make the
+choice, so no component branches on the count. The rough rate needs a
+muted figure, so it is only where one can be drawn: where only one line
+is free (a version's row, a field row's caption, the keep-cost sentence)
+the line is "58% · 35–25" from ten up and the record alone under it, a
+sentence (the session line, the play/draw line) keeps ten alone, and so
+does a ranking (Matchups' best and worst). A chart keeps its hollow dot
+for a point under ten, since a chart cannot draw a record. The Coach
+keeps ten alone too: its rates come from the server, which marks one
+under ten anecdotal (`review/leaks.py`, `MIN_SAMPLE`) and sends no
+percent for it.
+
+Field evidence is not a personal record. It measures other people's
+lists, so it keeps the corpus thresholds in `docs/metagame.md`
+(`MIN_TRUSTED_FIELD_SAMPLE`, `WINRATE_MIN_MATCHES`), from the same
+`lib/sample.ts`.
+
+**A record table's columns come in one order.** Name · Matches ·
+Record · Rate, then any split (G1 · Post-board, then Play · Draw), then
+the field's columns (Share, Field rate). A table without a column skips
+it and keeps the rest in this order, so a reader who learned one table
+reads every other one without looking.
+
 ## Rules a new component follows
 
 - **Tokens only.** A color is a CSS custom property or a `Tokens` slot,
   never a hex literal typed at the call site (chart marks are the one place
   a literal hex is unavoidable, and even there it comes from `theme.ts`'s
   `Tokens`, not a fresh value).
+- **A number is written by `lib/format.ts` and `lib/sample.ts`**: a
+  percent, a record, a rate under ten (rough or too few) and a record
+  table's column order
+  follow "Numbers" above, never a format chosen per component.
 - **The accent is never data**, and `--on-accent` is the only text on it.
 - **Semantic type utilities only.** `text-body`, `text-caption`, etc. — never
   a default Tailwind size class, never an arbitrary `text-[Npx]`. A step

@@ -10,7 +10,6 @@
     "shareNote": "A chip's share is of the Tier {{tier}} decks of the last {{days}} days; the smaller archetypes are under \"Other\"."
   },
   "view": {
-    "back": "The guide",
     "write": "Write the RCQ guide",
     "writeAgain": "Write the RCQ guide again",
     "subtitle": "A game plan, the field you will meet, a plan for each matchup checked against your 75, the flex slots and a checklist between rounds.",
@@ -45,18 +44,18 @@
     "noFormat": "No tournament format is known for this deck, so there is no tournament field to show.",
     "expectedTitle": "Expected at the store",
     "expected": {
-      "share": "<name>{{name}}</name>, {{pct}}% of the field",
-      "shareRecord": "<name>{{name}}</name>, {{pct}}% of the field; you are {{wins}}–{{losses}} against it",
-      "shareNone": "<name>{{name}}</name>, {{pct}}% of the field; you have not played it",
+      "share": "<name>{{name}}</name>, {{pct}} of the field",
+      "shareRecord": "<name>{{name}}</name>, {{pct}} of the field; you are {{record}} against it",
+      "shareNone": "<name>{{name}}</name>, {{pct}} of the field; you have not played it",
       "absent": "<name>{{name}}</name>, not in the field",
-      "absentRecord": "<name>{{name}}</name>, not in the field; you are {{wins}}–{{losses}} against it",
+      "absentRecord": "<name>{{name}}</name>, not in the field; you are {{record}} against it",
       "absentNone": "<name>{{name}}</name>, not in the field; you have not played it"
     },
     "freshTitle": "How fresh the field is",
     "freshNone": "No tournament source has been fetched.",
     "recentShares": "The field over the last 14 days",
-    "recentShare_one": "{{pct}}%, {{n}} deck",
-    "recentShare_other": "{{pct}}%, {{n}} decks",
+    "recentShare_one": "{{pct}}, {{n}} deck",
+    "recentShare_other": "{{pct}}, {{n}} decks",
     "eventsSummary": "Events of the last 7 days ({{n}})",
     "noEvents": "No event in the corpus in the last 7 days.",
     "event_one": "{{source}} · Tier {{tier}} · {{n}} list",

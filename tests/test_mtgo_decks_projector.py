@@ -553,6 +553,48 @@ def test_a_deck_file_is_never_linked_to_an_mtgo_match(conn, tmp_path, monkeypatc
     assert [tuple(row) for row in rows] == [(None,)]
 
 
+def test_the_rebuild_transaction_only_deletes_and_inserts(conn, tmp_path, monkeypatch):
+    """The live watcher's ingest thread waits out ``project()``'s write lock
+    before it can store the next log line, so every read and parse runs
+    before ``BEGIN``: on a real database, the MTGO game logs decoded inside
+    the lock held it 15-18 s (docs/architecture.md, "Live mode's two
+    cadences"). Both sources and a deck file are stored, so every half
+    ``project()`` builds has rows to write."""
+    monkeypatch.setenv("MTGO_HANDLE", "Player1")
+    ingest_file(conn, ARENA_LOG, locale_hint="mdy")
+    conn.execute(
+        """
+        INSERT INTO raw_events (digest, source_file, logged_at, kind, label, payload, source)
+             VALUES (?, ?, '2026-09-14T12:42:37', 'event', 'MtgoGameLog', ?, 'mtgo')
+        """,
+        (
+            hashlib.sha256(MTGO_LOG_BYTES).hexdigest(),
+            MTGO_LOG_NAME,
+            base64.b64encode(MTGO_LOG_BYTES).decode("ascii"),
+        ),
+    )
+    _store(conn, tmp_path, ("Alpha.dek", SAMPLE_BYTES, 0))
+    statements: list[str] = []
+    conn.set_trace_callback(lambda sql: statements.append(sql.split(None, 1)[0].upper()))
+
+    try:
+        project(conn)
+    finally:
+        conn.set_trace_callback(None)
+
+    inside = statements[statements.index("BEGIN") + 1 : statements.index("COMMIT")]
+    assert set(inside) == {"DELETE", "INSERT"}
+    # Every half had rows to write inside: Arena matches, the MTGO one, and
+    # the deck file beside the Arena fixture's decks.
+    by_source = dict(
+        conn.execute("SELECT source, COUNT(*) FROM matches GROUP BY source").fetchall()
+    )
+    assert by_source.get("arena", 0) > 0
+    assert by_source.get("mtgo") == 1
+    names = [row["name"] for row in _decks(conn)]
+    assert "Alpha" in names and len(names) > 1
+
+
 _SMAUG = b'Quantity="4" Sideboard="false" Name="Smaug the Magnificent"'
 _QUANTITIES = [
     ("zero", "0"),

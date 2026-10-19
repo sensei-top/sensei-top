@@ -8,7 +8,7 @@
  */
 import type { LeakOut } from '../api'
 import type { TFunction } from '../i18n'
-import { formatCount } from './time'
+import { formatRecord } from './format'
 
 /** A pattern's title and the clause its sentence takes, by code
  *  (`review/leaks.py`). A code not here takes the API's own title and
@@ -44,14 +44,15 @@ export function patternWords(
   }
 }
 
-/** Matches won out of matches played, on one side of a pattern. */
+/** Matches won out of matches played, on one side of a pattern. A leak's
+ *  counts are over wins and losses only (`review/leaks.py` reads
+ *  `result IN ('win', 'loss')`), so the losses are `n - wins`. */
 export type PatternSide = { wins: number; n: number }
 
-/** The sentence under a pattern's title: "You won 133 of the 234 matches
- *  where you led the damage race, and 41 of the other 151." `clause` is
+/** The sentence under a pattern's title: "You are 133–101 in the matches
+ *  where you led the damage race, and 41–110 in the rest." `clause` is
  *  `patternWords`' clause; `withIt` counts the matches with the pattern,
- *  `without` the rest. A no-break space holds the count of matches with it
- *  to the word "matches". */
+ *  `without` the rest. */
 export function patternSentence(
   clause: string,
   withIt: PatternSide,
@@ -60,9 +61,7 @@ export function patternSentence(
 ): string {
   return t('matchups.patterns.sentence', {
     clause,
-    wins: formatCount(withIt.wins),
-    n: formatCount(withIt.n),
-    otherWins: formatCount(without.wins),
-    otherN: formatCount(without.n),
+    recordWith: formatRecord(withIt.wins, withIt.n - withIt.wins),
+    recordWithout: formatRecord(without.wins, without.n - without.wins),
   })
 }

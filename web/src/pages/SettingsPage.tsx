@@ -2,16 +2,18 @@ import { useLLMStatus } from '../api'
 import { useTranslation } from 'react-i18next'
 import { useShell } from '../bridge'
 import { LanguageSection } from '../components/settings/LanguageSection'
-import { Card, Segmented } from '../components/ui'
+import { Card, Segmented, Switch } from '../components/ui'
 import type { WritingStatusAnswer } from '../components/settings/WritingSection'
 import { useDensity } from '../shell/density'
+import { useLiveAdvice } from '../shell/liveAdvice'
 import { CreditsView } from '../views/CreditsView'
 import { SettingsView } from '../views/SettingsView'
 
 /** `/settings`: the language first, then the shell's settings and what the
- *  API says of writing, then the density control, which is the browser's
- *  own, then what the credits show. With no shell that is the language,
- *  Writing as sentences, the density and the credits. `#credits` is where
+ *  API says of writing, then the density control and the Live page's
+ *  advice switch, which are the browser's own, then what the credits show.
+ *  With no shell that is the language, Writing as sentences, the density,
+ *  the advice switch and the credits. `#credits` is where
  *  the footer's "Credits" lands; `scroll-mt-16` keeps the heading clear of
  *  the sticky strip under 48rem. */
 export function SettingsPage() {
@@ -19,6 +21,7 @@ export function SettingsPage() {
   const shell = useShell()
   const status = useLLMStatus()
   const [density, setDensity] = useDensity()
+  const [liveAdvice, setLiveAdvice] = useLiveAdvice()
   const densityOptions = [
     { value: 'comfortable' as const, label: t('settings.density.comfortable') },
     { value: 'compact' as const, label: t('settings.density.compact') },
@@ -44,6 +47,20 @@ export function SettingsPage() {
           <Card className="max-w-3xl">
             <Segmented label={t('settings.density.label')} value={density} options={densityOptions} onChange={setDensity} />
             <p className="mt-3 text-caption text-muted">{t('settings.density.note')}</p>
+          </Card>
+        </section>
+
+        <section aria-labelledby="live-settings" className="space-y-4">
+          <h2 id="live-settings" className="font-display text-title text-ink">
+            {t('settings.sections.live')}
+          </h2>
+          <Card className="max-w-3xl">
+            <Switch
+              label={t('settings.liveAdvice.label')}
+              description={t('settings.liveAdvice.description')}
+              checked={liveAdvice}
+              onChange={setLiveAdvice}
+            />
           </Card>
         </section>
 

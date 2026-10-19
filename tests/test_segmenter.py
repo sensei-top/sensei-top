@@ -5,6 +5,7 @@ or by minimal synthetic lines for edge cases the fixture can't easily show.
 
 import json
 import logging
+from dataclasses import replace
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -30,6 +31,7 @@ def _unwarned(monkeypatch):
     """The header warnings fire once per process; every test starts unwarned."""
     monkeypatch.setattr(segmenter, "_warned_patterns", set())
     monkeypatch.setattr(segmenter, "_warned_impossible", set())
+    monkeypatch.setattr(segmenter, "_warned_summaries", set())
 
 
 def fixture_lines() -> list[str]:
@@ -253,6 +255,104 @@ def test_non_json_response_body_does_not_swallow_following_lines():
     entries = segment_lines(lines)
     assert len(entries) == 1  # the noise line after "Success" produces nothing,
     assert entries[0].payload == "Success"  # but it is never fed to the response
+
+
+# --- a summarized message is warned ------------------------------------------
+
+
+def _summarized_block_lines() -> list[str]:
+    return [
+        "[UnityCrossThreadLogger]10/6/2026 2:37:04 PM: Match to X: GreToClientEvent",
+        "[Message summarized because one or more GameStateMessages exceeded the "
+        "50 GameObject or 50 Annotation limit.]",
+        "::: GameStateMessage",
+        ":: GameObject Count = 61",
+        ":: Annotation Count = 12",
+        ":: something not a count",
+        '{"after": 1}',
+    ]
+
+
+def test_summarized_block_warns_once_and_stores_nothing(caplog):
+    """SYNTHETIC: no real capture of this block exists. The shape is the one
+    manasight #200/#257 and mtgatool's arena-log-decoder document."""
+    lines = _summarized_block_lines()
+    with caplog.at_level(logging.WARNING):
+        entries = segment_lines(lines, locale_hint="mdy")
+    plain = segment_lines([lines[0], lines[-1]], locale_hint="mdy")
+    assert len(entries) == 1
+    assert [replace(e, line_number=0) for e in entries] == [
+        replace(e, line_number=0) for e in plain
+    ]
+    assert entries[0].label == "GreToClientEvent"
+    assert entries[0].logged_at == "2026-10-06T14:37:04"
+    warnings = [r.getMessage() for r in caplog.records if "summarized" in r.getMessage()]
+    assert len(warnings) == 1
+    assert "GameObject Count = 61" in warnings[0]
+    assert "Annotation Count = 12" in warnings[0]
+    assert "something not a count" not in warnings[0]
+    assert "+1 other line" in warnings[0]
+
+
+def test_summarized_block_is_pending_until_a_line_ends_it(caplog):
+    """SYNTHETIC. An open block holds the poll's offset (ingest keys on
+    ``pending``), so a poll that ends inside it re-reads it whole."""
+    lines = _summarized_block_lines()
+    seg = Segmenter(locale_hint="mdy")
+    seg.feed_line(lines[0])
+    assert not seg.pending
+    with caplog.at_level(logging.WARNING):
+        for ln in lines[1:6]:
+            seg.feed_line(ln)
+            assert seg.pending
+        assert not [r for r in caplog.records if "summarized" in r.getMessage()]
+        seg.feed_line(lines[6])
+    assert not seg.pending
+    assert sum("summarized" in r.getMessage() for r in caplog.records) == 1
+
+
+def test_summarized_block_flush_warns(caplog):
+    """SYNTHETIC: no real capture. ``segment_lines`` ends with ``flush()``, so
+    input that ends inside a block still warns."""
+    seg = Segmenter()
+    for ln in _summarized_block_lines()[1:4]:
+        seg.feed_line(ln)
+    with caplog.at_level(logging.WARNING):
+        seg.flush()
+    assert sum("summarized" in r.getMessage() for r in caplog.records) == 1
+    assert not seg.pending
+
+
+def test_summarized_block_met_by_a_second_segmenter_warns_once(caplog):
+    """SYNTHETIC. The startup recovery reads Player-prev.log's content and can
+    meet the same block again inside Player.log: a second Segmenter, same
+    lines, same header."""
+    with caplog.at_level(logging.WARNING):
+        segment_lines(_summarized_block_lines(), locale_hint="mdy")
+        segment_lines(_summarized_block_lines(), locale_hint="mdy")
+    assert sum("summarized" in r.getMessage() for r in caplog.records) == 1
+
+
+def test_summarized_block_reclosed_after_the_offset_held_at_its_marker(caplog):
+    """SYNTHETIC. The line that closes a block opens an entry still open when
+    the poll ends, so the offset holds at the marker. The next poll's
+    Segmenter starts at the marker with the carry from before it, and closes
+    the same block at a different line position: one warning in all."""
+    lines = _summarized_block_lines()
+    opener = '{"open":'
+    first = Segmenter(locale_hint="mdy")
+    first.feed_line("noise")               # shifts the first poll's line numbers
+    first.feed_line(lines[0])
+    carry = first.carry_state()            # what ingest commits before the marker
+    with caplog.at_level(logging.WARNING):
+        for ln in [*lines[1:6], opener]:
+            first.feed_line(ln)
+        assert first.pending
+        second = Segmenter(locale_hint="mdy")
+        second.restore_carry(*carry)
+        for ln in [*lines[1:6], opener]:
+            second.feed_line(ln)
+    assert sum("summarized" in r.getMessage() for r in caplog.records) == 1
 
 
 # --- flush() reports what it dropped -----------------------------------------

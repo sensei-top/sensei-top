@@ -149,8 +149,8 @@ user becomes `Deshi#00001` (`Deshi` on MTGO), every other player a given
 name and five digits drawn with `--seed`. It projects the copy, rewrites it
 again, and scans it once more: one term left deletes the copy, and the
 script exits 2 printing only counts by category. Nothing it prints names a
-term or a path. `--live` cuts the raw events inside one completed, unranked
-best-of-three Arena match at its last game's result, so the Live page shows
+term or a path. `--live` cuts the raw events inside one completed
+best-of-three Arena match in a casual or ladder queue at its last game's result, so the Live page shows
 that match in progress; `--live-cut` picks an earlier row from the per-game
 ranges it prints. Before serving the copy, run
 `MTGO_HANDLE=Deshi uv run sensei-top --db <copy> project`: the subcommand
@@ -179,23 +179,27 @@ pt-BR`, from the same two copies, into `site/img/pt-br/`.
 
 ## Screenshots
 
-    pnpm shots --label before    # every view at 1280 and 360 px
+    pnpm shots --label before    # every view at 1280 and 1008 px
 
 `scripts/screenshots.mjs` drives a headless Chromium (Playwright, a dev
 dependency; `pnpm exec playwright install chromium` once) through every
 address of a server that is already up, and writes one full-height PNG per
-view and width: eighteen views in all. They are Home, Live, Matches, a match
-and its replay, Decks, a deck's Overview (once by its own key and once, with
-a version chosen, by the key of the deck with the most matches), a deck's
-Matchups (the same two ways), a deck's Guide, Field, an event's page, Coach,
-Settings, the reference page and the not-found page. A pairing's page has an
-address but is not in this list. Each is opened from a cold load of its own
-address, the way a link or a reload opens it. The flags follow the script's
-name directly: pnpm forwards a `--` as written, and the script refuses it.
-`--only` takes the ids of the views to capture (`--only design,settings`),
-and `--base` the server's address (`http://127.0.0.1:8000` when none is
-given). It is a way to look at a change, not a check: nothing compares the
-images, and neither `pnpm lint` nor `pnpm build` runs it.
+view and width: nineteen views in all. They are Home, Live, Matches, a match
+and its replay, Decks, a deck's Overview three ways (by its own key; by the
+key of the deck with the most matches, over every version; and by that key
+with its last-played version chosen), a deck's Matchups two ways (by its own
+key and by the largest deck's, both over every version), a deck's Guide, its
+RCQ tab, Field, an event's page, Coach, Settings, the reference page and the
+not-found page. A pairing's page, a past coach report (`/coach/<id>`),
+`/mtgo/picks`, `/welcome` and `/design/surfaces` have addresses but are not
+in this list. Each is opened from a
+cold load of its own address, the way a link or a reload opens it. The flags
+follow the script's name directly: pnpm forwards a `--` as written, and the
+script refuses it. `--only` takes the ids of the views to capture (`--only
+design,settings`), and `--base` the server's address
+(`http://127.0.0.1:8000` when none is given). It is a way to look at a
+change, not a check: nothing compares the images, and neither `pnpm lint`
+nor `pnpm build` runs it.
 
 The table of views is `web/scripts/views.mjs`, shared with
 `site-images.mjs`, as is the resolution of an address's placeholders. A view

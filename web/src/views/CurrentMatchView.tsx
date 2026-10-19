@@ -1,19 +1,20 @@
 import { useTranslation } from 'react-i18next'
 import { useCurrentMatch, useCurrentMatchRead, useLive } from '../api'
 import type { CurrentMatch, IntermissionOut, OpeningHandOut } from '../api'
-import type { TFunction } from '../i18n'
 import { KeepGuideCard } from '../components/KeepGuideCard'
 import { LibraryCard } from '../components/LibraryCard'
 import { MatchupBriefCard } from '../components/MatchupBriefCard'
 import { OpeningHandCard } from '../components/OpeningHandCard'
 import { OpponentHandCard } from '../components/OpponentHandCard'
-import { OpponentRead } from '../components/OpponentRead'
+import { OpponentRead, PickDeckButton } from '../components/OpponentRead'
 import { SideboardOpponentRail, SideboardPlanCard } from '../components/SideboardPlanCard'
-import { Callout, Chip, Disclosure, EmptyState, ErrorNote, Loading, ManaPips, StatTile } from '../components/ui'
+import { Callout, Chip, Disclosure, EmptyState, ErrorNote, Loading, ManaPips } from '../components/ui'
 import { isLikelyAbandoned } from '../lib/liveMatch'
-import { type LivePanel, livePanels } from '../lib/livePanels'
+import { type LivePanel, livePanels, railAlternatives } from '../lib/livePanels'
+import { timesPhrase } from '../lib/format'
 import { confidenceLabel, opponentLabelText } from '../lib/opponent'
 import { ago, useNow } from '../lib/time'
+import { useLiveAdvice } from '../shell/liveAdvice'
 import { placeById } from '../shell/places'
 
 const CONFIDENCE_CHIP_VARIANT: Record<string, 'neutral' | 'warn'> = {
@@ -23,37 +24,28 @@ const CONFIDENCE_CHIP_VARIANT: Record<string, 'neutral' | 'warn'> = {
   unknown: 'warn',
 }
 
-// "once" / "twice" reads better than "1 time" / "2 times" for the common
-// cases, and every count still gets a grammatical sentence beyond that.
-const timesPhrase = (n: number, t: TFunction): string =>
-  n === 1 ? t('live.times.once') : n === 2 ? t('live.times.twice') : t('live.times.many', { n })
-
-// Mirrors OpponentRead.tsx's headerText: a real name from any of the four
-// sources (manual pick, rule archetype/fallback, or the corpus evidence
-// source) reads as itself; anything else is only the colours-and-signature
-// fallback, so it says so instead of a name that sounds settled.
-function opponentDeckValue(match: CurrentMatch, t: TFunction): string {
-  const label = match.opponent_label ?? t('common.unknownDeck')
-  const named =
-    match.opponent_source === 'manual' ||
-    match.opponent_source === 'archetype' ||
-    match.opponent_source === 'fallback' ||
-    match.opponent_source === 'corpus'
-  return named ? label : t('live.opponent.unclear', { label })
-}
+/** Why a game shows no advice: an event's (the server's rule), or the
+ *  user's switch. */
+type AdviceOff = 'event' | 'switch' | null
 
 /** The band at the page's top: game and turn as big display numerals under
  *  small sentence-case labels (the two facts worth reading at a glance from
  *  second-monitor distance), the `·`-joined facts beside them, and the
- *  opponent's identity (pips, name, confidence) at the far end. From 48rem
+ *  opponent's identity (pips, name, chip) at the far end. From 48rem
  *  up that is one line, the facts cut to fit. Under 48rem it is two: game,
- *  turn, pips and confidence on the first; the opponent's name and the
+ *  turn, pips and chip on the first; the opponent's name and the
  *  facts on the second, wrapping, none cut. Reads `openingHand` over
- *  `match` for the game/turn phrase whenever a decision is pending — that
- *  can be true even before `match` exists at all, since the read comes
- *  straight from a live replay (table/opening_hand.py) and does not wait
- *  on a projected match row. The rail stays beside the page in focus mode
- *  (`shell/Shell.tsx`), so this strip carries no escape hatch of its own.
+ *  `match` for the phase phrase and for play or draw whenever a decision
+ *  is pending — that can be true even before `match` exists at all, since
+ *  the read comes straight from a live replay (table/opening_hand.py) and
+ *  does not wait on a projected match row. During the break between games
+ *  the name, the chip (the confidence, or "picked" for a manual pick) and
+ *  the cards seen come from `intermission`, the break's own live read;
+ *  the pips stay the match's colours. Outside the break, "pick this deck"
+ *  closes the identity, the user's correction beside the name it corrects.
+ *  The rail stays beside the page in
+ *  focus mode (`shell/Shell.tsx`), so this strip carries no escape hatch
+ *  of its own.
  *  A match `lib/liveMatch.ts` calls likely abandoned says so here rather
  *  than rendering under a pulsing "live" dot indefinitely.
  */
@@ -61,18 +53,20 @@ function MatchStatusStrip({
   match,
   openingHand,
   intermission,
-  adviceOff = false,
+  adviceOff = null,
 }: {
   match: CurrentMatch | null
   openingHand: OpeningHandOut | null
-  /** A ranked game is under way and the page shows no advice
-   *  (`table/ranked.py`); the strip says so, so a missing keep guide never
-   *  reads as a broken one. */
-  adviceOff?: boolean
+  /** Why the page shows no advice during this game, if it shows none: an
+   *  event's game (`table/queues.py`), or the user's own switch in
+   *  Settings. The strip says which, so a missing keep guide never reads
+   *  as a broken one. */
+  adviceOff?: AdviceOff
   /** Between-games break (S8): takes precedence over every other phase
    *  phrase below, including a pending mulligan decision — Arena cannot
    *  raise both at once, since the next game's opening hand doesn't exist
-   *  until sideboarding ends. */
+   *  until sideboarding ends. It also supplies the opponent's name, chip
+   *  and cards seen, in place of the projected match's. */
   intermission?: IntermissionOut | null
 }) {
   const { t } = useTranslation()
@@ -83,6 +77,9 @@ function MatchStatusStrip({
   // rather than showing nothing while turns hasn't been written yet — true
   // for Arena in the gap right after a game starts.
   const turnNumber = latest?.turn_number ?? game?.turn_count ?? null
+  // A pending hand's own read is the live value: `game` is the last
+  // projected game, which lags in a game 2 or 3 hand.
+  const onPlay = openingHand ? openingHand.on_the_play : (game?.on_play ?? null)
   const likelyAbandoned = isLikelyAbandoned(match?.started_at, now)
 
   // The turn number now has its own numeral below, so the phase phrase only
@@ -101,21 +98,45 @@ function MatchStatusStrip({
             ? t('live.strip.waiting')
             : null
 
+  const cardsSeen = intermission ? intermission.cards_seen : (match?.opponent_cards_seen ?? null)
+
   const parts = [
     match
       ? t('live.strip.record', { won: match.games_won ?? 0, lost: match.games_lost ?? 0 })
       : null,
-    game?.on_play == null ? null : game.on_play ? t('live.onPlay') : t('live.onDraw'),
+    onPlay == null ? null : onPlay ? t('live.onPlay') : t('live.onDraw'),
     phase,
-    adviceOff ? t('live.strip.rankedAdviceOff') : null,
-    match ? t('live.cardsSeen', { count: match.opponent_cards_seen }) : null,
+    adviceOff === 'event'
+      ? t('live.strip.eventAdviceOff')
+      : adviceOff === 'switch'
+        ? t('live.strip.adviceSwitchedOff')
+        : null,
+    cardsSeen == null ? null : t('live.cardsSeen', { count: cardsSeen }),
     match?.started_at ? t('live.strip.seen', { ago: ago(match.started_at, now) }) : null,
     likelyAbandoned ? t('live.strip.abandoned') : null,
   ].filter((part): part is string => part != null)
 
-  const opponentName = match?.opponent_label
-    ? opponentLabelText(match.opponent_label, match.opponent_colors)
-    : null
+  // During the break the opponent is the break's own live read (or the
+  // user's pick), which can be ahead of the projected match.
+  const opponentLabel = intermission ? (intermission.opponent?.label ?? null) : (match?.opponent_label ?? null)
+  const opponentName = opponentLabel ? opponentLabelText(opponentLabel, match?.opponent_colors) : null
+  const opponentChip = intermission
+    ? intermission.opponent
+      ? intermission.opponent.source === 'manual'
+        ? { variant: 'neutral' as const, text: t('live.picker.pickedMark') }
+        : {
+            variant: CONFIDENCE_CHIP_VARIANT[intermission.opponent.confidence] ?? 'neutral',
+            text: confidenceLabel(intermission.opponent.confidence, t),
+          }
+      : null
+    : match?.opponent_source === 'manual'
+      ? { variant: 'neutral' as const, text: t('live.picker.pickedMark') }
+      : match?.opponent_confidence
+      ? {
+          variant: CONFIDENCE_CHIP_VARIANT[match.opponent_confidence] ?? 'neutral',
+          text: confidenceLabel(match.opponent_confidence, t),
+        }
+      : null
   const facts = parts.join(' · ') || t('live.title')
   // Under 48rem the name leaves the far end and leads the facts' line.
   const narrowFacts = [opponentName, ...parts].filter((part) => part != null).join(' · ') || t('live.title')
@@ -149,66 +170,38 @@ function MatchStatusStrip({
         <span className="hidden truncate md:inline">{facts}</span>
       </div>
 
-      {match?.opponent_label && (
+      {(opponentLabel || (match && !intermission)) && (
         <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-0">
-          <ManaPips colors={match.opponent_colors} size="lg" />
-          <span className="hidden truncate text-body text-ink2 md:inline">{opponentName}</span>
-          {match.opponent_confidence && (
-            <Chip variant={CONFIDENCE_CHIP_VARIANT[match.opponent_confidence] ?? 'neutral'}>
-              {confidenceLabel(match.opponent_confidence, t)}
-            </Chip>
+          {opponentLabel && (
+            <>
+              <ManaPips colors={match?.opponent_colors} size="lg" />
+              <span className="hidden truncate text-body text-ink2 md:inline">{opponentName}</span>
+              {opponentChip && <Chip variant={opponentChip.variant}>{opponentChip.text}</Chip>}
+            </>
           )}
+          {/* The break has its own picker, on the sideboard plan. */}
+          {match && !intermission && <PickDeckButton match={match} />}
         </div>
       )}
     </div>
   )
 }
 
-/** The matchup brief and the four stat tiles — everything demoted off the
- *  base render so the live read fits one screen. Each is a `Disclosure`
- *  that opens over its own content, independently, and scrolls inside
- *  itself rather than the page. The brief has no other
- *  home in the dashboard yet (the deck guide tab doesn't render it), so it
- *  stays here rather than being cut along with the rest of this bar. */
+/** The matchup brief, behind a `Disclosure` so the live read fits one
+ *  screen: it opens over its own content and scrolls inside itself. The
+ *  match's facts (the opponent's deck, the game, play or draw, the turn)
+ *  are the status strip's alone. The pairing page shows the brief too;
+ *  here it sits beside the game it is for. */
 function DisclosureBar({ match, advice }: { match: CurrentMatch; advice: boolean }) {
   const { t } = useTranslation()
-  const game = match.game
-  const latest = match.turns.at(-1)
+  // The brief's play-arounds are advice: off during an event's game, or
+  // when the user turned advice off.
+  if (!advice) return null
   return (
     <div className="flex shrink-0 flex-wrap gap-4 border-t border-edge pt-2 text-caption">
-      {/* The brief's play-arounds are advice: off during a ranked game. */}
-      {advice && (
-        <Disclosure summary={t('live.bar.brief')}>
-          <div className="max-h-[55vh] w-[min(28rem,90vw)] overflow-y-auto">
-            <MatchupBriefCard match={match} />
-          </div>
-        </Disclosure>
-      )}
-      <Disclosure summary={t('live.bar.details')}>
-        <div className="grid max-h-[55vh] w-[min(40rem,90vw)] grid-cols-2 gap-3 overflow-y-auto sm:grid-cols-4">
-          <StatTile
-            label={t('live.bar.opponentDeck')}
-            value={opponentDeckValue(match, t)}
-            detail={t('live.bar.seenEvent', {
-              n: match.opponent_cards_seen,
-              event: match.event_id ?? t('live.bar.eventUnknown'),
-            })}
-          />
-          <StatTile
-            label={t('live.bar.game')}
-            value={game ? String(game.game_number) : '—'}
-            detail={t('live.bar.matchScore', { won: match.games_won ?? 0, lost: match.games_lost ?? 0 })}
-          />
-          <StatTile
-            label={t('live.bar.playDraw')}
-            value={game?.on_play == null ? '—' : game.on_play ? t('live.bar.play') : t('live.bar.draw')}
-            detail={game?.on_play == null ? t('live.bar.undetermined') : t('live.bar.thisGame')}
-          />
-          <StatTile
-            label={t('live.bar.turn')}
-            value={latest ? String(latest.turn_number) : '—'}
-            detail={t('live.bar.turnNote')}
-          />
+      <Disclosure summary={t('live.bar.brief')}>
+        <div className="max-h-[55vh] w-[min(28rem,90vw)] overflow-y-auto">
+          <MatchupBriefCard match={match} />
         </div>
       </Disclosure>
     </div>
@@ -219,6 +212,7 @@ export function CurrentMatchView() {
   const current = useCurrentMatch()
   const read = useCurrentMatchRead()
   const live = useLive()
+  const [adviceSwitch] = useLiveAdvice()
   const { t } = useTranslation()
   // A watcher that died mid-match leaves the match frozen on screen, and the
   // status pill is hidden on this page from 48rem up: say so above every
@@ -242,10 +236,13 @@ export function CurrentMatchView() {
   if (current.error) return <ErrorNote error={current.error} />
 
   const openingHand = read.data?.opening_hand ?? null
-  // The server's answer, never re-derived (table/ranked.py). Until the read
-  // arrives the page assumes a ranked game, as the server does for an
-  // unknown queue.
-  const advice = read.data?.advice ?? false
+  // The server's answer, never re-derived (table/queues.py). Until the read
+  // arrives the page assumes an event, as the server does for an unknown
+  // queue. The user's switch can only hide more; the break between games
+  // is drawn below without either.
+  const serverAdvice = read.data?.advice ?? false
+  const advice = serverAdvice && adviceSwitch
+  const adviceOff: AdviceOff = !serverAdvice ? 'event' : !adviceSwitch ? 'switch' : null
 
   if (!current.data) {
     // opening_hand reads a live replay directly and does not wait on a
@@ -265,20 +262,20 @@ export function CurrentMatchView() {
         </div>
       )
     }
-    // A decision is pending before any match row exists. In a ranked game
-    // the hand's read is advice and nothing else is known yet.
+    // A decision is pending before any match row exists. Without advice
+    // the hand's read is all there is, and nothing else is known yet.
     return (
       <div className="flex h-full min-h-0 flex-col gap-3">
         {stopped}
-        <MatchStatusStrip match={null} openingHand={openingHand} adviceOff={!advice} />
+        <MatchStatusStrip match={null} openingHand={openingHand} adviceOff={adviceOff} />
         <div className="min-h-0 flex-1 overflow-hidden">
           {advice ? (
             <OpeningHandCard hand={openingHand} />
           ) : (
             <EmptyState
               icon={placeById('live').icon}
-              title={t('live.ranked.title')}
-              message={t('live.ranked.message')}
+              title={t(adviceOff === 'switch' ? 'live.noAdvice.switchTitle' : 'live.noAdvice.eventTitle')}
+              message={t(adviceOff === 'switch' ? 'live.noAdvice.switchMessage' : 'live.noAdvice.eventMessage')}
             />
           )}
         </div>
@@ -294,17 +291,24 @@ export function CurrentMatchView() {
   // precedence — there is no board to show, no keep guide to run, and no
   // hand to read until the next game's opening hand actually exists.
   if (intermission) {
+    const hasRail = railAlternatives(intermission).length > 0
     return (
       <div className="flex h-full min-h-0 flex-col gap-3">
         {stopped}
         <MatchStatusStrip match={match} openingHand={null} intermission={intermission} />
-        <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto sm:grid-cols-[1fr_360px]">
+        <div
+          className={`grid min-h-0 flex-1 gap-3 overflow-y-auto ${
+            hasRail ? 'sm:grid-cols-[1fr_360px]' : ''
+          }`}
+        >
           <div className="min-h-0">
             <SideboardPlanCard intermission={intermission} match={match} />
           </div>
-          <div className="min-h-0">
-            <SideboardOpponentRail intermission={intermission} match={match} />
-          </div>
+          {hasRail && (
+            <div className="min-h-0">
+              <SideboardOpponentRail intermission={intermission} match={match} />
+            </div>
+          )}
         </div>
       </div>
     )
@@ -315,17 +319,19 @@ export function CurrentMatchView() {
 
   const oppMulliganPhrase =
     game?.opp_mulligans == null ? t('live.times.unknown') : timesPhrase(game.opp_mulligans, t)
-  const keepGuideSubtitle = !game
-    ? t('live.keepSubtitle.waiting')
-    : [
-        turns.length === 0 ? t('live.keepSubtitle.firstTurn') : null,
-        game.self_mulligans
-          ? t('live.keepSubtitle.mulliganed', { times: timesPhrase(game.self_mulligans, t) })
-          : t('live.keepSubtitle.kept'),
-        t('live.keepSubtitle.opponentMulliganed', { times: oppMulliganPhrase }),
-      ]
-        .filter((part): part is string => part != null)
-        .join(' · ')
+  // Nothing while the hand is pending: until it is kept, the opponent's
+  // mulligan count is the last projected game's, or not settled yet. After
+  // that, the strip has said the rest (waiting, first turn, own mulligans),
+  // and this keeps what it does not.
+  const keepGuideSubtitle =
+    !game || openingHand
+      ? undefined
+      : [
+          game.self_mulligans
+            ? t('live.keepSubtitle.mulliganed', { times: timesPhrase(game.self_mulligans, t) })
+            : t('live.keepSubtitle.kept'),
+          t('live.keepSubtitle.opponentMulliganed', { times: oppMulliganPhrase }),
+        ].join(' · ')
 
   const panels = livePanels({
     decisionPending: openingHand != null,
@@ -339,23 +345,20 @@ export function CurrentMatchView() {
         return <OpeningHandCard key={name} hand={openingHand} />
       case 'keep-guide':
         return <KeepGuideCard key={name} keep={read.data?.keep} subtitle={keepGuideSubtitle} />
-      case 'keep-guide-dense':
-        return (
-          <KeepGuideCard key={name} keep={read.data?.keep} subtitle={keepGuideSubtitle} dense />
-        )
       case 'library':
         return (
           <LibraryCard
             key={name}
             cards={read.data?.library}
             libraryCount={read.data?.library_count}
-            keep={read.data?.keep}
           />
         )
       case 'opponent-hand':
-        return <OpponentHandCard key={name} hand={read.data?.hand} />
+        return <OpponentHandCard key={name} hand={read.data?.hand} mulligans={game?.opp_mulligans} />
       case 'opponent-hand-facts':
-        return <OpponentHandCard key={name} hand={read.data?.hand} estimate={false} />
+        return (
+          <OpponentHandCard key={name} hand={read.data?.hand} mulligans={game?.opp_mulligans} estimate={false} />
+        )
       case 'opponent-read':
         return <OpponentRead key={name} match={match} />
       case 'opponent-read-dense':
@@ -366,9 +369,9 @@ export function CurrentMatchView() {
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       {stopped}
-      <MatchStatusStrip match={match} openingHand={openingHand} adviceOff={!advice} />
+      <MatchStatusStrip match={match} openingHand={openingHand} adviceOff={adviceOff} />
 
-      <div className="grid min-h-0 flex-1 gap-3 sm:grid-cols-[1fr_360px]">
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-3">
         <div className="min-h-0 overflow-hidden">{panel(panels.primary)}</div>
 
         <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">

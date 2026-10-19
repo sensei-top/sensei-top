@@ -3,8 +3,8 @@ archetype, and a game-2 board plan, for one of the player's decks — the
 useful half of ``guide/``'s §6 matchup content, reachable while a game is
 actually on the clock.
 
-``guide/__init__.py`` states its own rule that nothing in that package is
-ever persisted, because a deck guide is a *derivation* of the current
+``guide/__init__.py`` states its own rule that the evidence bundle in that
+package is never persisted, because a deck guide is a *derivation* of the current
 database and a stored derivation could silently disagree with a rebuilt
 projection. **A brief is different: it is an authored artifact with its own
 provenance, not a derivation.** ``brief.store.Brief`` is stamped with the

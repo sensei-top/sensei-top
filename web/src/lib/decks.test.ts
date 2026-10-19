@@ -174,7 +174,7 @@ describe('fieldNameLine', () => {
 describe('deckLine', () => {
   const now = new Date(2026, 8, 28, 12, 0, 0).getTime()
 
-  it('joins the format, every match and its wins, and the last played', () => {
+  it('joins the format and the last played, and leaves out the match count', () => {
     // 12:00 on the log's own clock, 24 hours before now: "1d ago".
     const deck = identity('guid:kites', ['v1'], {
       format: 'TraditionalStandard',
@@ -183,39 +183,48 @@ describe('deckLine', () => {
       match_losses: 33,
       last_played: '2026-09-27T12:00:00',
     })
-    expect(deckLine(deck, now, t)).toBe('Standard, best of three · 64 matches, 30 won · last played 1d ago')
-  })
-
-  it('says one match in the singular', () => {
-    const deck = identity('guid:kites', ['v1'], { format: 'Standard', matches: 1, last_played: '2026-09-25T12:00:00' })
-    expect(deckLine(deck, now, t)).toBe('Standard · 1 match, 0 won · last played 3d ago')
+    expect(deckLine(deck, now, t)).toBe('Standard, best of three · last played 1d ago')
   })
 
   it('leaves out a format it does not know, with no dash', () => {
     const deck = identity('guid:kites', ['v1'], { matches: 2, last_played: '2026-09-13T12:00:00' })
-    expect(deckLine(deck, now, t)).toBe('2 matches, 0 won · last played 15d ago')
+    expect(deckLine(deck, now, t)).toBe('last played 15d ago')
   })
 
   it('leaves out a last played it does not know', () => {
     const deck = identity('guid:kites', ['v1'], { format: 'Draft', matches: 2, match_wins: 1 })
-    expect(deckLine(deck, now, t)).toBe('Draft · 2 matches, 1 won')
+    expect(deckLine(deck, now, t)).toBe('Draft')
   })
 })
 
 describe('deckRecord', () => {
-  it('is a rate from ten finished matches', () => {
-    // 35 / 60 = 0.583…, 58%.
-    expect(deckRecord({ finished: 60, wins: 35 }, t)).toEqual({ figure: '58%', line: 'won 35 of 60' })
-    expect(deckRecord({ finished: 10, wins: 5 }, t)).toEqual({ figure: '50%', line: 'won 5 of 10' })
+  it('is a rate from ten finished matches, with the record under it', () => {
+    // 35 / 60 = 0.583…, 58%; the losses are 60 - 35.
+    expect(deckRecord({ finished: 60, wins: 35 }, t)).toEqual({ figure: '58%', line: '35\u2060–\u206025', thin: false })
+    expect(deckRecord({ finished: 10, wins: 5 }, t)).toEqual({ figure: '50%', line: '5\u2060–\u20605', thin: false })
   })
 
-  it('is a count from one to nine', () => {
-    expect(deckRecord({ finished: 9, wins: 6 }, t)).toEqual({ figure: '6 of 9', line: 'matches won' })
-    expect(deckRecord({ finished: 1, wins: 0 }, t)).toEqual({ figure: '0 of 1', line: 'matches won' })
+  it('is the rate, muted, from five to nine', () => {
+    expect(deckRecord({ finished: 9, wins: 6 }, t)).toEqual({
+      figure: '67%',
+      line: '6\u2060–\u20603 · rough, under 10\u00a0matches',
+      thin: true,
+    })
+    expect(deckRecord({ finished: 5, wins: 2 }, t)).toEqual({
+      figure: '40%',
+      line: '2\u2060–\u20603 · rough, under 10\u00a0matches',
+      thin: true,
+    })
+  })
+
+  it('is the record, muted, from one to four', () => {
+    const line = 'too few for a rate, under 5\u00a0matches'
+    expect(deckRecord({ finished: 4, wins: 3 }, t)).toEqual({ figure: '3\u2060–\u20601', line, thin: true })
+    expect(deckRecord({ finished: 1, wins: 0 }, t)).toEqual({ figure: '0\u2060–\u20601', line, thin: true })
   })
 
   it('has no figure with no finished match', () => {
-    expect(deckRecord({ finished: 0, wins: 0 }, t)).toEqual({ figure: null, line: 'no finished match yet' })
+    expect(deckRecord({ finished: 0, wins: 0 }, t)).toEqual({ figure: null, line: 'no finished match yet', thin: false })
   })
 })
 

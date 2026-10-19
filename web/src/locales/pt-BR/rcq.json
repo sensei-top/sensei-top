@@ -10,7 +10,6 @@
     "shareNote": "A fatia de um chip é sobre os decks de Tier {{tier}} dos últimos {{days}} dias; os arquétipos menores estão em \"Outros\"."
   },
   "view": {
-    "back": "O guia",
     "write": "Escrever o guia de RCQ",
     "writeAgain": "Escrever o guia de RCQ de novo",
     "subtitle": "Um plano de jogo, o meta que você vai encontrar, um plano para cada matchup conferido contra seus 75, os slots flex e um checklist entre rodadas.",
@@ -45,18 +44,18 @@
     "noFormat": "Nenhum formato de torneio é conhecido para este deck, então não há meta de torneios para mostrar.",
     "expectedTitle": "Esperados na loja",
     "expected": {
-      "share": "<name>{{name}}</name>, {{pct}}% do meta",
-      "shareRecord": "<name>{{name}}</name>, {{pct}}% do meta; você está {{wins}}–{{losses}} contra ele",
-      "shareNone": "<name>{{name}}</name>, {{pct}}% do meta; você ainda não jogou contra ele",
+      "share": "<name>{{name}}</name>, {{pct}} do meta",
+      "shareRecord": "<name>{{name}}</name>, {{pct}} do meta; você está {{record}} contra ele",
+      "shareNone": "<name>{{name}}</name>, {{pct}} do meta; você ainda não jogou contra ele",
       "absent": "<name>{{name}}</name>, fora do meta",
-      "absentRecord": "<name>{{name}}</name>, fora do meta; você está {{wins}}–{{losses}} contra ele",
+      "absentRecord": "<name>{{name}}</name>, fora do meta; você está {{record}} contra ele",
       "absentNone": "<name>{{name}}</name>, fora do meta; você ainda não jogou contra ele"
     },
     "freshTitle": "Quão atualizado o meta está",
     "freshNone": "Nenhuma fonte de torneios foi baixada.",
     "recentShares": "O meta nos últimos 14 dias",
-    "recentShare_one": "{{pct}}%, {{n}} deck",
-    "recentShare_other": "{{pct}}%, {{n}} decks",
+    "recentShare_one": "{{pct}}, {{n}} deck",
+    "recentShare_other": "{{pct}}, {{n}} decks",
     "eventsSummary": "Eventos dos últimos 7 dias ({{n}})",
     "noEvents": "Nenhum evento no corpus nos últimos 7 dias.",
     "event_one": "{{source}} · Tier {{tier}} · {{n}} lista",

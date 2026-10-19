@@ -111,9 +111,3 @@ export function formatDayTime(ms: number): string {
 export function formatCount(value: number): string {
   return formatNumber(value)
 }
-
-/** A share or a rate, 0..1, as a whole percentage without its sign: "46".
- *  `lib/format.ts`'s `formatPercent` is the one with its sign. */
-export function formatPercent(fraction: number): string {
-  return formatNumber(Math.round(fraction * 100))
-}

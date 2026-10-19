@@ -1,22 +1,24 @@
 import { describe, expect, it } from 'vitest'
 import { translator } from '../i18n'
-import { NBSP } from './matchups'
 import { patternSentence, patternWords } from './patterns'
+
+/** The word joiner a record keeps each side of its dash. */
+const WJ = '\u2060'
 
 const t = translator('en')
 
 describe('patternSentence', () => {
-  it('writes counts over 999 with a thousands comma, and holds the count to "matches"', () => {
+  it('writes each side as a record, wins then losses', () => {
     const clause = 'where you led the damage race'
     expect(patternSentence(clause, { wins: 1234, n: 2345 }, { wins: 1000, n: 1500 }, t)).toBe(
-      `You won 1,234 of the 2,345${NBSP}matches where you led the damage race, and 1,000 of the other 1,500.`,
+      `You are 1,234${WJ}–${WJ}1,111 in the matches where you led the damage race, and 1,000${WJ}–${WJ}500 in the rest.`,
     )
   })
 
-  it('writes one match the same way, as the Guide has always written it', () => {
+  it('writes one match the same way', () => {
     // The sentence has one form: no singular for a single match.
     expect(patternSentence('where this happened', { wins: 1, n: 1 }, { wins: 0, n: 1 }, t)).toBe(
-      `You won 1 of the 1${NBSP}matches where this happened, and 0 of the other 1.`,
+      `You are 1${WJ}–${WJ}0 in the matches where this happened, and 0${WJ}–${WJ}1 in the rest.`,
     )
   })
 })

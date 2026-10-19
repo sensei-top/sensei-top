@@ -68,7 +68,7 @@ export const OG_TEXT = {
   'pt-BR': {
     brand: 'Sensei Top',
     title: 'Suas partidas, seus decks, o meta de verdade. Tudo no seu próprio computador.',
-    lead: 'O Sensei Top lê os logs que o Arena e o Magic Online já escrevem e os transforma em um dashboard: cada partida e cada jogo, turno a turno, seu retrospecto com cada deck e contra cada arquétipo, e o metajogo dos torneios ao lado.',
+    lead: 'O Sensei Top lê os logs que o Arena e o Magic Online já escrevem e os transforma em um dashboard: cada partida e cada jogo, turno a turno, seu histórico com cada deck e contra cada arquétipo, e o metajogo dos torneios ao lado.',
   },
 }
 

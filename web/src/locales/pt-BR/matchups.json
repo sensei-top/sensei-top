@@ -5,14 +5,15 @@
     "everyVersion": "Todas as versões",
     "noFinishedTitle": "Nenhuma partida terminada ainda",
     "noFinishedMessage": "Os matchups são contados quando uma partida termina.",
-    "countedOver": "Contado sobre as {{n}} partidas mais recentes.",
     "archetypesMet": "Arquétipos enfrentados",
-    "archetypesMetSubtitle": "Só partidas terminadas, os mais enfrentados primeiro. Uma taxa precisa de dez partidas.",
+    "archetypesMetSubtitle": "Só partidas terminadas, os mais enfrentados primeiro. Uma taxa precisa de dez partidas; a partir de cinco ela aparece esmaecida, aproximada.",
     "columns": {
       "archetype": "Arquétipo",
       "matches": "Partidas",
-      "won": "Vitórias",
-      "rate": "Taxa"
+      "record": "Histórico",
+      "rate": "Taxa",
+      "game1": "Jogo 1",
+      "postboard": "Jogos 2 e 3"
     }
   },
   "tiles": {
@@ -24,9 +25,7 @@
     "oneSoFar": "um arquétipo enfrentado {{min}} vezes até agora",
     "best": "Melhor matchup",
     "worst": "Pior matchup",
-    "rankedRate": "venceu {{won}} de {{matches}} contra {{against}}",
-    "rankedCount": "venceu contra {{against}}",
-    "countOf": "{{won}} de {{matches}}"
+    "rankedRate": "{{record}} contra {{against}}"
   },
   "name": {
     "unrecognized": "Deck não reconhecido",
@@ -35,11 +34,11 @@
     "unknownInSentence": "um deck desconhecido"
   },
   "fieldLine": {
-    "games": "Jogos {{won}}–{{lost}}",
-    "record_one": "Jogos {{won}}–{{lost}} · vence {{rate}}% em torneios, {{n}} participação",
-    "record_other": "Jogos {{won}}–{{lost}} · vence {{rate}}% em torneios, {{n}} participações",
-    "recordThin_one": "Jogos {{won}}–{{lost}} · vence {{rate}}% em torneios, {{n}} participação, poucas para confiar",
-    "recordThin_other": "Jogos {{won}}–{{lost}} · vence {{rate}}% em torneios, {{n}} participações, poucas para confiar"
+    "games": "Jogos {{record}}",
+    "record_one": "Jogos {{record}} · vence {{rate}} em torneios, {{n}} participação",
+    "record_other": "Jogos {{record}} · vence {{rate}} em torneios, {{n}} participações",
+    "recordThin_one": "Jogos {{record}} · vence {{rate}} em torneios, {{n}} participação, poucas para confiar",
+    "recordThin_other": "Jogos {{record}} · vence {{rate}} em torneios, {{n}} participações, poucas para confiar"
   },
   "pairing": {
     "allMatchups": "Todos os matchups",
@@ -47,11 +46,11 @@
     "noVersionTitle": "Nenhuma partida contra ele com esta versão",
     "noMatchTitle": "Nenhuma partida contra ele ainda",
     "noMatchMessage": "Quando você jogar uma, ela é contada aqui.",
-    "record": "Retrospecto",
-    "wonOf": "venceu {{won}} de {{matches}}",
-    "matchesWon": "partidas vencidas",
+    "record": "Histórico",
     "games": "Jogos",
     "yoursFirst": "os seus primeiro",
+    "game1": "Jogo 1",
+    "postboard": "Jogos 2 e 3",
     "inTournaments": "Em torneios",
     "onlyNamed": "só um arquétipo nomeado tem resultados",
     "noResults": "nenhum resultado de torneio para ele",
@@ -75,8 +74,8 @@
     "writeAgain": "Escrever de novo"
   },
   "briefCard": {
-    "record_one": "Seu retrospecto: {{wins}}-{{losses}} em {{count}} partida",
-    "record_other": "Seu retrospecto: {{wins}}-{{losses}} em {{count}} partidas",
+    "record_one": "Seu histórico: {{record}} em {{count}} partida",
+    "record_other": "Seu histórico: {{record}} em {{count}} partidas",
     "writtenBy": "escrito por {{model}}",
     "pasted": "colado",
     "fromGuideRun": "de uma rodada completa do guia",
@@ -180,20 +179,19 @@
       "clause": "em que você tinha a mesa mais forte e não atacou"
     },
     "genericClause": "em que isso aconteceu",
-    "sentence": "Você venceu {{wins}} das {{n}} partidas {{clause}}, e {{otherWins}} das outras {{otherN}}."
+    "sentence": "Seu histórico é {{recordWith}} nas partidas {{clause}}, e {{recordWithout}} nas demais."
   },
   "sideboard": {
     "thisOpponent": "este oponente",
     "thisArchetype": "este arquétipo",
+    "postboardRecord": "Seus jogos 2 e 3 contra ele: {{record}}",
     "headline": {
-      "noResult": "Trocas para o jogo {{next}} vs {{label}}",
-      "won": "Venceu o jogo {{game}} — trocas para o jogo {{next}} vs {{label}}",
-      "wonReason": "Venceu o jogo {{game}} ({{reason}}) — trocas para o jogo {{next}} vs {{label}}",
-      "lost": "Perdeu o jogo {{game}} — trocas para o jogo {{next}} vs {{label}}",
-      "lostReason": "Perdeu o jogo {{game}} ({{reason}}) — trocas para o jogo {{next}} vs {{label}}"
+      "noResult": "Plano de sideboard",
+      "won": "Venceu o jogo {{game}}",
+      "wonReason": "Venceu o jogo {{game}} ({{reason}})",
+      "lost": "Perdeu o jogo {{game}}",
+      "lostReason": "Perdeu o jogo {{game}} ({{reason}})"
     },
-    "youPicked": "Você escolheu: {{label}}",
-    "opponentConfidence": "{{label}} · confiança {{confidence}}",
     "result": {
       "win": "venceu",
       "loss": "perdeu",
@@ -211,19 +209,10 @@
     "closest": "Nenhum plano escrito para {{label}} — plano escrito mais próximo: {{closest}}",
     "stale": "Desatualizado",
     "staleMessage": "O meta ou os seus 75 atuais mudaram desde que este plano foi escrito.",
-    "boardFor": "Trocas para o jogo {{next}}",
+    "boarding": "Trocas",
     "fullWriteup": "Texto completo",
-    "opponent": "Oponente",
-    "formatUnknown": "Nenhum formato de torneio é conhecido para esta partida, então o deck do oponente não pode ser nomeado pelos cards vistos.",
-    "unclassified": "Oponente ainda não identificado.",
-    "cardsSeen_one": "{{count}} card visto",
-    "cardsSeen_other": "{{count}} cards vistos",
-    "cardsSeenFrom_one": "{{count}} card visto · {{source}}",
-    "cardsSeenFrom_other": "{{count}} cards vistos · {{source}}",
-    "yourPick": "sua escolha",
-    "liveRead": "leitura ao vivo",
     "otherPlans": "Outros planos escritos",
-    "alternative": "{{label}} · {{fit}}% de encaixe · {{confidence}}"
+    "alternative": "{{label}} · {{fit}} de encaixe · {{confidence}}"
   },
   "position": {
     "turnLabel": "Turno {{turn}}",

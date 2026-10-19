@@ -2,7 +2,8 @@ import type { CoverageOut, CoveragePromptOut, CoverageRowOut, CurrentMatch } fro
 import type { TFunction } from '../i18n'
 import { archetypeName } from './decks'
 import type { TileText } from './matchups'
-import { formatCount, formatPercent, parseTimestamp } from './time'
+import { formatPercent } from './format'
+import { formatCount, parseTimestamp } from './time'
 
 /** A row a prompt can close: its brief `missing` or `stale`. A row
  *  `no_consensus` is not one: too few tournament lists to write from. */
@@ -52,7 +53,7 @@ export function coverageTiles(coverage: CoverageOut, t: TFunction): [TileText, T
         }
       : {
           label: t('matchups.coverage.tiles.matchesCovered'),
-          value: `${formatPercent(coverage.matches_covered)}%`,
+          value: formatPercent(coverage.matches_covered),
           detail: t('matchups.coverage.tiles.matchesDetail', {
             count: coverage.matches_covered_denominator,
             covered: formatCount(coverage.matches_covered_numerator),
@@ -67,7 +68,7 @@ export function coverageTiles(coverage: CoverageOut, t: TFunction): [TileText, T
       }
     : {
         label: t('matchups.coverage.tiles.fieldCovered'),
-        value: `${formatPercent(coverage.field_covered)}%`,
+        value: formatPercent(coverage.field_covered),
         detail: t('matchups.coverage.tiles.fieldDetail'),
       }
   const gaps = coverage.rows.filter(isCoverageGap).length

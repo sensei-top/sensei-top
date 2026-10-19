@@ -70,10 +70,11 @@ def get_conn(request: Request) -> Iterator[sqlite3.Connection]:
 def get_writable_conn(request: Request) -> Iterator[sqlite3.Connection]:
     """The one writable connection in this layer.
 
-    Rule 6 in AGENTS.md allows exactly one exception to the read-only API, and
-    this is it: a manual deck label is the user's own words about their own
-    match, there is no other source for it, and it has to survive the full
-    rebuild that erases every derived row. Kept beside ``get_conn`` rather than
+    Rule 6 in AGENTS.md allows one exception to the read-only API, and this
+    is it: the routes that write its allowlist of authored artifacts (the
+    user's own picks for their own matches, and the narratives written for
+    them), which have no other source and have to survive the full rebuild
+    that erases every derived row. Kept beside ``get_conn`` rather than
     inside ``create_app`` for the same reason — under ``from __future__ import
     annotations`` a locally-defined alias is an unresolvable forward reference
     to pydantic.
@@ -81,8 +82,8 @@ def get_writable_conn(request: Request) -> Iterator[sqlite3.Connection]:
     Pragmas match ``db.py``'s ``connect()`` deliberately: ``isolation_level=
     None`` so a write block is an explicit ``BEGIN``/``COMMIT``/``ROLLBACK``
     (``docs/conventions.md``) rather than sqlite3's implicit transaction, and
-    ``foreign_keys=ON`` so this connection enforces what every other one in
-    the project does. Neither is currently load-bearing — no table on rule 6's
+    ``foreign_keys=ON`` so this connection enforces what ``connect()`` does.
+    Neither is currently load-bearing — no table on rule 6's
     write allowlist declares a foreign key, and ``opponent_deck_override``
     deliberately never will (see ``docs/architecture.md``) — but a writable
     connection that silently enforces *less* than the rest of the project is

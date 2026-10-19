@@ -21,10 +21,11 @@ import type {
 } from '../api'
 import type { TFunction } from '../i18n'
 import { type TileText } from './matchups'
-import { formatDollars, formatPrice } from './format'
+import { formatDollars, formatPercent, formatPrice, formatRecord, WORD_JOINER } from './format'
 import { formatOf, paramFor } from './field'
 import { gapPoints } from './guide'
-import { formatCount, formatIsoDateShort, formatPercent, formatShortDay, parseTimestamp } from './time'
+import { RATE_MIN_MATCHES } from './sample'
+import { formatCount, formatIsoDateShort, formatShortDay, parseTimestamp } from './time'
 
 /** The report an address names: `'latest'` for `/coach`, the number for
  *  `/coach/:id`. */
@@ -255,55 +256,62 @@ export function citationOf(label: string, sources: CoachSource[]): { url: string
 
 /* The profile ("Your numbers"). */
 
-/** A rate's three parts as the profile writes them: the record "174 of
- *  385", the percent "45%" and the range "40–50%", each end a whole
- *  percent rounded as the percent is. The record is `null` with no match;
- *  the percent and the range are `null` with no match and under ten
- *  (`anecdotal`, the same ten as `RATE_MIN_MATCHES`): a rate needs ten. */
+/** A rate's three parts as the profile writes them: the record "174–211"
+ *  (wins then losses), the percent "45%" and the range "40%–50%", each end
+ *  a whole percent rounded as the percent is. The record is `null` with no
+ *  match; the percent and the range are `null` with no match and under ten
+ *  (`anecdotal`, the same ten as `RATE_MIN_MATCHES`): a rate needs ten. The
+ *  coach's matches and games are wins and losses only (`coach/evidence.py`
+ *  keeps `result IN ('win', 'loss')`), so the losses are `n - wins`. */
 export type RateWords = { record: string | null; percent: string | null; range: string | null }
 
-/** The word joiner (U+2060): no line may break on either side of it. Built
- *  in code, never typed, like `NBSP`. */
-export const WORD_JOINER = String.fromCharCode(0x2060)
-
-export function rateWords(rate: RateModel, t: TFunction): RateWords {
+export function rateWords(rate: RateModel): RateWords {
   if (rate.n === 0) return { record: null, percent: null, range: null }
-  const record = t('coach.rate.record', { wins: formatCount(rate.wins), n: formatCount(rate.n) })
+  const record = formatRecord(rate.wins, rate.n - rate.wins)
   if (rate.anecdotal || rate.rate == null) return { record, percent: null, range: null }
   return {
     record,
-    percent: `${formatPercent(rate.rate)}%`,
+    percent: formatPercent(rate.rate),
     // A word joiner each side of the dash: the range never breaks at it.
-    range: `${formatPercent(rate.ci_low)}${WORD_JOINER}–${WORD_JOINER}${formatPercent(rate.ci_high)}%`,
+    range: `${formatPercent(rate.ci_low)}${WORD_JOINER}–${WORD_JOINER}${formatPercent(rate.ci_high)}`,
   }
 }
 
-/** One overall tile: the percent as the value, the record and range as
- *  its detail; under ten, a dash over the record alone; with no match, a
+/** What a coach tile says: `muted` is a record drawn muted, too few for a
+ *  rate. */
+export type RateTileText = TileText & { muted?: boolean }
+
+/** One overall tile (D7): from ten, the percent as the value, the record
+ *  and the range as its detail; under ten, the record as the value, muted,
+ *  over the "too few" line (matches or games, by `unit`); with no match, a
  *  dash over "None played". */
-export function rateTile(label: string, rate: RateModel, t: TFunction): TileText {
-  const words = rateWords(rate, t)
+export function rateTile(
+  label: string,
+  rate: RateModel,
+  t: TFunction,
+  unit: 'matches' | 'games' = 'matches',
+): RateTileText {
+  const words = rateWords(rate)
   if (words.record == null) return { label, value: '—', detail: t('coach.rate.nonePlayed') }
-  if (words.percent == null) return { label, value: '—', detail: t('coach.rate.won', { record: words.record }) }
-  return {
-    label,
-    value: words.percent,
-    detail: t('coach.rate.wonRange', { record: words.record, range: words.range }),
+  if (words.percent == null) {
+    const key = unit === 'games' ? 'common.sample.tooFewGames' : 'common.sample.tooFewMatches'
+    return { label, value: words.record, detail: t(key, { min: RATE_MIN_MATCHES }), muted: true }
   }
+  return { label, value: words.percent, detail: `${words.record} · ${words.range}` }
 }
 
 /** The six overall tiles, in the profile's order. */
 export function overallTiles(
   evidence: Pick<CoachEvidenceModel, 'overall' | 'overall_games' | 'g1' | 'post_board' | 'on_play' | 'on_draw'>,
   t: TFunction,
-): TileText[] {
+): RateTileText[] {
   return [
     rateTile(t('coach.split.matches'), evidence.overall, t),
-    rateTile(t('coach.split.games'), evidence.overall_games, t),
-    rateTile(t('coach.split.game1'), evidence.g1, t),
-    rateTile(t('coach.split.postBoard'), evidence.post_board, t),
-    rateTile(t('coach.split.onPlay'), evidence.on_play, t),
-    rateTile(t('coach.split.onDraw'), evidence.on_draw, t),
+    rateTile(t('coach.split.games'), evidence.overall_games, t, 'games'),
+    rateTile(t('coach.split.game1'), evidence.g1, t, 'games'),
+    rateTile(t('coach.split.postBoard'), evidence.post_board, t, 'games'),
+    rateTile(t('coach.split.onPlay'), evidence.on_play, t, 'games'),
+    rateTile(t('coach.split.onDraw'), evidence.on_draw, t, 'games'),
   ]
 }
 

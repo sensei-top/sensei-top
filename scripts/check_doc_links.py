@@ -84,7 +84,7 @@ def target(name: str, cache: dict[str, Doc | None]) -> Doc | None:
         if not p.is_file():
             cache[name] = None
         else:
-            text = p.read_text(errors="replace")
+            text = p.read_text(encoding="utf-8", errors="replace")
             heads = [m.group(1) for m in re.finditer(r"^#{1,6} +(.+?)\s*$", text, re.M)]
             cache[name] = (norm(text), [norm(h) for h in heads], {slug(h) for h in heads})
     return cache[name]
@@ -93,7 +93,8 @@ def target(name: str, cache: dict[str, Doc | None]) -> Doc | None:
 def all_headings() -> set[str]:
     out: set[str] = set()
     for p in (ROOT / "docs").rglob("*.md"):
-        for m in re.finditer(r"^#{1,6} +(.+?)\s*$", p.read_text(errors="replace"), re.M):
+        text = p.read_text(encoding="utf-8", errors="replace")
+        for m in re.finditer(r"^#{1,6} +(.+?)\s*$", text, re.M):
             out.add(norm(m.group(1)))
     return out
 
@@ -141,7 +142,7 @@ def main() -> int:
         if SKIP & set(path.parts):
             continue
         try:
-            lines = path.read_text().split("\n")
+            lines = path.read_text(encoding="utf-8").split("\n")
         except (UnicodeDecodeError, OSError):
             continue
         shown = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path

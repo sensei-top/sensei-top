@@ -265,7 +265,7 @@ msgstr "Mínimo de jogadores em um torneio de papel grande"
 
 #: sensei_top/review/summary.py
 msgid "Field record"
-msgstr "Retrospecto do meta"
+msgstr "Histórico no meta"
 
 #: sensei_top/review/analyzers/information.py
 msgid "Field staples never revealed"
@@ -625,7 +625,7 @@ msgid ""
 " the decklists are empty. The skill sections still cover every format played,"
 " and the field section still shows the {fmt} field."
 msgstr ""
-"Nenhuma partida de {fmt} registrada: os retrospectos por deck, por papel e "
+"Nenhuma partida de {fmt} registrada: os históricos por deck, por papel e "
 "por oponente e as listas estão vazios. As seções de habilidade ainda cobrem "
 "todos os formatos jogados, e a seção do meta ainda mostra o meta de {fmt}."
 
@@ -638,7 +638,7 @@ msgid ""
 "shows the {fmt} field."
 msgstr ""
 "Nenhuma partida de {fmt} desde {win_start} (a última mudança do formato "
-"{fmt}): os retrospectos por deck, por papel e por oponente e as listas estão "
+"{fmt}): os históricos por deck, por papel e por oponente e as listas estão "
 "vazios. As seções de habilidade ainda cobrem todos os formatos jogados, e a "
 "seção do meta ainda mostra o meta de {fmt}."
 
@@ -657,7 +657,7 @@ msgid ""
 "records."
 msgstr ""
 "Ainda não há jogos terminados suficientes com este deck para comparar os "
-"retrospectos no play e no draw."
+"históricos no play e no draw."
 
 #: sensei_top/review/summary.py
 msgid "Not enough of your own match history with this deck yet"
@@ -753,11 +753,11 @@ msgid_plural ""
 "Only {n} other completed matches in this matchup so far — too few to call a "
 "record."
 msgstr[0] ""
-"Só {n} outra partida terminada neste matchup até agora — poucas para definir "
-"um retrospecto."
+"Só {n} outra partida terminada neste matchup até agora — poucas para formar "
+"um histórico."
 msgstr[1] ""
 "Só {n} outras partidas terminadas neste matchup até agora — poucas para "
-"definir um retrospecto."
+"formar um histórico."
 
 #: sensei_top/review/analyzers/clock.py
 #, python-brace-format
@@ -1284,7 +1284,7 @@ msgid ""
 "there is no personal record to compare against."
 msgstr ""
 "Esta é a primeira vez que este deck enfrenta esta identificação de oponente, "
-"então não há retrospecto pessoal para comparar."
+"então não há histórico pessoal para comparar."
 
 #: sensei_top/review/analyzers/resources.py
 msgid ""
@@ -1489,7 +1489,7 @@ msgstr[1] ""
 msgid ""
 "You lost — your record in this matchup is {wins} wins to {losses} losses"
 msgstr ""
-"Você perdeu — seu retrospecto neste matchup é de {wins} vitórias a {losses} "
+"Você perdeu — seu histórico neste matchup é de {wins} vitórias a {losses} "
 "derrotas"
 
 #: sensei_top/review/analyzers/frame.py
@@ -1516,7 +1516,7 @@ msgstr "Você estava no play neste jogo."
 #, python-brace-format
 msgid "You won — your record in this matchup is {wins} wins to {losses} losses"
 msgstr ""
-"Você venceu — seu retrospecto neste matchup é de {wins} vitórias a {losses} "
+"Você venceu — seu histórico neste matchup é de {wins} vitórias a {losses} "
 "derrotas"
 
 #: sensei_top/table/opening_hand.py
@@ -1541,7 +1541,7 @@ msgstr "Seu dano por turno de jogador"
 
 #: sensei_top/review/analyzers/baseline.py
 msgid "Your deck's own play/draw record"
-msgstr "Retrospecto play/draw do seu deck"
+msgstr "Histórico play/draw do seu deck"
 
 #: sensei_top/review/analyzers/resources.py
 #, python-brace-format
@@ -1619,7 +1619,7 @@ msgstr ""
 
 #: sensei_top/review/summary.py
 msgid "Your record"
-msgstr "Seu retrospecto"
+msgstr "Seu histórico"
 
 #: sensei_top/review/analyzers/resources.py
 msgid "Your spells countered"
@@ -2250,10 +2250,10 @@ msgid_plural ""
 "so they count in the {fmt} records but in no per-deck line."
 msgstr[0] ""
 "{n} partida de {fmt} foi jogada com um deck cujo formato é outro, então ela "
-"conta nos retrospectos de {fmt} mas em nenhuma linha por deck."
+"conta nos históricos de {fmt} mas em nenhuma linha por deck."
 msgstr[1] ""
 "{n} partidas de {fmt} foram jogadas com um deck cujo formato é outro, então "
-"elas contam nos retrospectos de {fmt} mas em nenhuma linha por deck."
+"elas contam nos históricos de {fmt} mas em nenhuma linha por deck."
 
 #: sensei_top/archetypes/classify.py
 #, python-brace-format

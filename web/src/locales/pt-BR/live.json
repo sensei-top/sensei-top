@@ -21,11 +21,13 @@
   },
   "empty": {
     "title": "Nenhuma partida em andamento",
-    "message": "Comece uma partida no Arena e esta página a acompanha: o que resta no seu grimório, os cards e o deck do oponente e, em jogos não ranqueados, um guia de mão inicial e o que o oponente pode estar segurando. Ao vivo acompanha só o Arena; uma partida de MTGO aparece em Partidas."
+    "message": "Comece uma partida no Arena e esta página a acompanha: o que resta no seu grimório, os cards e o deck do oponente e, fora de eventos, um guia de mão inicial e o que o oponente pode estar segurando. Ao vivo acompanha só o Arena; uma partida de MTGO aparece em Partidas."
   },
-  "ranked": {
-    "title": "Jogo ranqueado",
-    "message": "Nenhum conselho de mão inicial em um jogo ranqueado. Seu grimório e os cards do oponente aparecem assim que o Arena começa o jogo."
+  "noAdvice": {
+    "eventTitle": "Jogo de evento",
+    "eventMessage": "Nenhum conselho de mão inicial em um jogo de evento. Seu grimório e os cards do oponente aparecem assim que o Arena começa o jogo.",
+    "switchTitle": "Conselhos desligados",
+    "switchMessage": "Você desligou os conselhos em Configurações. Seu grimório e os cards do oponente aparecem assim que o Arena começa o jogo."
   },
   "strip": {
     "game": "Jogo",
@@ -36,29 +38,15 @@
     "mulliganPhase": "Fase de mulligan",
     "waiting": "Aguardando o primeiro estado do jogo",
     "record": "{{won}}–{{lost}} na partida",
-    "rankedAdviceOff": "ranqueado, conselhos desligados",
+    "eventAdviceOff": "evento, conselhos desligados",
+    "adviceSwitchedOff": "conselhos desligados em Configurações",
     "seen": "visto {{ago}}",
     "abandoned": "provavelmente abandonada, nenhum resultado chegou"
   },
   "bar": {
-    "brief": "Briefing do matchup",
-    "details": "Detalhes da partida",
-    "opponentDeck": "Deck do oponente",
-    "game": "Jogo",
-    "playDraw": "Play / draw",
-    "play": "Play",
-    "draw": "Draw",
-    "turn": "Turno",
-    "seenEvent": "{{n}} cards vistos · {{event}}",
-    "eventUnknown": "evento desconhecido",
-    "matchScore": "partida {{won}}–{{lost}}",
-    "undetermined": "indeterminado",
-    "thisGame": "este jogo",
-    "turnNote": "o turno de cada jogador conta como um"
+    "brief": "Briefing do matchup"
   },
   "keepSubtitle": {
-    "waiting": "Aguardando o primeiro estado do jogo vindo do Arena.",
-    "firstTurn": "O primeiro turno não começou",
     "mulliganed": "Você fez mulligan {{times}}",
     "kept": "Você manteve sua mão",
     "opponentMulliganed": "o oponente fez mulligan {{times}}"
@@ -74,7 +62,7 @@
     "untagged_one": "{{count}} card ainda não tem texto de regras registrado, então não é contado como interação acima.",
     "untagged_other": "{{count}} cards ainda não têm texto de regras registrado, então não são contados como interação acima.",
     "landBand": "Só pelos terrenos, <strong>{{rate}}</strong> das suas mãos iniciais de sete caem na faixa de {{min}} a {{max}} terrenos.",
-    "mulliganRecord": "Retrospecto de mulligans",
+    "mulliganRecord": "Histórico de mulligans",
     "hand": "Mão",
     "games": "Jogos",
     "winRate": "Taxa de vitórias",
@@ -83,9 +71,9 @@
     "needs": "O que este deck precisa",
     "keyPlay": "Jogada-chave",
     "bestWindow": "Melhor janela",
-    "record": "Retrospecto",
+    "record": "Histórico",
     "neverResolved": "Nunca resolveu",
-    "cost": "Manteve 7: <strong>{{keptRate}}</strong> ({{keptWins}}-{{keptLosses}} em {{keptGames}}) contra com mulligan: <strong>{{mullRate}}</strong> ({{mullWins}}-{{mullLosses}} em {{mullGames}})."
+    "cost": "Manteve 7: <strong>{{kept}}</strong> contra com mulligan: <strong>{{mull}}</strong>."
   },
   "hand": {
     "verdict": {
@@ -103,14 +91,14 @@
     "lands_one": "{{count}} terreno",
     "lands_other": "{{count}} terrenos",
     "band": "faixa de {{min}} a {{max}}",
-    "mulligan": "mulligan {{n}}",
     "keeping7": "mantendo 7",
     "mull": "mull {{n}}",
-    "deckRecord": "este deck está {{wins}}-{{losses}} {{label}}"
+    "deckRecord": "o histórico deste deck é {{record}} {{label}}"
   },
   "opponentHand": {
     "title": "Mão do oponente",
     "revealedInHand": "Revelado na mão",
+    "mulliganed": "fez mulligan {{times}}",
     "shownSoFar": "Mostrado até agora",
     "unclassified": "O deck do oponente ainda não foi identificado — nenhuma leitura card a card até que seja.",
     "noConsensus": "O corpus de torneios tem poucos decks deste arquétipo para estimar cards específicos.",
@@ -131,36 +119,23 @@
   "library": {
     "title": "Seu grimório",
     "empty": "Nada mais para comprar, ou a contagem do grimório ainda não é conhecida.",
-    "landLabel": "Terreno · próxima compra",
-    "topCard": "no card do topo",
-    "withinThree": "em até três compras",
-    "landFoot_one": "{{count}} terreno entre {{total}} cards",
-    "landFoot_other": "{{count}} terrenos entre {{total}} cards",
-    "interactionLabel": "Interação · próxima compra",
-    "interactionFoot_one": "{{count}} remoção, contramágica ou bounce restante",
-    "interactionFoot_other": "{{count}} remoções, contramágicas e bounces restantes",
-    "noRulesText_one": "{{count}} ainda sem texto de regras",
-    "noRulesText_other": "{{count}} ainda sem texto de regras",
-    "floodLabel": "Flood e screw",
-    "leftIsLand": "do que resta é terreno",
-    "ofDeck": "do deck que você montou",
-    "trueToDeck": "Fiel ao deck.",
-    "landLight": "{{points}} pontos abaixo em terrenos — você já comprou a sua parte.",
-    "landHeavy": "{{points}} pontos acima em terrenos — os terrenos ainda estão lá.",
     "costUnknown": "Custo desconhecido",
     "mana": "{{mv}} de mana",
-    "unknownCard": "Card desconhecido",
-    "note": "As porcentagens são a chance de comprar ao menos uma cópia em até três compras."
+    "lands": "Terrenos",
+    "colLeft": "Restam",
+    "colCost": "Custo",
+    "next": "Próxima",
+    "within": "Em até {{n}}",
+    "colCard": "Card",
+    "colChance": "Próxima compra",
+    "unknownCard": "Card desconhecido"
   },
   "opponent": {
     "title": "Deck do oponente",
-    "picked": "Você escolheu: {{label}}",
-    "withConfidence": "{{label}} · confiança {{confidence}}",
-    "unclear": "{{label}} — incerto",
     "pick": "escolher este deck",
     "candidates_one": "{{count}} candidato próximo",
     "candidates_other": "{{count}} candidatos próximos",
-    "fit": "{{pct}}% de encaixe",
+    "fit": "{{pct}} de encaixe",
     "stillUnseen": "ainda não vistos: {{cards}}"
   },
   "picker": {
