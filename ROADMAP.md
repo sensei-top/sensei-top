@@ -17,62 +17,82 @@ features and a monthly allowance of written reports, and it is the only
 thing that asks for an account. If the tracker earns a place in your
 routine, [donations](#donations) keep it maintained.
 
-## Now: before 1.0.0
+What it is for: one tracker for both Arena and Magic Online, on Windows
+and Linux (the Steam Deck included), that sends none of your matches
+anywhere and shows how many games stand behind every rate it gives you.
+The order below follows from that.
 
-The 0.7.x beta already ships the rest of what was planned for the first
-release: the Windows installer and the Linux AppImage (no Flatpak, AUR or
-`.deb` package), with updates that apply themselves; the source on GitHub
-under the AGPL-3.0, one fresh snapshot commit per release; Brazilian
-Portuguese beside English; the landing page at
-[senseitop.com](https://senseitop.com); a daily version check that a
-switch in Settings turns off; and a diagnostics bundle you make and attach
-by hand. What is left:
+## Now
 
-- **The Microsoft Store build** of the same app, which the Store signs.
-  It is listed free at first and priced once Microsoft confirms an
-  individual developer may sell. The direct download stays unsigned for
-  now: the open-source signing programme asks for more public use first,
-  and the application goes in again after the launch.
-- **A lighter first run.** Fewer words in the welcome steps, a picture
-  guide to turning on Arena's Detailed Logs, a tour of the dashboard, and
-  where MTGO keeps your deck exports.
-- **Saving a pasted answer in the app.** Without a key, the answer you
-  get from your own assistant is pasted back into the dashboard, instead
-  of saved with a command the installed app doesn't put in reach.
-- **The deck guide and the RCQ guide as files**, in Markdown or PDF, to
-  read on your phone or print for the event.
-- **A round of fixes** from the backlog.
+1.0.0 shipped on 2026-10-17, with the Windows installer, the Linux
+AppImage, updates that apply themselves, and Brazilian Portuguese beside
+English. What comes first after it:
 
-## Next: the first releases after launch
+1. **Game 1 and games 2 and 3, apart.** Your record in each matchup split
+   into the first game and the games after sideboarding, for best-of-three
+   matches. Arena's log says which deck you played in every game; Magic
+   Online's doesn't, so its post-board cells say unknown rather than
+   guess.
+2. **Fixes to how the logs are read.** Arena sometimes shortens a message
+   that grew too large, and lets a player undo a spell; one malformed
+   message can also cost the messages beside it. Magic Online ends some
+   games with lines the tracker doesn't read yet (a disconnection, running
+   out of time, drawing from an empty library), opens a phantom game when
+   a player reconnects, and drops a few matches whose names carry
+   unexpected characters. Each fix also mends every match you already
+   recorded.
+3. **Finding Arena on more Linux setups.** Every Steam library, Flatpak
+   and Snap Steam, Lutris, Bottles and Heroic, and the newest log when
+   more than one is found.
+
+Outside this order, because it waits on Microsoft rather than on the
+work: **the Microsoft Store build** of the same app, which the Store
+signs. It is listed free at first and priced once Microsoft confirms an
+individual developer may sell. The direct download stays unsigned for
+now: the open-source signing programme asks for more public use first.
+
+## Next
 
 In this order, unless Discussions says otherwise.
 
-1. **Sideboard help without a model.** Your own record for each matchup
-   after boarding, read from Arena's own deck submissions; the cards in
-   your 75 that answer what the opponent's deck does, as candidate ins; and
-   a link to a published sideboard guide for the pairing, found through
-   the Skill Issue Magic guide index, with credit to its author on every
-   link. Nothing is generated and no "outs" are invented.
-2. **Written guides with any model.** Today a written deck guide, match
-   report or coach report comes from a prompt you copy into whatever
-   assistant you already use, or from an Anthropic key you set yourself.
-   Next: any provider that speaks the OpenAI format, and local models
-   through Ollama or LM Studio, with the model named on every report it
-   wrote.
-3. **macOS, Arena only.** An unsigned build from GitHub's runners first;
-   notarization when donations cover Apple's fee.
+1. **Seeing that the tracker is reading.** A page that says where your
+   log is, when it was last read, how many matches came from it, and
+   whether Arena's Detailed Logs setting is off, with the exact place to
+   turn it on; a warning when a match looks missing; and what changed in
+   each release, dated, inside the app.
+2. **Your data out, and every column explained.** Your matches and games
+   as a CSV file; a one-line definition on every table column; and a tour
+   of the dashboard in the help pages, in both languages, which says what
+   the tracker reads and that it sends nothing.
+3. **Sideboard help without a model.** The cards in your 75 that answer
+   what the opponent's deck does, as candidate ins, and a link to a
+   published sideboard guide for the pairing, found through the Skill
+   Issue Magic guide index, with credit to its author on every link.
+   Nothing is generated and no "outs" are invented.
+4. **Win rates per card**, from your own games: with the card in your
+   opening hand, drawn, and cast, with the number of games beside each
+   rate.
 
 ## Later
 
+- **Written guides with any model.** Today a written deck guide, match
+  report or coach report comes from a prompt you copy into whatever
+  assistant you already use, or from an Anthropic key you set yourself.
+  Later: any provider that speaks the OpenAI format, and local models
+  through Ollama or LM Studio, with the model named on every report it
+  wrote.
+- **macOS, Arena only.** An unsigned build from GitHub's runners first;
+  notarization when donations cover Apple's fee.
 - **MTGO on the Live page**: the opponent's revealed cards during a game
   and the between-games plan, read from MTGO's game log the way Arena's
   Live page reads Arena's.
-- **A Discord server**, once there are enough people to staff one.
-  Discussions on GitHub come first.
-- **Opt-in match contributions.** A way to send your finished matches,
-  with the exact payload shown before anything leaves, to build matchup
-  numbers from real games. Not built until real usage shows it is worth
-  the trust it asks for, and never on by default.
+- **Caution cards**: the cards to watch for from the deck your opponent
+  most likely plays, with their rules text.
+- **Finding your history faster**: date ranges, a search, your matches
+  grouped by day, and league runs with their trophies.
+- **Historic, Explorer and Timeless**, the Arena-only formats other than
+  Alchemy and Brawl, with the field data and format features the MTGO
+  formats have.
 - **An optional paid tier**, once a few thousand players use the tracker
   regularly. A subscription for deeper features, with a monthly allowance
   of written reports inside it, so you never set up a key or paste a
@@ -80,9 +100,8 @@ In this order, unless Discussions says otherwise.
   play. It is the only thing that asks for an account, made when you
   subscribe: a code sent to your email, or Google, Discord or X. The free
   tracker, the copy prompt and your own key stay as they are.
-- **Historic, Explorer and Timeless**, the Arena-only formats other than
-  Alchemy and Brawl, with the field data and format features the MTGO
-  formats have.
+- **A Discord server**, once there are enough people to staff one.
+  Discussions on GitHub come first.
 
 ## Never
 
@@ -98,6 +117,9 @@ These are decisions, not gaps. Each one was considered and refused.
 - **Reading the memory of, injecting into or automating either client.**
   The tracker reads the log files Arena and MTGO already write, with
   Arena's own Detailed Logs setting on, and nothing else.
+- **Sending your matches anywhere.** Not by default, and not as an
+  opt-in: your match history stays on your computer. The matchup numbers
+  from outside your own games come from published tournament results.
 - **Draft.** The draft assistant was removed in October 2026 and is not
   coming back in this project.
 - **Mobile.** iOS makes log reading impossible and Android impractical.
@@ -105,9 +127,25 @@ These are decisions, not gaps. Each one was considered and refused.
   and nothing free ever asks you to sign up. The only requests the app
   makes on its own
   are reference downloads (card data, images, archetype definitions,
-  tournament results) and the daily version check above.
+  tournament results) and a daily version check, which a switch in
+  Settings turns off.
 - **Alchemy and Brawl.** Games in them still appear in your history, but
   no field data or format-specific feature is built for them.
+
+## Where it comes from
+
+- **Installers come only from the
+  [GitHub releases](https://github.com/sensei-top/sensei-top/releases)**,
+  which [senseitop.com](https://senseitop.com) links to, and later from
+  the Microsoft Store listing. Any other download site is not this
+  project's.
+- **The app never contacts senseitop.com.** Updates and the version check
+  come from the GitHub releases, and the tracker runs on your computer
+  with no server of this project's behind it. If the site went away, the
+  tracker would keep working.
+- **The source is on GitHub under the AGPL-3.0**, developed in the open
+  since 1.0.0, so anyone can build it, and fork it if the project ever
+  stops.
 
 ## How fixes ship
 
