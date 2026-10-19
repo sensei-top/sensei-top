@@ -18,6 +18,8 @@ Field paths verified against client 2026.62.10 (see brief §6):
   submitted deck for the match (``deckCards`` / ``sideboardCards``, grpIds).
 * ``…[].gameStateMessage.gameInfo`` — per-game result at
   ``stage == GameStage_GameOver``.
+* ``…[].gameStateMessage.gameInfo.matchWinCondition`` — the match's best-of
+  (``Best2of3`` → 3, ``SingleElimination`` → 1), first value kept.
 * ``…[].gameStateMessage.turnInfo`` — sibling of ``gameInfo``; ``turnNumber``
   and ``activePlayer`` drive on-play detection and turn counts.
 * requests ``DeckUpsertDeckV3`` (deck edited) and ``EventSetDeckV3`` (deck
@@ -136,9 +138,20 @@ class MatchState:
     # Projector._handle_submit_deck); a Bo3 that boarded gets rows for 2
     # and/or 3 here, game 1's own deck staying in `deck_cards` above.
     submitted_decks: dict[int, dict[str, list[int]]] = field(default_factory=dict)
+    # gameInfo.matchWinCondition: the first value seen for the match, raw, and
+    # the best-of it maps to (3, 1, or None for a value this code doesn't know).
+    win_condition: str | None = None
+    best_of: int | None = None
+    _warned_win_conditions: set[str] = field(default_factory=set)
 
     def game(self, number: int) -> GameState:
         return self.games.setdefault(number, GameState(game_number=number))
+
+
+_BEST_OF_BY_WIN_CONDITION = {
+    "MatchWinCondition_Best2of3": 3,
+    "MatchWinCondition_SingleElimination": 1,
+}
 
 
 def _outcome(winning_team: int | None, self_team: int | None) -> str:
@@ -388,6 +401,21 @@ class Projector:
             _int("constructedMatchesLost"),
         ))
 
+    def _handle_win_condition(self, state: MatchState, value: str) -> None:
+        """The match's best-of, from the first matchWinCondition seen (never overwritten)."""
+        if state.win_condition is None:
+            state.win_condition = value
+            state.best_of = _BEST_OF_BY_WIN_CONDITION.get(value)
+            if state.best_of is None:
+                state._warned_win_conditions.add(value)
+                self._warn(f"unknown matchWinCondition {value!r} in match {state.match_id}")
+        elif value != state.win_condition and value not in state._warned_win_conditions:
+            state._warned_win_conditions.add(value)
+            self._warn(
+                f"matchWinCondition changed from {state.win_condition!r} to {value!r} "
+                f"in match {state.match_id}; keeping the first"
+            )
+
     def _handle_gre_message(self, message: dict[str, Any], logged_at: str | None) -> None:
         connect = message.get("connectResp")
         if isinstance(connect, dict) and "deckMessage" in connect:
@@ -417,6 +445,9 @@ class Projector:
                     self._pending_sideboard_deck = None
         if state is None:
             return
+
+        if isinstance(info, dict) and isinstance(info.get("matchWinCondition"), str):
+            self._handle_win_condition(state, info["matchWinCondition"])
 
         game = state.game(state.current_game)
         # Apply this message's own state changes before deciding whether it's
@@ -728,14 +759,15 @@ def project(conn: sqlite3.Connection) -> dict[str, int]:
                 """
                 INSERT INTO matches (match_id, event_id, deck_id, self_seat, opponent_seat,
                                      opponent_user_id, opponent_name, started_at, ended_at,
-                                     result, games_won, games_lost, completed_reason, format)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                     result, games_won, games_lost, completed_reason, format,
+                                     best_of)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     state.match_id, state.event_id, state.deck_id, state.self_seat,
                     state.opponent_seat, state.opponent_user_id, state.opponent_name,
                     state.started_at, state.ended_at, state.result, won, lost,
-                    state.completed_reason, match_format,
+                    state.completed_reason, match_format, state.best_of,
                 ),
             )
             counts["matches"] += 1

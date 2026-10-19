@@ -358,12 +358,15 @@ def _write_match(
     match_result = _game_result(parsed.winner_handle, self_handle, opponent_handle)
 
     # `format` is left out on purpose: MTGO's log never names one, so it is NULL.
+    # best_of is 3: the MTGO constructed matches this tracker reads are best of
+    # three (D2, the user's call); its log names no structure.
     conn.execute(
         """
         INSERT INTO matches (match_id, event_id, deck_id, self_seat, opponent_seat,
                              opponent_user_id, opponent_name, started_at, ended_at,
-                             result, games_won, games_lost, completed_reason, source)
-             VALUES (?, NULL, NULL, ?, ?, NULL, ?, ?, ?, ?, ?, ?, NULL, 'mtgo')
+                             result, games_won, games_lost, completed_reason, source,
+                             best_of)
+             VALUES (?, NULL, NULL, ?, ?, NULL, ?, ?, ?, ?, ?, ?, NULL, 'mtgo', 3)
         """,
         (
             parsed.match_id, SELF_SEAT, OPPONENT_SEAT, opponent_handle,

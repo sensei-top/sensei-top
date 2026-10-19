@@ -777,6 +777,7 @@ def test_full_fixture_projects_one_match_two_games_45_card_events(conn):
     assert row["result"] == "win"
     assert row["games_won"] == 2
     assert row["games_lost"] == 0
+    assert row["best_of"] == 3
     assert row["started_at"] == "2026-09-14T12:42:37"
     assert row["ended_at"] == "2026-09-14T12:42:37"
 
