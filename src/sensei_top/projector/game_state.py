@@ -76,8 +76,9 @@ order**, never by comparing ids: in the real history, 16 of 923 games carry
 undo naming a state this tracker never applied in the current game drops
 nothing and adds a line to ``warnings``: there is no length to return to, and
 guessing one would invent history (rule 4). The remembered states are kept
-per game (``gameInfo.gameNumber``): ``live_state.py`` replays a whole match
-through one tracker, and a game-2 undo must never return to a game-1 state.
+per game (``gameInfo.gameNumber``): ``live_state.py`` keeps one tracker per
+game, so this reset only guards a caller that feeds one tracker more than one
+game, where a game-2 undo must never return to a game-1 state.
 
 The rollback also forgets the dropped transfers' annotation ids. Arena rewinds
 its own counters with the game: in ``tests/fixtures/undo_session.log`` the

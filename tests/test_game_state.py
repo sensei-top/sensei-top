@@ -965,10 +965,10 @@ def _cast(state_id: int, instance_id: int, grp_id: int, annotation_id: int, **ex
 
 
 def test_an_undo_never_returns_to_a_state_of_an_earlier_game():
-    """Synthetic. live_state.py replays a whole match through one tracker, and
-    state ids start over each game, so a game-2 undo can name an id only game
-    1 applied. Rolling back to game 1's point would truncate game 2's real
-    rows."""
+    """Synthetic. live_state.py keeps one tracker per game, but a caller that
+    feeds one tracker more than one game meets state ids that start over each
+    game, so a game-2 undo can name an id only game 1 applied. Rolling back to
+    game 1's point would truncate game 2's real rows."""
     t = GameStateTracker()
     t.apply(_cast(5, 7, 100, 1, gameInfo={"gameNumber": 1}))
     t.apply(_cast(1, 8, 200, 2, gameInfo={"gameNumber": 2}))
