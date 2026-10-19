@@ -160,7 +160,7 @@ class Tree:
             if NOT_CODE.search(f):
                 continue
             try:
-                body = (ROOT / f).read_text()
+                body = (ROOT / f).read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
                 continue
             self.text[f] = body
@@ -169,10 +169,11 @@ class Tree:
         # The client's own names (message types, fields) are in its logs.
         for f in self.files:
             if f.startswith("tests/fixtures/") and f.endswith(".log"):
-                idents.update(IDENT.findall((ROOT / f).read_text(errors="replace")))
+                text = (ROOT / f).read_text(encoding="utf-8", errors="replace")
+                idents.update(IDENT.findall(text))
         self.idents = idents
         self.flags = flags
-        types = (ROOT / "web/src/types/api.ts").read_text()
+        types = (ROOT / "web/src/types/api.ts").read_text(encoding="utf-8")
         paths = re.findall(r'^    "(/api/[^"]+)": \{', types, re.M)
         self.routes = [re.sub(r"\{[^}]*\}", "*", r) for r in paths]
 
@@ -260,7 +261,7 @@ def main() -> int:
     for doc in docs(sys.argv[1:] or None):
         shown = doc.relative_to(ROOT) if doc.is_relative_to(ROOT) else doc
         fenced = False
-        for i, line in enumerate(doc.read_text().split("\n")):
+        for i, line in enumerate(doc.read_text(encoding="utf-8").split("\n")):
             if line.lstrip().startswith("```"):
                 fenced = not fenced
                 continue
