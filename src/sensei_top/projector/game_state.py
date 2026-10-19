@@ -265,8 +265,6 @@ class GameStateTracker:
         # full-snapshot reset the same way card_events does — see _zone_cards.
         self._drawn_on: dict[int, int] = {}
 
-    # -- ingestion ------------------------------------------------------
-
     def apply(self, gsm: dict[str, Any]) -> None:
         """Merge one GameStateMessage (full or diff) into accumulated state."""
         if gsm.get("type") == "GameStateType_Full":
@@ -400,8 +398,6 @@ class GameStateTracker:
         """
         if self._current_turn is not None and self._current_turn not in self.turns:
             self._finalize(self._current_turn)
-
-    # -- merge helpers ----------------------------------------------------
 
     def _rekey(self, orig_id: int | None, new_id: int | None) -> None:
         if orig_id is None or new_id is None or orig_id == new_id:
@@ -551,8 +547,6 @@ class GameStateTracker:
             ids = zone.get("objectInstanceIds")
             if ids and instance_id in ids:
                 zone["objectInstanceIds"] = [i for i in ids if i != instance_id]
-
-    # -- snapshot -----------------------------------------------------------
 
     def _finalize(self, turn_number: int) -> None:
         self.turns[turn_number] = TurnRow(

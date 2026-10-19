@@ -393,8 +393,6 @@ def build_brief_context(
     return "\n".join(lines), facts
 
 
-# --- several briefs in one prompt ---------------------------------------------
-
 MULTI_BRIEF_MAX = 8  # matchups per prompt; the rest wait for the next round
 
 MULTI_SYSTEM_PROMPT = (

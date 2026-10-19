@@ -353,8 +353,6 @@ class LiveIngester:
     # is never contended there.
     _dirty_lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
-    # -- one pass ----------------------------------------------------------
-
     def _poll_mtgo(self, conn: sqlite3.Connection) -> int:
         """Store MTGO's game logs as their games end (module docstring; plan
         3, D2), checking ``mtgo_dir`` at most once per ``mtgo_poll_every``
@@ -725,8 +723,6 @@ class LiveIngester:
         rebuilt = self.project_if_due(conn, force_project=force_project)
         return rebuilt or bool(inserted)
 
-    # -- loops -------------------------------------------------------------
-
     def _ingest_loop(self) -> None:
         """The ingest thread's own loop, on its own connection.
 
@@ -825,8 +821,6 @@ class LiveIngester:
         has."""
         return self.stats.running
 
-
-# -- separate-process watcher --------------------------------------------
 
 def _run_watcher(
     *,
