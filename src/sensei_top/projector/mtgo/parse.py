@@ -117,8 +117,9 @@ per-event field). A game with only ``Turn 1: <H1>`` and ``Turn 1: <H2>`` —
 two lines, one per player — therefore has ``turn_count == 2``, not ``1``.
 
 ``score_line`` is deliberately self-check only: ``games_won``/``games_lost``
-are always derived by *counting* ``GameRecord.winner_handle`` values
-(``project.py``), never by trusting the match-score text. ``leads the match``
+are always derived by *counting* each game's result as
+``project.py::_game_outcome`` reads it (its winner, else the loser's
+opponent), never by trusting the match-score text. ``leads the match``
 and ``wins the match`` share the same ``<a>-<b>`` shape and both update
 ``score_line`` (last one seen wins) so the check has something to compare
 against even for a match that ends before either side would say "leads";
@@ -133,17 +134,19 @@ cannot answer it (``reader/mtgo.py``'s module docstring): ``last_game_decided``
 answers it here, from the same decode and parse ``project.py`` uses, so the
 watcher judges a file by the reading the projector will give it.
 
-Decided means the last ``GameRecord`` names a winner (``<H> wins the game.``).
-A concession alone does not count: both of the fixture's games write
-``has conceded from the game`` and then ``wins the game`` as two strings, and
-a read can land between them. The next game's first start-block line
-(``joined the game``) opens a new record, so between games the answer stays
-true until that line lands, then false until the new game names its winner.
-A game that ends with no winner line (a disconnect, a crash, a draw) is never
-decided here; the watcher's 10-minute quiet fallback stores it. Since only a
-complete string can match the grammar, a read cut mid-string (MTGO's own
-write, or a copy's, half done) loses the string at the cut rather than
-deciding anything from it.
+Decided means the last ``GameRecord`` names a winner (``<H> wins the
+game.``), a loser (``loses the game.``, ``has lost the game due to
+inaction.``, ``has run out of time and has lost the match.``) or a draw
+(``<A> and <B> lose the game.``). A concession alone does not count: both of
+the fixture's games write ``has conceded from the game`` and then ``wins the
+game`` as two strings, and a read can land between them. The next game's
+first start-block line (``joined the game``) opens a new record, so between
+games the answer stays true until that line lands, then false until the new
+game names a winner, a loser or a draw. A game that ends with none of these
+(a disconnect, a crash) is never decided here; the watcher's 10-minute quiet
+fallback stores it. Since only a complete string can match the grammar, a
+read cut mid-string (MTGO's own write, or a copy's, half done) loses the
+string at the cut rather than deciding anything from it.
 """
 
 from __future__ import annotations
@@ -220,6 +223,10 @@ class _Patterns:
     begins: re.Pattern[str]
     turn: re.Pattern[str]
     concede: re.Pattern[str]
+    loses_game: re.Pattern[str]
+    inaction: re.Pattern[str]
+    timeout: re.Pattern[str]
+    draw: re.Pattern[str]
     wins_game: re.Pattern[str]
     wins_match: re.Pattern[str]
     leads_match: re.Pattern[str]
@@ -231,7 +238,8 @@ def _patterns(known: set[str]) -> _Patterns:
     # non-word character ("Name-") has no word boundary before that space, so
     # `\S+\b` backtracked to "Name" — a third, phantom handle that made
     # `project_mtgo` skip the whole match (real match, 2026-09-22).
-    h = f"(?P<handle>{_handle_alternation(known)})"
+    alternation = _handle_alternation(known)
+    h = f"(?P<handle>{alternation})"
     return _Patterns(
         rolled=re.compile(rf"^{h} rolled a \d+\.$"),
         joined=re.compile(rf"^{h} joined the game\.$"),
@@ -247,6 +255,11 @@ def _patterns(known: set[str]) -> _Patterns:
         ),
         turn=re.compile(rf"^Turn (?P<n>\d+): {h}$"),
         concede=re.compile(rf"^{h} has conceded from the game\.$"),
+        loses_game=re.compile(rf"^{h} loses the game\.$"),
+        inaction=re.compile(rf"^{h} has lost the game due to inaction\.$"),
+        timeout=re.compile(rf"^{h} has run out of time and has lost the match\.$"),
+        # Two handles, so the bare alternation twice: a group name can't repeat.
+        draw=re.compile(rf"^(?P<a>{alternation}) and (?P<b>{alternation}) lose the game\.$"),
         wins_game=re.compile(rf"^{h} wins the game\.$"),
         wins_match=re.compile(rf"^{h} wins the match \d+-\d+$"),
         # Self-check only (see module docstring): both "leads the match"
@@ -326,6 +339,16 @@ class GameRecord:
     turn_count: int = 0
     winner_handle: str | None = None
     conceded_handle: str | None = None
+    # Whoever a loss line names: ``loses the game.``, ``has lost the game due
+    # to inaction.``, ``has run out of time and has lost the match.``. A
+    # concession alone does not set it.
+    loser_handle: str | None = None
+    # ``<A> and <B> lose the game.``
+    draw: bool = False
+    # How the game ended, when a line says: "concede", "timeout" or
+    # "inaction". None for a game played out, whose ``wins the game.`` doesn't
+    # say how.
+    reason: str | None = None
     card_events: list[CardEvent] = field(default_factory=list)
 
     def has_action(self) -> bool:
@@ -338,7 +361,15 @@ class GameRecord:
         return bool(
             self.turn_count or self.card_events
             or self.winner_handle or self.conceded_handle
+            or self.loser_handle or self.draw
         )
+
+    def contradicts(self) -> bool:
+        """True when the game's lines disagree about its result: the same
+        handle both won and lost it, or a draw beside a winner or a loser."""
+        if self.draw:
+            return self.winner_handle is not None or self.loser_handle is not None
+        return self.winner_handle is not None and self.winner_handle == self.loser_handle
 
 
 @dataclass
@@ -353,6 +384,9 @@ class ParsedMatch:
     spectators: set[str]
     games: list[GameRecord]
     winner_handle: str | None   # from the final "wins the match" line
+    # Who wrote "has run out of time and has lost the match.": they lost the
+    # match, so the other player won it even when no "wins the match" follows.
+    timed_out_handle: str | None
     score_line: tuple[str, int, int] | None   # self-check only; see docstring
     # Never a handle or a raw line, which names one: project.py logs these,
     # and the log goes into the diagnostics zip a bug report attaches.
@@ -380,6 +414,7 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
     current: GameRecord | None = None
     current_turn: int | None = None
     final_winner: str | None = None
+    timed_out: str | None = None
     score_line: tuple[str, int, int] | None = None
     warnings: list[str] = []
 
@@ -513,6 +548,38 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
             handles.add(m.group("handle"))
             if current is not None:
                 current.conceded_handle = m.group("handle")
+                current.reason = "concede"
+            continue
+
+        m = patterns.loses_game.match(s)
+        if m:
+            handles.add(m.group("handle"))
+            if current is not None:
+                current.loser_handle = m.group("handle")
+            continue
+
+        m = patterns.inaction.match(s)
+        if m:
+            handles.add(m.group("handle"))
+            if current is not None:
+                current.loser_handle = m.group("handle")
+                current.reason = "inaction"
+            continue
+
+        m = patterns.timeout.match(s)
+        if m:
+            handles.add(m.group("handle"))
+            timed_out = m.group("handle")
+            if current is not None:
+                current.loser_handle = timed_out
+                current.reason = "timeout"
+            continue
+
+        m = patterns.draw.match(s)
+        if m:
+            handles.update((m.group("a"), m.group("b")))
+            if current is not None:
+                current.draw = True
             continue
 
         m = patterns.wins_game.match(s)
@@ -545,16 +612,22 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
         # (see the module docstring's "deliberately not parsed" list) — not
         # a warning.
 
+    for game in games:
+        if game.contradicts():
+            warnings.append(f"game {game.game_number}'s lines disagree about its result")
+
     return ParsedMatch(
         match_id=match_id, handles=handles, spectators=spectators, games=games,
-        winner_handle=final_winner, score_line=score_line, warnings=warnings,
+        winner_handle=final_winner, timed_out_handle=timed_out,
+        score_line=score_line, warnings=warnings,
     )
 
 
 def last_game_decided(data: bytes) -> bool:
-    """True when the last game in one game log's bytes names its winner (the
-    module docstring's "Whether the last game is decided"). False for no game
-    at all: empty bytes, garbage, a match still at its die roll.
+    """True when the last game in one game log's bytes names a winner, a
+    loser or a draw (the module docstring's "Whether the last game is
+    decided"). False for no game at all: empty bytes, garbage, a match still at
+    its die roll.
 
     Never raises (non-negotiable #4): the watcher calls this from its poll
     loop on bytes it has not stored yet, half-copied ones included, and one
@@ -570,4 +643,7 @@ def last_game_decided(data: bytes) -> bool:
     except Exception as exc:
         log.warning("mtgo: could not tell whether the last game ended: %r", exc)
         return False
-    return bool(games) and games[-1].winner_handle is not None
+    if not games:
+        return False
+    last = games[-1]
+    return last.winner_handle is not None or last.loser_handle is not None or last.draw

@@ -86,6 +86,7 @@ from sensei_top.db import open_database
 from sensei_top.projector.mtgo.decode import decode_strings
 from sensei_top.projector.mtgo.parse import last_game_decided, parse_strings
 from sensei_top.projector.mtgo.project import _resolve_grp_id, _Warner, project_mtgo
+from sensei_top.review.summary import _reason_text
 
 FIXTURE = Path(__file__).parent / "fixtures" / "mtgo_match_session.log"
 FIXTURE_BYTES = FIXTURE.read_bytes()
@@ -572,7 +573,8 @@ def test_a_watched_match_with_no_start_block_reads_its_players_by_first_word():
     """With no player line whose ending is fixed, handles fall back to
     ``\\S+``. The five card lines (two casts, two triggers, one activation)
     come before any game started, so each warns and none is recorded; the
-    "Player3000's" line and the time-out line match no pattern."""
+    "Player3000's" line matches no pattern, and the time-out line is read as
+    the match's but records no game's loss, there being none."""
     parsed = parse_strings(_WATCHED_MATCH)
     assert parsed.handles == {"Player2000", "Player3000"}
     assert parsed.spectators == {"Player1"}
@@ -580,6 +582,7 @@ def test_a_watched_match_with_no_start_block_reads_its_players_by_first_word():
     assert len(parsed.warnings) == 5
     assert all(w.startswith("card event before any game started") for w in parsed.warnings)
     assert parsed.winner_handle == "Player3000"
+    assert parsed.timed_out_handle == "Player2000"
 
 
 @pytest.mark.parametrize("digits", ["\u0663", "9" * 5000])
@@ -1270,3 +1273,385 @@ def test_resolve_grp_id_reversible_name_resolves_to_the_arena_id(conn):
     from sensei_top.cards import upsert_cards
     upsert_cards(conn, [regent])
     assert _resolve_grp_id(conn, {}, "Marang River Regent", _Warner()) == 91001
+
+
+
+# --- the ending lines (plan 30, S2) --------------------------------------------
+#
+# Real games' lines from the user's history, anonymized (the user is Player1, the
+# other player Player2000), card and draw lines trimmed. What each says, read from
+# the lines:
+#   4a  `Player1 wins the game.` then `Player2000 loses the game.`, then game 2's
+#       start block.
+#   5   `Player1 and Player2000 lose the game.` then `Match Tied 1-1`: a draw.
+#   6a  `Player2000 has run out of time and has lost the match.`, `Player1 wins
+#       the game.`, `Match Tied 1-1`, and no `wins the match` line.
+#   6b  `Player1 has run out of time and has lost the match.`, `Player2000 wins
+#       the game.`, `Player2000 wins the match 2-1`.
+#   7b  `Player1 has lost the game due to inaction.`, `Player2000 wins the game.`,
+#       `Player2000 wins the match 2-0`.
+
+# Case 4a: the opponent reconnects inside game 1's start block; the game ends with
+# `loses the game.` beside `wins the game.`.
+_CASE_4A = [
+    GUID,
+    GUID,
+    "Player1 rolled a 6.",
+    "Player2000 rolled a 5.",
+    "Player2000 joined the game.",
+    "Player1 joined the game.",
+    "Player1 chooses to play first.",
+    "Player2000 has lost connection to the game.",
+    "Player1 begins the game with seven cards in hand.",
+    "Player2000 joined the game.",
+    "Player2000 begins the game with seven cards in hand.",
+    "Turn 1: Player1",
+    "Player1 plays @[Arid Mesa@:126370,430:@].",
+    "Turn 1: Player2000",
+    "Turn 2: Player1",
+    "Player1 puts an energy counter on Player1.",
+    "Turn 2: Player2000",
+    "Turn 3: Player1",
+    "Player1 puts an energy counter on Player1.",
+    "Player1 puts an energy counter on Player1.",
+    "Player1 puts an energy counter on Player1.",
+    "Player1 puts an energy counter on Player1.",
+    "Player1 puts an energy counter on Player1.",
+    "Player1 puts an energy counter on Player1.",
+    "Player1 removes three energy counters from Player1.",
+    "Player1 removes three energy counters from Player1.",
+    "Turn 3: Player2000",
+    "Turn 4: Player1",
+    "Player1 puts an energy counter on Player1.",
+    "Player1 puts an energy counter on Player1.",
+    "Player1 removes three energy counters from Player1.",
+    "Player1 wins the game.",
+    "Player2000 loses the game.",
+    "Player1 leads the match 1-0",
+    "Player2000 joined the game.",
+    "Player1 joined the game.",
+    "Player2000 chooses to play first.",
+    "Player2000 begins the game with seven cards in hand.",
+    "Player1 begins the game with seven cards in hand.",
+    "Turn 1: Player2000",
+]
+
+
+# Case 5: the drawn game (game 3 of its match), then game 4's start block.
+_CASE_5 = [
+    "Player1 joined the game.",
+    "Player2000 joined the game.",
+    "Player1 chooses to play first.",
+    "Player1 begins the game with seven cards in hand.",
+    "Player2000 begins the game with seven cards in hand.",
+    "Turn 1: Player1",
+    "Turn 1: Player2000",
+    "Turn 2: Player1",
+    "Turn 2: Player2000",
+    "Turn 3: Player1",
+    "Turn 3: Player2000",
+    "Turn 4: Player1",
+    "Turn 4: Player2000",
+    "Turn 5: Player1",
+    "Player1 and Player2000 lose the game.",
+    "Match Tied 1-1",
+    "Player2000 joined the game.",
+    "Player1 joined the game.",
+    "Player1 chooses to play first.",
+    "Player1 mulligans to six cards.",
+    "Player2000 begins the game with seven cards in hand.",
+    "Player1 puts a card on the bottom of their library and begins the game with six "
+    "cards in hand.",
+]
+
+
+# Case 6a: a time-out with no `wins the match` after it.
+_CASE_6A = [
+    "Player1 joined the game.",
+    "Player2000 joined the game.",
+    "Player1 chooses to play first.",
+    "Player1 mulligans to six cards.",
+    "Player2000 begins the game with seven cards in hand.",
+    "Player1 puts a card on the bottom of their library and begins the game with six "
+    "cards in hand.",
+    "Turn 1: Player1",
+    "Player1 puts 1 card on top of their library.",
+    "Turn 1: Player2000",
+    "Player2000 puts 1 card on top of their library.",
+    "Turn 2: Player1",
+    "Turn 2: Player2000",
+    "Player2000 puts 1 card on top of their library.",
+    "Turn 3: Player1",
+    "Turn 3: Player2000",
+    "Turn 4: Player1",
+    "Turn 4: Player2000",
+    "Turn 5: Player1",
+    "Turn 5: Player2000",
+    "Turn 6: Player1",
+    "Turn 6: Player2000",
+    "Turn 7: Player1",
+    "Turn 7: Player2000",
+    "Turn 8: Player1",
+    "Turn 8: Player2000",
+    "Turn 9: Player1",
+    "Turn 9: Player2000",
+    "Turn 10: Player1",
+    "Turn 10: Player2000",
+    "Turn 11: Player1",
+    "Turn 11: Player2000",
+    "Turn 12: Player1",
+    "Turn 12: Player2000",
+    "Turn 13: Player1",
+    "Turn 13: Player2000",
+    "Turn 14: Player1",
+    "Turn 14: Player2000",
+    "Player2000 has run out of time and has lost the match.",
+    "Player1 wins the game.",
+    "Match Tied 1-1",
+]
+
+
+# Case 6b: the user's own time-out, then `wins the match`.
+_CASE_6B = [
+    "Player1 joined the game.",
+    "Player2000 joined the game.",
+    "Player1 chooses to play first.",
+    "Player1 mulligans to six cards.",
+    "Player2000 mulligans to six cards.",
+    "Player1 puts a card on the bottom of their library and begins the game with six "
+    "cards in hand.",
+    "Player2000 puts a card on the bottom of their library and begins the game with "
+    "six cards in hand.",
+    "Turn 1: Player1",
+    "Turn 1: Player2000",
+    "Turn 2: Player1",
+    "Turn 2: Player2000",
+    "Turn 3: Player1",
+    "Turn 3: Player2000",
+    "Turn 4: Player1",
+    "Turn 4: Player2000",
+    "Player1 has run out of time and has lost the match.",
+    "Player2000 wins the game.",
+    "Player2000 wins the match 2-1",
+]
+
+
+# Case 7b: an inaction loss.
+_CASE_7B = [
+    "Player1 joined the game.",
+    "Player2000 joined the game.",
+    "Player1 chooses to play first.",
+    "Player1 begins the game with seven cards in hand.",
+    "Player2000 begins the game with seven cards in hand.",
+    "Turn 1: Player1",
+    "Turn 1: Player2000",
+    "Turn 2: Player1",
+    "Player1 puts an energy counter on Player1.",
+    "Turn 2: Player2000",
+    "Turn 3: Player1",
+    "Player1 puts an energy counter on Player1.",
+    "Player1 puts an energy counter on Player1.",
+    "Turn 3: Player2000",
+    "Turn 4: Player1",
+    "Player1 puts an energy counter on Player1.",
+    "Player1 removes three energy counters from Player1.",
+    "Player1's Triggered ability from Guide of Souls is removed from the stack because "
+    "it has no legal targets.",
+    "Turn 4: Player2000",
+    "Turn 5: Player1",
+    "Player1 has lost the game due to inaction.",
+    "Player2000 wins the game.",
+    "Player2000 wins the match 2-0",
+]
+
+_SCORED_AT = "2026-09-20T20:00:00"
+
+
+def _bytes_of(strings: list[str]) -> bytes:
+    return b"".join(_framed(s) for s in strings)
+
+
+def _project_strings(conn, strings: list[str], handle: str = "Player1") -> dict[str, int]:
+    """One match's lines through the projector, behind a match GUID when the
+    list has none (the cases below that are a game's lines, not a file's)."""
+    if GUID not in strings:
+        strings = [GUID, *strings]
+    _insert_mtgo_row(conn, data=_bytes_of(strings), logged_at=_SCORED_AT)
+    return project_mtgo(conn, handle)
+
+
+def _stored_games(conn):
+    return conn.execute(
+        "SELECT game_number, result, result_reason FROM games WHERE match_id = ? "
+        "ORDER BY game_number",
+        (GUID,),
+    ).fetchall()
+
+
+def _stored_match(conn):
+    return conn.execute("SELECT * FROM matches WHERE match_id = ?", (GUID,)).fetchone()
+
+
+def test_loses_the_game_beside_wins_the_game_changes_no_result(conn):
+    parsed = parse_strings(_CASE_4A)
+    assert parsed.warnings == []
+    assert len(parsed.games) == 2
+    first = parsed.games[0]
+    assert first.on_play_handle == "Player1"
+    assert first.winner_handle == "Player1"
+    assert first.loser_handle == "Player2000"
+    assert first.draw is False
+    assert first.reason is None
+    assert first.turn_count == 7
+    assert parsed.games[1].on_play_handle == "Player2000"
+    assert parsed.games[1].loser_handle is None
+    assert parsed.timed_out_handle is None
+
+    _project_strings(conn, _CASE_4A)
+    assert [tuple(g) for g in _stored_games(conn)] == [(1, "win", None), (2, "incomplete", None)]
+    match = _stored_match(conn)
+    assert (match["result"], match["games_won"], match["games_lost"]) == ("incomplete", 1, 0)
+
+
+def test_a_drawn_game_is_a_draw_and_leaves_the_match_incomplete(conn):
+    parsed = parse_strings(_CASE_5)
+    assert parsed.warnings == []
+    assert len(parsed.games) == 2
+    drawn = parsed.games[0]
+    assert drawn.draw is True
+    assert drawn.winner_handle is None
+    assert drawn.loser_handle is None
+    assert drawn.reason is None
+    assert drawn.turn_count == 9
+    assert parsed.games[1].on_play_handle == "Player1"
+    assert parsed.games[1].mulligans_by_handle == {"Player1": 1, "Player2000": 0}
+    assert parsed.winner_handle is None
+
+    _project_strings(conn, _CASE_5)
+    assert [tuple(g) for g in _stored_games(conn)] == [
+        (1, "draw", None),
+        (2, "incomplete", None),
+    ]
+    match = _stored_match(conn)
+    assert (match["result"], match["games_won"], match["games_lost"]) == ("incomplete", 0, 0)
+    assert match["ended_at"] is None
+
+
+def test_a_time_out_with_no_wins_the_match_gives_the_match_to_the_other_player(conn):
+    parsed = parse_strings(_CASE_6A)
+    assert parsed.warnings == []
+    assert parsed.winner_handle is None
+    assert parsed.timed_out_handle == "Player2000"
+    (game,) = parsed.games
+    assert game.loser_handle == "Player2000"
+    assert game.winner_handle == "Player1"
+    assert game.reason == "timeout"
+
+    _project_strings(conn, _CASE_6A)
+    assert [tuple(g) for g in _stored_games(conn)] == [(1, "win", "ResultReason_Timeout")]
+    match = _stored_match(conn)
+    assert (match["result"], match["games_won"], match["games_lost"]) == ("win", 1, 0)
+    assert match["ended_at"] == _SCORED_AT
+
+
+def test_the_users_own_time_out_loses_the_game_and_the_match(conn):
+    parsed = parse_strings(_CASE_6B)
+    assert parsed.warnings == []
+    assert parsed.timed_out_handle == "Player1"
+    assert parsed.winner_handle == "Player2000"
+    (game,) = parsed.games
+    assert game.loser_handle == "Player1"
+    assert game.winner_handle == "Player2000"
+    assert game.reason == "timeout"
+
+    _project_strings(conn, _CASE_6B)
+    assert [tuple(g) for g in _stored_games(conn)] == [(1, "loss", "ResultReason_Timeout")]
+    match = _stored_match(conn)
+    assert (match["result"], match["games_won"], match["games_lost"]) == ("loss", 0, 1)
+    assert match["ended_at"] == _SCORED_AT
+
+
+def test_a_time_out_decides_the_game_without_a_wins_the_game_line(conn):
+    """Case 6a without its last two lines: the loss line alone gives the game
+    and, with no `wins the match`, the match to the other player."""
+    cut = _CASE_6A[:-2]
+    assert cut[-1] == "Player2000 has run out of time and has lost the match."
+    _project_strings(conn, cut)
+    assert [tuple(g) for g in _stored_games(conn)] == [(1, "win", "ResultReason_Timeout")]
+    assert _stored_match(conn)["result"] == "win"
+
+
+def test_an_inaction_loss(conn):
+    parsed = parse_strings(_CASE_7B)
+    assert parsed.warnings == []
+    (game,) = parsed.games
+    assert game.loser_handle == "Player1"
+    assert game.winner_handle == "Player2000"
+    assert game.reason == "inaction"
+    assert parsed.timed_out_handle is None
+    assert parsed.winner_handle == "Player2000"
+
+    _project_strings(conn, _CASE_7B)
+    assert [tuple(g) for g in _stored_games(conn)] == [(1, "loss", "ResultReason_Inaction")]
+    # The report has no wording for MTGO's own reason.
+    assert _reason_text(_stored_games(conn)[0]["result_reason"]) is None
+    match = _stored_match(conn)
+    assert (match["result"], match["games_won"], match["games_lost"]) == ("loss", 0, 1)
+
+
+def test_a_winner_who_is_also_the_loser_is_incomplete_with_a_warning(conn):
+    """Case 7b with its winner line naming the loser: the lines disagree, so
+    the game has no result (rule 4). The warning names no one."""
+    lines = [
+        "Player1 wins the game." if s == "Player2000 wins the game." else s for s in _CASE_7B
+    ]
+    parsed = parse_strings(lines)
+    assert len(parsed.warnings) == 1
+    assert "game 1" in parsed.warnings[0]
+    assert "Player" not in parsed.warnings[0]
+
+    _project_strings(conn, lines)
+    assert [tuple(g) for g in _stored_games(conn)] == [(1, "incomplete", "ResultReason_Inaction")]
+
+
+def test_a_draw_beside_a_winner_is_incomplete_with_a_warning(conn):
+    lines = [*_CASE_5[:15], "Player1 wins the game."]
+    assert lines[14] == "Player1 and Player2000 lose the game."
+    parsed = parse_strings(lines)
+    assert len(parsed.warnings) == 1
+    _project_strings(conn, lines)
+    assert [tuple(g) for g in _stored_games(conn)] == [(1, "incomplete", None)]
+
+
+@pytest.mark.parametrize(
+    ("lines", "decided"),
+    [
+        pytest.param(_CASE_4A[:31], False, id="mid-game"),
+        pytest.param(_CASE_4A[:32], True, id="wins-the-game"),
+        pytest.param([*_CASE_4A[:31], _CASE_4A[32]], True, id="loses-the-game-alone"),
+        pytest.param(_CASE_5[:14], False, id="drawn-game-before-its-line"),
+        pytest.param(_CASE_5[:15], True, id="drawn-game"),
+        pytest.param(_CASE_6A[:-3], False, id="before-the-time-out"),
+        pytest.param(_CASE_6A[:-2], True, id="time-out"),
+        pytest.param(_CASE_7B[:-3], False, id="before-the-inaction-loss"),
+        pytest.param(_CASE_7B[:-2], True, id="inaction-loss"),
+        pytest.param(
+            [*_CASE_7B[:-3], "Player1 has lost connection to the game."],
+            False,
+            id="a-lost-connection-alone",
+        ),
+    ],
+)
+def test_last_game_decided_after_each_ending(lines, decided):
+    assert last_game_decided(_bytes_of(lines)) is decided
+
+
+def test_a_mtgo_concession_is_worded_in_the_report(conn):
+    """The fixture's two games each end `has conceded from the game.`; the
+    report words Arena's `ResultReason_Concede` (review/summary.py), so the
+    stored reason is Arena's name and the report's text for it is "conceded"."""
+    _insert_mtgo_row(conn, data=FIXTURE_BYTES, logged_at="2026-09-14T12:42:37")
+    project_mtgo(conn, "Player1")
+    reasons = [row["result_reason"] for row in _stored_games(conn)]
+    assert reasons == ["ResultReason_Concede", "ResultReason_Concede"]
+    assert [_reason_text(r) for r in reasons] == ["conceded", "conceded"]
