@@ -171,16 +171,16 @@ a source the Live page does not show
 (`migrations/040_arena_only_current_match.sql`). So the leg checks the folder
 every 2 s and holds a changed file back until one of two things is true:
 
-- **Its last game names a winner and the file has been quiet 5 s.** Whether
-  the last game names a winner is the projector's answer
+- **Its last game names a winner, a loser or a draw and the file has been
+  quiet 5 s.** Whether the last game is decided is the projector's answer
   (`projector/mtgo/parse.py::last_game_decided`); the reader only reports
   which files moved and stores the one it is handed, and `live.py` combines
   the two (non-negotiable 1). The 5 s keeps a row from catching a write half
   done: MTGO's own, or a copy's when the folder is mirrored, as the author's
   is from a VM through a share `robocopy` fills.
 - **The file has been quiet 10 minutes**, whatever its last game says. A
-  disconnect, a crash or a game that ends with no winner line still lands, as
-  an unfinished game, which the projector already reads.
+  disconnect, a crash or an ending line the parser doesn't know still lands,
+  as an unfinished game, which the projector already reads.
 
 Quiet alone cannot tell a finished game from a long think: in the measured
 match one mid-game pause lasted 36 s and the gap between games 46 s, and a
@@ -195,14 +195,22 @@ forced one, went with the Current match tab's MTGO support).
 **A mirrored folder can fold two games into one row.** When the folder is a
 copy, as the author's is (a `robocopy` in the VM fills the share once a
 minute), a game's end and the next game's first line can reach the copy in
-the same pass. The copy then never holds a file whose last game names a
-winner, so that game gets no row of its own; the next row, at the next
+the same pass. The copy then never holds a file whose last game is
+decided, so that game gets no row of its own; the next row, at the next
 game's end, holds it, and nothing is lost. Measured on one real Bo3 (plan 3,
 phase 10): two rows for three games, each landing 6–7 s after the copy
 received the write. On such a setup a row lands up to about a minute after
 its game ends, the copy's own interval. Not yet run against MTGO's own
 folder, where the next game's first line is written only once that game
 starts (46 s after the previous one ended, in plan 12's measurement).
+
+**Two kinds of game log project no match, on purpose.** A match the user
+only watched: the configured handle writes `has started watching.` and
+plays in none of its games, so `projector/mtgo/project.py` skips the file
+with a debug line and no warning (plan 30, D6). And a game with more than
+one opponent, such as Commander, skipped with a warning, because a match
+row holds one opponent. On 2026-10-19 these were all 9 of the real
+history's 365 game logs that projected no match: 8 watched, 1 Commander.
 
 A file counts as read (`ingest_state`) only once it is stored, so a watcher
 stopped mid-game leaves it for the next one. Its identity token is

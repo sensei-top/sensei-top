@@ -32,6 +32,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - In English, some counts of one read as a plural, such as "1 cards
   seen" on **Live**. They now read "1 card seen".
+- On Magic Online, a player who reconnects mid-game no longer splits
+  that game in two, which also pushed every later game of the match one
+  number up and lost who was on the play. Games that end on time, to
+  inaction or in a draw are read as such, and a match lost on time is
+  no longer left unfinished. A name with a space in it reads as one
+  player, so that opponent's cards and results count. A match you only
+  watched is left out without a warning. Your recorded matches are read
+  again once, the first time the app starts after the update.
 
 ## [1.0.1] - 2026-10-17
 

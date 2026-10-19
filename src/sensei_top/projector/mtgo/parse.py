@@ -7,9 +7,11 @@ only place that knows which handle is "us" and writes rows to a database.
 The one entry point that takes bytes, ``last_game_decided``, hands them
 straight to ``decode.py`` (see "Whether the last game is decided" below).
 
-Grammar recognised (every shape confirmed present in the fixture; see
-``.claude/handoffs/mtgo-implementation.md``'s table and the Live MTGO matches
-plan's Bug B analysis):
+Grammar recognised. The fixture holds the start block, the turns, the card
+lines, the concessions, the wins and the match lines; the ending, reconnect
+and watching lines come from the real history plan 30 measured
+(2026-10-19), and ``tests/test_projector_mtgo.py`` carries them as
+transcribed lines. ``<H>`` is a handle, read as "Handles" below says:
 
 * the bare GUID appearing as (one of) the first decoded string(s) -> match id
 * ``<H> rolled a <n>.`` -> discovers a handle (the pre-game die roll)
@@ -42,7 +44,21 @@ plan's Bug B analysis):
 * ``<H> puts a triggered ability from @[Name@:i1,i2:@] onto the stack ...``
   -> a card event, category ``Trigger`` (same reasoning as ``Activate``)
 * ``<H> has conceded from the game.`` -> the current game's result reason
-* ``<H> wins the game.`` -> the current game's winning handle
+  (``concede``)
+* ``<H> loses the game.`` -> the current game's losing handle
+* ``<H> has lost the game due to inaction.`` -> the current game's losing
+  handle, reason ``inaction``
+* ``<H> has run out of time and has lost the match.`` -> the current game's
+  losing handle, reason ``timeout``, and the match's loser: when no
+  ``wins the match`` line follows, the other player wins the match
+* ``<A> and <B> lose the game.`` -> the current game is a draw
+* ``<H> wins the game.`` -> the current game's winning handle. A ``wins``
+  line that contradicts a loss line or a draw leaves the game with no
+  result, and a warning
+* ``<H> has lost connection to the game.`` -> a drop; that handle's next
+  ``joined the game`` in the same game is a rejoin (see Bug B below)
+* ``<H> has started watching.`` -> a spectator, kept in
+  ``ParsedMatch.spectators`` and never among the players
 * ``<H> leads the match <a>-<b>`` / ``<H> wins the match <a>-<b>`` -> a
   running or final score, recorded as ``ParsedMatch.score_line`` (a
   **self-check only** — see below); only ``wins the match`` sets the
@@ -54,7 +70,23 @@ Token``, ``chooses <color> for`` — none of these appear in the plan's
 grammar table, and every card name in the one real sample already surfaces
 through the plays/casts/activates/triggers lines above (verified: 26 distinct
 ``@[...]`` names in the fixture, all 26 reachable through just those four
-line shapes).
+line shapes). Nor are ``Match Tied <a>-<b>``, MTGO's running score while the
+match is level (``score_line`` would be its only reader, and it is a
+self-check, see below), or ``has left the game``: a game that ends with a
+player leaving, or with a lost connection and no return, has no result here,
+since the log never says who MTGO awarded it to.
+
+Handles
+-------
+A handle may hold a space (``Player Two``), so ``<H>`` is not ``\\S+``. The
+players' handles come first from the lines whose ending is fixed
+(``rolled a <n>.``, ``joined the game.``, ``chooses to play first.``), where
+everything before that ending is the handle; a spectator's come from
+``has started watching.`` and are kept apart. Every other line is read as
+led by one of the players' handles, longest first, then a space, so
+``Bob Two`` is tried before ``Bob``. A transcript with none of those lines
+falls back to ``\\S+``. Two opponents in the real history had a space in
+their handle, and both matches read wrong before this rule.
 
 Bug B — game boundaries are per-game start markers, not "turn resets to 1"
 ---------------------------------------------------------------------------
@@ -96,9 +128,11 @@ block. So a ``joined`` by a handle that lost connection earlier in the
 current, undecided game is a rejoin: no new game, nothing stored, a debug
 line. The set of such handles lasts the whole game (a player can drop
 twice); a drop is ignored once the game has a result, and the set is
-emptied when the next game opens. Every other
-``joined`` opens a game as above, and opening one while the last has action
-and no result warns that a game started before the last one ended.
+emptied when the next game opens. Every other ``joined`` opens a game as
+above, and opening one while the last has action and no result warns that
+a game started before the last one ended. Before this rule, the real
+history held 9 phantom games in 8 matches, each pushing every later game
+of its match one number up.
 
 Turn units — this parser's ``turn_count``/``turn_number`` are Arena's units,
 not MTGO's printed ones

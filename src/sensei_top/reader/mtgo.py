@@ -59,9 +59,9 @@ this module must not make:
 ``sensei-top ingest-mtgo`` runs, and the watcher's first pass, which catches
 up whatever was written while nothing watched. After that first pass the
 watcher (``live.py::_poll_mtgo``) stores a changed file only once a game
-ends: when its last game names a winner and it has been quiet 5 s, or when it
-has been quiet 10 minutes, whatever its last game says. Whether the last game
-names a winner is the projector's answer
+ends: when its last game names a winner, a loser or a draw and it has been
+quiet 5 s, or when it has been quiet 10 minutes, whatever its last game
+says. Whether the last game is decided is the projector's answer
 (``projector/mtgo/parse.py::last_game_decided``); this module only reports
 which files moved and stores the one it is handed, and ``live.py`` combines
 the two (non-negotiable #1).
