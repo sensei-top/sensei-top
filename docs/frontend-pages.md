@@ -808,19 +808,20 @@ gives; the Rate cell is the rate from ten finished matches, a muted "too
 few" under ten, and an em dash only with no match won or lost. Game 1 and
 Games 2–3 count games, and only a best-of-three match's (`best_of = 3`): a
 best-of-one game is a different queue's, with its own hand smoothing, and
-is in neither. Each cell is one line, "58% · 35–25" from ten games won or
-lost, the record alone and muted under ten, and an em dash with none, which
-is also what a row with no best-of-three match shows; a drawn game counts
-in neither number. A row is never left out for being small. The field is
-the deck's own format's (`useFieldRecords(format)`, the format coverage
-names, "Field, and the field-winrate join" below); a deck with no format
-has no field line. Three tiles sit above the table: archetypes met (and
-how many were named), and the best and worst among those met ten finished
-times or more (`RATE_MIN_MATCHES`) by wins over wins plus losses, the same
-threshold the table's own "Rate" column uses; with none that often the
-tile says so, and with one it is the best and the worst says there is only
-one so far. There is no chart: a row already shows the pips, the name, the
-games and the field's own rate beside them.
+is in neither. Each cell is the rate alone, as the Rate cell is, over games:
+the percent from ten games won or lost, a muted "too few" under ten, and an
+em dash with none, which is also what a row with no best-of-three match
+shows; a drawn game counts in neither number. A row is never left out for
+being small. The field is the deck's own format's
+(`useFieldRecords(format)`, the format coverage names, "Field, and the
+field-winrate join" below); a deck with no format has no field line. Three
+tiles sit above the table: archetypes met (and how many were named), and the
+best and worst among those met ten finished times or more
+(`RATE_MIN_MATCHES`) by wins over wins plus losses, the same threshold the
+table's own "Rate" column uses; with none that often the tile says so, and
+with one it is the best and the worst says there is only one so far. There
+is no chart: a row already shows the pips, the name, the games and the
+field's own rate beside them.
 
 **A pairing** (`PairingView`, `/decks/:id/matchups/:opponent`) is one
 deck against one opponent's deck, `:opponent` a Matchups row's own
@@ -1296,7 +1297,7 @@ so a record's losses are the rate's `n` less its wins.
 The cards, in order, are in `components/coach/`:
 
 1. **Six tiles** (`Profile`, `overallTiles`): matches, games, game 1,
-   after sideboarding, on the play, on the draw. Two to a row under 48rem,
+   games 2–3, on the play, on the draw. Two to a row under 48rem,
    three from it. From ten, the percent is the figure and the record and
    the range are the line; under ten, the record is the figure, muted,
    over the "too few for a rate" line; with no match, a dash over "None

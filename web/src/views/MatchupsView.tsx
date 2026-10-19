@@ -15,7 +15,7 @@ import {
 } from '../lib/matchups'
 import { formatPercent, formatRecord } from '../lib/format'
 import { pairingAddress, withVersion } from '../lib/pairing'
-import { RATE_MIN_MATCHES, rateAndRecordLine } from '../lib/sample'
+import { RATE_MIN_MATCHES } from '../lib/sample'
 import { formatCount, useNow } from '../lib/time'
 import { placeById } from '../shell/places'
 
@@ -35,15 +35,18 @@ function RateCell({ row }: { row: MatchupRow }) {
 }
 
 /** A Game 1 or Games 2–3 cell, over the games of the row's best-of-three
- *  matches won and lost (a drawn game is neither), on one line: from ten
- *  the rate and the record, "58% · 35–25"; one to nine the record alone,
+ *  matches won and lost (a drawn game is neither): the Rate cell's form over
+ *  games. From ten the rate alone, "58%"; one to nine the "too few" word,
  *  muted; an em dash with none, which is also a row with no best-of-three
  *  match. */
 function SplitCell({ wins, losses }: { wins: number; losses: number }) {
-  const line = rateAndRecordLine({ wins, losses })
-  if (line == null) return <>—</>
-  if (wins + losses < RATE_MIN_MATCHES) return <span className="whitespace-nowrap text-muted">{line}</span>
-  return <span className="whitespace-nowrap">{line}</span>
+  const { t } = useTranslation()
+  const played = wins + losses
+  if (played === 0) return <>—</>
+  if (played < RATE_MIN_MATCHES) {
+    return <span className="whitespace-nowrap text-muted">{t('common.sample.tooFewCellGames')}</span>
+  }
+  return <>{formatPercent(wins / played)}</>
 }
 
 /** A deck's Matchups, over the versions the address chose (`versionIds`,
