@@ -174,10 +174,15 @@ player took 12 turns reports `turnNumber: 24`, and `players[].turnNumber` in
 that same message reads 12. Game "length" is therefore roughly twice the round
 count — label it as player-turns in any UI, or the numbers look absurd.
 
-**6. Full snapshots and diffs carry no distinguishing flag.** Merge incoming
-fields into running state and purge anything in `diffDeletedInstanceIds`, or
-the board fills with phantom cards. On one real session, diffs outnumbered full
-snapshots 206 to 1.
+**6. Full snapshots and diffs look alike, but `type` tells them apart.** A
+`GameStateMessage` with `type: GameStateType_Full` is the whole board and
+replaces what came before; `GameStateType_Diff` carries only what changed.
+Merge a diff's fields into running state and purge anything in its
+`diffDeletedInstanceIds`, or the board fills with phantom cards. On one real
+session, diffs outnumbered full snapshots 206 to 1. A full snapshot whose
+`update` is `GameStateUpdate_Undo` is not a fresh start but a rewind (trap 16).
+This trap once said no flag existed; the projector branched on `type` all
+along.
 
 **7. `AnnotationType_ObjectIdChanged` re-keys objects.** A resolving spell gets
 a new `instanceId`; without re-keying, battlefield counts double-count. One
@@ -359,6 +364,46 @@ the segmenter only labels these entries, so they stay in `raw_events` — but
 the project's pre-public history rather than this repository, hold the
 full protocol and how `draft_id` was synthesized, for whoever brings
 drafts back.
+
+**16. A player can undo an action, and the log rewinds with it.** Arena
+sends a `GameStateType_Full` state whose `update` is `GameStateUpdate_Undo`
+and whose `prevGameStateId` names the state the game returns to. The states
+in between never happened: a spell cast in them was not cast. Only the
+user's own undos reach the log (211 in the real history as of 2026-10-19;
+the 76 that cancelled something cancelled the user's own cast or
+sacrifice). The projector drops the `card_events` recorded after the named
+state, by the order states were applied, not by comparing ids: 16 of 923
+real games carry `gameStateId`s that are not monotonic. An undo naming a
+state never applied in that game drops nothing and warns. Arena also
+rewinds its annotation ids: the cast that follows an undo can reuse the
+cancelled cast's annotation and instance ids while moving a different
+card, so the ids of the dropped rows are forgotten too, or the real cast
+would look like a re-broadcast. `tests/fixtures/undo_session.log` holds one
+(Undo at state 101, back to 99).
+
+**17. `GREMessageType_QueuedGameStateMessage` is a state message too.** It
+carries a `gameStateMessage` like `GREMessageType_GameStateMessage` does,
+and its zone changes are real: apply it once, like any other. In the real
+history (2026-10-19), 7,772 queued states and none of them arrived again as
+a plain one, so nothing is applied twice. A queued and a plain message can
+share one event: `tests/fixtures/undo_session.log` has queued states 96 and
+97 beside plain 98 and 99.
+
+**18. Arena can replace an oversized message with a summary.** Other
+projects document a `[Message summarized because one or more
+GameStateMessages exceeded the 50 GameObject or 50 Annotation limit.]` line
+followed by lines opening with three or two colons that give the counts,
+in place of the message itself. None has appeared in the user's logs (2026-10-19). The segmenter
+recognises the block, warns once per block with its counts, and stores
+nothing: the state it replaced is lost, and that game's replay is missing
+it. A block that is the very last thing in a file that never grows again
+does not warn (`docs/status.md`, "Correctness").
+
+**19. One bad message must not cost its neighbours.** An event batches many
+messages (trap 3), the game's result often among them. The projector
+catches an exception per message, warns with the message's `type` and
+`gameStateId` and applies the rest; before, one failure lost the whole
+event, `GameOver` included.
 
 ## Deriving the two hardest fields
 
