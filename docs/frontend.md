@@ -442,10 +442,11 @@ sent with "Undo", or removed). No address draws any of the three, so
 they are drawn only on `/design/surfaces`.
 
 **Draft data and `components/sharing/` describe drafts, which the app no
-longer reads** (the draft assistant was deleted on 2026-10-01). They are
-kept on purpose: plan 10's match-data contribution reworks them for
-finished matches rather than starting again (`docs/status.md`). The
-Overlay section went with the pivot, since no overlay is planned.
+longer reads** (the draft assistant was deleted on 2026-10-01). They were
+kept for plan 10's match-data contribution, which was refused on
+2026-10-19 (`ROADMAP.md`, "Never"), so their removal is owed
+(`docs/status.md`). The Overlay section went with the pivot, since no
+overlay is planned.
 
 **Inside the desktop shell** every section above is drawn but Draft
 data, which waits for a shell that offers sharing. The first-run steps
