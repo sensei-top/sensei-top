@@ -5,9 +5,19 @@ tests in ``test_projector.py`` cover the real thing end to end. Field shapes
 here match what's actually in ``tests/fixtures/match_session.log`` (verified
 by direct inspection: ``annotations[].details[]`` entries carry
 ``valueInt32``, zone entries carry ``objectInstanceIds``, etc.).
+
+The undo rollback is the exception: it is tested against
+``tests/fixtures/undo_session.log``, a real game with a cancelled cast, at
+the end of this file.
 """
 
+import json
+from pathlib import Path
+
 from sensei_top.projector.game_state import GameStateTracker
+from sensei_top.reader.segmenter import segment_lines
+
+UNDO_FIXTURE = Path(__file__).parent / "fixtures" / "undo_session.log"
 
 
 def _id_changed(orig_id: int, new_id: int) -> dict:
@@ -830,3 +840,203 @@ def test_an_annotation_with_no_id_is_never_treated_as_a_replay():
     t.apply(gsm)
     t.apply(gsm)
     assert len(t.card_events) == 2
+
+
+# --- undo (tests/fixtures/undo_session.log) ----------------------------
+#
+# Every expected value below was read from the fixture with fixture_peek.py
+# and an independent script over its JSON, never from a run (rule 8). The
+# receiving seat is 2. State 100 is seat 2's CastSpell of instance 176 (re-
+# keyed to 272, grpId 106256); state 101 is a Full state with update
+# GameStateUpdate_Undo and prevGameStateId 99; state 102 casts instance 214
+# instead (grpId 106273, drawn at state 24), re-keyed to the same 272 under
+# the same annotation id 267. Zones: 27 stack, 28 battlefield, 31/32/33
+# seat 1's hand/library/graveyard, 35/36 seat 2's hand/library.
+
+_CANCELLED_CAST = (5, 2, 106256, "CastSpell", "ZoneType_Hand", "ZoneType_Stack")  # 100
+
+# (turn_number, seat, grp_id, category, zone_src, zone_dest), state by state.
+# The turn is the one current before the carrying message's own turnInfo.
+_ROWS_BEFORE_THE_UNDO = [
+    (1, 1, 101039, "PlayLand", "ZoneType_Hand", "ZoneType_Battlefield"),  # 7
+    (1, 1, 106358, "CastSpell", "ZoneType_Hand", "ZoneType_Stack"),  # 8
+    (1, 1, 106358, "Resolve", "ZoneType_Stack", "ZoneType_Battlefield"),  # 10
+    (2, 2, 106273, "Draw", "ZoneType_Library", "ZoneType_Hand"),  # 24
+    (2, 2, 97169, "PlayLand", "ZoneType_Hand", "ZoneType_Battlefield"),  # 27
+    (2, 2, 106415, "CastSpell", "ZoneType_Hand", "ZoneType_Stack"),  # 28
+    (2, 2, 106415, "Resolve", "ZoneType_Stack", "ZoneType_Battlefield"),  # 30
+    (3, 1, None, "Draw", "ZoneType_Library", "ZoneType_Hand"),  # 44, hidden
+    (3, 1, 101039, "PlayLand", "ZoneType_Hand", "ZoneType_Battlefield"),  # 47
+    (3, 1, 106276, "Discard", "ZoneType_Hand", "ZoneType_Graveyard"),  # 48
+    # 51: the object rides the message under its old id 163, re-keyed to 225.
+    (3, 1, 101041, "Put", "ZoneType_Library", "ZoneType_Hand"),  # 51
+    (4, 2, 106491, "Draw", "ZoneType_Library", "ZoneType_Hand"),  # 75
+    (4, 2, 70504, "PlayLand", "ZoneType_Hand", "ZoneType_Battlefield"),  # 78
+    (5, 1, None, "Draw", "ZoneType_Library", "ZoneType_Hand"),  # 92, hidden
+    (5, 1, 101041, "PlayLand", "ZoneType_Hand", "ZoneType_Battlefield"),  # 95
+    # 96 reaches the log only as a QueuedGameStateMessage.
+    (5, 1, 106296, "CastSpell", "ZoneType_Hand", "ZoneType_Stack"),  # 96
+]
+
+
+def _undo_fixture_states() -> list[dict]:
+    """Every gameStateMessage in the fixture, queued ones included, in log
+    order: the same messages the projector hands the tracker."""
+    lines = UNDO_FIXTURE.read_text(encoding="utf-8").splitlines()
+    states = []
+    for entry in segment_lines(lines, locale_hint="mdy"):
+        event = json.loads(entry.payload).get("greToClientEvent") or {}
+        for message in event.get("greToClientMessages") or []:
+            if isinstance(message.get("gameStateMessage"), dict):
+                states.append(message["gameStateMessage"])
+    return states
+
+
+def _rows(tracker: GameStateTracker) -> list[tuple]:
+    return [
+        (e.turn_number, e.seat, e.grp_id, e.category, e.zone_src, e.zone_dest)
+        for e in tracker.card_events
+    ]
+
+
+def test_an_undo_drops_the_cancelled_cast_and_keeps_the_rest():
+    t = GameStateTracker()
+    for gsm in _undo_fixture_states():
+        t.apply(gsm)
+
+    rows = _rows(t)
+    # The cancelled cast never happened.
+    assert _CANCELLED_CAST not in rows
+    # The cast before the undo window (state 96) survives.
+    assert (5, 1, 106296, "CastSpell", "ZoneType_Hand", "ZoneType_Stack") in rows
+    # Every other row is unchanged, and the cast made after the undo is kept
+    # although Arena gave it the cancelled one's annotation id.
+    assert rows == [
+        *_ROWS_BEFORE_THE_UNDO,
+        (5, 2, 106273, "CastSpell", "ZoneType_Hand", "ZoneType_Stack"),  # 102
+    ]
+    assert [e.seq for e in t.card_events] == list(range(len(rows)))
+
+
+def test_an_undo_to_a_state_never_applied_warns_and_drops_nothing():
+    """State 99 left out, as if its message had been lost: the undo names a
+    state this tracker never saw, so there is nothing to return to, and
+    guessing a point would invent history (rule 4)."""
+    states = [s for s in _undo_fixture_states() if s.get("gameStateId") != 99]
+    t = GameStateTracker()
+    for gsm in states:
+        if gsm.get("gameStateId") == 101:
+            break
+        t.apply(gsm)
+    before = list(t.card_events)
+    assert _rows(t)[-1] == _CANCELLED_CAST
+    assert t.warnings == []
+
+    t.apply(next(s for s in states if s.get("gameStateId") == 101))
+
+    assert t.card_events == before
+    (warning,) = t.warnings
+    assert "99" in warning
+
+
+# Synthetic undo cases: shapes the one real fixture game cannot show.
+
+STACK = {"zoneId": 3, "type": "ZoneType_Stack"}
+
+
+def _undo(state_id: int, prev_state_id: int, **extra) -> dict:
+    return {
+        "type": "GameStateType_Full",
+        "update": "GameStateUpdate_Undo",
+        "gameStateId": state_id,
+        "prevGameStateId": prev_state_id,
+        **extra,
+    }
+
+
+def _cast(state_id: int, instance_id: int, grp_id: int, annotation_id: int, **extra) -> dict:
+    return {
+        "gameStateId": state_id,
+        "gameObjects": [{"instanceId": instance_id, "grpId": grp_id}],
+        "zones": [HAND, STACK],
+        "annotations": [_transfer(2, 3, "CastSpell", [instance_id], id=annotation_id)],
+        **extra,
+    }
+
+
+def test_an_undo_never_returns_to_a_state_of_an_earlier_game():
+    """Synthetic. live_state.py replays a whole match through one tracker, and
+    state ids start over each game, so a game-2 undo can name an id only game
+    1 applied. Rolling back to game 1's point would truncate game 2's real
+    rows."""
+    t = GameStateTracker()
+    t.apply(_cast(5, 7, 100, 1, gameInfo={"gameNumber": 1}))
+    t.apply(_cast(1, 8, 200, 2, gameInfo={"gameNumber": 2}))
+    t.apply(_cast(2, 9, 300, 3))
+    before = list(t.card_events)
+
+    t.apply(_undo(9, 5, gameInfo={"gameNumber": 2}))
+
+    assert t.card_events == before
+    assert len(t.warnings) == 1
+
+
+def test_an_undo_rolls_back_by_apply_order_not_by_state_id():
+    """Synthetic. 16 of 923 real games carry state ids that are not monotonic
+    in the order they arrive, so "the states after prevGameStateId" means the
+    states applied after it, never the ones with a larger id."""
+    t = GameStateTracker()
+    t.apply(_cast(10, 7, 100, 1))  # A
+    t.apply(_cast(5, 8, 200, 2))  # B
+    t.apply(_cast(7, 9, 300, 3))  # C
+    t.apply(_undo(12, 10))
+
+    assert [(e.seq, e.grp_id) for e in t.card_events] == [(0, 100)]
+    assert t.warnings == []
+
+
+def test_an_undo_forgets_exactly_the_annotation_ids_it_drops():
+    """Synthetic. Arena rewinds annotation ids with the game, so an id the
+    undone window used can return on a real action and must not read as a
+    re-broadcast. An id first seen before the restored state is still a
+    re-broadcast when it comes again, even if the window repeated it, and
+    the undo state's own transfers happened after the undo and stay."""
+    t = GameStateTracker()
+    x = _transfer(1, 2, "Draw", [7], id=10)
+    t.apply(
+        {
+            "gameStateId": 1,
+            "gameObjects": [{"instanceId": 7, "grpId": 100}],
+            "zones": [LIBRARY, HAND],
+            "annotations": [x],
+        }
+    )
+    t.apply(
+        {
+            "gameStateId": 2,
+            "gameObjects": [{"instanceId": 8, "grpId": 200}],
+            "zones": [LIBRARY, HAND],
+            "annotations": [_transfer(1, 2, "Draw", [8], id=11), x],  # Y, then X again
+        }
+    )
+    t.apply(
+        _undo(
+            3,
+            1,
+            gameObjects=[{"instanceId": 9, "grpId": 300}],
+            zones=[LIBRARY, HAND],
+            annotations=[_transfer(1, 2, "Draw", [9], id=12)],  # Z
+        )
+    )
+    assert [e.grp_id for e in t.card_events] == [100, 300]  # Y gone, Z kept
+
+    t.apply(
+        {
+            "gameStateId": 4,
+            "gameObjects": [{"instanceId": 11, "grpId": 400}],
+            "zones": [LIBRARY, HAND],
+            "annotations": [x, _transfer(1, 2, "Draw", [11], id=11)],  # X, a new card as 11
+        }
+    )
+
+    assert [(e.seq, e.grp_id) for e in t.card_events] == [(0, 100), (1, 300), (2, 400)]
