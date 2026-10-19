@@ -656,20 +656,30 @@ has no losses field and counts draws in `games_completed`, so the deck
 strip's Play vs draw side record still writes a drawn game as a loss,
 listed in `docs/status.md`.
 
-**Ten finished matches before a rate.** A personal record has one
-threshold, `RATE_MIN_MATCHES` (10), over matches, or over games for a
-games figure. From ten up, a tile's figure is the rate and its line is
-the record. Under ten, the figure is the record, drawn muted, and its
-line says it is too few for a rate. A table's Rate cell under ten says
-"too few", muted and on one line (`whitespace-nowrap`), beside the
-record its own column already has. A row is never left out for being
-small, since a missing row reads as a matchup never played; an em dash
-means nothing at all, never "too few". `rateOrRecord` in `lib/sample.ts`
-makes the choice, so no component branches on the count. Where only one
-line is free (a version's row, a field row's caption, the keep-cost
-sentence) the line is "58% · 35–25" from ten up and the record alone
-under it. A chart keeps its hollow dot for a thin point, since a chart
-cannot draw a record.
+**Ten finished matches before a rate, five before a rough one.** A
+personal record has two thresholds, `RATE_MIN_MATCHES` (10) and
+`ROUGH_RATE_MIN` (5), over matches, or over games for a games figure.
+From ten up, a tile's figure is the rate and its line is the record.
+From five to nine, the figure is the rate drawn muted, and its line is
+the record and "rough": a reader sees which way a matchup leans without
+reading it as a measurement. Under five, the figure is the record, drawn
+muted, and its line says it is too few for a rate. A table's Rate cell
+is the rate from ten, the rate muted from five to nine, and "too few",
+muted, under five, on one line (`whitespace-nowrap`), beside the record
+its own column already has. A row is never left out for being small,
+since a missing row reads as a matchup never played; an em dash means
+nothing at all, never "too few". `rateOrRecord` (a tile) and `rateCell`
+(a cell, drawn by `components/RateCell.tsx`) in `lib/sample.ts` make the
+choice, so no component branches on the count. The rough rate needs a
+muted figure, so it is only where one can be drawn: where only one line
+is free (a version's row, a field row's caption, the keep-cost sentence)
+the line is "58% · 35–25" from ten up and the record alone under it, a
+sentence (the session line, the play/draw line) keeps ten alone, and so
+does a ranking (Matchups' best and worst). A chart keeps its hollow dot
+for a point under ten, since a chart cannot draw a record. The Coach
+keeps ten alone too: its rates come from the server, which marks one
+under ten anecdotal (`review/leaks.py`, `MIN_SAMPLE`) and sends no
+percent for it.
 
 Field evidence is not a personal record. It measures other people's
 lists, so it keeps the corpus thresholds in `docs/metagame.md`
@@ -689,7 +699,8 @@ reads every other one without looking.
   a literal hex is unavoidable, and even there it comes from `theme.ts`'s
   `Tokens`, not a fresh value).
 - **A number is written by `lib/format.ts` and `lib/sample.ts`**: a
-  percent, a record, a rate under ten and a record table's column order
+  percent, a record, a rate under ten (rough or too few) and a record
+  table's column order
   follow "Numbers" above, never a format chosen per component.
 - **The accent is never data**, and `--on-accent` is the only text on it.
 - **Semantic type utilities only.** `text-body`, `text-caption`, etc. — never

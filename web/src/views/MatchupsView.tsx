@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router'
 import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } from '../api'
+import { RateCell } from '../components/RateCell'
 import { VersionSwitcher } from '../components/VersionSwitcher'
 import { Button, Card, DataTable, EmptyState, ErrorNote, Loading, ManaPips, StatTile, TextLink } from '../components/ui'
 import { mergeNewestFirst } from '../lib/deckOverview'
@@ -9,45 +10,15 @@ import {
   archetypeKeyOf,
   fieldLine,
   matchupName,
-  type MatchupRow,
   matchupRows,
   matchupTiles,
 } from '../lib/matchups'
-import { formatPercent, formatRecord } from '../lib/format'
+import { formatRecord } from '../lib/format'
 import { pairingAddress, withVersion } from '../lib/pairing'
-import { RATE_MIN_MATCHES } from '../lib/sample'
 import { formatCount, useNow } from '../lib/time'
 import { placeById } from '../shell/places'
 
 const MINUTE = 60_000
-
-/** A row's Rate cell: the rate from ten finished matches (a draw is neither
- *  won nor lost); under ten the "too few" word, muted, the record being the
- *  column beside it; an em dash only when no match was won or lost. */
-function RateCell({ row }: { row: MatchupRow }) {
-  const { t } = useTranslation()
-  const finished = row.won + row.lost
-  if (finished === 0) return <>—</>
-  if (finished < RATE_MIN_MATCHES) {
-    return <span className="whitespace-nowrap text-muted">{t('common.sample.tooFewCellMatches')}</span>
-  }
-  return <>{formatPercent(row.won / finished)}</>
-}
-
-/** A Game 1 or Games 2–3 cell, over the games of the row's best-of-three
- *  matches won and lost (a drawn game is neither): the Rate cell's form over
- *  games. From ten the rate alone, "58%"; one to nine the "too few" word,
- *  muted; an em dash with none, which is also a row with no best-of-three
- *  match. */
-function SplitCell({ wins, losses }: { wins: number; losses: number }) {
-  const { t } = useTranslation()
-  const played = wins + losses
-  if (played === 0) return <>—</>
-  if (played < RATE_MIN_MATCHES) {
-    return <span className="whitespace-nowrap text-muted">{t('common.sample.tooFewCellGames')}</span>
-  }
-  return <>{formatPercent(wins / played)}</>
-}
 
 /** A deck's Matchups, over the versions the address chose (`versionIds`,
  *  every version when `version` is `null`), counted from the matches in
@@ -56,7 +27,7 @@ function SplitCell({ wins, losses }: { wins: number; losses: number }) {
  *  ten times or more; and every archetype met, one row each, whichever
  *  version met it, its name a link to the pairing's page carrying the
  *  version chosen, its record and rate, and its best-of-three games split
- *  into game 1 and games 2–3 (`SplitCell`). Finished matches only.
+ *  into game 1 and games 2–3, each a `RateCell`. Finished matches only.
  *  Each version is read on its own and the page waits for every one; one
  *  failure is the page's error. The field's numbers never hold the page:
  *  until they come, or when they fail, the line under a name is the games
@@ -156,9 +127,9 @@ export function MatchupsView({
                 </div>,
                 formatCount(row.matches),
                 formatRecord(row.won, row.lost),
-                <RateCell key="rate" row={row} />,
-                <SplitCell key="game1" wins={row.game1Won} losses={row.game1Lost} />,
-                <SplitCell key="postboard" wins={row.postboardWon} losses={row.postboardLost} />,
+                <RateCell key="rate" wins={row.won} losses={row.lost} />,
+                <RateCell key="game1" wins={row.game1Won} losses={row.game1Lost} games />,
+                <RateCell key="postboard" wins={row.postboardWon} losses={row.postboardLost} games />,
               ]
             })}
           />

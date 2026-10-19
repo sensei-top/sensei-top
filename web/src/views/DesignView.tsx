@@ -513,7 +513,7 @@ function DeckTiles({ art }: { art: ArtCard[] }) {
   return (
     <Section id="deck-tile" title="Deck tile">
       <p className="text-body text-ink2">
-        Ten finished matches or more, a rate; one to nine, a count; none, no figure. A deck with no name, muted.
+        Ten finished matches or more, a rate; five to nine, a rate drawn muted; one to four, a count; none, no figure. A deck with no name, muted.
       </p>
       <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
         {DECK_TILES.map((tile, index) => (

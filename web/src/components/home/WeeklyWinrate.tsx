@@ -12,9 +12,9 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import type { TFunction } from '../../i18n'
 import type { Week, Weeks } from '../../lib/home'
 import { RATE_MIN_MATCHES } from '../../lib/sample'
+import { RateCell } from '../RateCell'
 import { formatPercent, formatRecord } from '../../lib/format'
 import { formatCount, formatShortDay } from '../../lib/time'
 import { useTokens } from '../../theme'
@@ -29,13 +29,11 @@ const CHART_MIN_HEIGHT = 'min-h-[200px]'
 
 type Point = { label: string; rate: number | null; decided: number }
 
-/** A week's Win rate cell: the rate from ten decided matches, "too few"
- *  muted under ten, an em dash when no match was won or lost. */
-function weekRate(week: Week, t: TFunction): ReactNode {
-  const decided = week.won + week.losses
+/** A week's Win rate cell: a `RateCell` over its decided matches, an em
+ *  dash when the week has no rate. */
+function weekRate(week: Week): ReactNode {
   if (week.rate == null) return '—'
-  if (decided < RATE_MIN_MATCHES) return <span className="whitespace-nowrap text-muted">{t('common.sample.tooFewCellMatches')}</span>
-  return formatPercent(week.rate)
+  return <RateCell key="rate" wins={week.won} losses={week.losses} />
 }
 
 /** Finished matches by week, as a line on 0 to 100%: a dashed line at 50%
@@ -188,7 +186,7 @@ export const WeeklyWinrate = memo(function WeeklyWinrate({
                 formatShortDay(week.start, yearStart),
                 formatCount(week.played),
                 formatRecord(week.won, week.losses),
-                weekRate(week, t),
+                weekRate(week),
               ])}
           />
         </Disclosure>

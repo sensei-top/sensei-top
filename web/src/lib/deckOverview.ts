@@ -12,7 +12,7 @@ import type { Deck, Match, PlayDrawWinrate } from '../api'
 import type { TFunction } from '../i18n'
 import { formatDate, formatPercent, formatRecord } from './format'
 import { isFinished, startOf } from './home'
-import { RATE_MIN_MATCHES, rateAndRecordLine, rateOrRecord } from './sample'
+import { RATE_MIN_MATCHES, rateAndRecordLine, rateCell, rateOrRecord } from './sample'
 import { formatCount, formatShortDay, parseTimestamp } from './time'
 
 /** For a sort, newest first: a time that cannot be read comes last. */
@@ -205,7 +205,8 @@ export function deckKeyNumbers(
 /** The ladder's classes, best first. */
 const LADDER = ['Mythic', 'Diamond', 'Platinum', 'Gold', 'Silver', 'Bronze']
 
-/** `record` is wins–losses; `thin` is a `rate` drawn muted, "too few". */
+/** `record` is wins–losses; `thin` is a `rate` drawn muted, a rough rate
+ *  or "too few" (`rateCell`). */
 export type RankRow = { rank: string; matches: number; record: string; rate: string; thin: boolean }
 
 type RankGroup = { rankClass: string | null; level: number | null; matches: number; wins: number; losses: number }
@@ -224,8 +225,8 @@ function classPlace(rankClass: string | null): number {
  *  class not on the ladder after them by name; matches with no rank last.
  *  Matches counts every finished match, a draw too; the record and the
  *  rate are over wins and losses, a draw counting toward neither. The rate
- *  is "too few", muted, from one to nine of them, and an em dash with none
- *  (a row of draws alone). */
+ *  is `rateCell`'s: muted from five to nine of them, "too few", muted,
+ *  from one to four, and an em dash with none (a row of draws alone). */
 export function rankRows(matches: Match[], t: TFunction): RankRow[] {
   const groups = new Map<string, RankGroup>()
   for (const match of matches) {
@@ -247,14 +248,9 @@ export function rankRows(matches: Match[], t: TFunction): RankRow[] {
       return (a.level ?? Infinity) - (b.level ?? Infinity)
     })
     .map((group) => {
-      const finished = group.wins + group.losses
-      const thin = finished > 0 && finished < RATE_MIN_MATCHES
-      const rate =
-        finished >= RATE_MIN_MATCHES
-          ? formatPercent(group.wins / finished)
-          : thin
-            ? t('common.sample.tooFewCellMatches')
-            : '—'
+      const cell = rateCell({ wins: group.wins, losses: group.losses }, t)
+      const thin = cell?.muted ?? false
+      const rate = cell?.text ?? '—'
       return {
         rank:
           group.rankClass == null

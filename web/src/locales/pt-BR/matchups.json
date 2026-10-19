@@ -6,7 +6,7 @@
     "noFinishedTitle": "Nenhuma partida terminada ainda",
     "noFinishedMessage": "Os matchups são contados quando uma partida termina.",
     "archetypesMet": "Arquétipos enfrentados",
-    "archetypesMetSubtitle": "Só partidas terminadas, os mais enfrentados primeiro. Uma taxa precisa de dez partidas.",
+    "archetypesMetSubtitle": "Só partidas terminadas, os mais enfrentados primeiro. Uma taxa precisa de dez partidas; a partir de cinco ela aparece esmaecida, aproximada.",
     "columns": {
       "archetype": "Arquétipo",
       "matches": "Partidas",

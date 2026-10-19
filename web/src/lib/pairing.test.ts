@@ -292,7 +292,8 @@ describe('pairingTiles', () => {
 
   /** A record as `formatRecord` writes it: a word joiner each side of the dash. */
   const record = (wins: number, losses: number) => `${wins}\u2060–\u2060${losses}`
-  const tooFew = `too few for a rate, under 10${NBSP}matches`
+  const tooFew = `too few for a rate, under 5${NBSP}matches`
+  const rough = (wins: number, losses: number) => `${record(wins, losses)} · rough, under 10${NBSP}matches`
 
   it('at one finished match writes the record, muted, the unfinished left out', () => {
     const [tile, games] = pairingTiles(matchupRows([win('a'), match('b', { result: null, games_won: 1 })])[0], none)
@@ -300,27 +301,28 @@ describe('pairingTiles', () => {
     expect(games).toEqual({ label: 'Games', value: '2\u2060–\u20601', detail: 'yours first' })
   })
 
-  it('at nine finished, a draw among them, writes the record of wins and losses', () => {
-    // Five wins, three losses, one draw: 5–3, eight rated matches. Games:
+  it('at nine finished, a draw among them, writes a rough rate over wins and losses', () => {
+    // Five wins, three losses, one draw: 5–3, eight rated matches, 5 of 8
+    // is 0.625, 63, muted. Games:
     // 5×2 + 3×1 + 1 = 14 won, 5×1 + 3×2 + 1 = 12 lost.
     const nine = [win('a'), win('b'), win('c'), win('d'), win('e'), loss('f'), loss('g'), loss('h'), draw('i')]
     const [tile, games] = pairingTiles(matchupRows(nine)[0], none)
-    expect(tile).toEqual({ label: 'Record', value: record(5, 3), detail: tooFew, muted: true })
+    expect(tile).toEqual({ label: 'Record', value: '63%', detail: rough(5, 3), muted: true })
     expect(games).toEqual({ label: 'Games', value: '14\u2060–\u206012', detail: 'yours first' })
   })
 
   it('at ten wins plus losses, a draw aside, writes the rate over them, as Matchups does', () => {
     // Seven wins, three losses and a draw: 7 of 10 is 70%; the draw is
     // neither. With the draw among the ten (7–2 and a draw) it would be
-    // nine rated and a record.
+    // nine rated, 7 of 9 is 0.778, a rough 78%.
     const ten = [win('a'), win('b'), win('c'), win('d'), win('e'), win('f'), win('g'), loss('h'), loss('i'), loss('j'), draw('k')]
     const [tile] = pairingTiles(matchupRows(ten)[0], none)
     expect(tile).toEqual({ label: 'Record', value: '70%', detail: record(7, 3) })
     const nine = [...ten.slice(0, 9), draw('l')]
     expect(pairingTiles(matchupRows(nine)[0], none)[0]).toEqual({
       label: 'Record',
-      value: record(7, 2),
-      detail: tooFew,
+      value: '78%',
+      detail: rough(7, 2),
       muted: true,
     })
   })
@@ -344,7 +346,7 @@ describe('pairingTiles', () => {
       postboard_lost: postboard[1],
     })
   }
-  const tooFewGames = `too few for a rate, under 10${NBSP}games`
+  const tooFewGames = `too few for a rate, under 5${NBSP}games`
 
   it('draws three tiles with no best-of-three match, best of one or unknown', () => {
     const rows = matchupRows([

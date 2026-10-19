@@ -6,7 +6,7 @@
     "noFinishedTitle": "No finished match yet",
     "noFinishedMessage": "Matchups are counted once a match has ended.",
     "archetypesMet": "Archetypes met",
-    "archetypesMetSubtitle": "Finished matches only, most met first. A rate needs ten matches.",
+    "archetypesMetSubtitle": "Finished matches only, most met first. A rate needs ten matches; from five it is shown muted, a rough one.",
     "columns": {
       "archetype": "Archetype",
       "matches": "Matches",

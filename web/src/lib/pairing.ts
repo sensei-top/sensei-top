@@ -148,9 +148,8 @@ function fieldTile(opponentKey: string, fieldByKey: Map<string, FieldRecord>, t:
 export type PairingTileText = TileText & { muted?: boolean }
 
 /** The tile of one split of the best-of-three games, Game 1 or Games 2–3,
- *  drawn as Record is (`rateOrRecord`, over games): from ten won or lost
- *  the rate over the record, under it the record, muted, over the "too
- *  few" line, a drawn game in neither number. */
+ *  drawn as Record is (`rateOrRecord`, over games), a drawn game in
+ *  neither number. */
 function splitTile(label: string, wins: number, losses: number, t: TFunction): PairingTileText {
   const { figure, line, thin } = rateOrRecord({ wins, losses }, t, 'games')
   const tile: PairingTileText = { label, value: figure ?? '—', detail: line }
@@ -163,7 +162,8 @@ function splitTile(label: string, wins: number, losses: number, t: TFunction): P
  *  or five when the row has a best-of-three match (`bo3Matches`). Record,
  *  as Matchups rates the same row (`rateOrRecord` over `won` and `lost`):
  *  from ten won or lost the rate (a draw is not one of the ten), "73%",
- *  over the record "8–3"; under it the record, "7–2", muted, over the
+ *  over the record "8–3"; five to nine the rate, "71%", muted, over the
+ *  record and "rough"; under five the record, "3–1", muted, over the
  *  "too few" line. Games: own first, "17–4". Then, with a best-of-three
  *  match, Game 1 and Games 2–3 (`splitTile`), the split the Matchups row's
  *  two columns show. Last, In tournaments: `fieldTile` over `fieldByKey`,

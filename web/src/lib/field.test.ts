@@ -532,11 +532,19 @@ describe('topTwoTile and rowCaption', () => {
     })
   })
 
-  it('shows a muted record under ten matches', () => {
+  it('shows a muted rate from five to nine matches', () => {
     expect(topTwoTile(rec(6, 3), 'x', t)).toEqual({
-      value: `6${WJ}\u2013${WJ}3`,
+      value: '67%',
       muted: true,
-      detail: `too few for a rate, under 10\u00a0matches \u00b7 ${WITH}`,
+      detail: `6${WJ}\u2013${WJ}3 \u00b7 rough, under 10\u00a0matches \u00b7 ${WITH}`,
+    })
+  })
+
+  it('shows a muted record under five matches', () => {
+    expect(topTwoTile(rec(3, 1), 'x', t)).toEqual({
+      value: `3${WJ}\u2013${WJ}1`,
+      muted: true,
+      detail: `too few for a rate, under 5\u00a0matches \u00b7 ${WITH}`,
     })
   })
 

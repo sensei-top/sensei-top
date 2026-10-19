@@ -191,8 +191,10 @@ describe('deckKeyNumbers', () => {
 
   it('gives records, muted, on a thin side', () => {
     // Six won, three lost, a draw and a match in progress, which counts
-    // toward neither, though its one game won counts. Play has nine games,
-    // too few for a rate: its record, 6 won and 3 not; draw 7 of 12 is 58.
+    // toward neither, though its one game won counts. Nine matches is a
+    // rough rate, 6 of 9 is 0.667, 67; one game is too few for one. Play
+    // has nine games, too few for the play/draw line's rate: its record, 6
+    // won and 3 not; draw 7 of 12 is 58.
     const matches = [
       ...results('w', 'win', 6),
       ...results('l', 'loss', 3),
@@ -201,8 +203,8 @@ describe('deckKeyNumbers', () => {
     ]
     const totals = { play: { games: 9, won: 6 }, draw: { games: 12, won: 7 } }
     expect(deckKeyNumbers(matches, totals, t)).toEqual([
-      { label: 'Matches', value: rec(6, 3), detail: `too few for a rate, under 10${NBSP}matches`, thin: true },
-      { label: 'Games', value: rec(1, 0), detail: `too few for a rate, under 10${NBSP}games`, thin: true },
+      { label: 'Matches', value: '67%', detail: `${rec(6, 3)} · rough, under 10${NBSP}matches`, thin: true },
+      { label: 'Games', value: rec(1, 0), detail: `too few for a rate, under 5${NBSP}games`, thin: true },
       { label: 'Play vs draw', value: 'too few', detail: `${rec(6, 3)} on the play · 58% on the draw`, thin: true },
     ])
   })
@@ -279,18 +281,21 @@ describe('rankRows', () => {
     ])
   })
 
-  it('gives a rate from ten wins and losses, "too few" under, a draw counting toward neither', () => {
+  it('gives a rate from ten wins and losses, muted from five, "too few" under, a draw counting toward neither', () => {
     // 7 won and 4 lost is 11, 7 of 11 is 0.636, 64; the draw is a finished
-    // match, in Matches, but in neither the record nor the rate.
+    // match, in Matches, but in neither the record nor the rate. Nine won
+    // is a rough 100%, muted; two won is too few.
     const matches = [
       ...results('p-w', 'win', 7, { rank_class: 'Platinum', rank_level: 2 }),
       ...results('p-l', 'loss', 4, { rank_class: 'Platinum', rank_level: 2 }),
       ...results('p-d', 'draw', 1, { rank_class: 'Platinum', rank_level: 2 }),
       ...results('g-w', 'win', 9, { rank_class: 'Gold', rank_level: 1 }),
+      ...results('s-w', 'win', 2, { rank_class: 'Silver', rank_level: 1 }),
     ]
     expect(rankRows(matches, t)).toEqual([
       { rank: 'Platinum 2', matches: 12, record: rec(7, 4), rate: '64%', thin: false },
-      { rank: 'Gold 1', matches: 9, record: rec(9, 0), rate: 'too few', thin: true },
+      { rank: 'Gold 1', matches: 9, record: rec(9, 0), rate: '100%', thin: true },
+      { rank: 'Silver 1', matches: 2, record: rec(2, 0), rate: 'too few', thin: true },
     ])
   })
 })
