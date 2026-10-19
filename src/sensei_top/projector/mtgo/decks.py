@@ -2,10 +2,11 @@
 
 Reads the ``raw_events`` rows ``reader/mtgo_decks.py`` stored
 (``source = 'mtgo_deck'``, one row per distinct file content) and writes one
-``decks`` row per distinct maindeck. Runs inside the caller's own transaction
-(``projector/matches.py::project()``, right after ``project_mtgo``), so there
-is no ``BEGIN``/``COMMIT`` here, and from scratch like every projection:
-``project()`` has already emptied ``decks``.
+``decks`` row per distinct maindeck. In two halves, like ``project.py``:
+``read_mtgo_decks`` parses before ``projector/matches.py::project()`` opens
+its transaction, and ``write_mtgo_decks`` inserts inside it, right after the
+MTGO matches, so there is no ``BEGIN``/``COMMIT`` here, and from scratch like
+every projection: ``project()`` has already emptied ``decks``.
 
 This is the one place that reads a deck file's contents; the reader moved the
 bytes and knows nothing of XML or card names.
@@ -394,12 +395,50 @@ def _board(
     return sorted(grp_ids), unresolved
 
 
+@dataclass
+class MtgoDeckRows:
+    """Every ``decks`` row ``write_mtgo_decks`` inserts, built by
+    ``read_mtgo_decks`` before the rebuild takes the write lock."""
+
+    decks: list[tuple]
+    warnings: int
+    groupings_skipped: int
+
+
 def project_mtgo_decks(conn: sqlite3.Connection) -> dict[str, int]:
-    """Project every ``mtgo_deck`` row in ``raw_events`` into ``decks``. Runs
-    inside the caller's transaction and writes nothing else. Returns
-    ``{"decks": rows written, "warnings": warnings raised, "groupings_skipped":
-    grouping files with no row that is a deck in one of the seven formats}``;
-    ``project()`` adds the first two to its own counts."""
+    """Project every ``mtgo_deck`` row in ``raw_events`` into ``decks``:
+    ``read_mtgo_decks`` then ``write_mtgo_decks``. Runs inside the caller's
+    transaction and writes nothing else. Returns ``{"decks": rows written,
+    "warnings": warnings raised, "groupings_skipped": grouping files with no
+    row that is a deck in one of the seven formats}``; ``project()`` calls
+    the two halves itself, the read before its transaction opens, and adds
+    the first two to its own counts."""
+    return write_mtgo_decks(conn, read_mtgo_decks(conn))
+
+
+def write_mtgo_decks(conn: sqlite3.Connection, rows: MtgoDeckRows) -> dict[str, int]:
+    """Insert what ``read_mtgo_decks`` built, inside the caller's
+    transaction; it reads nothing, so the write lock is held for the inserts
+    alone."""
+    conn.executemany(
+        """
+        INSERT INTO decks (deck_id, name, format, cards_json, first_seen, last_seen)
+             VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        rows.decks,
+    )
+    return {
+        "decks": len(rows.decks),
+        "warnings": rows.warnings,
+        "groupings_skipped": rows.groupings_skipped,
+    }
+
+
+def read_mtgo_decks(conn: sqlite3.Connection) -> MtgoDeckRows:
+    """Read and parse every ``mtgo_deck`` row into the ``decks`` rows
+    ``write_mtgo_decks`` inserts. Writes nothing: ``project()`` runs it
+    before ``BEGIN``, so parsing every stored deck file never holds the
+    write lock the live watcher's ingest thread waits on."""
     warner = _Warner()
     resolver = _Resolver(conn, warner)
     decks: dict[str, _Deck] = {}
@@ -439,6 +478,7 @@ def project_mtgo_decks(conn: sqlite3.Connection) -> dict[str, int]:
             deck = decks[deck_id] = _Deck(parsed.maindeck, parsed.sideboard, key, [])
         deck.take(parsed, key, logged)
 
+    rows: list[tuple] = []
     for deck_id, deck in decks.items():
         maindeck, maindeck_unresolved = _board(resolver, deck.maindeck)
         sideboard, sideboard_unresolved = _board(resolver, deck.sideboard)
@@ -447,15 +487,11 @@ def project_mtgo_decks(conn: sqlite3.Connection) -> dict[str, int]:
             "sideboard": sideboard,
             "unresolved": {"maindeck": maindeck_unresolved, "sideboard": sideboard_unresolved},
         }
-        conn.execute(
-            """
-            INSERT INTO decks (deck_id, name, format, cards_json, first_seen, last_seen)
-                 VALUES (?, ?, ?, ?, ?, ?)
-            """,
+        rows.append(
             (
                 deck_id, deck.name, deck.format, json.dumps(cards),
                 min(deck.logged, default=None), max(deck.logged, default=None),
-            ),
+            )
         )
 
     groupings_skipped = len(skipped - kept)
@@ -465,4 +501,4 @@ def project_mtgo_decks(conn: sqlite3.Connection) -> dict[str, int]:
             "outside the seven formats",
             groupings_skipped,
         )
-    return {"decks": len(decks), "warnings": warner.count, "groupings_skipped": groupings_skipped}
+    return MtgoDeckRows(rows, warner.count, groupings_skipped)
