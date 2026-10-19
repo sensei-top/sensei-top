@@ -68,8 +68,7 @@ Where it appears:
 - `Button variant="primary"`: the one call to action a card has.
 - `Chip variant="accent"`: the item a list leads with, or an authored
   artefact. Today: a `decisive` finding (through `severityChip`, the only
-  severity that takes it), the latest coach report, and a matchup whose
-  brief is written.
+  severity that takes it).
 - `Card tone="accent"`: a tinted border (`border-accent/30`) around an
   authored or metered artefact, such as a written narrative.
   `GenerateCard` and `CopyPromptCard` pass it from their own `accent`
@@ -256,7 +255,7 @@ of Home's three things, a `Dialog`.
 `Card` takes an `elevation` prop. `1` (the default) is a page's own
 top-level card: `surface-1`, `rounded-card`, a border in `edge`, and the
 lift. `2` is a block nested inside one of those (the deck guide's
-`LeakCard`/`MatchupCard`, the match report's per-finding cards):
+`LeakCard`/`PlanCard`, the match report's per-finding cards):
 `surface-2`, `rounded-block`, and neither border nor shadow. A nested block
 is set apart by its fill alone. `Finding` and `Callout` are nested blocks
 too.
@@ -423,9 +422,9 @@ outside WUBRG is ignored; `null`/`undefined`/`''` renders nothing (rule 4:
 unknown means no render, never a guess — never the word "Colourless"
 either, since `''` covers both "revealed only colourless cards" and
 "revealed cards whose colours are unknown", which cannot be told apart).
-`role="img"` with an `aria-label` naming the colours in English
-(`"Revealed colours: blue, black"`) carries accessibility; each inner `svg`
-is `aria-hidden`.
+`role="img"` with an `aria-label` naming the colours in the dashboard's
+language (keyed, `common.revealedColours`: `"Revealed colours: blue,
+black"`) carries accessibility; each inner `svg` is `aria-hidden`.
 
 **The boundary rule:** mana colours are identity chrome: beside a deck
 or archetype name, or as a table row's label. **They never colour a

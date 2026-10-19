@@ -12,11 +12,13 @@ rules that package states for itself:
    table the reader owns.** Every module here is a pure function of the
    projected database, or (``narrative.py``, ``markdown.py``) of an
    already-built ``DeckGuide``. (AGENTS.md non-negotiable #1.)
-2. **Nothing here is ever persisted.** A deck guide depends on the
-   tournament corpus, the card database and the player's own current
+2. **The evidence bundle is never persisted.** A deck guide depends on
+   the tournament corpus, the card database and the player's own current
    decklist, all three of which change independently of any projector
    rebuild — the same reasoning ``review/__init__.py`` gives for why a
-   stored report would read wrong, not merely stale.
+   stored report would read wrong, not merely stale. The authored
+   narratives are persisted: ``deck_narrative`` (``authored.py``) and
+   ``rcq_guide`` (``rcq_authored.py``).
 """
 
 from sensei_top.guide.bundle import DeckGuide, Provenance, build_deck_guide

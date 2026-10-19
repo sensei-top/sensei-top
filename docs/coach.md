@@ -200,9 +200,10 @@ report stays readable and a caller always knows what got cut:
   label a key has carried rides along as `variants`. Beyond the top 12, and
   every unclassified opponent, is a gap.
 - **Recurring patterns, all decks and per deck.** `find_leaks` unscoped for
-  the top 8 (`TOP_LEAKS`), plus a second `find_leaks` run per kept deck with
-  at least `2 * MIN_SAMPLE` (20) of its own population matches, in every
-  format the deck was played in — below that
+  the top 8 (`TOP_LEAKS`), plus a second `find_leaks` run per deck among the
+  top 8 by whole-population match count (every format, not `by_deck`'s
+  set) with at least `2 * MIN_SAMPLE` (20) of its own population matches,
+  in every format the deck was played in — below that
   a deck can never clear the leak finder's own per-side sample gate even in
   the best case, so it is skipped rather than scanned for nothing. Each
   deck's own top 3 (`TOP_DECK_LEAKS`) are kept.
@@ -439,7 +440,8 @@ stored prose stays verbatim and neither report can be rewritten in place.
   is dropped and counted rather than trusted. `api/routes/coach.py::
   _sources_out` appends these after the stored web citations and reading
   ids, skipping any URL already present. `CoachReport.tsx`'s `SourcesBody`
-  labels the two groups "Reading list" / "Web" once both are non-empty.
+  labels the two groups "Reading list" / "From the web" once both are
+  non-empty.
 
 `build_coach_prompt` computes `context_hash` — reused from
 `review/narrative_store.py`, the same SHA-256-of-the-prompt-context every
@@ -506,8 +508,9 @@ Both measurements in this section predate prompt caching. Since migration
 063 every request in that loop is marked for caching, so a continuation
 reads the re-sent prefix back at a tenth of the input price or less instead
 of paying it in full, and the row keeps the two cache counts beside
-`input_tokens` (`docs/llm.md`, "Model, effort, and cost"). The saving is not
-measured yet.
+`input_tokens` (`docs/llm.md`, "Model, effort, and cost"). The saving is
+measured for Opus 5.5 only: the cached run of 2026-10-07 in that section's
+table. The other models have no cached measurement.
 
 Output came in at about a third of the estimate, which is the ordinary kind
 of miss.

@@ -64,10 +64,11 @@ touching the parser.
 
     uv run ruff check .
     uv run pytest -q
-    cd web && pnpm lint && pnpm build
+    cd web && pnpm lint && pnpm test && pnpm build
 
-All four must pass. If one fails and you believe the check is wrong, say so
-in the pull request instead of changing the check.
+All five must pass. If you changed the API, run `pnpm gen:types` too and
+commit the regenerated `web/src/types/api.ts`; CI fails when it is stale.
+If one fails and you believe the check is wrong, say so in the pull request instead of changing the check.
 
 If a player would notice the change, add a line under `Unreleased` in
 `CHANGELOG.md`; the release notes are built from it.

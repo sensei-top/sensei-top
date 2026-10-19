@@ -34,6 +34,7 @@ fetch. TanStack Query stays the only data layer.
 | `/field/events/*` | `FieldEventPage` | `FieldEventView`: one tournament event, every deck with its standing, archetype and decklist, and where its results were published |
 | `/coach` | `CoachPage` | `CoachView`: the latest report, the way to write the next one, and your numbers |
 | `/coach/:id` | `CoachPage` | `CoachView`: one earlier report, as it was written |
+| `/mtgo/picks` | `MtgoPicksPage` | "Pick MTGO decks": not a place in the rail; Home's "Needs a deck" card links to it |
 | `/settings` | `SettingsPage` | `SettingsView`: what a desktop shell hands over, how reports get written, the density control, then the credits |
 | `/welcome` | `WelcomePage` | `WelcomeView`: the first-run steps, four or five by which clients the user plays, the step in `?step=`; a desktop shell only, else `NotFoundPage` |
 | `/design` | `DesignPage` | the design system's reference page, outside the shell |
@@ -114,8 +115,9 @@ page", out of sight until it holds focus. It moves focus to
 **The document's title** is the place's name and the product's, "Matches ·
 Sensei Top", and the product's name alone at Home and at an address that
 is no place (`documentTitle` in `shell/places.ts`). An address that is no
-place but has a name of its own, `/welcome`, takes it from its route's
-handle ("Welcome · Sensei Top"; `layoutName`, "Welcome").
+place but has a name of its own, `/welcome` or `/mtgo/picks`, takes it from
+its route's handle, a catalogue key `routeTitle` resolves ("Welcome · Sensei
+Top"; `layoutName`, "Welcome").
 
 **An address the router does not know** renders inside the shell: no place
 is current, and the `h1` is "No such page".
@@ -478,8 +480,9 @@ for the name) are the two callers of `useShell()` here; the view takes the shell
 `WelcomeActions` of its functions as props, so it is drawn to static
 markup in its test with no shell. **With no shell the address is
 `NotFoundPage`:** a browser has nothing to set up. The route's handle,
-`{ title: 'Welcome', needsShell: true }`, is how the layout names it:
-"Welcome" as the `h1` and "Welcome · Sensei Top" as the document's title
+`{ title: 'welcome', needsShell: true }`, is how the layout names it,
+its `title` a catalogue key `routeTitle` resolves: "Welcome" as the `h1`
+and "Welcome · Sensei Top" as the document's title
 (`places.ts`'s `layoutName`), and with no shell "No such page", matching
 the page.
 
@@ -746,16 +749,17 @@ assistant was deleted, 2026-10-01.)
 
 **Every `GET` hook here is a `useQuery` — the split between query and
 mutation now tracks who does the writing, not just "does this cost money".**
-`useReportNarrativePrompt`, `useLeaksNarrative` and `useGuideNarrative` stay
-plain queries: they always return the stored prose (or the prompt to write
-one) and cost nothing to read, so riding the heartbeat is not just safe but
-useful — a narrative written from any source shows up in the tab within a
+`useReportNarrativePrompt`, `useLeaksNarrative`, `useGuideNarrative`,
+`useRcqGuide` and `useCoachNarrative` stay plain queries: they always
+return the stored prose (or the prompt to write one) and cost nothing to
+read, so riding the heartbeat is not just safe but useful — a narrative written from any source shows up in the tab within a
 beat, whether it arrived via a CLI import or the generate button.
-`useSetOpponentDeck` and the three generate mutations —
+`useSetOpponentDeck` and the five generate mutations —
 `useGenerateMatchReportNarrative`, `useGenerateLeaksNarrative`,
-`useGenerateGuideNarrative` — are `useMutation`s because they genuinely
-write, and the last three do so via an opt-in Claude call (AGENTS.md
-non-negotiable #5, `docs/llm.md`) that must never fire on a timer. Each
+`useGenerateGuideNarrative`, `useGenerateRcq`, `useGenerateCoachNarrative` —
+are `useMutation`s because they genuinely write, and the last five do so
+via an opt-in Claude call (AGENTS.md non-negotiable #5, `docs/llm.md`)
+that must never fire on a timer. Each
 invalidates its own query key on success for the same reason
 `useSetOpponentDeck` already did: the heartbeat's revision is built from row
 counts, and a stored narrative changes none of them.
@@ -918,8 +922,8 @@ badge or a price, and the button's words do not change with the writer.
 The `POST .../narrative` routes answer 503 with no key configured.
 
 The deck guide's narrative is structured rather than a prose blob, so
-its caller (`WriteAndExport.tsx`) passes no `narrative` and lets `model`
-and `generatedAt` alone say that something is stored (`GenerateCard`'s
+its caller (`WriteAndExport.tsx`) passes no `narrative` and lets
+`generatedAt` alone say that something is stored (`GenerateCard`'s
 `hasContent`); the match report's summary and the training plan pass
 their prose directly.
 
@@ -1091,7 +1095,9 @@ What is tested is what counts, not what draws: the pure functions under
 them). They take the API's rows and a clock and return what a component
 shows, so a test needs no browser, no DOM and no server; `vitest.config.ts`
 runs them in Node and loads neither the React nor the Tailwind plugin. The
-layout's naming rule (`shell/places.test.ts`) is pure and tested too.
+layout's naming rule (`shell/places.test.ts`) is pure and tested too, and so
+are `src/api.test.ts` (`pasteRequest`) and `src/bridge.test.ts` (the shell
+bridge: `readShellGlobal`, `shellStore`).
 `views/WelcomeView.tsx` has a test, drawn to static markup with
 `react-dom/server` and a fake shell's settings, as `*.test.ts` with
 `createElement` (the config includes no `.tsx`), so it pins what each state

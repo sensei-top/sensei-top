@@ -36,7 +36,7 @@ start, with `--db <data dir>/sensei-top.db`, the data directory as its
 working directory and a launch id in `SENSEI_TOP_SESSION`. `serve` starts
 the watcher as a child process of its own and the refresh and backup jobs as
 threads in itself (`procs.py`, trap 6). Every other subcommand the shell
-needs (`config`, `doctor`, `cards --scryfall`, `restore`) is a short-lived
+needs (`config`, `doctor`, `diagnostics`, `cards --scryfall`, `restore`) is a short-lived
 child of the shell against the same `--db`; a key is written to its stdin
 and nothing else is. What kills what: on a stop the shell
 closes `serve`'s stdin, which is the lifeline above; if `serve` is still

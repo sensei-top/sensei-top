@@ -6,7 +6,7 @@ options.
 
     sensei-top ingest                # read Player-prev.log then Player.log once
     sensei-top project               # rebuild matches/games/turns from raw events
-    sensei-top report                # the three metrics, in the terminal
+    sensei-top report                # win rate, play/draw, game length, curves, meta
     sensei-top serve                 # dashboard without watching (read-only)
     sensei-top serve --watch         # live mode: watch, rebuild and serve
     sensei-top ingest --watch --project   # headless live mode, no server

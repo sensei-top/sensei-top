@@ -115,7 +115,8 @@ and dedupe permanently.
 **Day and month.** `06/10/2026` is the 6th of October in a Spanish header and
 would be the 10th of June in an English one, and both can sit in one
 `Player.log`, so no single order fits a file, let alone a machine. The CLI's
-`--locale` is `auto` by default; `mdy` and `dmy` are overrides that read
+`--locale` defaults to `[arena] date_order` in `config.toml` (`config
+--set-date-order`), else `auto`; `mdy` and `dmy` are overrides that read
 every non-year-first header that way and warn once per shape when a date is
 impossible in that order. The library functions (`ingest_file`, `live.py`)
 default to `None`, which dates year-first shapes only, and pass the string
@@ -311,8 +312,7 @@ itself is a `ClientToGREMessage` with `payload.type ==
 relays the opponent's decision only as its *effect* on shared state, never
 the outgoing message. Verified against 503 real decisions in a live capture:
 every offer resolves to exactly 7 cards (Magic's own London mulligan rule),
-zero failures — see `projector/mulligan.py`'s module docstring for two more
-traps hit getting there:
+zero failures. Two more traps hit getting there:
 
 - A follow-up diff regularly re-affirms `pendingMessageType` without
   resending `gameObjects` — a single message cannot always be parsed alone.
@@ -344,8 +344,9 @@ capture, the outer keys are only `CurrentModule`, `DTO_InventoryInfo`,
 `Payload`, `id`, `request`, none of them a draft-instance id. Nothing
 parses a draft today — the draft assistant was deleted on 2026-10-01 and
 the segmenter only labels these entries, so they stay in `raw_events` — but
-`docs/draft.md` and `projector/draft.py` at the `archive/draft` tag hold
-the full protocol and how `draft_id` was synthesized, for whoever brings
+`docs/draft.md` and `projector/draft.py` at the `archive/draft` tag, in
+the project's pre-public history rather than this repository, hold the
+full protocol and how `draft_id` was synthesized, for whoever brings
 drafts back.
 
 ## Deriving the two hardest fields

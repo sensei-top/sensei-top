@@ -32,7 +32,7 @@ class CardVerdict:
     consensus_copies: float | None
     consensus_share: float | None
     recommended: int
-    verdict: str  # "correct" | "add" | "trim" | "cut" | "flex"
+    verdict: str  # "correct" | "add" | "trim" | "flex"
 
 
 @dataclass(frozen=True, slots=True)

@@ -60,6 +60,7 @@ IGNORED = {"data", "logs", "handoffs", "web_dist", "dist", "build", "release", "
 NOT_CODE = re.compile(
     r"(\.md|\.lock|pnpm-lock\.yaml|\.(png|webp|jpg|ico|woff2?|ttf|dat|db|mo|pdf|svg|gif))$"
     r"|^tests/fixtures/"
+    r"|^tests/test_doc_refs\.py$"  # its made-up names must stay missing
 )
 SOURCE = ("py", "ts", "tsx", "mjs", "js", "sql", "css", "html", "spec")
 EXTENSIONS = (

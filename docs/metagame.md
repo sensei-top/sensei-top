@@ -153,7 +153,7 @@ coverage answer's `fmt`); a deck with none asks for no field.
 need (`Topdeck` and `Manatrader` are both dead in this cache, stopped at
 2025 and 2024 respectively; `CardsRealm` was never evaluated).
 
-1. **One GitHub API call** resolves `main` to a commit SHA, then lists the
+1. **Two GitHub API calls** resolve `main` to a commit SHA, then list the
    whole repository's file tree at that pinned commit. Every file fetched
    in one refresh comes from the same snapshot, and the SHA is stored
    (`meta_fetch.commit_sha`) so any report can name exactly which snapshot
@@ -244,10 +244,11 @@ the 43 real groups were Tier C leagues **republished under a later date
 folder**, with a different `Tournament.Date` too. Including the date in the
 key would let exactly those slip through undetected.
 
-Each group's survivor is `min(event_id)` — the file path sorts by date
-folder first, so this is always the group's earliest publication,
-deterministic without needing to know which copy the source repository
-considers canonical. Every other member is marked
+Each group's survivor is `min(event_id)` — the file path sorts by source
+folder, then date: within one source the survivor is the group's earliest
+publication, and across sources it is the copy whose source folder sorts
+first. Either way it is deterministic, without needing to know which copy
+the source repository considers canonical. Every other member is marked
 (`meta_event.duplicate_of = <survivor>`, migration 043) and **loses** its
 `meta_deck`, `meta_round_match` and `meta_deck_archetype` rows outright,
 rather than having them filtered at query time — that is what lets every
@@ -325,9 +326,11 @@ rate-limited (~100 requests/minute), not billed — it exists for attribution
 and abuse prevention, not cost. AGENTS.md non-negotiable #5 was narrowed to
 say so explicitly: `llm/config.py` remains the only place a *metered*
 credential is resolved, and TopDeck's key is resolved by its own sibling,
-`metagame/config.py` (`TOPDECK_API_KEY` env var, or a `[topdeck]` table in
-the same `~/.config/sensei-top/config.toml` the Claude credential lives
-in, written by `sensei-top config --set-topdeck-key`). With no key
+`metagame/config.py` (`TOPDECK_API_KEY` env var, else the system keyring
+(service `sensei-top`), else a `[topdeck]` table in the same
+`~/.config/sensei-top/config.toml` the Claude credential lives in;
+`sensei-top config --set-topdeck-key` writes the keyring where one exists,
+else the file). With no key
 configured, `refresh_topdeck` returns `status="not_configured"` and makes no
 network call at all — `sensei-top meta --source all` (the default) simply
 skips it, the same way an unreachable host is skipped, never an error.
@@ -753,7 +756,7 @@ against — and every route below calls it rather than re-running
   `brief/narrative.py`'s "Field record for this pairing" line both
   read one format's field — the match report the match's format, the brief
   the deck's — windowed to that format's latest reset rather than the whole
-  corpus. Each passes its format to `review/snapshot.py::ranked_field_matchup
+  corpus. Each passes its format to `metagame/matchup.py::ranked_field_matchup
   (..., fmt=)`, which answers `None` when there is none — see
   `docs/review.md` and `docs/brief.md`. `api/routes/matches.py::
   _field_context` (the match-report narrative prompt's field section) reads

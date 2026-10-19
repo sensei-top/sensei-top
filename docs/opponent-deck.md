@@ -9,7 +9,7 @@ Arena never sends the opponent's decklist (see
 revealed. `src/sensei_top/archetypes/source.py` downloads rule-based
 definitions; `classify.py` evaluates them against what a match showed and
 writes `opponent_archetype`. Classification runs immediately after `project()`
-in both `cmd_project` and `LiveIngester.poll_once`, because a rebuild deletes
+in both `cmd_project` and `LiveIngester.project_if_due`, because a rebuild deletes
 its output — it is part of finishing the rebuild, not a separate job.
 
 Naming a match at all needs its format first, because definitions are per

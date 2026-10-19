@@ -11,15 +11,15 @@ history, your record in every matchup, the leak finder, the turn-by-turn
 replay, and written guides through a prompt you paste into any assistant
 or through a key of your own. Two paid things are planned, and neither
 takes any of that away. The Microsoft Store build is the same app as the
-free download, listed free at release and priced later, for anyone who
+free download, listed free when it goes up and priced later, for anyone who
 would rather support the project that way. Later, an [optional paid tier](#later) adds deeper
 features and a monthly allowance of written reports, and it is the only
 thing that asks for an account. If the tracker earns a place in your
 routine, [donations](#donations) keep it maintained.
 
 What it is for: one tracker for both Arena and Magic Online, on Windows
-and Linux (the Steam Deck included), that sends none of your matches
-anywhere and shows how many games stand behind every rate it gives you.
+and Linux (the Steam Deck included), that shares none of your matches
+with anyone and shows how many games stand behind every rate it gives you.
 The order below follows from that.
 
 ## Now
@@ -48,7 +48,8 @@ English. What comes first after it:
 Outside this order, because it waits on Microsoft rather than on the
 work: **the Microsoft Store build** of the same app, which the Store
 signs. It is listed free at first and priced once Microsoft confirms an
-individual developer may sell. The direct download stays unsigned for
+individual developer may sell and the other blockers `docs/status.md`
+names clear. The direct download stays unsigned for
 now: the open-source signing programme asks for more public use first.
 
 ## Next
@@ -117,9 +118,12 @@ These are decisions, not gaps. Each one was considered and refused.
 - **Reading the memory of, injecting into or automating either client.**
   The tracker reads the log files Arena and MTGO already write, with
   Arena's own Detailed Logs setting on, and nothing else.
-- **Sending your matches anywhere.** Not by default, and not as an
-  opt-in: your match history stays on your computer. The matchup numbers
-  from outside your own games come from published tournament results.
+- **Collecting or sharing your matches.** Not by default, and not as an
+  opt-in: your match history is never contributed to us or to a shared
+  dataset. The one thing that leaves your computer is a report you ask to
+  generate with your own key, which sends that match to the model you
+  configured. The matchup numbers from outside your own games come from
+  published tournament results.
 - **Draft.** The draft assistant was removed in October 2026 and is not
   coming back in this project.
 - **Mobile.** iOS makes log reading impossible and Android impractical.

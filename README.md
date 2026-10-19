@@ -23,8 +23,10 @@ computer and turns them into a dashboard: every match and game, turn by
 turn, your record with each deck and against each archetype, and what the
 real tournament metagame looks like next to it.
 
-- **Nothing leaves your computer.** No account, no upload; the dashboard
-  runs on your own machine and answers nobody else.
+- **Your matches stay on your computer.** No account, no upload; the
+  dashboard runs on your own machine and answers nobody else. The one
+  exception is a report you ask to generate with your own key, which
+  sends that match to the model you configured.
 - **Free, with no account.** The tracker is free now and later, and
   nothing free asks you to sign up. A Microsoft Store build of the same
   app, free at first and priced later, and, later still, an optional paid
@@ -64,7 +66,7 @@ Sensei Top runs on Windows 10 and 11 (64-bit) and on 64-bit Linux. Get the
 Windows installer or the Linux AppImage from [senseitop.com](https://senseitop.com)
 or the [releases page](https://github.com/sensei-top/sensei-top/releases);
 [INSTALL.md](INSTALL.md) has the steps for each system. A Microsoft Store
-listing of the same app, free, is planned for the release.
+listing of the same app, free when it goes up, is planned.
 
 The one thing to change in Arena: turn on **Detailed Logs (Plugin
 Support)** under Options → Account, then restart it.

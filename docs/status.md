@@ -12,29 +12,34 @@ wrong or missing, why it was deferred, and what picking it up needs. It does
 not describe how to fix it, because that belongs to the session that does
 the fix.
 
-Last reviewed: 2026-10-12, for plan 9's half of the launch that lives in
-the tree: the site, the release job, the snapshot script and the community
-files (schema version 63, ~3,030 Python tests).
+Last reviewed: 2026-10-19, for the docs verification: every doc checked
+against the code and against the others, and every row below re-read
+(schema version 63, ~3,360 Python tests).
 
 **The roadmap's order, 2026-10-19.** Reordered with the user after the
 tracker research (plan 27). Now: the game 1 versus post-board split, the
 Arena and MTGO log-reading fixes, wider Linux discovery. Next: reader
 health, the CSV export and help tour, sideboard help, per-card win rates.
 Written guides with any model and macOS move to Later; match
-contributions move to Never, so nothing the app records is ever sent.
+contributions move to Never, so no match is ever collected or shared;
+the one that leaves the machine is a report the user asks for with their
+own key.
 The rows that carry the order are under "Roadmap order" below.
 
 **The paid tier, 2026-10-12.** Amends the repositioning below: the
 licence stays AGPL-3.0-only and the tracker stays free with no account,
 and two paid things are planned. The Microsoft Store listing is the same
-build as the free download, listed free at release and priced once the
-blockers below clear. At around 3,000 monthly
+build as the free download, listed free when it goes up and priced once
+the blockers below clear. At around 3,000 monthly
 active users, an optional subscription gated by feature, with a monthly
 report allowance inside it written through a hosted proxy, and the one
 account in the project, made at checkout (`AGENTS.md` rule 5,
 `docs/llm.md`, `ROADMAP.md`). Two rows under "Features not built" carry
-them, and the three third-party questions the repositioning closed
-because nothing was sold are open again.
+them. The two third-party questions the repositioning closed because
+nothing was sold are open again, the MTGOFormatData licence now blocks the
+sale too, and so is whether the Fan Content Policy allows either paid thing
+(the Store row), which the repositioning's reason for donations assumed it
+did not.
 
 **The repositioning, 2026-10-07.** The licence is AGPL-3.0-only again, the
 Pro tiers, the hosted proxy and the account are gone, and the copy-prompt
@@ -47,11 +52,13 @@ raised.
 
 **The pivot, 2026-10-01.** The product became a competitive 1v1 companion
 app for Arena and MTGO: every MTGO format that has archetype rules, no
-Arena-only formats (Historic, Explorer, Timeless), no in-game overlay or
-companion window, and never reading the memory of, injecting into or
-automating either client. Draft was deleted rather than hidden
-(`feature/remove-draft`; the last commit that has it is tagged
-`archive/draft`), and its rows left with it. The rows the pivot
+Arena-only formats (Historic, Explorer, Timeless; reversed 2026-10-16 for
+those three, see the Arena-only formats row, while Alchemy and Brawl stay
+out), no in-game overlay or companion window, and never reading the memory
+of, injecting into or automating either client. Draft was deleted rather
+than hidden (`feature/remove-draft`; the last commit that has it is tagged
+`archive/draft` in the pre-public history, not in this repository), and
+its rows left with it. The rows the pivot
 added are dated 2026-10-01.
 
 ## What works today
@@ -85,7 +92,7 @@ downloads. Nothing about anyone's games is in any of them.
 These look like gaps but are decisions. Don't "fix" them without reopening
 the decision.
 
-- **MTGO never reaches the Live page.** Since plan 3 the watcher stores
+- **MTGO doesn't reach the Live page yet.** Since plan 3 the watcher stores
   each MTGO game once it ends, so History and the metrics follow a session
   as it is played, but the current-match reads stay Arena-only
   (`docs/current-match.md`). See "MTGO on the Live page" under "Features not
@@ -128,7 +135,7 @@ order (under "Features not built").
 |---|---|---|
 | Now 1. Each matchup's record split into game 1 and games 2 and 3, for best-of-three matches. Arena's post-board games come from `game_decks` (migration 024); MTGO's log has no per-game deck, so its post-board cells are NULL with a warning. | The first step of sideboard help, split out on 2026-10-19 because it needs no outside source; the most-asked competitive statistic in the research. | Computed in the rebuild or at request time (rule 3), nothing stored; where it shows (a deck's Matchups, the pairing page). |
 | Now 2a. Arena log reading: a `[Message summarized …]` marker replacing an oversized `GameStateMessage` is dropped silently by `reader/segmenter.py`, so the replay loses messages with no warning; an exception in one message of a `greToClientMessages[]` event loses its siblings, GameOver included, because `projector/matches.py` catches per raw event; `GameStateUpdate_Undo` resets the board but `card_events` keeps the cancelled cast, which is phantom opponent evidence; `QueuedGameStateMessage` has no decided treatment; nothing fails when a label's handler stops matching (a per-label count ratchet); derived rows carry no projector version; `docs/arena-log.md`'s trap 6 says Full and diff messages have no distinguishing flag, while `projector/game_state.py` branches on `GameStateType_Full`. | Found by the tracker research (2026-10-19) in other trackers' bug histories; none is measured against the real log yet. Each is a silent loss, and rule 2 makes each fix retroactive. | A grep of the real log for each marker (`Message summarized`, `QueuedGameStateMessage`, `GameStateUpdate_Undo`), then fixture-backed tests (rules 7 and 8). The marker is the segmenter's to find and the projector's to interpret (rule 1); an incomplete game is flagged, never patched (rule 4). |
-| Now 2b. MTGO log reading: games ended by a disconnection, running out of time, drawing from an empty library, inaction or a bare "loses the game" stay undecided, since `projector/mtgo/parse.py` reads only concessions and wins; a reconnect ("joined the game" again) opens a phantom game; `projector/mtgo/decode.py`'s text check rejects a whole string holding a control character or NUL, so that player's lines vanish, a lead for the 9 unprojected files under "Correctness"; the deck played (`deck_used`) is not matched against deck files, so more matches need a manual pick. | Found by the tracker research (2026-10-19). "MTGO draws and disconnects are untested" (below) is the same gap. | Real captures from the VM (a pulled network, a timeout) for the fixtures; `scripts/mtgo_probe.py` over the 9 files. Unknown results stay undecided (rule 4); `mtgo_match_pick` stays the user's override (rule 6). |
+| Now 2b. MTGO log reading: games ended by a disconnection, running out of time, drawing from an empty library, inaction or a bare "loses the game" stay undecided, since `projector/mtgo/parse.py` reads only concessions and wins; a reconnect ("joined the game" again) opens a phantom game; `projector/mtgo/decode.py`'s text check rejects a whole string holding a control character or NUL, so that player's lines vanish, a lead for the 9 unprojected files under "Correctness"; the deck played is not matched against deck files, so more matches need a manual pick. | Found by the tracker research (2026-10-19). "MTGO draws and disconnects are untested" (below) is the same gap. | Real captures from the VM (a pulled network, a timeout) for the fixtures; `scripts/mtgo_probe.py` over the 9 files. Unknown results stay undecided (rule 4); `mtgo_match_pick` stays the user's override (rule 6). |
 | Now 3. Arena's log found on more Linux setups: every Steam library root, Flatpak and Snap Steam, `~/.steam/root`, Lutris, Bottles and Heroic, and any Wine user (`reader/ingest.py` hard-codes `steamuser`; `steam.py` knows two roots); duplicates removed by realpath and the newest `Player.log` preferred, so a stale prefix can't shadow the live one. | Found by the tracker research (2026-10-19); helps the Steam Deck tester. | Filesystem tests against fake home directories, one per layout; discovery stays filesystem-only (rule 1). |
 | Next 1. Reader health in the dashboard: the log's path and whether it was found, the last read, "waiting for the log to grow", raw and projected counts, and Detailed Logs off with the setting's exact path (on the empty Matches page too); a "Total matches · Last updated" line; a warning for a match that looks missing; a dated changelog in the app. | Most of it exists in `doctor` on the command line only. | A read-only GET under the guard; the panel reads state and never drives the reader (rule 1); the changelog is text shipped with the app, never fetched. |
 | Next 2. A CSV export of the user's own matches, games and per-deck numbers (an unknown value is an empty cell, never 0); a one-line definition on each table column; and the help tour below, with an entry that cites Arena's own article on Detailed Logs for community tools and says the app reads only the log and sends nothing. | Asked by no one yet; the research found the export is what other trackers charge for. | A GET under the guard; every string keyed in both languages (`docs/i18n.md`). |
@@ -145,10 +152,10 @@ order (under "Features not built").
 | A provider adapter for the generate routes (decided 2026-10-07, `AGENTS.md` rule 5, `docs/llm.md`): the credential becomes a provider, a base URL, a key and a model id, so the five routes can call Anthropic, any OpenAI-compatible endpoint or a local model (Ollama, LM Studio). Each stored narrative is labelled with the model that wrote it; the coach's web search degrades to the reading list on a provider without it; an unknown model prices `NULL`. The brief, coverage and sideboard-plan cards get a generate route with it. | The repositioning made the user's own credential the only writing path, and "any model" was the research's second-most-asked thing after "no account". Moved from Next to Later on 2026-10-19: the 2026-10-19 tracker research found no demand either way. Not started. | Its plan (`~/.claude/plans/release-16-provider-adapter.md`, outline). One adapter per protocol under `llm/`, `llm/config.py` widened, a `model` column on every narrative table (one migration), `REPORT_MODELS` reworked into a per-provider list, Settings' Writing section, and the route additions to rule 5's list and `test_only_authored_artifact_routes_write`. |
 | The deck guide's Export card copies `guide/markdown.py`'s document but has no download, while the RCQ guide downloads its `.md` (`components/rcq/RcqResult.tsx`). A PDF and a phone or print layout were dropped on 2026-10-19: the Markdown is enough. | Asked 2026-10-16 as guides as files; the RCQ half shipped first. | A download button beside the copy, as the RCQ guide's. |
 | Sideboard help without a model (decided 2026-10-07; `ROADMAP.md`'s Next 3): the user's own post-board record per matchup, split out as Now 1 on 2026-10-19 ("Roadmap order"), then candidate ins by a card-role rule over the 75 (answers, threats, hate by the opponent's archetype), and a link to a sideboard guide for the pairing from the Skill Issue Magic guide index. No generated outs. | The research's most-wanted feature, and the one every competitor sells a model for; the index's creator was asked on 2026-10-07, in exchange for credit on each link, and had not answered. Not started. | The creator's yes, recorded in `docs/attribution.md` with a row for the index ("Rules for a new source"): the published CSV's address and shape, an alias table from the index's archetype names to the corpus keys, a scheduled fail-soft fetch kept in cache, never any guide content copied. Plan `release-17-sideboard-referrals.md` (outline). |
-| The launch itself (plan 9, S7): the accounts (GitHub Sponsors on the `sensei-top` organisation, Cloudflare's site Worker and its Web Analytics token, X; Apoia.se is live at `https://apoia.se/senseitop` since 2026-10-12; GitHub Sponsors was still unapproved at 1.0.0, and Stripe refused the maintainer's CPF, so PayPal stands in as the worldwide link from 1.0.1 on the site and in `FUNDING.yml`), the public repository with its labels and Discussions categories, the `0.7.x` beta installed from the site by the testers, the Store listing, the `1.0.0` release and its posts per venue, which never say "AI". Perks never gate anything: credits, a roadmap vote, sponsor-a-feature; no Discord role while there is no Discord. The credits perk has nothing to show it yet: `web/src/credits.ts` and the Credits view list sources and software, not supporters. No early builds for donors, because the policy forbids requiring payment or a subscription for fan content. | Every part of it that lives in the tree is built (2026-10-12): the site in `site/`, the tag-driven release job, `scripts/publish_snapshot.py`, the issue forms and the funding file. What is left is the maintainer's own sequence of accounts and releases. | The user's steps in plan `release-9-launch.md`, S7. The Store identity (its S3) waits on the Partner Center account. |
-| A macOS build, Arena-only, unsigned, from GitHub's free macOS runners once the repository is public; notarization when donations cover the Apple fee. | Linux and Windows ship first (decided 2026-10-07); moved from Next to Later on 2026-10-19, behind wider Linux discovery. | Plan 6 phase 5. |
+| The launch itself (plan 9, S7): the accounts (GitHub Sponsors on the `sensei-top` organisation, Cloudflare's site Worker and its Web Analytics token, X; Apoia.se is live at `https://apoia.se/senseitop` since 2026-10-12; GitHub Sponsors was still unapproved at 1.0.0, and Stripe refused the maintainer's CPF, so PayPal stands in as the worldwide link from 1.0.1 on the site and in `FUNDING.yml`), the public repository with its labels and Discussions categories, the `0.7.x` beta installed from the site by the testers, the Store listing, the `1.0.0` release and its posts per venue, which never say "AI". Done by 2026-10-19: the public repository, the `1.0.0` and `1.0.1` releases and their posts, Apoia.se and PayPal in `.github/FUNDING.yml`. Left: the Store listing, GitHub Sponsors' approval and the credits perk. Perks never gate anything: credits, a roadmap vote, sponsor-a-feature; no Discord role while there is no Discord. The credits perk has nothing to show it yet: `web/src/credits.ts` and the Credits view list sources and software, not supporters. No early builds for donors, because the policy forbids requiring payment or a subscription for fan content. | Every part of it that lives in the tree is built (2026-10-12): the site in `site/`, the tag-driven release job, the issue forms and the funding file. What is left is the maintainer's own sequence of accounts and releases. | The user's steps in plan `release-9-launch.md`, S7. The Store identity (its S3) waits on the Partner Center account. |
+| A macOS build, Arena-only, unsigned, from GitHub's free macOS runners, open to it since the repository went public; notarization when donations cover the Apple fee. | Linux and Windows ship first (decided 2026-10-07); moved from Next to Later on 2026-10-19, behind wider Linux discovery. | A plan of its own: plan 6, now done, left macOS out of scope. |
 | MTGO's `.txt` deck export is not read; only `.dek` exports and the deck store are (plan 12, D13). | No real `.txt` export exists to build a fixture from (rule 7). | A real `.txt` export, from the user or the VM. |
-| Settings' Draft data section (`settings/SharingSection.tsx`), `components/sharing/` and the `Sharing`, `SharedDraft`, `DraftPayload` and `Deleted` types in `web/src/bridge.ts` describe drafts, which the app no longer reads. Nothing draws them outside `/design/surfaces`. | Kept when the draft assistant and the overlay's leftovers were removed (2026-10-01), for plan 10 to rework for match data. Plan 10 was refused on 2026-10-19 (`ROADMAP.md`, "Never"), so nothing will. | Their removal, with the shell side of `deleteContributions` (`web/src/bridge.ts`, `views/SettingsView.tsx`, `lib/sampleShell.ts`) and `docs/frontend.md`'s paragraph on them. |
+| Settings' Draft data section (`components/settings/SharingSection.tsx`), `components/sharing/` and the `Sharing`, `SharedDraft`, `DraftPayload` and `Deleted` types in `web/src/bridge.ts` describe drafts, which the app no longer reads. Nothing draws them outside `/design/surfaces`. | Kept when the draft assistant and the overlay's leftovers were removed (2026-10-01), for plan 10 to rework for match data. Plan 10 was refused on 2026-10-19 (`ROADMAP.md`, "Never"), so nothing will. | Their removal, with the shell side of `deleteContributions` (`web/src/bridge.ts`, `views/SettingsView.tsx`, `lib/sampleShell.ts`, and in the desktop shell `desktop/src/preload.ts` and `desktop/src/settings.ts`, which set `sharing` to null) and `docs/frontend.md`'s paragraph on them. |
 | Formats beyond what plan 13 built. Plan 13 made the format a parameter for the seven formats in `formats.FORMATS` (Standard, Pioneer, Modern, Pauper, Legacy, Vintage, Premodern): legality per format (`card_legality`, migration 053, in place of `cards.standard_legality`); a match's format (`matches.format`, 055, read through `v_match_format`: the log's, then the MTGO pick, then the format the revealed cards fit); and per-format archetype rules, corpus prior, consensus, reset window, field record, leaks and coach reports, with a format choice on the Field and Coach pages. Left out: Arena-only formats (Historic, Explorer and Timeless are planned after 1.0.0, row below; Alchemy and Brawl never) and Duel Commander; Premodern's archetype rules, so its opponents are named by colours and signature card only; a date-aware ban or rotation history (Scryfall's ban list is today's, so a ban never takes a match out of its format); "&" names (below). The corpus follows Standard, Modern and every format it already holds an event in, and `sensei-top meta --format X` adds another (`docs/metagame.md`, "Fetching the corpus"); the quality pass (`docs/metagame.md`, "Formats: how well each is named") covers Standard, Modern and Pauper's corpus. | Decided with the user, 2026-10-02 (plan 13, D10 and D11): fetch what is played, and never write Premodern rules here, because it is not a Wizards-sanctioned format. | Per format: switching its fetch on, then its quality pass. Premodern rules only from an outside source, if one exists. |
 | Historic, Explorer and Timeless, the Arena-only formats other than Alchemy and Brawl (decided 2026-10-16, after 1.0.0, low priority). Reverses that part of the 2026-10-01 pivot; Alchemy and Brawl stay out. | Asked 2026-10-16, for after 1.0.0. | What plan 13 built per format (legality, archetype rules, corpus prior, consensus, field), and a corpus source for formats that have no MTGO events. `ROADMAP.md` keeps them in Later (2026-10-19). |
 | MTGO on the Live page: the opponent's revealed cards during a game (the log is rewritten about every 7 s) and the between-games plan (see "Limited on purpose"). | Moved out of plan 3, which built the ingest it stands on (plan 3, D1): it is a `table/`, API and Live-page feature, and migration 040 made the current-match view Arena-only. | Plan 15. |
@@ -165,7 +172,7 @@ order (under "Features not built").
 
 | Item | Why deferred | Needs |
 |---|---|---|
-| Coach web-search citations are never stored. `sources_json` holds only the reading-list ids. | Diagnosing it needs a paid run. | The user's go-ahead for one coach run, then a read of the response's block types. |
+| Coach web-search citations are never stored. `sources_json` holds only the reading-list ids. The pages are not lost: `coach/narrative.py::web_sources` recovers them from the prose's "Sources" section when the report is read. | The 2026-09-22 runs found no citation objects in the response to store. | Storing the recovered pages at write time, if a reader ever needs them without the prose. |
 | A prepare spell half that several cards share has no legality and no `oracle_id`: Reality Fracture's "Peer Review" is the back of three different creatures, so `cards.py::_backfill_by_name` skips the face name as two cards sharing it (15 face grp_ids across five names). No match's format read depends on one: MTGO resolves the combined name, and no MTGO match sat at `unknown_legality` on 2026-10-05. | The skip is the guard that keeps Odyssey's Careful Study apart from an Arena face; loosening it for shared faces is its own change. | A rule telling a face shared by several cards (same face, different whole cards) from an unrelated card of the same name, then a test over a real `prepare` line. |
 | `table/hand_read.py::_seen_elsewhere` counts per game, while the classifier counts per match. | The asymmetry is undocumented but harmless today. | A decision on which grain is right, then a doc line or a change. |
 | `review/analyzers/baseline.py`'s `GAME_LENGTH_MIN_GAMES` gate counts projected games, so it couples to projection details. | Raised during review and left unchanged. | A look at whether the gate should count completed games only. |
@@ -188,7 +195,7 @@ order (under "Features not built").
 | An entry stored with no time by `--locale auto` (`reader/dates.py`, step 6) gets a dated twin if the same bytes are read again once its shape's order is learned (`ingest --file` reads from the start), because the digest includes `logged_at`. A `--locale` change between two reads of one file does the same. | Known when `auto` was built (plan 3, S10); out of its scope. | Re-deriving `logged_at` from `raw_events.header`, which migration 062 keeps for this. |
 | Whether Windows' regional format reaches Arena's header while Arena is in English is not known. The header followed the in-game language in all eight captured languages. | Every capture so far ran under Proton, where setting the locale did not change the header. | One Windows capture with Arena in English and a day-first regional format. A new shape is a fixture and a row in `docs/arena-log.md`'s table; a day-first `slash-12h` header is one `auto` already settles. |
 | The keep guide's mulligan table counts one deck version (`table/keep.py`'s query on `m.deck_id = ?`), while its mulligan-cost line counts the whole deck identity (`guide_play.mulligan_record`), so the two can differ for a deck whose list was edited; both say "Kept 7". | Found in plan 26's review of phase 3b; the two reads predate it. | A decision on which grain the table should have, then the same grain for both, with a fixture-backed test (rule 7). |
-| In a game 2 or 3 hand, the Live status strip's Game numeral lags beside a live play or draw, since `OpeningHandOut` has no game number and the strip reads the last projected game. In the sideboard break the strip's record and Game numeral read the projected match too, so they can trail the plan card's "Lost game 1". | Found in plan 26's reviews of phases 3a and 3c. A server field is outside that plan ("No server-side change"). | A game number on `OpeningHandOut` and on `IntermissionOut`, read by the strip in place of the projected game's. |
+| In a game 2 or 3 hand, the Live status strip's Game numeral lags beside a live play or draw, since `OpeningHandOut` has no game number and the strip reads the last projected game. In the sideboard break the strip's record and Game numeral read the projected match too, so they can trail the plan card's "Lost game 1". | Found in plan 26's reviews of phases 3a and 3c. A server field is outside that plan ("No server-side change"). | A game number on `OpeningHandOut` (`IntermissionOut` already carries the game that just ended), read by the strip in place of the projected game's. |
 | `/api/metrics/play-draw` has no games-lost field, and its `games_completed` counts draws, so the deck strip's Play vs draw (`web/src/lib/deckOverview.ts`) writes a drawn game as a loss in a side's record, counts it toward the side's ten games and lowers its rate (`docs/design-system.md`, "Numbers": a draw is never a loss). | Plan 26, phase 4: accepted as debt on 2026-10-18. The fix is on the server, on its own branch. | A `games_lost` column in `v_play_draw_winrate` (a migration), the route and its model, then the strip reading it. |
 | Play and draw are not on the Matches page. | `/api/metrics/play-draw` answered 500 for MTGO when the page was built; it answers for every source now, deckless matches in one row per side. | Put the split on the page, or count it from the list's games as the band does. |
 | No route lists the matches past the 500th or counts the matches of a filter. | Found while building the Matches page. The list says where it stops. | A design for paging. |
@@ -213,12 +220,12 @@ order (under "Features not built").
 
 | Item | Needs |
 |---|---|
-| Big file: `review/snapshot.py::build_snapshot` (~490 lines) | Out of scope for the sweep. Split it when a feature next touches it. |
+| Big file: `review/snapshot.py::build_snapshot` (~515 lines) | Out of scope for the sweep. Split it when a feature next touches it. |
 | `projector/matches.py` calls `mtgo.config.load_handle()` on every `project()`, so a config file with no `[mtgo]` table (an Arena-only user with a Claude key, say) logs a warning on every rebuild. | Loading the handle only when MTGO `raw_events` exist, or a silent absence like `resolve_log_dir()`'s. |
-| Several tracked files (`git grep -l '\.claude/handoffs'`) cite notes under the gitignored `.claude/handoffs/`, so the citations dangle for anyone else reading the repo. | A wording pass before a public release: state what the note established, or drop the citation. |
-| About 19 lists in `web/src` are joined by hand with `", "`, not through `lib/format.ts`'s `formatList` (`docs/i18n.md`, "Keying a string in the dashboard"), so they read as English in another language. `OpponentRead` was fixed in plan 26, phase 3a. | Finding them (a `join(', ')` in `web/src`), then `formatList` at each, with the test the file already has. |
+| Several tracked files (`git grep -l '\.claude/handoffs'`) cite notes under the gitignored `.claude/handoffs/`, so the citations dangle for anyone else reading the repo. | A wording pass, overdue since the repository went public on 2026-10-17 (15 files besides this one on 2026-10-19): state what the note established, or drop the citation. |
+| About 17 lists in `web/src` are joined by hand with `", "`, not through `lib/format.ts`'s `formatList` (`docs/i18n.md`, "Keying a string in the dashboard"), so they read as English in another language. `OpponentRead` was fixed in plan 26, phase 3a. | Finding them (a `join(', ')` in `web/src`), then `formatList` at each, with the test the file already has. |
 | `docs/guide.md`'s `narrative.py` section justifies the guide prompt's size by quoting an AGENTS.md "outbound-call standard" that AGENTS.md no longer states. | Restating the reasoning in `docs/guide.md` itself, or dropping the quote. |
-| The rule that reads a seat's colours from its played cards exists twice: `table/`'s `live_opponent_colors`, and `_colors_by_played_name`/`_colors_of` in `api/routes/mtgo_picks.py` (plan 19, one query per request instead of one per match), kept equal by a test. | One helper both import, outside `table/`. |
+| The rule that reads a seat's colours from its played cards exists twice: `archetypes/classify.py`'s `live_opponent_colors` (which `table/intermission.py` calls), and `_colors_by_played_name`/`_colors_of` in `api/routes/mtgo_picks.py` (plan 19, one query per request instead of one per match), kept equal by a test. | One helper both import, from `archetypes/`. |
 | The installer's uninstall page (`desktop/build/installer.nsh`, both languages) and `INSTALL.md`'s folder table name `%APPDATA%\sensei-top` as the settings folder, which holds only the server's `config.toml`; the shell's own `shell.json` (language, autostart, onboarding) sits in `%APPDATA%\Sensei Top`, Electron's userData, and is named nowhere. Found in plan 18's VM read, 2026-10-12. | A decision on whether the uninstall page names the second folder, then the same sentence in both `LangString`s and in `INSTALL.md`. |
 | `scripts/build_server.py` accepts python-build-standalone 20260623 and 20260807 only (`VENDORED_PBS_TAGS`): a bare `uv sync` in the Windows VM picked 3.12.14 (PBS 20260929) on 2026-10-12 and the freeze refused it; `--python 3.12.13` is the workaround. | Re-checking `desktop/server/licenses/cpython-deps/` against the newer tag, then adding it to the tuple. |
 | 37 imports reach into another package's leading-underscore names (counted 2026-10-16, the gettext alias `_` aside): 17 from `archetypes/classify.py`, 8 into `coach/evidence.py`, one each into `cli.py` from `reader/` and into `projector/` from `formats.py`. | Promote the shared ones to public names, or pin them with a test. Moved after 1.0.0 on 2026-10-16; no visible effect. |
@@ -257,9 +264,10 @@ each of them.
 - The public source release. The licence is AGPL-3.0-only since
   2026-10-07; between 2026-10-01 and then it was a proprietary notice, and
   no copy was published under either. The source is public at
-  `https://github.com/sensei-top/sensei-top` since 2026-10-13, one
-  snapshot commit per tag from `v0.7.0` on. What was established on
-  2026-09-27 holds:
+  `https://github.com/sensei-top/sensei-top` since 2026-10-13: one
+  snapshot commit per tag from `v0.7.0` to `v1.0.0`, and since 2026-10-17
+  the development itself (`docs/branching.md`). What was established on
+  2026-09-27 still explains why the public history starts at a snapshot:
   - The history cannot be published. `scripts/privacy_scan.py --history`
     found local paths in old versions of `README.md`, `tests/conftest.py`
     and the MTGO reader, the MTGO handle in old versions of
@@ -268,17 +276,17 @@ each of them.
   - So the source goes out as a fresh one-commit snapshot in a new
     repository, never over this one: GitHub keeps every pull request's
     commits under `refs/pull/*`, where rewriting a branch does not reach
-    them. The README says why the history starts there. The working
-    repository stays private as the record.
+    them. The README says why the history starts there. The old working
+    repository stays private as the record of everything before it.
   - The snapshot's commits identify the maintainer: the name git records
     today, and GitHub's no-reply address for the maintainer's account.
-    `scripts/publish_snapshot.py` makes that snapshot (plan 9, 2026-10-12):
+    `scripts/publish_snapshot.py` made those snapshots (plan 9, 2026-10-12)
+    and is unused since development went public, still in the tree:
     the tag's tree into a clone of the public repository, one commit, one
     tag, scanned before any push. The scan reads the global git identity
     as well as the clone's, and accepts the clone's declared local
     identity only in `history:log`'s author and committer fields; the same
-    values in any file still count. `docs/branching.md`, "A release",
-    steps 6 and 7.
+    values in any file still count.
   - `sourceUrl` in `web/src/credits.ts` is the address, and the Windows
     installer's welcome page links it. Its finish page links the GitHub
     Sponsors page beside the Apoia.se one in 1.0.0, a page GitHub had

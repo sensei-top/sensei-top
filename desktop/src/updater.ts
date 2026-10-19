@@ -1,6 +1,6 @@
 // Updates (release plan 6, S14, decision D24). Electron-free: vitest imports
-// it directly, and `main.ts` is the only file that loads Electron. It hands
-// `UpdateService` electron-updater's `autoUpdater` only when
+// it directly, and `main.ts` is the only main-process file that loads
+// Electron. It hands `UpdateService` electron-updater's `autoUpdater` only when
 // `updaterAvailability` says the updater can run, so electron-updater (whose
 // `autoUpdater` getter loads Electron when it constructs the updater) is never
 // imported otherwise.

@@ -85,7 +85,9 @@ its bookkeeping:
 Each is a pure function of one `MatchSnapshot` (`review/snapshot.py`;
 "The match report, and its optional narrative" below lists every module
 here that touches `sqlite3`). The registry order in
-`analyzers/__init__.py` is the order a postmortem actually reads in.
+`analyzers/__init__.py` is the order a postmortem's arc runs in; the report
+itself sorts findings by game, turn, then code, and gaps by game, then
+analyzer, whatever the registry order.
 
 ### `frame.py` — the matchup, and the role it demands
 
@@ -409,7 +411,8 @@ one has the signature `analyze_*(snap: MatchSnapshot) -> AnalyzerResult`, with
 zero database access in `review/analyzers/`.
 
 Query access in this package is confined to five modules with distinct jobs:
-`snapshot.py` (the per-match read the analyzers run on, 21 queries),
+`snapshot.py` (the per-match read the analyzers run on, a fixed set of
+queries, none per turn),
 `leaks.py` (the cross-match population, 6), `consensus.py` (the corpus scan,
 3), and `narrative_store.py` / `leaks_store.py` (2 each). `match_report.py`
 takes a connection but issues no query of its own — it passes one through to
@@ -463,14 +466,18 @@ data:
   falls back to plain `CopyPromptCard` with no credential configured. There
   is no *CLI* importer for a per-match review — it is read once, about a
   game already played ("The narrative" above) — so a stored narrative here comes
-  only from the generate button.
+  from the generate button's `POST` or from a pasted answer, which a **`PUT`**
+  on the same path stores with no model call (the copy-prompt round trip).
 
 **The matchup brief still has no generate button of its own**, and that has not
 changed — but it is no longer import-only either. `POST /api/guide/{key}/
 narrative` writes `matchup_brief` rows as a second effect, via
 `brief/from_guide.py::store_guide_matchups`, for every matchup the generated
-guide covers. So a brief now arrives by three paths: a CLI `brief --import`, a
-CLI `guide --import`, or the guide's generate route. Its own card
+guide covers. So a brief now arrives by several paths: a CLI `brief --import`
+or `brief --missing --import`, a CLI `guide --import`, the guide's generate
+route, or one of the guide's three `PUT` routes for a pasted answer (one
+brief, the multi-brief coverage answer, or a guide, which backfills briefs the
+same way; `docs/brief.md`). Its own card
 (`MatchupBriefCard`) remains `CopyPromptCard`-only, deliberately — a brief is
 read while a game is on the clock, which is the worst moment to start a
 minutes-long API call.

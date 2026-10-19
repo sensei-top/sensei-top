@@ -185,11 +185,14 @@ pt-BR`, from the same two copies, into `site/img/pt-br/`.
 dependency; `pnpm exec playwright install chromium` once) through every
 address of a server that is already up, and writes one full-height PNG per
 view and width: nineteen views in all. They are Home, Live, Matches, a match
-and its replay, Decks, a deck's Overview (once by its own key and once, with
-a version chosen, by the key of the deck with the most matches), a deck's
-Matchups (the same two ways), a deck's Guide, its RCQ tab, Field, an event's
-page, Coach, Settings, the reference page and the not-found page. A
-pairing's page has an address but is not in this list. Each is opened from a
+and its replay, Decks, a deck's Overview three ways (by its own key; by the
+key of the deck with the most matches, over every version; and by that key
+with its last-played version chosen), a deck's Matchups two ways (by its own
+key and by the largest deck's, both over every version), a deck's Guide, its
+RCQ tab, Field, an event's page, Coach, Settings, the reference page and the
+not-found page. A pairing's page, a past coach report (`/coach/<id>`),
+`/mtgo/picks`, `/welcome` and `/design/surfaces` have addresses but are not
+in this list. Each is opened from a
 cold load of its own address, the way a link or a reload opens it. The flags
 follow the script's name directly: pnpm forwards a `--` as written, and the
 script refuses it. `--only` takes the ids of the views to capture (`--only
