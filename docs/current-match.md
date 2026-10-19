@@ -59,9 +59,12 @@ reaches `raw_events` — and this replay — within one ingest tick even while a
 match-boundary rebuild is mid-flight on the other thread. Measured by
 replaying a match start into a 1.7 GB copy of the real database: the
 offers landed 0.13 s after they were written, against 16–22 s on the
-single-thread watcher. The one wait left is `project()`'s own commit
-(5.7 s measured), which the ingest connection's 30 s `busy_timeout` waits
-out rather than failing on. That split only
+single-thread watcher. The one wait left is `project()`'s own write
+transaction, which the ingest connection's 30 s `busy_timeout` waits out
+rather than failing on: 5.7 s when first measured, 15–18 s by 2026-10-19
+once it held the MTGO projection's parse, and 1.8 s since `project()`
+builds every row before it opens the transaction (`docs/architecture.md`,
+"Live mode's two cadences"). That split only
 buys back the *ingest* lag; the staleness this section is about (`turns`,
 `matches`, and anything the rebuild alone produces) is unchanged by it, which
 is exactly why this replay reads `raw_events` directly instead of waiting for

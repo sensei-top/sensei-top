@@ -108,6 +108,15 @@ separate threads rather than one:
   blocking the next log line — the old single-loop design ran ingest and
   rebuild back-to-back on one thread, so a rebuild's write lock (or even just
   its lock-free parse phase) delayed every new line until it finished.
+  The thread split does not remove the lock itself: an ingest tick still
+  waits for the rebuild's `COMMIT` before it can append, so `project()`
+  builds every row before its `BEGIN` and holds the lock for the deletes
+  and inserts alone. It once read and decoded every stored MTGO game log
+  inside the transaction; with 365 of them, on a 2.4 GB database
+  (2026-10-19), the lock had grown to 15–18 s and the Live page stalled
+  that long once a rebuild, about every 75 s of a game. Built first, the
+  same rebuild's longest wait for a writer measured 1.8 s, with every
+  derived table byte-identical.
 - **Rebuild, gated to a duty cycle, `project_every` (default 5 s) as a
   floor.** New rows mark the projection dirty; a later tick does the work.
   Rebuilding on every ingest would be waste today and unaffordable after a
