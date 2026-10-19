@@ -765,6 +765,38 @@ def test_a_queued_state_messages_zone_change_applies(tmp_path):
     conn.close()
 
 
+def test_a_trackers_warning_is_counted_by_the_projection(tmp_path):
+    """The tracker collects its warnings instead of logging them (the Live
+    replay runs it at 1 Hz); ``project()`` forwards each through
+    ``Projector._warn`` so it is counted. undo_session.log with state 99's
+    message removed in memory: state 101 undoes back to 99, which the game
+    never applied, and that is the fixture's only warning
+    (test_game_state.py asserts the same case on the tracker alone)."""
+    conn = open_database(tmp_path / "w.db")
+    ingest_file(conn, UNDO_FIXTURE, locale_hint="mdy")
+    assert project(conn)["warnings"] == 0
+    removed = 0
+    for row in conn.execute(
+        "SELECT id, payload FROM raw_events WHERE label = 'GreToClientEvent'"
+    ).fetchall():
+        parsed = json.loads(row["payload"])
+        msgs = parsed["greToClientEvent"]["greToClientMessages"]
+        kept = [
+            m for m in msgs
+            if (m.get("gameStateMessage") or {}).get("gameStateId") != 99
+        ]
+        if len(kept) != len(msgs):
+            removed += len(msgs) - len(kept)
+            parsed["greToClientEvent"]["greToClientMessages"] = kept
+            conn.execute(
+                "UPDATE raw_events SET payload = ? WHERE id = ?",
+                (json.dumps(parsed), row["id"]),
+            )
+    assert removed == 1
+    assert project(conn)["warnings"] == 1
+    conn.close()
+
+
 DRAFT_FIXTURE = Path(__file__).parent / "fixtures" / "draft_session.log"
 
 

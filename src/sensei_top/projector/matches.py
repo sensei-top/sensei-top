@@ -190,6 +190,16 @@ class Projector:
         # event, so the deck has to be parked until a match exists to own it.
         self._pending_deck: tuple[str, dict[str, list[int]]] | None = None
         self.warnings: int = 0
+        # Events each handler acted on (past its own early returns), keyed by
+        # what routed them there: the payload key for the authenticate and
+        # room-state events, the label for the deck, rank and submit-deck
+        # handlers. A GRE message routes on its ``gameStateMessage`` or its
+        # ``connectResp.deckMessage``; its ``type`` is only the key it is
+        # counted under. Nothing reads it in production; tests/
+        # test_label_ratchet.py reads it, so a handler that stops matching
+        # (an unseen rename in Arena's log) fails a test instead of silently
+        # projecting less.
+        self.handled: Counter[str] = Counter()
         # (observed_at, class, level, step, season, wins, losses) — one row
         # per RankGetCombinedRankInfo *response*, in the order raw_events was
         # replayed. Not match-scoped: Arena polls this on its own schedule,
@@ -236,6 +246,12 @@ class Projector:
         for state in self.matches.values():
             for game in state.games.values():
                 game.tracker.flush_trailing()
+                # Collected, not logged, by the tracker (the Live replay runs
+                # it at 1 Hz); counted here like every other warning.
+                for warning in game.tracker.warnings:
+                    self._warn(
+                        f"match {state.match_id} game {game.game_number}: {warning}"
+                    )
 
     def _warn(self, message: str) -> None:
         self.warnings += 1
@@ -245,6 +261,8 @@ class Projector:
         if "authenticateResponse" in payload:
             auth = payload["authenticateResponse"]
             self.self_user_id = auth.get("clientId") or auth.get("userId")
+            if self.self_user_id:
+                self.handled["authenticateResponse"] += 1
             return
 
         if "matchGameRoomStateChangedEvent" in payload:
@@ -252,11 +270,13 @@ class Projector:
             return
 
         if kind == "request" and label in ("DeckUpsertDeckV3", "EventSetDeckV3"):
-            self._handle_deck_request(payload, logged_at)
+            if self._handle_deck_request(payload, logged_at):
+                self.handled[label] += 1
             return
 
         if kind == "response" and label == "RankGetCombinedRankInfo":
-            self._handle_rank_response(payload, logged_at)
+            if self._handle_rank_response(payload, logged_at):
+                self.handled[label] += 1
             return
 
         # A client-outbound message, not a greToClientEvent batch: unlike
@@ -268,7 +288,8 @@ class Projector:
         if kind == "event" and label == "ClientToGremessage":
             inner = payload.get("payload")
             if isinstance(inner, dict) and inner.get("type") == "ClientMessageType_SubmitDeckResp":
-                self._handle_submit_deck(inner.get("submitDeckResp", {}).get("deck"))
+                if self._handle_submit_deck(inner.get("submitDeckResp", {}).get("deck")):
+                    self.handled[label] += 1
                 return
 
         # One try per message, not per event: a batch carries several state
@@ -296,6 +317,7 @@ class Projector:
         state_type = info.get("stateType")
 
         if state_type == "MatchGameRoomStateType_Playing":
+            self.handled["matchGameRoomStateChangedEvent"] += 1
             self._active = state
             state.started_at = state.started_at or logged_at
             players = config.get("reservedPlayers") or []
@@ -326,6 +348,7 @@ class Projector:
                 self._warn(f"self seat unresolved for match {match_id}")
 
         elif state_type == "MatchGameRoomStateType_MatchCompleted":
+            self.handled["matchGameRoomStateChangedEvent"] += 1
             state.ended_at = logged_at
             final = info.get("finalMatchResult", {})
             state.completed_reason = final.get("matchCompletedReason")
@@ -345,7 +368,7 @@ class Projector:
             if self._active is state:
                 self._active = None
 
-    def _handle_deck_request(self, payload: dict[str, Any], logged_at: str | None) -> None:
+    def _handle_deck_request(self, payload: dict[str, Any], logged_at: str | None) -> bool:
         """Learn a deck's name, format and Arena GUID from a deck request.
 
         Two requests carry the same summary: ``DeckUpsertDeckV3`` when a deck is
@@ -356,7 +379,7 @@ class Projector:
         """
         raw = payload.get("request")
         if not isinstance(raw, str):
-            return
+            return False
         # A bad payload here is caught by _dispatch's broad except (above),
         # same as every other dispatch path, so this stays unguarded.
         inner = orjson.loads(raw)
@@ -365,7 +388,7 @@ class Projector:
         for card in maindeck:
             grp_ids.extend([card["cardId"]] * int(card.get("quantity", 0)))
         if not grp_ids:
-            return  # no card list, so nothing to attach the metadata to
+            return False  # no card list, so nothing to attach the metadata to
         deck_id, _ = deck_identity(grp_ids)
 
         summary = inner.get("Summary") or {}
@@ -384,8 +407,9 @@ class Projector:
                 attributes.get("Format"),
                 logged_at,
             )
+        return True
 
-    def _handle_rank_response(self, payload: dict[str, Any], logged_at: str | None) -> None:
+    def _handle_rank_response(self, payload: dict[str, Any], logged_at: str | None) -> bool:
         """One bare observation from a ``RankGetCombinedRankInfo`` response —
         not match-scoped, so it is simply appended in replay order rather than
         attached to ``self._active``. ``observed_at`` withheld (``None``, never
@@ -396,7 +420,7 @@ class Projector:
         """
         if logged_at is None:
             self._warn("RankGetCombinedRankInfo with no resolved timestamp, dropped")
-            return
+            return False
 
         def _int(key: str) -> int | None:
             value = payload.get(key)
@@ -412,6 +436,7 @@ class Projector:
             _int("constructedMatchesWon"),
             _int("constructedMatchesLost"),
         ))
+        return True
 
     def _handle_win_condition(self, state: MatchState, value: str) -> None:
         """The match's best-of, from the first matchWinCondition seen (never overwritten)."""
@@ -429,9 +454,14 @@ class Projector:
             )
 
     def _handle_gre_message(self, message: dict[str, Any], logged_at: str | None) -> None:
+        message_type = message.get("type")
         connect = message.get("connectResp")
-        if isinstance(connect, dict) and "deckMessage" in connect:
-            self._handle_deck_message(connect["deckMessage"])
+        if (
+            isinstance(connect, dict)
+            and "deckMessage" in connect
+            and self._handle_deck_message(connect["deckMessage"])
+        ):
+            self.handled[message_type] += 1
 
         gsm = message.get("gameStateMessage")
         if not isinstance(gsm, dict):
@@ -457,6 +487,7 @@ class Projector:
                     self._pending_sideboard_deck = None
         if state is None:
             return
+        self.handled[message_type] += 1
 
         if isinstance(info, dict) and isinstance(info.get("matchWinCondition"), str):
             self._handle_win_condition(state, info["matchWinCondition"])
@@ -495,7 +526,7 @@ class Projector:
             if count is not None:
                 game.mulligans[seat] = max(game.mulligans[seat], count)
 
-    def _handle_submit_deck(self, deck: dict[str, Any] | None) -> None:
+    def _handle_submit_deck(self, deck: dict[str, Any] | None) -> bool:
         """``ClientMessageType_SubmitDeckResp`` — the deck actually held for
         the game that follows, i.e. Bo3 sideboarding as played. It carries no
         ``matchID`` and no ``gameNumber`` of its own (verified against a real
@@ -507,16 +538,17 @@ class Projector:
         ``connectResp.deckMessage`` already covers that one.
         """
         if not isinstance(deck, dict):
-            return
+            return False
         maindeck = [int(g) for g in deck.get("deckCards") or []]
         if not maindeck:
-            return
+            return False
         self._pending_sideboard_deck = {
             "maindeck": sorted(maindeck),
             "sideboard": sorted(int(g) for g in deck.get("sideboardCards") or []),
         }
+        return True
 
-    def _handle_deck_message(self, deck: dict[str, Any]) -> None:
+    def _handle_deck_message(self, deck: dict[str, Any]) -> bool:
         """connectResp.deckMessage is only ever sent to us, so it is our deck.
 
         It arrives on connecting to the game room, which is *before* the
@@ -526,7 +558,7 @@ class Projector:
         """
         maindeck = [int(g) for g in deck.get("deckCards") or []]
         if not maindeck:
-            return
+            return False
         deck_id, _ = deck_identity(maindeck)
         cards = {
             "maindeck": sorted(maindeck),
@@ -535,6 +567,7 @@ class Projector:
         self._pending_deck = (deck_id, cards)
         if self._active is not None:
             self._active.deck_id, self._active.deck_cards = deck_id, cards
+        return True
 
     def _handle_game_over(self, state: MatchState, info: dict[str, Any]) -> None:
         if info.get("stage") != "GameStage_GameOver":
