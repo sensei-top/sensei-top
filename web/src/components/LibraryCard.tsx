@@ -62,7 +62,7 @@ export function LibraryCard({
               <th scope="col" className={`${TH} sticky top-0 border-b border-line2 pr-3`}>
                 {t('live.library.colCard')}
               </th>
-              <th scope="col" className={`${TH} sticky top-0 w-px whitespace-nowrap border-b border-line2`}>
+              <th scope="col" className={`${TH} sticky top-0 w-px whitespace-nowrap border-b border-line2 text-right`}>
                 {t('live.library.colChance')}
               </th>
             </tr>
@@ -76,7 +76,7 @@ export function LibraryCard({
               <td className={`${CELL} pr-3 pt-2 font-display text-title text-ink`}>
                 {t('live.library.lands')}
               </td>
-              <td className={`${CELL} pt-2 text-body tabular-nums text-ink2`}>
+              <td className={`${CELL} pt-2 text-right text-body tabular-nums text-ink2`}>
                 {formatPercent(lands.chance)}
               </td>
             </tr>
@@ -106,7 +106,7 @@ export function LibraryCard({
                   >
                     {c.name ?? t('live.library.unknownCard')}
                   </td>
-                  <td className={`${CELL} text-body tabular-nums text-ink2`}>
+                  <td className={`${CELL} text-right text-body tabular-nums text-ink2`}>
                     {formatPercent(rowChance(libraryCount, c.left))}
                   </td>
                 </tr>
