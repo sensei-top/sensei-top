@@ -324,6 +324,47 @@ def test_watermark_survives_a_restart(tmp_path):
     conn.close()
 
 
+def _restart_with_stored_version(tmp_path, version=...):
+    """Rebuild once, set ``projection_state.projector_version`` to ``version``
+    (left as the rebuild wrote it when omitted), then poll a fresh
+    ``LiveIngester`` over the same database with no new ``raw_events``.
+    Returns that second watcher's ``projections`` count."""
+    log = tmp_path / "Player.log"
+    log.write_text("", newline="")
+    db_path = tmp_path / "live.db"
+    first = LiveIngester(
+        db_path=db_path, log_path=log, locale_hint="mdy",
+        interval=0.01, project_every=0.0,
+    )
+    conn = open_database(db_path)
+    append(log, FIXTURE.read_text(encoding="utf-8", errors="replace"))
+    first.poll_once(conn)
+    assert first.stats.projections == 1
+    if version is not ...:
+        conn.execute("UPDATE projection_state SET projector_version = ?", (version,))
+        conn.commit()
+    conn.close()
+
+    second = LiveIngester(
+        db_path=db_path, log_path=log, locale_hint="mdy",
+        interval=0.01, project_every=0.0,
+    )
+    conn = open_database(db_path)
+    second.poll_once(conn)
+    conn.close()
+    return second.stats.projections
+
+
+def test_a_null_projector_version_rebuilds_on_the_first_poll(tmp_path):
+    """Rows written before the column existed carry NULL and must be rebuilt once."""
+    assert _restart_with_stored_version(tmp_path, None) == 1
+
+
+def test_the_current_projector_version_does_not_rebuild(tmp_path):
+    """The rebuild must record its version, or every restart would rebuild again."""
+    assert _restart_with_stored_version(tmp_path) == 0
+
+
 def test_a_new_match_room_updates_the_projected_through_watermark(live, conn):
     live.project_every = 3600.0
     live._last_projection = time.monotonic()
