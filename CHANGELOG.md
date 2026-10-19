@@ -52,6 +52,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   started to cast and cancelled, no longer counts as played. One
   message the app can't read no longer loses the rest of what arrived
   with it.
+- **Live** no longer freezes for 15 seconds or more about once a minute
+  during a game. Each time the app rebuilt your match history it held
+  the database long enough to stop new log lines from being stored, and
+  with a few hundred Magic Online games recorded that took most of the
+  rebuild. Now the pause is under two seconds.
 - Your recorded matches are read again once, the first time the app
   starts after the update, so these fixes reach the games you already
   played.

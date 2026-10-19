@@ -66,7 +66,7 @@ Earlier versions of this projector discarded a parsed file entirely when it
 had not reached a full game yet (``if not parsed.games: continue``) — but a
 match still choosing mulligans, or one abandoned mid-file-write, has no
 ``Turn 1`` yet and *is* exactly the window this live feature exists to show.
-``_write_match`` already tolerates empty ``games_rows``/``card_event_rows``
+``_match_rows`` already tolerates empty ``games_rows``/``card_event_rows``
 (``won = lost = 0``, ``result = 'incomplete'``), so nothing downstream needs
 a nonzero game count to behave correctly.
 
@@ -87,6 +87,7 @@ import base64
 import binascii
 import logging
 import sqlite3
+from dataclasses import dataclass, field
 
 from sensei_top.projector.mtgo.decode import decode_strings
 from sensei_top.projector.mtgo.parse import GameRecord, ParsedMatch, parse_strings
@@ -339,7 +340,18 @@ _RESULT_REASONS = {
 }
 
 
-def _write_match(
+@dataclass
+class MtgoRows:
+    """Every row ``write_mtgo`` inserts, built by ``read_mtgo`` before the
+    rebuild takes the write lock (``projector/matches.py::project()``)."""
+
+    matches: list[tuple] = field(default_factory=list)
+    games: list[tuple] = field(default_factory=list)
+    card_events: list[tuple] = field(default_factory=list)
+    warnings: int = 0
+
+
+def _match_rows(
     conn: sqlite3.Connection,
     parsed: ParsedMatch,
     *,
@@ -349,11 +361,11 @@ def _write_match(
     ended_at: str | None,
     grp_id_cache: dict[str, int | None],
     warner: _Warner,
-    counts: dict[str, int],
+    rows: MtgoRows,
 ) -> None:
     assert parsed.match_id is not None
-    games_rows: list[tuple] = []
-    card_event_rows: list[tuple] = []
+    games_rows = rows.games
+    card_event_rows = rows.card_events
     won = lost = 0
 
     for game in parsed.games:
@@ -411,7 +423,20 @@ def _write_match(
     # `format` is left out on purpose: MTGO's log never names one, so it is NULL.
     # best_of is 3: the MTGO constructed matches this tracker reads are best of
     # three (D2, the user's call); its log names no structure.
-    conn.execute(
+    rows.matches.append(
+        (
+            parsed.match_id, SELF_SEAT, OPPONENT_SEAT, opponent_handle,
+            started_at, ended_at, match_result, won, lost,
+        )
+    )
+
+
+def write_mtgo(conn: sqlite3.Connection, rows: MtgoRows) -> dict[str, int]:
+    """Insert what ``read_mtgo`` built. Runs inside the caller's own
+    transaction (``projector/matches.py::project()``) — no
+    ``BEGIN``/``COMMIT`` here — and reads nothing, so the write lock is held
+    for the inserts alone."""
+    conn.executemany(
         """
         INSERT INTO matches (match_id, event_id, deck_id, self_seat, opponent_seat,
                              opponent_user_id, opponent_name, started_at, ended_at,
@@ -419,40 +444,51 @@ def _write_match(
                              best_of)
              VALUES (?, NULL, NULL, ?, ?, NULL, ?, ?, ?, ?, ?, ?, NULL, 'mtgo', 3)
         """,
-        (
-            parsed.match_id, SELF_SEAT, OPPONENT_SEAT, opponent_handle,
-            started_at, ended_at, match_result, won, lost,
-        ),
+        rows.matches,
     )
-    counts["matches"] += 1
-
     conn.executemany(
         """
         INSERT INTO games (match_id, game_number, on_play, result, result_reason,
                            turn_count, self_mulligans, opp_mulligans)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        games_rows,
+        rows.games,
     )
-    counts["games"] += len(games_rows)
-
     conn.executemany(
         """
         INSERT INTO card_events (match_id, game_number, seq, turn_number,
                                  seat, grp_id, category, zone_src, zone_dest, mtgo_name)
              VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?)
         """,
-        card_event_rows,
+        rows.card_events,
     )
-    counts["card_events"] += len(card_event_rows)
+    return {
+        "matches": len(rows.matches),
+        "games": len(rows.games),
+        "card_events": len(rows.card_events),
+        "warnings": rows.warnings,
+    }
 
 
 def project_mtgo(conn: sqlite3.Connection, handle: str | None) -> dict[str, int]:
     """Project every MTGO match found in ``raw_events`` into ``matches``,
-    ``games`` and ``card_events``. Runs inside the caller's own transaction
-    (``projector/matches.py::project()``) — no ``BEGIN``/``COMMIT`` here.
+    ``games`` and ``card_events``: ``read_mtgo`` then ``write_mtgo``. Runs
+    inside the caller's own transaction — no ``BEGIN``/``COMMIT`` here.
+    ``project()`` calls the two halves itself, the read before its
+    transaction opens.
     """
-    counts = {"matches": 0, "games": 0, "card_events": 0, "warnings": 0}
+    return write_mtgo(conn, read_mtgo(conn, handle))
+
+
+def read_mtgo(conn: sqlite3.Connection, handle: str | None) -> MtgoRows:
+    """Read, decode and parse every MTGO match in ``raw_events`` into the
+    rows ``write_mtgo`` inserts. Writes nothing: ``project()`` runs it
+    before ``BEGIN``, because decoding every stored game log takes seconds,
+    and inside the transaction those seconds held the write lock the live
+    watcher's ingest thread waits on (``docs/architecture.md``, "Live mode's
+    two cadences").
+    """
+    rows = MtgoRows()
     warner = _Warner()
 
     files = _select_latest_payload_per_file(conn)
@@ -462,8 +498,8 @@ def project_mtgo(conn: sqlite3.Connection, handle: str | None) -> dict[str, int]
                 f"no MTGO handle configured ($MTGO_HANDLE or [mtgo] handle in "
                 f"config.toml) — skipping {len(files)} MTGO match file(s)"
             )
-        counts["warnings"] = warner.count
-        return counts
+        rows.warnings = warner.count
+        return rows
 
     grp_id_cache: dict[str, int | None] = {}
     for source_file, payload_b64, first_logged_at, last_logged_at in files:
@@ -537,13 +573,13 @@ def project_mtgo(conn: sqlite3.Connection, handle: str | None) -> dict[str, int]
             else None
         )
 
-        _write_match(
+        _match_rows(
             conn, parsed,
             self_handle=handle, opponent_handle=opponent_handle,
             started_at=first_logged_at, ended_at=ended_at,
             grp_id_cache=grp_id_cache,
-            warner=warner, counts=counts,
+            warner=warner, rows=rows,
         )
 
-    counts["warnings"] = warner.count
-    return counts
+    rows.warnings = warner.count
+    return rows

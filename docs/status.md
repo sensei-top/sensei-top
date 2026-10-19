@@ -213,7 +213,8 @@ order (under "Features not built").
 | Coach page, warm | ~2.5 s. The report cache removed the per-match rebuild; what's left is non-report work. | Profiling `build_coach_evidence` outside `build_match_report`. |
 | Coach narrative route (the prompt the page loads on every visit) | ~3.8 s | The same profile. |
 | Sideboard break, cold path | ~2 s against a 1 s target (`brief/narrative`'s full prompt and consensus) | A cache, or trimming what the break needs from the brief. |
-| Live page at the opening hand | Fixed on 2026-09-24. The delay was ingest waiting behind the match-boundary rebuild (22 s `project()` plus 2 s classify on a real database). Ingest now runs on its own thread. In a replayed match start on a 1.7 GB copy of the real database, the mulligan offers landed in 0.13 s, against 16–22 s before. The verdict had also been blank on 47% of Boros Dragons hands, because of Multiversal Passage's missing `produced_mana`. Replayed over the real hands, none are withheld now. What's left: `project()`'s own write lock (5.7 s measured) still holds up an ingest tick that lands during the commit. The ingest connection's 30 s `busy_timeout` waits it out rather than failing. On 2026-10-17 the same lock made a dashboard write (an MTGO pick) fail after its own 5 s wait. The MTGO projection, which runs inside the lock, took at least 4.5 s of it alone. The API's writes now wait 60 s (`api/deps.py::WRITE_BUSY_TIMEOUT_MS`) and answer 503 past that, rather than a 500. | Shrinking the write lock, which means a smaller `BEGIN`…`COMMIT` in `project()`. |
+| Live page at the opening hand | Fixed on 2026-09-24. The delay was ingest waiting behind the match-boundary rebuild (22 s `project()` plus 2 s classify on a real database). Ingest now runs on its own thread. In a replayed match start on a 1.7 GB copy of the real database, the mulligan offers landed in 0.13 s, against 16–22 s before. The verdict had also been blank on 47% of Boros Dragons hands, because of Multiversal Passage's missing `produced_mana`. Replayed over the real hands, none are withheld now. On 2026-10-17 `project()`'s write lock made a dashboard write (an MTGO pick) fail after its own 5 s wait; the API's writes now wait 60 s (`api/deps.py::WRITE_BUSY_TIMEOUT_MS`) and answer 503 past that, rather than a 500. | Done. |
+| Live page during a game | Fixed on 2026-10-19. The page stalled 15–18 s about every 75 s of play: `project()` read and decoded all 365 stored MTGO game logs inside its write transaction, and the ingest thread waited out that lock before it could store the next line (today's mulligan offers: median 1.1 s, p90 15.9 s, n = 39). `project()` now builds every row before `BEGIN`. On a copy of the 2.4 GB real database, a writer's longest wait during one rebuild went from 15.0 s to 1.8 s, and every derived table came out byte-identical. | The next real session's offer lag (below). |
 
 ### Code health
 
@@ -255,6 +256,8 @@ each of them.
   (which is local time, UTC−3) for rows carrying
   `ClientMessageType_MulliganResp`. Before the fix: median 3.1 s, p90 13.3 s
   (n = 1,099). Target: median ~1 s, p90 ≤ 6 s, the bound the write lock sets.
+  On 2026-10-19, with the MTGO projection inside the lock: median 1.1 s, p90
+  15.9 s (n = 39). Re-measure after the first session with the lock at 1.8 s.
 - The backup's real cost. Every daily run records its duration in
   `backup_state.last_duration_ms` (`sqlite3 "file:data/sensei-top.db?mode=ro"
   "SELECT last_duration_ms FROM backup_state"`); read it after a few runs and
