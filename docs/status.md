@@ -280,10 +280,10 @@ each of them.
     repository stays private as the record of everything before it.
   - The snapshot's commits identify the maintainer: the name git records
     today, and GitHub's no-reply address for the maintainer's account.
-    `scripts/publish_snapshot.py` made those snapshots (plan 9, 2026-10-12)
-    and is unused since development went public, still in the tree:
+    `scripts/publish_snapshot.py` made those snapshots (plan 9, 2026-10-12):
     the tag's tree into a clone of the public repository, one commit, one
-    tag, scanned before any push. The scan reads the global git identity
+    tag, scanned before any push. It was removed on 2026-10-19, unused
+    since development went public. The scan reads the global git identity
     as well as the clone's, and accepts the clone's declared local
     identity only in `history:log`'s author and committer fields; the same
     values in any file still count.
