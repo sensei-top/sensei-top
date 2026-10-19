@@ -134,6 +134,22 @@ a game started before the last one ended. Before this rule, the real
 history held 9 phantom games in 8 matches, each pushing every later game
 of its match one number up.
 
+A concession inside a start block
+---------------------------------
+A player can concede in the middle of their own mulligan, and MTGO still
+writes the rest of that game after the concession. One real game reads
+``mulligans to five cards``, ``has conceded from the game``, then the same
+player's ``puts two cards on the bottom of their library and begins the game
+with five cards in hand.``, their ``Turn 1``, and the opponent's ``wins the
+game``. The concession counts as action (``has_action()``), so that
+``begins`` line opened a second game, which took the turn and the win and
+left the first with no result. So only ``joined``, the line that opens a
+start block, starts a new game after a bare concession; ``chooses to play
+first``, ``mulligans to`` and ``begins the game with`` start one only once
+the current game has a turn, a card event or a result
+(``GameRecord.has_begun()``). A ``joined`` after a concession with no result
+line still opens the next game, with the warning above.
+
 Turn units — this parser's ``turn_count``/``turn_number`` are Arena's units,
 not MTGO's printed ones
 -------------------------------------------------------------------------
@@ -405,6 +421,14 @@ class GameRecord:
             or self.loser_handle or self.draw
         )
 
+    def has_begun(self) -> bool:
+        """``has_action()`` without a bare concession: a turn, a card event
+        or a result. A player can concede in the middle of their own
+        mulligan, and MTGO still writes the rest of that start block after
+        the concession (module docstring's "A concession inside a start
+        block")."""
+        return bool(self.turn_count or self.card_events or self.has_result())
+
     def has_result(self) -> bool:
         """True once a line names a winner, a loser or a draw."""
         return bool(self.winner_handle or self.loser_handle or self.draw)
@@ -466,16 +490,19 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
     # `joined` in that game is a rejoin, not a start block.
     lost_connection: set[str] = set()
 
-    def ensure_fresh_game() -> None:
+    def ensure_fresh_game(*, joined: bool = False) -> None:
         """Start a new GameRecord for a start-block signal, unless the
         current one is still the empty shell an earlier start-block signal
         already created for this same game. Resets the per-game turn
         ordinal (``current_turn``) on an actual new game so a card event
         seen before the new game's own first ``Turn`` line gets
         ``turn_number=None`` rather than inheriting the previous game's last
-        count (module docstring's "Turn units")."""
+        count (module docstring's "Turn units"). A ``joined`` line opens a
+        game after any action, a concession included; the start block's
+        later lines only after a turn, a card event or a result (module
+        docstring's "A concession inside a start block")."""
         nonlocal current, current_turn
-        if current is None or current.has_action():
+        if current is None or (current.has_action() if joined else current.has_begun()):
             if current is not None and not current.has_result():
                 warnings.append(
                     f"game {current.game_number} had no result when the next "
@@ -516,7 +543,7 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
             ):
                 log.debug("mtgo: a player rejoined game %d", current.game_number)
                 continue
-            ensure_fresh_game()
+            ensure_fresh_game(joined=True)
             continue
 
         m = patterns.play_first.match(s)

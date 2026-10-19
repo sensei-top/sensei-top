@@ -47,7 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   inaction or in a draw are read as such, and a match lost on time is
   no longer left unfinished. A name with a space in it reads as one
   player, so that opponent's cards and results count. A match you only
-  watched is left out without a warning.
+  watched is left out without a warning. A game conceded in the middle
+  of a mulligan is no longer counted as two.
 - On Arena, an action you took back with undo, such as a spell you
   started to cast and cancelled, no longer counts as played. One
   message the app can't read no longer loses the rest of what arrived

@@ -1939,3 +1939,65 @@ def test_a_game_that_started_before_the_last_one_ended_warns_naming_no_one():
     assert len(parsed.warnings) == 1
     assert "game 1" in parsed.warnings[0]
     assert "Player" not in parsed.warnings[0]
+
+
+# --- a concession inside a start block -----------------------------------------
+#
+# A real match's opening lines, anonymized as above: the user mulligans to five
+# and concedes, and MTGO still writes their `puts two cards on the bottom … begins
+# the game with five cards`, their `Turn 1` and the opponent's win; then game 2's
+# start block.
+_CONCEDED_IN_MULLIGAN = [
+    'Player2000 rolled a 2.',
+    'Player1 rolled a 4.',
+    'Player1 joined the game.',
+    'Player2000 joined the game.',
+    'Player1 chooses to play first.',
+    'Player1 mulligans to six cards.',
+    'Player2000 begins the game with seven cards in hand.',
+    'Player1 mulligans to five cards.',
+    'Player1 has conceded from the game.',
+    'Player1 puts two cards on the bottom of their library and begins the game '
+    'with five cards in hand.',
+    'Turn 1: Player1',
+    'Player2000 wins the game.',
+    'Player2000 leads the match 1-0',
+    'Player1 joined the game.',
+    'Player2000 joined the game.',
+    'Player1 chooses to play first.',
+    'Player1 begins the game with seven cards in hand.',
+    'Player2000 begins the game with seven cards in hand.',
+]
+
+
+def test_a_concession_inside_a_start_block_opens_no_game():
+    parsed = parse_strings(_CONCEDED_IN_MULLIGAN)
+    assert parsed.warnings == []
+    assert [g.game_number for g in parsed.games] == [1, 2]
+    first = parsed.games[0]
+    assert _rejoin_game_facts(first) == (
+        "Player1", {"Player1": 2, "Player2000": 0}, 1, 0, "Player2000",
+    )
+    assert (first.conceded_handle, first.reason) == ("Player1", "concede")
+    second = parsed.games[1]
+    assert second.on_play_handle == "Player1"
+    assert second.mulligans_by_handle == {"Player1": 0, "Player2000": 0}
+    assert second.turn_count == 0
+
+
+def test_a_concession_inside_a_start_block_stores_one_lost_game(conn):
+    _project_strings(conn, _CONCEDED_IN_MULLIGAN)
+    assert [tuple(g) for g in _stored_games(conn)] == [(1, "loss", "ResultReason_Concede"),
+                                                       (2, "incomplete", None)]
+
+
+def test_a_join_after_a_bare_concession_still_opens_the_next_game():
+    """Synthetic shape: the real lines up to the concession, no result line, then
+    game 2's start block. `joined` opens a game after a concession, and warns."""
+    lines = [*_CONCEDED_IN_MULLIGAN[:9], *_CONCEDED_IN_MULLIGAN[13:]]
+    parsed = parse_strings(lines)
+    assert [g.game_number for g in parsed.games] == [1, 2]
+    assert parsed.games[0].conceded_handle == "Player1"
+    assert parsed.games[1].mulligans_by_handle == {"Player1": 0, "Player2000": 0}
+    assert len(parsed.warnings) == 1
+    assert "game 1" in parsed.warnings[0]
