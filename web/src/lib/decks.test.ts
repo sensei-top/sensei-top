@@ -204,9 +204,22 @@ describe('deckRecord', () => {
     expect(deckRecord({ finished: 10, wins: 5 }, t)).toEqual({ figure: '50%', line: '5\u2060–\u20605', thin: false })
   })
 
-  it('is the record, muted, from one to nine', () => {
-    const line = 'too few for a rate, under 10\u00a0matches'
-    expect(deckRecord({ finished: 9, wins: 6 }, t)).toEqual({ figure: '6\u2060–\u20603', line, thin: true })
+  it('is the rate, muted, from five to nine', () => {
+    expect(deckRecord({ finished: 9, wins: 6 }, t)).toEqual({
+      figure: '67%',
+      line: '6\u2060–\u20603 · rough, under 10\u00a0matches',
+      thin: true,
+    })
+    expect(deckRecord({ finished: 5, wins: 2 }, t)).toEqual({
+      figure: '40%',
+      line: '2\u2060–\u20603 · rough, under 10\u00a0matches',
+      thin: true,
+    })
+  })
+
+  it('is the record, muted, from one to four', () => {
+    const line = 'too few for a rate, under 5\u00a0matches'
+    expect(deckRecord({ finished: 4, wins: 3 }, t)).toEqual({ figure: '3\u2060–\u20601', line, thin: true })
     expect(deckRecord({ finished: 1, wins: 0 }, t)).toEqual({ figure: '0\u2060–\u20601', line, thin: true })
   })
 

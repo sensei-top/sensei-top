@@ -6,12 +6,14 @@
     "noFinishedTitle": "No finished match yet",
     "noFinishedMessage": "Matchups are counted once a match has ended.",
     "archetypesMet": "Archetypes met",
-    "archetypesMetSubtitle": "Finished matches only, most met first. A rate needs ten matches.",
+    "archetypesMetSubtitle": "Finished matches only, most met first. A rate needs ten matches; from five it is shown muted, a rough one.",
     "columns": {
       "archetype": "Archetype",
       "matches": "Matches",
       "record": "Record",
-      "rate": "Rate"
+      "rate": "Rate",
+      "game1": "Game 1",
+      "postboard": "Games 2–3"
     }
   },
   "tiles": {
@@ -47,6 +49,8 @@
     "record": "Record",
     "games": "Games",
     "yoursFirst": "yours first",
+    "game1": "Game 1",
+    "postboard": "Games 2–3",
     "inTournaments": "In tournaments",
     "onlyNamed": "only a named archetype has results",
     "noResults": "no tournament results for it",
@@ -180,6 +184,7 @@
   "sideboard": {
     "thisOpponent": "this opponent",
     "thisArchetype": "this archetype",
+    "postboardRecord": "Your games 2–3 against it: {{record}}",
     "headline": {
       "noResult": "Sideboard plan",
       "won": "Won game {{game}}",

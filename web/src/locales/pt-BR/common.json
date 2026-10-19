@@ -56,6 +56,8 @@
   "sample": {
     "tooFewMatches": "poucas para uma taxa, menos de {{min}}\u00a0partidas",
     "tooFewGames": "poucos para uma taxa, menos de {{min}}\u00a0jogos",
+    "roughMatches": "{{record}} · aproximada, menos de {{min}}\u00a0partidas",
+    "roughGames": "{{record}} · aproximada, menos de {{min}}\u00a0jogos",
     "tooFewCellMatches": "poucas",
     "tooFewCellGames": "poucos",
     "noMatch": "nenhuma partida terminada ainda",

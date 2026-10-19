@@ -1723,6 +1723,89 @@ def test_changed_match_result_invalidates_the_shared_report_cache(
     assert counting_build_match_report  # at least the edited match was rebuilt
 
 
+def _seed_split_match(db_path, match_id, best_of, results, started_at):
+    """A seeded match whose games carry ``results`` in order — rows, not a
+    fixture: the split is SQL over projected rows, not a parsing rule."""
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "INSERT INTO matches (match_id, event_id, deck_id, self_seat, opponent_seat, "
+        "opponent_user_id, opponent_name, started_at, ended_at, result, games_won, "
+        "games_lost, completed_reason, best_of) VALUES (?, 'e', NULL, 1, 2, 'u', 'n', "
+        "?, ?, 'win', 0, 0, 'r', ?)",
+        (match_id, started_at, started_at, best_of),
+    )
+    for number, result in enumerate(results, start=1):
+        conn.execute(
+            "INSERT INTO games (match_id, game_number, on_play, result, result_reason, "
+            "turn_count, self_mulligans, opp_mulligans) VALUES (?, ?, 1, ?, NULL, 6, 0, 0)",
+            (match_id, number, result),
+        )
+    conn.commit()
+    conn.close()
+
+
+def _listed(client, match_id):
+    rows = client.get("/api/matches", params={"limit": 500}).json()
+    return next(r for r in rows if r["match_id"] == match_id)
+
+
+def test_a_best_of_three_match_reads_game_1_and_the_games_after(client):
+    _seed_split_match(
+        client.app.state.database, "m-bo3", 3, ["loss", "win", "win"], "9999-01-01T00:00:00"
+    )
+    row = _listed(client, "m-bo3")
+    assert row["best_of"] == 3
+    assert row["game1_result"] == "loss"
+    assert row["postboard_won"] == 2
+    assert row["postboard_lost"] == 0
+
+
+def test_a_best_of_one_match_reads_no_split(client):
+    _seed_split_match(client.app.state.database, "m-bo1", 1, ["win"], "9999-01-02T00:00:00")
+    row = _listed(client, "m-bo1")
+    assert row["best_of"] == 1
+    assert row["game1_result"] is None
+    assert row["postboard_won"] is None
+    assert row["postboard_lost"] is None
+
+
+def test_a_drawn_game_is_in_neither_post_board_count(client):
+    _seed_split_match(
+        client.app.state.database, "m-draw", 3, ["win", "draw", "loss"], "9999-01-03T00:00:00"
+    )
+    row = _listed(client, "m-draw")
+    assert row["game1_result"] == "win"
+    assert row["postboard_won"] == 0
+    assert row["postboard_lost"] == 1
+
+
+def test_a_best_of_three_that_ended_after_game_1_reads_zero_zero(client):
+    _seed_split_match(client.app.state.database, "m-short", 3, ["win"], "9999-01-04T00:00:00")
+    row = _listed(client, "m-short")
+    assert row["game1_result"] == "win"
+    assert (row["postboard_won"], row["postboard_lost"]) == (0, 0)
+
+
+def test_an_unfinished_game_1_reads_no_game1_result(client):
+    _seed_split_match(
+        client.app.state.database, "m-open", 3, ["incomplete"], "9999-01-05T00:00:00"
+    )
+    assert _listed(client, "m-open")["game1_result"] is None
+
+
+def test_match_detail_carries_the_same_split_as_the_list(client):
+    _seed_split_match(
+        client.app.state.database, "m-same", 3, ["loss", "win", "draw"], "9999-01-06T00:00:00"
+    )
+    listed = _listed(client, "m-same")
+    detail = client.get("/api/matches/m-same").json()
+    for field in ("best_of", "game1_result", "postboard_won", "postboard_lost"):
+        assert detail[field] == listed[field]
+    assert (detail["game1_result"], detail["postboard_won"], detail["postboard_lost"]) == (
+        "loss", 1, 0,
+    )
+
+
 def _seed_one_card(db_path) -> None:
     conn = sqlite3.connect(db_path)
     conn.execute(

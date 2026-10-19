@@ -23,8 +23,9 @@ function count(matches: Match[]): Counts {
 }
 
 /** Matches and games, for the filter in force, by the small-sample rule
- *  (`rateOrRecord`): from ten the rate with the record under it, under ten
- *  the record, muted, and the line saying it is too few for a rate; with
+ *  (`rateOrRecord`): from ten the rate with the record under it; five to
+ *  nine the rate, muted, over the record and "rough"; under five the
+ *  record, muted, and the line saying it is too few for a rate; with
  *  nothing finished an em dash and the line says so. `full` is a list cut at
  *  the route's maximum: a caption says what was counted. One row of two from
  *  48rem up, stacked under it. */

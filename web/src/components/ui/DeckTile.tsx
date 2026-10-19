@@ -9,7 +9,8 @@ import { useTranslation } from 'react-i18next'
  *  button, so it sits outside the link.
  *
  *  The record comes in two parts the caller writes: `figure`, the large
- *  number ("58%", "6–3"; under ten matches the record, drawn muted),
+ *  number ("58%", "6–3"; under ten matches drawn muted, the rate from
+ *  five, the record under five),
  *  absent when there is none, and `line`, the words under it. No mana pips:
  *  nothing names a deck's own colours. A deck with no name reads "Unnamed
  *  deck", in muted text. */

@@ -58,6 +58,11 @@ function row(key: string, matches: number, won: number, rest: Partial<MatchupRow
     lost: matches - won,
     gamesWon: 0,
     gamesLost: 0,
+    bo3Matches: 0,
+    game1Won: 0,
+    game1Lost: 0,
+    postboardWon: 0,
+    postboardLost: 0,
     ...rest,
   }
 }
@@ -84,8 +89,69 @@ describe('matchupRows', () => {
         lost: 1,
         gamesWon: 3,
         gamesLost: 4,
+        // No match says it is a best of three.
+        bo3Matches: 0,
+        game1Won: 0,
+        game1Lost: 0,
+        postboardWon: 0,
+        postboardLost: 0,
       },
     ])
+  })
+
+  // The split's fields as `/api/matches` sends them: `game1_result`,
+  // `postboard_won` and `postboard_lost` are null unless `best_of` is 3, and
+  // the post-board counts already leave a drawn game out.
+  const split = (rows: MatchupRow[]) =>
+    rows.map((r) => [r.bo3Matches, r.game1Won, r.game1Lost, r.postboardWon, r.postboardLost])
+
+  it('splits a best-of-three match’s games into game 1 and games 2–3', () => {
+    const rows = matchupRows([
+      // Lost game 1, won games 2 and 3.
+      match('a', { result: 'win', best_of: 3, games_won: 2, games_lost: 1, game1_result: 'loss', postboard_won: 2, postboard_lost: 0 }),
+      // Won game 1, lost games 2 and 3.
+      match('b', { result: 'loss', best_of: 3, games_won: 1, games_lost: 2, game1_result: 'win', postboard_won: 0, postboard_lost: 2 }),
+      // Won game 1 and game 2.
+      match('c', { result: 'win', best_of: 3, games_won: 2, games_lost: 0, game1_result: 'win', postboard_won: 1, postboard_lost: 0 }),
+    ])
+    // Three best of three; game 1 won in b and c, lost in a: 2–1. Games 2–3:
+    // 2 + 0 + 1 won, 0 + 2 + 0 lost: 3–2.
+    expect(split(rows)).toEqual([[3, 2, 1, 3, 2]])
+  })
+
+  it('adds nothing to the split for a best-of-one match, or one whose best-of is unknown', () => {
+    const rows = matchupRows([
+      match('a', { result: 'win', best_of: 1, games_won: 1, games_lost: 0, game1_result: null }),
+      match('b', { result: 'loss', best_of: null, games_won: 1, games_lost: 2, game1_result: null }),
+      match('c', { result: 'loss', best_of: 3, games_won: 0, games_lost: 2, game1_result: 'loss', postboard_won: 0, postboard_lost: 1 }),
+    ])
+    // Only c is a best of three: game 1 lost, game 2 lost. The games of a and
+    // b still count in the row's own games: 1 + 1 + 0 won, 0 + 2 + 2 lost.
+    expect(split(rows)).toEqual([[1, 0, 1, 0, 1]])
+    expect([rows[0].gamesWon, rows[0].gamesLost]).toEqual([2, 4])
+  })
+
+  it('counts a drawn game 1 in neither number, and a drawn match’s decided games as they fell', () => {
+    const rows = matchupRows([
+      // Game 1 drawn, then games 2 and 3 won: the draw is neither.
+      match('a', { result: 'win', best_of: 3, games_won: 2, games_lost: 0, game1_result: 'draw', postboard_won: 2, postboard_lost: 0 }),
+      // A drawn match, 1–1: game 1 won, game 2 lost.
+      match('b', { result: 'draw', best_of: 3, games_won: 1, games_lost: 1, game1_result: 'win', postboard_won: 0, postboard_lost: 1 }),
+    ])
+    // Two best of three; game 1: b won, a drawn, so 1–0. Games 2–3: 2–0 from
+    // a, 0–1 from b, so 2–1.
+    expect(split(rows)).toEqual([[2, 1, 0, 2, 1]])
+  })
+
+  it('adds nothing to the split for an unfinished best-of-three match', () => {
+    const rows = matchupRows([
+      match('a', { result: 'win', best_of: 3, games_won: 2, games_lost: 1, game1_result: 'win', postboard_won: 1, postboard_lost: 1 }),
+      // Still being played: game 1 won, game 2 lost, game 3 not yet.
+      match('b', { result: null, best_of: 3, games_won: 1, games_lost: 1, game1_result: 'win', postboard_won: 0, postboard_lost: 1 }),
+      match('c', { result: 'incomplete', best_of: 3, game1_result: 'loss', postboard_won: 0, postboard_lost: 0 }),
+    ])
+    // Only a counts: game 1 won, games 2–3 one each.
+    expect(split(rows)).toEqual([[1, 1, 0, 1, 1]])
   })
 
   it('leaves out a key whose every match is unfinished', () => {

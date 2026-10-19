@@ -108,6 +108,69 @@ def test_ladder_matches_are_standard(db):
     assert match(db, MATCH_LOSS)["format"] == "Standard"
 
 
+def test_best_of_three_matches_project_best_of_3(db):
+    # match_session.log's gameInfo carries MatchWinCondition_Best2of3 throughout.
+    assert match(db, MATCH_LOSS)["best_of"] == 3
+    assert match(db, MATCH_WIN)["best_of"] == 3
+
+
+def test_single_elimination_match_projects_best_of_1(tmp_path):
+    # bo1_session.log: fixture_peek entries 1 and 4 name the match in
+    # gameRoomConfig.matchId; entries 2 and 3 carry gameInfo.matchID and
+    # MatchWinCondition_SingleElimination (show --max-depth 7).
+    conn = open_database(tmp_path / "bo1.db")
+    ingest_file(conn, FIXTURE.with_name("bo1_session.log"), locale_hint="mdy")
+    project(conn)
+    assert [tuple(r) for r in conn.execute("SELECT match_id, best_of FROM matches")] == [
+        ("801ebc43-c204-4cb4-856c-00b22837087b", 1)
+    ]
+    conn.close()
+
+
+def test_unknown_win_condition_is_null_and_warns(tmp_path, caplog):
+    conn, counts = _reproject_with(
+        tmp_path, [("MatchWinCondition_Best2of3", "MatchWinCondition_Mystery")], caplog
+    )
+    assert [r[0] for r in conn.execute("SELECT best_of FROM matches")] == [None, None]
+    assert sum("MatchWinCondition_Mystery" in r.getMessage() for r in caplog.records) == 2
+    assert counts["warnings"] == 2
+    conn.close()
+
+
+def test_later_different_win_condition_warns_once_and_changes_nothing(caplog):
+    # Synthetic: tests the keep-the-first rule, not Arena's format.
+    p = Projector()
+    p.feed(
+        "event",
+        None,
+        '{"matchGameRoomStateChangedEvent": {"gameRoomInfo": {'
+        '"gameRoomConfig": {"matchId": "m1", "reservedPlayers": ['
+        '{"userId": "A", "systemSeatId": 1, "teamId": 1}]},'
+        '"stateType": "MatchGameRoomStateType_Playing"}}}',
+        None,
+    )
+    before = p.warnings
+    for condition in (
+        "MatchWinCondition_Best2of3",
+        "MatchWinCondition_SingleElimination",
+        "MatchWinCondition_SingleElimination",
+    ):
+        p._handle_gre_message(
+            {"gameStateMessage": {"gameInfo": {"matchID": "m1", "matchWinCondition": condition}}},
+            None,
+        )
+    assert p.matches["m1"].best_of == 3
+    assert p.warnings - before == 1
+
+
+def test_best_of_is_stable_across_a_second_project(db):
+    first = [tuple(r) for r in db.execute("SELECT match_id, best_of FROM matches ORDER BY 1")]
+    project(db)
+    second = [tuple(r) for r in db.execute("SELECT match_id, best_of FROM matches ORDER BY 1")]
+    assert first == second
+    assert {b for _, b in second} == {3}
+
+
 def _reproject_with(tmp_path, replacements, caplog):
     """Rewrite raw_events payloads, project, return (conn, project()'s counts).
     The fixture's two matches share one event id, Traditional_Ladder."""

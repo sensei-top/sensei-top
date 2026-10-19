@@ -238,6 +238,17 @@ greater than the game that opened it — `projector/live_state.py`'s
 `replay_live_state` clears `LiveState.intermission` on either, and never on
 `SubmitDeckConfirmation`.
 
+**11d. A match's best-of is in `gameInfo.matchWinCondition`, on every game's
+state messages.** `MatchWinCondition_Best2of3` is a best of three and
+`MatchWinCondition_SingleElimination` a best of one; a real history holds
+nothing else. The value is the match's, not the game's: a Bo1 carries
+`SingleElimination` on its one game, a Bo3 `Best2of3` on all of them. Neither
+the queue nor the event id says which: `DirectGame` is either. The projector
+keeps the first value it sees as `matches.best_of` (3 or 1); an unknown value
+is NULL and warns, a later different value warns and changes nothing, and a
+match whose log never shows a `gameInfo` (`sample_player.log`'s) is NULL with
+no warning of its own.
+
 **12. The `name` field on a game object is a numeric ID, not a string.** Card
 names require a `grpId` lookup against Scryfall data.
 

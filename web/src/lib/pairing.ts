@@ -121,7 +121,7 @@ export function lastMetLine(matches: Match[], now: number, t: TFunction): string
   return since ? t('matchups.pairing.lastMet', { since }) : null
 }
 
-/** The third tile: how the opponent's archetype wins in the field's
+/** The last tile: how the opponent's archetype wins in the field's
  *  tournaments, joined on its archetype key (`archetypeKeyOf`). A key that
  *  is not a named archetype has nothing to join; a named one the field has
  *  no rate for says so; under five entries (`MIN_TRUSTED_FIELD_SAMPLE`) the
@@ -147,19 +147,33 @@ function fieldTile(opponentKey: string, fieldByKey: Map<string, FieldRecord>, t:
  *  for a rate. */
 export type PairingTileText = TileText & { muted?: boolean }
 
-/** The three tiles over the pairing's row of `matchupRows` (its finished
- *  matches: wins, losses and draws, a draw neither won nor lost). Record,
+/** The tile of one split of the best-of-three games, Game 1 or Games 2–3,
+ *  drawn as Record is (`rateOrRecord`, over games), a drawn game in
+ *  neither number. */
+function splitTile(label: string, wins: number, losses: number, t: TFunction): PairingTileText {
+  const { figure, line, thin } = rateOrRecord({ wins, losses }, t, 'games')
+  const tile: PairingTileText = { label, value: figure ?? '—', detail: line }
+  if (thin) tile.muted = true
+  return tile
+}
+
+/** The tiles over the pairing's row of `matchupRows` (its finished
+ *  matches: wins, losses and draws, a draw neither won nor lost): three,
+ *  or five when the row has a best-of-three match (`bo3Matches`). Record,
  *  as Matchups rates the same row (`rateOrRecord` over `won` and `lost`):
  *  from ten won or lost the rate (a draw is not one of the ten), "73%",
- *  over the record "8–3"; under it the record, "7–2", muted, over the
- *  "too few" line. Games: own first,
- *  "17–4". In tournaments: `fieldTile` over `fieldByKey`, the field's
- *  records by archetype key, empty while they load or when they fail. */
+ *  over the record "8–3"; five to nine the rate, "71%", muted, over the
+ *  record and "rough"; under five the record, "3–1", muted, over the
+ *  "too few" line. Games: own first, "17–4". Then, with a best-of-three
+ *  match, Game 1 and Games 2–3 (`splitTile`), the split the Matchups row's
+ *  two columns show. Last, In tournaments: `fieldTile` over `fieldByKey`,
+ *  the field's records by archetype key, empty while they load or when
+ *  they fail. */
 export function pairingTiles(
   row: MatchupRow,
   fieldByKey: Map<string, FieldRecord>,
   t: TFunction,
-): [PairingTileText, PairingTileText, PairingTileText] {
+): PairingTileText[] {
   const { figure, line, thin } = rateOrRecord({ wins: row.won, losses: row.lost }, t)
   const record: PairingTileText = { label: t('matchups.pairing.record'), value: figure ?? '—', detail: line }
   if (thin) record.muted = true
@@ -168,5 +182,12 @@ export function pairingTiles(
     value: formatRecord(row.gamesWon, row.gamesLost),
     detail: t('matchups.pairing.yoursFirst'),
   }
-  return [record, games, fieldTile(row.key, fieldByKey, t)]
+  const split =
+    row.bo3Matches > 0
+      ? [
+          splitTile(t('matchups.pairing.game1'), row.game1Won, row.game1Lost, t),
+          splitTile(t('matchups.pairing.postboard'), row.postboardWon, row.postboardLost, t),
+        ]
+      : []
+  return [record, games, ...split, fieldTile(row.key, fieldByKey, t)]
 }

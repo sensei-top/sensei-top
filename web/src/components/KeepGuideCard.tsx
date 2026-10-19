@@ -1,7 +1,8 @@
 import { Trans, useTranslation } from 'react-i18next'
 import type { HandSlotOut, KeepGuideOut, KeyPlayOut } from '../api'
 import { formatFixed, formatPercent, formatRecord } from '../lib/format'
-import { RATE_MIN_MATCHES, rateAndRecordLine } from '../lib/sample'
+import { rateAndRecordLine } from '../lib/sample'
+import { RateCell } from './RateCell'
 import { Card, Chip, DataTable, Meter, SectionLabel } from './ui'
 
 function IdealHandChips({ idealHand }: { idealHand: HandSlotOut[] }) {
@@ -168,11 +169,7 @@ export function KeepGuideCard({
               m.mulligans === 0 ? t('live.keep.kept7') : t('live.keep.mullTo', { n: 7 - m.mulligans }),
               String(m.games),
               formatRecord(m.wins, m.games - m.wins),
-              m.games >= RATE_MIN_MATCHES ? (
-                formatPercent(m.wins / m.games)
-              ) : (
-                <span key="rate" className="whitespace-nowrap text-muted">{t('common.sample.tooFewCellGames')}</span>
-              ),
+              <RateCell key="rate" wins={m.wins} losses={m.games - m.wins} games />,
             ])}
           />
         </div>

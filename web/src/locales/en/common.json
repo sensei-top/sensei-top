@@ -56,6 +56,8 @@
   "sample": {
     "tooFewMatches": "too few for a rate, under {{min}}\u00a0matches",
     "tooFewGames": "too few for a rate, under {{min}}\u00a0games",
+    "roughMatches": "{{record}} · rough, under {{min}}\u00a0matches",
+    "roughGames": "{{record}} · rough, under {{min}}\u00a0games",
     "tooFewCellMatches": "too few",
     "tooFewCellGames": "too few",
     "noMatch": "no finished match yet",

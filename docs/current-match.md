@@ -556,6 +556,18 @@ alternative (`intermission.py`, step 5b). The
 prompt is `full_prompt`'s, so it is `None` too when the player's own deck has
 no format (`docs/brief.md`).
 
+**Post-board record.** `postboard_record` (`{won, lost}`, or `None`) is this
+deck identity's games 2 and 3 against the archetype the read named or the
+user picked (`_postboard_record`): the same identity and exclusion as
+`_past_boarding`, over every earlier finished match with
+`matches.best_of = 3`, a drawn game counted in neither number. It reads only
+the named or picked archetype, never the "closest" alternative that past
+boarding falls back to: the card words it as a record against this
+opponent's deck, which a guess at a different archetype is not. `None` when
+no archetype is named or picked, when the identity is unknown, or when no
+such earlier game exists. Bo1 matches stay out: their games are not
+post-board games.
+
 **Degradation.** Unknown opponent → no prompt, though a "closest" plan
 from the alternatives may still show; no format → no
 live read, so the same unless the user picked the opponent's deck; `stale`
@@ -566,13 +578,13 @@ best evidence available, just labelled as possibly out of date.
 **Per-match memoization and cost.** `caches` is a plain dict the API layer
 owns across polls: `definitions`/`colors_by_name`/`prior` (the classifier's
 own slow loads, shared with the rest of the archetype-naming machinery) plus,
-per match, the brief `prompts` and `past_boarding` results — both keyed to
-include the match id, since nothing that feeds either one can change while
-*this* match is still being played (only past, completed matches and the
-corpus do). Measured on the real database: a cold `build_break_read` costs
-~2.0 s, almost all of it `full_prompt` (~1.05 s: `format_resets` ~0.75 s,
-the personal matchup-rate read ~0.27 s) plus `_past_boarding` (~0.27 s).
-Memoized, a reprojection mid-break (the watcher still rebuilds on every
+per match, the brief `prompts`, `past_boarding` and `postboard_record`
+results — all keyed to include the match id, since nothing that feeds any of
+them can change while *this* match is still being played (only past,
+completed matches and the corpus do). Measured on the real database: a cold
+`build_break_read` costs ~2.0 s, almost all of it `full_prompt` (~1.05 s:
+`format_resets` ~0.75 s, the personal matchup-rate read ~0.27 s) plus
+`_past_boarding` (~0.27 s). Memoized, a reprojection mid-break (the watcher still rebuilds on every
 match-boundary event) now costs ~70 ms instead of paying that ~2 s again,
 and an ordinary cache hit costs ~3 ms; only the first poll of a match's
 first break ever pays the full ~2 s. `api/sql.py`'s `_cached_break_read`
@@ -595,7 +607,11 @@ only the other archetypes with a written plan, each expandable to its own
 full board; with none it is not drawn, and the plan card takes the full
 width. The plan card's title is the result and its reason alone ("Lost game
 1 (concede)"), since the strip already says which game is next and against
-what. In `CurrentMatchView.tsx`, the break phase takes precedence over every
+what. Under the title, one line gives this deck's own games 2 and 3 against
+the opponent's deck, from `intermission.postboard_record`: "Your games 2–3
+against it: 58% · 35–25" from ten games won or lost, the record alone under
+ten, and no line when the record is null or every earlier game 2 or 3 was a
+draw. In `CurrentMatchView.tsx`, the break phase takes precedence over every
 other phase — including a pending mulligan decision, which cannot actually
 co-occur with a break since the next game's opening hand doesn't exist until
 sideboarding ends — and `MatchStatusStrip` renders `"Sideboarding, game N

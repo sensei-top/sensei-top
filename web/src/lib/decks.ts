@@ -115,9 +115,10 @@ export function deckLine(identity: DeckIdentityOut, now: number, t: TFunction): 
 }
 
 /** A tile's record by the small-sample rule (`rateOrRecord`): from ten
- *  finished matches a rate with the record under it, "58%" and "35–25"; one
- *  to nine the record as the figure, `thin`, with the "too few" line; none,
- *  no figure. `finished` counts wins and losses, draws aside, so the losses
+ *  finished matches a rate with the record under it, "58%" and "35–25";
+ *  five to nine the rate, `thin`, over the record and "rough"; one to four
+ *  the record as the figure, `thin`, with the "too few" line; none, no
+ *  figure. `finished` counts wins and losses, draws aside, so the losses
  *  are `finished - wins`. */
 export function deckRecord({ finished, wins }: { finished: number; wins: number }, t: TFunction): RateOrRecord {
   return rateOrRecord({ wins, losses: finished - wins }, t)

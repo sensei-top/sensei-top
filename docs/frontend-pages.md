@@ -164,8 +164,9 @@ are each deck's own totals from `/api/guide/decks`.
 `/api/guide/decks`, five at most, those with the most matches in the
 last 30 days first and then by last played. An identity with no match is
 left out. From ten matches won or lost (`RATE_MIN_MATCHES`; a draw is
-neither) the record is a rate, "58%" over "35–25"; under ten it is
-the record, "6–3", muted, over the "too few for a rate" line; with none
+neither) the record is a rate, "58%" over "35–25"; from five to nine
+the rate muted, "67%" over "6–3 · rough"; under five the record, "3–1",
+muted, over the "too few for a rate" line; with none
 there is no figure. A tile leads to
 the deck's own address, `deckAddress(deck.key)` (`lib/decks.ts`), never
 a version's id.
@@ -308,8 +309,9 @@ counted in the client over every match in hand, not only the rows shown, so
 the band and the list can never disagree. A finished match is a win, a loss
 or a draw, and a draw is neither won nor lost. Each tile follows "Numbers"
 in `docs/design-system.md` (`rateOrRecord`): from ten finished the rate,
-"58%", with the record under it; under ten the record as the number, muted,
-with a line saying it is too few for a rate; with nothing finished an em
+"58%", with the record under it; from five to nine the rate, muted, over the
+record and "rough"; under five the record as the number, muted, with a line
+saying it is too few for a rate; with nothing finished an em
 dash and a line that says so. The band is not drawn from
 `/api/metrics/winrate` or `/api/metrics/play-draw`, which did not answer for
 every source when the page was built; they do now, and play and draw are
@@ -475,10 +477,11 @@ page scrolls: the strip takes two lines and cuts none of its facts.
 Each fact is shown once on this page. The status strip alone carries the
 game, the turn, play or draw, the record, the opponent's deck with its
 confidence, the cards seen and the pick button; `OpponentRead` holds the
-cards behind an unnamed deck and the candidates, `LibraryCard` is the decklist, and between
-games the plan card's title is the result and its reason, with the opponent
-and the next game left to the strip. The old "Match details" disclosure
-that repeated the strip is gone.
+cards behind an unnamed deck and the candidates, `LibraryCard` is the
+decklist, and between games the plan card's title is the result and its
+reason, with the opponent and the next game left to the strip, and its
+first line this deck's own games 2 and 3 against that deck. The old
+"Match details" disclosure that repeated the strip is gone.
 
 `useCurrentMatchRead` rides a 1s timer of its own on top of the ordinary
 heartbeat, unconditionally whenever `CurrentMatchView` is mounted — the one
@@ -718,7 +721,8 @@ button (`docs/review.md`).
 order the route answers them, last played first. `decksTiles`
 (`lib/decks.ts`) builds each tile: the deck's own name, its record by
 the small-sample rule (`deckRecord`: from ten finished matches a rate over
-the record, "58%" over "35–25"; under ten the record, "6–3", muted, with
+the record, "58%" over "35–25"; from five to nine the rate, "67%", muted,
+over the record and "rough"; under five the record, "3–1", muted, with
 the line saying it is too few for a rate), the format in words with how
 many versions when there is more than one (`tileDetail`), when it was
 last played, and its art: a card the viewer cast in the deck's newest
@@ -802,18 +806,27 @@ link to the pairing), and a line under it with the games, own first, and,
 once the field's numbers are in, how the archetype wins in tournaments over
 however many entries, marked too few to trust under five
 (`MIN_TRUSTED_FIELD_SAMPLE`). The columns are Archetype · Matches · Record ·
-Rate, in the order `docs/design-system.md`, "Numbers", gives; the Rate cell
-is the rate from ten finished matches, a muted "too few" under ten, and an
-em dash only with no match won or lost. A row is never left out for being
-small. The field is the deck's own format's (`useFieldRecords(format)`, the
-format coverage names, "Field, and the field-winrate join" below); a deck
-with no format has no field line. Three tiles sit above the table:
-archetypes met (and how many were named), and the best and worst among those
-met ten finished times or more (`RATE_MIN_MATCHES`) by wins over wins plus
-losses, the same threshold the table's own "Rate" column uses; with none
-that often the tile says so, and with one it is the best and the worst says
-there is only one so far. There is no chart: a row already shows the pips,
-the name, the games and the field's own rate beside them.
+Rate · Game 1 · Games 2–3, in the order `docs/design-system.md`, "Numbers",
+gives; the Rate cell (`RateCell`) is the rate from ten finished matches,
+the rate muted from five to nine, a muted "too few" under five, and an em
+dash only with no match won or lost. Game 1 and Games 2–3 count games,
+and only a best-of-three match's (`best_of = 3`): a best-of-one game is a
+different queue's, with its own hand smoothing, and is in neither. Each
+cell is the rate alone, as the Rate cell is, over games: the percent from
+ten games won or lost, muted from five to nine, a muted "too few" under
+five, and an em dash with none, which is also what a row with no
+best-of-three match shows; a drawn game counts in neither number. A row is never left out for
+being small. The field is the deck's own format's
+(`useFieldRecords(format)`, the format coverage names, "Field, and the
+field-winrate join" below); a deck with no format has no field line. Three
+tiles sit above the table: archetypes met (and how many were named), and the
+best and worst among those met ten finished times or more
+(`RATE_MIN_MATCHES`) by wins over wins plus losses, the threshold at which
+the table's own "Rate" column stops being muted, since a ranking of rough
+rates would rank noise; with none that often the tile says so, and
+with one it is the best and the worst says there is only one so far. There
+is no chart: a row already shows the pips, the name, the games and the
+field's own rate beside them.
 
 **A pairing** (`PairingView`, `/decks/:id/matchups/:opponent`) is one
 deck against one opponent's deck, `:opponent` a Matchups row's own
@@ -823,10 +836,12 @@ way a Matchups row does when a match is in hand; with none, an
 `archetype:` key is named from the deck's own coverage (shared with the
 brief below, one query) or spaced from the key itself, a `manual:` key
 as typed, a `colors:` key "Unrecognized deck", anything else "Unknown
-deck". Three tiles: Record (by the small-sample rule over the row's wins and
-losses, so it agrees with the Matchups row, a draw counting toward
-neither), Games (own first, "17–4"), and In tournaments (the field's
-rate for the archetype in the deck's format, over the same window
+deck". Three tiles, five when the pairing has a best-of-three match:
+Record (by the small-sample rule over the row's wins and losses, so it
+agrees with the Matchups row, a draw counting toward neither), Games (own
+first, "17–4"), Game 1 and Games 2–3 (the same split as the Matchups row's
+two columns, by the small-sample rule over games), and In tournaments (the
+field's rate for the archetype in the deck's format, over the same window
 `useFieldRecords` gives Matchups). Below the tiles is the matchup brief
 against this opponent (`components/PairingBrief.tsx`, `docs/brief.md`)
 in one of five states (`briefState`, `lib/pairing.ts`): not named (the
@@ -1045,9 +1060,10 @@ format and the viewer's own record against it. Its cards are in
    window, the most played deck with its share, and the viewer's record
    against the two most played, over every deck of theirs in the
    selected format (`topTwoTile`, `lib/field.ts`). The third tile has
-   four states: nothing played, an em dash and "not met" with the window;
-   only draws, an em dash and "no finished match yet"; one to nine matches
-   won or lost, the record muted, with the "too few for a rate" line; from
+   five states: nothing played, an em dash and "not met" with the window;
+   only draws, an em dash and "no finished match yet"; one to four matches
+   won or lost, the record muted, with the "too few for a rate" line; five
+   to nine, the rate muted, with the record and "rough"; from
    ten the rate, with the record and where it comes from ("with any of your
    decks"). Not drawn when the tier has no list in the window.
 4. **"What is being played"** (`ShareCard`): one `FieldRow` per deck, the
@@ -1273,9 +1289,11 @@ Every rate on the page is written by `lib/coach.ts::rateWords`, which
 turns the API's rate into three strings: the record, wins then losses
 ("174–211", `formatRecord`), the percent ("45%") and the range
 ("40%–50%", each end a whole percent). A rate the API marks `anecdotal`,
-under ten matches (the same ten as `RATE_MIN_MATCHES`), has a record and
-no percent, and the page draws the record muted beside the "too few"
-line or word, never a percent of a handful; with no match at all, a dash.
+under ten matches (the same ten as `RATE_MIN_MATCHES`; the Coach has
+no rough rate from five, since the API sends no percent under ten), has
+a record and no percent, and the page draws the record muted beside the
+"too few" line or word, never a percent of a handful; with no match at
+all, a dash.
 `rateWords` reads the API's flag and keeps no threshold of its own. The
 range is the API's interval, and the caption under the heading says in a
 sentence what it is; the words "confidence interval" and "sample" are not
@@ -1287,7 +1305,7 @@ so a record's losses are the rate's `n` less its wins.
 The cards, in order, are in `components/coach/`:
 
 1. **Six tiles** (`Profile`, `overallTiles`): matches, games, game 1,
-   after sideboarding, on the play, on the draw. Two to a row under 48rem,
+   games 2–3, on the play, on the draw. Two to a row under 48rem,
    three from it. From ten, the percent is the figure and the record and
    the range are the line; under ten, the record is the figure, muted,
    over the "too few for a rate" line; with no match, a dash over "None

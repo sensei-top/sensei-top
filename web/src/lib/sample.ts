@@ -6,6 +6,12 @@ import { formatPercent, formatRecord } from './format'
  *  the user's own play. */
 export const RATE_MIN_MATCHES = 10
 
+/** Personal records: from this many finished, under `RATE_MIN_MATCHES`, the
+ *  rate is shown but drawn muted, a rough rate; under it, no rate at all.
+ *  Only where a figure can be drawn muted (a tile, a table cell): the
+ *  one-line form and a sentence keep `RATE_MIN_MATCHES` alone. */
+export const ROUGH_RATE_MIN = 5
+
 /** Field (corpus) evidence: below this many corpus entries (tournament
  *  decks, matches), a field-derived rate is real but too thin to trust as a
  *  measurement. It measures other people's lists, not the user's play, so it
@@ -22,8 +28,10 @@ export type RateOrRecord = { figure: string | null; line: string; thin: boolean 
 
 /** A personal record, by the small-sample rule. Ten or more finished
  *  (`RATE_MIN_MATCHES`): the rate as the figure, the record as the line.
- *  One to nine: the record as the figure, the "too few" line, `thin`. None:
- *  no figure, and the "no finished ..." line. The caller passes losses with
+ *  Five to nine (`ROUGH_RATE_MIN`): the rate as the figure, `thin`, the
+ *  record and "rough" as the line. One to four: the record as the figure,
+ *  the "too few" line, `thin`. None: no figure, and the "no finished ..."
+ *  line. The caller passes losses with
  *  draws left out (`docs/design-system.md`, "Numbers"), so the threshold and
  *  the rate are over wins plus losses. `unit` picks the words, matches or
  *  games. */
@@ -37,11 +45,29 @@ export function rateOrRecord(
   if (finished >= RATE_MIN_MATCHES) {
     return { figure: formatPercent(wins / finished), line: record, thin: false }
   }
+  if (finished >= ROUGH_RATE_MIN) {
+    const key = unit === 'games' ? 'common.sample.roughGames' : 'common.sample.roughMatches'
+    return { figure: formatPercent(wins / finished), line: t(key, { record, min: RATE_MIN_MATCHES }), thin: true }
+  }
   if (finished > 0) {
     const key = unit === 'games' ? 'common.sample.tooFewGames' : 'common.sample.tooFewMatches'
-    return { figure: record, line: t(key, { min: RATE_MIN_MATCHES }), thin: true }
+    return { figure: record, line: t(key, { min: ROUGH_RATE_MIN }), thin: true }
   }
   return { figure: null, line: t(unit === 'games' ? 'common.sample.noGame' : 'common.sample.noMatch'), thin: false }
+}
+
+/** A table's Rate cell, by the same rule: from ten the rate; five to nine
+ *  the rate, `muted`; one to four the "too few" word, `muted`; `null` with
+ *  none won or lost, which the caller draws as its em dash. */
+export function rateCell(
+  { wins, losses }: { wins: number; losses: number },
+  t: TFunction,
+  unit: 'matches' | 'games' = 'matches',
+): { text: string; muted: boolean } | null {
+  const finished = wins + losses
+  if (finished <= 0) return null
+  if (finished >= ROUGH_RATE_MIN) return { text: formatPercent(wins / finished), muted: finished < RATE_MIN_MATCHES }
+  return { text: t(unit === 'games' ? 'common.sample.tooFewCellGames' : 'common.sample.tooFewCellMatches'), muted: true }
 }
 
 /** The one-line form, for a place with room for nothing else: ten or more

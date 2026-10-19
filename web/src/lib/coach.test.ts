@@ -405,7 +405,7 @@ describe('overallTiles', () => {
       'Matches',
       'Games',
       'Game 1',
-      'After sideboarding',
+      'Games 2–3',
       'On the play',
       'On the draw',
     ])

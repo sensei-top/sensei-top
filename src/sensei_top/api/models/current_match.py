@@ -433,6 +433,11 @@ class PastBoardingOut(BaseModel):
     games: list[PastBoardingGameOut]
 
 
+class PostboardRecordOut(BaseModel):
+    won: int = Field(description="Games won.")
+    lost: int = Field(description="Games lost.")
+
+
 class IntermissionOut(BaseModel):
     """The Bo3 break card: the game that just ended, who the opponent looks
     like from whatever has been revealed so far, the stored matchup plan for
@@ -453,6 +458,14 @@ class IntermissionOut(BaseModel):
     stale: bool = Field(False, description="the corpus or the 75 has moved since plan was written")
     alternatives: list[AlternativePlanOut] = Field(default_factory=list)
     past_boarding: list[PastBoardingOut] = Field(default_factory=list)
+    postboard_record: PostboardRecordOut | None = Field(
+        None,
+        description=(
+            "This deck identity's earlier games 2 and 3 against the named or picked "
+            "archetype, best-of-three matches only, the current match excluded; null when "
+            "there is no archetype, no identity, or no such game."
+        ),
+    )
     prompt: str | None = Field(
         None, description="text to write an exact plan from, when none exists yet"
     )

@@ -330,6 +330,24 @@ class Match(BaseModel):
     result: str | None = None
     games_won: int | None = None
     games_lost: int | None = None
+    best_of: int | None = Field(
+        None,
+        description="3 for a best-of-three match, 1 for a best of one, null when the log never "
+        "said (Arena's matchWinCondition; every MTGO match is 3).",
+    )
+    game1_result: str | None = Field(
+        None,
+        description="Game 1's result ('win', 'loss' or 'draw') when the match is a best of three "
+        "and game 1 finished; null otherwise.",
+    )
+    postboard_won: int | None = Field(
+        None, description="Games 2 and 3 won, for a best-of-three match; null otherwise."
+    )
+    postboard_lost: int | None = Field(
+        None,
+        description="Games 2 and 3 lost, for a best-of-three match; null otherwise. A drawn "
+        "game is in neither count.",
+    )
     rank_class: str | None = Field(
         None,
         description="constructed rank at the most recent snapshot at or before started_at "
