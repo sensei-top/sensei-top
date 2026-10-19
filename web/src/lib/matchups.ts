@@ -34,6 +34,17 @@ export type MatchupRow = {
   lost: number
   gamesWon: number
   gamesLost: number
+  /** The finished best-of-three matches among `matches` (`best_of === 3`):
+   *  the only ones whose games the two counts below read. */
+  bo3Matches: number
+  /** Game 1 won, and lost, over the best-of-three matches; a drawn game 1
+   *  is neither. */
+  game1Won: number
+  game1Lost: number
+  /** Games 2 and 3 won, and lost, over the best-of-three matches; a drawn
+   *  game is neither. */
+  postboardWon: number
+  postboardLost: number
 }
 
 /** `opponent_key` is `'archetype:' + archetype_key` only when the classifier
@@ -93,7 +104,10 @@ type Group = { key: string; lastMet: number | null; matches: Match[] }
 
 /** One row per `opponent_key` over the finished matches, its kind, label
  *  and colours by `opponentSeen` over them. A draw is a match and not a
- *  win; a match with no games recorded adds none. Most matches first, then
+ *  win; a match with no games recorded adds none. Game 1 and games 2–3
+ *  are counted over the best-of-three matches alone (`best_of === 3`): a
+ *  best-of-one game is a different queue's and in neither, and a drawn
+ *  game is in neither count. Most matches first, then
  *  the archetype met last (a key whose every start is unreadable after the
  *  rest), then by label. */
 export function matchupRows(matches: Match[]): MatchupRow[] {
@@ -115,12 +129,23 @@ export function matchupRows(matches: Match[]): MatchupRow[] {
         lost: 0,
         gamesWon: 0,
         gamesLost: 0,
+        bo3Matches: 0,
+        game1Won: 0,
+        game1Lost: 0,
+        postboardWon: 0,
+        postboardLost: 0,
       }
       for (const match of group.matches) {
         if (match.result === 'win') row.won += 1
         if (match.result === 'loss') row.lost += 1
         row.gamesWon += match.games_won ?? 0
         row.gamesLost += match.games_lost ?? 0
+        if (match.best_of !== 3) continue
+        row.bo3Matches += 1
+        if (match.game1_result === 'win') row.game1Won += 1
+        if (match.game1_result === 'loss') row.game1Lost += 1
+        row.postboardWon += match.postboard_won ?? 0
+        row.postboardLost += match.postboard_lost ?? 0
       }
       return { row, lastMet: group.lastMet }
     })

@@ -15,7 +15,7 @@ import {
 } from '../lib/matchups'
 import { formatPercent, formatRecord } from '../lib/format'
 import { pairingAddress, withVersion } from '../lib/pairing'
-import { RATE_MIN_MATCHES } from '../lib/sample'
+import { RATE_MIN_MATCHES, rateAndRecordLine } from '../lib/sample'
 import { formatCount, useNow } from '../lib/time'
 import { placeById } from '../shell/places'
 
@@ -34,13 +34,26 @@ function RateCell({ row }: { row: MatchupRow }) {
   return <>{formatPercent(row.won / finished)}</>
 }
 
+/** A Game 1 or Games 2–3 cell, over the games of the row's best-of-three
+ *  matches won and lost (a drawn game is neither), on one line: from ten
+ *  the rate and the record, "58% · 35–25"; one to nine the record alone,
+ *  muted; an em dash with none, which is also a row with no best-of-three
+ *  match. */
+function SplitCell({ wins, losses }: { wins: number; losses: number }) {
+  const line = rateAndRecordLine({ wins, losses })
+  if (line == null) return <>—</>
+  if (wins + losses < RATE_MIN_MATCHES) return <span className="whitespace-nowrap text-muted">{line}</span>
+  return <span className="whitespace-nowrap">{line}</span>
+}
+
 /** A deck's Matchups, over the versions the address chose (`versionIds`,
  *  every version when `version` is `null`), counted from the matches in
  *  hand, top to bottom: the version switcher when the deck has more than
  *  one; three tiles, the archetypes met and the best and worst of those met
  *  ten times or more; and every archetype met, one row each, whichever
  *  version met it, its name a link to the pairing's page carrying the
- *  version chosen. Finished matches only.
+ *  version chosen, its record and rate, and its best-of-three games split
+ *  into game 1 and games 2–3 (`SplitCell`). Finished matches only.
  *  Each version is read on its own and the page waits for every one; one
  *  failure is the page's error. The field's numbers never hold the page:
  *  until they come, or when they fail, the line under a name is the games
@@ -113,6 +126,8 @@ export function MatchupsView({
               t('matchups.view.columns.matches'),
               t('matchups.view.columns.record'),
               t('matchups.view.columns.rate'),
+              t('matchups.view.columns.game1'),
+              t('matchups.view.columns.postboard'),
             ]}
             rows={rows.map((row) => {
               const name = matchupName(row, t)
@@ -139,6 +154,8 @@ export function MatchupsView({
                 formatCount(row.matches),
                 formatRecord(row.won, row.lost),
                 <RateCell key="rate" row={row} />,
+                <SplitCell key="game1" wins={row.game1Won} losses={row.game1Lost} />,
+                <SplitCell key="postboard" wins={row.postboardWon} losses={row.postboardLost} />,
               ]
             })}
           />

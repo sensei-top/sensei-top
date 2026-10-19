@@ -11,7 +11,9 @@
       "archetype": "Archetype",
       "matches": "Matches",
       "record": "Record",
-      "rate": "Rate"
+      "rate": "Rate",
+      "game1": "Game 1",
+      "postboard": "Games 2–3"
     }
   },
   "tiles": {
@@ -47,6 +49,8 @@
     "record": "Record",
     "games": "Games",
     "yoursFirst": "yours first",
+    "game1": "Game 1",
+    "postboard": "Games 2–3",
     "inTournaments": "In tournaments",
     "onlyNamed": "only a named archetype has results",
     "noResults": "no tournament results for it",
@@ -180,6 +184,7 @@
   "sideboard": {
     "thisOpponent": "this opponent",
     "thisArchetype": "this archetype",
+    "postboardRecord": "Your games 2–3 against it: {{record}}",
     "headline": {
       "noResult": "Sideboard plan",
       "won": "Won game {{game}}",

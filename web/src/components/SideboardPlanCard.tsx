@@ -15,6 +15,7 @@ import { confidenceLabel } from '../lib/opponent'
 import { BoardPlan, BriefProvenance, PlayAroundList } from './MatchupBriefCard'
 import { CopyPromptCard } from './CopyPromptCard'
 import { formatPercent } from '../lib/format'
+import { rateAndRecordLine } from '../lib/sample'
 import { Card, Chip, Disclosure, EmptyState, Prose, SectionLabel } from './ui'
 
 /** Arena's own `ResultReason_*` spelling, humanised the same way for every
@@ -134,12 +135,28 @@ function pastBoardingLabel(intermission: IntermissionOut, t: TFunction): string 
   return intermission.alternatives?.[0]?.label ?? t('matchups.sideboard.thisArchetype')
 }
 
+/** "Your games 2–3 against it: 58% · 35–25": this deck's own earlier games
+ *  2 and 3 against the opponent's deck (`intermission.postboard_record`),
+ *  the rate and the record from ten won or lost, the record alone under
+ *  ten (`rateAndRecordLine`). A fact, not advice, so it is drawn whatever
+ *  the card's body holds. `null`, no element at all, when the record is
+ *  null or holds no game won or lost. */
+function postboardLine(intermission: IntermissionOut, t: TFunction): React.ReactNode {
+  const record = intermission.postboard_record
+  const line = record ? rateAndRecordLine({ wins: record.won, losses: record.lost }) : null
+  if (line == null) return null
+  return <p className="text-caption text-muted">{t('matchups.sideboard.postboardRecord', { record: line })}</p>
+}
+
 /** The primary break-phase card: what to board for the next game, from the
  *  best free tier available (S4's precedence) — an exact written plan, the
  *  closest one already written for a different archetype, this deck's own
  *  past boarding against the archetype, or (last) a prompt to write an
- *  exact plan from. Reuses `MatchupBriefCard`'s extracted `BoardPlan`/
- *  `PlayAroundList`/`BriefProvenance` rather than forking their rendering. */
+ *  exact plan from. Whichever it draws, the first line under the title
+ *  (`postboardLine`) is this deck's own games 2 and 3 against the
+ *  opponent's deck, when it has any. Reuses `MatchupBriefCard`'s extracted
+ *  `BoardPlan`/`PlayAroundList`/`BriefProvenance` rather than forking
+ *  their rendering. */
 export function SideboardPlanCard({
   intermission,
   match,
@@ -151,6 +168,7 @@ export function SideboardPlanCard({
   const paste = usePasteBrief()
   const seen = seenOpponentCards(match)
   const title = headline(intermission, t)
+  const postboard = postboardLine(intermission, t)
   // `alternatives`/`past_boarding` default to `[]` server-side
   // (Field(default_factory=list)) but the generated type still marks them
   // optional, since a default makes a field un-required in the OpenAPI
@@ -169,6 +187,7 @@ export function SideboardPlanCard({
     return (
       <Card title={title}>
         <div className="space-y-4">
+          {postboard}
           <EmptyState
             message={
               intermission.opponent
@@ -210,7 +229,14 @@ export function SideboardPlanCard({
             : undefined
         }
       >
-        {pastBoarding}
+        {postboard ? (
+          <div className="space-y-4">
+            {postboard}
+            {pastBoarding}
+          </div>
+        ) : (
+          pastBoarding
+        )}
       </CopyPromptCard>
     )
   }
@@ -222,6 +248,7 @@ export function SideboardPlanCard({
   return (
     <Card title={title}>
       <div className="space-y-4">
+        {postboard}
         {isClosest && pastBoarding}
         {isClosest && (
           <p className="rounded-block border border-warn/40 bg-plane px-3 py-2 text-caption text-warn">

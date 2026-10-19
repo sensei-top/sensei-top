@@ -325,6 +325,73 @@ describe('pairingTiles', () => {
     })
   })
 
+  /** A finished best-of-three match as `/api/matches` sends one: its games,
+   *  game 1's result and games 2 and 3 won and lost. */
+  const bo3 = (
+    id: string,
+    result: 'win' | 'loss',
+    game1: 'win' | 'loss',
+    postboard: [number, number],
+  ): Match => {
+    const g1 = game1 === 'win' ? [1, 0] : [0, 1]
+    return match(id, {
+      result,
+      best_of: 3,
+      games_won: g1[0] + postboard[0],
+      games_lost: g1[1] + postboard[1],
+      game1_result: game1,
+      postboard_won: postboard[0],
+      postboard_lost: postboard[1],
+    })
+  }
+  const tooFewGames = `too few for a rate, under 10${NBSP}games`
+
+  it('draws three tiles with no best-of-three match, best of one or unknown', () => {
+    const rows = matchupRows([
+      match('a', { result: 'win', best_of: 1, games_won: 1, games_lost: 0 }),
+      match('b', { result: 'loss', best_of: null, games_won: 1, games_lost: 2 }),
+    ])
+    expect(pairingTiles(rows[0], none).map((tile) => tile.label)).toEqual(['Record', 'Games', 'In tournaments'])
+  })
+
+  it('draws five with a best-of-three match, game 1 and games 2–3 between Games and In tournaments', () => {
+    const rows = matchupRows([
+      bo3('a', 'win', 'loss', [2, 0]),
+      bo3('b', 'loss', 'win', [0, 2]),
+      // A best of one: in Record and Games, in neither split.
+      match('c', { result: 'win', best_of: 1, games_won: 1, games_lost: 0 }),
+    ])
+    const tiles = pairingTiles(rows[0], none)
+    expect(tiles.map((tile) => tile.label)).toEqual(['Record', 'Games', 'Game 1', 'Games 2–3', 'In tournaments'])
+    // Game 1: won in b, lost in a. Games 2–3: 2–0 in a, 0–2 in b.
+    expect(tiles[2]).toEqual({ label: 'Game 1', value: record(1, 1), detail: tooFewGames, muted: true })
+    expect(tiles[3]).toEqual({ label: 'Games 2–3', value: record(2, 2), detail: tooFewGames, muted: true })
+  })
+
+  it('writes a split’s rate over its record from ten games won or lost', () => {
+    const rows = matchupRows([
+      // Four won game 1, then split games 2 and 3: 4–0, then 4–4.
+      bo3('a', 'win', 'win', [1, 1]),
+      bo3('b', 'win', 'win', [1, 1]),
+      bo3('c', 'win', 'win', [1, 1]),
+      bo3('d', 'win', 'win', [1, 1]),
+      // Two lost game 1, then won 2 and 3: 0–2, then 4–0.
+      bo3('e', 'win', 'loss', [2, 0]),
+      bo3('f', 'win', 'loss', [2, 0]),
+      // Two won game 1, then lost 2 and 3: 2–0, then 0–4.
+      bo3('g', 'loss', 'win', [0, 2]),
+      bo3('h', 'loss', 'win', [0, 2]),
+      // Two lost game 1, then split: 0–2, then 2–2.
+      bo3('i', 'loss', 'loss', [1, 1]),
+      bo3('j', 'loss', 'loss', [1, 1]),
+    ])
+    // Game 1: 4 + 2 won, 2 + 2 lost, 6 of 10 is 60%. Games 2–3: 4 + 4 + 0 + 2
+    // won, 4 + 0 + 4 + 2 lost, 10 of 20 is 50%.
+    const tiles = pairingTiles(rows[0], none)
+    expect(tiles[2]).toEqual({ label: 'Game 1', value: '60%', detail: record(6, 4) })
+    expect(tiles[3]).toEqual({ label: 'Games 2–3', value: '50%', detail: record(10, 10) })
+  })
+
   it('writes the field’s rate over its entries, and says under five are too few', () => {
     const row = matchupRows([win('a')])[0]
     const field = (record: FieldRecord) => new Map([['dimir_midrange', record]])

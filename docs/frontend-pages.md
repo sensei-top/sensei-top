@@ -475,10 +475,11 @@ page scrolls: the strip takes two lines and cuts none of its facts.
 Each fact is shown once on this page. The status strip alone carries the
 game, the turn, play or draw, the record, the opponent's deck with its
 confidence, the cards seen and the pick button; `OpponentRead` holds the
-cards behind an unnamed deck and the candidates, `LibraryCard` is the decklist, and between
-games the plan card's title is the result and its reason, with the opponent
-and the next game left to the strip. The old "Match details" disclosure
-that repeated the strip is gone.
+cards behind an unnamed deck and the candidates, `LibraryCard` is the
+decklist, and between games the plan card's title is the result and its
+reason, with the opponent and the next game left to the strip, and its
+first line this deck's own games 2 and 3 against that deck. The old
+"Match details" disclosure that repeated the strip is gone.
 
 `useCurrentMatchRead` rides a 1s timer of its own on top of the ordinary
 heartbeat, unconditionally whenever `CurrentMatchView` is mounted — the one
@@ -802,18 +803,24 @@ link to the pairing), and a line under it with the games, own first, and,
 once the field's numbers are in, how the archetype wins in tournaments over
 however many entries, marked too few to trust under five
 (`MIN_TRUSTED_FIELD_SAMPLE`). The columns are Archetype · Matches · Record ·
-Rate, in the order `docs/design-system.md`, "Numbers", gives; the Rate cell
-is the rate from ten finished matches, a muted "too few" under ten, and an
-em dash only with no match won or lost. A row is never left out for being
-small. The field is the deck's own format's (`useFieldRecords(format)`, the
-format coverage names, "Field, and the field-winrate join" below); a deck
-with no format has no field line. Three tiles sit above the table:
-archetypes met (and how many were named), and the best and worst among those
-met ten finished times or more (`RATE_MIN_MATCHES`) by wins over wins plus
-losses, the same threshold the table's own "Rate" column uses; with none
-that often the tile says so, and with one it is the best and the worst says
-there is only one so far. There is no chart: a row already shows the pips,
-the name, the games and the field's own rate beside them.
+Rate · Game 1 · Games 2–3, in the order `docs/design-system.md`, "Numbers",
+gives; the Rate cell is the rate from ten finished matches, a muted "too
+few" under ten, and an em dash only with no match won or lost. Game 1 and
+Games 2–3 count games, and only a best-of-three match's (`best_of = 3`): a
+best-of-one game is a different queue's, with its own hand smoothing, and
+is in neither. Each cell is one line, "58% · 35–25" from ten games won or
+lost, the record alone and muted under ten, and an em dash with none, which
+is also what a row with no best-of-three match shows; a drawn game counts
+in neither number. A row is never left out for being small. The field is
+the deck's own format's (`useFieldRecords(format)`, the format coverage
+names, "Field, and the field-winrate join" below); a deck with no format
+has no field line. Three tiles sit above the table: archetypes met (and
+how many were named), and the best and worst among those met ten finished
+times or more (`RATE_MIN_MATCHES`) by wins over wins plus losses, the same
+threshold the table's own "Rate" column uses; with none that often the
+tile says so, and with one it is the best and the worst says there is only
+one so far. There is no chart: a row already shows the pips, the name, the
+games and the field's own rate beside them.
 
 **A pairing** (`PairingView`, `/decks/:id/matchups/:opponent`) is one
 deck against one opponent's deck, `:opponent` a Matchups row's own
@@ -823,10 +830,12 @@ way a Matchups row does when a match is in hand; with none, an
 `archetype:` key is named from the deck's own coverage (shared with the
 brief below, one query) or spaced from the key itself, a `manual:` key
 as typed, a `colors:` key "Unrecognized deck", anything else "Unknown
-deck". Three tiles: Record (by the small-sample rule over the row's wins and
-losses, so it agrees with the Matchups row, a draw counting toward
-neither), Games (own first, "17–4"), and In tournaments (the field's
-rate for the archetype in the deck's format, over the same window
+deck". Three tiles, five when the pairing has a best-of-three match:
+Record (by the small-sample rule over the row's wins and losses, so it
+agrees with the Matchups row, a draw counting toward neither), Games (own
+first, "17–4"), Game 1 and Games 2–3 (the same split as the Matchups row's
+two columns, by the small-sample rule over games), and In tournaments (the
+field's rate for the archetype in the deck's format, over the same window
 `useFieldRecords` gives Matchups). Below the tiles is the matchup brief
 against this opponent (`components/PairingBrief.tsx`, `docs/brief.md`)
 in one of five states (`briefState`, `lib/pairing.ts`): not named (the
