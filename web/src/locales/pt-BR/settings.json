@@ -7,6 +7,7 @@
     "app": "Aplicativo",
     "draftData": "Dados de draft",
     "appearance": "Aparência",
+    "live": "Ao vivo",
     "credits": "Sobre e créditos"
   },
   "language": {
@@ -20,6 +21,10 @@
     "comfortable": "Confortável",
     "compact": "Compacta",
     "note": "Compacta cabe mais na tela. Uma janela estreita é sempre compacta."
+  },
+  "liveAdvice": {
+    "label": "Conselhos durante o jogo",
+    "description": "O guia de mão inicial, o que o oponente pode estar segurando e o briefing do matchup, em jogos casuais e na ranqueada. Eventos nunca os mostram, e o plano de sideboard entre os jogos aparece de qualquer jeito."
   },
   "saveFailed": "Não foi salvo. Tente de novo.",
   "restartNeeded": "Isso passa a valer na próxima vez que o aplicativo abrir.",

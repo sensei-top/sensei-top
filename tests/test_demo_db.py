@@ -6,14 +6,14 @@ output. ``match_session.log``'s ``AuthenticateResponse`` names the user as
 ``SelfPlayer`` with client id ``SELFCLIENTID0001``; its two completed best-of-
 three matches are against ``OppPlayerOne`` (``AAAAAAAAAAAAAAA1``, match
 ``fd5624a4-...``) and ``OppPlayerTwo`` (``BBBBBBBBBBBBBBB2``, match
-``fa7a4d16-...``), both in ``Traditional_Ladder``, a ranked queue.
+``fa7a4d16-...``), both in ``Traditional_Ladder``, the ranked ladder.
 ``mtgo_match_session.log`` is one match between ``Player1`` and
 ``Player2000``. The tests read the same names back through SQL, as the spec
 asks, and check that the SQL found what the fixture holds.
 
-No Arena fixture holds a completed *unranked* best-of-three match, so the
-``--live`` success test skips; the orchestrator checks that branch against a
-real database copy in phase 3.
+The ladder allows advice (``table/queues.py``), so both are ``--live``
+candidates; no fixture holds an event's match, so the refusal test renames
+the queue in the stored payloads to an event id read off a real database.
 
 The pseudonym shape (``<given name>#<5 digits>``, the user ``Deshi``) is
 plan 21's D6.
@@ -36,14 +36,14 @@ from sensei_top.db import open_database
 from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file
 from sensei_top.reader.mtgo import read_game_log, store_game_log
-from sensei_top.table.ranked import UNRANKED_EVENTS
+from sensei_top.table.queues import ADVICE_QUEUES
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "scripts" / "demo_db.py"
 FIXTURE = Path(__file__).parent / "fixtures" / "match_session.log"
 MTGO_FIXTURE = Path(__file__).parent / "fixtures" / "mtgo_match_session.log"
 
-RANKED_MATCH = "fa7a4d16-afb7-4094-bae2-111092fc71d2"
+LADDER_MATCH = "fa7a4d16-afb7-4094-bae2-111092fc71d2"
 NARRATIVE_MATCH = "fd5624a4-d970-40eb-80aa-fba9d2ce17b3"
 FIXTURE_NAMES = {
     "SelfPlayer",
@@ -301,14 +301,23 @@ def test_data_is_refused_before_anything_is_written(tmp_path):
         module.check_paths(source, REPO_ROOT / "data" / "demo-refusal-check.db")
 
 
-def test_live_refuses_a_ranked_match(source_db, tmp_path):
+def test_live_refuses_an_event_match(source_db, tmp_path):
     source, _names = source_db
+    conn = open_database(source)
+    conn.execute(
+        "UPDATE raw_events SET payload = replace(payload, "
+        "'\"Traditional_Ladder\"', '\"Traditional_Cons_Event_2026\"')"
+    )
+    conn.commit()
+    project(conn)
+    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    conn.close()
     target = tmp_path / "demo.db"
 
-    result = _run("--from", str(source), "--to", str(target), "--live", RANKED_MATCH)
+    result = _run("--from", str(source), "--to", str(target), "--live", LADDER_MATCH)
 
     assert result.returncode == 3
-    assert "ranked" in result.stderr
+    assert "event" in result.stderr
     assert not target.exists()
 
 
@@ -336,18 +345,19 @@ def test_live_leaves_one_match_in_progress(source_db, tmp_path, make_client):
     source, _names = source_db
     conn = sqlite3.connect(source)
     try:
-        placeholders = ",".join("?" * len(UNRANKED_EVENTS))
+        placeholders = ",".join("?" * len(ADVICE_QUEUES))
         candidates = conn.execute(
             "SELECT m.match_id FROM matches m WHERE m.source = 'arena' "
             f"AND m.event_id IN ({placeholders}) AND m.result != 'incomplete' "
             "AND (SELECT COUNT(*) FROM games g WHERE g.match_id = m.match_id) >= 2",
-            sorted(UNRANKED_EVENTS),
+            sorted(ADVICE_QUEUES),
         ).fetchall()
     finally:
         conn.close()
     if not candidates:
         pytest.skip(
-            "match_session.log has no completed unranked best-of-three Arena match; "
+            "match_session.log has no completed best-of-three Arena match in a queue that "
+            "allows advice; "
             "--live is checked against a real database copy in phase 3"
         )
     from sensei_top.api.app import create_app

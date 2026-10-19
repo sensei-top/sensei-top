@@ -21,11 +21,13 @@
   },
   "empty": {
     "title": "Nenhuma partida em andamento",
-    "message": "Comece uma partida no Arena e esta página a acompanha: o que resta no seu grimório, os cards e o deck do oponente e, em jogos não ranqueados, um guia de mão inicial e o que o oponente pode estar segurando. Ao vivo acompanha só o Arena; uma partida de MTGO aparece em Partidas."
+    "message": "Comece uma partida no Arena e esta página a acompanha: o que resta no seu grimório, os cards e o deck do oponente e, fora de eventos, um guia de mão inicial e o que o oponente pode estar segurando. Ao vivo acompanha só o Arena; uma partida de MTGO aparece em Partidas."
   },
-  "ranked": {
-    "title": "Jogo ranqueado",
-    "message": "Nenhum conselho de mão inicial em um jogo ranqueado. Seu grimório e os cards do oponente aparecem assim que o Arena começa o jogo."
+  "noAdvice": {
+    "eventTitle": "Jogo de evento",
+    "eventMessage": "Nenhum conselho de mão inicial em um jogo de evento. Seu grimório e os cards do oponente aparecem assim que o Arena começa o jogo.",
+    "switchTitle": "Conselhos desligados",
+    "switchMessage": "Você desligou os conselhos em Configurações. Seu grimório e os cards do oponente aparecem assim que o Arena começa o jogo."
   },
   "strip": {
     "game": "Jogo",
@@ -36,7 +38,8 @@
     "mulliganPhase": "Fase de mulligan",
     "waiting": "Aguardando o primeiro estado do jogo",
     "record": "{{won}}–{{lost}} na partida",
-    "rankedAdviceOff": "ranqueado, conselhos desligados",
+    "eventAdviceOff": "evento, conselhos desligados",
+    "adviceSwitchedOff": "conselhos desligados em Configurações",
     "seen": "visto {{ago}}",
     "abandoned": "provavelmente abandonada, nenhum resultado chegou"
   },

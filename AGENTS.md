@@ -53,7 +53,7 @@ One line each; the detail is in the doc named, and
 - `src/sensei_top/guide/` — the deck guide, built on `review/` rather than duplicating it, and the RCQ guide for one pasted 75 — `docs/guide.md`.
 - `src/sensei_top/brief/` — the live matchup brief, one per `(deck, archetype)`, persisted as an authored artifact; `coverage.py` reads which archetypes still lack one — `docs/brief.md`.
 - `src/sensei_top/coach/` — the dated cross-deck coach report, kept as history; reuses `review/` and `guide/` — `docs/coach.md`.
-- `src/sensei_top/table/` — the current-match reads: a request-time replay of `raw_events`, never stored. Arena-only. `ranked.py` is the ranked-play rule: no advice on Live during a ranked game — `docs/current-match.md`.
+- `src/sensei_top/table/` — the current-match reads: a request-time replay of `raw_events`, never stored. Arena-only. `queues.py` is the event rule: no advice on Live during an event's game — `docs/current-match.md`.
 - `src/sensei_top/archetypes/` — deck-archetype classification from revealed cards: a rule engine (`classify.py`) and a corpus read (`corpus.py`) — `docs/opponent-deck.md`, "Naming the opponent's deck".
 - `src/sensei_top/metagame/` — real tournament results, tiered by evidence quality — `docs/metagame.md`.
 - `src/sensei_top/backup/` — the daily verified database snapshot; imports neither `reader` nor `projector` — `docs/architecture.md`, "Backups".

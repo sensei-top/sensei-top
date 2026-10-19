@@ -4,7 +4,7 @@ import { livePanels, railAlternatives } from './livePanels'
 const ADVICE_PANELS = ['opening-hand', 'keep-guide', 'opponent-hand']
 
 describe('livePanels', () => {
-  it('draws no advice in any phase of a ranked game', () => {
+  it('draws no advice in any phase of a game without it', () => {
     for (const decisionPending of [true, false]) {
       for (const mulliganPhase of [true, false]) {
         const { primary, rail } = livePanels({ decisionPending, mulliganPhase, advice: false })
@@ -13,7 +13,7 @@ describe('livePanels', () => {
     }
   })
 
-  it('keeps the library and the opponent in a ranked game', () => {
+  it('keeps the library and the opponent in a game without advice', () => {
     expect(livePanels({ decisionPending: true, mulliganPhase: true, advice: false })).toEqual({
       primary: 'library',
       rail: ['opponent-read'],

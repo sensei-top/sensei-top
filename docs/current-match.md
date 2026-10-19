@@ -601,15 +601,13 @@ co-occur with a break since the next game's opening hand doesn't exist until
 sideboarding ends — and `MatchStatusStrip` renders `"Sideboarding, game N
 next"` in place of the ordinary game/turn phase phrase.
 
-## The ranked-play rule (`table/ranked.py`)
+## The event rule (`table/queues.py`)
 
-During a ranked game the Live page shows what every tracker shows, and no
-advice. Wizards' Terms §2.2 forbid unauthorized third-party tools, trackers
-run on tolerance, and real-time coaching in ranked or competitive play is
-the line none of them crosses. The rule was planned for the overlay; when
-the pivot removed the overlay (2026-10-01), it moved here.
+During a game in an event the Live page shows what every tracker shows, and
+no advice. In casual queues and on the ranked ladder it shows everything,
+unless the user turned advice off in Settings.
 
-| | ranked game | unranked game, or between games |
+| | game in an event | casual or ladder game, or between games |
 |---|---|---|
 | remaining library and its draw odds | shown | shown |
 | the opponent's revealed cards, hand size, open mana | shown | shown |
@@ -620,19 +618,56 @@ the pivot removed the overlay (2026-10-01), it moved here.
 | the matchup brief (the disclosure bar) | hidden | shown |
 | the sideboard plan (the break) | — | shown in every queue |
 
-The break is allowed in every queue: a written plan read between games is
-accepted practice in paper, and live prompting during a game is not.
+**Why the line sits there.** Magic's digital tournament documents are
+where a rule could reach a tracker, and they cover tournaments, not the
+ladder:
 
-**Ranked means everything but a short allowlist of casual queues.**
-`UNRANKED_EVENTS` holds `Play`, `Constructed_BestOf3`, `AIBotMatch` and
-`DualColorPrecons`, each read off a real database's `matches.event_id`. Any
-other id is ranked: the ladder, `Traditional_Cons_Event_*`, every draft and
-every event. So is a missing one (rule 4), which covers MTGO too: its
-matches carry no event id, and its leagues and challenges are what the rule
-is for. `DirectGame` is ranked on purpose (the user's decision,
-2026-10-01): community tournaments on Arena are played by Direct Challenge,
-and the log can't tell one from a game with a friend. A casual queue missing
-from the list costs only the advice in that queue until it is added.
+- The [Digital Tournament Rules](https://blogs.magicjudges.org/rules/dtr/)
+  let a player "take written notes during a match and may refer to those
+  notes" ([2.10](https://blogs.magicjudges.org/rules/dtr/2-10/); a LAN event
+  may restrict them). The sideboard plan read between games is that.
+- The [Digital Infraction Procedure Guide, 2.2 Outside
+  Assistance](https://blogs.magicjudges.org/rules/dipg/2-2/), allows "Deck
+  Tracking software … as long as they do not provide any Private
+  Information" in online events, and forbids software that shows what the
+  game client can't. Every read on this page is derived from what the
+  client shows. But its philosophy also says "any strategy advice, play
+  advice, or construction advice from an external source is considered
+  outside assistance". The sentence speaks of people, and a keep verdict is
+  not one; a judge could still read it as one, so an event's game gets no
+  advice.
+- The ladder is not a tournament: neither document reaches it. What does,
+  [Wizards' Terms](https://company.wizards.com/en/legal/terms) §2.2, treats
+  every third-party tool alike, whatever it shows.
+- The terms of Arena's own events (the
+  [Arena Open](https://magic.wizards.com/en/news/mtg-arena/arena-open-terms-and-conditions),
+  [Arena Direct](https://magic.wizards.com/en/news/mtg-arena/arena-direct-terms-and-conditions)
+  and the [Qualifiers](https://magic.gg/events/qualifier-play-in#rulesandpolicies))
+  have no clause on trackers, notes or advice; they forbid cheating and
+  modifying the client, and incorporate a Wizards Play Policy that could
+  not be fetched (2026-10-19) and is unread.
+
+Both rules documents are read from the judges' copies, effective June
+2020; no newer version was found (2026-10-19).
+
+**Advice means a short allowlist of casual and ladder queues.**
+`ADVICE_QUEUES` holds `Play`, `Constructed_BestOf3`, `AIBotMatch`,
+`DualColorPrecons`, `Ladder` and `Traditional_Ladder`, each read off a real
+database's `matches.event_id`. Any other id is an event:
+`Traditional_Cons_Event_*`, every draft, every Arena Open, Direct and
+Qualifier. So is a missing one (rule 4), which covers MTGO too: its matches
+carry no event id, and its leagues and challenges are what the rule is for.
+`DirectGame` is an event on purpose (the user's decision, 2026-10-01):
+community tournaments on Arena are played by Direct Challenge, and the log
+can't tell one from a game with a friend. A queue missing from the list
+costs only the advice in that queue until it is added.
+
+**The user's switch.** Settings' Live section has "Advice during a game",
+on by default. It is the browser's own (`web/src/shell/liveAdvice.ts`,
+`localStorage`, like the density control), since the API writes only
+authored artifacts (non-negotiable #6), and it can only hide more: off,
+every queue looks like an event's game, and the break still shows its
+sideboard plan. The server never sees it.
 
 **The queue comes from the live replay first.** `LiveState.event_id` is
 read from the room-start event that anchors the replay
@@ -640,14 +675,21 @@ read from the room-start event that anchors the replay
 `matches.event_id`), so the rule holds at the first mulligan of a match,
 before `project()` has written its row. The projected `event_id` is the
 fallback when the replay found none. `GET /api/current-match/read` returns
-`ranked` and `advice` (`not ranked`, or a break in progress), and the
-dashboard obeys `advice` without deriving it again. The server still builds
-every read: the rule decides what the page draws, and the route stays one
-shape in every queue.
+`advice` (the queue allows it, or a break is in progress), and the
+dashboard obeys it without deriving it again, then ands it with the switch.
+The server still builds every read: the rule decides what the page draws,
+and the route stays one shape in every queue.
 
 `web/src/lib/livePanels.ts` is the table of which panels each phase draws,
 with and without advice; `livePanels.test.ts` pins that no advice panel
-appears in any ranked phase.
+appears in any phase without it.
+
+Until this change (2026-10-19) the rule was the ranked-play rule, and
+this module was named for it: the ladder counted as ranked and showed no advice
+either, on the reading that real-time coaching in ranked play was a line no
+tracker crossed. Read against the documents above, that line is the
+tournaments', and the ladder is not one. The read also returned `ranked`,
+which only fed the strip's "ranked, advice off" and is gone.
 
 ## Wiring: one route
 
@@ -809,8 +851,8 @@ The base render is meant to fit a second monitor with nothing scrolled: a
 one-line status strip, a two-column grid (a primary read and a rail, split 60/40),
 and a disclosure bar holding the matchup brief, a `Disclosure` that
 opens over the page and scrolls inside itself. The match's facts are
-the status strip's alone, so the bar repeats none of them, and in a
-ranked game it is not drawn, since the brief is advice. Under 48rem there is no
+the status strip's alone, so the bar repeats none of them, and without
+advice it is not drawn, since the brief is advice. Under 48rem there is no
 cap: the page scrolls, and the strip takes two lines
 ("The status strip", below).
 
@@ -827,16 +869,16 @@ until the next game's opening hand exists:
 | mulligan phase, no offer yet | `KeepGuideCard` (full) | `OpponentRead` |
 | game under way | `LibraryCard` — our own remaining deck, by mana value, no card cap | `OpponentHandCard`, `OpponentRead` (dense) |
 
-In a ranked game (`advice` false, "The ranked-play rule" above) a pending
+Without advice (an event's game or the switch off, "The event rule" above) a pending
 decision and the mulligan phase both draw `LibraryCard` with `OpponentRead`
 in the rail, and a game under way draws `LibraryCard` with
 `OpponentHandCard` (facts only, `estimate={false}`) and `OpponentRead`
 (dense). Once a game is under way the keep guide is gone in every queue:
 it has said what it had to, and the rail is the opponent's. The status
-strip adds "ranked, advice off", so a missing keep guide before the
-first turn never reads as a broken one. Before any match row exists, a ranked game's
-pending decision shows a "Ranked game" empty state instead of the opening
-hand. The rows above come from `lib/livePanels.ts`.
+strip adds "event, advice off" or "advice off in Settings", so a missing
+keep guide before the first turn never reads as a broken one. Before any
+match row exists, such a game's pending decision shows an "Event game" or
+"Advice off" empty state instead of the opening hand. The rows above come from `lib/livePanels.ts`.
 
 A decision can be pending even before `current.data` (`/api/current-match`)
 exists at all — `opening_hand` does not wait on a projected match row — so

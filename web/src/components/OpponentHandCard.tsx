@@ -116,8 +116,9 @@ function CouldBeHolding({ cards }: { cards: HandCardOut[] }) {
  *  when they took one; the keep guide said it before the first turn.
  *
  *  `estimate={false}` drops the estimate and everything said about it,
- *  leaving the facts: the ranked-play rule (`table/ranked.py`) keeps the
- *  estimate off the page during a ranked game.
+ *  leaving the facts: the event rule (`table/queues.py`) keeps the
+ *  estimate off the page during an event's game, and the user's switch in
+ *  Settings anywhere.
  */
 export function OpponentHandCard({
   hand,

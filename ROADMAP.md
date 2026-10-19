@@ -110,11 +110,24 @@ These are decisions, not gaps. Each one was considered and refused.
 
 - **An overlay or any window over the game.** The Live page is a page in
   the tracker's own window.
-- **Live advice during a ranked game.** In ranked or competitive play the
-  Live page shows what any tracker shows: your library, draw odds, the
-  cards your opponent has revealed and what deck they point to. Keep
-  advice, hand reads and play-arounds appear only in unranked games and
-  between games.
+- **Live advice during an event.** In an Arena event (paid events,
+  drafts, the Arena Open, Directs, Qualifiers, a Direct Challenge) the Live
+  page shows what any tracker shows: your library, draw odds, the cards
+  your opponent has revealed and what deck they point to. Keep advice, hand
+  reads and play-arounds appear in casual games, on the ranked ladder and
+  between games, and a switch in Settings hides them everywhere. Until
+  October 2026 the ladder got none either. The rules that could reach a
+  tracker are the
+  [Digital Tournament Rules](https://blogs.magicjudges.org/rules/dtr/) and
+  the [Digital Infraction Procedure Guide](https://blogs.magicjudges.org/rules/dipg/2-2/):
+  they allow deck tracking software that shows no private information,
+  they count play advice from an outside source as outside assistance, and
+  they govern tournaments, which the ladder is not. On the ladder only
+  [Wizards' Terms](https://company.wizards.com/en/legal/terms) apply, and
+  they treat every tracker alike. The terms of the
+  [Arena Open](https://magic.wizards.com/en/news/mtg-arena/arena-open-terms-and-conditions)
+  and [Arena Direct](https://magic.wizards.com/en/news/mtg-arena/arena-direct-terms-and-conditions)
+  say nothing of trackers either way, so events keep the stricter line.
 - **Reading the memory of, injecting into or automating either client.**
   The tracker reads the log files Arena and MTGO already write, with
   Arena's own Detailed Logs setting on, and nothing else.

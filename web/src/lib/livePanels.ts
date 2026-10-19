@@ -1,11 +1,13 @@
 /** Which panels the Live page draws while a game is on, by phase. A table
- *  rather than nested conditionals in the view, so the ranked-play rule
- *  (`table/ranked.py`) can be read and tested in one place.
+ *  rather than nested conditionals in the view, so the event rule
+ *  (`table/queues.py`) can be read and tested in one place.
  *
  *  `advice` is the server's own `CurrentMatchRead.advice`, never derived
- *  here: false during a ranked game. Without it the keep verdict, the keep
- *  guide and the opponent-hand estimate leave the page, and what stays is
- *  what every tracker shows: the remaining library with its odds, the
+ *  here, and-ed in the view with the user's switch in Settings
+ *  (`shell/liveAdvice.ts`): false during an event's game, or when the user
+ *  turned advice off. Without it the keep verdict, the keep guide and the
+ *  opponent-hand estimate leave the page, and what stays is what every
+ *  tracker shows: the remaining library with its odds, the
  *  opponent's revealed cards and the archetype read. The break between
  *  games is drawn elsewhere and is not in this table. */
 

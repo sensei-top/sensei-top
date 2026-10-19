@@ -2154,14 +2154,8 @@ export interface components {
             /** @description the Bo3 break card — set only between games, never mid-game (table/intermission.py) */
             intermission?: components["schemas"]["IntermissionOut"] | null;
             /**
-             * Ranked
-             * @description the match is in a ranked or competitive queue, or its queue is unknown (table/ranked.py)
-             * @default true
-             */
-            ranked: boolean;
-            /**
              * Advice
-             * @description the page may show advice now: the keep verdict and keep guide, the opponent-hand estimate, the matchup brief. False during a ranked game, true in an unranked one and between games (table/ranked.py). The dashboard obeys it and never re-derives it
+             * @description the page may show advice now: the keep verdict and keep guide, the opponent-hand estimate, the matchup brief. False during a game in an event or an unknown queue, true in a casual or ladder one and between games (table/queues.py). The dashboard obeys it and never re-derives it; the user's own Settings switch can only hide more
              * @default false
              */
             advice: boolean;

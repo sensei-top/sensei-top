@@ -42,7 +42,7 @@ from sensei_top.table.hand_read import build_hand_read
 from sensei_top.table.keep import build_keep_guide
 from sensei_top.table.live import build_library_remaining, build_live_state
 from sensei_top.table.opening_hand import build_opening_hand_read
-from sensei_top.table.ranked import is_ranked
+from sensei_top.table.queues import allows_advice
 
 router = APIRouter()
 
@@ -285,11 +285,11 @@ def current_match_read(request: Request, conn: Conn) -> CurrentMatchRead:
     # The queue the same way: the replay's own room-start event first, so
     # the rule holds at the first mulligan, before project() has written a
     # matches row; the projected event_id only when the replay found none.
-    # Neither means unknown, and unknown is ranked (table/ranked.py).
+    # Neither means unknown, and unknown is an event (table/queues.py).
     event_id = live_state.event_id if live_state is not None else None
     if event_id is None and match_row is not None:
         event_id = match_row["event_id"]
-    ranked = is_ranked(event_id)
+    advice = allows_advice(event_id)
 
     opening_hand = build_opening_hand_read(
         conn,
@@ -303,7 +303,7 @@ def current_match_read(request: Request, conn: Conn) -> CurrentMatchRead:
     if match_row is None:
         return CurrentMatchRead(
             status="no_match", opening_hand=opening_hand_out, source=source,
-            ranked=ranked, advice=not ranked,
+            advice=advice,
         )
 
     match_id = match_row["match_id"]
@@ -385,8 +385,7 @@ def current_match_read(request: Request, conn: Conn) -> CurrentMatchRead:
         source=source,
         intermission=intermission_out,
         # Between games the sideboard plan shows in every queue: a written
-        # plan read between games is accepted practice, live prompting
-        # during one is not (table/ranked.py).
-        ranked=ranked,
-        advice=not ranked or intermission_out is not None,
+        # plan read between games is a player's own notes, advice during
+        # an event's game is not (table/queues.py).
+        advice=advice or intermission_out is not None,
     )

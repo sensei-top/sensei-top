@@ -14,6 +14,7 @@ import { type LivePanel, livePanels, railAlternatives } from '../lib/livePanels'
 import { timesPhrase } from '../lib/format'
 import { confidenceLabel, opponentLabelText } from '../lib/opponent'
 import { ago, useNow } from '../lib/time'
+import { useLiveAdvice } from '../shell/liveAdvice'
 import { placeById } from '../shell/places'
 
 const CONFIDENCE_CHIP_VARIANT: Record<string, 'neutral' | 'warn'> = {
@@ -22,6 +23,10 @@ const CONFIDENCE_CHIP_VARIANT: Record<string, 'neutral' | 'warn'> = {
   low: 'warn',
   unknown: 'warn',
 }
+
+/** Why a game shows no advice: an event's (the server's rule), or the
+ *  user's switch. */
+type AdviceOff = 'event' | 'switch' | null
 
 /** The band at the page's top: game and turn as big display numerals under
  *  small sentence-case labels (the two facts worth reading at a glance from
@@ -48,14 +53,15 @@ function MatchStatusStrip({
   match,
   openingHand,
   intermission,
-  adviceOff = false,
+  adviceOff = null,
 }: {
   match: CurrentMatch | null
   openingHand: OpeningHandOut | null
-  /** A ranked game is under way and the page shows no advice
-   *  (`table/ranked.py`); the strip says so, so a missing keep guide never
-   *  reads as a broken one. */
-  adviceOff?: boolean
+  /** Why the page shows no advice during this game, if it shows none: an
+   *  event's game (`table/queues.py`), or the user's own switch in
+   *  Settings. The strip says which, so a missing keep guide never reads
+   *  as a broken one. */
+  adviceOff?: AdviceOff
   /** Between-games break (S8): takes precedence over every other phase
    *  phrase below, including a pending mulligan decision — Arena cannot
    *  raise both at once, since the next game's opening hand doesn't exist
@@ -100,7 +106,11 @@ function MatchStatusStrip({
       : null,
     onPlay == null ? null : onPlay ? t('live.onPlay') : t('live.onDraw'),
     phase,
-    adviceOff ? t('live.strip.rankedAdviceOff') : null,
+    adviceOff === 'event'
+      ? t('live.strip.eventAdviceOff')
+      : adviceOff === 'switch'
+        ? t('live.strip.adviceSwitchedOff')
+        : null,
     cardsSeen == null ? null : t('live.cardsSeen', { count: cardsSeen }),
     match?.started_at ? t('live.strip.seen', { ago: ago(match.started_at, now) }) : null,
     likelyAbandoned ? t('live.strip.abandoned') : null,
@@ -184,7 +194,8 @@ function MatchStatusStrip({
  *  here it sits beside the game it is for. */
 function DisclosureBar({ match, advice }: { match: CurrentMatch; advice: boolean }) {
   const { t } = useTranslation()
-  // The brief's play-arounds are advice: off during a ranked game.
+  // The brief's play-arounds are advice: off during an event's game, or
+  // when the user turned advice off.
   if (!advice) return null
   return (
     <div className="flex shrink-0 flex-wrap gap-4 border-t border-edge pt-2 text-caption">
@@ -201,6 +212,7 @@ export function CurrentMatchView() {
   const current = useCurrentMatch()
   const read = useCurrentMatchRead()
   const live = useLive()
+  const [adviceSwitch] = useLiveAdvice()
   const { t } = useTranslation()
   // A watcher that died mid-match leaves the match frozen on screen, and the
   // status pill is hidden on this page from 48rem up: say so above every
@@ -224,10 +236,13 @@ export function CurrentMatchView() {
   if (current.error) return <ErrorNote error={current.error} />
 
   const openingHand = read.data?.opening_hand ?? null
-  // The server's answer, never re-derived (table/ranked.py). Until the read
-  // arrives the page assumes a ranked game, as the server does for an
-  // unknown queue.
-  const advice = read.data?.advice ?? false
+  // The server's answer, never re-derived (table/queues.py). Until the read
+  // arrives the page assumes an event, as the server does for an unknown
+  // queue. The user's switch can only hide more; the break between games
+  // is drawn below without either.
+  const serverAdvice = read.data?.advice ?? false
+  const advice = serverAdvice && adviceSwitch
+  const adviceOff: AdviceOff = !serverAdvice ? 'event' : !adviceSwitch ? 'switch' : null
 
   if (!current.data) {
     // opening_hand reads a live replay directly and does not wait on a
@@ -247,20 +262,20 @@ export function CurrentMatchView() {
         </div>
       )
     }
-    // A decision is pending before any match row exists. In a ranked game
-    // the hand's read is advice and nothing else is known yet.
+    // A decision is pending before any match row exists. Without advice
+    // the hand's read is all there is, and nothing else is known yet.
     return (
       <div className="flex h-full min-h-0 flex-col gap-3">
         {stopped}
-        <MatchStatusStrip match={null} openingHand={openingHand} adviceOff={!advice} />
+        <MatchStatusStrip match={null} openingHand={openingHand} adviceOff={adviceOff} />
         <div className="min-h-0 flex-1 overflow-hidden">
           {advice ? (
             <OpeningHandCard hand={openingHand} />
           ) : (
             <EmptyState
               icon={placeById('live').icon}
-              title={t('live.ranked.title')}
-              message={t('live.ranked.message')}
+              title={t(adviceOff === 'switch' ? 'live.noAdvice.switchTitle' : 'live.noAdvice.eventTitle')}
+              message={t(adviceOff === 'switch' ? 'live.noAdvice.switchMessage' : 'live.noAdvice.eventMessage')}
             />
           )}
         </div>
@@ -354,7 +369,7 @@ export function CurrentMatchView() {
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       {stopped}
-      <MatchStatusStrip match={match} openingHand={openingHand} adviceOff={!advice} />
+      <MatchStatusStrip match={match} openingHand={openingHand} adviceOff={adviceOff} />
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-3">
         <div className="min-h-0 overflow-hidden">{panel(panels.primary)}</div>
