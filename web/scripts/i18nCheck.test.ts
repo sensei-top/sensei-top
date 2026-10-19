@@ -80,6 +80,7 @@ const NOT_TEXT: ReadonlySet<string> = new Set([
   'transform',
   'd',
   'textAnchor',
+  'dominantBaseline',
   'htmlFor',
   'replayHref',
   'matchHref',

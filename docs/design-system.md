@@ -414,7 +414,9 @@ Sizes are upscaled for legibility at distance, revised once already (18px
 read as small at second-monitor distance at the first checkpoint):
 `--pip: max(18px, calc(22px * var(--d)))` default, `--pip-lg: max(22px,
 calc(28px * var(--d)))` for hero contexts (the current-match band's opponent
-identity). Compact density never shrinks a default pip below 18px.
+identity), and `--pip-sm: max(16px, calc(18px * var(--d)))` for a mana cost,
+which sits inside a line of body text and is no taller than it. Compact
+density never shrinks a default pip below 18px.
 
 `<ManaPips colors="UB" size="md" | "lg" />` takes a WUBRG string in any
 order and renders the letters present in canonical WUBRG order; a character
@@ -425,6 +427,20 @@ either, since `''` covers both "revealed only colourless cards" and
 `role="img"` with an `aria-label` naming the colours in the dashboard's
 language (keyed, `common.revealedColours`: `"Revealed colours: blue,
 black"`) carries accessibility; each inner `svg` is `aria-hidden`.
+
+`<ManaCost cost="{1}{U/R}{U/R}" />`, from the same file, draws a card's
+mana cost as its printed symbols, at `--pip-sm`. A colour symbol is the
+colour's pip; a hybrid is a disc split on the diagonal, the first
+symbol upper-left, each half its own colour with its glyph small (a
+`2/W` half is the grey disc with a `2`); a Phyrexian symbol is its
+colour's disc carrying a Φ; generic, `X`, `C` and `S` are a grey disc,
+`--mana-c`, carrying the symbol's text in `--mana-glyph`. It draws the
+front face only (`costSymbols`, the same face `effects.mana_value`
+reads), and reads Arena's parenthesised hybrid, `{(U/B)}`, as `{U/B}`.
+A null or empty cost, a land's, renders nothing. The accessible label
+is the cost in braces (`common.manaCost`), since every symbol in it is
+drawn. `--mana-c` is in `scripts/validate_palette.py` with the five
+colours.
 
 **The boundary rule:** mana colours are identity chrome: beside a deck
 or archetype name, or as a table row's label. **They never colour a
@@ -561,7 +577,7 @@ Its sections: palette, type ramp, radii and elevation, buttons, links,
 chips, cards, stat tiles, deck tile, empty state, onboarding steps,
 findings, callouts, text block, disclosure, segmented control, fields,
 selects, switches, dialog, meters, bars, data table, line chart, bar
-chart, mana pips, glyph and wordmark, card tile, card art.
+chart, mana pips and costs, glyph and wordmark, card tile, card art.
 
 Its names and numbers are invented. The one real thing on it is its
 cards: three at most from the newest Arena match, chosen by

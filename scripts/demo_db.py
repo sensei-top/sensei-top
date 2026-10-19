@@ -40,8 +40,8 @@ MTGO matches resolve again, and every table is rewritten once more: a rebuild
 writes what the raw events say, and the authored tables survive it.
 
 **``--live MATCH_ID``** cuts ``raw_events`` inside one match so the Live page
-shows it in progress. The match must be Arena, unranked
-(``table/ranked.py``), completed and best of three (two games or more in
+shows it in progress. The match must be Arena, in a queue that allows
+advice (``table/queues.py``), completed and best of three (two games or more in
 ``games``). The cut is the row after which the projector knows the last
 game's result, found by replaying the rows through ``Projector`` itself;
 every row from it on is deleted, later matches with them. ``--live-cut``
@@ -490,7 +490,7 @@ def find_live_cut(conn: sqlite3.Connection, match_id: str, override: int | None)
     import orjson
 
     from sensei_top.projector.matches import Projector, _first_request_occurrences
-    from sensei_top.table.ranked import is_ranked
+    from sensei_top.table.queues import allows_advice
 
     row = conn.execute(
         "SELECT source, event_id, result FROM matches WHERE match_id = ?", (match_id,)
@@ -500,8 +500,8 @@ def find_live_cut(conn: sqlite3.Connection, match_id: str, override: int | None)
     source, event_id, result = row
     if source != "arena":
         raise RefusedError("--live: the match is not an Arena match")
-    if is_ranked(event_id):
-        raise RefusedError("--live: the match was played in a ranked queue (table/ranked.py)")
+    if not allows_advice(event_id):
+        raise RefusedError("--live: the match was played in an event (table/queues.py)")
     if result == "incomplete":
         raise RefusedError("--live: the match is not completed")
     games = conn.execute(
@@ -717,7 +717,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--to", dest="target", required=True, help="the copy; must not exist")
     parser.add_argument(
         "--live", metavar="MATCH_ID",
-        help="cut raw_events inside this unranked best-of-three Arena match",
+        help="cut raw_events inside this best-of-three Arena match, casual or ladder",
     )
     parser.add_argument(
         "--live-cut", metavar="RAW_EVENT_ID", type=int,

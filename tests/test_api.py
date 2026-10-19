@@ -1005,9 +1005,8 @@ def test_current_match_read_serves_the_opening_hand_before_any_match_row(tmp_pat
     assert body["opening_hand"]["verdict"] is None  # no deck_id at all yet
     assert body["keep"] is None
     assert body["hand"] is None
-    # This room-start event names no queue, and unknown is ranked
-    # (table/ranked.py): the read is built, the page is told to hide it.
-    assert body["ranked"] is True
+    # This room-start event names no queue, and unknown is an event
+    # (table/queues.py): the read is built, the page is told to hide it.
     assert body["advice"] is False
 
 
@@ -1015,7 +1014,7 @@ def test_current_match_read_allows_advice_in_a_casual_queue_before_any_match_row
     tmp_path, make_client
 ):
     """The queue comes from the live replay's room-start event, so an
-    unranked game gets its keep advice at the very first mulligan, before
+    casual game gets its keep advice at the very first mulligan, before
     project() has written a matches row. Synthetic: no fixture captures a
     casual queue; "Play" is a real event id read off a real database."""
     db_path = tmp_path / "casual.db"
@@ -1036,7 +1035,6 @@ def test_current_match_read_allows_advice_in_a_casual_queue_before_any_match_row
         body = client.get("/api/current-match/read").json()
 
     assert body["status"] == "no_match"
-    assert body["ranked"] is False
     assert body["advice"] is True
 
 
@@ -1133,7 +1131,9 @@ def test_current_match_read_reports_no_match_for_an_mtgo_only_database(mtgo_clie
 INTERMISSION_FIXTURE = Path(__file__).parent / "fixtures" / "intermission_session.log"
 
 
-def _intermission_client(tmp_path, cutoff_entry: int, make_client) -> TestClient:
+def _intermission_client(
+    tmp_path, cutoff_entry: int, make_client, *, event_id: str | None = None
+) -> TestClient:
     """A database built from the real Bo3-break fixture
     (tests/test_intermission.py's own ``intermission_session.log``), with
     ``raw_events`` truncated after ``cutoff_entry`` (0-based; that file's
@@ -1142,11 +1142,21 @@ def _intermission_client(tmp_path, cutoff_entry: int, make_client) -> TestClient
     /api/current-match/read has to answer from on every poll of a live
     match. Ground truth for entries 34/35/40/41 is
     tests/test_intermission.py's module docstring, read from the fixture via
-    fixture_peek.py, never re-derived here."""
+    fixture_peek.py, never re-derived here.
+
+    The fixture's queue is ``Traditional_Ladder``. ``event_id`` swaps that
+    id for another in every stored payload, so the same break can be read
+    as an event's; synthetic, and only ever the queue's name."""
     db_path = tmp_path / "intermission_api.db"
     conn = open_database(db_path)
     ingest_file(conn, INTERMISSION_FIXTURE, locale_hint="mdy")
     conn.execute("DELETE FROM raw_events WHERE id > ?", (cutoff_entry + 1,))
+    if event_id is not None:
+        conn.execute(
+            "UPDATE raw_events SET payload = replace(payload, "
+            "'\"Traditional_Ladder\"', ?)",
+            (f'"{event_id}"',),
+        )
     conn.commit()
     project(conn)
     conn.close()
@@ -1159,9 +1169,19 @@ def test_current_match_read_has_no_intermission_mid_game(tmp_path, make_client):
     with _intermission_client(tmp_path, 34, make_client) as client:
         body = client.get("/api/current-match/read").json()
     assert body["intermission"] is None
-    # Traditional_Ladder (the fixture's room-start event): mid-game in a
-    # ranked queue, the advice stays off.
-    assert body["ranked"] is True
+    # Traditional_Ladder (the fixture's room-start event): the ladder allows
+    # advice mid-game.
+    assert body["advice"] is True
+
+
+def test_current_match_read_keeps_advice_off_mid_game_in_an_event(tmp_path, make_client):
+    """entry 34 again, the queue renamed to an event id read off a real
+    database: mid-game in an event, the advice stays off."""
+    with _intermission_client(
+        tmp_path, 34, make_client, event_id="Traditional_Cons_Event_2026"
+    ) as client:
+        body = client.get("/api/current-match/read").json()
+    assert body["intermission"] is None
     assert body["advice"] is False
 
 
@@ -1176,8 +1196,17 @@ def test_current_match_read_sets_intermission_at_game_over(tmp_path, make_client
     assert intermission["next_game"] == 2
     assert intermission["won"] is True
     assert intermission["reason"] == "ResultReason_Concede"
-    # Between games the sideboard plan shows even in a ranked queue.
-    assert body["ranked"] is True
+    assert body["advice"] is True
+
+
+def test_current_match_read_allows_advice_between_games_in_an_event(tmp_path, make_client):
+    """entry 35, the queue renamed to an event: between games the sideboard
+    plan shows even there."""
+    with _intermission_client(
+        tmp_path, 35, make_client, event_id="Traditional_Cons_Event_2026"
+    ) as client:
+        body = client.get("/api/current-match/read").json()
+    assert body["intermission"] is not None
     assert body["advice"] is True
 
 
@@ -1199,10 +1228,12 @@ def test_current_match_read_keeps_intermission_through_submit_deck_confirmation(
 def test_current_match_read_clears_intermission_at_game_2_start(tmp_path, make_client):
     """entry 41's gameInfo (gameNumber 2, GameStage_Start) is the break's
     real end (trap 11c), not the SubmitDeckConfirmation before it."""
-    with _intermission_client(tmp_path, 41, make_client) as client:
+    with _intermission_client(
+        tmp_path, 41, make_client, event_id="Traditional_Cons_Event_2026"
+    ) as client:
         body = client.get("/api/current-match/read").json()
     assert body["intermission"] is None
-    # Game 2 has begun: the break's allowance ends with it.
+    # Game 2 has begun: in an event, the break's allowance ends with it.
     assert body["advice"] is False
 
 

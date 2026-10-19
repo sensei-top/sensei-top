@@ -131,7 +131,7 @@ class LiveState:
     # The queue this match was played in, from the room-start event's
     # reservedPlayers[].eventId, read the way projector/matches.py reads it
     # for matches.event_id. None when the window carried no room-start event
-    # with one; table/ranked.py counts that as ranked (rule 4).
+    # with one; table/queues.py counts that as an event (rule 4).
     event_id: str | None = None
 
 

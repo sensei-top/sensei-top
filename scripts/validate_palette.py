@@ -73,6 +73,7 @@ MANA = {
     "mana-b": "#aca29a",
     "mana-r": "#db8664",
     "mana-g": "#93b483",
+    "mana-c": "#cac5c0",
 }
 
 MANA_GLYPH = "#111111"

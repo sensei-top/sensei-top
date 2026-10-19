@@ -35,7 +35,7 @@ fetch. TanStack Query stays the only data layer.
 | `/coach` | `CoachPage` | `CoachView`: the latest report, the way to write the next one, and your numbers |
 | `/coach/:id` | `CoachPage` | `CoachView`: one earlier report, as it was written |
 | `/mtgo/picks` | `MtgoPicksPage` | "Pick MTGO decks": not a place in the rail; Home's "Needs a deck" card links to it |
-| `/settings` | `SettingsPage` | `SettingsView`: what a desktop shell hands over, how reports get written, the density control, then the credits |
+| `/settings` | `SettingsPage` | `SettingsView`: what a desktop shell hands over, how reports get written, the density control, the Live page's advice switch, then the credits |
 | `/welcome` | `WelcomePage` | `WelcomeView`: the first-run steps, four or five by which clients the user plays, the step in `?step=`; a desktop shell only, else `NotFoundPage` |
 | `/design` | `DesignPage` | the design system's reference page, outside the shell |
 | `/design/surfaces` | `DesignSurfacesPage` | `SurfacesView`: the second reference page, Settings and a report's card, drawn with invented values; outside the shell |
@@ -282,8 +282,8 @@ same change.
 ### Settings
 
 `/settings` is `pages/SettingsPage.tsx` over `views/SettingsView.tsx`.
-The page reads three things, `useShell()`, `useLLMStatus()` and the
-density, and draws its own Language section, which reads
+The page reads four things, `useShell()`, `useLLMStatus()`, the
+density and the Live advice switch, and draws its own Language section, which reads
 `useLanguage()`, first, above the view; the view then draws the
 sections in this order, each an `h2` over its cards, with an id an
 address can name:
@@ -297,11 +297,12 @@ address can name:
 | App | `app` | `settings/AppSection.tsx` | a desktop shell |
 | Draft data | `draft-data` | `settings/SharingSection.tsx` | a desktop shell that offers sharing |
 | Appearance | `appearance` | the page's own | always |
+| Live | `live-settings` | the page's own | always |
 | About and credits | `credits` | `CreditsView` | always |
 
-Language, Appearance and About and credits are drawn with or without
-a shell. Language is drawn by the page above the view; Appearance and
-About and credits reach the view as its children. Language is a
+Language, Appearance, Live and About and credits are drawn with or
+without a shell. Language is drawn by the page above the view;
+Appearance, Live and About and credits reach the view as its children. Language is a
 `Segmented` (System, English, Português (Brasil)) over `i18n.ts`'s
 `useLanguage`. The choice is kept in a shell's `shell.json` (written
 through `app.set({ language })`, and the shell's publish of it wins at
@@ -311,10 +312,13 @@ when there is none (`i18n.ts`'s `systemLanguage`); `docs/i18n.md`,
 "The language, from setting to sentence", has the same facts beside the
 server's half. Appearance is the density control, a `Segmented` (Comfortable,
 Compact); `docs/design-system.md`'s "Density" says what it changes and
-where the choice is kept.
+where the choice is kept. Live is one `Switch`, "Advice during a game",
+on by default and kept in the browser's own storage
+(`shell/liveAdvice.ts`); `docs/current-match.md`, "The event rule", says
+what it hides and why the server never sees it.
 
-**In a browser, `/settings` is Language, Writing, Appearance and About
-and credits.** Writing is then one card of sentences from
+**In a browser, `/settings` is Language, Writing, Appearance, Live and
+About and credits.** Writing is then one card of sentences from
 `GET /api/llm/status`: a Claude key is set and which model writes, by
 its id as the API gives it; or none is set, and what the app does then
 (the prompt is copied, the answer pasted back). Nothing in it can be

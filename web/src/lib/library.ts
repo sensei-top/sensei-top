@@ -1,8 +1,9 @@
 import type { LibraryCardOut } from '../api'
 import { probAtLeastOneIn } from './odds'
 
-/** The horizon every chance on the library card is over. */
-export const LIBRARY_DRAWS = 3
+/** The horizons the lands strip gives a chance over: the next draw, within
+ *  two, within three. */
+export const LANDS_HORIZONS = [1, 2, 3] as const
 
 /** The group key of a nonland with no parseable mana value: last, never a
  *  made-up cost (rule 4). */
@@ -16,19 +17,21 @@ export type LibraryGroup = {
 
 export type LandsLine = {
   left: number
-  /** The deck's lands, or null when the deck's count is not known. */
-  total: number | null
-  /** P(at least one land within `LIBRARY_DRAWS` draws). */
-  chance: number
+  /** The deck's lands: every land row's quantity, since the server keeps a
+   *  row whose copies are all seen (`table/live.py`). */
+  total: number
+  /** P(at least one land) within each of `LANDS_HORIZONS`, in its order. */
+  chances: number[]
 }
 
-/** A row's chance of at least one copy within three draws. */
-export function rowChance(libraryCount: number, left: number): number {
-  return probAtLeastOneIn(libraryCount, left, LIBRARY_DRAWS)
+/** A row's chance of drawing a copy next. */
+export function nextDrawChance(libraryCount: number, left: number): number {
+  return probAtLeastOneIn(libraryCount, left, 1)
 }
 
 /** The nonland cards grouped by mana value, ascending, an unknown value last;
- *  each group sorted by name, so a row's place never moves as the game goes. */
+ *  each group by copies left, most first, so its likeliest draw leads, then
+ *  by name. A row whose copies are all seen stays, last in its group. */
 export function groupByManaValue(cards: LibraryCardOut[]): LibraryGroup[] {
   const groups = new Map<number, LibraryCardOut[]>()
   for (const c of cards) {
@@ -42,21 +45,18 @@ export function groupByManaValue(cards: LibraryCardOut[]): LibraryGroup[] {
     .sort(([a], [b]) => a - b)
     .map(([manaValue, group]) => ({
       manaValue,
-      cards: [...group].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')),
+      cards: [...group].sort((a, b) => b.left - a.left || (a.name ?? '').localeCompare(b.name ?? '')),
     }))
 }
 
 /** Lands left, the deck's lands, and the chance of at least one land within
- *  three draws. `deckLands` comes from the deck (the keep guide's land
- *  count), never from the rows: the server leaves a card out once every copy
- *  is seen (`table/live.py`), so summing `quantity` over the land rows would
- *  shrink as lands run out and read 0/0 at the end. Unknown stays null
- *  (rule 4). */
-export function landsLine(
-  cards: LibraryCardOut[],
-  libraryCount: number,
-  deckLands: number | null | undefined,
-): LandsLine {
-  const left = cards.filter((c) => c.is_land).reduce((sum, c) => sum + c.left, 0)
-  return { left, total: deckLands ?? null, chance: rowChance(libraryCount, left) }
+ *  each horizon. */
+export function landsLine(cards: LibraryCardOut[], libraryCount: number): LandsLine {
+  const lands = cards.filter((c) => c.is_land)
+  const left = lands.reduce((sum, c) => sum + c.left, 0)
+  return {
+    left,
+    total: lands.reduce((sum, c) => sum + c.quantity, 0),
+    chances: LANDS_HORIZONS.map((draws) => probAtLeastOneIn(libraryCount, left, draws)),
+  }
 }

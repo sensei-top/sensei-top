@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { HandCardOut, HandReadOut, RevealedCardOut } from '../api'
 import type { TFunction } from '../i18n'
-import { formatPercent } from '../lib/format'
+import { formatPercent, timesPhrase } from '../lib/format'
 import { Card, CardTile, Chip, SectionLabel } from './ui'
 
 /** Why there is no card-by-card estimate, by the read's status. */
@@ -31,10 +31,10 @@ function RevealedChips({
   return (
     <div className="mb-3">
       <SectionLabel as="h4">{title}</SectionLabel>
-      <ul className="mt-1 flex flex-wrap gap-1.5">
+      <ul className={`mt-1 flex flex-wrap ${struck ? 'gap-1' : 'gap-1.5'}`}>
         {cards.map((card) => (
           <li key={card.grp_id ?? card.name}>
-            <Chip variant={struck ? 'seen' : 'neutral'} emphasis={!struck}>
+            <Chip variant={struck ? 'seen' : 'neutral'} size={struck ? 'sm' : 'md'} emphasis={!struck}>
               {card.name}
             </Chip>
           </li>
@@ -112,15 +112,21 @@ function CouldBeHolding({ cards }: { cards: HandCardOut[] }) {
  *  an unknown format, or too thin a corpus for a consensus, the observed
  *  facts above still render — only the estimate list disappears.
  *
+ *  `mulligans` is this game's count for the opponent, said in the subtitle
+ *  when they took one; the keep guide said it before the first turn.
+ *
  *  `estimate={false}` drops the estimate and everything said about it,
- *  leaving the facts: the ranked-play rule (`table/ranked.py`) keeps the
- *  estimate off the page during a ranked game.
+ *  leaving the facts: the event rule (`table/queues.py`) keeps the
+ *  estimate off the page during an event's game, and the user's switch in
+ *  Settings anywhere.
  */
 export function OpponentHandCard({
   hand,
+  mulligans,
   estimate = true,
 }: {
   hand: HandReadOut | null | undefined
+  mulligans?: number | null
   estimate?: boolean
 }) {
   const { t } = useTranslation()
@@ -144,6 +150,7 @@ export function OpponentHandCard({
     hand.held_turns != null && hand.held_turns > 1
       ? t('live.opponentHand.held', { count: hand.held_turns })
       : null,
+    mulligans ? t('live.opponentHand.mulliganed', { times: timesPhrase(mulligans, t) }) : null,
   ].filter((part): part is string => part != null)
 
   return (

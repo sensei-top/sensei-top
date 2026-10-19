@@ -115,7 +115,7 @@ from sensei_top.review.snapshot import _classify_own_deck, build_snapshot
 # Arena's event-name prefix for each draft queue: "QuickDraft_SOS_20260831".
 # Read off real captures when the draft assistant parsed them (archive/draft,
 # projector/draft.py); an unrecognized prefix is not Limited. "PickTwoDraft"
-# came from a real database event id (the one tests/test_table_ranked.py
+# came from a real database event id (the one tests/test_table_queues.py
 # records), not from the draft captures, which did not supply it.
 _LIMITED_PREFIXES = frozenset({"QuickDraft", "PremierDraft", "TradDraft", "CubeDraft",
                                 "PickTwoDraft"})

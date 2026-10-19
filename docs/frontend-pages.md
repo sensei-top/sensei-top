@@ -464,14 +464,18 @@ mulligan decision currently pending.
 The page is `/live`, and what it draws in each of its four states (a
 break between games, a hand offered, the mulligan phase, a game under
 way) is in `docs/current-match.md`'s "Frontend", with the strip at
-the page's top and the lines under each row of cards. Under 48rem the
-page is one column that scrolls: the strip takes two lines and cuts
-none of its facts.
+the page's top and the lines under each row of cards. Once a game is
+under way the rail is the opponent's: their hand, then the deck read;
+the keep guide is drawn only before the first turn. Advice (the keep
+guide, the opponent-hand estimate, the brief) shows in casual and ladder
+games, never in an event's, and Settings' "Advice during a game" hides it
+everywhere (`docs/current-match.md`, "The event rule"). Under 48rem the
+page scrolls: the strip takes two lines and cuts none of its facts.
 
 Each fact is shown once on this page. The status strip alone carries the
 game, the turn, play or draw, the record, the opponent's deck with its
-confidence and the cards seen; `OpponentRead` holds the cards behind an
-unnamed deck and the pick button, `LibraryCard` is the decklist, and between
+confidence, the cards seen and the pick button; `OpponentRead` holds the
+cards behind an unnamed deck and the candidates, `LibraryCard` is the decklist, and between
 games the plan card's title is the result and its reason, with the opponent
 and the next game left to the strip. The old "Match details" disclosure
 that repeated the strip is gone.
@@ -529,25 +533,26 @@ the prose.
 
 `OpponentRead` (`components/OpponentRead.tsx`) replaced a card that used to
 appear only below `'low'`/`'unknown'` confidence and, once shown, offered
-nothing but the classifier's own single guess. It is unconditional now, and
-it draws no headline: the deck's name, its confidence, the colours and the
-count of cards seen are the status strip's alone ("The status strip",
-`docs/current-match.md`), so the card does not repeat them. What it holds is
-the word "picked" for a manual override; the cards seen, when the deck is
-unnamed (the strip's label falls through to the colours-and-signature-card
-layer at that point, same as `v_match_opponent` always did), listed through
-`formatList`; and the "pick this deck" button. Below `'high'` confidence it
-also shows the top few candidates from `GET .../opponent-deck/candidates` —
+nothing but the classifier's own single guess. It draws no headline: the
+deck's name, its confidence (or "picked" for a manual override), the
+colours, the count of cards seen and the "pick this deck" button
+(`PickDeckButton`, from the same file) are the status strip's alone ("The
+status strip", `docs/current-match.md`), so the card does not repeat them.
+What it holds is the cards seen, when the deck is unnamed (the strip's
+label falls through to the colours-and-signature-card layer at that point,
+same as `v_match_opponent` always did), listed through `formatList`. Below
+`'high'` confidence it also shows the top few candidates from `GET .../opponent-deck/candidates` —
 label, a bar sized to `fit`, and `reasons` (matched cards, or a colour the
 definition needs that the opponent hasn't shown) — instead of asking the
 player to trust a label that may have named itself off one generic card
 early in the match. See `docs/opponent-deck.md`'s "Naming the opponent's
 deck" for why fit, not a raw condition count, is what `classify.py` ranks
-on.
+on. With neither the unnamed deck's cards nor a shortlist, the card is
+not drawn.
 
 `OpponentDeckLabel` (`components/OpponentDeckLabel.tsx`), the compact
 label and picker on a match's own page (`MatchHero.tsx`), and
-`OpponentRead` share one `DeckPicker` popover: a filter box over every
+`PickDeckButton` share one `DeckPicker` popover: a filter box over every
 definition for the match's format, not only the classifier's own
 shortlist, offered at any confidence rather than only when the
 classifier reports doubt, since a wrong `'medium'` or `'high'` guess is

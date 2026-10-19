@@ -61,6 +61,8 @@
   --mana-b: #aca29a;
   --mana-r: #db8664;
   --mana-g: #93b483;
+  /* The generic and colourless symbols' grey disc (ManaCost). */
+  --mana-c: #cac5c0;
   --mana-glyph: #111111;
 
   /* Elevation: a hairline highlight and one soft shadow under every raised
@@ -217,6 +219,9 @@ h4 {
 :root {
   --pip: max(18px, calc(22px * var(--d)));
   --pip-lg: max(22px, calc(28px * var(--d)));
+  /* A mana cost inside a line of body text (ManaCost): no taller than the
+     line. */
+  --pip-sm: max(16px, calc(18px * var(--d)));
 }
 
 /* Card art is its own picture, from /api/cards/{id}/art, and fills its box

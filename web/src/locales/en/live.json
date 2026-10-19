@@ -21,11 +21,13 @@
   },
   "empty": {
     "title": "No match in progress",
-    "message": "Start a match in Arena and this page follows it: what is left in your library, the opponent's cards and deck, and in unranked games a keep guide for your opening hand and what the opponent may be holding. Live follows Arena only; an MTGO match appears under Matches."
+    "message": "Start a match in Arena and this page follows it: what is left in your library, the opponent's cards and deck, and, outside events, a keep guide for your opening hand and what the opponent may be holding. Live follows Arena only; an MTGO match appears under Matches."
   },
-  "ranked": {
-    "title": "Ranked game",
-    "message": "No keep advice in a ranked game. Your library and the opponent's cards appear as soon as Arena starts the game."
+  "noAdvice": {
+    "eventTitle": "Event game",
+    "eventMessage": "No keep advice in an event's game. Your library and the opponent's cards appear as soon as Arena starts the game.",
+    "switchTitle": "Advice off",
+    "switchMessage": "You turned advice off in Settings. Your library and the opponent's cards appear as soon as Arena starts the game."
   },
   "strip": {
     "game": "Game",
@@ -36,7 +38,8 @@
     "mulliganPhase": "Mulligan phase",
     "waiting": "Waiting for the first game state",
     "record": "{{won}}–{{lost}} in the match",
-    "rankedAdviceOff": "ranked, advice off",
+    "eventAdviceOff": "event, advice off",
+    "adviceSwitchedOff": "advice off in Settings",
     "seen": "seen {{ago}}",
     "abandoned": "likely abandoned, no result arrived"
   },
@@ -95,6 +98,7 @@
   "opponentHand": {
     "title": "Opponent's hand",
     "revealedInHand": "Revealed in hand",
+    "mulliganed": "mulliganed {{times}}",
     "shownSoFar": "Shown so far",
     "unclassified": "Opponent's deck hasn't been identified yet — no card-by-card read until it is.",
     "noConsensus": "The tournament corpus has too few decks of this archetype to estimate specific cards.",
@@ -119,8 +123,11 @@
     "mana": "{{mv}} mana",
     "lands": "Lands",
     "colLeft": "Left",
+    "colCost": "Cost",
+    "next": "Next",
+    "within": "Within {{n}}",
     "colCard": "Card",
-    "colChance": "In 3 draws",
+    "colChance": "Next draw",
     "unknownCard": "Unknown card"
   },
   "opponent": {

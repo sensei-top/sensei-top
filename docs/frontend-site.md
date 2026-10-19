@@ -149,8 +149,8 @@ user becomes `Deshi#00001` (`Deshi` on MTGO), every other player a given
 name and five digits drawn with `--seed`. It projects the copy, rewrites it
 again, and scans it once more: one term left deletes the copy, and the
 script exits 2 printing only counts by category. Nothing it prints names a
-term or a path. `--live` cuts the raw events inside one completed, unranked
-best-of-three Arena match at its last game's result, so the Live page shows
+term or a path. `--live` cuts the raw events inside one completed
+best-of-three Arena match in a casual or ladder queue at its last game's result, so the Live page shows
 that match in progress; `--live-cut` picks an earlier row from the per-game
 ranges it prints. Before serving the copy, run
 `MTGO_HANDLE=Deshi uv run sensei-top --db <copy> project`: the subcommand

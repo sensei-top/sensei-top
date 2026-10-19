@@ -22,6 +22,7 @@
   "theCard": "The card",
   "showCard": "Show the card",
   "showCardNamed": "Show the card: {{name}}",
+  "manaCost": "Mana cost {{cost}}",
   "revealedColours": "Revealed colours: {{colours}}",
   "colours": {
     "W": "white",

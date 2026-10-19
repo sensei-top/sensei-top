@@ -104,20 +104,15 @@ function WhatThisDeckNeeds({ keep }: { keep: KeepGuideOut }) {
  *  this game's own mulligan status (kept / mulliganed N times), which
  *  belongs beside the deck's general mulligan record rather than on its own
  *  card (see CurrentMatchView, which used to put it on a plain scoreboard).
- *
- *  `dense` drops the land-odds bars and the mulligan-record table — the two
- *  tallest blocks, ~220px together — for the closing three-card grid once a
- *  game is under way. The mulligan phase itself always renders full: that is
- *  the one moment this card *is* the screen.
+ *  Drawn only before the first turn: once a game is under way the rail is
+ *  the opponent's (`lib/livePanels.ts`).
  */
 export function KeepGuideCard({
   keep,
   subtitle,
-  dense = false,
 }: {
   keep: KeepGuideOut | null | undefined
   subtitle?: string
-  dense?: boolean
 }) {
   const { t } = useTranslation()
   if (!keep) return null
@@ -138,7 +133,7 @@ export function KeepGuideCard({
     .join(' · ')
 
   return (
-    <Card title={t('live.keep.title')} subtitle={subtitle} elevation={dense ? 2 : 1}>
+    <Card title={t('live.keep.title')} subtitle={subtitle}>
       <p className="text-caption text-muted">{summary}</p>
       {keep.untagged_count > 0 && (
         <p className="mt-1 text-caption text-ink2">
@@ -162,9 +157,9 @@ export function KeepGuideCard({
         </p>
       )}
 
-      {!dense && <LandOddsBars keep={keep} />}
+      <LandOddsBars keep={keep} />
 
-      {!dense && mulliganRecord.length > 0 && (
+      {mulliganRecord.length > 0 && (
         <div className="mt-4 border-t border-edge pt-3">
           <SectionLabel as="h4">{t('live.keep.mulliganRecord')}</SectionLabel>
           <DataTable
@@ -187,7 +182,7 @@ export function KeepGuideCard({
         <p className="mt-3 text-caption text-muted">{notes[0]}</p>
       )}
 
-      {!dense && <WhatThisDeckNeeds keep={keep} />}
+      <WhatThisDeckNeeds keep={keep} />
     </Card>
   )
 }

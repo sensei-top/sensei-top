@@ -7,6 +7,7 @@
     "app": "App",
     "draftData": "Draft data",
     "appearance": "Appearance",
+    "live": "Live",
     "credits": "About and credits"
   },
   "language": {
@@ -20,6 +21,10 @@
     "comfortable": "Comfortable",
     "compact": "Compact",
     "note": "Compact fits more on the screen. A narrow window is always compact."
+  },
+  "liveAdvice": {
+    "label": "Advice during a game",
+    "description": "The keep guide, what the opponent may be holding and the matchup brief, in casual games and on the ranked ladder. Events never show them, and the sideboard plan between games stays either way."
   },
   "saveFailed": "It was not saved. Try again.",
   "restartNeeded": "This takes effect the next time the app starts.",

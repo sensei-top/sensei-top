@@ -41,6 +41,7 @@ import {
   Field,
   Finding,
   IntervalBar,
+  ManaCost,
   ManaPips,
   Meter,
   OnboardingSteps,
@@ -1111,6 +1112,7 @@ function BarChartSection() {
 
 function Pips() {
   const identities = ['W', 'U', 'B', 'R', 'G', 'UR', 'WBG', 'WUBRG']
+  const costs = ['{1}{U}', '{2}{R}{R}', '{1}{U/R}{U/R}', '{2/W}', '{3}{U/P}', '{X}{C}']
   return (
     <Section id="pips" title="Mana pips">
       <Card>
@@ -1125,6 +1127,14 @@ function Pips() {
               </div>
             </div>
           ))}
+          <div className="space-y-2">
+            <SectionLabel>Cost, size sm</SectionLabel>
+            <div className="flex flex-wrap items-center gap-4">
+              {costs.map((cost) => (
+                <ManaCost key={cost} cost={cost} />
+              ))}
+            </div>
+          </div>
         </div>
       </Card>
     </Section>
