@@ -498,6 +498,27 @@ def mtgo_needs_pick(conn: Conn) -> list[dict[str, Any]]:
     )
 
 
+# The four per-match split columns, shared by the list and the detail so a
+# match reads the same on both. Each is NULL unless the match is a best of
+# three; a game that has not finished (no win/loss/draw) is not counted.
+_BO3_SPLIT_COLUMNS = """m.best_of,
+               CASE WHEN m.best_of = 3 THEN
+                 (SELECT g.result FROM games g
+                   WHERE g.match_id = m.match_id AND g.game_number = 1
+                     AND g.result IN ('win', 'loss', 'draw'))
+               END AS game1_result,
+               CASE WHEN m.best_of = 3 THEN
+                 (SELECT COUNT(*) FROM games g
+                   WHERE g.match_id = m.match_id AND g.game_number >= 2
+                     AND g.result = 'win')
+               END AS postboard_won,
+               CASE WHEN m.best_of = 3 THEN
+                 (SELECT COUNT(*) FROM games g
+                   WHERE g.match_id = m.match_id AND g.game_number >= 2
+                     AND g.result = 'loss')
+               END AS postboard_lost,"""
+
+
 @router.get("/api/matches", response_model=list[Match], tags=["matches"])
 def matches(
     conn: Conn,
@@ -505,9 +526,10 @@ def matches(
     limit: Annotated[int, Query(ge=1, le=500)] = 50,
     source: SourceFilter = "arena",
 ) -> list[dict[str, Any]]:
-    sql = """
+    sql = f"""
         SELECT m.match_id, m.source, m.event_id, md.deck_id, d.name AS deck_name,
                m.opponent_name, m.started_at, m.ended_at, m.result, m.games_won, m.games_lost,
+               {_BO3_SPLIT_COLUMNS}
                o.opponent_label, o.opponent_key, o.opponent_source,
                o.opponent_confidence, o.opponent_cards_seen, o.opponent_colors,
                (SELECT r.constructed_class FROM rank_snapshot r
@@ -548,10 +570,11 @@ def match_detail(match_id: str, conn: Conn) -> MatchDetail:
     each is a thin select, nothing is counted or averaged in Python.
     """
     match = conn.execute(
-        """
+        f"""
         SELECT m.match_id, m.source, m.event_id, md.deck_id, d.name AS deck_name,
                m.opponent_name, m.self_seat, m.started_at, m.ended_at, m.result,
                m.games_won, m.games_lost,
+               {_BO3_SPLIT_COLUMNS}
                o.opponent_label, o.opponent_key, o.opponent_source,
                o.opponent_confidence, o.opponent_cards_seen, o.opponent_colors,
                (SELECT r.constructed_class FROM rank_snapshot r

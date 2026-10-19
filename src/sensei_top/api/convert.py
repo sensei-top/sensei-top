@@ -33,6 +33,7 @@ from sensei_top.api.models.current_match import (
     PastBoardingCardOut,
     PastBoardingGameOut,
     PastBoardingOut,
+    PostboardRecordOut,
     RevealedCardOut,
 )
 from sensei_top.api.models.guide import (
@@ -176,6 +177,11 @@ def _intermission_out(read: BreakRead) -> IntermissionOut:
         stale=read.stale,
         alternatives=[_alternative_plan_out(a) for a in read.alternatives],
         past_boarding=[_past_boarding_out(p) for p in read.past_boarding],
+        postboard_record=(
+            PostboardRecordOut(won=read.postboard_record.won, lost=read.postboard_record.lost)
+            if read.postboard_record is not None
+            else None
+        ),
         prompt=read.prompt,
         deck_key=read.deck_key,
         fmt=read.fmt,

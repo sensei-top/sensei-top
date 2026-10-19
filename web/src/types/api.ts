@@ -2738,6 +2738,8 @@ export interface components {
             alternatives?: components["schemas"]["AlternativePlanOut"][];
             /** Past Boarding */
             past_boarding?: components["schemas"]["PastBoardingOut"][];
+            /** @description This deck identity's earlier games 2 and 3 against the named or picked archetype, best-of-three matches only, the current match excluded; null when there is no archetype, no identity, or no such game. */
+            postboard_record?: components["schemas"]["PostboardRecordOut"] | null;
             /**
              * Prompt
              * @description text to write an exact plan from, when none exists yet
@@ -3127,6 +3129,26 @@ export interface components {
             /** Games Lost */
             games_lost?: number | null;
             /**
+             * Best Of
+             * @description 3 for a best-of-three match, 1 for a best of one, null when the log never said (Arena's matchWinCondition; every MTGO match is 3).
+             */
+            best_of?: number | null;
+            /**
+             * Game1 Result
+             * @description Game 1's result ('win', 'loss' or 'draw') when the match is a best of three and game 1 finished; null otherwise.
+             */
+            game1_result?: string | null;
+            /**
+             * Postboard Won
+             * @description Games 2 and 3 won, for a best-of-three match; null otherwise.
+             */
+            postboard_won?: number | null;
+            /**
+             * Postboard Lost
+             * @description Games 2 and 3 lost, for a best-of-three match; null otherwise. A drawn game is in neither count.
+             */
+            postboard_lost?: number | null;
+            /**
              * Rank Class
              * @description constructed rank at the most recent snapshot at or before started_at (rank_snapshot); null when no snapshot precedes this match, and always null for an MTGO match, which has no Arena rank; never guessed
              */
@@ -3190,6 +3212,26 @@ export interface components {
             games_won?: number | null;
             /** Games Lost */
             games_lost?: number | null;
+            /**
+             * Best Of
+             * @description 3 for a best-of-three match, 1 for a best of one, null when the log never said (Arena's matchWinCondition; every MTGO match is 3).
+             */
+            best_of?: number | null;
+            /**
+             * Game1 Result
+             * @description Game 1's result ('win', 'loss' or 'draw') when the match is a best of three and game 1 finished; null otherwise.
+             */
+            game1_result?: string | null;
+            /**
+             * Postboard Won
+             * @description Games 2 and 3 won, for a best-of-three match; null otherwise.
+             */
+            postboard_won?: number | null;
+            /**
+             * Postboard Lost
+             * @description Games 2 and 3 lost, for a best-of-three match; null otherwise. A drawn game is in neither count.
+             */
+            postboard_lost?: number | null;
             /**
              * Rank Class
              * @description constructed rank at the most recent snapshot at or before started_at (rank_snapshot); null when no snapshot precedes this match, and always null for an MTGO match, which has no Arena rank; never guessed
@@ -4566,6 +4608,19 @@ export interface components {
             self_turn_index: number;
             /** Index */
             index: number;
+        };
+        /** PostboardRecordOut */
+        PostboardRecordOut: {
+            /**
+             * Won
+             * @description Games won.
+             */
+            won: number;
+            /**
+             * Lost
+             * @description Games lost.
+             */
+            lost: number;
         };
         /** ProvenanceOut */
         ProvenanceOut: {

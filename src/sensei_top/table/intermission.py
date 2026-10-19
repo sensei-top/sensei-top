@@ -100,6 +100,14 @@ class PastBoarding:
 
 
 @dataclass(frozen=True, slots=True)
+class PostboardRecord:
+    """Games 2 and 3 won and lost, a drawn game in neither."""
+
+    won: int
+    lost: int
+
+
+@dataclass(frozen=True, slots=True)
 class BreakRead:
     """Everything the Bo3 break card needs, built once per poll and cached
     by the API layer (``api/sql.py``) since the board never moves during a
@@ -117,6 +125,7 @@ class BreakRead:
     stale: bool
     alternatives: tuple[AlternativePlan, ...]
     past_boarding: tuple[PastBoarding, ...]
+    postboard_record: PostboardRecord | None
     prompt: str | None
     deck_key: str | None
     fmt: str | None  # the match's format as resolved here; None means no live read was attempted
@@ -367,6 +376,38 @@ def _past_boarding(
     return results
 
 
+def _postboard_record(
+    conn: sqlite3.Connection, identity: DeckIdentity, archetype_key: str, current_match_id: str
+) -> PostboardRecord | None:
+    """This deck identity's games 2 and 3 against the archetype, over every
+    earlier finished best-of-three match (``matches.best_of = 3``), the
+    current match excluded. A drawn game is in neither count; ``None`` when
+    no such game finished."""
+    if not identity.deck_ids:
+        return None
+    placeholders = ",".join("?" for _ in identity.deck_ids)
+    row = conn.execute(
+        f"""
+        SELECT SUM(g.result = 'win') AS won, SUM(g.result = 'loss') AS lost,
+               COUNT(*) AS n
+          FROM games g
+          JOIN matches m ON m.match_id = g.match_id
+          JOIN v_match_opponent o ON o.match_id = m.match_id
+         WHERE m.deck_id IN ({placeholders})
+           AND m.best_of = 3
+           AND m.result IS NOT NULL AND m.result != 'incomplete'
+           AND m.match_id != ?
+           AND o.opponent_key = ?
+           AND g.game_number >= 2
+           AND g.result IN ('win', 'loss', 'draw')
+        """,
+        (*identity.deck_ids, current_match_id, f"archetype:{archetype_key}"),
+    ).fetchone()
+    if row is None or not row["n"]:
+        return None
+    return PostboardRecord(won=row["won"] or 0, lost=row["lost"] or 0)
+
+
 def build_break_read(
     conn: sqlite3.Connection,
     match_id: str,
@@ -500,6 +541,16 @@ def build_break_read(
                 )
             past_boarding = boardings[boarding_cache_key]
 
+    postboard_record: PostboardRecord | None = None
+    if identity is not None and chosen_key is not None:
+        # Only the named or picked archetype, never the closest guess that
+        # past boarding falls back to. Memoized like the above.
+        records = caches.setdefault("postboard_record", {})
+        record_cache_key = (match_id, identity.key, chosen_key)
+        if record_cache_key not in records:
+            records[record_cache_key] = _postboard_record(conn, identity, chosen_key, match_id)
+        postboard_record = records[record_cache_key]
+
     return BreakRead(
         game_number=intermission.game_number,
         next_game=intermission.game_number + 1,
@@ -513,6 +564,7 @@ def build_break_read(
         stale=stale,
         alternatives=tuple(alternatives),
         past_boarding=tuple(past_boarding),
+        postboard_record=postboard_record,
         prompt=prompt,
         deck_key=identity.key if identity is not None else None,
         fmt=fmt,
