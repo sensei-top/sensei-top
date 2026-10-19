@@ -12,7 +12,6 @@
 export type LivePanel =
   | 'opening-hand'
   | 'keep-guide'
-  | 'keep-guide-dense'
   | 'library'
   | 'opponent-hand'
   | 'opponent-hand-facts'
@@ -42,10 +41,9 @@ export function livePanels({
   }
   if (decisionPending) return { primary: 'opening-hand', rail: ['keep-guide'] }
   if (mulliganPhase) return { primary: 'keep-guide', rail: ['opponent-read'] }
-  return {
-    primary: 'library',
-    rail: ['opponent-hand', 'keep-guide-dense', 'opponent-read-dense'],
-  }
+  // Once a turn has started the keep guide has said what it had to: the
+  // rail is the opponent's alone.
+  return { primary: 'library', rail: ['opponent-hand', 'opponent-read-dense'] }
 }
 
 /** The alternatives the break's rail lists. A closest plan is itself

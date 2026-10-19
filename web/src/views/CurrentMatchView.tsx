@@ -1,17 +1,17 @@
 import { useTranslation } from 'react-i18next'
 import { useCurrentMatch, useCurrentMatchRead, useLive } from '../api'
 import type { CurrentMatch, IntermissionOut, OpeningHandOut } from '../api'
-import type { TFunction } from '../i18n'
 import { KeepGuideCard } from '../components/KeepGuideCard'
 import { LibraryCard } from '../components/LibraryCard'
 import { MatchupBriefCard } from '../components/MatchupBriefCard'
 import { OpeningHandCard } from '../components/OpeningHandCard'
 import { OpponentHandCard } from '../components/OpponentHandCard'
-import { OpponentRead } from '../components/OpponentRead'
+import { OpponentRead, PickDeckButton } from '../components/OpponentRead'
 import { SideboardOpponentRail, SideboardPlanCard } from '../components/SideboardPlanCard'
 import { Callout, Chip, Disclosure, EmptyState, ErrorNote, Loading, ManaPips } from '../components/ui'
 import { isLikelyAbandoned } from '../lib/liveMatch'
 import { type LivePanel, livePanels, railAlternatives } from '../lib/livePanels'
+import { timesPhrase } from '../lib/format'
 import { confidenceLabel, opponentLabelText } from '../lib/opponent'
 import { ago, useNow } from '../lib/time'
 import { placeById } from '../shell/places'
@@ -22,11 +22,6 @@ const CONFIDENCE_CHIP_VARIANT: Record<string, 'neutral' | 'warn'> = {
   low: 'warn',
   unknown: 'warn',
 }
-
-// "once" / "twice" reads better than "1 time" / "2 times" for the common
-// cases, and every count still gets a grammatical sentence beyond that.
-const timesPhrase = (n: number, t: TFunction): string =>
-  n === 1 ? t('live.times.once') : n === 2 ? t('live.times.twice') : t('live.times.many', { n })
 
 /** The band at the page's top: game and turn as big display numerals under
  *  small sentence-case labels (the two facts worth reading at a glance from
@@ -41,7 +36,9 @@ const timesPhrase = (n: number, t: TFunction): string =>
  *  does not wait on a projected match row. During the break between games
  *  the name, the chip (the confidence, or "picked" for a manual pick) and
  *  the cards seen come from `intermission`, the break's own live read;
- *  the pips stay the match's colours. The rail stays beside the page in
+ *  the pips stay the match's colours. Outside the break, "pick this deck"
+ *  closes the identity, the user's correction beside the name it corrects.
+ *  The rail stays beside the page in
  *  focus mode (`shell/Shell.tsx`), so this strip carries no escape hatch
  *  of its own.
  *  A match `lib/liveMatch.ts` calls likely abandoned says so here rather
@@ -122,7 +119,9 @@ function MatchStatusStrip({
             text: confidenceLabel(intermission.opponent.confidence, t),
           }
       : null
-    : match?.opponent_confidence
+    : match?.opponent_source === 'manual'
+      ? { variant: 'neutral' as const, text: t('live.picker.pickedMark') }
+      : match?.opponent_confidence
       ? {
           variant: CONFIDENCE_CHIP_VARIANT[match.opponent_confidence] ?? 'neutral',
           text: confidenceLabel(match.opponent_confidence, t),
@@ -161,11 +160,17 @@ function MatchStatusStrip({
         <span className="hidden truncate md:inline">{facts}</span>
       </div>
 
-      {opponentLabel && (
+      {(opponentLabel || (match && !intermission)) && (
         <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-0">
-          <ManaPips colors={match?.opponent_colors} size="lg" />
-          <span className="hidden truncate text-body text-ink2 md:inline">{opponentName}</span>
-          {opponentChip && <Chip variant={opponentChip.variant}>{opponentChip.text}</Chip>}
+          {opponentLabel && (
+            <>
+              <ManaPips colors={match?.opponent_colors} size="lg" />
+              <span className="hidden truncate text-body text-ink2 md:inline">{opponentName}</span>
+              {opponentChip && <Chip variant={opponentChip.variant}>{opponentChip.text}</Chip>}
+            </>
+          )}
+          {/* The break has its own picker, on the sideboard plan. */}
+          {match && !intermission && <PickDeckButton match={match} />}
         </div>
       )}
     </div>
@@ -325,23 +330,20 @@ export function CurrentMatchView() {
         return <OpeningHandCard key={name} hand={openingHand} />
       case 'keep-guide':
         return <KeepGuideCard key={name} keep={read.data?.keep} subtitle={keepGuideSubtitle} />
-      case 'keep-guide-dense':
-        return (
-          <KeepGuideCard key={name} keep={read.data?.keep} subtitle={keepGuideSubtitle} dense />
-        )
       case 'library':
         return (
           <LibraryCard
             key={name}
             cards={read.data?.library}
             libraryCount={read.data?.library_count}
-            deckLands={read.data?.keep?.land_count}
           />
         )
       case 'opponent-hand':
-        return <OpponentHandCard key={name} hand={read.data?.hand} />
+        return <OpponentHandCard key={name} hand={read.data?.hand} mulligans={game?.opp_mulligans} />
       case 'opponent-hand-facts':
-        return <OpponentHandCard key={name} hand={read.data?.hand} estimate={false} />
+        return (
+          <OpponentHandCard key={name} hand={read.data?.hand} mulligans={game?.opp_mulligans} estimate={false} />
+        )
       case 'opponent-read':
         return <OpponentRead key={name} match={match} />
       case 'opponent-read-dense':
@@ -354,7 +356,7 @@ export function CurrentMatchView() {
       {stopped}
       <MatchStatusStrip match={match} openingHand={openingHand} adviceOff={!advice} />
 
-      <div className="grid min-h-0 flex-1 gap-3 sm:grid-cols-[1fr_360px]">
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-3">
         <div className="min-h-0 overflow-hidden">{panel(panels.primary)}</div>
 
         <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">

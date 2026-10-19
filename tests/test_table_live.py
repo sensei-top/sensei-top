@@ -104,7 +104,7 @@ def test_seen_copies_are_subtracted_once_per_instance(conn):
     assert by_grp[BEAR_GRP].quantity == 4
 
 
-def test_a_fully_seen_card_drops_out_rather_than_showing_zero(conn):
+def test_a_fully_seen_card_stays_at_zero(conn):
     conn.execute(
         "INSERT INTO cards (grp_id, name, mana_cost, type_line) VALUES "
         "(?, 'Cheap Bear', '{1}{G}', 'Creature — Bear')", (BEAR_GRP,)
@@ -115,7 +115,7 @@ def test_a_fully_seen_card_drops_out_rather_than_showing_zero(conn):
     state = _state(self_seat=1, zone_cards=[_zone_card("graveyard", 1, 1, BEAR_GRP)])
 
     cards = build_library_remaining(conn, "d1", state)
-    assert cards == ()
+    assert [(c.grp_id, c.quantity, c.left) for c in cards] == [(BEAR_GRP, 1, 0)]
 
 
 def test_no_deck_or_no_live_state_yields_nothing(conn):

@@ -1,4 +1,5 @@
 import i18next from 'i18next'
+import type { TFunction } from '../i18n'
 
 /**
  * Numbers, percentages, dates, relative times and lists, through `Intl`,
@@ -117,4 +118,10 @@ export function formatPrice(price: number): string {
     useGrouping: false,
   }
   return cached('price', options, (locale) => new Intl.NumberFormat(locale, options)).format(price)
+}
+
+/** "once" / "twice" reads better than "1 time" / "2 times" for the common
+ *  cases, and every count still gets a grammatical phrase beyond that. */
+export function timesPhrase(n: number, t: TFunction): string {
+  return n === 1 ? t('live.times.once') : n === 2 ? t('live.times.twice') : t('live.times.many', { n })
 }

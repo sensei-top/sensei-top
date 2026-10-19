@@ -43,34 +43,11 @@ function CandidateLine({ candidate }: { candidate: OpponentDeckCandidate }) {
   )
 }
 
-/**
- * The opponent's deck read for the match in progress: the cards behind an
- * unnamed deck (the name, its confidence, the colours and how many cards
- * were seen are the status strip's alone), the "pick this deck" affordance
- * always available beside it, and — while nothing has clearly won yet — the
- * field of close candidates instead of a single guess dressed up as an answer.
- *
- * Replaces the old "Not sure what they are playing" card, which only
- * appeared below 'medium' confidence and, once shown, offered no more than
- * the winning guess's own name. A real match named "Dimir Harmonizer" off a
- * single generic card for twenty-odd turns while the archetype's own
- * signature creature (green) never matched the colours actually shown (pure
- * Dimir) — this panel is what would have surfaced that disagreement instead
- * of hiding it behind one confident-looking label.
- *
- * `dense` puts the candidate shortlist behind a disclosure for the closing
- * three-card grid; the "pick this deck" popover (already `fixed`-positioned,
- * so it never clips inside a height-capped rail) is the same either way.
- */
-export function OpponentRead({
-  match,
-  dense = false,
-}: {
-  match: CurrentMatch
-  dense?: boolean
-}) {
+/** "Pick this deck": the user's own correction of the opponent's deck,
+ *  in the status strip beside the name it corrects. The popover is
+ *  `fixed`-positioned, so it never clips inside the strip. */
+export function PickDeckButton({ match }: { match: CurrentMatch }) {
   const { t } = useTranslation()
-  const candidates = useOpponentDeckCandidates(match.match_id, true)
   const save = useSetOpponentDeck()
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
@@ -81,6 +58,54 @@ export function OpponentRead({
       { onSuccess: () => setOpen(false) },
     )
   }
+
+  return (
+    <>
+      <Button ref={buttonRef} size="sm" onClick={() => setOpen(true)}>
+        {t('live.opponent.pick')}
+      </Button>
+      {save.error && <span className="text-caption text-s2">{save.error.message}</span>}
+      {open && (
+        <DeckPicker
+          matchId={match.match_id}
+          anchorRef={buttonRef}
+          onClose={() => setOpen(false)}
+          onPick={pick}
+          pending={save.isPending}
+        />
+      )}
+    </>
+  )
+}
+
+/**
+ * The opponent's deck read for the match in progress, below what the
+ * status strip says: the cards behind an unnamed deck (the name, its
+ * confidence, the colours, the cards seen and the pick button are the
+ * strip's), and — while nothing has clearly won yet — the field of close
+ * candidates instead of a single guess dressed up as an answer. With
+ * neither to show, it draws nothing.
+ *
+ * Replaces the old "Not sure what they are playing" card, which only
+ * appeared below 'medium' confidence and, once shown, offered no more than
+ * the winning guess's own name. A real match named "Dimir Harmonizer" off a
+ * single generic card for twenty-odd turns while the archetype's own
+ * signature creature (green) never matched the colours actually shown (pure
+ * Dimir) — this panel is what would have surfaced that disagreement instead
+ * of hiding it behind one confident-looking label.
+ *
+ * `dense` puts the candidate shortlist behind a disclosure, for the rail
+ * once a game is under way.
+ */
+export function OpponentRead({
+  match,
+  dense = false,
+}: {
+  match: CurrentMatch
+  dense?: boolean
+}) {
+  const { t } = useTranslation()
+  const candidates = useOpponentDeckCandidates(match.match_id, true)
 
   const shortlist = (candidates.data ?? [])
     .filter((c) => c.confidence !== 'none')
@@ -93,30 +118,15 @@ export function OpponentRead({
     match.opponent_confidence !== 'high' &&
     shortlist.length > 0
   const detail = unclearDetail(match)
+  if (!showShortlist && !detail) return null
 
   return (
-    <Card
-      title={t('live.opponent.title')}
-      elevation={dense ? 2 : 1}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          {match.opponent_source === 'manual' && (
-            <p className="text-body text-ink2">{t('live.picker.pickedMark')}</p>
-          )}
-          {detail && <p className="text-caption text-muted">{detail}</p>}
-        </div>
-        <Button ref={buttonRef} size="sm" onClick={() => setOpen(true)}>
-          {t('live.opponent.pick')}
-        </Button>
-      </div>
-      {save.error && <p className="mt-2 text-caption text-s2">{save.error.message}</p>}
+    <Card title={t('live.opponent.title')} elevation={dense ? 2 : 1}>
+      {detail && <p className="text-caption text-muted">{detail}</p>}
 
       {showShortlist && dense && (
-        <div className="mt-3 border-t border-edge/50 pt-2">
-          <Disclosure
-            summary={t('live.opponent.candidates', { count: shortlist.length })}
-          >
+        <div className={detail ? 'mt-3 border-t border-edge/50 pt-2' : undefined}>
+          <Disclosure summary={t('live.opponent.candidates', { count: shortlist.length })}>
             <div className="divide-y divide-edge/50">
               {shortlist.map((c) => (
                 <CandidateLine key={c.archetype_key} candidate={c} />
@@ -127,21 +137,11 @@ export function OpponentRead({
       )}
 
       {showShortlist && !dense && (
-        <div className="mt-3 divide-y divide-edge/50 border-t border-edge/50">
+        <div className={`divide-y divide-edge/50 ${detail ? 'mt-3 border-t border-edge/50' : ''}`}>
           {shortlist.map((c) => (
             <CandidateLine key={c.archetype_key} candidate={c} />
           ))}
         </div>
-      )}
-
-      {open && (
-        <DeckPicker
-          matchId={match.match_id}
-          anchorRef={buttonRef}
-          onClose={() => setOpen(false)}
-          onPick={pick}
-          pending={save.isPending}
-        />
       )}
     </Card>
   )

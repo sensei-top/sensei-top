@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { livePanels, railAlternatives } from './livePanels'
 
-const ADVICE_PANELS = ['opening-hand', 'keep-guide', 'keep-guide-dense', 'opponent-hand']
+const ADVICE_PANELS = ['opening-hand', 'keep-guide', 'opponent-hand']
 
 describe('livePanels', () => {
   it('draws no advice in any phase of a ranked game', () => {
@@ -35,7 +35,7 @@ describe('livePanels', () => {
     })
     expect(livePanels({ decisionPending: false, mulliganPhase: false, advice: true })).toEqual({
       primary: 'library',
-      rail: ['opponent-hand', 'keep-guide-dense', 'opponent-read-dense'],
+      rail: ['opponent-hand', 'opponent-read-dense'],
     })
   })
 })

@@ -37,12 +37,12 @@ function colourName(color: ManaColor, t: TFunction): string {
 const WUBRG = ['W', 'U', 'B', 'R', 'G'] as const
 type ManaColor = (typeof WUBRG)[number]
 
-function Pip({ color, size }: { color: ManaColor; size: 'md' | 'lg' }) {
+function Pip({ color, size }: { color: ManaColor; size: 'sm' | 'md' | 'lg' }) {
   return (
     <svg
       aria-hidden
       viewBox="0 0 32 32"
-      className={size === 'lg' ? 'size-(--pip-lg)' : 'size-(--pip)'}
+      className={size === 'lg' ? 'size-(--pip-lg)' : size === 'sm' ? 'size-(--pip-sm)' : 'size-(--pip)'}
       style={{ filter: 'drop-shadow(-1px 1px 0 rgb(0 0 0 / .55))' }}
     >
       <circle cx="16" cy="16" r="16" fill={DISC_COLOR[color]} />
@@ -81,6 +81,96 @@ export function ManaPips({
     <span role="img" aria-label={label} title={label} className="inline-flex items-center gap-0.5">
       {ordered.map((c) => (
         <Pip key={c} color={c} size={size} />
+      ))}
+    </span>
+  )
+}
+
+const GENERIC_DISC = 'var(--mana-c)'
+
+/** One mana symbol's inner text (`2`, `U`, `U/R`, `2/W`, `U/P`, `X`), drawn
+ *  as its printed form: a colour pip as `Pip`; a hybrid as a disc split on
+ *  the diagonal, each half its own colour with its glyph small; a Phyrexian
+ *  symbol as its colour's disc carrying a Φ; anything else (generic, X, C,
+ *  S) as a grey disc carrying the symbol's text. */
+function CostSymbol({ symbol }: { symbol: string }) {
+  if ((WUBRG as readonly string[]).includes(symbol)) return <Pip color={symbol as ManaColor} size="sm" />
+  const [a, b] = symbol.split('/')
+  const isColour = (s: string | undefined): s is ManaColor => s != null && (WUBRG as readonly string[]).includes(s)
+  const shadow = { filter: 'drop-shadow(-1px 1px 0 rgb(0 0 0 / .55))' }
+  const text = (value: string, x: number, y: number, fontSize: number) => (
+    <text
+      x={x}
+      y={y}
+      textAnchor="middle"
+      dominantBaseline="central"
+      fontSize={fontSize}
+      fontWeight={700}
+      fill="var(--mana-glyph)"
+    >
+      {value}
+    </text>
+  )
+  if (b === 'P' && isColour(a)) {
+    return (
+      <svg aria-hidden viewBox="0 0 32 32" className="size-(--pip-sm)" style={shadow}>
+        <circle cx="16" cy="16" r="16" fill={DISC_COLOR[a]} />
+        {text('Φ', 16, 17, 20)}
+      </svg>
+    )
+  }
+  if (b != null && isColour(b)) {
+    // The upper-left half is the first symbol, as printed.
+    const half = (s: string, cx: number) =>
+      isColour(s) ? (
+        <path
+          d={MANA_GLYPH_PATH[s]}
+          fill="var(--mana-glyph)"
+          transform={`translate(${cx} ${cx}) scale(.4) translate(-16 -16)`}
+        />
+      ) : (
+        text(s, cx, cx, 13)
+      )
+    return (
+      <svg aria-hidden viewBox="0 0 32 32" className="size-(--pip-sm)" style={shadow}>
+        <path d="M27.31 4.69 A16 16 0 0 0 4.69 27.31 Z" fill={isColour(a) ? DISC_COLOR[a] : GENERIC_DISC} />
+        <path d="M27.31 4.69 A16 16 0 0 1 4.69 27.31 Z" fill={DISC_COLOR[b]} />
+        {half(a, 10.5)}
+        {half(b, 21.5)}
+      </svg>
+    )
+  }
+  return (
+    <svg aria-hidden viewBox="0 0 32 32" className="size-(--pip-sm)" style={shadow}>
+      <circle cx="16" cy="16" r="16" fill={GENERIC_DISC} />
+      {text(symbol.length > 2 ? symbol.slice(0, 2) : symbol, 16, 17, symbol.length > 1 ? 16 : 20)}
+    </svg>
+  )
+}
+
+/** The symbols of a card's front face (`{2}{U}{U} // {1}{R}` draws
+ *  `{2}{U}{U}`, as `effects.mana_value` reads it). Arena's parenthesised
+ *  hybrid (`{(U/B)}`) reads as `{U/B}`. */
+function costSymbols(cost: string): string[] {
+  const front = cost.split('//')[0]
+  return [...front.matchAll(/\{([^}]+)\}/g)].map((m) => m[1].replace(/[()]/g, '').toUpperCase())
+}
+
+/** A card's mana cost as its printed symbols, at the small pip size, which
+ *  sits inside a line of body text. A
+ *  cost with no symbol (a land, an unread cost) renders nothing: unknown
+ *  means no render, as for `ManaPips`. The raw cost is the accessible
+ *  label, since every symbol in it is drawn. */
+export function ManaCost({ cost }: { cost: string | null | undefined }) {
+  const { t } = useTranslation()
+  if (!cost) return null
+  const symbols = costSymbols(cost)
+  if (symbols.length === 0) return null
+  const label = t('common.manaCost', { cost: symbols.map((s) => `{${s}}`).join('') })
+  return (
+    <span role="img" aria-label={label} className="inline-flex items-center gap-0.5 align-middle">
+      {symbols.map((s, i) => (
+        <CostSymbol key={i} symbol={s} />
       ))}
     </span>
   )

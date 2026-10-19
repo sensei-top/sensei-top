@@ -139,6 +139,8 @@ run client-side off a stale `turns` row, now server-side against the fresh
 replay. `library_count` (the population size for the tab's draw-odds math)
 comes from the same replay, not the projected `turns.self_library` — the two
 would otherwise disagree by however stale the projection is.
+A card whose every copy has been seen stays in the list at `left` 0,
+so the panel keeps its row instead of dropping it mid-game.
 
 Each nonland card also carries `is_interaction`: `True` when its oracle text
 matches one of `effects.classify`'s `spot_removal`, `sweeper` or
@@ -609,11 +611,11 @@ the pivot removed the overlay (2026-10-01), it moved here.
 
 | | ranked game | unranked game, or between games |
 |---|---|---|
-| remaining library and its odds band | shown | shown |
+| remaining library and its draw odds | shown | shown |
 | the opponent's revealed cards, hand size, open mana | shown | shown |
 | the archetype read (`OpponentRead`) | shown | shown |
 | the opening hand's verdict and evidence (`OpeningHandCard`) | hidden | shown |
-| the keep guide (`KeepGuideCard`), full and dense | hidden | shown |
+| the keep guide (`KeepGuideCard`) | hidden | shown |
 | "Could be holding" and its caveat (`OpponentHandCard`) | hidden | shown |
 | the matchup brief (the disclosure bar) | hidden | shown |
 | the sideboard plan (the break) | — | shown in every queue |
@@ -804,12 +806,12 @@ mismatch first.
 window's height instead of letting the page scroll — see
 `docs/frontend.md`'s "Focus mode".
 The base render is meant to fit a second monitor with nothing scrolled: a
-one-line status strip, a two-column grid (a primary read and a narrow rail),
+one-line status strip, a two-column grid (a primary read and a rail, split 60/40),
 and a disclosure bar holding the matchup brief, a `Disclosure` that
 opens over the page and scrolls inside itself. The match's facts are
 the status strip's alone, so the bar repeats none of them, and in a
 ranked game it is not drawn, since the brief is advice. Under 48rem there is no
-cap: the page is one column and scrolls, and the strip takes two lines
+cap: the page scrolls, and the strip takes two lines
 ("The status strip", below).
 
 **Four phases**, driven by `read.data?.intermission`,
@@ -823,14 +825,16 @@ until the next game's opening hand exists:
 | between games (Bo3 break) | `SideboardPlanCard` — headline, board plan or prompt, past boarding | `SideboardOpponentRail` — the other archetypes with a written plan; not drawn when there are none, and the plan card takes the full width |
 | a decision is pending | `OpeningHandCard` — the real 7 as images, verdict headline, evidence | `KeepGuideCard` (full) |
 | mulligan phase, no offer yet | `KeepGuideCard` (full) | `OpponentRead` |
-| game under way | `LibraryCard` — our own remaining deck, decklist order, no card cap | `OpponentHandCard`, `KeepGuideCard` (dense), `OpponentRead` (dense) |
+| game under way | `LibraryCard` — our own remaining deck, by mana value, no card cap | `OpponentHandCard`, `OpponentRead` (dense) |
 
 In a ranked game (`advice` false, "The ranked-play rule" above) a pending
 decision and the mulligan phase both draw `LibraryCard` with `OpponentRead`
 in the rail, and a game under way draws `LibraryCard` with
 `OpponentHandCard` (facts only, `estimate={false}`) and `OpponentRead`
-(dense). The status strip adds "ranked, advice off", so a missing keep guide
-never reads as a broken one. Before any match row exists, a ranked game's
+(dense). Once a game is under way the keep guide is gone in every queue:
+it has said what it had to, and the rail is the opponent's. The status
+strip adds "ranked, advice off", so a missing keep guide before the
+first turn never reads as a broken one. Before any match row exists, a ranked game's
 pending decision shows a "Ranked game" empty state instead of the opening
 hand. The rows above come from `lib/livePanels.ts`.
 
@@ -870,32 +874,45 @@ always visible). No card cap: the fresh live replay behind it costs the
 same either way, unlike the old client-side subtraction against a stale
 `turns` row.
 
-The card is the decklist and nothing else. One table, under one header
-row: Left, Card, and "In 3 draws", the chance of at least one copy
-within the next three draws. The header is the whole explanation, so
-there is no footnote. The first row is the lands, drawn like a card
-row: the lands left out of the deck's land count (`keep.land_count`,
-already on the same response; the total is left off when that is
-null) and their chance. The nonland rows follow, grouped by mana
-value, each with its copies left out of its quantity and its own
-chance. The grouping, the lands row and every chance are
-`lib/library.ts`.
+The card is the decklist and nothing else. A strip on top answers
+the lands: how many are left out of the deck's land count (the land
+rows' summed quantity), then the chance of at least one on the next
+draw, within two draws and within three. Under it, one table: the
+cost (its header, "Cost", is for a screen reader; the pips say it),
+Card, Left and "Next draw", the chance the very next card is a copy.
+The header is the whole explanation, so there is no footnote. Rows are
+grouped by mana value; the cost is drawn as pips (`ManaCost`,
+`docs/design-system.md`'s "Mana pips"), each row's copies left out of
+its quantity beside it. The lands strip, the grouping and every
+chance are `lib/library.ts`.
+
+Within a group the rows sort by copies left, most first, so the
+likeliest draw of each cost leads it, with the name as tie-break. A
+card with none left stays, dimmed, at the bottom of its group: the
+group does not lose a row mid-game, and a player looking for a card
+finds it gone rather than missing. The name column truncates rather
+than wrapping, and the header stays put while the list scrolls inside
+the card.
 
 Until 1.0.1 a band of three tiles sat above the list: land odds,
 interaction odds and a flood or screw comparison, with a footnote
 under them. Together they moved from the next draw to the next three
 and back, and gave the land chance in more than one form. Feedback on
 the 1.0.1 announcement named this card first when it called the
-dashboard's information randomly spread, so the card now asks one
-question, three draws ahead, and answers it on every row. The API's
+dashboard's information randomly spread, so the card then asked one
+question, three draws ahead, and answered it on every row. The API's
 `is_interaction` stays, though no dashboard component reads it.
 
-The groups keep mana value, the shape a player already holds their own
-60 in memory in, and rows sort by name within a group, not by copies
-left, so a row's position stays fixed as the game evolves rather than
-reshuffling on every draw. The name column truncates rather than
-wrapping, and the header stays put while the list scrolls inside the
-card.
+Until this change every row carried that three-draw chance, the lands
+were a row like the others, rows sorted by name within a group, and a
+card with no copies left dropped out of the list. Three draws ahead on
+every row put a percentage everywhere that read the same at a glance;
+the next draw is the number every other tracker shows per card, so it
+is the one a row carries now, and the lands, the one count a player
+plans around, get the three horizons in a strip of their own. Sorting
+by name kept a row's place fixed as the game evolved; sorting by copies
+left reshuffles a group only when a draw changes its order, and puts the
+answer to "what am I likely to draw at this cost" first.
 
 **`OpponentHandCard` leads with facts, then demotes the estimate.** Order
 is hand size / open mana (plus any widened "+N other" sources) / held
@@ -910,12 +927,25 @@ list — a full-deck-minus-seen guess at cards not even confirmed in hand —
 is gone from the UI entirely: it was the least trustworthy number on the
 tab, and half of it used to be the opponent's own basic lands.
 
-`KeepGuideCard` and `OpponentRead` both take a `dense` prop rather than
-forking into separate components: dense `KeepGuideCard` skips the land-odds
-bars and the mulligan-record table (~220px together), keeping the summary
-line and the ideal-hand chips; dense `OpponentRead` puts the candidate
-shortlist behind a `Disclosure`, since its `DeckPicker` popover is already
-`fixed`-positioned and never clips inside the height-capped rail.
+`OpponentHandCard`'s subtitle says how many times the opponent
+mulliganed, when they did, and "Shown so far" is a row of small chips.
+
+`OpponentRead` takes a `dense` prop rather than forking into a second
+component: dense, it puts the candidate shortlist behind a `Disclosure`.
+With no shortlist and no unnamed-deck detail to show it draws nothing,
+rather than an empty card titled "Opponent deck". "Pick this deck"
+(`PickDeckButton`) is not on the card: it sits in the status strip,
+after the opponent's name it corrects, so it is there whenever a match
+is current, whether or not the card is drawn; its `DeckPicker`
+popover is `fixed`-positioned and never clips inside the strip. The
+strip's confidence reads "picked" once the user has picked. During the
+break the button is not drawn, since the sideboard plan has its own
+picker.
+
+Until this change the keep guide stayed in the rail once a game was
+under way, in a dense form without its land-odds bars or mulligan
+record, and "Pick this deck" lived on the opponent-deck card, which was
+therefore drawn, often empty, from the first turn.
 
 **The status strip** holds the game and the turn as large numerals,
 the facts joined by `·` (the games won and lost in the match, on the

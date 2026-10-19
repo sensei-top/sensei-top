@@ -16,7 +16,7 @@ export { Disclosure } from './Disclosure'
 export { EmptyState } from './EmptyState'
 export { Field } from './Field'
 export { Finding, type FindingWeight } from './Finding'
-export { ManaPips } from './ManaPips'
+export { ManaCost, ManaPips } from './ManaPips'
 export { IntervalBar, Meter, TwoSidedMeter } from './Meter'
 export {
   OnboardingSteps,

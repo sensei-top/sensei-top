@@ -22,6 +22,7 @@
   "theCard": "O card",
   "showCard": "Mostrar o card",
   "showCardNamed": "Mostrar o card: {{name}}",
+  "manaCost": "Custo de mana {{cost}}",
   "revealedColours": "Cores reveladas: {{colours}}",
   "colours": {
     "W": "branco",

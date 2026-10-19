@@ -95,6 +95,7 @@
   "opponentHand": {
     "title": "Mão do oponente",
     "revealedInHand": "Revelado na mão",
+    "mulliganed": "fez mulligan {{times}}",
     "shownSoFar": "Mostrado até agora",
     "unclassified": "O deck do oponente ainda não foi identificado — nenhuma leitura card a card até que seja.",
     "noConsensus": "O corpus de torneios tem poucos decks deste arquétipo para estimar cards específicos.",
@@ -119,8 +120,11 @@
     "mana": "{{mv}} de mana",
     "lands": "Terrenos",
     "colLeft": "Restam",
+    "colCost": "Custo",
+    "next": "Próxima",
+    "within": "Em até {{n}}",
     "colCard": "Card",
-    "colChance": "Em até 3 compras",
+    "colChance": "Próxima compra",
     "unknownCard": "Card desconhecido"
   },
   "opponent": {

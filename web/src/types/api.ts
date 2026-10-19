@@ -2957,8 +2957,8 @@ export interface components {
          * LibraryCardOut
          * @description One maindeck card and how many copies are still unaccounted for in
          *     the library this game — the tab's primary panel once a game is under
-         *     way (``table/live.py``). ``left`` is never negative and this list omits
-         *     a card once ``left`` reaches 0.
+         *     way (``table/live.py``). ``left`` is never negative, and a card stays in
+         *     the list at 0 once every copy is seen.
          */
         LibraryCardOut: {
             /** Grp Id */
