@@ -92,16 +92,16 @@ describe('the remembered bounds', () => {
 
   it('keeps a window that is on a display where it was', () => {
     expect(fitBounds({ x: 100, y: 50, width: 1200, height: 800 }, [screen])).toEqual({ x: 100, y: 50, width: 1200, height: 800 });
-    expect(fitBounds({ x: 2000, y: 10, width: 1000, height: 700 }, [screen, right])).toEqual({ x: 2000, y: 10, width: 1000, height: 700 });
+    expect(fitBounds({ x: 2000, y: 10, width: 1100, height: 700 }, [screen, right])).toEqual({ x: 2000, y: 10, width: 1100, height: 700 });
   });
 
   it('keeps a window mostly off screen if 64 px of it still show', () => {
-    expect(fitBounds({ x: 1856, y: 976, width: 1000, height: 700 }, [screen])).toEqual({ x: 1856, y: 976, width: 1000, height: 700 });
+    expect(fitBounds({ x: 1856, y: 976, width: 1100, height: 700 }, [screen])).toEqual({ x: 1856, y: 976, width: 1100, height: 700 });
   });
 
   it('drops the position of a window on a display that is gone, keeping its size', () => {
-    expect(fitBounds({ x: 2000, y: 10, width: 1000, height: 700 }, [screen])).toEqual({ width: 1000, height: 700 });
-    expect(fitBounds({ x: 1857, y: 10, width: 1000, height: 700 }, [screen])).toEqual({ width: 1000, height: 700 });
+    expect(fitBounds({ x: 2000, y: 10, width: 1100, height: 700 }, [screen])).toEqual({ width: 1100, height: 700 });
+    expect(fitBounds({ x: 1857, y: 10, width: 1100, height: 700 }, [screen])).toEqual({ width: 1100, height: 700 });
   });
 
   it('shrinks to the largest display, and never below the minimum', () => {

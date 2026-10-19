@@ -3,7 +3,7 @@
 // already up:
 //
 //     pnpm shots --label before
-//     pnpm shots --label phase-3 --widths 1280,360 --base http://127.0.0.1:5173
+//     pnpm shots --label phase-3 --widths 1280,1008 --base http://127.0.0.1:5173
 //     pnpm shots --label pt-br --locale pt-BR
 //
 // No `--` before the flags: pnpm forwards it as written, and parseArgs then
@@ -32,7 +32,7 @@ const { values: args } = parseArgs({
     base: { type: 'string', default: 'http://127.0.0.1:8000' },
     label: { type: 'string', default: 'current' },
     out: { type: 'string' },
-    widths: { type: 'string', default: '1280,360' },
+    widths: { type: 'string', default: '1280,1008' },
     height: { type: 'string', default: '900' },
     only: { type: 'string' },
     // The browser's own language (`pt-BR`), which a page with no stored

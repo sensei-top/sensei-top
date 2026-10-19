@@ -179,7 +179,7 @@ pt-BR`, from the same two copies, into `site/img/pt-br/`.
 
 ## Screenshots
 
-    pnpm shots --label before    # every view at 1280 and 360 px
+    pnpm shots --label before    # every view at 1280 and 1008 px
 
 `scripts/screenshots.mjs` drives a headless Chromium (Playwright, a dev
 dependency; `pnpm exec playwright install chromium` once) through every
