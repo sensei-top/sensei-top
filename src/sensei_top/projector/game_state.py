@@ -1,8 +1,9 @@
 """M2: per-game board-state accumulation, feeding turn-by-turn snapshots.
 
-``GameStateMessage`` entries are full snapshots or partial diffs with **no
-flag distinguishing them** (brief §6): fields must be merged in as they
-arrive and deletions purged explicitly via ``diffDeletedInstanceIds``. This
+``GameStateMessage`` entries are full snapshots or partial diffs, and their
+``type`` tells them apart (``GameStateType_Full`` or ``GameStateType_Diff``).
+A diff's fields must be merged in as they arrive and its deletions purged
+explicitly via ``diffDeletedInstanceIds``. This
 module owns that merge and the turn-snapshot rule. ``matches.py`` decides
 *when* a fresh tracker is needed (one per game, via ``GameState.tracker``'s
 default factory) and *when* to finalize the trailing turn (``GameOver``).
@@ -30,11 +31,13 @@ Field paths verified against the same fixture session as M1:
 * ``…annotations[].id`` — Arena's own identifier for the annotation instance,
   assigned by the game engine. Verified against 976 real ZoneTransfer
   annotations across two overlapping session logs: never missing, and never
-  reused for different content *within one game* (it does reset to a low
-  number at the start of each new game, so it is only unique per
-  ``(match, game)``, never across a whole session). That makes it the record's
-  own identity rather than its position in whatever raw event happened to
-  carry it, and is what ``card_events`` dedupes on — see ``_record_transfer``.
+  reused for different content *within one game* except across an undo,
+  which rewinds it with the rest of the game (see the undo paragraph below).
+  It also resets to a low number at the start of each new game, so it is
+  only unique per ``(match, game)``, never across a whole session. That
+  makes it the record's own identity rather than its position in whatever
+  raw event happened to carry it, and is what ``card_events`` dedupes on —
+  see ``_record_transfer``.
 * ``…diffDeletedInstanceIds[]`` — purge from objects and every zone list.
 * ``…players[]`` — sibling of ``gameInfo``/``turnInfo``; ``systemSeatNumber``
   + ``lifeTotal``.
@@ -62,6 +65,30 @@ twice, e.g. a near-total overlap between ``Player.log`` and the
 here already tolerates that by overwriting. ``card_events`` needed the same
 guarantee, just enforced differently because it accumulates instead of
 snapshotting.
+
+An undo rolls ``card_events`` back. When the player cancels an action, Arena
+sends a ``GameStateType_Full`` state whose ``update`` is
+``GameStateUpdate_Undo`` and whose ``prevGameStateId`` names the state the
+game returns to. The transfers recorded after that state never happened, so
+they are dropped, and ``seq`` stays contiguous. The rollback goes by **apply
+order**, never by comparing ids: in the real history, 16 of 923 games carry
+``gameStateId`` values that are not monotonic in the order they arrive. An
+undo naming a state this tracker never applied in the current game drops
+nothing and adds a line to ``warnings``: there is no length to return to, and
+guessing one would invent history (rule 4). The remembered states are kept
+per game (``gameInfo.gameNumber``): ``live_state.py`` keeps one tracker per
+game, so this reset only guards a caller that feeds one tracker more than one
+game, where a game-2 undo must never return to a game-1 state.
+
+The rollback also forgets the dropped transfers' annotation ids. Arena rewinds
+its own counters with the game: in ``tests/fixtures/undo_session.log`` the
+cancelled cast (state 100) and the cast that follows the undo (state 102)
+share annotation id 267 and instance id 272 while moving two different cards.
+Kept in ``_seen_transfer_ids``, the id would make the real cast look like a
+re-broadcast of the cancelled one and drop it. The undo state's own
+transfers use new ids (all 90 in the real history), so forgetting before they
+apply is safe. ``_drawn_on``, the damage and life dedup sets and the combat
+rows are left alone.
 
 Exile is a **shared** zone: verified against the real log, ``ZoneType_Exile``
 carries no ``ownerSeatId`` (unlike hand, graveyard and library, which all do),
@@ -105,10 +132,13 @@ unrelated, earlier annotation of a different type.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any
 
 from sensei_top.projector import combat
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -255,6 +285,16 @@ class GameStateTracker:
         self._seen_transfer_ids: set[int] = set()
         self._seen_damage_ids: set[int] = set()
         self._seen_life_ids: set[int] = set()
+        # _seen_transfer_ids in the order each id was first seen, so an undo
+        # can forget exactly the ids recorded after the state it returns to.
+        self._transfer_id_order: list[int] = []
+        # gameStateId -> (len(card_events), len(_transfer_id_order)) when that
+        # state's apply ended: where an undo naming it rolls back to.
+        self._applied_marks: dict[int, tuple[int, int]] = {}
+        # The last gameInfo.gameNumber seen: a new game forgets the marks.
+        self._game_number: int | None = None
+        # Problems found while applying, for the owner to report.
+        self.warnings: list[str] = []
         # (turn_number, instance_id) pairs already recorded, so Arena's own
         # repeated re-broadcast of the same attack/block assertion across
         # consecutive messages (verified in a real capture) does not multiply
@@ -267,11 +307,24 @@ class GameStateTracker:
 
     def apply(self, gsm: dict[str, Any]) -> None:
         """Merge one GameStateMessage (full or diff) into accumulated state."""
+        info = gsm.get("gameInfo")
+        game_number = info.get("gameNumber") if isinstance(info, dict) else None
+        if isinstance(game_number, int):
+            if self._game_number is not None and game_number != self._game_number:
+                # Only the current game's rows may be dropped or forgotten.
+                self._applied_marks.clear()
+                self._transfer_id_order.clear()
+            self._game_number = game_number
+
         if gsm.get("type") == "GameStateType_Full":
+            if gsm.get("update") == "GameStateUpdate_Undo":
+                # Before this state's own annotations: whatever it carries
+                # happened after the undo and is kept.
+                self._roll_back_to(gsm.get("prevGameStateId"), gsm.get("gameStateId"))
             # A full snapshot is authoritative on its own; anything accumulated
             # so far (including now-stale hidden objects) must not survive it,
             # since deletions only ever arrive on diffs. card_events is history
-            # rather than board state, so it deliberately survives.
+            # rather than board state, so it survives everything but an undo.
             self.objects.clear()
             self.zones.clear()
 
@@ -342,6 +395,43 @@ class GameStateTracker:
         for annotation in gsm.get("annotations") or []:
             if "AnnotationType_TappedUntappedPermanent" in (annotation.get("type") or []):
                 self._apply_tapped(annotation)
+
+        state_id = gsm.get("gameStateId")
+        if isinstance(state_id, int):
+            self._applied_marks[state_id] = (len(self.card_events), len(self._transfer_id_order))
+
+    def _roll_back_to(self, prev_state_id: Any, undo_state_id: Any) -> None:
+        """Drop the card events recorded after ``prev_state_id`` was applied.
+
+        See the module docstring: apply order, not id order, and the dropped
+        transfers' annotation ids are forgotten with them.
+        """
+        mark = self._applied_marks.get(prev_state_id) if isinstance(prev_state_id, int) else None
+        if mark is None:
+            self.warnings.append(
+                f"undo state {undo_state_id} returns to state {prev_state_id}, "
+                "which this game never applied; no card events dropped"
+            )
+            return
+        events_len, transfers_len = mark
+        dropped = len(self.card_events) - events_len
+        for annotation_id in self._transfer_id_order[transfers_len:]:
+            self._seen_transfer_ids.discard(annotation_id)
+        del self._transfer_id_order[transfers_len:]
+        del self.card_events[events_len:]
+        # The states inside the undone window are gone too. Lengths only grow
+        # between rollbacks, so a mark past the restored one belongs to them.
+        self._applied_marks = {
+            state_id: (ev, tr)
+            for state_id, (ev, tr) in self._applied_marks.items()
+            if ev <= events_len and tr <= transfers_len
+        }
+        log.debug(
+            "undo state %s returns to state %s: %d card event(s) dropped",
+            undo_state_id,
+            prev_state_id,
+            dropped,
+        )
 
     @property
     def current_turn(self) -> int | None:
@@ -442,8 +532,11 @@ class GameStateTracker:
         happened in rather than the one starting. That ordering is what keeps
         the turn snapshot pre-advance, and must not be swapped.
         """
-        if not self._first_sighting(self._seen_transfer_ids, annotation.get("id")):
+        annotation_id = annotation.get("id")
+        if not self._first_sighting(self._seen_transfer_ids, annotation_id):
             return
+        if annotation_id is not None:
+            self._transfer_id_order.append(annotation_id)
 
         src = self.zones.get(_detail(annotation, "zone_src")) or {}
         dest = self.zones.get(_detail(annotation, "zone_dest")) or {}

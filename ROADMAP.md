@@ -32,9 +32,7 @@ English. What comes first after it:
    into the first game and the games after sideboarding, for best-of-three
    matches, from Arena and Magic Online alike: on a deck's Matchups, on
    each pairing, and, for Arena, between games on Live.
-2. **Fixes to how the logs are read.** Arena sometimes shortens a message
-   that grew too large, and lets a player undo a spell; one malformed
-   message can also cost the messages beside it. Magic Online ends some
+2. **Fixes to how Magic Online's log is read.** Magic Online ends some
    games with lines the tracker doesn't read yet (a disconnection, running
    out of time, drawing from an empty library), opens a phantom game when
    a player reconnects, and drops a few matches whose names carry

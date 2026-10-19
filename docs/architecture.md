@@ -255,6 +255,20 @@ restores it instead of resetting to 0 — which would otherwise force the first
 boundary check after a restart to scan every row ever ingested rather than
 just the tail since the last rebuild.
 
+The watermark alone would leave a fixed projector's old rows in place: a
+watcher restarted after an upgrade restores it, finds nothing new past it,
+and never rebuilds until Arena or MTGO writes again. So the rebuild also
+stores `PROJECTOR_VERSION` (`projector/__init__.py`) in
+`projection_state.projector_version`, and a watcher that finds a different
+value, or `NULL`, treats its first poll as dirty and rebuilds once. Bump the
+constant by hand in any commit that changes what `project()` derives from
+the same `raw_events` — a parsing fix, a new derived column, a corrected
+rule — and leave it alone for a change that derives the same rows; the
+reviewer checks it. It is not the app's version: a release that touches
+only the dashboard rebuilds nothing. The one-shot `project` command does
+not write `projection_state`, so a watcher started after it rebuilds once
+more, which is harmless.
+
 A failing poll is recorded and the loop continues. A watcher that dies silently
 during a session is worse than one that logs an error and keeps going.
 

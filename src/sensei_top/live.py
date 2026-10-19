@@ -163,6 +163,7 @@ from sensei_top import arena_config, procs
 from sensei_top.archetypes import classify_matches
 from sensei_top.db import connect, open_database
 from sensei_top.llm.provenance import now_iso as _now
+from sensei_top.projector import PROJECTOR_VERSION
 from sensei_top.projector.matches import has_match_boundary, project
 from sensei_top.projector.mtgo.parse import last_game_decided
 from sensei_top.reader.ingest import default_log_path, ingest_file, ingest_with_recovery
@@ -600,14 +601,21 @@ class LiveIngester:
             # starting every restart back at 0: has_match_boundary below
             # LIKE-scans every raw_events row *after* this id, and 0 means
             # "all of them" on a database that may hold hundreds of
-            # thousands. sqlite3.OperationalError covers a pre-034 database
-            # that hasn't been migrated yet on this first poll.
+            # thousands. sqlite3.OperationalError covers a database missing
+            # either column (pre-034 or pre-065) on this first poll.
             try:
                 row = conn.execute(
-                    "SELECT projected_through_id FROM projection_state WHERE id = 1"
+                    "SELECT projected_through_id, projector_version"
+                    " FROM projection_state WHERE id = 1"
                 ).fetchone()
                 if row is not None and row[0] is not None:
                     self._projected_through = row[0]
+                    # Rows a different projector wrote (or one that never
+                    # recorded its version) are stale however far the
+                    # watermark got: rebuild once, on this first poll.
+                    if row[1] != PROJECTOR_VERSION:
+                        with self._dirty_lock:
+                            self._dirty = True
             except sqlite3.OperationalError:
                 pass
             self._watermark_loaded = True
@@ -697,15 +705,17 @@ class LiveIngester:
         conn.execute(
             """
             INSERT INTO projection_state
-                (id, last_projection_at, projections, projected_through_id, updated_at)
-            VALUES (1, ?, 1, ?, ?)
+                (id, last_projection_at, projections, projected_through_id,
+                 projector_version, updated_at)
+            VALUES (1, ?, 1, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 last_projection_at = excluded.last_projection_at,
                 projections = projection_state.projections + 1,
                 projected_through_id = excluded.projected_through_id,
+                projector_version = excluded.projector_version,
                 updated_at = excluded.updated_at
             """,
-            (now, self._projected_through, now),
+            (now, self._projected_through, PROJECTOR_VERSION, now),
         )
         return True
 

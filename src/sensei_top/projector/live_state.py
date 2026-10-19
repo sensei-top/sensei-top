@@ -363,7 +363,21 @@ def replay_live_state(
     does not take it back) but never ``deck_id``, which stays the connectResp
     list's.
     """
-    tracker = GameStateTracker(mana_source_grp_ids=mana_source_grp_ids)
+    # One tracker per gameNumber, routed the way projector/matches.py routes to
+    # ``state.game(n).tracker``: Arena restarts annotation ids every game, so
+    # a shared tracker drops a later game's transfers as re-broadcasts. The
+    # game-number reset inside GameStateTracker.apply still protects any
+    # other caller that feeds one tracker more than one game. A
+    # message with no gameNumber goes to the game last named (1 before any).
+    trackers: dict[int, GameStateTracker] = {}
+    current_game = 1
+
+    def tracker_for(number: int) -> GameStateTracker:
+        if number not in trackers:
+            trackers[number] = GameStateTracker(mana_source_grp_ids=mana_source_grp_ids)
+        return trackers[number]
+
+    tracker = tracker_for(current_game)
     pending: dict[int, int] = {}
     self_seat: int | None = None
     active_player: int | None = None
@@ -409,6 +423,10 @@ def replay_live_state(
             gsm = message.get("gameStateMessage")
             if not isinstance(gsm, dict):
                 continue
+            gsm_info = gsm.get("gameInfo")
+            if isinstance(gsm_info, dict) and gsm_info.get("gameNumber") is not None:
+                current_game = gsm_info["gameNumber"]
+            tracker = tracker_for(current_game)
             tracker.apply(gsm)
             for player in gsm.get("players") or []:
                 seat = player.get("systemSeatNumber")

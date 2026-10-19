@@ -45,8 +45,10 @@ surfaces as a corrupted row much later, not as a failing test now.
 The rule from the brief, applied consistently: an unknown or missing field
 produces a warning and a `NULL`, never an exception that stops ingestion.
 
-- `Projector.feed()` catches every exception per event, counts a warning, and
-  continues. One malformed payload must not cost a whole session.
+- `Projector.feed()` catches every exception per event, and inside a GRE
+  event per message, counts a warning, and continues. One malformed payload
+  must not cost a whole session, and one bad message must not cost the
+  messages batched beside it.
 - A missing log file is not an error — it returns empty stats.
 - A truncated payload is discarded, never emitted half-parsed.
 - A failing live poll is recorded; the loop continues.

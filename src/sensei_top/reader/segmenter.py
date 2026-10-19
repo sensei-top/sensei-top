@@ -1,7 +1,8 @@
 """Log entry segmentation for Arena's Player.log.
 
-Verified against a real 2026.62 log (Steam/Proton, Linux host). Five entry
-shapes matter; everything else is engine noise:
+Verified against a real 2026.62 log (Steam/Proton, Linux host), for the first
+five of the six entry shapes that matter; the sixth has never been captured.
+Everything else is engine noise:
 
 1. Single-line request::
 
@@ -47,6 +48,17 @@ shapes matter; everything else is engine noise:
    accident. This is structural, not semantic: the reader still learns
    nothing about what ``DeckDeleteDeck``/``Success`` means, and the
    projector's "unparseable payload" warning on that row is correct.
+
+6. A summarized message, known only from other projects' documentation (no
+   capture exists as of 2026-10-19)::
+
+       [Message summarized because one or more GameStateMessages exceeded the
+       50 GameObject or 50 Annotation limit.]
+       ::: GameStateMessage
+       :: GameObject Count = 61
+
+   Arena replaces the message with this block, so its content is not in the
+   log. The segmenter warns once per block and stores nothing.
 
 JSON payloads are extracted by brace-depth counting that respects string
 literals and backslash escapes — payloads legitimately contain ``{``/``}``
@@ -224,6 +236,15 @@ DateResolver = Callable[[HeaderStamp], str | None]
 # every second, and a warning per header would bury everything else.
 _warned_patterns: set[str] = set()     # unknown-shape stamps, digits as 9
 _warned_impossible: set[str] = set()   # shape keys warned by a fixed resolver
+# A summarized block, once per process too, for two re-reads of the same lines
+# by two Segmenters: the startup recovery reads Player-prev.log's content and
+# can meet the same block again inside Player.log; and when the line that
+# closes a block opens an entry still open at the poll's end, the offset holds
+# at the marker, so the next poll closes the same block again.
+_warned_summaries: set[tuple[str | None, tuple[str, ...]]] = set()
+_SUMMARY_MARKER = "[Message summarized because"
+# ":: GameObject Count = 61": the only continuation line that is quoted.
+_SUMMARY_COUNT_RE = re.compile(r"^:: (?P<name>[A-Za-z ]{1,40}?) Count = (?P<n>\d{1,9})\s*$")
 
 
 def _parse_stamp(stamp: str) -> HeaderStamp | None:
@@ -370,7 +391,10 @@ class Segmenter:
       previous one's snapshot before its first ``feed_line`` call (``header``
       is optional, for a caller that persists only the first two).
     - the pending multi-line accumulator itself (``pending`` property), for a
-      payload not yet closed. ``flush()`` drops it — for a truncated file,
+      payload not yet closed. An open summarized block (``_summary``) counts
+      as pending too, so it is never carried: the caller holds the offset at
+      its marker and feeds it whole next time. ``flush()`` drops a pending
+      payload and closes an open block, which warns — for a truncated file,
       that's correct; for an incremental read that simply stopped mid-entry,
       the caller (``ingest.py``) avoids ever needing to drop it by not
       committing an offset past the entry's first line, and re-feeding it
@@ -395,6 +419,7 @@ class Segmenter:
     _last_context: str | None = None  # context from that header, consumed by next payload
     _last_header: str | None = None   # that header's stamp, as written
     _line_no: int = 0
+    _summary: list[str] | None = field(default=None, repr=False)  # open summarized block
     _resolve: DateResolver = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -439,6 +464,15 @@ class Segmenter:
             self._pending.feed(line)
             if self._pending.complete:
                 out.append(self._finish_pending())
+            return out
+
+        if self._summary is not None:
+            if line.startswith("::"):
+                self._summary.append(line)
+                return out
+            self._close_summary()
+        if line.startswith(_SUMMARY_MARKER):
+            self._summary = [line]
             return out
 
         if line.startswith(_NOISE_PREFIXES):
@@ -489,10 +523,12 @@ class Segmenter:
 
     def flush(self) -> int | None:
         """Drop any incomplete pending payload (e.g. file truncated mid-write).
+        An open summarized block is closed too, which warns about it.
 
         Returns the 1-based line number the dropped entry started at, or
         ``None`` if nothing was pending.
         """
+        self._close_summary()
         if self._pending is None:
             return None
         start = self._pending_line
@@ -501,8 +537,11 @@ class Segmenter:
 
     @property
     def pending(self) -> bool:
-        """True while a multi-line payload is mid-accumulation."""
-        return self._pending is not None
+        """True while a multi-line payload is mid-accumulation, or a
+        summarized block is open. The second keeps ``ingest.py`` from
+        committing an offset past the marker, so the next poll re-reads the
+        block whole and the line that ends it warns."""
+        return self._pending is not None or self._summary is not None
 
     def carry_state(self) -> tuple[str | None, str | None, str | None]:
         """Snapshot ``(_last_ts, _last_context, _last_header)`` for a later
@@ -517,6 +556,40 @@ class Segmenter:
         self._last_ts = ts
         self._last_context = context
         self._last_header = header
+
+    def _close_summary(self) -> None:
+        """Warn once about the summarized block just ended; store nothing.
+
+        Arena drops game-state messages over its size limit from the log and
+        writes this marker with the counts instead, so the game's data has a
+        gap (rule 4: warned, not guessed). A block is closed by the first line
+        that does not start with ``::``, or by ``flush()``. While it is open,
+        ``pending`` is True, so a poll that ends inside it commits nothing past
+        the marker and the next poll re-reads the block.
+        """
+        block, self._summary = self._summary, None
+        if block is None:
+            return
+        key = (self._last_header, tuple(block))
+        if key in _warned_summaries:
+            return
+        _warned_summaries.add(key)
+        counts: list[str] = []
+        other = 0
+        for ln in block[1:]:
+            m = _SUMMARY_COUNT_RE.match(ln)
+            if m:
+                counts.append(f"{m['name']} Count = {m['n']}")
+            elif not ln.startswith(":::"):
+                other += 1
+        detail = "; ".join(counts) or "no counts given"
+        if other:
+            detail += f" (+{other} other line(s))"
+        log.warning(
+            "arena summarized a message (after header %s): %s; "
+            "its content is not in the log, so the game is missing it",
+            self._last_header or "none", detail,
+        )
 
     def _take_header(self, header: Header) -> None:
         # Every header replaces all three, an unreadable one included: keeping
