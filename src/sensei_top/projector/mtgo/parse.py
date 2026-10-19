@@ -159,45 +159,113 @@ log = logging.getLogger(__name__)
 _GUID_RE = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 )
-_ROLLED_RE = re.compile(r"^(?P<handle>\S+) rolled a \d+\.$")
-_JOINED_RE = re.compile(r"^(?P<handle>\S+) joined the game\.$")
-_PLAY_FIRST_RE = re.compile(r"^(?P<handle>\S+) chooses to play first\.$")
-_MULLIGAN_RE = re.compile(r"^(?P<handle>\S+) mulligans to (?P<n>\w+) cards?\.$")
-# `.*?` (non-greedy) is required by the fixture's two shapes: line "<H>
-# begins the game with seven cards in hand." (plain) and "<H> puts a card on
-# the bottom of their library and begins the game with six cards in hand."
-# (after a mulligan) — both end the same way, only the middle differs.
-# The handle ends at a literal space, never `\b`: a handle ending in a
-# non-word character ("Name-") has no word boundary before that space, so
-# `\S+\b` backtracked to "Name" — a third, phantom handle that made
-# `project_mtgo` skip the whole match (real match, 2026-09-22).
-_BEGINS_RE = re.compile(
-    r"^(?P<handle>\S+) .*?begins the game with (?P<n>\w+) cards? in hand\.$"
-)
-_TURN_RE = re.compile(r"^Turn (?P<n>\d+): (?P<handle>\S+)$")
-_CONCEDE_RE = re.compile(r"^(?P<handle>\S+) has conceded from the game\.$")
-_WINS_GAME_RE = re.compile(r"^(?P<handle>\S+) wins the game\.$")
-_WINS_MATCH_RE = re.compile(r"^(?P<handle>\S+) wins the match \d+-\d+$")
-# Self-check only (see module docstring): both "leads the match" (running,
-# mid-match) and "wins the match" (final) carry the same score shape, so both
-# feed `score_line` even though only the latter sets `winner_handle`.
-_LEADS_MATCH_RE = re.compile(
-    r"^(?P<handle>\S+) (?:leads|wins) the match (?P<a>\d+)-(?P<b>\d+)$"
-)
-
 _CARD_REF = r"@\[(?P<name>[^@]+)@:\d+,\d+:@\]"
-_PLAYS_RE = re.compile(rf"^(?P<handle>\S+) plays {_CARD_REF}\.$")
-_CASTS_RE = re.compile(rf"^(?P<handle>\S+) casts {_CARD_REF}\.$")
-_ACTIVATES_RE = re.compile(rf"^(?P<handle>\S+) activates an ability of {_CARD_REF}")
-_TRIGGER_RE = re.compile(
-    rf"^(?P<handle>\S+) puts a triggered ability from {_CARD_REF} onto the stack"
+
+# The handle rule (plan 30, D5). A handle may hold a space ("Player Two"), so
+# `\S+` read only its first word. The players' handles are taken first from
+# the lines whose ending is fixed, where everything before that ending is the
+# handle; every other line's handle is then one of those, longest first, so
+# "Bob Two" is tried before "Bob". A transcript with none of these lines
+# falls back to `\S+`, and with them, a line led by any other handle matches
+# nothing.
+_PLAYER_HANDLE_RES = (
+    re.compile(r"^(?P<handle>.+) rolled a \d+\.$"),
+    re.compile(r"^(?P<handle>.+) joined the game\.$"),
+    re.compile(r"^(?P<handle>.+) chooses to play first\.$"),
 )
-_CARD_EVENT_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("PlayLand", _PLAYS_RE),
-    ("CastSpell", _CASTS_RE),
-    ("Activate", _ACTIVATES_RE),
-    ("Trigger", _TRIGGER_RE),
-)
+# A spectator's handle, kept apart from the players': a spectator writes
+# nothing but this line, so no other line needs reading as theirs, and
+# `project.py` skips any match with other than exactly one opponent, so a
+# spectator counted as a player would lose the user's own match.
+_WATCHING_RE = re.compile(r"^(?P<handle>.+) has started watching\.$")
+
+
+def _known_handles(strings: list[str]) -> tuple[set[str], set[str]]:
+    """The players and the spectators the fixed-suffix lines name."""
+    players: set[str] = set()
+    spectators: set[str] = set()
+    for raw in strings:
+        s = _strip_at_p_prefix(raw)
+        for pattern in _PLAYER_HANDLE_RES:
+            m = pattern.match(s)
+            if m:
+                players.add(m.group("handle"))
+                break
+        else:
+            m = _WATCHING_RE.match(s)
+            if m:
+                spectators.add(m.group("handle"))
+    return players, spectators
+
+
+def _handle_alternation(known: set[str]) -> str:
+    """The regex a handle is read with: the known handles, escaped, longest
+    first (ties alphabetical, so the order is stable), or ``\\S+`` with
+    none."""
+    if not known:
+        return r"\S+"
+    ordered = sorted(known, key=lambda h: (-len(h), h))
+    return "|".join(re.escape(h) for h in ordered)
+
+
+@dataclass(frozen=True)
+class _Patterns:
+    """Every pattern that reads a handle, built once per transcript from its
+    handles (``_patterns``)."""
+
+    rolled: re.Pattern[str]
+    joined: re.Pattern[str]
+    play_first: re.Pattern[str]
+    mulligan: re.Pattern[str]
+    begins: re.Pattern[str]
+    turn: re.Pattern[str]
+    concede: re.Pattern[str]
+    wins_game: re.Pattern[str]
+    wins_match: re.Pattern[str]
+    leads_match: re.Pattern[str]
+    card_events: tuple[tuple[str, re.Pattern[str]], ...]
+
+
+def _patterns(known: set[str]) -> _Patterns:
+    # The handle ends at a literal space, never `\b`: a handle ending in a
+    # non-word character ("Name-") has no word boundary before that space, so
+    # `\S+\b` backtracked to "Name" — a third, phantom handle that made
+    # `project_mtgo` skip the whole match (real match, 2026-09-22).
+    h = f"(?P<handle>{_handle_alternation(known)})"
+    return _Patterns(
+        rolled=re.compile(rf"^{h} rolled a \d+\.$"),
+        joined=re.compile(rf"^{h} joined the game\.$"),
+        play_first=re.compile(rf"^{h} chooses to play first\.$"),
+        mulligan=re.compile(rf"^{h} mulligans to (?P<n>\w+) cards?\.$"),
+        # `.*?` (non-greedy) is required by the fixture's two shapes: line
+        # "<H> begins the game with seven cards in hand." (plain) and "<H>
+        # puts a card on the bottom of their library and begins the game with
+        # six cards in hand." (after a mulligan) — both end the same way,
+        # only the middle differs.
+        begins=re.compile(
+            rf"^{h} .*?begins the game with (?P<n>\w+) cards? in hand\.$"
+        ),
+        turn=re.compile(rf"^Turn (?P<n>\d+): {h}$"),
+        concede=re.compile(rf"^{h} has conceded from the game\.$"),
+        wins_game=re.compile(rf"^{h} wins the game\.$"),
+        wins_match=re.compile(rf"^{h} wins the match \d+-\d+$"),
+        # Self-check only (see module docstring): both "leads the match"
+        # (running, mid-match) and "wins the match" (final) carry the same
+        # score shape, so both feed `score_line` even though only the latter
+        # sets `winner_handle`.
+        leads_match=re.compile(
+            rf"^{h} (?:leads|wins) the match (?P<a>\d+)-(?P<b>\d+)$"
+        ),
+        card_events=(
+            ("PlayLand", re.compile(rf"^{h} plays {_CARD_REF}\.$")),
+            ("CastSpell", re.compile(rf"^{h} casts {_CARD_REF}\.$")),
+            ("Activate", re.compile(rf"^{h} activates an ability of {_CARD_REF}")),
+            ("Trigger", re.compile(
+                rf"^{h} puts a triggered ability from {_CARD_REF} onto the stack"
+            )),
+        ),
+    )
+
 
 _WORD_NUMBERS = {"zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
                   "six": 6, "seven": 7}
@@ -276,7 +344,13 @@ class GameRecord:
 @dataclass
 class ParsedMatch:
     match_id: str | None
+    # The players: the handles the fixed-suffix lines name, plus any the
+    # `\S+` fallback read. A watching line never adds one: `project.py` skips
+    # a match with other than exactly one opponent, so a spectator counted
+    # here would lose the user's own match.
     handles: set[str]
+    # Whoever wrote "has started watching." (`_WATCHING_RE`), player or not.
+    spectators: set[str]
     games: list[GameRecord]
     winner_handle: str | None   # from the final "wins the match" line
     score_line: tuple[str, int, int] | None   # self-check only; see docstring
@@ -300,7 +374,8 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
     for yet.
     """
     match_id: str | None = None
-    handles: set[str] = set()
+    handles, spectators = _known_handles(strings)
+    patterns = _patterns(handles)
     games: list[GameRecord] = []
     current: GameRecord | None = None
     current_turn: int | None = None
@@ -327,18 +402,18 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
             continue
         s = _strip_at_p_prefix(raw)
 
-        m = _ROLLED_RE.match(s)
+        m = patterns.rolled.match(s)
         if m:
             handles.add(m.group("handle"))
             continue
 
-        m = _JOINED_RE.match(s)
+        m = patterns.joined.match(s)
         if m:
             handles.add(m.group("handle"))
             ensure_fresh_game()
             continue
 
-        m = _PLAY_FIRST_RE.match(s)
+        m = patterns.play_first.match(s)
         if m:
             handle = m.group("handle")
             handles.add(handle)
@@ -346,7 +421,7 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
             current.on_play_handle = handle
             continue
 
-        m = _MULLIGAN_RE.match(s)
+        m = patterns.mulligan.match(s)
         if m:
             handle = m.group("handle")
             handles.add(handle)
@@ -358,7 +433,7 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
                 current.mulligans_by_handle[handle] = 7 - kept
             continue
 
-        m = _BEGINS_RE.match(s)
+        m = patterns.begins.match(s)
         if m:
             handle = m.group("handle")
             handles.add(handle)
@@ -378,7 +453,7 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
                 current.mulligans_by_handle[handle] = authoritative
             continue
 
-        m = _TURN_RE.match(s)
+        m = patterns.turn.match(s)
         if m:
             handle = m.group("handle")
             handles.add(handle)
@@ -410,7 +485,7 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
             continue
 
         matched_card_event = False
-        for category, pattern in _CARD_EVENT_PATTERNS:
+        for category, pattern in patterns.card_events:
             m = pattern.match(s)
             if not m:
                 continue
@@ -433,28 +508,28 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
         if matched_card_event:
             continue
 
-        m = _CONCEDE_RE.match(s)
+        m = patterns.concede.match(s)
         if m:
             handles.add(m.group("handle"))
             if current is not None:
                 current.conceded_handle = m.group("handle")
             continue
 
-        m = _WINS_GAME_RE.match(s)
+        m = patterns.wins_game.match(s)
         if m:
             handles.add(m.group("handle"))
             if current is not None:
                 current.winner_handle = m.group("handle")
             continue
 
-        m = _WINS_MATCH_RE.match(s)
+        m = patterns.wins_match.match(s)
         if m:
             handles.add(m.group("handle"))
             final_winner = m.group("handle")
-            # falls through to _LEADS_MATCH_RE below so the same line also
-            # updates score_line — don't `continue` here.
+            # falls through to the leads_match pattern below so the same line
+            # also updates score_line — don't `continue` here.
 
-        m = _LEADS_MATCH_RE.match(s)
+        m = patterns.leads_match.match(s)
         if m:
             handles.add(m.group("handle"))
             a, b = _ascii_int(m.group("a")), _ascii_int(m.group("b"))
@@ -471,7 +546,7 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
         # a warning.
 
     return ParsedMatch(
-        match_id=match_id, handles=handles, games=games,
+        match_id=match_id, handles=handles, spectators=spectators, games=games,
         winner_handle=final_winner, score_line=score_line, warnings=warnings,
     )
 

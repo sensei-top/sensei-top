@@ -45,19 +45,20 @@ plays/casts/activates/triggered-from line. The 26th, "Zombie Druid Token", is
 bracketed exactly once in the whole fixture — as the *target* clause of
 Thorin, Mountain-king's second triggered-ability line ("...puts a triggered
 ability from @[Thorin, Mountain-king@:...] onto the stack (...) targeting
-@[Zombie Druid Token@:...]."). ``_TRIGGER_RE`` (like ``_ACTIVATES_RE``) has no
-trailing ``$`` anchor and captures only the ability's *source* card — nothing
-in parse.py's grammar captures a second, trailing ``@[...]`` reference on the
-same line. Zombie Druid Token is a token: it is never played, cast, given its
-own "activates an ability of", or given its own "puts a triggered ability
-from" line anywhere in the fixture (tokens are never "cast" or "played" in
-MTGO's own log text). See ``test_25_of_26_bracketed_names_become_card_events``
-below and the handoff note.
+@[Zombie Druid Token@:...]."). The ``Trigger`` pattern (like ``Activate``) has
+no trailing ``$`` anchor and captures only the ability's *source* card —
+nothing in parse.py's grammar captures a second, trailing ``@[...]`` reference
+on the same line. Zombie Druid Token is a token: it is never played, cast,
+given its own "activates an ability of", or given its own "puts a triggered
+ability from" line anywhere in the fixture (tokens are never "cast" or
+"played" in MTGO's own log text). See
+``test_25_of_26_bracketed_names_become_card_events`` below and the handoff
+note.
 
 *** Also checked against the plan's own Verification section ***
 The plan says (line ~494) "a deleted `wins the game` line -> exactly one
 cross-check warning and the counted value kept." No such cross-check exists
-anywhere in parse.py or project.py: ``_WINS_GAME_RE``'s handler unconditionally
+anywhere in parse.py or project.py: the ``wins_game`` handler unconditionally
 sets ``current.winner_handle`` with no comparison against anything, and
 nothing else in either module reacts to a missing "wins the game" line — so
 deleting one produces zero warnings, not one. The plan's own Step 2
@@ -347,6 +348,238 @@ def test_handle_ending_in_a_hyphen_is_one_handle_in_both_begins_shapes():
     assert parsed.warnings == []
     assert parsed.games[0].mulligans_by_handle == {"Player1": 0, "Player2000-": 1}
     assert parsed.games[1].mulligans_by_handle == {"Player1": 0, "Player2000-": 0}
+
+
+# Plan 30's case 8: a real match's lines, card lines trimmed and handles
+# anonymized, the opponent's with the space their real handle has. Read from
+# the lines: game 1 to Player Two (Player1 concedes), games 2 and 3 to Player1
+# (Player Two concedes both), and "Player1 wins the match 2-1".
+_SPACED_HANDLE_MATCH = [
+    GUID,
+    GUID,
+    "Player1 rolled a 6.",
+    "Player Two rolled a 1.",
+    "Player Two joined the game.",
+    "Player1 joined the game.",
+    "Player1 chooses to play first.",
+    "Player1 mulligans to six cards.",
+    "Player Two begins the game with seven cards in hand.",
+    "Player1 puts a card on the bottom of their library "
+    "and begins the game with six cards in hand.",
+    "Turn 1: Player1",
+    "Player1 plays @[Mountain@:14306,444:@].",
+    "Turn 1: Player Two",
+    "Player Two plays @[Plains@:55642,447:@].",
+    "Player Two casts @[Swords to Plowshares@:77216,448:@] "
+    "targeting @[Goblin Lackey@:158136,445:@].",
+    "Turn 2: Player1",
+    "Turn 2: Player Two",
+    "Turn 3: Player1",
+    "Turn 3: Player Two",
+    "Player Two Cast face-down with Morph.",
+    "Turn 4: Player1",
+    "Player Two reveals face-down creature #1 as Bane of the Living.",
+    "Turn 4: Player Two",
+    "Player Two Cast face-down with Morph.",
+    "Turn 5: Player1",
+    "Player Two reveals face-down creature #2 as Exalted Angel.",
+    "Turn 5: Player Two",
+    "Player Two Cast face-down with Morph.",
+    "Turn 6: Player1",
+    "Turn 6: Player Two",
+    "Player Two turns face-down creature #3 face up.",
+    "Turn 7: Player1",
+    "Turn 7: Player Two",
+    "Turn 8: Player1",
+    "Turn 8: Player Two",
+    "Turn 9: Player1",
+    "Turn 9: Player Two",
+    "Turn 10: Player1",
+    "Turn 10: Player Two",
+    "Player Two Cast face-down with Morph.",
+    "Turn 11: Player1",
+    "Turn 11: Player Two",
+    "Player Two turns face-down creature #4 face up.",
+    "Turn 12: Player1",
+    "Player1 has conceded from the game.",
+    "Player Two wins the game.",
+    "Player Two leads the match 1-0",
+    "Player1 joined the game.",
+    "Player Two joined the game.",
+    "Player1 chooses to play first.",
+    "Player1 mulligans to six cards.",
+    "Player Two mulligans to six cards.",
+    "Player1 puts a card on the bottom of their library "
+    "and begins the game with six cards in hand.",
+    "Player Two puts a card on the bottom of their library "
+    "and begins the game with six cards in hand.",
+    "Turn 1: Player1",
+    "Player1 plays @[Mountain@:14306,462:@].",
+    "Turn 1: Player Two",
+    "Player Two plays @[Plains@:55642,465:@].",
+    "Turn 2: Player1",
+    "Player Two is being attacked by @[Goblin Lackey@:158136,463:@]",
+    "Turn 2: Player Two",
+    "Turn 3: Player1",
+    "Turn 3: Player Two",
+    "Turn 4: Player1",
+    "Turn 4: Player Two",
+    "Player Two Cast face-down with Morph.",
+    "Player Two has conceded from the game.",
+    "Player Two reveals face-down creature #1 as Exalted Angel.",
+    "Player1 wins the game.",
+    "Match Tied 1-1",
+    "Player Two joined the game.",
+    "Player1 joined the game.",
+    "Player Two chooses to play first.",
+    "Player Two mulligans to six cards.",
+    "Player1 begins the game with seven cards in hand.",
+    "Player Two mulligans to five cards.",
+    "Player Two puts two cards on the bottom of their library "
+    "and begins the game with five cards in hand.",
+    "Turn 1: Player Two",
+    "Player Two plays @[Swamp@:55702,464:@].",
+    "Turn 1: Player1",
+    "Player1 plays @[Mountain@:14306,466:@].",
+    "Turn 2: Player Two",
+    "Player Two plays @[Dust Bowl@:27246,469:@].",
+    "Turn 2: Player1",
+    "Turn 3: Player Two",
+    "Turn 3: Player1",
+    "Player Two has conceded from the game.",
+    "Player1 wins the game.",
+    "Player1 wins the match 2-1",
+]
+
+
+def test_handle_with_a_space_is_one_handle():
+    """``\\S+`` read "Player Two" as "Player", so none of that player's
+    lines but ``begins`` matched, and game 1 lost its winner. The ``Turn``
+    lines count both players' turns (Turn 1-11 each, then Turn 12: Player1).
+    The swords line is not a card event (a ``casts`` line ends at its card,
+    and this one goes on to a target), and neither are the morph lines nor
+    "Player Two is being attacked by", whose card is Player1's."""
+    parsed = parse_strings(_SPACED_HANDLE_MATCH)
+    assert parsed.handles == {"Player1", "Player Two"}
+    assert parsed.warnings == []
+    assert [g.winner_handle for g in parsed.games] == ["Player Two", "Player1", "Player1"]
+    assert [g.conceded_handle for g in parsed.games] == ["Player1", "Player Two", "Player Two"]
+    assert [g.on_play_handle for g in parsed.games] == ["Player1", "Player1", "Player Two"]
+    assert [g.mulligans_by_handle for g in parsed.games] == [
+        {"Player1": 1, "Player Two": 0},
+        {"Player1": 1, "Player Two": 1},
+        {"Player1": 0, "Player Two": 2},
+    ]
+    assert [g.turn_count for g in parsed.games] == [23, 8, 6]
+    assert [
+        [(ce.handle, ce.category, ce.name, ce.turn_number) for ce in g.card_events]
+        for g in parsed.games
+    ] == [
+        [("Player1", "PlayLand", "Mountain", 1), ("Player Two", "PlayLand", "Plains", 2)],
+        [("Player1", "PlayLand", "Mountain", 1), ("Player Two", "PlayLand", "Plains", 2)],
+        [
+            ("Player Two", "PlayLand", "Swamp", 1),
+            ("Player1", "PlayLand", "Mountain", 2),
+            ("Player Two", "PlayLand", "Dust Bowl", 3),
+        ],
+    ]
+    assert parsed.winner_handle == "Player1"
+    assert parsed.score_line == ("Player1", 2, 1)
+
+
+@pytest.mark.parametrize(
+    ("first", "second"), [("Bob", "Bob2"), ("Bob", "Bob Two")], ids=["suffix", "space"]
+)
+def test_a_handle_that_starts_another_is_told_apart(first, second):
+    """Each line goes to its own player when one handle begins the other. The
+    ``begins`` line is the one a shorter handle could take ("Bob" then
+    ``.*?``), so the longer is tried first. Line shapes are case 8's."""
+    strings = [
+        GUID,
+        f"{first} rolled a 4.",
+        f"{second} rolled a 2.",
+        f"{second} joined the game.",
+        f"{first} joined the game.",
+        f"{first} chooses to play first.",
+        f"{second} mulligans to six cards.",
+        f"{first} begins the game with seven cards in hand.",
+        f"{second} puts a card on the bottom of their library "
+        "and begins the game with six cards in hand.",
+        f"Turn 1: {first}",
+        f"{first} plays @[Mountain@:14306,444:@].",
+        f"Turn 1: {second}",
+        f"{second} plays @[Plains@:55642,447:@].",
+        f"{first} has conceded from the game.",
+        f"{second} wins the game.",
+        f"{second} leads the match 1-0",
+    ]
+    parsed = parse_strings(strings)
+    assert parsed.handles == {first, second}
+    assert parsed.warnings == []
+    (game,) = parsed.games
+    assert game.on_play_handle == first
+    assert game.mulligans_by_handle == {first: 0, second: 1}
+    assert game.turn_count == 2
+    assert [(ce.handle, ce.name) for ce in game.card_events] == [
+        (first, "Mountain"),
+        (second, "Plains"),
+    ]
+    assert game.conceded_handle == first
+    assert game.winner_handle == second
+    assert parsed.score_line == (second, 1, 0)
+
+
+def test_a_spectator_is_not_a_player():
+    """A spectator's ``has started watching.`` line names a spectator, and
+    ``handles`` holds the players: a third handle there would make the
+    projector skip a match someone merely watched."""
+    strings = [
+        GUID,
+        "Player1 joined the game.",
+        "Player2000 joined the game.",
+        "Player Three has started watching.",
+        "Player1 chooses to play first.",
+    ]
+    parsed = parse_strings(strings)
+    assert parsed.handles == {"Player1", "Player2000"}
+    assert parsed.spectators == {"Player Three"}
+
+
+# Plan 30's case 9: a real match the user only watched, joined mid-game, so
+# no start block and no player line with a fixed ending.
+_WATCHED_MATCH = [
+    GUID,
+    GUID,
+    "Player1 has started watching.",
+    "Player3000 casts @[Telling Time@:46712,590:@].",
+    "Player3000 casts @[Writhing Chrysalis@:252870,595:@].",
+    "Player3000 puts a triggered ability from @[Writhing Chrysalis@:252870,595:@] onto the "
+    "stack (When you cast this spell, create two 0/1 colorless Eldrazi Spawn creature tokens "
+    "with 'Sacrifice thi...).",
+    "Player3000's @[Writhing Chrysalis@:252870,595:@] creates two Eldrazi Spawn Tokens.",
+    "Player2000 activates an ability of @[Nihil Spellbomb@:76630,550:@] (Exile target "
+    "player's graveyard.) targeting Player3000.",
+    "Player2000 puts a triggered ability from @[Nihil Spellbomb@:76630,550:@] onto the stack "
+    "(When this artifact is put into a graveyard from the battlefield, you may pay {B}. If "
+    "you do, draw a ...).",
+    "Player2000 has run out of time and has lost the match.",
+    "Player3000 wins the game.",
+    "Player3000 wins the match 2-1",
+]
+
+
+def test_a_watched_match_with_no_start_block_reads_its_players_by_first_word():
+    """With no player line whose ending is fixed, handles fall back to
+    ``\\S+``. The five card lines (two casts, two triggers, one activation)
+    come before any game started, so each warns and none is recorded; the
+    "Player3000's" line and the time-out line match no pattern."""
+    parsed = parse_strings(_WATCHED_MATCH)
+    assert parsed.handles == {"Player2000", "Player3000"}
+    assert parsed.spectators == {"Player1"}
+    assert parsed.games == []
+    assert len(parsed.warnings) == 5
+    assert all(w.startswith("card event before any game started") for w in parsed.warnings)
+    assert parsed.winner_handle == "Player3000"
 
 
 @pytest.mark.parametrize("digits", ["\u0663", "9" * 5000])
