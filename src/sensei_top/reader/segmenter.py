@@ -518,8 +518,6 @@ class Segmenter:
         self._last_context = context
         self._last_header = header
 
-    # -- internals ----------------------------------------------------------
-
     def _take_header(self, header: Header) -> None:
         # Every header replaces all three, an unreadable one included: keeping
         # the previous header's time would store its date on these entries —

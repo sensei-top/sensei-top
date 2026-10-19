@@ -150,9 +150,6 @@ class OpeningHandRead:
     # 1 Hz for no new information.
 
 
-# -- resolving cards -----------------------------------------------------
-
-
 def _resolve_cards(
     conn: sqlite3.Connection, offer: MulliganOffer
 ) -> tuple[tuple[OpeningHandCard, ...], dict[int, str | None]]:
@@ -244,9 +241,6 @@ def _land_colors(
     return result, frozenset(chosen_type)
 
 
-# -- castability -----------------------------------------------------------
-
-
 def _castable_with(land_colors: list[frozenset[str]], req: effects.ManaRequirement) -> bool:
     """True when some assignment of one land per colored pip — out of
     exactly the lands given — leaves enough left over for the generic
@@ -289,10 +283,8 @@ def _castable_turn(
     return None
 
 
-# -- fuel-in-hand castability (Layer 1: cost-reduction clauses) ------------
-#
-# At mulligan time the graveyard is empty, so a cost-reduction card's
-# *printed* cost (castable_turn above) is the honest answer to "what does
+# Layer 1 (cost-reduction clauses): at mulligan time the graveyard is empty,
+# so a cost-reduction card's *printed* cost (castable_turn above) is the honest answer to "what does
 # this cost right now" — but the useful mulligan question is whether this
 # specific hand can feed the reduction. Two fuel kinds are on file
 # (effects.cost_reduction): a per-card graveyard count (Eddymurk Crab,
@@ -396,8 +388,6 @@ def _reduced_castable_turn(
     return _reduced_castable_turn_graveyard(card.mana_cost, reduction, fuel_cards, lands)
 
 
-# -- bounding a still-unknown land's color -----------------------------------
-#
 # A land with no produced_mana on file and no chosen_basic_type_colors match
 # either (see _land_colors) is genuinely unknown, but "unknown" isn't the
 # same as "could be anything" for the purpose of a keep/mulligan call: the
@@ -446,8 +436,6 @@ def _with_castability(
     )
 
 
-# -- verdict -----------------------------------------------------------
-#
 # Layer 3 (deck-aware mulligan/keep): the land-band and early-castable
 # cutoffs below answer "can this hand function" -- lands to cast spells,
 # spells cheap enough to play on curve. They say nothing about whether the
@@ -663,9 +651,6 @@ def _verdict(
         )
         return "marginal", tuple(reasons), tuple(caveats)
     return "mulligan", tuple(reasons), tuple(caveats)
-
-
-# -- entry point -----------------------------------------------------------
 
 
 def build_opening_hand_read(

@@ -188,8 +188,6 @@ class Projector:
         # _handle_submit_deck. Cleared the moment it is claimed.
         self._pending_sideboard_deck: dict[str, list[int]] | None = None
 
-    # -- entry points -------------------------------------------------------
-
     def feed(self, kind: str, label: str | None, payload_text: str, logged_at: str | None) -> None:
         try:
             payload = orjson.loads(payload_text)
@@ -262,8 +260,6 @@ class Projector:
 
         for message in _messages(payload):
             self._handle_gre_message(message, logged_at)
-
-    # -- handlers -----------------------------------------------------------
 
     def _handle_room_state(self, event: dict[str, Any], logged_at: str | None) -> None:
         info = event.get("gameRoomInfo", {})
