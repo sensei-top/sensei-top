@@ -3,12 +3,10 @@ import type { DeckGuideOut, GuideNarrativeOut, LeakOut } from '../../api'
 import type { TFunction } from '../../i18n'
 import type { BoardCurve, BoardCurveRow, GameLength, KeyCardTiming, MulliganRecord, ZoneCurve } from '../../lib/guide'
 import { num, TIMING_BUCKETS, timingLabel, timingRecord, turnsOf, zoneLabel } from '../../lib/guide'
+import { rateOrRecord } from '../../lib/sample'
 import { formatCount } from '../../lib/time'
 import { Card, DataTable, Disclosure, EmptyState, Prose, SectionLabel, StatTile } from '../ui'
 import { LeakCard, LeaksNarrativeCard } from './LeakCard'
-
-/** "N game"/"N games". */
-const games = (n: number, t: TFunction) => t('decks.count.games', { count: n, n: formatCount(n) })
 
 /** "11 turns", "1 turn", or a dash alone for no median. */
 function turnsValue(median: number | null, t: TFunction): string {
@@ -21,21 +19,15 @@ function FourTiles({ mulligans, gameLength }: { mulligans: MulliganRecord; gameL
   if (!mulligans.kept_seven && !mulligans.mulliganed && !gameLength.win && !gameLength.loss) {
     return null
   }
+  const kept = mulligans.kept_seven ? rateOrRecord(mulligans.kept_seven, t, 'games') : null
+  const mulled = mulligans.mulliganed ? rateOrRecord(mulligans.mulliganed, t, 'games') : null
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {mulligans.kept_seven && (
-        <StatTile
-          label={t('decks.guide.play.keptSeven')}
-          value={`${formatCount(mulligans.kept_seven.wins)}–${formatCount(mulligans.kept_seven.losses)}`}
-          detail={games(mulligans.kept_seven.games, t)}
-        />
+      {kept && (
+        <StatTile label={t('decks.guide.play.keptSeven')} value={kept.figure ?? '—'} detail={kept.line} muted={kept.thin} />
       )}
-      {mulligans.mulliganed && (
-        <StatTile
-          label={t('decks.guide.play.mulliganed')}
-          value={`${formatCount(mulligans.mulliganed.wins)}–${formatCount(mulligans.mulliganed.losses)}`}
-          detail={games(mulligans.mulliganed.games, t)}
-        />
+      {mulled && (
+        <StatTile label={t('decks.guide.play.mulliganed')} value={mulled.figure ?? '—'} detail={mulled.line} muted={mulled.thin} />
       )}
       {gameLength.win && (
         <StatTile

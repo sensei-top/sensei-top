@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { livePanels } from './livePanels'
+import { livePanels, railAlternatives } from './livePanels'
 
 const ADVICE_PANELS = ['opening-hand', 'keep-guide', 'keep-guide-dense', 'opponent-hand']
 
@@ -37,5 +37,29 @@ describe('livePanels', () => {
       primary: 'library',
       rail: ['opponent-hand', 'keep-guide-dense', 'opponent-read-dense'],
     })
+  })
+})
+
+describe('railAlternatives', () => {
+  const alternatives = [{ archetype_key: 'a' }, { archetype_key: 'b' }, { archetype_key: 'c' }]
+
+  it('keeps every alternative beside an exact plan', () => {
+    const got = railAlternatives({ alternatives, plan_basis: 'exact', plan: { archetype_key: 'z' } })
+    expect(got).toEqual(alternatives)
+  })
+
+  it('drops the alternative the closest plan is', () => {
+    const got = railAlternatives({ alternatives, plan_basis: 'closest', plan: { archetype_key: 'b' } })
+    expect(got.map((a) => a.archetype_key)).toEqual(['a', 'c'])
+  })
+
+  it('drops the first when the closest plan has no archetype key', () => {
+    const got = railAlternatives({ alternatives, plan_basis: 'closest', plan: { archetype_key: null } })
+    expect(got.map((a) => a.archetype_key)).toEqual(['b', 'c'])
+  })
+
+  it('gives nothing for missing or null alternatives', () => {
+    expect(railAlternatives({})).toEqual([])
+    expect(railAlternatives({ alternatives: null, plan_basis: 'closest' })).toEqual([])
   })
 })

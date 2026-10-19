@@ -5,7 +5,6 @@ import {
   formatDayTime,
   formatIsoDateShort,
   formatLongDay,
-  formatPercent,
   formatShortDay,
   minutesSince,
   parseTimestamp,
@@ -99,11 +98,8 @@ describe('the formatters', () => {
     expect(formatIsoDateShort('soon', now)).toBeNull()
   })
 
-  it('write a count and a percentage', () => {
+  it('write a count', () => {
     expect(formatCount(1032)).toBe('1,032')
     expect(formatCount(7)).toBe('7')
-    expect(formatPercent(0.5)).toBe('50')
-    expect(formatPercent(0.004)).toBe('0')
-    expect(formatPercent(1)).toBe('100')
   })
 })

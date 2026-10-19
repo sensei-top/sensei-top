@@ -8,8 +8,8 @@ import {
   coverageTiles,
   isCoverageGap,
 } from '../lib/brief'
+import { formatPercent } from '../lib/format'
 import { pairingAddress } from '../lib/pairing'
-import { formatPercent } from '../lib/time'
 import { placeById } from '../shell/places'
 import { CopyPromptBody } from './CopyPromptCard'
 import { Button, Card, Chip, DataTable, EmptyState, ErrorNote, Loading, StatTile, TextLink } from './ui'
@@ -135,7 +135,7 @@ export function MatchupCoverageCard({ guideKey }: { guideKey: string }) {
               {coverageStatusWord(row.status, t)}
             </Chip>,
             <span key="field" className="whitespace-nowrap">
-              {row.field_share == null ? '—' : `${formatPercent(row.field_share)}%`}
+              {row.field_share == null ? '—' : formatPercent(row.field_share)}
             </span>,
           ])}
         />

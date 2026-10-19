@@ -2,7 +2,7 @@ import { Fragment, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGuide, useGuideNarrative } from '../api'
-import { Button, ErrorNote, Loading } from '../components/ui'
+import { ErrorNote, Loading } from '../components/ui'
 import { MatchupCoverageCard } from '../components/MatchupCoverageCard'
 import { ScopeCard } from '../components/guide/ScopeCard'
 import { YourPlayCard } from '../components/guide/PlayCard'
@@ -16,7 +16,6 @@ import {
 } from '../components/guide/WrittenCards'
 import { NarrativeAndExport } from '../components/guide/WriteAndExport'
 import { SectionNav } from '../components/guide/SectionNav'
-import { deckAddress } from '../lib/decks'
 import { guideSections } from '../lib/guide'
 import { useScrollSpy } from '../lib/scrollSpy'
 
@@ -101,11 +100,6 @@ export function GuideView({ deckKey }: { deckKey: string }) {
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-6">
       <SectionNav sections={sections} activeId={activeSection} />
       <div className="mt-6 min-w-0 space-y-6 lg:col-start-1 lg:row-start-1 lg:mt-0">
-        <p>
-          <Button variant="secondary" href={`${deckAddress(deckKey)}/guide/rcq`}>
-            {t('decks.guide.prepareRcq')}
-          </Button>
-        </p>
         {sections.map((section) => (
           <Fragment key={section.id}>
             <div id={section.id} tabIndex={-1} className={SECTION_CLASS}>

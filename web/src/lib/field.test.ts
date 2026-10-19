@@ -31,10 +31,13 @@ import {
   windowOptions,
   windowStartOf,
   windowWords,
+  rowCaption,
+  topTwoTile,
   winrateRows,
 } from './field'
 
 const t = translator('en')
+const WJ = '\u2060'
 
 // The zone is America/New_York (vitest.config.ts). Timestamps below are
 // bare, so the log's own local clock.
@@ -343,16 +346,24 @@ describe('the record against a row', () => {
   ]
 
   it('counts every deck of the viewer\'s in the window, and nothing before it', () => {
-    expect(recordAgainstRows(matches, [tempo], start)).toEqual({ played: 3, won: 2 })
+    expect(recordAgainstRows(matches, [tempo], start)).toEqual({ played: 3, won: 2, losses: 1 })
+  })
+
+  it('counts a draw as played and in neither wins nor losses', () => {
+    const drawn = [
+      match('w', '2026-09-01T20:00:00', 'win', vs('ramp', 'Gruul Ramp')),
+      match('x', '2026-09-02T20:00:00', 'draw', vs('ramp', 'Gruul Ramp')),
+    ]
+    expect(recordAgainstRows(drawn, [ramp], start)).toEqual({ played: 2, won: 1, losses: 0 })
   })
 
   it('counts the top two together', () => {
-    expect(recordAgainstRows(matches, [tempo, ramp], start)).toEqual({ played: 4, won: 3 })
+    expect(recordAgainstRows(matches, [tempo, ramp], start)).toEqual({ played: 4, won: 3, losses: 1 })
   })
 
   it('counts a match at the window\'s first moment', () => {
     const edge = [match('e', '2026-08-11T00:00:00', 'loss', vs('ramp', 'Gruul Ramp'))]
-    expect(recordAgainstRows(edge, [ramp], start)).toEqual({ played: 1, won: 0 })
+    expect(recordAgainstRows(edge, [ramp], start)).toEqual({ played: 1, won: 0, losses: 1 })
   })
 
   it('tells apart two rows of one key by their labels', () => {
@@ -367,9 +378,9 @@ describe('the record against a row', () => {
       // No label at all: counts for neither.
       match('n1', '2026-09-05T20:00:00', 'win', { opponent_key: 'archetype:Control' }),
     ]
-    expect(recordAgainstRows(control, [jeskai], start)).toEqual({ played: 2, won: 2 })
-    expect(recordAgainstRows(control, [sultai], start)).toEqual({ played: 1, won: 0 })
-    expect(recordAgainstRows(control, [jeskai, sultai], start)).toEqual({ played: 3, won: 2 })
+    expect(recordAgainstRows(control, [jeskai], start)).toEqual({ played: 2, won: 2, losses: 0 })
+    expect(recordAgainstRows(control, [sultai], start)).toEqual({ played: 1, won: 0, losses: 1 })
+    expect(recordAgainstRows(control, [jeskai, sultai], start)).toEqual({ played: 3, won: 2, losses: 1 })
   })
 })
 
@@ -398,8 +409,8 @@ describe('the viewer\'s own counts', () => {
       match('n', '2026-09-03T20:00:00', 'win', { format: null, ...vs }),
     ]
     const counts = ownCounts(rows, [tempo], 'Standard', start, undefined)
-    expect(counts.records).toEqual([{ played: 1, won: 1 }])
-    expect(counts.topTwo).toEqual({ played: 1, won: 1 })
+    expect(counts.records).toEqual([{ played: 1, won: 1, losses: 0 }])
+    expect(counts.topTwo).toEqual({ played: 1, won: 1, losses: 0 })
   })
 
   it('is short for a full list of mixed formats none of which is before the window', () => {
@@ -498,5 +509,49 @@ describe('the hold lines', () => {
   it('gives nothing when no source holds', () => {
     expect(holdLines(status([{ source: 'mtgo' }]), 'paused', NOW, t)).toEqual([])
     expect(holdLines({} as MetagameStatus, 'waiting', NOW, t)).toEqual([])
+  })
+})
+
+describe('topTwoTile and rowCaption', () => {
+  const rec = (won: number, losses: number, draws = 0) => ({ played: won + losses + draws, won, losses })
+  const WITH = 'with any of your decks'
+
+  it('draws a dash and the not-met line when nothing was played', () => {
+    expect(topTwoTile(rec(0, 0), 'since May 1', t)).toEqual({
+      value: '\u2014',
+      muted: false,
+      detail: 'not met since May 1',
+    })
+  })
+
+  it('draws a dash when every match was a draw', () => {
+    expect(topTwoTile(rec(0, 0, 3), 'since May 1', t)).toEqual({
+      value: '\u2014',
+      muted: false,
+      detail: 'no finished match yet',
+    })
+  })
+
+  it('shows a muted record under ten matches', () => {
+    expect(topTwoTile(rec(6, 3), 'x', t)).toEqual({
+      value: `6${WJ}\u2013${WJ}3`,
+      muted: true,
+      detail: `too few for a rate, under 10\u00a0matches \u00b7 ${WITH}`,
+    })
+  })
+
+  it('shows the rate with the record as its line from ten', () => {
+    expect(topTwoTile(rec(35, 25), 'x', t)).toEqual({
+      value: '58%',
+      muted: false,
+      detail: `35${WJ}\u2013${WJ}25 \u00b7 ${WITH}`,
+    })
+  })
+
+  it('writes the caption in the one-line form', () => {
+    expect(rowCaption(rec(35, 25), 'not played', t)).toBe(`58% \u00b7 35${WJ}\u2013${WJ}25`)
+    expect(rowCaption(rec(6, 3), 'not played', t)).toBe(`6${WJ}\u2013${WJ}3`)
+    expect(rowCaption(rec(0, 0), 'not played', t)).toBe('not played')
+    expect(rowCaption(rec(0, 0, 2), 'not played', t)).toBe('no finished match yet')
   })
 })

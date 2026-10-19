@@ -7,10 +7,8 @@
  */
 import type { CoverageOut, CoverageRowOut, Match, MatchupBriefOut } from '../api'
 import type { TFunction } from '../i18n'
-import { MIN_TRUSTED_FIELD_SAMPLE } from '../theme'
 import { mergeNewestFirst } from './deckOverview'
 import { addressSegment, archetypeName, deckAddress } from './decks'
-import { RATE_MIN_MATCHES } from './home'
 import {
   archetypeKeyOf,
   type FieldRecord,
@@ -19,7 +17,9 @@ import {
   opponentSeen,
   type TileText,
 } from './matchups'
-import { ago, formatCount, formatPercent } from './time'
+import { formatPercent, formatRecord } from './format'
+import { MIN_TRUSTED_FIELD_SAMPLE, rateOrRecord } from './sample'
+import { ago, formatCount } from './time'
 
 /** A pairing's page: the deck's address, `/matchups/`, and the opponent's
  *  key spelled in one segment (`addressSegment`: encoded, the colon bare,
@@ -135,7 +135,7 @@ function fieldTile(opponentKey: string, fieldByKey: Map<string, FieldRecord>, t:
   const values = { count: field.entries, n: formatCount(field.entries) }
   return {
     label,
-    value: `${formatPercent(field.winrate)}%`,
+    value: formatPercent(field.winrate),
     detail:
       field.entries < MIN_TRUSTED_FIELD_SAMPLE
         ? t('matchups.pairing.wonInTournamentsThin', values)
@@ -143,31 +143,29 @@ function fieldTile(opponentKey: string, fieldByKey: Map<string, FieldRecord>, t:
   }
 }
 
+/** What a pairing's tile says: `muted` is a record drawn muted, too few
+ *  for a rate. */
+export type PairingTileText = TileText & { muted?: boolean }
+
 /** The three tiles over the pairing's row of `matchupRows` (its finished
- *  matches: wins, losses and draws, a draw a match and not a win). Record:
- *  from ten matches (`RATE_MIN_MATCHES`) the rate, "73%" and "won 8 of 11";
- *  under it the count, "7 of 9" and "matches won". Games: own first,
+ *  matches: wins, losses and draws, a draw neither won nor lost). Record,
+ *  as Matchups rates the same row (`rateOrRecord` over `won` and `lost`):
+ *  from ten won or lost the rate (a draw is not one of the ten), "73%",
+ *  over the record "8–3"; under it the record, "7–2", muted, over the
+ *  "too few" line. Games: own first,
  *  "17–4". In tournaments: `fieldTile` over `fieldByKey`, the field's
  *  records by archetype key, empty while they load or when they fail. */
 export function pairingTiles(
   row: MatchupRow,
   fieldByKey: Map<string, FieldRecord>,
   t: TFunction,
-): [TileText, TileText, TileText] {
-  const label = t('matchups.pairing.record')
-  const won = formatCount(row.won)
-  const matches = formatCount(row.matches)
-  const record: TileText =
-    row.matches >= RATE_MIN_MATCHES
-      ? {
-          label,
-          value: `${formatPercent(row.won / row.matches)}%`,
-          detail: t('matchups.pairing.wonOf', { won, matches }),
-        }
-      : { label, value: t('matchups.tiles.countOf', { won, matches }), detail: t('matchups.pairing.matchesWon') }
-  const games: TileText = {
+): [PairingTileText, PairingTileText, PairingTileText] {
+  const { figure, line, thin } = rateOrRecord({ wins: row.won, losses: row.lost }, t)
+  const record: PairingTileText = { label: t('matchups.pairing.record'), value: figure ?? '—', detail: line }
+  if (thin) record.muted = true
+  const games: PairingTileText = {
     label: t('matchups.pairing.games'),
-    value: `${formatCount(row.gamesWon)}–${formatCount(row.gamesLost)}`,
+    value: formatRecord(row.gamesWon, row.gamesLost),
     detail: t('matchups.pairing.yoursFirst'),
   }
   return [record, games, fieldTile(row.key, fieldByKey, t)]

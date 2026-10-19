@@ -9,13 +9,15 @@ import { useTranslation } from 'react-i18next'
  *  button, so it sits outside the link.
  *
  *  The record comes in two parts the caller writes: `figure`, the large
- *  number ("58%", "6 of 9"), absent when there is none, and `line`, the
- *  words under it. No mana pips: nothing names a deck's own colours. A
- *  deck with no name reads "Unnamed deck", in muted text. */
+ *  number ("58%", "6–3"; under ten matches the record, drawn muted),
+ *  absent when there is none, and `line`, the words under it. No mana pips:
+ *  nothing names a deck's own colours. A deck with no name reads "Unnamed
+ *  deck", in muted text. */
 export function DeckTile({
   name,
   href,
   figure,
+  muted = false,
   line,
   detail,
   lastPlayed,
@@ -25,6 +27,8 @@ export function DeckTile({
   /** A place in the app: the deck's own page. */
   href: string
   figure?: string | null
+  /** The figure is a record under the small-sample threshold: drawn muted. */
+  muted?: boolean
   line: string
   /** A line above the last played, "Standard, best of three · 4 versions"
    *  (`/decks`); absent on Home. */
@@ -46,7 +50,7 @@ export function DeckTile({
           <span className={`font-display text-title break-words ${name ? 'text-ink' : 'text-muted'}`}>
             {name ?? t('common.unnamedDeck')}
           </span>
-          {figure && <span className="mt-2 font-display text-stat text-ink">{figure}</span>}
+          {figure && <span className={`mt-2 font-display text-stat ${muted ? 'text-muted' : 'text-ink'}`}>{figure}</span>}
           <span className={`text-caption text-ink2 ${figure ? '' : 'mt-2'}`}>{line}</span>
           {(detail || lastPlayed) && (
             <span className="mt-auto flex flex-col pt-1 text-caption text-muted">

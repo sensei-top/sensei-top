@@ -38,9 +38,9 @@ import {
   turningSubtitle,
   turningTiles,
   variantsWords,
-  WORD_JOINER,
 } from './coach'
 import { translator } from '../i18n'
+import { WORD_JOINER } from './format'
 import { NBSP } from './matchups'
 
 const t = translator('en')
@@ -319,43 +319,46 @@ const underTen = rate(3, 7, 3 / 7, 0.1, 0.8)
 const none = rate(0, 0, null, 0, 1)
 
 /** A range as `rateWords` writes it: a word joiner each side of the dash. */
-const range = (low: number, high: number) => `${low}${WORD_JOINER}–${WORD_JOINER}${high}%`
+const range = (low: number, high: number) => `${low}%${WORD_JOINER}–${WORD_JOINER}${high}%`
+
+/** A record as `formatRecord` writes it. */
+const record = (wins: number, losses: number) => `${wins}${WORD_JOINER}–${WORD_JOINER}${losses}`
 
 describe('rateWords', () => {
   it('is the record, the percent and the range for ten matches or more', () => {
-    expect(rateWords(tenOrMore, t)).toEqual({ record: '174 of 385', percent: '45%', range: range(40, 50) })
+    expect(rateWords(tenOrMore)).toEqual({ record: record(174, 211), percent: '45%', range: range(40, 50) })
   })
 
   it("rounds the range's two ends as the percent rounds", () => {
     // 49.51% rounds up to 50; 44.49% down to 44, 55.51% up to 56.
-    expect(rateWords(rate(1000, 2020, 0.4951, 0.4449, 0.5551), t)).toEqual({
-      record: '1,000 of 2,020',
+    expect(rateWords(rate(1000, 2020, 0.4951, 0.4449, 0.5551))).toEqual({
+      record: `1,000${WORD_JOINER}–${WORD_JOINER}1,020`,
       percent: '50%',
       range: range(44, 56),
     })
   })
 
   it('is the record alone under ten', () => {
-    expect(rateWords(underTen, t)).toEqual({ record: '3 of 7', percent: null, range: null })
+    expect(rateWords(underTen)).toEqual({ record: record(3, 4), percent: null, range: null })
   })
 
   it('reads the anecdotal flag, not the count', () => {
     // Twelve matches flagged anecdotal: the record alone. 7 of 12 is 58.3%.
-    expect(rateWords({ ...rate(7, 12, 7 / 12, 0.3, 0.8), anecdotal: true }, t)).toEqual({
-      record: '7 of 12',
+    expect(rateWords({ ...rate(7, 12, 7 / 12, 0.3, 0.8), anecdotal: true })).toEqual({
+      record: record(7, 5),
       percent: null,
       range: null,
     })
     // Eight matches not flagged: a percent and a range. 5 of 8 is 62.5%, rounded up to 63.
-    expect(rateWords({ ...rate(5, 8, 5 / 8, 0.3, 0.9), anecdotal: false }, t)).toEqual({
-      record: '5 of 8',
+    expect(rateWords({ ...rate(5, 8, 5 / 8, 0.3, 0.9), anecdotal: false })).toEqual({
+      record: record(5, 3),
       percent: '63%',
       range: range(30, 90),
     })
   })
 
   it('is nothing with no match', () => {
-    expect(rateWords(none, t)).toEqual({ record: null, percent: null, range: null })
+    expect(rateWords(none)).toEqual({ record: null, percent: null, range: null })
   })
 })
 
@@ -364,12 +367,23 @@ describe('rateTile', () => {
     expect(rateTile('Matches', tenOrMore, t)).toEqual({
       label: 'Matches',
       value: '45%',
-      detail: `174 of 385 won · ${range(40, 50)}`,
+      detail: `${record(174, 211)} · ${range(40, 50)}`,
     })
   })
 
-  it('shows a dash over the record under ten', () => {
-    expect(rateTile('On the draw', underTen, t)).toEqual({ label: 'On the draw', value: '—', detail: '3 of 7 won' })
+  it('shows the record, muted, over the "too few" line under ten', () => {
+    expect(rateTile('Matches', underTen, t)).toEqual({
+      label: 'Matches',
+      value: record(3, 4),
+      detail: `too few for a rate, under 10${NBSP}matches`,
+      muted: true,
+    })
+    expect(rateTile('On the draw', underTen, t, 'games')).toEqual({
+      label: 'On the draw',
+      value: record(3, 4),
+      detail: `too few for a rate, under 10${NBSP}games`,
+      muted: true,
+    })
   })
 
   it('shows a dash over "None played" with no match', () => {

@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import type { MetaPresence } from '../../api'
 import type { FieldRecord } from '../../lib/home'
-import { formatCount, formatPercent } from '../../lib/time'
+import { formatPercent } from '../../lib/format'
+import { topTwoTile } from '../../lib/field'
+import { formatCount } from '../../lib/time'
 import { StatTile } from '../ui'
 
 /** Three tiles, a row from 48rem, stacked under it: every list of the tier
@@ -23,6 +25,7 @@ export function FieldTiles({
 }) {
   const { t } = useTranslation()
   const top = rows[0]
+  const against = topTwoTile(topTwo, when, t)
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <StatTile
@@ -37,12 +40,9 @@ export function FieldTiles({
       />
       <StatTile
         label={rows.length === 1 ? t('field.tiles.againstOne') : t('field.tiles.againstTwo')}
-        value={
-          topTwo.played > 0
-            ? t('field.tiles.recordValue', { won: formatCount(topTwo.won), played: formatCount(topTwo.played) })
-            : '0'
-        }
-        detail={topTwo.played > 0 ? t('field.tiles.wonDetail') : t('field.tiles.notMet', { when })}
+        value={against.value}
+        muted={against.muted}
+        detail={against.detail}
       />
     </div>
   )

@@ -72,13 +72,10 @@
     "onDraw": "No draw"
   },
   "rate": {
-    "record": "{{wins}} de {{n}}",
-    "nonePlayed": "Nenhuma jogada",
-    "won": "{{record}} vencidas",
-    "wonRange": "{{record}} vencidas · {{range}}"
+    "nonePlayed": "Nenhuma jogada"
   },
   "table": {
-    "won": "Vitórias",
+    "record": "Histórico",
     "rate": "Taxa",
     "archetype": "Arquétipo",
     "share": "Fatia"

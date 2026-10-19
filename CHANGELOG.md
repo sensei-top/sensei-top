@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Your library** on **Live** is now your decklist and nothing else:
+  how many of each card are left, and the chance of drawing at least one
+  in your next three draws, with your lands as the first row. The land,
+  interaction and flood tiles above it are gone, and so is the footnote:
+  the column's header says what the number is.
+- **Live** says each thing once. **Match details** is gone from the bar
+  under the page, since the strip at the top already shows the game, the
+  turn and the opponent. The opponent's deck no longer repeats its name
+  and confidence under the strip, and between games the strip names the
+  opponent while the sideboard plan takes the page.
+- A deck's page has a strip of three numbers under its name, on every
+  tab: its matches, its games, and the gap between its win rates on the
+  play and on the draw.
+- The RCQ guide is a tab of its own on a deck's page, beside **Guide**.
+  An old link to it still opens it.
+- Every page writes numbers the same way: a whole percent ("58%"), a
+  record as wins–losses ("6–3"), and, under ten matches, the record in
+  place of a rate, with a line saying it is too few for one.
+
+### Fixed
+
+- In English, some counts of one read as a plural, such as "1 cards
+  seen" on **Live**. They now read "1 card seen".
+
 ## [1.0.1] - 2026-10-17
 
 ### Fixed

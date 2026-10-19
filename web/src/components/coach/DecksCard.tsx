@@ -2,27 +2,39 @@ import { useTranslation } from 'react-i18next'
 import type { CoachEvidenceModel, RateModel } from '../../api'
 import { deckName, rateWords } from '../../lib/coach'
 import { archetypeName } from '../../lib/decks'
+import { RATE_MIN_MATCHES } from '../../lib/sample'
 import { Card } from '../ui'
 
 type DeckLine = CoachEvidenceModel['by_deck'][number]
 
-/** A deck's matches, at the row's right: the percent, and under it in
- *  caption the record and the range; under ten, a dash over the record. */
+/** A deck's matches, at the row's right: from ten the percent, and under it
+ *  in caption the record and the range; under ten the record, muted, over
+ *  the "too few" line (D7); a dash only with no match. */
 function MatchesRate({ rate }: { rate: RateModel }) {
   const { t } = useTranslation()
-  const words = rateWords(rate, t)
+  const words = rateWords(rate)
+  if (words.record == null) return <div className="shrink-0 text-right text-body text-muted">—</div>
+  if (words.percent == null) {
+    return (
+      <div className="max-w-[50%] shrink-0 text-right">
+        <div className="text-body whitespace-nowrap text-muted tabular-nums">{words.record}</div>
+        <div className="text-caption text-muted">{t('common.sample.tooFewMatches', { min: RATE_MIN_MATCHES })}</div>
+      </div>
+    )
+  }
   return (
     <div className="shrink-0 text-right">
-      <div className="text-body text-ink tabular-nums">{words.percent ?? '—'}</div>
-      {words.record && <div className="text-caption whitespace-nowrap text-muted tabular-nums">{words.record}</div>}
-      {words.range && <div className="text-caption whitespace-nowrap text-muted tabular-nums">{words.range}</div>}
+      <div className="text-body text-ink tabular-nums">{words.percent}</div>
+      <div className="text-caption whitespace-nowrap text-muted tabular-nums">{words.record}</div>
+      <div className="text-caption whitespace-nowrap text-muted tabular-nums">{words.range}</div>
     </div>
   )
 }
 
 /** One deck: the name the user typed, the field's name under it when it
  *  differs (D10), its matches at the right, then the four splits, each a
- *  label over the percent and the record. No range on a split. */
+ *  label over the percent and the record; under ten, the record, muted,
+ *  over "too few". No range on a split. */
 function DeckRow({ deck }: { deck: DeckLine }) {
   const { t } = useTranslation()
   const name = deckName(deck.label, t)
@@ -44,12 +56,25 @@ function DeckRow({ deck }: { deck: DeckLine }) {
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
         {splits.map(([label, rate]) => {
-          const words = rateWords(rate, t)
+          const words = rateWords(rate)
           return (
             <div key={label}>
               <dt className="text-caption text-muted">{label}</dt>
-              <dd className="text-body text-ink tabular-nums">{words.percent ?? '—'}</dd>
-              {words.record && <dd className="text-caption text-muted tabular-nums">{words.record}</dd>}
+              {words.percent != null ? (
+                <>
+                  <dd className="text-body text-ink tabular-nums">{words.percent}</dd>
+                  <dd className="text-caption text-muted tabular-nums">{words.record}</dd>
+                </>
+              ) : (
+                <>
+                  <dd className={`text-body tabular-nums ${words.record ? 'whitespace-nowrap text-muted' : 'text-ink'}`}>
+                    {words.record ?? '—'}
+                  </dd>
+                  {words.record && (
+                    <dd className="text-caption text-muted">{t('common.sample.tooFewCellGames')}</dd>
+                  )}
+                </>
+              )}
             </div>
           )
         })}

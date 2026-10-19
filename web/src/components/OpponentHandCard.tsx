@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { HandCardOut, HandReadOut, RevealedCardOut } from '../api'
 import type { TFunction } from '../i18n'
-import { percent } from '../theme'
+import { formatPercent } from '../lib/format'
 import { Card, CardTile, Chip, SectionLabel } from './ui'
 
 /** Why there is no card-by-card estimate, by the read's status. */
@@ -56,7 +56,7 @@ function HandCardTile({ card }: { card: HandCardOut }) {
   return (
     <CardTile grpId={card.grp_id} name={card.name} width={TILE_WIDTH}>
       <div className="flex items-center gap-1.5">
-        <span>{percent(card.p_in_hand)}</span>
+        <span>{formatPercent(card.p_in_hand)}</span>
         {card.castable_now && (
           <Chip size="sm" variant="warn">
             {t('live.opponentHand.now')}

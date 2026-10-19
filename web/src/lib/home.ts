@@ -23,9 +23,6 @@ export const SESSION_GAP_MS = 3 * HOUR
  *  far as a count needs. */
 export const HOME_MATCH_LIMIT = 500
 
-/** Below this many finished matches, a record is a count, not a rate. */
-export const RATE_MIN_MATCHES = 10
-
 export type LiveState = 'down' | 'stopped' | 'match' | 'watching' | 'idle'
 
 /** The status pill's state, the first that holds: the heartbeat failed, the
@@ -171,7 +168,7 @@ export function sessionHeadline({ wins, losses, draws }: Tally, t: TFunction): s
   return t('home.headline.recordWithDraws', { wins: w, losses: l, draws: t('home.headline.draws', { count: draws }) })
 }
 
-export type ThirtyDays = { played: number; won: number; outsideSession: boolean }
+export type ThirtyDays = { played: number; won: number; losses: number; outsideSession: boolean }
 
 /** The finished matches that started in the 30 days before `now`, and
  *  whether any of them is not part of the session. */
@@ -182,6 +179,7 @@ export function lastThirtyDays(matches: Match[], session: Session | null, now: n
   return {
     played: recent.length,
     won: recent.filter((match) => match.result === 'win').length,
+    losses: recent.filter((match) => match.result === 'loss').length,
     outsideSession: recent.some((match) => !inSession.has(match.match_id)),
   }
 }
@@ -261,7 +259,11 @@ export type Week = {
   start: number
   played: number
   won: number
-  /** 0..1; `null` for a week with no finished match. */
+  /** Finished losses alone: a draw is in `played` and in neither `won` nor
+   *  `losses`. */
+  losses: number
+  /** 0..1, over wins plus losses (a draw is in neither); `null` for a week
+   *  with neither a win nor a loss. */
   rate: number | null
 }
 
@@ -316,7 +318,7 @@ export function weeklyWinrate(matches: Match[], listFull: boolean): Weeks {
 
   const weeks: Week[] = []
   for (let start = first; start <= newest; start = addWeeks(start, 1)) {
-    weeks.push({ start, played: 0, won: 0, rate: null })
+    weeks.push({ start, played: 0, won: 0, losses: 0, rate: null })
   }
   const index = new Map(weeks.map((week, i) => [week.start, i]))
   for (const match of finished) {
@@ -324,8 +326,12 @@ export function weeklyWinrate(matches: Match[], listFull: boolean): Weeks {
     if (i == null) continue
     weeks[i].played += 1
     if (match.result === 'win') weeks[i].won += 1
+    else if (match.result === 'loss') weeks[i].losses += 1
   }
-  for (const week of weeks) week.rate = week.played > 0 ? week.won / week.played : null
+  for (const week of weeks) {
+    const decided = week.won + week.losses
+    week.rate = decided > 0 ? week.won / decided : null
+  }
 
   const firstWithMatch = weeks.findIndex((week) => week.played > 0)
   return { weeks: firstWithMatch < 0 ? [] : weeks.slice(firstWithMatch), truncated }
@@ -398,7 +404,9 @@ export function firstTierWithLists(presence: MetaPresence[]): Tier | null {
   return TIERS.find((tier) => hasLists(presence, tier)) ?? null
 }
 
-export type FieldRecord = { played: number; won: number }
+/** `losses` is the finished losses alone: a draw is in `played` and in
+ *  neither `won` nor `losses`. */
+export type FieldRecord = { played: number; won: number; losses: number }
 
 export type FieldRow = { presence: MetaPresence; record: FieldRecord }
 
@@ -468,7 +476,11 @@ export function recordAgainst(
       match.opponent_label != null &&
       wanted.has(pairOf(match.opponent_key, match.opponent_label)),
   )
-  return { played: against.length, won: against.filter((match) => match.result === 'win').length }
+  return {
+    played: against.length,
+    won: against.filter((match) => match.result === 'win').length,
+    losses: against.filter((match) => match.result === 'loss').length,
+  }
 }
 
 /** The matches played in `format`; a match with no format counts toward

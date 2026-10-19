@@ -3,7 +3,7 @@ import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { archetypeName } from '../../lib/decks'
 import { splitOptions, type ExpectedOption, type RcqInputs } from '../../lib/rcq'
-import { formatPercent } from '../../lib/time'
+import { formatPercent } from '../../lib/format'
 import { Card, Select } from '../ui'
 
 /** The 75 as the player will register it: a text box the size of a list,
@@ -59,7 +59,7 @@ function ExpectedChip({
     >
       {pressed && <Check size={14} strokeWidth={2} aria-hidden className="mr-1 inline-block shrink-0 align-[-2px]" />}
       {option.label}
-      {option.share != null && <span className="ml-1.5 text-muted tabular-nums">{formatPercent(option.share)}%</span>}
+      {option.share != null && <span className="ml-1.5 text-muted tabular-nums">{formatPercent(option.share)}</span>}
     </button>
   )
 }

@@ -39,10 +39,28 @@ export function formatNumber(value: number, options?: Intl.NumberFormatOptions):
 }
 
 /** A share or a rate, 0..1, with its sign: "52%". Whole by default;
- *  `options` may ask for digits. */
+ *  `options` may ask for digits. Whole, a fraction strictly between 0 and
+ *  0.01 reads "<1%" and one strictly between 0.99 and 1 reads ">99%", so a
+ *  rate that is not nothing and not everything never rounds to either. The
+ *  bounds are built from the locale's own 1% and 99%. */
 export function formatPercent(fraction: number, options?: Intl.NumberFormatOptions): string {
   const all: Intl.NumberFormatOptions = { style: 'percent', maximumFractionDigits: 0, ...options }
-  return cached('percent', all, (locale) => new Intl.NumberFormat(locale, all)).format(fraction)
+  const format = (value: number) => cached('percent', all, (locale) => new Intl.NumberFormat(locale, all)).format(value)
+  if (all.maximumFractionDigits === 0) {
+    if (fraction > 0 && fraction < 0.01) return `<${format(0.01)}`
+    if (fraction > 0.99 && fraction < 1) return `>${format(0.99)}`
+  }
+  return format(fraction)
+}
+
+/** The word joiner (U+2060): no line may break on either side of it. Built
+ *  in code, never typed, like `NBSP`. */
+export const WORD_JOINER = String.fromCharCode(0x2060)
+
+/** A record, wins then losses, with an en dash: "6–3". A word joiner each
+ *  side of the dash, so a record never wraps at it. */
+export function formatRecord(wins: number, losses: number): string {
+  return `${formatNumber(wins)}${WORD_JOINER}–${WORD_JOINER}${formatNumber(losses)}`
 }
 
 /** A moment, in the viewer's own zone, in the shape `options` asks for. */

@@ -574,24 +574,27 @@ first break ever pays the full ~2 s. `api/sql.py`'s `_cached_break_read`
 owns the cache key (see Wiring, below).
 
 **Frontend.** `SideboardPlanCard` renders the headline ("Lost game 1
-(concede) — board for game 2 vs Boros Aggro"), the plan itself
-(`BoardPlan`/`PlayAroundList`, reused from `MatchupBriefCard` rather than
-forked), past boarding, and — when there is no plan at all — a
-`CopyPromptCard` carrying the prompt and the exact `brief --import` command
-to paste the answer back through. With neither a plan nor a prompt it says
-why instead: a match whose `fmt` is `null` gets its own sentence ("No
-tournament format is known for this match, so the opponent's deck can't be
-named from the cards seen, and there is no plan to show."), distinct from
-the unnamed-opponent one, and `SideboardOpponentRail`'s empty opponent says
-the same in its shorter form. `SideboardOpponentRail` shows who the
-live read currently thinks the opponent is (or "your pick" when it's a
-manual override) and, when there are any, the other archetypes with a
-written plan, each expandable to its own full board. In
-`CurrentMatchView.tsx`, the break phase takes precedence over every other
-phase — including a pending mulligan decision, which cannot actually
-co-occur with a break since the next game's opening hand doesn't exist
-until sideboarding ends — and `MatchStatusStrip` renders `"Sideboarding —
-game N next"` in place of the ordinary game/turn phase phrase.
+(concede)"), the plan itself (`BoardPlan`/`PlayAroundList`, reused from
+`MatchupBriefCard` rather than forked), past boarding, and — when there is
+no plan at all — a `CopyPromptCard` carrying the prompt and the exact `brief
+--import` command to paste the answer back through. With neither a plan nor
+a prompt it says why instead: a match whose `fmt` is `null` gets its own
+sentence ("No tournament format is known for this match, so the opponent's
+deck can't be named from the cards seen, and there is no plan to show."),
+distinct from the unnamed-opponent one. The opponent is the status strip's
+during the break, as at every other phase: its name, its chip (the
+confidence, or "picked" for a manual pick) and the cards seen come from
+`intermission.opponent` and `intermission.cards_seen`, the live read, not
+from the projected match, which can trail it. `SideboardOpponentRail` holds
+only the other archetypes with a written plan, each expandable to its own
+full board; with none it is not drawn, and the plan card takes the full
+width. The plan card's title is the result and its reason alone ("Lost game
+1 (concede)"), since the strip already says which game is next and against
+what. In `CurrentMatchView.tsx`, the break phase takes precedence over every
+other phase — including a pending mulligan decision, which cannot actually
+co-occur with a break since the next game's opening hand doesn't exist until
+sideboarding ends — and `MatchStatusStrip` renders `"Sideboarding, game N
+next"` in place of the ordinary game/turn phase phrase.
 
 ## The ranked-play rule (`table/ranked.py`)
 
@@ -799,9 +802,10 @@ window's height instead of letting the page scroll — see
 `docs/frontend.md`'s "Focus mode".
 The base render is meant to fit a second monitor with nothing scrolled: a
 one-line status strip, a two-column grid (a primary read and a narrow rail),
-and a disclosure bar for everything demoted (the matchup brief, the four
-stat tiles) — each is a `Disclosure` that opens independently and
-scrolls inside itself rather than the page. Under 48rem there is no
+and a disclosure bar holding the matchup brief, a `Disclosure` that
+opens over the page and scrolls inside itself. The match's facts are
+the status strip's alone, so the bar repeats none of them, and in a
+ranked game it is not drawn, since the brief is advice. Under 48rem there is no
 cap: the page is one column and scrolls, and the strip takes two lines
 ("The status strip", below).
 
@@ -813,7 +817,7 @@ until the next game's opening hand exists:
 
 | phase | primary | rail |
 |---|---|---|
-| between games (Bo3 break) | `SideboardPlanCard` — headline, board plan or prompt, past boarding | `SideboardOpponentRail` — live opponent read, other written plans |
+| between games (Bo3 break) | `SideboardPlanCard` — headline, board plan or prompt, past boarding | `SideboardOpponentRail` — the other archetypes with a written plan; not drawn when there are none, and the plan card takes the full width |
 | a decision is pending | `OpeningHandCard` — the real 7 as images, verdict headline, evidence | `KeepGuideCard` (full) |
 | mulligan phase, no offer yet | `KeepGuideCard` (full) | `OpponentRead` |
 | game under way | `LibraryCard` — our own remaining deck, decklist order, no card cap | `OpponentHandCard`, `KeepGuideCard` (dense), `OpponentRead` (dense) |
@@ -863,30 +867,32 @@ always visible). No card cap: the fresh live replay behind it costs the
 same either way, unlike the old client-side subtraction against a stale
 `turns` row.
 
-A header band of large odds readouts sits above the list — land odds,
-interaction odds (hidden when every nonland row's `is_interaction` is
-`None`), and a flood and screw comparison of the library's current land
-ratio against the deck's built ratio (`keep.land_count /
-keep.maindeck_size`, already on the same response). From 48rem up the
-tiles share a row; under it they stack, one to a row. In a tile each
-big number shares its line with its words and is never cut: the words
-wrap beside it. This replaced a fourth table column giving
-each row its own "next / in 3" percentage: P(next draw) is exactly
-`left ÷ library_count`, so every 4-of read the same percentage regardless of
-which 4-of it was — that column was `text-xs text-muted`, the smallest,
-dimmest type in the panel, spent on a number that mostly restated the `Left`
-column beside it. The band spends large type on the aggregate figures that
-actually vary game to game instead.
+The card is the decklist and nothing else. One table, under one header
+row: Left, Card, and "In 3 draws", the chance of at least one copy
+within the next three draws. The header is the whole explanation, so
+there is no footnote. The first row is the lands, drawn like a card
+row: the lands left out of the deck's land count (`keep.land_count`,
+already on the same response; the total is left off when that is
+null) and their chance. The nonland rows follow, grouped by mana
+value, each with its copies left out of its quantity and its own
+chance. The grouping, the lands row and every chance are
+`lib/library.ts`.
 
-The list below the band keeps mana-value grouping — the shape a player
-already holds their own 60 in memory in — across auto-flowing columns
-(`[columns:21rem_3]`) rather than one full-width table, so a card's name and
-its own percentage sit within a few hundred pixels of each other instead of
-spanning the whole primary column. Rows sort by name within a group, not by
-copies left, so a row's position stays fixed as the game evolves rather than
-reshuffling on every draw. Lands collapse into the header band's own tile
-rather than a summary row in the list — that is where they were always the
-headline.
+Until 1.0.1 a band of three tiles sat above the list: land odds,
+interaction odds and a flood or screw comparison, with a footnote
+under them. Together they moved from the next draw to the next three
+and back, and gave the land chance in more than one form. Feedback on
+the 1.0.1 announcement named this card first when it called the
+dashboard's information randomly spread, so the card now asks one
+question, three draws ahead, and answers it on every row. The API's
+`is_interaction` stays, since `KeepGuideCard` still reads it.
+
+The groups keep mana value, the shape a player already holds their own
+60 in memory in, and rows sort by name within a group, not by copies
+left, so a row's position stays fixed as the game evolves rather than
+reshuffling on every draw. The name column truncates rather than
+wrapping, and the header stays put while the list scrolls inside the
+card.
 
 **`OpponentHandCard` leads with facts, then demotes the estimate.** Order
 is hand size / open mana (plus any widened "+N other" sources) / held
@@ -916,7 +922,10 @@ seen), and the opponent's identity: pips, name, confidence. From
 48rem up it is one line, and the facts are cut to fit it. Under 48rem
 it is two: game, turn, pips and confidence on the first; the
 opponent's name and then the facts on the second, wrapping, none cut.
-While sideboarding the phase reads "Sideboarding, game 2 next".
+While sideboarding the phase reads "Sideboarding, game 2 next", and the
+opponent's identity and cards seen come from the break read
+("The break read", above), so they agree with the plan card beside
+them.
 
 **The status strip flags a likely-abandoned match.** `v_current_match`
 stays current until the next match begins even if the current one never

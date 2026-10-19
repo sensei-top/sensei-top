@@ -47,3 +47,18 @@ export function livePanels({
     rail: ['opponent-hand', 'keep-guide-dense', 'opponent-read-dense'],
   }
 }
+
+/** The alternatives the break's rail lists. A closest plan is itself
+ *  `alternatives[0]` (`table/intermission.py`), and the plan card already
+ *  shows it, so it is dropped here: by the plan's archetype key, or the
+ *  first entry when that key is null. */
+export function railAlternatives<A extends { archetype_key: string }>(intermission: {
+  alternatives?: A[] | null
+  plan_basis?: string | null
+  plan?: { archetype_key?: string | null } | null
+}): A[] {
+  const alternatives = intermission.alternatives ?? []
+  if (intermission.plan_basis !== 'closest') return alternatives
+  const key = intermission.plan?.archetype_key
+  return key == null ? alternatives.slice(1) : alternatives.filter((a) => a.archetype_key !== key)
+}

@@ -6,12 +6,12 @@ import { ageText, seenOpponentCards } from '../lib/brief'
 import { isPasted } from '../lib/written'
 import { CopyPromptCard } from './CopyPromptCard'
 import { Card, Chip, EmptyState, Loading, Prose, SectionLabel } from './ui'
-import { percent } from '../theme'
+import { formatPercent, formatRecord } from '../lib/format'
 
 function recordText(brief: MatchupBriefOut, t: TFunction): string | null {
   if (brief.personal_matches == null || brief.personal_matches === 0) return null
-  const losses = brief.personal_matches - (brief.personal_wins ?? 0)
-  return t('matchups.briefCard.record', { wins: brief.personal_wins ?? 0, losses, count: brief.personal_matches })
+  const record = formatRecord(brief.personal_wins ?? 0, brief.personal_losses ?? 0)
+  return t('matchups.briefCard.record', { record, count: brief.personal_matches })
 }
 
 /** The play-around list, each card a `Chip` that turns `seen` (struck
@@ -158,7 +158,7 @@ function BriefBody({ brief, match }: { brief: MatchupBriefOut; match: CurrentMat
           {brief.archetype_label ?? brief.archetype_key}
           {brief.archetype_share != null && (
             <span className="ml-2 font-normal text-muted">
-              {t('matchups.briefCard.ofTheField', { share: percent(brief.archetype_share) })}
+              {t('matchups.briefCard.ofTheField', { share: formatPercent(brief.archetype_share) })}
             </span>
           )}
         </h3>

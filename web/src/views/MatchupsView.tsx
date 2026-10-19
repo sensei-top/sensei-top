@@ -1,26 +1,46 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router'
-import { DECK_MATCH_LIMIT, useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } from '../api'
+import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } from '../api'
 import { VersionSwitcher } from '../components/VersionSwitcher'
 import { Button, Card, DataTable, EmptyState, ErrorNote, Loading, ManaPips, StatTile, TextLink } from '../components/ui'
 import { mergeNewestFirst } from '../lib/deckOverview'
-import { archetypeKeyOf, fieldLine, matchupName, matchupRows, matchupTiles } from '../lib/matchups'
-import { RATE_MIN_MATCHES } from '../lib/home'
+import {
+  archetypeKeyOf,
+  fieldLine,
+  matchupName,
+  type MatchupRow,
+  matchupRows,
+  matchupTiles,
+} from '../lib/matchups'
+import { formatPercent, formatRecord } from '../lib/format'
 import { pairingAddress, withVersion } from '../lib/pairing'
-import { formatCount, formatPercent, useNow } from '../lib/time'
+import { RATE_MIN_MATCHES } from '../lib/sample'
+import { formatCount, useNow } from '../lib/time'
 import { placeById } from '../shell/places'
 
 const MINUTE = 60_000
+
+/** A row's Rate cell: the rate from ten finished matches (a draw is neither
+ *  won nor lost); under ten the "too few" word, muted, the record being the
+ *  column beside it; an em dash only when no match was won or lost. */
+function RateCell({ row }: { row: MatchupRow }) {
+  const { t } = useTranslation()
+  const finished = row.won + row.lost
+  if (finished === 0) return <>—</>
+  if (finished < RATE_MIN_MATCHES) {
+    return <span className="whitespace-nowrap text-muted">{t('common.sample.tooFewCellMatches')}</span>
+  }
+  return <>{formatPercent(row.won / finished)}</>
+}
 
 /** A deck's Matchups, over the versions the address chose (`versionIds`,
  *  every version when `version` is `null`), counted from the matches in
  *  hand, top to bottom: the version switcher when the deck has more than
  *  one; three tiles, the archetypes met and the best and worst of those met
- *  five times or more, and under them, when a version's list is cut at the
- *  route's maximum, how many matches were counted; and every archetype
- *  met, one row each, whichever version met it, its name a link to the
- *  pairing's page carrying the version chosen. Finished matches only.
+ *  ten times or more; and every archetype met, one row each, whichever
+ *  version met it, its name a link to the pairing's page carrying the
+ *  version chosen. Finished matches only.
  *  Each version is read on its own and the page waits for every one; one
  *  failure is the page's error. The field's numbers never hold the page:
  *  until they come, or when they fail, the line under a name is the games
@@ -78,20 +98,12 @@ export function MatchupsView({
       />
     )
   } else {
-    const full = (matches.data ?? []).some((list) => list.length >= DECK_MATCH_LIMIT)
     body = (
       <>
-        <div className="space-y-2">
-          <div className="grid gap-4 md:grid-cols-3">
-            {tiles.map((tile) => (
-              <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} />
-            ))}
-          </div>
-          {full && (
-            <p className="text-caption text-muted">
-              {t('matchups.view.countedOver', { n: formatCount(inHand.length) })}
-            </p>
-          )}
+        <div className="grid gap-4 md:grid-cols-3">
+          {tiles.map((tile) => (
+            <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} />
+          ))}
         </div>
 
         <Card title={t('matchups.view.archetypesMet')} subtitle={t('matchups.view.archetypesMetSubtitle')}>
@@ -99,7 +111,7 @@ export function MatchupsView({
             columns={[
               t('matchups.view.columns.archetype'),
               t('matchups.view.columns.matches'),
-              t('matchups.view.columns.won'),
+              t('matchups.view.columns.record'),
               t('matchups.view.columns.rate'),
             ]}
             rows={rows.map((row) => {
@@ -125,8 +137,8 @@ export function MatchupsView({
                   </div>
                 </div>,
                 formatCount(row.matches),
-                formatCount(row.won),
-                row.matches >= RATE_MIN_MATCHES ? `${formatPercent(row.won / row.matches)}%` : '—',
+                formatRecord(row.won, row.lost),
+                <RateCell key="rate" row={row} />,
               ]
             })}
           />

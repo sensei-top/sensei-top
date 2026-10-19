@@ -57,6 +57,7 @@ const NOT_TEXT: ReadonlySet<string> = new Set([
   'target',
   'type',
   'role',
+  'scope',
   'as',
   'variant',
   'tone',

@@ -14,8 +14,7 @@ import { GenerateCard } from '../components/GenerateCard'
 import { InputsCard } from '../components/rcq/InputsCard'
 import { PreviewCard } from '../components/rcq/PreviewCard'
 import { RcqResult } from '../components/rcq/RcqResult'
-import { BackLink, ErrorNote, Loading } from '../components/ui'
-import { deckAddress } from '../lib/decks'
+import { ErrorNote, Loading } from '../components/ui'
 import {
   browserStorage,
   expectedOptions,
@@ -104,10 +103,6 @@ export function RcqView({ deckKey }: { deckKey: string }) {
 
   return (
     <div className="space-y-6">
-      <p className="text-caption">
-        <BackLink href={`${deckAddress(deckKey)}/guide`}>{t('rcq.view.back')}</BackLink>
-      </p>
-
       <InputsCard
         inputs={inputs}
         onChange={change}

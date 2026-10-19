@@ -184,18 +184,19 @@ pt-BR`, from the same two copies, into `site/img/pt-br/`.
 `scripts/screenshots.mjs` drives a headless Chromium (Playwright, a dev
 dependency; `pnpm exec playwright install chromium` once) through every
 address of a server that is already up, and writes one full-height PNG per
-view and width: eighteen views in all. They are Home, Live, Matches, a match
+view and width: nineteen views in all. They are Home, Live, Matches, a match
 and its replay, Decks, a deck's Overview (once by its own key and once, with
 a version chosen, by the key of the deck with the most matches), a deck's
-Matchups (the same two ways), a deck's Guide, Field, an event's page, Coach,
-Settings, the reference page and the not-found page. A pairing's page has an
-address but is not in this list. Each is opened from a cold load of its own
-address, the way a link or a reload opens it. The flags follow the script's
-name directly: pnpm forwards a `--` as written, and the script refuses it.
-`--only` takes the ids of the views to capture (`--only design,settings`),
-and `--base` the server's address (`http://127.0.0.1:8000` when none is
-given). It is a way to look at a change, not a check: nothing compares the
-images, and neither `pnpm lint` nor `pnpm build` runs it.
+Matchups (the same two ways), a deck's Guide, its RCQ tab, Field, an event's
+page, Coach, Settings, the reference page and the not-found page. A
+pairing's page has an address but is not in this list. Each is opened from a
+cold load of its own address, the way a link or a reload opens it. The flags
+follow the script's name directly: pnpm forwards a `--` as written, and the
+script refuses it. `--only` takes the ids of the views to capture (`--only
+design,settings`), and `--base` the server's address
+(`http://127.0.0.1:8000` when none is given). It is a way to look at a
+change, not a check: nothing compares the images, and neither `pnpm lint`
+nor `pnpm build` runs it.
 
 The table of views is `web/scripts/views.mjs`, shared with
 `site-images.mjs`, as is the resolution of an address's placeholders. A view

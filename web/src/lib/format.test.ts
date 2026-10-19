@@ -1,7 +1,7 @@
 import i18next from 'i18next'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { apiLanguage, languageOf, onLanguageChange, setLanguage, systemLanguage } from '../i18n'
-import { formatDate, formatDollars, formatFixed, formatList, formatPrice, formatNumber, formatPercent, formatRelative } from './format'
+import { formatDate, formatDollars, formatFixed, formatList, formatPrice, formatNumber, formatPercent, formatRecord, formatRelative } from './format'
 
 // Every expected string below was read from Chromium 153's own ICU (the
 // browser the screenshots run in) and Node's, which agree: `Intl` called
@@ -124,5 +124,28 @@ describe('onLanguageChange', () => {
     setLanguage('pt-BR')
     expect(heard).toEqual(['pt-BR', 'en'])
     setLanguage('en')
+  })
+})
+
+describe('percent bounds and records', () => {
+  it('keeps a rate that is neither nothing nor everything off 0% and 100%', () => {
+    setLanguage('en')
+    expect(formatPercent(0)).toBe('0%')
+    expect(formatPercent(0.004)).toBe('<1%')
+    expect(formatPercent(0.01)).toBe('1%')
+    expect(formatPercent(0.995)).toBe('>99%')
+    expect(formatPercent(1)).toBe('100%')
+    setLanguage('pt-BR')
+    expect(formatPercent(0)).toBe('0%')
+    expect(formatPercent(0.004)).toBe('<1%')
+    expect(formatPercent(0.01)).toBe('1%')
+    expect(formatPercent(0.995)).toBe('>99%')
+    expect(formatPercent(1)).toBe('100%')
+    setLanguage('en')
+  })
+
+  it('writes a record wins, en dash, losses', () => {
+    expect(formatRecord(6, 3)).toBe('6\u2060–\u20603')
+    expect(formatRecord(1234, 0)).toBe('1,234\u2060–\u20600')
   })
 })

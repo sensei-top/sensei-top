@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type {
   CurrentMatch,
-  IntermissionOpponentOut,
   IntermissionOut,
   PastBoardingCardOut,
   PastBoardingGameOut,
@@ -11,10 +10,12 @@ import { usePasteBrief } from '../api'
 import type { TFunction } from '../i18n'
 import { seenOpponentCards } from '../lib/brief'
 import { cardName } from '../lib/cards'
+import { railAlternatives } from '../lib/livePanels'
 import { confidenceLabel } from '../lib/opponent'
 import { BoardPlan, BriefProvenance, PlayAroundList } from './MatchupBriefCard'
 import { CopyPromptCard } from './CopyPromptCard'
-import { Card, Chip, Disclosure, EmptyState, Meter, Prose, SectionLabel } from './ui'
+import { formatPercent } from '../lib/format'
+import { Card, Chip, Disclosure, EmptyState, Prose, SectionLabel } from './ui'
 
 /** Arena's own `ResultReason_*` spelling, humanised the same way for every
  *  value it sends — the fixture only shows `ResultReason_Concede`
@@ -24,32 +25,23 @@ function humanizeReason(reason: string): string {
   return stripped.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase()
 }
 
-/** "Lost game 1 (concede) — board for game 2 vs Boros Aggro." `won`/`reason`
+/** "Lost game 1 (concede)." The next game and the opponent are the status
+ *  strip's. `won`/`reason`
  *  are dropped when null (rule 4: unknown means no render, never a guess) —
  *  ``won`` is only null when Arena never named a winning team or our own
  *  seat, which leaves nothing honest to say about who won. */
 function headline(intermission: IntermissionOut, t: TFunction): string {
-  const label = intermission.opponent?.label ?? t('matchups.sideboard.thisOpponent')
-  const next = intermission.next_game
-  if (intermission.won == null) return t('matchups.sideboard.headline.noResult', { next, label })
+  if (intermission.won == null) return t('matchups.sideboard.headline.noResult')
   const game = intermission.game_number
   const reason = intermission.reason ? humanizeReason(intermission.reason) : null
   if (intermission.won) {
     return reason
-      ? t('matchups.sideboard.headline.wonReason', { game, reason, next, label })
-      : t('matchups.sideboard.headline.won', { game, next, label })
+      ? t('matchups.sideboard.headline.wonReason', { game, reason })
+      : t('matchups.sideboard.headline.won', { game })
   }
   return reason
-    ? t('matchups.sideboard.headline.lostReason', { game, reason, next, label })
-    : t('matchups.sideboard.headline.lost', { game, next, label })
-}
-
-function opponentHeaderText(opponent: IntermissionOpponentOut, t: TFunction): string {
-  if (opponent.source === 'manual') return t('matchups.sideboard.youPicked', { label: opponent.label })
-  return t('matchups.sideboard.opponentConfidence', {
-    label: opponent.label,
-    confidence: confidenceLabel(opponent.confidence, t),
-  })
+    ? t('matchups.sideboard.headline.lostReason', { game, reason })
+    : t('matchups.sideboard.headline.lost', { game })
 }
 
 function resultWord(result: string | null | undefined, t: TFunction): string {
@@ -133,11 +125,12 @@ function PastBoardingList({ entries, label }: { entries: PastBoardingOut[]; labe
 }
 
 /** Which archetype `past_boarding` is measured against: the opponent's own
- *  classified archetype when one was named, otherwise the top alternative
- *  (S4 step 5b — "the named archetype and, if there is none, the top
- *  alternative"). */
+ *  classified archetype when one was named (the status strip names it, so
+ *  this says only "this archetype"), otherwise the top alternative, which
+ *  the strip never shows (S4 step 5b — "the named archetype and, if there
+ *  is none, the top alternative"). */
 function pastBoardingLabel(intermission: IntermissionOut, t: TFunction): string {
-  if (intermission.opponent?.archetype_key) return intermission.opponent.label
+  if (intermission.opponent?.archetype_key) return t('matchups.sideboard.thisArchetype')
   return intermission.alternatives?.[0]?.label ?? t('matchups.sideboard.thisArchetype')
 }
 
@@ -233,7 +226,7 @@ export function SideboardPlanCard({
         {isClosest && (
           <p className="rounded-block border border-warn/40 bg-plane px-3 py-2 text-caption text-warn">
             {t('matchups.sideboard.closest', {
-              label: intermission.opponent?.label ?? t('matchups.sideboard.thisOpponent'),
+              label: t('matchups.sideboard.thisOpponent'),
               closest: closestLabel,
             })}
           </p>
@@ -249,7 +242,7 @@ export function SideboardPlanCard({
           boardOut={plan.board_out}
           problems={plan.problems}
           size="large"
-          heading={t('matchups.sideboard.boardFor', { next: intermission.next_game })}
+          heading={t('matchups.sideboard.boarding')}
         />
         <PlayAroundList playAround={plan.play_around} seen={seen} />
         {!isClosest && pastBoarding}
@@ -264,10 +257,11 @@ export function SideboardPlanCard({
   )
 }
 
-/** The break-phase rail: who the opponent looks like right now (live read,
- *  not the projected — possibly stale — name), and the other archetypes
- *  with a written plan, each expandable to its own full plan reusing the
- *  same shared pieces as the primary card. */
+/** The break-phase rail: the other archetypes with a written plan, each
+ *  expandable to its own full plan reusing the same shared pieces as the
+ *  primary card. The opponent is the status strip's, so there is no
+ *  opponent card here. With nothing to list the rail returns null, and the
+ *  caller gives the plan card the full width. */
 export function SideboardOpponentRail({
   intermission,
   match,
@@ -277,63 +271,35 @@ export function SideboardOpponentRail({
 }) {
   const { t } = useTranslation()
   const seen = seenOpponentCards(match)
-  const alternatives = intermission.alternatives ?? []
+  const alternatives = railAlternatives(intermission)
+  if (alternatives.length === 0) return null
   return (
-    <div className="flex flex-col gap-3">
-      <Card title={t('matchups.sideboard.opponent')} elevation={2}>
-        {intermission.opponent ? (
-          <p className="text-body text-ink">{opponentHeaderText(intermission.opponent, t)}</p>
-        ) : (
-          <EmptyState
-            message={
-              intermission.fmt === null
-                ? t('matchups.sideboard.formatUnknown')
-                : t('matchups.sideboard.unclassified')
-            }
-          />
-        )}
-        <p className="mt-2 text-caption text-muted">
-          {intermission.opponent
-            ? t('matchups.sideboard.cardsSeenFrom', {
-                count: intermission.cards_seen,
-                source:
-                  intermission.opponent.source === 'manual'
-                    ? t('matchups.sideboard.yourPick')
-                    : t('matchups.sideboard.liveRead'),
-              })
-            : t('matchups.sideboard.cardsSeen', { count: intermission.cards_seen })}
-        </p>
-      </Card>
-
-      {alternatives.length > 0 && (
-        <Card title={t('matchups.sideboard.otherPlans')} elevation={2}>
-          <div className="divide-y divide-edge/50">
-            {alternatives.map((alt) => (
-              <div key={alt.archetype_key} className="py-2">
-                <Disclosure
-                  summary={t('matchups.sideboard.alternative', {
-                    label: alt.label,
-                    fit: Math.round(alt.fit * 100),
-                    confidence: confidenceLabel(alt.confidence, t),
-                  })}
-                >
-                  <div className="space-y-3">
-                    <Meter fraction={alt.fit} color="s1" />
-                    <BoardPlan
-                      boardIn={alt.brief.board_in}
-                      boardOut={alt.brief.board_out}
-                      problems={alt.brief.problems}
-                    />
-                    <PlayAroundList playAround={alt.brief.play_around} seen={seen} />
-                    <Prose text={alt.brief.prose} />
-                    <BriefProvenance brief={alt.brief} />
-                  </div>
-                </Disclosure>
+    <Card title={t('matchups.sideboard.otherPlans')} elevation={2}>
+      <div className="divide-y divide-edge/50">
+        {alternatives.map((alt) => (
+          <div key={alt.archetype_key} className="py-2">
+            <Disclosure
+              summary={t('matchups.sideboard.alternative', {
+                label: alt.label,
+                fit: formatPercent(alt.fit),
+                confidence: confidenceLabel(alt.confidence, t),
+              })}
+            >
+              <div className="space-y-3">
+                <BoardPlan
+                  boardIn={alt.brief.board_in}
+                  boardOut={alt.brief.board_out}
+                  problems={alt.brief.problems}
+                  heading={t('matchups.sideboard.boarding')}
+                />
+                <PlayAroundList playAround={alt.brief.play_around} seen={seen} />
+                <Prose text={alt.brief.prose} />
+                <BriefProvenance brief={alt.brief} />
               </div>
-            ))}
+            </Disclosure>
           </div>
-        </Card>
-      )}
-    </div>
+        ))}
+      </div>
+    </Card>
   )
 }

@@ -62,14 +62,8 @@
     "showed": "mostrou {{card}}"
   },
   "summary": {
-    "matchesWon": "Partidas vencidas",
-    "matchesDetail_one": "{{won}} de {{n}} partida terminada",
-    "matchesDetail_other": "{{won}} de {{n}} partidas terminadas",
-    "noMatches": "Nenhuma partida terminada",
-    "gamesWon": "Jogos vencidos",
-    "gamesDetail_one": "{{won}} de {{n}} jogo terminado",
-    "gamesDetail_other": "{{won}} de {{n}} jogos terminados",
-    "noGames": "Nenhum jogo terminado",
+    "matchesWon": "Partidas",
+    "gamesWon": "Jogos",
     "counted": "Contado sobre as {{n}} partidas mais recentes."
   },
   "sideboarding": {

@@ -7,19 +7,16 @@
  */
 import type { Match, MetaWinrate } from '../api'
 import type { TFunction } from '../i18n'
-import { MIN_TRUSTED_FIELD_SAMPLE } from '../theme'
 import { mergeNewestFirst } from './deckOverview'
 import { archetypeName } from './decks'
-import { isFinished, opponentNamed, RATE_MIN_MATCHES, startOf } from './home'
+import { formatPercent, formatRecord } from './format'
+import { isFinished, opponentNamed, startOf } from './home'
 import { opponentLabelText } from './opponent'
-import { formatCount, formatPercent } from './time'
+import { MIN_TRUSTED_FIELD_SAMPLE, RATE_MIN_MATCHES, rateOrRecord } from './sample'
+import { formatCount } from './time'
 
 /** A no-break space: a count and the word after it never part. */
 export const NBSP = '\u00a0'
-
-/** An archetype is ranked best or worst only from this many finished
- *  matches against it. */
-export const MATCHUP_MIN_MATCHES = 5
 
 /** How the opponent's deck is known, as `MatchRow` tells it: by a name (the
  *  classifier's or the viewer's own), by its colours and a card it showed,
@@ -33,6 +30,8 @@ export type MatchupRow = {
   colors: string | null
   matches: number
   won: number
+  /** Matches lost. A draw is neither this nor a win (`docs/design-system.md`, "Numbers"). */
+  lost: number
   gamesWon: number
   gamesLost: number
 }
@@ -113,11 +112,13 @@ export function matchupRows(matches: Match[]): MatchupRow[] {
         ...opponentSeen(group.matches),
         matches: group.matches.length,
         won: 0,
+        lost: 0,
         gamesWon: 0,
         gamesLost: 0,
       }
       for (const match of group.matches) {
         if (match.result === 'win') row.won += 1
+        if (match.result === 'loss') row.lost += 1
         row.gamesWon += match.games_won ?? 0
         row.gamesLost += match.games_lost ?? 0
       }
@@ -162,25 +163,18 @@ export function matchupName(row: OpponentSeen, t: TFunction): MatchupName {
 /** What a `StatTile` says. */
 export type TileText = { label: string; value: string; detail: string }
 
-/** A row's rate for ranking: wins over matches. */
-const rateOf = (row: MatchupRow) => row.won / row.matches
+/** A row's rate for ranking: wins over wins plus losses, a draw in neither. */
+const rateOf = (row: MatchupRow) => row.won / (row.won + row.lost)
 
-/** The number and line of a best or worst tile: from ten matches
- *  (`RATE_MIN_MATCHES`) the rate, "73%" and "won 8 of 11 against …"; under
- *  it the count, "7 of 9" and "won against …". */
+/** The number and line of a best or worst tile: the rate, "73%", and the
+ *  record against the archetype, "8–3 against …". Only a row of ten
+ *  finished matches or more reaches it (`RATE_MIN_MATCHES`). */
 function rankedTile(label: string, row: MatchupRow, t: TFunction): TileText {
-  const against = matchupName(row, t).inSentence
-  if (row.matches >= RATE_MIN_MATCHES) {
-    return {
-      label,
-      value: `${formatPercent(rateOf(row))}%`,
-      detail: t('matchups.tiles.rankedRate', { won: formatCount(row.won), matches: formatCount(row.matches), against }),
-    }
-  }
+  const { figure, line } = rateOrRecord({ wins: row.won, losses: row.lost }, t)
   return {
     label,
-    value: t('matchups.tiles.countOf', { won: formatCount(row.won), matches: formatCount(row.matches) }),
-    detail: t('matchups.tiles.rankedCount', { against }),
+    value: figure ?? '—',
+    detail: t('matchups.tiles.rankedRate', { record: line, against: matchupName(row, t).inSentence }),
   }
 }
 
@@ -194,11 +188,11 @@ function pick(rows: MatchupRow[], better: (a: MatchupRow, b: MatchupRow) => bool
 
 /** The three tiles over the rows `matchupRows` gave: how many archetypes
  *  were met and how many of them named; the best and the worst among the
- *  archetypes met five times or more (`MATCHUP_MIN_MATCHES`), by wins over
- *  matches. Among equal rates each takes the row of more matches, and
- *  among rows equal in both the first in the rows' order; the worst is
- *  never the row the best took. With one such row it is the best, and the
- *  worst says so. */
+ *  archetypes met ten times or more (`RATE_MIN_MATCHES`, wins plus
+ *  losses), by wins over wins plus losses. Among equal rates each takes
+ *  the row of more matches, and among rows equal in both the first in the
+ *  rows' order; the worst is never the row the best took. With one such
+ *  row it is the best, and the worst says so. */
 export function matchupTiles(rows: MatchupRow[], t: TFunction): [TileText, TileText, TileText] {
   const named = rows.filter((row) => row.kind === 'named').length
   const notNamed = rows.length - named
@@ -210,8 +204,8 @@ export function matchupTiles(rows: MatchupRow[], t: TFunction): [TileText, TileT
         : t('matchups.tiles.namedAndNot', { named: formatCount(named), notNamed: formatCount(notNamed) })
   const met: TileText = { label: t('matchups.tiles.archetypesMet'), value: formatCount(rows.length), detail: metDetail }
 
-  const eligible = rows.filter((row) => row.matches >= MATCHUP_MIN_MATCHES)
-  const noneYet = t('matchups.tiles.noneYet', { min: MATCHUP_MIN_MATCHES })
+  const eligible = rows.filter((row) => row.won + row.lost >= RATE_MIN_MATCHES)
+  const noneYet = t('matchups.tiles.noneYet', { min: RATE_MIN_MATCHES })
   const best = pick(eligible, (a, b) => rateOf(a) > rateOf(b) || (rateOf(a) === rateOf(b) && a.matches > b.matches))
   const worst = pick(
     eligible.filter((row) => row !== best),
@@ -228,7 +222,7 @@ export function matchupTiles(rows: MatchupRow[], t: TFunction): [TileText, TileT
     : {
         label: worstLabel,
         value: '—',
-        detail: best ? t('matchups.tiles.oneSoFar', { min: MATCHUP_MIN_MATCHES }) : noneYet,
+        detail: best ? t('matchups.tiles.oneSoFar', { min: RATE_MIN_MATCHES }) : noneYet,
       }
   return [met, bestTile, worstTile]
 }
@@ -271,10 +265,9 @@ export function fieldLine(
   field: FieldRecord | null | undefined,
   t: TFunction,
 ): string {
-  const won = formatCount(games.won)
-  const lost = formatCount(games.lost)
-  if (field == null || field.winrate == null) return t('matchups.fieldLine.games', { won, lost })
-  const values = { won, lost, rate: formatPercent(field.winrate), count: field.entries, n: formatCount(field.entries) }
+  const record = formatRecord(games.won, games.lost)
+  if (field == null || field.winrate == null) return t('matchups.fieldLine.games', { record })
+  const values = { record, rate: formatPercent(field.winrate), count: field.entries, n: formatCount(field.entries) }
   return field.entries < MIN_TRUSTED_FIELD_SAMPLE
     ? t('matchups.fieldLine.recordThin', values)
     : t('matchups.fieldLine.record', values)
