@@ -89,11 +89,16 @@ players' ``Turn 1`` lines are in, so a bare ``Turn 1`` as a game's third
 ``Turn`` line — a real next game whose start block was lost — trips the
 fallback at once.
 
-⚠️ These rules rest on a **single fixture**. "``joined the game`` is
-per-game" is read off one real match; a mid-game reconnect might emit an
-extra ``joined`` line that this parser would misread as a new game. If that
-turns out to happen, tighten the rule to "both handles have (re-)joined since
-the last boundary" rather than "either handle joined once".
+A reconnect is not a new game. A player who drops writes ``<H> has lost
+connection to the game.`` and, on return, ``<H> joined the game.`` again in
+the middle of the game; MTGO keeps counting its turns and re-sends no start
+block. So a ``joined`` by a handle that lost connection earlier in the
+current, undecided game is a rejoin: no new game, nothing stored, a debug
+line. The set of such handles lasts the whole game (a player can drop
+twice); a drop is ignored once the game has a result, and the set is
+emptied when the next game opens. Every other
+``joined`` opens a game as above, and opening one while the last has action
+and no result warns that a game started before the last one ended.
 
 Turn units — this parser's ``turn_count``/``turn_number`` are Arena's units,
 not MTGO's printed ones
@@ -218,6 +223,7 @@ class _Patterns:
 
     rolled: re.Pattern[str]
     joined: re.Pattern[str]
+    lost_connection: re.Pattern[str]
     play_first: re.Pattern[str]
     mulligan: re.Pattern[str]
     begins: re.Pattern[str]
@@ -243,6 +249,7 @@ def _patterns(known: set[str]) -> _Patterns:
     return _Patterns(
         rolled=re.compile(rf"^{h} rolled a \d+\.$"),
         joined=re.compile(rf"^{h} joined the game\.$"),
+        lost_connection=re.compile(rf"^{h} has lost connection to the game\.$"),
         play_first=re.compile(rf"^{h} chooses to play first\.$"),
         mulligan=re.compile(rf"^{h} mulligans to (?P<n>\w+) cards?\.$"),
         # `.*?` (non-greedy) is required by the fixture's two shapes: line
@@ -364,6 +371,10 @@ class GameRecord:
             or self.loser_handle or self.draw
         )
 
+    def has_result(self) -> bool:
+        """True once a line names a winner, a loser or a draw."""
+        return bool(self.winner_handle or self.loser_handle or self.draw)
+
     def contradicts(self) -> bool:
         """True when the game's lines disagree about its result: the same
         handle both won and lost it, or a draw beside a winner or a loser."""
@@ -417,6 +428,9 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
     timed_out: str | None = None
     score_line: tuple[str, int, int] | None = None
     warnings: list[str] = []
+    # Handles that lost connection in the current, undecided game: any later
+    # `joined` in that game is a rejoin, not a start block.
+    lost_connection: set[str] = set()
 
     def ensure_fresh_game() -> None:
         """Start a new GameRecord for a start-block signal, unless the
@@ -428,8 +442,14 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
         count (module docstring's "Turn units")."""
         nonlocal current, current_turn
         if current is None or current.has_action():
+            if current is not None and not current.has_result():
+                warnings.append(
+                    f"game {current.game_number} had no result when the next "
+                    f"game started (a game started before the last one ended)"
+                )
             current = _start_new_game(games)
             current_turn = None
+            lost_connection.clear()
 
     for raw in strings:
         if match_id is None and _GUID_RE.match(raw):
@@ -442,9 +462,26 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
             handles.add(m.group("handle"))
             continue
 
+        m = patterns.lost_connection.match(s)
+        if m:
+            # Not added to `handles`: a spectator's drop must not make them a
+            # player (the `\S+` fallback would).
+            handle = m.group("handle")
+            if current is not None and not current.has_result():
+                lost_connection.add(handle)
+            continue
+
         m = patterns.joined.match(s)
         if m:
-            handles.add(m.group("handle"))
+            handle = m.group("handle")
+            handles.add(handle)
+            if (
+                handle in lost_connection
+                and current is not None
+                and not current.has_result()
+            ):
+                log.debug("mtgo: a player rejoined game %d", current.game_number)
+                continue
             ensure_fresh_game()
             continue
 
@@ -510,6 +547,7 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
                     f"start block (game {len(games) + 1})"
                 )
                 current = _start_new_game(games)
+                lost_connection.clear()
             if current is not None:
                 # One `Turn` line = one player-turn (Arena's units): count
                 # lines, don't track the printed N's own max.

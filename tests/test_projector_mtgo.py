@@ -1655,3 +1655,242 @@ def test_a_mtgo_concession_is_worded_in_the_report(conn):
     reasons = [row["result_reason"] for row in _stored_games(conn)]
     assert reasons == ["ResultReason_Concede", "ResultReason_Concede"]
     assert [_reason_text(r) for r in reasons] == ["conceded", "conceded"]
+
+
+# --- a reconnect is not a new game (plan 30, S3) -------------------------------
+#
+# Real games' lines, anonymized as above. What each says, read from the lines:
+#   1   the user loses connection and rejoins mid-game 1 (7 `Turn` lines, won by
+#       the user after the opponent conceded), then game 2's start block.
+#   2   the user drops, rejoins twice, drops and rejoins again; one game of 20
+#       `Turn` lines, won by the user; the opponent drops after it.
+#   3   the opponent drops and rejoins in turn 2; one game, 9 `Turn` lines.
+#   4b  the user drops and rejoins inside a re-sent start block.
+
+# Case 1.
+_CASE_1 = [
+    GUID,
+    GUID,
+    'Player2000 rolled a 6.',
+    'Player1 rolled a 2.',
+    'Player2000 joined the game.',
+    'Player2000 chooses to play first.',
+    'Player1 joined the game.',
+    'Player2000 begins the game with seven cards in hand.',
+    'Player1 mulligans to six cards.',
+    'Player1 puts a card on the bottom of their library and begins the game with six '
+    'cards in hand.',
+    'Turn 1: Player2000',
+    'Player2000 plays @[Riverpyre Verge@:273286,440:@].',
+    'Turn 1: Player1',
+    'Turn 2: Player2000',
+    'Turn 2: Player1',
+    'Turn 3: Player2000',
+    'Turn 3: Player1',
+    'Player1 scrys 1 (0 top, 1 bottom).',
+    'Player1 scrys 1 (0 top, 1 bottom).',
+    'Player1 puts a triggered ability from @[Otter Token@:258474,446:@] onto the stack (Prowess).',
+    'Player1 has lost connection to the game.',
+    'Player1 joined the game.',
+    'Player2000 is being attacked by @[Otter Token@:258474,463:@] and @[Otter Token@:258474,446:@]',
+    'Turn 4: Player2000',
+    'Player2000 has conceded from the game.',
+    'Player1 wins the game.',
+    'Player1 leads the match 1-0',
+    'Player1 joined the game.',
+    'Player2000 joined the game.',
+    'Player2000 chooses to play first.',
+    'Player2000 mulligans to six cards.',
+    'Player1 begins the game with seven cards in hand.',
+    'Player2000 puts a card on the bottom of their library and begins the game with '
+    'six cards in hand.',
+    'Turn 1: Player2000',
+]
+
+
+# Case 2.
+_CASE_2 = [
+    GUID,
+    GUID,
+    'Player1 rolled a 3.',
+    'Player2000 rolled a 6.',
+    'Player1 joined the game.',
+    'Player2000 joined the game.',
+    'Player2000 chooses to play first.',
+    'Player2000 begins the game with seven cards in hand.',
+    'Player1 begins the game with seven cards in hand.',
+    'Turn 1: Player2000',
+    'Player2000 plays @[Island@:14138,428:@].',
+    'Turn 1: Player1',
+    'Turn 2: Player2000',
+    'Turn 2: Player1',
+    'Turn 3: Player2000',
+    'Turn 3: Player1',
+    'Turn 4: Player2000',
+    'Turn 4: Player1',
+    'Turn 5: Player2000',
+    'Turn 5: Player1',
+    "Player2000 activates an ability of @[Phyrexian Furnace@:18734,429:@] "
+    "(Exile the bottom card of target player's graveyard.) targeting Player1.",
+    'Turn 5: Player2000',
+    'Turn 5: Player1',
+    'Player1 has lost connection to the game.',
+    'Player1 joined the game.',
+    'Player1 joined the game.',
+    'Player1 plays @[Flooded Strand@:108388,453:@].',
+    'Player1 has lost connection to the game.',
+    'Player1 joined the game.',
+    'Player2000 activates an ability of @[Phyrexian Furnace@:18734,429:@] '
+    '(Exile target card from a graveyard. Draw a card.) '
+    'targeting @[Fact or Fiction@:144944,447:@].',
+    'Turn 6: Player2000',
+    'Turn 6: Player1',
+    'Turn 7: Player2000',
+    'Turn 7: Player1',
+    'Turn 8: Player2000',
+    'Turn 8: Player1',
+    'Turn 9: Player2000',
+    'Turn 9: Player1',
+    'Player1 plays @[Adarkar Wastes@:45050,511:@].',
+    'Player2000 has conceded from the game.',
+    'Player1 wins the game.',
+    'Player2000 has lost connection to the game.',
+    'Player1 leads the match 1-0',
+]
+
+
+# Case 3.
+_CASE_3 = [
+    'Player1 joined the game.',
+    'Player2000 joined the game.',
+    'Player1 chooses to play first.',
+    'Player1 begins the game with seven cards in hand.',
+    'Player2000 begins the game with seven cards in hand.',
+    'Turn 1: Player1',
+    'Player1 plays @[Plains@:290112,427:@].',
+    'Turn 1: Player2000',
+    'Turn 2: Player1',
+    'Player2000 is being attacked by @[Momo, Friendly Flier@:289072,428:@]',
+    'Turn 2: Player2000',
+    'Player2000 has lost connection to the game.',
+    'Player2000 joined the game.',
+    'Player2000 plays @[Ba Sing Se@:290048,439:@].',
+    'Turn 3: Player1',
+    'Turn 3: Player2000',
+    'Turn 4: Player1',
+    'Turn 4: Player2000',
+    'Turn 5: Player1',
+    'Player2000 has conceded from the game.',
+    'Player1 wins the game.',
+    'Player1 wins the match 2-1',
+]
+
+
+# Case 4b.
+_CASE_4B = [
+    'Player2000 joined the game.',
+    'Player1 joined the game.',
+    'Player2000 chooses to play first.',
+    'Player2000 begins the game with seven cards in hand.',
+    'Player1 joined the game.',
+    'Player2000 chooses to play first.',
+    'Player2000 begins the game with seven cards in hand.',
+    'Player1 has lost connection to the game.',
+    'Player1 joined the game.',
+    'Player1 begins the game with seven cards in hand.',
+    'Turn 1: Player2000',
+    'Player2000 plays @[Plains@:298962,423:@].',
+    'Player2000 scrys 2 (2 top, 0 bottom).',
+    'Turn 1: Player1',
+]
+
+
+def _rejoin_game_facts(game):
+    return (
+        game.on_play_handle, game.mulligans_by_handle, game.turn_count,
+        len(game.card_events), game.winner_handle,
+    )
+
+
+def test_a_reconnect_by_the_user_mid_game_opens_no_game():
+    parsed = parse_strings(_CASE_1)
+    assert parsed.warnings == []
+    assert [g.game_number for g in parsed.games] == [1, 2]
+    assert _rejoin_game_facts(parsed.games[0]) == (
+        "Player2000", {"Player2000": 0, "Player1": 1}, 7, 2, "Player1",
+    )
+    assert parsed.games[0].conceded_handle == "Player2000"
+    second = parsed.games[1]
+    assert second.on_play_handle == "Player2000"
+    assert second.mulligans_by_handle == {"Player2000": 1, "Player1": 0}
+    assert second.turn_count == 1
+    assert second.winner_handle is None
+
+
+def test_a_player_who_drops_and_rejoins_twice_in_one_game_opens_none():
+    parsed = parse_strings(_CASE_2)
+    assert parsed.warnings == []
+    assert len(parsed.games) == 1
+    assert _rejoin_game_facts(parsed.games[0]) == (
+        "Player2000", {"Player2000": 0, "Player1": 0}, 20, 5, "Player1",
+    )
+
+
+def test_a_reconnect_inside_a_start_block_before_any_action_opens_no_game():
+    parsed = parse_strings(_CASE_4A)
+    assert [g.game_number for g in parsed.games] == [1, 2]
+    assert _rejoin_game_facts(parsed.games[0]) == (
+        "Player1", {"Player1": 0, "Player2000": 0}, 7, 1, "Player1",
+    )
+
+
+def test_a_spectators_lost_connection_does_not_make_them_a_player():
+    """Synthetic input: no real file shows a spectator's own drop line. A
+    spectator is never a player (``ParsedMatch.handles``)."""
+    parsed = parse_strings([*_WATCHED_MATCH, "Player1 has lost connection to the game."])
+    assert parsed.handles == {"Player2000", "Player3000"}
+
+
+def test_a_reconnect_by_the_opponent_opens_no_game():
+    parsed = parse_strings(_CASE_3)
+    assert parsed.warnings == []
+    assert len(parsed.games) == 1
+    assert _rejoin_game_facts(parsed.games[0]) == (
+        "Player1", {"Player1": 0, "Player2000": 0}, 9, 2, "Player1",
+    )
+    assert parsed.winner_handle == "Player1"
+
+
+def test_a_reconnect_inside_a_re_sent_start_block_is_still_one_game():
+    parsed = parse_strings(_CASE_4B)
+    assert parsed.warnings == []
+    assert len(parsed.games) == 1
+    assert _rejoin_game_facts(parsed.games[0]) == (
+        "Player2000", {"Player2000": 0, "Player1": 0}, 2, 1, None,
+    )
+
+
+def test_a_reconnect_stores_the_real_game_once(conn):
+    _project_strings(conn, _CASE_1)
+    assert [tuple(g) for g in _stored_games(conn)] == [(1, "win", "ResultReason_Concede"),
+                                                       (2, "incomplete", None)]
+
+
+def test_a_join_after_a_decided_game_is_a_new_game_even_after_a_drop():
+    """The opponent drops once game 1 is over; their `joined` is game 2's start
+    block, not a rejoin (case 2's last lines, then a start block)."""
+    lines = [*_CASE_2, "Player2000 joined the game.", "Player1 joined the game."]
+    parsed = parse_strings(lines)
+    assert [g.game_number for g in parsed.games] == [1, 2]
+    assert parsed.warnings == []
+
+
+def test_a_game_that_started_before_the_last_one_ended_warns_naming_no_one():
+    """Synthetic shape (D2): case 7b cut before its ending lines, plus a start
+    block."""
+    lines = [*_CASE_7B[:-3], "Player2000 joined the game.", "Player1 joined the game."]
+    parsed = parse_strings(lines)
+    assert len(parsed.games) == 2
+    assert len(parsed.warnings) == 1
+    assert "game 1" in parsed.warnings[0]
+    assert "Player" not in parsed.warnings[0]
