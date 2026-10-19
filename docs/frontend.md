@@ -63,6 +63,22 @@ event's page, under `/field/events/`, is in Field.
 place's own icon: a place's empty state takes its icon from there, so
 the icon is named once.
 
+### Widths
+
+The dashboard is a desktop app, never a phone one (`ROADMAP.md`, "Never").
+A view is designed, reviewed and screenshotted at 1008 px and up, the
+common floor for a responsive desktop app, and the shell's window cannot
+be made narrower (`MIN_SIZE` in `desktop/src/window.ts`). Nothing new is
+built for a phone's width, and no test pins one. The layouts that already
+exist under 48rem (the strip and bottom bar below, the compact density in
+`docs/design-system.md`, "Density", and the narrow forms some pages
+describe in `docs/frontend-pages.md`) stay as they are; one is removed
+only when a change touches it anyway. A browser tab can still be made
+narrower than 1008 px; what it shows there works but is not designed.
+
+The static site in `site/` is the exception: it is opened on phones from
+posts and links, so it stays responsive (`docs/frontend-site.md`).
+
 ### The layout
 
 `shell/Shell.tsx` is the layout route every place renders in.

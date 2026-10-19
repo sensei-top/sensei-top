@@ -287,8 +287,10 @@ table above).
 
 **Compact is both a choice and a width.** `:root[data-density="compact"]`
 is the choice. `@media (width < 48rem)` is the width: anything narrower
-than Tailwind's `md` breakpoint is compact without being asked, because a
-phone and a narrow panel have no room for anything else.
+than Tailwind's `md` breakpoint is compact without being asked. Nothing
+new is designed for that width any more (`docs/frontend.md`, "Widths"):
+the media query stays for a browser tab made that narrow, and for the
+layouts already built under it.
 
 The choice is persisted to `localStorage` (every read/write wrapped in
 `try/catch`: a private window or blocked storage must never break the

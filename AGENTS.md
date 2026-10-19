@@ -271,6 +271,9 @@ naming, but a location the user chooses is theirs to keep out of the tree.
   "I watched it work" are different claims.
 - **Correct yourself out loud.** If an earlier explanation was wrong, say so
   plainly and explain the real cause.
+- **The dashboard is desktop-only.** Design, review and screenshot a view
+  at 1008 px and up; build nothing for a phone's width. `site/` stays
+  responsive — `docs/frontend.md`, "Widths".
 - **One feature per branch, cut from `develop`.** `feature/<topic>`, merged
   back by pull request with a merge commit; `main` moves only on a release or
   a hotfix. Pushing, opening a pull request and merging wait for the user's
