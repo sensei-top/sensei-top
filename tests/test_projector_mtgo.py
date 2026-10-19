@@ -1124,6 +1124,51 @@ def test_a_handle_not_in_the_match_warns_without_naming_anyone(conn, caplog):
         assert handle not in message
 
 
+def test_a_watched_match_is_skipped_without_a_warning(conn, caplog):
+    """Case 9: the configured handle only watched, so nothing is stored and
+    the five card-before-game warnings the parser raises never reach the log."""
+    _insert_mtgo_row(
+        conn, data=b"".join(map(_framed, _WATCHED_MATCH)), logged_at="2026-09-14T12:42:37"
+    )
+    with caplog.at_level(logging.WARNING):
+        result = project_mtgo(conn, "Player1")
+    assert result["matches"] == 0
+    assert result["games"] == 0
+    assert conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0] == 0
+    assert caplog.messages == []
+
+
+def test_a_match_someone_else_watched_is_still_projected(conn):
+    """The skip needs the configured handle to be the watcher: plan 30's
+    measurement found 14 spectators across the user's own matches in the real
+    history, and those matches must still be stored."""
+    data = FIXTURE_BYTES + _framed("@PPlayer3000 has started watching.")
+    _insert_mtgo_row(conn, data=data, logged_at="2026-09-14T12:42:37")
+    result = project_mtgo(conn, "Player1")
+    assert result["matches"] == 1
+    assert conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0] == 1
+
+
+def test_a_four_player_transcript_still_warns(conn, caplog):
+    """Synthetic input: S0 transcribed no Commander file; the real one had four
+    players. The handle plays, but has three opponents."""
+    strings = [
+        GUID,
+        GUID,
+        "Player1 joined the game.",
+        "Player2000 joined the game.",
+        "Player3000 joined the game.",
+        "Player4000 joined the game.",
+        "Player1 chooses to play first.",
+        "Turn 1: Player1",
+    ]
+    _insert_mtgo_row(conn, data=b"".join(map(_framed, strings)), logged_at="2026-09-14T12:42:37")
+    with caplog.at_level(logging.WARNING):
+        result = project_mtgo(conn, "Player1")
+    assert result["matches"] == 0
+    assert any("opponents rather than one" in m for m in caplog.messages)
+
+
 def test_no_handle_configured_projects_nothing_but_warns_once(conn):
     _insert_mtgo_row(conn, data=FIXTURE_BYTES, logged_at="2026-09-14T12:42:37")
     result = project_mtgo(conn, None)

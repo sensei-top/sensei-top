@@ -15,7 +15,10 @@ MTGO's log has no auth event and no seat concept at all — both are Arena-isms
 this parser has nothing to read. Who is "us" comes from ``mtgo/config.py``'s
 configured handle, checked against the two handles this specific match's log
 actually mentions; no match, no guess (rule 4) — the match is skipped with a
-warning, exactly like a missing handle skips *every* match.
+warning, exactly like a missing handle skips *every* match. The exception
+(plan 30, D6): a match the configured handle only watched, with its ``has
+started watching.`` line and no player line, is skipped with a debug line,
+since nothing failed.
 
 ``self_seat = 1`` / ``opponent_seat = 2`` is a fixed, made-up convention, not
 observed data — but it has to exist anyway: ``v_opponent_cards`` (the view
@@ -486,6 +489,19 @@ def project_mtgo(conn: sqlite3.Connection, handle: str | None) -> dict[str, int]
             )
 
         parsed = parse_strings(strings)
+        # A match the user only watched: their handle "has started watching"
+        # and is no player. The parser warns once per card line for a file
+        # with no start block, so this comes before that loop and before the
+        # handle guards. A debug line, not a warning: watching is no fault,
+        # and a warning would recur on every rebuild. Like the guards below,
+        # it never names the handle.
+        if handle in parsed.spectators and handle not in parsed.handles:
+            log.debug(
+                "%s: the configured MTGO handle only watched match %s; skipping it",
+                source_file,
+                parsed.match_id,
+            )
+            continue
         for w in parsed.warnings:
             warner.warn(f"{source_file}: {w}")
 
