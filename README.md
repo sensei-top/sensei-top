@@ -57,6 +57,10 @@ inglês: são texto para o modelo, não para você.
 - **Coach**: a dated report across every deck, each one measured against the last.
 
 <p align="center">
+  <img src="docs/images/live.png" alt="The Live page during an unranked match: the lands left with the chance of drawing one, the rest of the library by mana value with the chance of each card on the next draw, and the opponent's hand: what they have shown and what they could be holding.">
+</p>
+
+<p align="center">
   <img src="docs/images/field.png" alt="The Field page: the Standard metagame from Magic Online Challenge lists since the format's last reset, archetype by archetype, with your record against each.">
 </p>
 
