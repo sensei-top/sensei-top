@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Game 1 and games 2–3, apart. **Matchups** has a column for each, a
+  pairing's page two tiles of the same split, and the sideboard break's
+  plan your own record in games 2–3 against the opponent's deck. Only
+  best-of-three matches count, on Arena and Magic Online alike, and a
+  drawn game counts in neither.
+
 ### Changed
 
 - **Your library** on **Live** is now your decklist and nothing else:
@@ -24,14 +32,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   play and on the draw.
 - The RCQ guide is a tab of its own on a deck's page, beside **Guide**.
   An old link to it still opens it.
-- Every page writes numbers the same way: a whole percent ("58%"), a
-  record as wins–losses ("6–3"), and, under ten matches, the record in
-  place of a rate, with a line saying it is too few for one.
+- Every page writes numbers the same way: a whole percent ("58%") and a
+  record as wins–losses ("6–3"). From five to nine matches a rate is
+  shown muted, with "rough" beside the record; under five the record
+  takes the rate's place, with a line saying it is too few for one.
 
 ### Fixed
 
 - In English, some counts of one read as a plural, such as "1 cards
   seen" on **Live**. They now read "1 card seen".
+- On Magic Online, a player who reconnects mid-game no longer splits
+  that game in two, which also pushed every later game of the match one
+  number up and lost who was on the play. Games that end on time, to
+  inaction or in a draw are read as such, and a match lost on time is
+  no longer left unfinished. A name with a space in it reads as one
+  player, so that opponent's cards and results count. A match you only
+  watched is left out without a warning.
+- On Arena, an action you took back with undo, such as a spell you
+  started to cast and cancelled, no longer counts as played. One
+  message the app can't read no longer loses the rest of what arrived
+  with it.
+- Your recorded matches are read again once, the first time the app
+  starts after the update, so these fixes reach the games you already
+  played.
 
 ## [1.0.1] - 2026-10-17
 

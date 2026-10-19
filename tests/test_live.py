@@ -712,6 +712,49 @@ def test_a_won_game_is_stored_once_quiet_five_seconds(live, conn, share, quiet, 
     assert live._dirty is stored
 
 
+# A game's lines as MTGO writes them (plan 30, S2), card lines left out: the start
+# block, a turn each, then one ending line.
+_ENDING_GAME = [
+    "Player1 joined the game.",
+    "Player2000 joined the game.",
+    "Player1 chooses to play first.",
+    "Player1 begins the game with seven cards in hand.",
+    "Player2000 begins the game with seven cards in hand.",
+    "Turn 1: Player1",
+    "Turn 1: Player2000",
+]
+
+
+def _framed_strings(lines: list[str]) -> bytes:
+    """``lines`` as .NET's BinaryWriter frames them (one length byte, each line
+    well under 128 bytes), as ``_mtgo_span`` reads them out of the fixture."""
+    return b"".join(bytes([len(line.encode())]) + line.encode() for line in lines)
+
+
+@pytest.mark.parametrize(
+    ("ending", "stored"),
+    [
+        ("Player2000 loses the game.", True),
+        ("Player1 has lost the game due to inaction.", True),
+        ("Player2000 has run out of time and has lost the match.", True),
+        ("Player1 and Player2000 lose the game.", True),
+        ("Player2000 has lost connection to the game.", False),
+    ],
+)
+def test_a_game_ended_by_a_loss_line_is_stored_at_once(live, conn, share, ending, stored):
+    """The loss and draw lines decide a game, so the watcher stores it after the
+    5 s quiet instead of the 10-minute fallback; a lost connection alone does
+    not (a disconnect stays undecided, plan 30, D7)."""
+    data = _framed_strings([*_ENDING_GAME, ending])
+    append_bytes(share / MATCH_LOG, data)
+    at(live, conn, 2.0)  # the check that first sees it
+    at(live, conn, 7.0)  # quiet 5 s
+    assert mtgo_payloads(conn) == ([data] if stored else [])
+    if not stored:
+        run_for(live, conn, 60)
+        assert mtgo_payloads(conn) == []
+
+
 def test_a_log_that_moves_between_scan_and_read_is_not_quiet(live, conn, share, monkeypatch):
     """The bytes stored are the bytes judged, and only while they are the
     ones the scan saw. A write landing between the scan and the read (here

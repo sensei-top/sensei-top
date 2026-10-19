@@ -32,12 +32,13 @@ English. What comes first after it:
    into the first game and the games after sideboarding, for best-of-three
    matches, from Arena and Magic Online alike: on a deck's Matchups, on
    each pairing, and, for Arena, between games on Live.
-2. **Fixes to how Magic Online's log is read.** Magic Online ends some
-   games with lines the tracker doesn't read yet (a disconnection, running
-   out of time, drawing from an empty library), opens a phantom game when
-   a player reconnects, and drops a few matches whose names carry
-   unexpected characters. Each fix also mends every match you already
-   recorded.
+2. **Fixes to how Magic Online's log is read.** Games that end on time,
+   to inaction or in a draw are read as such, and a match lost on time
+   is no longer left unfinished. A player who reconnects no longer opens
+   a phantom game that pushed every later game of the match one number
+   up. A name with a space in it reads as one player, and a match you
+   only watched is left out without a warning. Each fix also mends
+   every match you already recorded.
 3. **Finding Arena on more Linux setups.** Every Steam library, Flatpak
    and Snap Steam, Lutris, Bottles and Heroic, and the newest log when
    more than one is found.

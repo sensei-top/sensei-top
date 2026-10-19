@@ -15,7 +15,10 @@ MTGO's log has no auth event and no seat concept at all — both are Arena-isms
 this parser has nothing to read. Who is "us" comes from ``mtgo/config.py``'s
 configured handle, checked against the two handles this specific match's log
 actually mentions; no match, no guess (rule 4) — the match is skipped with a
-warning, exactly like a missing handle skips *every* match.
+warning, exactly like a missing handle skips *every* match. The exception
+(plan 30, D6): a match the configured handle only watched, with its ``has
+started watching.`` line and no player line, is skipped with a debug line,
+since nothing failed.
 
 ``self_seat = 1`` / ``opponent_seat = 2`` is a fixed, made-up convention, not
 observed data — but it has to exist anyway: ``v_opponent_cards`` (the view
@@ -49,10 +52,11 @@ back-filled from a directory of already-finished matches (or from a hand-run
 under the name "first observed" either way — never claimed to be more than
 that.
 
-``ended_at`` is the last row's ``logged_at`` **only when the parser found a
-"wins the match" line** (``parsed.winner_handle is not None``); otherwise
-``NULL``. Writing a timestamp into a column named ``ended_at`` is a claim
-that the match ended — an in-progress match (still in mulligans, or mid-game
+``ended_at`` is the last row's ``logged_at`` **only when the match has a
+winner** (a "wins the match" line, or a "has run out of time and has lost the
+match" line, which makes the other player the winner); otherwise ``NULL``.
+Writing a timestamp into a column named ``ended_at`` is a claim that the
+match ended — an in-progress match (still in mulligans, or mid-game
 with no winner recorded yet) must not make that claim, even though a row for
 it already exists so the live tab has something to show.
 
@@ -85,7 +89,7 @@ import logging
 import sqlite3
 
 from sensei_top.projector.mtgo.decode import decode_strings
-from sensei_top.projector.mtgo.parse import ParsedMatch, parse_strings
+from sensei_top.projector.mtgo.parse import GameRecord, ParsedMatch, parse_strings
 
 log = logging.getLogger(__name__)
 
@@ -289,6 +293,52 @@ def _game_result(winner_handle: str | None, self_handle: str, opponent_handle: s
     return "incomplete"
 
 
+def _game_outcome(game: GameRecord, self_handle: str, opponent_handle: str) -> str:
+    """A game's result: its winner, else its loser's opponent wins, else a
+    draw, else ``incomplete``. Lines that disagree (the same handle won and
+    lost; a draw beside a winner) are ``incomplete``, never a pick (rule 4)."""
+    if game.contradicts():
+        return "incomplete"
+    if game.winner_handle is not None:
+        return _game_result(game.winner_handle, self_handle, opponent_handle)
+    if game.loser_handle is not None:
+        # The other handle of the two, whichever lost: a loser who is neither
+        # is not this match's player, so nothing is said.
+        if game.loser_handle == self_handle:
+            return "loss"
+        if game.loser_handle == opponent_handle:
+            return "win"
+        return "incomplete"
+    if game.draw:
+        return "draw"
+    return "incomplete"
+
+
+def _match_winner(
+    parsed: ParsedMatch, self_handle: str, opponent_handle: str
+) -> str | None:
+    """The ``wins the match`` handle, else the other side of the handle whose
+    clock ran out (a time-out loses the match, and not every log then goes on
+    to say who won it)."""
+    if parsed.winner_handle is not None:
+        return parsed.winner_handle
+    if parsed.timed_out_handle == self_handle:
+        return opponent_handle
+    if parsed.timed_out_handle == opponent_handle:
+        return self_handle
+    return None
+
+
+# The reason column in Arena's names, so the match report and the sideboard card
+# read an MTGO game unchanged. "ResultReason_Inaction" is MTGO's own: Arena
+# has no such ending, and the report has no wording for it.
+_RESULT_REASONS = {
+    "concede": "ResultReason_Concede",
+    "timeout": "ResultReason_Timeout",
+    "inaction": "ResultReason_Inaction",
+}
+
+
 def _write_match(
     conn: sqlite3.Connection,
     parsed: ParsedMatch,
@@ -307,7 +357,7 @@ def _write_match(
     won = lost = 0
 
     for game in parsed.games:
-        result = _game_result(game.winner_handle, self_handle, opponent_handle)
+        result = _game_outcome(game, self_handle, opponent_handle)
         if result == "win":
             won += 1
         elif result == "loss":
@@ -321,7 +371,7 @@ def _write_match(
         else:
             on_play = None
 
-        result_reason = "concede" if game.conceded_handle is not None else None
+        result_reason = _RESULT_REASONS.get(game.reason) if game.reason else None
 
         games_rows.append(
             (
@@ -355,7 +405,8 @@ def _write_match(
                 )
             )
 
-    match_result = _game_result(parsed.winner_handle, self_handle, opponent_handle)
+    match_winner = _match_winner(parsed, self_handle, opponent_handle)
+    match_result = _game_result(match_winner, self_handle, opponent_handle)
 
     # `format` is left out on purpose: MTGO's log never names one, so it is NULL.
     # best_of is 3: the MTGO constructed matches this tracker reads are best of
@@ -438,6 +489,19 @@ def project_mtgo(conn: sqlite3.Connection, handle: str | None) -> dict[str, int]
             )
 
         parsed = parse_strings(strings)
+        # A match the user only watched: their handle "has started watching"
+        # and is no player. The parser warns once per card line for a file
+        # with no start block, so this comes before that loop and before the
+        # handle guards. A debug line, not a warning: watching is no fault,
+        # and a warning would recur on every rebuild. Like the guards below,
+        # it never names the handle.
+        if handle in parsed.spectators and handle not in parsed.handles:
+            log.debug(
+                "%s: the configured MTGO handle only watched match %s; skipping it",
+                source_file,
+                parsed.match_id,
+            )
+            continue
         for w in parsed.warnings:
             warner.warn(f"{source_file}: {w}")
 
@@ -467,7 +531,11 @@ def project_mtgo(conn: sqlite3.Connection, handle: str | None) -> dict[str, int]
         # Writing last_logged_at unconditionally would claim an in-progress
         # match had ended just because this rebuild happens to be its most
         # recent read.
-        ended_at = last_logged_at if parsed.winner_handle is not None else None
+        ended_at = (
+            last_logged_at
+            if _match_winner(parsed, handle, opponent_handle) is not None
+            else None
+        )
 
         _write_match(
             conn, parsed,

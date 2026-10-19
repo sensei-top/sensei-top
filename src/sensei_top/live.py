@@ -106,10 +106,10 @@ was measured taking 5.7 s on a real database — now two threads, not one:
   the ~16 s rebuild running at the duty cycle's pace for the whole session,
   for a source the Live page does not show (migration 040). So the leg checks
   the folder every ``MTGO_POLL_SECONDS`` and holds a changed file back until
-  its last game names a winner (the projector's answer,
+  its last game names a winner, a loser or a draw (the projector's answer,
   ``projector/mtgo/parse.py::last_game_decided``) and it has been quiet 5 s,
   or until it has been quiet 10 minutes, whatever its last game says: a
-  disconnect, a crash or a game that ends with no winner line still lands.
+  disconnect, a crash or an ending line the parser doesn't know still lands.
   Quiet alone cannot tell a finished game from a long think (one measured
   mid-game pause lasted 36 s, the gap between games 46 s). Quiet is measured
   on the watcher's own clock (``mtgo_clock``), from the check that first saw
@@ -193,9 +193,10 @@ DECK_POLL_SECONDS = 30.0
 MTGO_POLL_SECONDS = 2.0
 
 # How long a changed game log stays unchanged, on the watcher's own clock,
-# before it is stored (plan 3, D2): 5 s once its last game names a winner, so a
-# row does not catch a write half done (MTGO's own, or a copy's); 10 minutes
-# whatever its last game says, for a game that ends with no winner line.
+# before it is stored (plan 3, D2): 5 s once its last game names a winner, a
+# loser or a draw, so a row does not catch a write half done (MTGO's own, or
+# a copy's); 10 minutes whatever its last game says, for a game that ends
+# with none of those lines.
 _DECIDED_QUIET_SECONDS = 5.0
 _FALLBACK_QUIET_SECONDS = 600.0
 
@@ -419,7 +420,7 @@ class LiveIngester:
         """One check after the catch-up: store each changed game log whose
         game has ended, and remember the rest. Returns the rows inserted.
 
-        A file is stored when its last game names a winner
+        A file is stored when its last game names a winner, a loser or a draw
         (``last_game_decided``) and its identity (``GameLogFile``: size, mtime
         and inode) has not moved for ``_DECIDED_QUIET_SECONDS``, or when it
         has not moved for ``_FALLBACK_QUIET_SECONDS``, whatever its last game
