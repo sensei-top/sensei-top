@@ -65,34 +65,63 @@ columns. `NULL` means "not observed" and must keep meaning that.
 
 ## Comments and docstrings
 
-The house style is heavier on *why* than most codebases, and deliberately so —
-this project decodes an undocumented, changing format. This project is run by
-agents, not human maintainers, and an agent carries no memory from one
-session to the next — a comment at the trap site is what keeps the next
-session from re-discovering the same trap the hard way.
+The house style is heavier on *why* than most codebases, and deliberately so:
+this project decodes an undocumented format that changes without notice. It is
+run by agents, not human maintainers, and an agent carries no memory from one
+session to the next. A comment at the trap site is what keeps the next session
+from finding the same trap the hard way.
 
-- **Module docstrings carry the reasoning**: what the module is for, the field
-  paths it depends on (with the client version verified against), and numbered
-  lists of the traps the code exists to avoid. `projector/matches.py` and
-  `reader/ingest.py` are the reference examples.
-- **Document deviations from the brief with justification**, in place. See the
-  "Digest strategy (deviation from brief §5, justified)" section in
-  `reader/ingest.py` — it states the alternative, the measured cost of it, and
-  why the code does something else.
-- **Inline comments state constraints the code cannot show**: why `inode` is
-  `TEXT` (overlayfs overflows SQLite's INTEGER), why `executescript()` is
-  avoided, why both line endings are accepted.
+That reasoning is also why prose costs something here. Every session re-reads
+whatever it opens, so a paragraph copied from a doc gets paid for on every
+read, and the copy drifts away from the original until one of them is wrong.
+One fact, one place:
+
+1. **A trap or a contract lives at the code. A design explanation lives in
+   `docs/`.** A trap is a constraint the code can't show: why `inode` is
+   `TEXT` (overlayfs overflows SQLite's INTEGER), why `executescript()` is
+   avoided, why both line endings are accepted. A contract is what a caller
+   may rely on: what a function returns when the data is missing, which
+   field paths it reads, and the client version they were checked against.
+   A module docstring that explains a design is a pointer to the doc section,
+   plus the traps the doc can't hold.
+2. **Never copy a measured number.** A timing, a size or a count belongs to
+   the doc that measured it. Cite that doc, or leave the number out.
+3. **Point at code by symbol, never by line number** (`live.py::project_if_due`,
+   not `live.py:589`), and never at a plan's section ("brief §5"). Line
+   numbers move with every edit, and the plans aren't in the repo.
+4. **No history at the code.** What a function used to do, which plan
+   changed it and what was tried first belong in git and `docs/status.md`.
+   A comment says what is true now.
+5. **Say a thing once per file.** When two functions share a trap, explain
+   it at the first one and point to it from the second.
+
+Two more, as before:
+
 - **Never comment what the next line does**, and never leave notes addressed to
   a reviewer ("fixed the bug where…"). Comments are for the next reader.
 - **No decorative section-banner comments in `src/`** (`# --- like this ---`).
   Function and class boundaries already mark sections, and the
   `navigating-sensei-top` skill's `repo_map.py` gives a symbol-level map on
-  demand — a banner adds token cost on every read without adding
+  demand. A banner adds token cost on every read without adding
   information. Tests are the exception: a test file is a long run of
   same-shaped functions, and `docs/testing.md` groups them under these
   comments.
 
 When you discover a trap, write the comment that would have saved you.
+
+### Reviewing prose
+
+When you review a comment or docstring, sort each paragraph into one of six
+classes. The first two stay. The other four get fixed.
+
+| Class | What it is | What to do |
+|---|---|---|
+| trap | a constraint the code can't show | keep it at the code |
+| contract | what a caller may rely on | keep it at the code |
+| duplicate | restates a doc section, or another paragraph in the same file | replace it with a pointer to the original. If the doc doesn't actually hold the fact, move it to the doc first |
+| history | what used to be true, or how the code got here | delete it, after checking that git or `docs/status.md` holds it |
+| restates | says what the next lines do | delete it |
+| stale | no longer matches the code | fix it to match. If a doc says the same thing, find out which one is right before changing either |
 
 ## CLI
 
