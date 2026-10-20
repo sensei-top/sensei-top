@@ -11,12 +11,20 @@ run.
     uv run python .claude/skills/navigating-sensei-top/scripts/usage_report.py
     uv run python .claude/skills/navigating-sensei-top/scripts/usage_report.py --days 7
     uv run python .claude/skills/navigating-sensei-top/scripts/usage_report.py --since 2026-09-28
+    uv run python .claude/skills/navigating-sensei-top/scripts/usage_report.py \
+        --since 2026-10-06 --until 2026-10-13 --project-dir all
+
+`--project-dir` adds transcript folders beside this checkout's: the project
+has moved folders, and a session started from `web/` gets a folder of its
+own. `all` takes every folder under ~/.claude/projects whose name ends in a
+repo name this project has had (REPO_NAMES).
 
 Read-only. Prints counts and sums only, never a transcript's text or a path;
 the one identifier it prints is the first 8 characters of a session id, for
 the main sessions that passed the handoff threshold without writing a handoff
 note, so a reader can check them by hand. The transcript directory is derived from the repo root, so
-nothing here names a home directory.
+nothing here names a home directory; nor does `--project-dir`, which prints
+only how many folders it read.
 
 The dollar figure is an API-equivalent from list prices, not a bill: a
 subscription is not charged per token. A model missing from PRICES is
@@ -56,6 +64,29 @@ HANDOFF_THRESHOLD = 120_000
 HANDOFF_DIR = "/.claude/handoffs/"
 HANDOFF_TOOLS = ("Write", "Edit")
 
+# Every folder name this checkout has had, for `--project-dir all`.
+REPO_NAMES = ("-mtga-tracker", "-sensei-top", "-sensei-top-web", "-mtga-tracker-web")
+
+# Tool results by what was read: the size of what lands in context, in
+# characters (tokens are roughly a quarter of that; the transcript carries no
+# per-result token count). First match wins.
+READ_BUCKETS = (
+    (
+        "Read src/**/*.py",
+        lambda tool, target: tool == "Read" and "/src/" in target and target.endswith(".py"),
+    ),
+    ("Read tests/", lambda tool, target: tool == "Read" and "/tests/" in target),
+    ("Read docs/ and *.md", lambda tool, target: tool == "Read" and target.endswith(".md")),
+    (
+        "Read web/ and desktop/",
+        lambda tool, target: tool == "Read" and ("/web/" in target or "/desktop/" in target),
+    ),
+    ("Read, other", lambda tool, target: tool == "Read"),
+    ("Bash", lambda tool, target: tool == "Bash"),
+    ("Grep/Glob", lambda tool, target: tool in ("Grep", "Glob")),
+    ("Agent results", lambda tool, target: tool in ("Agent", "Task")),
+)
+
 
 @dataclass
 class Transcript:
@@ -65,6 +96,8 @@ class Transcript:
     compactions: int = 0
     # A Write or Edit under .claude/handoffs/ before the first compaction.
     handoff_written: bool = False
+    # Characters of tool results per READ_BUCKETS label.
+    read_chars: dict[str, int] = field(default_factory=lambda: defaultdict(int))
 
 
 @dataclass
@@ -82,6 +115,33 @@ def _transcript_dir() -> Path:
         ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=True
     ).stdout.strip()
     return Path.home() / ".claude" / "projects" / root.replace("/", "-")
+
+
+def _transcript_dirs(extra: list[str]) -> list[Path]:
+    projects = Path.home() / ".claude" / "projects"
+    dirs = [_transcript_dir()]
+    for name in extra:
+        if name == "all":
+            dirs += [p for p in projects.iterdir() if p.is_dir() and p.name.endswith(REPO_NAMES)]
+        else:
+            dirs.append(projects / name)
+    return sorted({d for d in dirs if d.is_dir()})
+
+
+def _bucket(tool: str, target: str) -> str | None:
+    for label, matches in READ_BUCKETS:
+        if matches(tool, target):
+            return label
+    return None
+
+
+def _result_chars(block: dict) -> int:
+    content = block.get("content")
+    if isinstance(content, str):
+        return len(content)
+    if isinstance(content, list):
+        return sum(len(c.get("text", "")) for c in content if isinstance(c, dict))
+    return 0
 
 
 def _price(model: str) -> tuple[float, float, float] | None:
@@ -118,9 +178,16 @@ def _writes_handoff(message: dict) -> bool:
 
 
 def _read(
-    path: Path, since: datetime, totals: dict[tuple[str, str], ModelTotals], seen: set[str]
+    path: Path,
+    since: datetime,
+    until: datetime | None,
+    totals: dict[tuple[str, str], ModelTotals],
+    seen: set[str],
 ) -> Transcript:
-    transcript = Transcript(is_subagent=path.parent.name == "subagents", session=path.stem)
+    # A workflow's agents sit deeper, under subagents/workflows/<run>/.
+    transcript = Transcript(is_subagent="subagents" in path.parts, session=path.stem)
+    # tool_use id -> (tool name, file path), to label the result that follows.
+    pending: dict[str, tuple[str, str]] = {}
     with path.open(encoding="utf-8", errors="replace") as handle:
         for line in handle:
             try:
@@ -130,14 +197,33 @@ def _read(
             if not isinstance(row, dict):
                 continue
             when = _timestamp(row)
-            if when is None or when < since:
+            if when is None or when < since or (until is not None and when >= until):
                 continue
             if row.get("subtype") == "compact_boundary":
                 transcript.compactions += 1
                 continue
             message = row.get("message")
-            if row.get("type") != "assistant" or not isinstance(message, dict):
+            if not isinstance(message, dict):
                 continue
+            content = message.get("content")
+            if row.get("type") == "user" and isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") == "tool_result":
+                        tool, target = pending.pop(block.get("tool_use_id"), ("", ""))
+                        label = _bucket(tool, target)
+                        if label:
+                            transcript.read_chars[label] += _result_chars(block)
+                continue
+            if row.get("type") != "assistant":
+                continue
+            if isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") == "tool_use":
+                        given = block.get("input") if isinstance(block.get("input"), dict) else {}
+                        pending[block.get("id")] = (
+                            block.get("name", ""),
+                            str(given.get("file_path", "")),
+                        )
             # Before the dedup below: a response's tool_use block is its own
             # row, and the text block ahead of it has already claimed the id.
             if transcript.compactions == 0 and _writes_handoff(message):
@@ -233,11 +319,38 @@ def _report_handoff_rule(sessions: list[Transcript]) -> None:
             print(f"    {t.session[:8]}  {max(t.contexts):,}")
 
 
+def _report_reads(transcripts: list[Transcript]) -> None:
+    print("Tool results by source (characters; tokens are about a quarter):")
+    for role, group in (
+        ("main", [t for t in transcripts if not t.is_subagent]),
+        ("subagent", [t for t in transcripts if t.is_subagent]),
+    ):
+        sums: dict[str, int] = defaultdict(int)
+        for t in group:
+            for label, chars in t.read_chars.items():
+                sums[label] += chars
+        whole = sum(sums.values()) or 1
+        print(f"  {role}: {_millions(whole)} chars")
+        for label, _ in READ_BUCKETS:
+            if sums[label]:
+                print(
+                    f"    {label:<24}{_millions(sums[label]):>8}"
+                    f"  {100 * sums[label] / whole:4.0f} %"
+                )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     window = parser.add_mutually_exclusive_group()
     window.add_argument("--days", type=int, default=7, help="look back this many days (default 7)")
     window.add_argument("--since", help="count from this date, YYYY-MM-DD (UTC)")
+    parser.add_argument("--until", help="stop before this date, YYYY-MM-DD (UTC)")
+    parser.add_argument(
+        "--project-dir",
+        action="append",
+        default=[],
+        help="another folder under ~/.claude/projects to read, or 'all' (repeatable)",
+    )
     args = parser.parse_args()
 
     if args.since:
@@ -245,16 +358,26 @@ def main() -> int:
     else:
         since = datetime.now(UTC) - timedelta(days=args.days)
 
-    directory = _transcript_dir()
-    if not directory.is_dir():
+    until = datetime.fromisoformat(args.until).replace(tzinfo=UTC) if args.until else None
+
+    directories = _transcript_dirs(args.project_dir)
+    if not directories:
         print("No transcripts found for this repo.")
         return 1
 
     totals: dict[tuple[str, str], ModelTotals] = defaultdict(ModelTotals)
     seen: set[str] = set()
-    transcripts = [_read(path, since, totals, seen) for path in sorted(directory.rglob("*.jsonl"))]
+    transcripts = [
+        _read(path, since, until, totals, seen)
+        for directory in directories
+        for path in sorted(directory.rglob("*.jsonl"))
+    ]
 
-    print(f"Window: since {since.date().isoformat()} (UTC)")
+    end = f" until {until.date().isoformat()}" if until else ""
+    print(
+        f"Window: since {since.date().isoformat()}{end} (UTC), "
+        f"{len(directories)} transcript folder(s)"
+    )
     print()
     print(
         f"{'role':<10}{'model':<28}{'calls':>8}{'cache read':>13}{'cache write':>13}"
@@ -279,6 +402,13 @@ def main() -> int:
         )
     print(f"API-equivalent at list prices of {PRICES_AS_OF}: US$ {dollars:,.0f}")
     print(f"  main sessions US$ {by_role['main']:,.0f}, subagents US$ {by_role['subagent']:,.0f}")
+    mains = sum(1 for t in transcripts if t.contexts and not t.is_subagent)
+    subs = sum(1 for t in transcripts if t.contexts and t.is_subagent)
+    if mains and subs:
+        print(
+            f"  per main session US$ {by_role['main'] / mains:,.2f}, "
+            f"per subagent US$ {by_role['subagent'] / subs:,.2f}"
+        )
     if unpriced:
         print(f"Not priced, left out of the sum: {', '.join(sorted(set(unpriced)))}")
     print()
@@ -295,6 +425,8 @@ def main() -> int:
     )
     print()
     _report_handoff_rule([t for t in transcripts if not t.is_subagent])
+    print()
+    _report_reads(transcripts)
     return 0
 
 

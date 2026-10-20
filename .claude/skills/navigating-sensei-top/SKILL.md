@@ -13,24 +13,29 @@ repo root — `fixture_peek.py` imports `sensei_top` and needs it.
 
 ## 1. Repo map — before exploring
 
-`tests/fixtures/*.log` aside, this repo's tracked files cost ~245k tokens to
-read in full. The map costs a few thousand.
+`tests/fixtures/*.log` aside, this repo's tracked text is about 8 MB, far
+more than any context. The full map is about 90 KB (~22k tokens), so start
+with `--path` on the directory you need (a few KB), and run the bare map
+only when you don't know where to look.
 
     uv run python .claude/skills/navigating-sensei-top/scripts/repo_map.py
     uv run python .claude/skills/navigating-sensei-top/scripts/repo_map.py --path src/sensei_top/review
     uv run python .claude/skills/navigating-sensei-top/scripts/repo_map.py --max-symbols 12
 
 Output is a tree with per-file line counts and top-level symbols (functions,
-classes, SQL tables). `src/sensei_top/api/app.py` gets special handling:
-instead of generic symbols it lists every route (method, path,
-response_model), because the route decorator and its Pydantic model usually
-sit hundreds of lines apart in that 1,500-line file.
+classes, SQL tables). Files under `src/sensei_top/api/routes/` get special
+handling: instead of generic symbols they list every route (method, path,
+response_model), because the route decorator and its Pydantic model often
+sit far apart.
 
 Symbols come from regexes, not a parser — good for navigation, not analysis.
 **Escalation ladder:** map first → `Read` the one file the map points at
 (with an offset if it's large) → `grep` if you need every occurrence of
-something specific. Prefer `Read` with `offset`/`limit` over `sed -n` line
-ranges — `sed` has no cap and will happily dump the whole file into context.
+something specific. Read a section, never a whole doc or a whole large
+module: `Read` with `offset`/`limit`, or a bounded `sed -n 'A,Bp'` when the
+range is known. An unbounded `cat` or `sed` of a doc is the most common
+waste measured (shell reads of `.md` were 28 % of main-session Bash output,
+week of 2026-10-13).
 Scope a grep before pulling full matching lines: `grep -l` or `-c` to find
 which files matter, or pipe to `head`, then read only what you need.
 
@@ -38,7 +43,7 @@ which files matter, or pipe to `head`, then read only what you need.
 
 Prints, for every `docs/*.md` file plus `AGENTS.md`, its line count and every
 `##`/`###` heading with its 1-indexed line number — use it to `Read` a single
-doc section with `offset`/`limit` instead of loading a whole 30-40 KB doc.
+doc section with `offset`/`limit` instead of loading a whole doc (the largest run 65–77 KB).
 
 A fixed set of generated/huge files never gets symbol-scanned; they show up
 in the map as a name and line count tagged `[do-not-read]`
@@ -134,11 +139,17 @@ re-run until green.
 
 ## 4. Usage report — what the sessions themselves cost
 
-    uv run python .claude/skills/navigating-sensei-top/scripts/usage_report.py --days 7
+    uv run python .claude/skills/navigating-sensei-top/scripts/usage_report.py --days 7 --project-dir all
+    uv run python .claude/skills/navigating-sensei-top/scripts/usage_report.py --since 2026-10-06 --until 2026-10-13 --project-dir all
 
 Reads this repo's local Claude Code transcripts and prints counts only:
-calls and tokens per model, the context a session starts with, the average
-context per call, how many sessions compacted, and how long subagents ran.
+calls and tokens per model, cost per main session and per subagent, the
+context a session starts with, the average context per call, how many
+sessions compacted, how long subagents ran, whether sessions past 120k
+wrote a handoff first, and tool-result volume by source (Bash, `src/`,
+`docs/`…). Without `--project-dir` it reads only the current folder;
+`all` adds every folder this repo has had (its old names, and sessions
+started from `web/`). Workflow agents count as subagents.
 Cost is calls × context carried, so these are the numbers to watch, not the
 size of a doc. The dollar figure is an API-equivalent at list prices, not a
 bill.
