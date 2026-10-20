@@ -47,6 +47,10 @@ def _no_ambient_config(monkeypatch, tmp_path):
       game-log folder; an empty, never-created temp directory makes
       discovery find nothing.
 
+    - ``steam.py`` and ``wine.py`` look under ``HOME``, ``XDG_DATA_HOME`` and
+      ``$WINEPREFIX`` for Steam libraries and Wine prefixes, so those point at
+      empty, never-created temp folders too.
+
     Pointing ``XDG_CONFIG_HOME`` at an empty, never-created temp directory
     (``llm/config.py::config_path()`` honours it) makes every one of those
     lookups miss cleanly, the same way a fresh install would. A test body
@@ -66,6 +70,13 @@ def _no_ambient_config(monkeypatch, tmp_path):
     monkeypatch.setenv("PYTHON_KEYRING_BACKEND", "keyring.backends.fail.Keyring")
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "localappdata"))
+    # Steam and Wine discovery (``steam.py``, ``wine.py``) read roots under the
+    # home directory and the XDG data directory at call time; an empty,
+    # never-created home means no test sees a developer's real prefix or log.
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
+    monkeypatch.delenv("WINEPREFIX", raising=False)
 
 
 @pytest.fixture(autouse=True)
