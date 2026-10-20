@@ -11,8 +11,8 @@ a game or a decklist, and it only has an answer once enough matches exist to
 separate a real pattern from one bad night.
 
 The coach is that third scope: one button that writes a dated report for one
-format, read from *every* completed Arena and MTGO Constructed match at once
-(plan 13, D12). Habits are read across every format the player played; what
+format, read from *every* completed Arena and MTGO Constructed match at once.
+Habits are read across every format the player played; what
 is about the format — the decks, the roles, the opponents, the field — is
 read from that format alone (see "The two windows"). It sees three things
 nothing else in this project computes:
@@ -48,7 +48,7 @@ every report of every format.
 `POST /api/coach/narrative` and `PUT /api/coach/narrative` (a pasted
 report, `docs/llm.md`, "Saving a pasted answer") take an optional
 `?format=`; omitted, they use `api/sql.py::default_format`
-(D13: the most recent match's format, else Standard), and every response
+(the most recent match's format, else Standard), and every response
 says which format it used. The Coach page always sends it on the `PUT`, so a
 pasted answer's `coach:{format}` line is checked against the format the page
 shows. Only a report of the requested format is ever the
@@ -73,7 +73,7 @@ already does for the deck guide.
 The population is every match with `result IN ('win', 'loss')` that is
 **Constructed** and has a **format**: `v_match_format.format` is not NULL
 (the format Arena's log named, else the user's MTGO pick, else the format the
-match's revealed cards fit — plan 13, D6; `docs/opponent-deck.md`). Every
+match's revealed cards fit; `docs/opponent-deck.md`). Every
 format is kept, not only the report's own: which sections a match reaches is
 the report's choice (see "The two windows"), not the population's. Every
 exclusion that actually removes at least one match earns its own line in
@@ -107,13 +107,16 @@ blocking it (`infer_formats`' own docstring). Anything else with no format —
 an Arena queue for a format this app doesn't track, an MTGO match never
 inferred — lands in `no_format`. A banned card does not exclude a match:
 Scryfall's ban list is today's, so a card banned since the match was played
-still fits its format (D3).
+still fits its format.
 
 An included MTGO match counts in `overall`, the skill splits, the leaks and
 the turning points exactly like an Arena one. It reaches `by_deck` only when
 the user picked its deck (`mtgo_match_pick`, read through `v_match_deck`):
-MTGO writes no deck id, and rule 4 forbids inventing one. A gap line says so
-whenever at least one included MTGO match has no picked deck.
+MTGO writes no deck id, and rule 4 forbids inventing one. Its `decks` rows
+come from deck files, an exported `.dek` or MTGO's own deck store
+(`grouping *.xml`), reached only through that pick (`docs/architecture.md`,
+"What a turn snapshot holds"). A gap line says so whenever at least one
+included MTGO match has no picked deck.
 `CoachEvidence.by_source` (and `metrics_snapshot`'s own `"by_source"` key)
 always carries both an `"arena"` and an `"mtgo"` rate, `n=0` when a source
 contributed nothing, so a caller never has to guess which source is empty
@@ -178,7 +181,7 @@ report stays readable and a caller always knows what got cut:
   deck — the most recently played `deck_id` under that identity, full 60,
   no event conditioning, under the report format's rules) and the same four
   splits as overall. Only a deck whose own format (`guide/deck.py
-  ::identity_format`, D15) is the report's gets a line; a match of the
+  ::identity_format`) is the report's gets a line; a match of the
   report's format played with a deck of another format still counts in the
   other format records, and a gap line counts those. Everything past the top
   8 is a gap line naming how many decks and matches it covers.
@@ -280,12 +283,17 @@ model memory).
 Every entry is curated, not generated: **every URL and author was checked
 against the live page before check-in** (2026-09-18), and its `summary` is
 2-3 sentences written from that page's own content in this project's words
-— never a pasted quote. A candidate entry that could not be verified this
-way was dropped rather than guessed at, per rule 4.
+— never a pasted quote. Two TCGplayer entries were checked through the
+publisher's search index instead, since TCGplayer serves its articles as a
+script-rendered app no fetch can read; their `note` says so. A candidate
+entry that could not be verified was dropped rather than guessed at, per
+rule 4.
 
-`topics` mixes two vocabularies: `Finding.code`s an analyzer actually emits
-(`role_assignment`, `race_behind`, `mana_screwed`, `over_committed_into_
-sweeper`, …) and broad tags a report's evidence sections carry
+`topics` mixes two vocabularies: codes, which are the `Finding.code`s an
+analyzer actually emits (`role_assignment`, `race_behind`,
+`over_committed_into_sweeper`, …) plus the leak finder's two synthetic
+codes (`mana_screwed`, `mana_flooded`, `review/leaks.py::_mana_flags`), and
+broad tags a report's evidence sections carry
 (`sideboarding`, `mulligans`, `play-draw`, `deckbuilding`, `review`,
 `variance`, `tournament-prep`, `tilt`). `coach/narrative.py::reading_list`
 collects the codes and tags this report's *own* evidence actually surfaced —
@@ -311,7 +319,7 @@ redirects to `tcgplayer.com`, `cardkingdom.com` has no Standard content, and
 module's own comment as deliberate omissions, not oversights. A report on
 another format searches the same nine domains: the list was checked for
 Standard only and has not been re-checked for the other formats, and adding
-a domain waits for the user (plan 13 leaves it out of scope).
+a domain waits for the user.
 
 Two domains here, `mtgdecks.net` and `mtgazone.com`, are sites
 `metagame/` will not download from (`docs/review.md`, "Metagame data: real
@@ -380,16 +388,16 @@ unreadable and progress can't be measured, per rule 4.
 the report's format name, so the prompt says which records are that
 format's alone and which are habits read across every format, and tells the
 model never to present one as the other. It fixes seven `## ` headings, in
-order, because the frontend splits a stored report on them
-(`coach/narrative.py::HEADINGS`): Player profile, Since your last report
-(omitted entirely on a first report), Focus areas, Training plan, At the
-LGS, Format notes, Sources. `build_coach_context` renders every evidence
-section above as labelled text blocks, ending with the gap lines and the
-same "not tracked at all" sentence (`review/narrative.py::UNTRACKED`) every
-other prompt in this project uses verbatim — the stack, counters and
-continuous effects, attachments, exact phase/step, and the opponent's hand.
-Combat *is* projected (`migrations/014_combat.sql`), so it is not on that
-list.
+order (`coach/narrative.py::HEADINGS`), and the Coach page draws one card
+per `## ` section (`web/src/lib/markdown.ts::parseReport`): Player profile,
+Since your last report (omitted entirely on a first report), Focus areas,
+Training plan, At the LGS, Format notes, Sources. `build_coach_context`
+renders every evidence section above as labelled text blocks, ending with the
+gap lines and the same "not tracked at all" sentence
+(`review/narrative.py::UNTRACKED`) every other prompt in this project uses
+verbatim — the stack, counters and continuous effects, attachments, exact
+phase/step, and the opponent's hand. Combat *is* projected
+(`migrations/014_combat.sql`), so it is not on that list.
 
 **Two things the measured reports show that the design didn't expect.** Both
 were seen on real data on 2026-09-22. Both are fixed at read time, since
@@ -406,15 +414,15 @@ stored prose stays verbatim and neither report can be rewritten in place.
   splits into several blocks, and wrong between narration and a heading.
   The Opus report survived because an unrequested `#` title sat between its
   narration and `## Player profile`. The Fable report had nothing there, so
-  `CoachReport.tsx`, which splits on `^## `, never sees its first heading:
-  the player profile renders as untitled leading text, with the narration
-  in front of it. `coach/narrative.py::clean_report` fixes this at read
-  time — it finds the first occurrence of `## ` followed by a `HEADINGS`
-  entry, even glued mid-line as in the Fable shape, and returns the prose
-  from there; `api/routes/coach.py::_report_out` is the one place all four
-  routes' prose passes through it, so the fix reaches every route with no
-  duplicated logic. Stored prose is still verbatim — the row on disk keeps
-  its narration — only what the API and CLI ever see is trimmed.
+  `parseReport`, which starts a section at a line beginning `## `, never sees
+  its first heading: the player profile renders as untitled leading text, with
+  the narration in front of it. `coach/narrative.py::clean_report` fixes this
+  at read time — it finds the first occurrence of `## ` followed by a
+  `HEADINGS` entry, even glued mid-line as in the Fable shape, and returns the
+  prose from there; `api/routes/coach.py::_report_out` is the one place all
+  four routes' prose passes through it, so the fix reaches every route with no
+  duplicated logic. Stored prose is still verbatim — the row on disk keeps its
+  narration — only what the API returns is trimmed.
 - **No web citations are stored.** Neither report stored a single web
   citation, although the Opus 5 run searched 6 times and the Fable 5.1 run 8.
   `sources_json` holds reading ids only, so the Sources section lists the
@@ -444,8 +452,8 @@ stored prose stays verbatim and neither report can be rewritten in place.
   non-empty.
 
 `build_coach_prompt` computes `context_hash` — reused from
-`review/narrative_store.py`, the same SHA-256-of-the-prompt-context every
-authored-artifact table in this project uses to mean "the evidence changed"
+`review/narrative_store.py`, the same SHA-256-of-the-prompt-context
+`match_narrative` and `leaks_narrative` use to mean "the evidence changed"
 — over the evidence **alone**: `build_coach_context` called with
 `previous=None, progress=()`, never the full context actually sent to
 Claude. The full context does embed the previous report's own focus section,
@@ -466,7 +474,7 @@ reads against it; its cost and search count are `NULL`.
 
 ## Cost
 
-Planning estimates from the phase-0 design, at `effort: high`, assuming
+Planning estimates made before the first report, at `effort: high`, assuming
 roughly 50-60k input tokens, 20-30k output tokens (thinking included), and
 8 or fewer web searches at $0.01 each:
 
@@ -481,9 +489,8 @@ These four are `llm/client.py::REPORT_MODELS` — the Coach page's model
 dropdown picks one of them per report, preselected to the `[claude.coach]`
 model or the base `[claude]` model (`load_coach()`'s own resolution); left
 alone, the dropdown sends nothing and the server uses that same configured
-model, exactly as before the dropdown existed. `--set-coach-model` now only
-sets that preselected default, not the ceiling on what a report can be
-written with.
+model. `--set-coach-model` sets only that preselected default, not the
+ceiling on what a report can be written with.
 
 `llm/client.py::_PRICES` also prices `claude-haiku-4-5` ($1/$5), but it is
 not offered in the dropdown or `REPORT_MODELS`: it rejects the adaptive
@@ -497,7 +504,7 @@ constructed matches: 110,718 input / 9,384 output tokens, 6 searches,
 the estimate gave.
 
 The prompt itself is small — about 37,700 characters, call it 10k tokens,
-against the 50-60k phase 0 assumed. The billed 110,718 is that prompt
+against the 50-60k the estimate assumed. The billed 110,718 is that prompt
 charged about eleven times over, because `write_report`'s `pause_turn` loop
 re-sends the whole accumulated conversation on every continuation and sums
 `usage.input_tokens` across all of them. **Search count, not match count, is
