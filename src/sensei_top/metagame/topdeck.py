@@ -1,37 +1,27 @@
-"""Tournament results from the TopDeck.gg API — a second source for
-the corpus ``metagame/source.py`` already builds, added because a live
-comparison of one August's Standard corpus found the fbettega cache holding
-almost no large-paper Standard evidence: MTGO's own Standard events are all
-leagues (Tier C, presence-only — a league dump has no losses in it at all),
-so real Standard matchup data comes down to the handful of paper events Melee
-happens to publish. TopDeck.gg is where Standard RCQs and Regional
-Championships are actually run and scored — real tabletop swiss events, the
-shape the tier system ranks highest at tournament size.
+"""Tournament results from the TopDeck.gg API — a second source for the
+corpus ``metagame/source.py`` builds, for the paper Standard events the
+fbettega cache barely holds. See docs/metagame.md, "A second source:
+TopDeck.gg".
 
-This module does not reimplement the corpus pipeline. It normalises a
-TopDeck API response into the same ``CacheItem`` shape
-``metagame/source.py``'s :func:`~sensei_top.metagame.source.parse_event`
-already parses, then hands off to that function unchanged — including its
-own call to :func:`~sensei_top.metagame.tiers.classify_tier`. A TopDeck event
-is tabletop, so it earns Tier A or D on the exact same size test (64 or more
-real ``Standings`` rows for A, fewer for D) as every Melee-sourced event;
-nothing here trusts an event for where it came from.
+It normalises a TopDeck response into the ``CacheItem`` shape
+``source.parse_event`` already parses, then hands off to that function and
+``store_events`` unchanged, so an event earns Tier A or D on the same size
+test as a Melee event, never for where it came from.
 
-Privacy, automatically. TopDeck standings and round tables carry a player's
-real display name and account id. Both are used here purely as an in-memory
-join key — mapped into ``CacheItem["Decks"][i]["Player"]``, the exact field
-:func:`~sensei_top.metagame.source.parse_event` already resolves to a
-per-event ordinal and discards before anything reaches ``store_events``, per
-that module's own docstring and AGENTS.md's privacy rule. Nothing in this
-module writes a name or id anywhere else in the normalised payload, so the
-existing pipeline's privacy guarantee is inherited rather than re-implemented.
+Privacy: a standings row's or a round table's player name is read only as an
+in-memory join key, written only into the ``Player`` fields ``parse_event``
+resolves to a per-event ordinal and discards before anything reaches
+``store_events``. Nothing here writes a name anywhere else in the normalised
+payload, and the account id a round table carries is never read, so the
+pipeline's privacy guarantee is inherited, not re-implemented.
 
-Credential: an opt-in, unmetered API key (AGENTS.md's "standard for the free
-downloads that remain", not the metered-call rule) resolved by
+Credential: an opt-in, unmetered API key (AGENTS.md non-negotiable 5's
+standard for free downloads, not the metered-call rule) resolved by
 ``metagame/config.py``, a sibling to ``llm/config.py`` rather than an
-extension of it. With no key configured, :func:`refresh_topdeck` is a no-op.
-Attribution: TopDeck's terms require a visible credit and link back to
-TopDeck.gg wherever this data is shown; see ``FieldView.tsx``.
+extension of it. With no key configured, :func:`refresh_topdeck` makes no
+request and returns ``not_configured``. Attribution: TopDeck's terms require
+a visible credit and link back to TopDeck.gg wherever this data is shown;
+the Field page and each TopDeck event's page carry it.
 """
 
 from __future__ import annotations
@@ -77,8 +67,8 @@ from sensei_top.metagame.source import (
 
 log = logging.getLogger(__name__)
 
-# api.topdeck.gg never resolved (DNS), so no TopDeck event was stored until
-# this base was corrected to the host that answers.
+# The host that answers: api.topdeck.gg does not resolve (DNS), and a base
+# there stores no TopDeck event at all.
 API_BASE = "https://topdeck.gg/api/v2"
 TIMEOUT = 30.0
 GAME = "Magic: The Gathering"
@@ -399,8 +389,8 @@ def refresh_topdeck(
     by_hand: bool = False,
 ) -> RefreshResult:
     """Update the corpus from TopDeck.gg, for each of ``formats`` (one query
-    each, one key, ``FORMAT_SPACING_S`` apart), through the source's hold
-    (plan 14, S3 and S5). Never raises on a failed request.
+    each, one key, ``FORMAT_SPACING_S`` apart), through the source's hold.
+    Never raises on a failed request.
 
     No credential configured is its own status, checked first; a missing
     opt-in key is not an error. Then the gate: ``held`` and ``fresh`` make no

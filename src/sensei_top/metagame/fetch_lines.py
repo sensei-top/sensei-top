@@ -1,20 +1,24 @@
 """The lines a corpus fetch prints, on ``sensei-top meta`` and on ``serve``'s
-console (plan 14, S3): ``render`` turns a ``RefreshResult`` into them. Pure —
-no database, no clock; the caller passes ``now``, and prints.
+console: ``render`` turns a ``RefreshResult`` into them. Pure — no database,
+no clock; the caller passes ``now``, and prints.
 
-Every line is final wording from plan 14's line catalog (``lines.md`` §0 and
-§1.1 to §1.4), cleared by Fable. The templates below were copied from it by
-script, each entry's example values replaced by fields, and are never
-retyped: a change of wording goes through the catalog first.
-``tests/test_metagame_lines.py`` holds every entry verbatim and renders each.
-One line is not the catalog's: TopDeck's "corpus is 5h old; nothing to do",
-which the catalog does not list, is ``cli.py``'s as it printed it before
-(S3: TopDeck's lines "as today"), copied from there by the same script.
+Every line is final, reviewed wording from the line catalog (kept outside
+the repo). The templates below were copied from it by script, each entry's
+example values replaced by fields, and are never retyped: a change of
+wording goes through the catalog first. ``tests/test_metagame_lines.py``
+holds every entry verbatim, in ``LINES`` (mtgo.com's) and ``TOPDECK_LINES``
+(TopDeck's), keyed by section and a short name, and the tests render each:
+§1.1 is mtgo.com's lines with no pause standing, §1.2 its hand-run lines
+during a wait or a pause, §1.3 TopDeck's, §1.4 mtgo.com's endings on
+``serve``. One line is not the
+catalog's: TopDeck's "corpus is 5h old; nothing to do", which the catalog
+does not list, is the fresh line ``cli.py`` printed for TopDeck before this
+module, copied the same way.
 
 mtgo.com's lines (§1.1, §1.2, §1.4) and TopDeck's (§1.3) take the same
 ``render`` and the same ``serve`` rule, each through its entry in
 ``_SOURCES``; fbettega's ``cache: …`` lines are not this module's and stay in
-``cli.py``. ``render`` refuses a source with no entry.
+``cli.py::_run_metagame_refresh``. ``render`` refuses a source with no entry.
 
 Traps this module exists to avoid:
 
@@ -32,7 +36,7 @@ Traps this module exists to avoid:
    repeats the pause's cause.
 3. **A not-before is never printed earlier than it is.** mtgo.com's are
    stored on the minute; one that is not is rounded up, never down.
-   TopDeck's are its own time to the second (D18), printed ``HH:MM:SS`` and
+   TopDeck's are its own time to the second, printed ``HH:MM:SS`` and
    rounded up to the second the same way. The time an answer arrived is a
    past moment and prints as a clock reads it.
 4. **Dates follow the printing, not the storing.** A time carries its UTC
@@ -48,23 +52,23 @@ Traps this module exists to avoid:
 6. **The 503 lines take their own after-N form** ("HTTP 503 after 2
    tournament events stored"), not the reason's. In a hand run during a
    pause the after-N phrase composes like every other hand-run line, ahead of
-   "still paused since". A day of 503s never follows a page read (k1 resets
-   the count), so its line has no after-N form.
+   "still paused since". A day of 503s never follows a page read (a page
+   read restarts ``holds.apply_outcome``'s count), so its line has no
+   after-N form.
 7. **A run with no pause standing, TopDeck's §1.3 first-run lines, says
    where it stopped by format, never by count.** "at Standard; nothing
    fetched" when no format had answered, "after Standard; Modern was not
    fetched" once one had. A hand run during a pause names no format and
-   takes §0's after-N count instead, like §1.2's. Not fetched is every
+   takes the after-N count instead, like §1.2's. Not fetched is every
    format the run did not get: the ones that went unanswered before the
    answer, the one that drew it, and the ones it left unasked, so the
    ``--format`` hint retries them all, after the not-before. The "no answer
-   for" line, with its hint to retry now, follows only a success (k6), as it
-   always has. A 401 with nothing fetched names no format: the key was
-   refused, not a format (``followup2.md:239``).
+   for" line, with its hint to retry now, follows only a success. A 401
+   with nothing fetched names no format: the key was refused, not a format.
 8. **", 42 s" is TopDeck's own wait.** A first 429 names the seconds only
    when TopDeck did, in ``retryAfterSeconds`` or ``Retry-After``; the hour
    the app waits when it named none is not the site's, and the line says
-   "(HTTP 429)" alone (Q13.7).
+   "(HTTP 429)" alone.
 """
 
 from __future__ import annotations
@@ -89,16 +93,16 @@ _NOT_CONFIGURED = "not_configured"
 _CLOCK = "%H:%M UTC"
 _DATED = "%Y-%m-%d %H:%M UTC"
 _DATE = "%Y-%m-%d"
-# TopDeck's not-befores are to the second (lines.md §0, "Times").
+# TopDeck's not-befores are to the second (trap 3).
 _TD_CLOCK = "%H:%M:%S UTC"
 _TD_DATED = "%Y-%m-%d %H:%M:%S UTC"
 
-# A 401 from TopDeck is its key (followup2.md:239).
+# A 401 from TopDeck is its key.
 _KEY_STATUS = 401
-# The "no answer for" line's list, as cli.py has always joined it.
+# The "no answer for" line's list separator, which ``_td_and`` uses too.
 _TD_LIST = ", "
 
-# The stored copy's age, as cli.py has always printed it.
+# The stored copy's age, in the form ``cli.py``'s cache lines print too.
 _AGE = "{hours:.0f}h old"
 _NO_COPY = "no cached copy"
 _FRESH_HOURS = "{hours:.1f}"
@@ -180,7 +184,7 @@ _DAY_NOT_BEFORE = "mtgo: HTTP 503 for a whole day; keeping what is stored ({age}
 _WAITING = "mtgo: waiting until {until} after HTTP {status} at {at}; nothing fetched; keeping what is stored ({age})."  # noqa: E501
 
 # §1.2 paused, with a not-before still ahead: no attempt ("HTTP 503" in place of "HTTP 429" when a
-# 503 set the time, F4:146)
+# 503 set the time)
 _PAUSED_AHEAD = "mtgo: still paused since {since}; nothing fetched after HTTP {status} at {at}; keeping what is stored ({age}); run 'sensei-top meta' again after {until}."  # noqa: E501
 
 # §1.2 paused, generic failure
@@ -218,7 +222,7 @@ _NOT_BEFORE = " — not before {time}"
 # word for word.
 
 # §1.3 success
-# (``{skipped}`` as in the code the entry cites, cli.py:507-508)
+# (``{skipped}`` is ``_SKIPPED``, the suffix ``cli.py::_run_metagame_refresh`` prints too)
 _TD_STORED = "topdeck: {events} tournament events stored{skipped}."
 
 # §1.3 the server's own attempt ends a wait
@@ -244,10 +248,10 @@ _TD_COULD_NOT = "topdeck: could not refresh ({reason}); keeping what is stored (
 # §1.3 no key (only with `--source topdeck`)
 _TD_NO_KEY = "topdeck: no API key configured — run 'sensei-top config --set-topdeck-key KEY'."
 
-# cli.py's fresh line for TopDeck, which the catalog does not list
+# TopDeck's fresh line, which the catalog does not list (the module docstring)
 _TD_NOTHING_TO_DO = "topdeck: corpus is {hours}h old; nothing to do."
 
-# cli.py's fresh line for TopDeck, which the catalog does not list
+# TopDeck's fresh line, which the catalog does not list (the module docstring)
 _TD_FRESH_HOURS = "{hours:.0f}"
 
 # §1.3 403 at the first format
@@ -259,10 +263,10 @@ _TD_AFTER = " after {answered}; {not_fetched}"
 # §1.3 403 after a format was fetched
 _TD_NOT_FETCHED = "{formats} was not fetched"
 
-# Q13.7, several formats (followup3.md:204)
+# ``_TD_NOT_FETCHED`` for several formats
 _TD_NOT_FETCHED_SEVERAL = "{formats} were not fetched"
 
-# Q13.7, several formats (followup3.md:204)
+# The last join of several formats: "Standard and Pioneer"
 _TD_AND = " and "
 
 _TD_REFUSED = {
@@ -314,7 +318,7 @@ def render(source: str, result: RefreshResult, *, surface: str, now: datetime) -
 
     On ``meta`` there is always a line. On ``serve`` there is one only after
     the server's own attempt moved the hold (trap 5), and ``[]`` otherwise,
-    which the caller logs at warning level as before.
+    which the caller logs (``cli.py::_log_corpus_result``).
     """
     if surface not in SURFACES:
         raise ValueError(f"no surface {surface!r}")
@@ -548,7 +552,7 @@ def _td_command(formats: Sequence[str]) -> str:
 
 
 def _td_no_answer(result: RefreshResult) -> list[str]:
-    """The line after a success whose run left formats unanswered (k6)."""
+    """The line after a success whose run left formats unanswered (trap 7)."""
     if not result.unanswered:
         return []
     return [
@@ -559,8 +563,8 @@ def _td_no_answer(result: RefreshResult) -> list[str]:
 
 
 def _td_and(formats: Sequence[str]) -> str:
-    """Q13.7's "Standard and Pioneer"; three or more take commas before the
-    last "and"."""
+    """"Standard and Pioneer"; three or more take commas before the last
+    "and"."""
     if len(formats) < 2:
         return "".join(formats)
     return _TD_LIST.join(formats[:-1]) + _TD_AND + formats[-1]
@@ -598,7 +602,7 @@ def _td_wait(answer: Answer) -> str:
 def _td_answer(result: RefreshResult, answer: Answer, now: datetime) -> str:
     """§1.3: an answer to a run with no pause standing."""
     if answer.kind == AnswerKind.GENERIC:
-        # Every format unanswered (S5): nothing was fetched.
+        # Every format unanswered: nothing was fetched.
         return _TD_COULD_NOT.format(reason=answer.reason, age=_age(result.age_seconds))
     if answer.kind == AnswerKind.UNAVAILABLE:
         raise ValueError("TopDeck's 5xx is 'no answer for' its format, never an Answer")
@@ -622,7 +626,7 @@ def _td_answer(result: RefreshResult, answer: Answer, now: datetime) -> str:
 def _td_paused_answer(result: RefreshResult, answer: Answer, before: Hold, now: datetime) -> str:
     """§1.3's hand-run lines: an answer to a hand run made during a pause.
     Like their §1.2 models they name no format, and once the run stored
-    events they take §0's after-N form, as §1.2's do (``followup4.md:85-88``)."""
+    events they take the after-N form, as §1.2's do."""
     since = _date(before.since)
     if result.events > 0:
         where = _STILL_PAUSED_AFTER.format(events=result.events, since=since)
