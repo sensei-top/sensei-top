@@ -27,7 +27,7 @@ primary panel once a game is under way — exactly what's left in your own
 library and the odds of drawing it soon. Every one of them lives in
 `src/sensei_top/table/`, a sibling to `review/` for the same architectural
 reason: `review/` only runs once a match is over, `table/` only runs while
-one is in progress. Neither writes anything, so every route built on it
+one is in progress. `table/` writes nothing, so every route built on it
 stays in the API's read-only majority (AGENTS.md non-negotiable #6).
 
 ## The live replay (`table/live.py`, `projector/live_state.py`)
@@ -36,18 +36,17 @@ stays in the API's read-only majority (AGENTS.md non-negotiable #6).
 replaying the current match's own `raw_events` at request time, never by
 reading `turns`/`matches`.
 
-**Why this exists.** A database with 238,520 raw events (~1.33 GB) measures
-**~16.2 s** wall time for one `project()` rebuild (of which parsing every
-payload with `orjson` is ~9.7 s; dispatch and the SQL writes account for the
-rest) — already well past `project_every`'s 5 s default. Left unchecked, the
-rebuild would run back-to-back rather than every 5 s; `live.py`'s duty-cycle
-gate (`live.py`'s module docstring) instead paces rebuilds to roughly a
-`1/duty_factor` share of wall time, so anything sourced from `turns`
-(opponent hand size, library, open mana, your own turn history) runs stale
-by roughly one gate interval — which grows, not shrinks, as history grows,
-since a full rebuild's own cost is a function of total history, not new
-rows. Replaying only the *current match* — bounded by its own room-opening
-event, 990-4,276 events on the same database — costs **0.03-0.08 s**:
+**Why this exists.** One full `project()` rebuild on a real database takes
+far longer than `project_every`'s 5 s default (the measurement is in
+`docs/architecture.md`, "Full rebuild, always"), so the watcher's duty-cycle
+gate paces rebuilds off the previous one's own duration
+(`docs/architecture.md`, "Live mode's two cadences"), and anything sourced
+from `turns` (opponent hand size, library, open mana, your own turn history)
+runs stale by roughly one gate interval — which grows, not shrinks, as
+history grows, since a full rebuild's own cost is a function of total
+history, not new rows. Replaying only the *current match* — bounded by its
+own room-opening event, 990-4,276 events (8-25 MB of payload text) on a real
+database — costs **0.03-0.08 s**:
 comfortably inside a 1-second poll, and the same order of magnitude
 regardless of how much history sits behind it, and unaffected by the gate
 since it never reads `turns`/`matches` at all.
@@ -76,8 +75,8 @@ GIL — so `serve --watch` runs the watcher in its own OS process
 (`live.WatcherProcess`) rather than a thread inside the API's own process.
 Without that separation a rebuild in progress taxed every request roughly
 5x, this route included, regardless of whether the request touched anything
-the rebuild was actually changing (`live.py`'s module docstring has the
-measurements).
+the rebuild was actually changing (`docs/architecture.md`, "Live mode's
+two cadences", has the measurements).
 
 This is the general form of what `table/opening_hand.py` already did for
 one narrow question ("is a mulligan pending"): `projector/live_state.py`
@@ -181,8 +180,9 @@ decision without resending the objects.
 
 **Why this bypasses the projection.** Same reasoning as the live replay
 above, and originally the *first* place this project drew that line: the
-5-second median decision window is well inside `project()`'s ~16 s rebuild
-time on a real database, so the projection can never land in time.
+5-second median decision window is far shorter than one full rebuild
+(`docs/architecture.md`, "Full rebuild, always"), so the projection can
+never land in time.
 `build_opening_hand_read` defaults to replaying `raw_events` itself
 (`table/live.py`'s anchor, `projector/live_state.py`'s replay) — every
 existing caller keeps working unchanged — but accepts an already-resolved
@@ -333,7 +333,8 @@ split (a hand can meet the land/curve cutoffs and still be missing the one
 card the deck actually wins with). **In band, early plays short:** no
 pressure normally proceeds straight to "mulligan," but a `mulligan_cost`
 (below) with at least a 13-point gap between this deck's kept-seven and
-mulliganed (any number) win rates acts as a brake — the downgrade stops at
+mulliganed (any number) win rates (`_MULLIGAN_BRAKE_POINTS`, set from the
+Spellementals gap measured below) acts as a brake — the downgrade stops at
 "marginal" instead, with a reason naming the cost, since shipping a hand
 costs a measured, wide amount for this deck specifically. Only measured
 evidence moves the verdict this way: with no `key_plays` at all (below the
@@ -504,22 +505,23 @@ against a running watcher.
 `opponent_archetype`.** Measured on 392 real breaks: median length ~39 s,
 80% end within 60 s (min 5 s, max 145 s — how long the user actually took,
 not an Arena timer). Measured separately, a full projection round trip
-reaches up to ~58 s at the default `--duty-factor 1.0` (`live.py`'s module
-docstring). Those two numbers together mean the projected opponent name is
-often still mid-game-1 by the time a break this short has already ended —
-waiting on `project()` would show a stale or absent read for most of a
-break's own lifetime. `table/intermission.py`'s `opponent_seen_names` pools
-`card_events` (whatever `project()` has caught up to) with the live
-replay's own revealed non-hand zones, and `_resolve_opponent` runs
+reaches up to ~58 s at the default `--duty-factor 1.0`
+(`docs/architecture.md`, "Live mode's two cadences"). Those two numbers
+together mean the projected opponent name is often still mid-game-1 by the
+time a break this short has already ended — waiting on `project()` would
+show a stale or absent read for most of a break's own lifetime.
+`table/intermission.py`'s `opponent_seen_names` pools `card_events`
+(whatever `project()` has caught up to) with the live replay's own revealed
+non-hand zones, and `_resolve_opponent` runs
 `archetypes.classify.classify_seen` — `classify_matches`'s per-match rule
 engine/corpus read, extracted so it can run on a request-time name set
 instead of waiting for a `card_events` row to exist. `rank_candidates`
 gained a `seen_names` parameter for the same reason, and
 `live_opponent_colors` reimplements `v_opponent_cards`'s colour/count logic
-directly in Python over a live name set — it counts **distinct card names**,
-not `(name, rarity, colors)` groups the way the SQL view does, a documented
-simplification (its own docstring) rather than an attempt to match the view
-exactly.
+directly in Python over a live name set — it counts **distinct card
+names**, not `(name, rarity, colors)` groups the way the SQL view does, a
+documented simplification (its own docstring) rather than an attempt to
+match the view exactly.
 
 **The live read is in the match's format.** `build_break_read` resolves it
 once: `v_match_format.format` (the log's for an Arena match, the pick or the
@@ -555,7 +557,7 @@ says so rather than rendering dead buttons (rule 4). No archetype named at
 all (a game 1 conceded before a card was seen, or a match with no format):
 `prompt` comes back `None`, but the alternatives still run, so the top one
 can still show as a "closest" plan, and past boarding reads that same
-alternative (`intermission.py`, step 5b). The
+alternative (`intermission.py::_past_boarding`). The
 prompt is `full_prompt`'s, so it is `None` too when the player's own deck has
 no format (`docs/brief.md`).
 
@@ -596,29 +598,31 @@ owns the cache key (see Wiring, below).
 **Frontend.** `SideboardPlanCard` renders the headline ("Lost game 1
 (concede)"), the plan itself (`BoardPlan`/`PlayAroundList`, reused from
 `MatchupBriefCard` rather than forked), past boarding, and — when there is
-no plan at all — a `CopyPromptCard` carrying the prompt and the exact `brief
---import` command to paste the answer back through. With neither a plan nor
-a prompt it says why instead: a match whose `fmt` is `null` gets its own
-sentence ("No tournament format is known for this match, so the opponent's
-deck can't be named from the cards seen, and there is no plan to show."),
-distinct from the unnamed-opponent one. The opponent is the status strip's
-during the break, as at every other phase: its name, its chip (the
-confidence, or "picked" for a manual pick) and the cards seen come from
-`intermission.opponent` and `intermission.cards_seen`, the live read, not
-from the projected match, which can trail it. `SideboardOpponentRail` holds
-only the other archetypes with a written plan, each expandable to its own
-full board; with none it is not drawn, and the plan card takes the full
-width. The plan card's title is the result and its reason alone ("Lost game
-1 (concede)"), since the strip already says which game is next and against
-what. Under the title, one line gives this deck's own games 2 and 3 against
-the opponent's deck, from `intermission.postboard_record`: "Your games 2–3
-against it: 58% · 35–25" from ten games won or lost, the record alone under
-ten, and no line when the record is null or every earlier game 2 or 3 was a
-draw. In `CurrentMatchView.tsx`, the break phase takes precedence over every
-other phase — including a pending mulligan decision, which cannot actually
-co-occur with a break since the next game's opening hand doesn't exist until
-sideboarding ends — and `MatchStatusStrip` renders `"Sideboarding, game N
-next"` in place of the ordinary game/turn phase phrase.
+no plan at all — a `CopyPromptCard` carrying the prompt and two ways back
+for the answer: its paste box, which saves through the PUT
+`api/routes/guide.py::paste_brief`, and the exact `brief --import` command.
+With neither a plan nor a prompt it says why instead: a match whose `fmt`
+is `null` gets its own sentence ("No tournament format is known for this
+match, so the opponent's deck can't be named from the cards seen, and there
+is no plan to show."), distinct from the unnamed-opponent one. The opponent
+is the status strip's during the break, as at every other phase: its name,
+its chip (the confidence, or "picked" for a manual pick) and the cards seen
+come from `intermission.opponent` and `intermission.cards_seen`, the live
+read, not from the projected match, which can trail it.
+`SideboardOpponentRail` holds only the other archetypes with a written
+plan, each expandable to its own full board; with none it is not drawn, and
+the plan card takes the full width. The plan card's title is the result and
+its reason alone ("Lost game 1 (concede)"), since the strip already says
+which game is next and against what. Under the title, one line gives this
+deck's own games 2 and 3 against the opponent's deck, from
+`intermission.postboard_record`: "Your games 2–3 against it: 58% · 35–25"
+from ten games won or lost, the record alone under ten, and no line when
+the record is null or every earlier game 2 or 3 was a draw. In
+`CurrentMatchView.tsx`, the break phase takes precedence over every other
+phase — including a pending mulligan decision, which cannot actually
+co-occur with a break since the next game's opening hand doesn't exist
+until sideboarding ends — and `MatchStatusStrip` renders `"Sideboarding,
+game N next"` in place of the ordinary game/turn phase phrase.
 
 ## The event rule (`table/queues.py`)
 

@@ -1,34 +1,14 @@
 """What the opponent might still be holding, from everything revealed about
 this game so far — the same "known information" logic Duke's *Thoughtseize
-You* asks a player to run in their own head, computed instead.
+You* asks a player to run in their own head, computed instead. See
+docs/current-match.md, "The opponent-hand read (`table/hand_read.py`)".
 
-The estimate rests on one number Arena does hand us honestly: the *count* of
-cards in the opponent's hand and library — from a fresh live replay when one
-is available (``table/live.py``), falling back to the projected
-``turns.opp_hand``/``opp_library`` otherwise — never their identity, which
-stays genuinely hidden unless something revealed it. For each card in the
-field's consensus decklist for the opponent's archetype
-(``review/consensus.py``), the expected copies still unaccounted for is that
-archetype's average count minus whatever has already turned up this game,
-and the odds it's in hand right now is the same hypergeometric read
-``web/src/lib/odds.ts``'s ``probAtLeastOneIn`` runs for the player's own
-deck, extended to handle a fractional "successes" count since an
-archetype's average copies of a card is rarely a whole number.
-
-Degrades in stages, never to a blank card (rule 4): an opponent whose
-archetype hasn't resolved yet, or whose archetype has too thin a corpus for
-``build_consensus`` to return anything, still gets the *observed* facts —
-hand size, hidden pool, open mana, how long they've sat on this hand, and
-whatever they've actually revealed — with only the per-card odds withheld.
-
-The estimate excludes lands entirely and subtracts anything already seen —
-including a card genuinely revealed sitting in their hand, not only cards
-seen elsewhere — before it is ever ranked: a land is never a "threat", and a
-card already confirmed by ``known_in_hand`` has no business also showing up
-as a probabilistic guess a few rows below it. Verified against the real
-corpus: without the land filter, the single most-expected "threat" for
-URProwess was a basic Island (6.33 expected copies, ahead of every real
-spell in the deck).
+The estimate rests on the one thing Arena hands us honestly: the *count* of
+cards in the opponent's hand and library, never their identity. Lands are
+excluded, and anything already seen (a card revealed sitting in their hand
+included) is subtracted, before anything is ranked: without the land
+filter, a basic Island ranked as one archetype's most-expected "threat"
+against the real corpus.
 """
 
 from __future__ import annotations
@@ -51,10 +31,9 @@ _CONSENSUS_CAVEAT = N_(
     "actual 60 cards, which this reader never sees."
 )
 
-# Facts-first: the tab leads with what's actually known and demotes this
-# estimate to a short, clearly-speculative list rather than a second grid
-# the size of "Could be holding". Threats stays at its older, more generous
-# cap since it is no longer the tab's primary content.
+# Facts-first: the page leads with what's actually known and keeps this
+# estimate to a short, clearly speculative list. The dashboard doesn't draw
+# threats at all, so they keep a wider cap.
 _MAX_INTERACTION = 5
 _MAX_CARDS_PER_LIST = 8
 
@@ -107,7 +86,8 @@ def _prob_at_least_one(population: int, successes: float, draws: int) -> float:
     drawn without replacement from a `population`-card pool) — the
     hypergeometric complement, run sequentially (rather than via a binomial
     coefficient) because `successes` is an expected-copy count and is rarely
-    a whole number."""
+    a whole number. The same read ``web/src/lib/odds.ts``'s
+    ``probAtLeastOneIn`` runs for the player's own deck."""
     if population <= 0 or successes <= 0 or draws <= 0:
         return 0.0
     draws = min(draws, population)
@@ -272,20 +252,21 @@ def build_hand_read(
     """The opponent-hand read for one game in progress.
 
     ``consensus`` is passed in rather than built here: the caller
-    (``api/app.py``) already resolves ``opponent_key`` to an archetype and
-    fetches/caches its consensus for the matchup brief, and building it a
-    second time per request would double the corpus scan on every heartbeat.
+    (``api/routes/current_match.py``) already resolves ``opponent_key`` to
+    an archetype and fetches/caches its consensus for the matchup brief, and
+    building it a second time per request would double the corpus scan on
+    every poll.
 
     ``live`` is the shared per-request replay from ``table/live.py``. When
     given, and it has actually reached a real turn (``live.turn_number`` is
     not ``None`` — the mulligan phase is deliberately excluded, matching the
     "no_game" status every caller already expects before the first turn),
     every observed fact below comes from that fresh replay instead of the
-    latest stored ``turns`` row, which can run 8-15 s+ stale on a real
-    database (``projector/live_state.py``'s module docstring has the
-    numbers). Falls back to the ``turns``/``v_turn_zones`` query used before
-    the live replay existed whenever ``live`` is absent or hasn't reached a
-    turn yet, so every existing caller keeps working unchanged.
+    latest stored ``turns`` row, which runs stale by the rebuild's lag
+    (docs/current-match.md, "The live replay (`table/live.py`,
+    `projector/live_state.py`)"). Falls back to the ``turns``/
+    ``v_turn_zones`` rows whenever ``live`` is absent or hasn't reached a
+    turn yet.
 
     ``fmt`` is the match's format (``None`` when nothing names one) and has no
     default: a caller must say. With ``None`` the read is ``format_unknown``,
@@ -321,9 +302,9 @@ def build_hand_read(
         library = latest["opp_library"]
         open_mana = latest["opp_open_mana"]
         # Not available outside a live replay — turns.opp_open_mana stays
-        # lands-only (see GameStateTracker's own docstring on why that
-        # column's meaning never changes), so there is nothing to widen with
-        # here. None, not 0: genuinely unknown, not "no other sources".
+        # lands-only (see TurnRow.other_mana_sources on why that column's
+        # meaning never changes), so there is nothing to widen with here.
+        # None, not 0: genuinely unknown, not "no other sources".
         other_mana_sources = None
         seen_elsewhere = _seen_elsewhere(conn, match_id, game_number)
         known_in_hand = _known_in_hand_now(conn, match_id, game_number, latest["turn_number"])
@@ -435,9 +416,8 @@ def build_hand_read(
         (interaction if is_interaction else threats).append(hand_card)
 
     # Ranked by expected copies left, not p_in_hand: a 3-or-4-of and a 1-of
-    # cluster to similar-looking probabilities once the pool is large, which
-    # is what made the old ranking read as noise. p_in_hand still rides along
-    # as the displayed badge — only the ordering changed.
+    # cluster to similar-looking probabilities once the pool is large.
+    # p_in_hand rides along as the displayed badge.
     interaction.sort(key=lambda c: -c.expected_copies_left)
     threats.sort(key=lambda c: -c.expected_copies_left)
 

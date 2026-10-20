@@ -744,9 +744,9 @@ projected table. `useCurrentMatchRead`'s opening-hand read has
 a 5-second median decision window in real play that the ~3s heartbeat alone
 would eat too much of — see `docs/frontend-pages.md`, "The current-match reads". It used to gate
 the fast timer on a match actually being in progress; that gate is gone now that the route it drives
-replays only the current match (0.03-0.08s) rather than reading data a
-`project()` rebuild produced (which can now take ~16s+ to land, and is
-gated to run even less often than that suggests) — the fast poll runs
+replays only the current match rather than reading data a `project()`
+rebuild produced (what each costs: `docs/current-match.md`, "The live
+replay (`table/live.py`, `projector/live_state.py`)") — the fast poll runs
 unconditionally whenever `CurrentMatchView` is mounted, which is the only
 time this hook is called at all, so an idle dashboard on another tab still
 does none of this work. (`useDraft` was a second exception until the draft

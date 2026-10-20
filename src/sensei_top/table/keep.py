@@ -1,16 +1,11 @@
 """The keep guide: what a keepable opening hand looks like for the deck being
 played right now, from the maindeck alone — no board state, so this is as
-valid during the mulligan decision as at any later point in the game.
+valid during the mulligan decision as at any later point in the game. See
+docs/current-match.md, "The keep guide (`table/keep.py`)".
 
-Two numbers a serious player already carries in their head for a deck they
-know well — "how many lands does a good hand have" and "does this curve want
-me holding up interaction or racing" — computed instead of guessed, from
-``decks.cards_json`` and ``cards.type_line``/``mana_cost``/``oracle_text``,
-the same reference-data columns ``review/snapshot.py::_classify_own_deck``
-already reads for the post-game report. ``review.effects`` does the per-card
-classification here too, so a card with no downloaded rules text degrades to
-``"unknown"`` (AGENTS.md rule 4) exactly as it does everywhere else this
-package is used — never guessed from the name alone.
+``review.effects`` does the per-card classification, so a card with no
+downloaded rules text degrades to ``"unknown"`` (AGENTS.md rule 4), never
+guessed from the name alone.
 
 ``land_min``/``land_max``/``ideal_hand``/``land_odds`` all depend on knowing
 every maindeck card's type line, so they are withheld (``None``/empty) rather
@@ -49,8 +44,8 @@ _EARLY_PLAYS_THRESHOLD = 8
 _THREAT_CREATURE_SHARE = 0.35
 _OPENING_HAND_SIZE = 7
 
-# Layer 2 (deck-aware mulligan/keep): the deck's own play evidence is only
-# worth citing once there is enough of it — the same floor review/leaks.py's
+# The deck's own play evidence is only worth citing once there is enough of
+# it — the same floor review/leaks.py's
 # MIN_SAMPLE and review/analyzers/baseline.py's PLAY_DRAW_MIN_GAMES already
 # hold a split to, applied here at two levels: whether key_plays/
 # mulligan_cost appear at all (against the identity's total decided games),
@@ -70,13 +65,10 @@ class HandSlot:
 @dataclass(frozen=True, slots=True)
 class MulliganRecord:
     """This deck's own real record at one mulligan count — the empirical
-    half of the keep guide, needing no reconstruction of hands actually
-    *kept*. ``migrations/009_drop_opening_hand.sql`` deleted a
-    reconstruction of that specific thing — the kept hand's zone
-    transfers, which really do arrive only after the decision — for good
-    reason; it is not a claim that Arena never logs an opening hand at all.
-    ``table/opening_hand.py`` reads a different message, the offer itself,
-    which arrives before the decision (see its own module docstring)."""
+    half of the keep guide, needing no reconstruction of the hand actually
+    *kept*, whose zone transfers arrive only after the decision
+    (``migrations/009_drop_opening_hand.sql``). ``table/opening_hand.py``
+    reads a different message, the offer itself, which arrives before it."""
 
     mulligans: int
     games: int
@@ -110,7 +102,7 @@ class MulliganCost:
     """This deck's own kept-seven vs. mulliganed-to-six-or-fewer record —
     ``guide/play.mulligan_record`` verbatim, reused rather than
     recomputed, so a keep guide and a deck guide can never disagree about
-    it. ``opening_hand.py``'s Layer 3 verdict reads this as a brake: a
+    it. ``opening_hand.py``'s verdict reads this as a brake: a
     deck that pays little for mulliganing can afford to ship a marginal
     hand; one that pays a lot should not be nudged toward mulliganing on a
     close call."""
@@ -299,8 +291,7 @@ def build_keep_guide(
     ``v_deck_land_count`` itself is (``_maindeck_land_counts``/
     ``_land_prefix_has_land`` mirror that view's own em-dash rule, since
     there is no ``decks`` row to join the view against yet), and ignored
-    once a ``v_deck_land_count`` row exists — every existing caller keeps
-    reading the projected numbers it always has.
+    once a ``v_deck_land_count`` row exists.
 
     ``boarded`` (the replay saw a SubmitDeckResp, so ``maindeck`` is the list
     held after a sideboarding break) makes ``maindeck`` the source of every
@@ -484,9 +475,9 @@ def build_keep_guide(
         for r in mulligan_rows
     )
 
-    # Layer 2: this deck's own play evidence, scoped to the DeckIdentity (the
-    # stable Arena GUID) containing this deck_id -- the exact lookup already
-    # at api/routes/current_match.py's staleness check, so a list edit that
+    # This deck's own play evidence, scoped to the DeckIdentity (the stable
+    # Arena GUID) containing this deck_id -- the same lookup
+    # api/routes/current_match.py::_brief_response makes, so a list edit that
     # mints a new deck_id never loses the identity's history.
     identity = next((i for i in list_identities(conn) if deck_id in i.deck_ids), None)
     key_plays: tuple[KeyPlay, ...] = ()
