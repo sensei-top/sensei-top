@@ -660,7 +660,8 @@ Everything is safe to re-run, and this is tested rather than assumed:
   recovery. The digest function takes no source argument at all, so this cannot
   regress by accident.
 - **Payload alone is not enough.** Arena polls some endpoints with
-  byte-identical responses, and `EventEnterPairing` emits the same
+  byte-identical responses (`QuestGetQuests`, `PeriodicRewardsGetStatus`),
+  and `EventEnterPairing` emits the same
   `{"CurrentModule":"CreateMatch","Payload":"Success"}` once per match. On one
   real session, a payload-only digest dropped 40 rows across 13 payloads.
 - **The tiebreaker used to be `line_number`, and that was wrong.** A line
@@ -669,8 +670,13 @@ Everything is safe to re-run, and this is tested rather than assumed:
   carries a different amount of preamble). Measured on a real pair of logs,
   that split 3,842 shared entries into two rows apiece — invisible in every
   derived table keyed by natural key (`matches`, `games`, `turns` all
-  overwrite), and visible only in `card_events`, which appends. See
-  `reader/ingest.py`'s module docstring for the full account.
+  overwrite), and visible only in `card_events`, which appends.
+- **The occurrence count is per read, which costs one rare case.** A
+  byte-identical payload carrying the same second on both sides of an
+  incremental poll boundary is taken for a re-read and dropped; a full read
+  of the file (`Player-prev.log` on recovery) counts from zero and restores
+  it. Measured on real logs: two such pairs in 15,118 entries, both
+  same-second client-state polls, neither a game event.
 - **A poll boundary used to change what an entry digests to.** The live
   watcher calls `ingest_file` roughly once a second, and a fresh `Segmenter`
   per call lost two things at every boundary: the most recent header
@@ -690,9 +696,10 @@ Everything is safe to re-run, and this is tested rather than assumed:
   response) is held back rather than split or discarded: the committed byte
   offset never advances past that entry's first line, so the next poll
   re-reads it whole with the same timestamp and label it would have carried
-  uninterrupted — up to a size cap (`MAX_PENDING_BYTES`), past which an entry
-  that still hasn't closed is corrupt in some new way, not merely still
-  arriving, and is abandoned rather than held back forever.
+  uninterrupted — up to a size cap (`MAX_PENDING_BYTES`, 32 MiB, about 30
+  times the largest real payload measured, a 1,055,060-byte response), past
+  which an entry that still hasn't closed is corrupt in some new way, not
+  merely still arriving, and is abandoned rather than held back forever.
 - **Migration 042 stops the poll-boundary twin going forward, not
   retroactively.** A database ingested before it still holds, for some
   requests, the `logged_at = NULL` row and its fully-timestamped twin as two

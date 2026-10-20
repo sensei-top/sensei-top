@@ -96,6 +96,8 @@ ALLOW: dict[str, str] = {
     "SubmitDeckReq": ARENA,
     "CardPool": ARENA,
     "CourseDeckSummary": ARENA,
+    "QuestGetQuests": ARENA,
+    "PeriodicRewardsGetStatus": ARENA,
     "TimerStateMessage": ARENA,
     "QueuedGameStateMessage": ARENA,
     "application_settings": "a file MTGO writes on Windows",

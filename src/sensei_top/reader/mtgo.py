@@ -8,60 +8,40 @@ names. ``projector/mtgo/`` is the only place that decodes a payload.
 Why this can't reuse ``ingest.py`` as-is
 -----------------------------------------
 MTGO writes one ``Match_GameLog_<guid>.dat`` **file** per match, not one
-growing text stream with a header timestamp on every line
-(``.claude/handoffs/mtgo-source.md``, questions 1-2):
+growing text stream with a header timestamp on every line:
 
-* **No per-line timestamp exists**, so Arena's digest formula — hashing
-  ``(logged_at, occurrence, payload)`` (``ingest.py``'s module docstring) —
-  has nothing to key on. This reader hashes the **filename plus the whole
-  file's bytes** instead. The filename already carries the match GUID by
-  construction (``Match_GameLog_<guid>.dat``), so this stays a
-  reader-level, no-semantics hash — it never has to decode the payload to
-  find the GUID that is also the first string *inside* the file.
-* **There is no line framing to resume from.** MTGO writes the same file
-  several times a minute during a match, and every write is an append (103
-  of 103 in one measured Bo3, on MTGO's own folder rather than a copy; plan
-  12 S2), but the payload is a binary blob that only means something decoded
-  whole. So every stored row is the **whole file** as it was when read, never
-  the bytes past the previous row. A match therefore has one row per store,
-  each a longer prefix of the same eventual file; nothing already written is
-  edited or discarded (non-negotiable #2), and the projector keeps the
-  **longest** payload per match rather than assuming one row is one match
-  (``projector/mtgo/project.py``).
-* **Delta rows** (storing only the bytes past the previous row) were deferred
-  until MTGO was shown never to rewrite what it had written. It now has been
-  (plan 12 S2), but plan 3 chose whole rows once per game instead (its D2):
-  the payload model stays as it is, and since the watcher stores about once
-  per game a match's rows add up to at most its number of games times the
-  final file — linear, where a store per write grew with the square of a
-  match's length (``docs/architecture.md``, "MTGO's storage arithmetic").
-  Revisit only if payload volume becomes a measured problem.
+* **No per-line timestamp exists**, so Arena's digest formula has nothing to
+  key on. This reader hashes the **filename plus the whole file's bytes**
+  instead (``_file_digest``). The filename carries the match GUID by
+  construction, so this stays a reader-level, no-semantics hash: it never
+  has to decode the payload to find the GUID that is also the first string
+  *inside* the file.
+* **There is no line framing to resume from.** The payload is a binary blob
+  that only means something decoded whole, so every stored row is the
+  **whole file** as it was when read, never the bytes past the previous row.
+  A match has one row per store, each a longer prefix of the same eventual
+  file; nothing already written is edited or discarded (non-negotiable #2),
+  and the projector keeps the **longest** payload per match
+  (``projector/mtgo/project.py``). Why not delta rows:
+  docs/architecture.md, "Storage".
 
 Scan, read, store
 -----------------
 Three steps, kept apart so the watcher can put a judgement between them that
 this module must not make:
 
-* ``scan_game_logs`` says which files moved since they were last stored —
-  unseen, or a size, mtime or inode that differs from ``ingest_state`` — and
-  returns their identities, not their bytes. It costs one ``stat()`` per file
-  and one ``ingest_state`` query per scan, holds no transaction and writes
-  nothing, because the watcher runs it every 2 s over a folder that keeps
-  every match ever played. For the same reason it logs nothing: a file it
-  cannot ``stat()`` goes to the caller's ``on_stat_error``, and the caller
-  decides how often to warn of it.
+* ``scan_game_logs`` says which files moved since they were last stored and
+  returns their identities, not their bytes, writing nothing.
 * ``read_game_log`` reads one file whole, with the identity of the bytes it
   read.
 * ``store_game_log`` stores the bytes it is handed and records their
   identity, in one transaction of its own.
 
 ``ingest_mtgo_dir`` is the three in a row for every changed file: what
-``sensei-top ingest-mtgo`` runs, and the watcher's first pass, which catches
-up whatever was written while nothing watched. After that first pass the
-watcher (``live.py::_poll_mtgo``) stores a changed file only once a game
-ends: when its last game names a winner, a loser or a draw and it has been
-quiet 5 s, or when it has been quiet 10 minutes, whatever its last game
-says. Whether the last game is decided is the projector's answer
+``sensei-top ingest-mtgo`` runs, and the watcher's first pass. After that
+pass the watcher (``live.py::_poll_mtgo``) stores a changed file only once a
+game ends (docs/architecture.md, "Live mode's two cadences"). Whether the
+last game is decided is the projector's answer
 (``projector/mtgo/parse.py::last_game_decided``); this module only reports
 which files moved and stores the one it is handed, and ``live.py`` combines
 the two (non-negotiable #1).
@@ -84,26 +64,23 @@ shows a different size on the next scan, and a write that lands between the
 scan reports again; the digest then dedupes the re-read or stores the newer
 bytes, never loses them. The mtime is in the token for a write that changes
 bytes without changing the size, such as a copy that sizes its target before
-filling it and sets the source's mtime once done. A file counts as read only once
-it is stored, so a watcher stopped mid-game leaves it for the next one to
-store. A row written before the token carried the mtime holds the inode
-alone: every such file reads as changed once, is read again, and dedupes.
+filling it and sets the source's mtime once done. A file counts as read only
+once it is stored, so a watcher stopped mid-game leaves it for the next one
+to store.
 
 Payload encoding
------------------
-The raw ``.dat`` bytes are not valid TEXT (they are an opaque .NET binary
-stream — non-UTF-8, arbitrary byte values), and ``raw_events.payload`` is a
-TEXT column. Storing verbatim (rule 2) therefore means **base64**, not the
-raw bytes and not a lossy decode: base64 round-trips exactly, so a future fix
-to the decoder in ``projector/mtgo/decode.py`` can be replayed over history
-without re-reading any file from disk. Only the projector base64-decodes; the
-cost of that is contained to the one place that needs the bytes.
+----------------
+The raw ``.dat`` bytes are not valid TEXT (an opaque .NET binary stream —
+non-UTF-8, arbitrary byte values), and ``raw_events.payload`` is a TEXT
+column. Storing verbatim (rule 2) therefore means **base64**, not the raw
+bytes and not a lossy decode: base64 round-trips exactly, so a future fix to
+the decoder in ``projector/mtgo/decode.py`` can be replayed over history
+without re-reading any file from disk. Only the projector base64-decodes.
 
 ``logged_at`` here is the file's own **mtime** as the read's ``stat()`` saw
-it, not a per-event timestamp — MTGO's log offers no other time signal (recon
-question 2). Every consumer of ``raw_events.logged_at`` must remember this
-column means something different for ``source = 'mtgo'`` rows than it does
-for Arena's.
+it, not a per-event timestamp — MTGO's log offers no other time signal. Every
+consumer of ``raw_events.logged_at`` must remember this column means
+something different for ``source = 'mtgo'`` rows than it does for Arena's.
 """
 
 from __future__ import annotations
@@ -160,9 +137,8 @@ class GameLogRead:
 def _file_digest(path: Path, data: bytes) -> str:
     """Content digest for one MTGO game-log file.
 
-    Filename + full bytes, not ``ingest.py``'s ``(logged_at, occurrence,
-    payload)`` — see the module docstring for why that formula can't
-    transfer. The filename is folded in (rather than hashing bytes alone) so
+    Filename + full bytes, not ``ingest.py``'s formula (module docstring).
+    The filename is folded in (rather than hashing bytes alone) so
     that two different matches which happened to write byte-identical
     content at some size — plausible early in a game, before any
     match-specific text has been written yet — still digest distinctly.
@@ -188,9 +164,10 @@ def _mtime_iso(path: Path) -> str:
     compared as TEXT across sources (``v_current_match``'s ``MAX``,
     ``/api/matches``' ``ORDER BY``, ``/api/live``'s newest ``logged_at``).
     Arena's log headers carry no zone, so Arena's column is local wall clock;
-    writing MTGO's as UTC-with-``Z`` made an MTGO match sort as though it were
+    UTC-with-``Z`` here would sort an MTGO match as though it were
     UTC-offset hours newer than an Arena match at the same instant, and put
-    ``'Z'`` on the wrong side of the second-boundary comparison besides.
+    ``'Z'`` on the wrong side of the second-boundary comparison besides
+    (migration 036).
     """
     return _local_iso(path.stat().st_mtime_ns)
 
@@ -232,15 +209,16 @@ def scan_game_logs(
     ``from_start``, every one of them. A directory that does not exist is an
     empty result.
 
-    Reads no file and writes nothing, and holds no transaction: the stats
-    come first, then one ``ingest_state`` query (``_stored_identities``). A
-    file still changing keeps being reported, scan after scan, until a store
-    records the identity it has. A file whose ``stat()`` fails (it vanished
-    between the listing and the ``stat()``, or the share refused it) is left
-    out and handed to ``on_stat_error`` with its error. Nothing is logged
-    here, because only the caller knows how often it scans:
-    ``ingest_mtgo_dir`` warns of it on every call, and the watcher, which
-    scans every 2 s, once per file (``live.py``). A listing that itself fails
+    Reads no file, writes nothing and holds no transaction: one ``stat()``
+    per file, then one ``ingest_state`` query (``_stored_identities``),
+    because the watcher runs it every ``live.py::MTGO_POLL_SECONDS`` over a
+    folder that keeps every match ever played. A file still changing keeps
+    being reported, scan after scan, until a store records the identity it
+    has. A file whose ``stat()`` fails (it vanished between the listing and
+    the ``stat()``, or the share refused it) is left out and handed to
+    ``on_stat_error`` with its error. Nothing is logged here, because only
+    the caller knows how often it scans: ``ingest_mtgo_dir`` warns of it on
+    every call, and the watcher once per file. A listing that itself fails
     (a dead mount) raises ``OSError`` for the caller.
     """
     directory = Path(directory)

@@ -7,17 +7,19 @@ projector is the only place that decodes a payload.
 
 Two kinds of file are read, each by its name alone:
 
-* ``*.dek``, a deck the user exported (``[mtgo] deck_dir``; plan 12, D6),
-  stored with the label ``MtgoDeckFile``.
+* ``*.dek``, a deck the user exported (``[mtgo] deck_dir``), stored with the
+  label ``MtgoDeckFile``.
 * ``grouping *.xml``, an entry in MTGO's own deck store, which MTGO keeps in
-  the folder its game logs are written to (``[mtgo] dir``; plan 12, D14),
-  stored with the label ``MtgoDeckGrouping``. A grouping may be a binder or a
+  the folder its game logs are written to (``[mtgo] dir``), stored with the
+  label ``MtgoDeckGrouping``. A grouping may be a binder or a
   wishlist rather than a deck; telling them apart means reading the XML, so
   that is the projector's job and every grouping is stored.
 
 Both kinds are read from whichever folder ``ingest_deck_dir`` is given, so the
-caller passes each configured folder in turn. The label is the one thing the
-reader says about a file, and it says it from the name, never the contents.
+caller passes each configured folder in turn (docs/architecture.md, "Live
+mode's two cadences", for when the watcher polls them). The label is the one
+thing the reader says about a file, and it says it from the name, never the
+contents.
 
 The pattern is ``reader/mtgo.py``'s, with the differences that matter:
 
@@ -30,8 +32,8 @@ The pattern is ``reader/mtgo.py``'s, with the differences that matter:
   discarded (non-negotiable #2); the payload is the file's bytes in base64,
   so a later fix to the decoder replays over history without the file.
 * The folder is not walked recursively, and nothing else in it is read: no
-  ``.txt`` export, which waits for a real sample of one (plan 12, D13), and
-  none of the game logs that share ``[mtgo] dir`` with the deck store.
+  ``.txt`` export (``docs/status.md``, "Features not built"), and none of the
+  game logs that share ``[mtgo] dir`` with the deck store.
 * ``logged_at`` is the file's mtime, as in ``reader/mtgo.py``.
 
 Unchanged-file skip. As in ``reader/mtgo.py``, the ``inode`` column, which
