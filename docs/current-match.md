@@ -308,7 +308,7 @@ named heuristic in `table/keep.py`'s own style (a cutoff on land count and
 early castability, not a simulation), reusing `build_keep_guide` for every
 deck-level number rather than recomputing: lands in `[land_min, land_max]`
 and enough of the hand castable by turn 3 to hit the deck's own
-`early_plays` target (the same number `ideal_hand`'s "play(s) at 1-3 mana"
+`early_plays` target (the same number `ideal_hand`'s "play(s) at 1-2 mana"
 chip already carries, exposed here as a bare int). Withheld (`None`) rather
 than guessed whenever an input is unknown — an unnamed card, no land band
 for this deck yet, or (see above) an unresolved land whose color the hand's
@@ -364,7 +364,7 @@ Two coarse, explicitly-labelled heuristics, not a simulation:
   cards at mana value ≤ 2, else 1 (`early_plays`, also exposed as a bare
   int for the opening-hand verdict above). A creature slot appears when
   creatures are at least 35% of nonlands. Whatever's left of the 7 is
-  "flex." This is the "3 lands, 2 plays at 1-3 mana, 1 creature, 1 flex"
+  "flex." This is the "3 lands, 2 plays at 1-2 mana, 1 creature, 1 flex"
   line the tab renders as chips.
 
 `land_odds` is the exact hypergeometric distribution (`math.comb`, no

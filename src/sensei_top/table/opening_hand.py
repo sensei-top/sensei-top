@@ -87,9 +87,9 @@ from sensei_top.table.keep import (
 )
 
 _LAND_TYPE = "CardType_Land"
-# "Castable by turn 3" mirrors keep.py's own "play(s) at 1-3 mana" framing
-# for the ideal-hand shape (_CHEAP_MANA_VALUE there), so the verdict compares
-# like against like rather than inventing a second cutoff.
+# "Castable by turn 3" is this verdict's own threshold. keep.py's early-play
+# slot ("play(s) at 1-2 mana") counts mana value <= 2 (_CHEAP_MANA_VALUE),
+# a different cutoff.
 _EARLY_TURN_THRESHOLD = 3
 # Sentinel distinguishing "caller didn't pass an offer, replay it yourself"
 # from "caller passed offer=None, meaning a live replay already found

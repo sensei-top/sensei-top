@@ -2652,7 +2652,7 @@ export interface components {
             count: number;
             /**
              * Label
-             * @description e.g. 'lands', 'creature', 'plays at 1-3 mana'
+             * @description e.g. 'lands', 'creature', 'plays at 1-2 mana'
              */
             label: string;
         };
@@ -2801,7 +2801,7 @@ export interface components {
             ideal_hand?: components["schemas"]["HandSlotOut"][];
             /**
              * Early Plays
-             * @description ideal_hand's own 'play(s) at 1-3 mana' count, as a bare int
+             * @description ideal_hand's own 'play(s) at 1-2 mana' count, as a bare int
              */
             early_plays?: number | null;
             /**

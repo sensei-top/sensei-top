@@ -136,7 +136,7 @@ class CurrentMatch(BaseModel):
 
 class HandSlotOut(BaseModel):
     count: int
-    label: str = Field(description="e.g. 'lands', 'creature', 'plays at 1-3 mana'")
+    label: str = Field(description="e.g. 'lands', 'creature', 'plays at 1-2 mana'")
 
 
 class MulliganRecordOut(BaseModel):
@@ -209,7 +209,7 @@ class KeepGuideOut(BaseModel):
         default_factory=list, description="sums to 7 when present"
     )
     early_plays: int | None = Field(
-        None, description="ideal_hand's own 'play(s) at 1-3 mana' count, as a bare int"
+        None, description="ideal_hand's own 'play(s) at 1-2 mana' count, as a bare int"
     )
     land_odds: list[list[float]] = Field(
         description="[k, P(exactly k lands in an opening 7)] for k = 0..7"

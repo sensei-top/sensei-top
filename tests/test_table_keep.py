@@ -60,7 +60,7 @@ def test_land_odds_sum_to_one_and_match_hypergeometric_by_hand(conn):
 
     assert sum(slot.count for slot in guide.ideal_hand) == 7
 
-    # early_plays is the same number ideal_hand's "play(s) at 1-3 mana" slot
+    # early_plays is the same number ideal_hand's "play(s) at 1-2 mana" slot
     # carries as a formatted label — exposed as a bare int too, since
     # table/opening_hand.py's verdict needs to compare against it directly.
     early_slot = next(s for s in guide.ideal_hand if "mana" in s.label)

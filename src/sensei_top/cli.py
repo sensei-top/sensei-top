@@ -19,6 +19,8 @@
     sensei-top guide --deck KEY --import FILE        store a written narrative
     sensei-top brief --deck KEY --archetype KEY --prompt | --import FILE
                                                       one matchup brief (omit --deck to list)
+    sensei-top rcq --deck KEY --decklist FILE --prompt | --import FILE
+                                                      the RCQ guide for the exact 75 you register
     sensei-top config --set-key KEY                  opt in to Claude-generated narratives
     sensei-top config --set-key -                    the same, reading the key from stdin
     sensei-top config --clear-key                    remove the key
@@ -32,6 +34,8 @@
                                                       daily VACUUM INTO snapshot of the database
     sensei-top restore FILE                          replace the database with a backup
     sensei-top serve --no-backup                     serve without the automatic daily backup
+    sensei-top doctor [--json] [--file PATH]         what the app can find (read-only)
+    sensei-top diagnostics --out FILE                a zip of the logs and a secret-free report
 
 A Claude API call is opt-in (AGENTS.md non-negotiable #5): with no credential
 configured, `--prompt` prints text to paste into an assistant you already pay

@@ -13,6 +13,7 @@ fail loudly here rather than actually starting a server.
 
 from __future__ import annotations
 
+import argparse
 import io
 import json
 import os
@@ -1175,3 +1176,17 @@ def test_version_flag_prints_the_pyproject_version(capsys):
         cli_module.main(["--version"])
     assert exit_info.value.code == 0
     assert capsys.readouterr().out.strip() == expected
+
+
+def test_help_description_names_every_registered_subcommand():
+    # The module docstring is --help's description; a subcommand added to the
+    # parser without a line there is invisible to anyone who reads --help.
+    parser = cli_module.build_parser()
+    subparsers = next(
+        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
+    )
+    assert subparsers.choices
+    missing = [
+        name for name in subparsers.choices if f"sensei-top {name}" not in parser.description
+    ]
+    assert missing == []

@@ -206,7 +206,7 @@ class KeepGuide:
     land_min: int | None
     land_max: int | None
     ideal_hand: tuple[HandSlot, ...]
-    early_plays: int | None  # ideal_hand's own "play(s) at 1-3 mana" count, exposed as a
+    early_plays: int | None  # ideal_hand's own "play(s) at 1-2 mana" count, exposed as a
     # bare int for table/opening_hand.py's verdict — ideal_hand only carries it as a
     # formatted label
     land_odds: tuple[tuple[int, float], ...]  # (k, P(exactly k lands in 7)), k = 0..7
@@ -450,7 +450,7 @@ def build_keep_guide(
         slots = [
             HandSlot(lands_in_hand, ngettext("land", "lands", lands_in_hand)),
             HandSlot(
-                early, ngettext("play at 1-3 mana", "plays at 1-3 mana", early)
+                early, ngettext("play at 1-2 mana", "plays at 1-2 mana", early)
             ),
         ]
         if threat:
