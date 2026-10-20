@@ -599,11 +599,12 @@ export const useGuideCoveragePrompt = (key: string | undefined, enabled: boolean
 
 /** How stale the archetype cache and the tournament corpus are, and how
  *  often the classifier actually names an opponent's own deck. Read per
- *  format and not on the heartbeat — this is a diagnostic, not a metric that
- *  moves as the user plays; `enabled` holds it until the caller knows the
- *  format (Field waits for `/api/formats`). Also the source of
- *  `format_reset_start`, which `FieldView`/`useFieldRecords` use to decide
- *  whether a "Since the last reset" window is even offered. */
+ *  format, with no timer of its own: like every other query, it refetches
+ *  when the heartbeat reports a new `projection_revision`. `enabled` holds
+ *  it until the caller knows the format (Field waits for `/api/formats`).
+ *  Also the source of `format_reset_start`, which `FieldView`/
+ *  `useFieldRecords` use to decide whether a "Since the last reset" window
+ *  is even offered. */
 export const useMetagameStatus = (format?: string, enabled = true) =>
   useQuery({
     queryKey: ['metagame-status', format ?? null],

@@ -4,7 +4,7 @@ matchups, tiered by evidence quality — ``/api/metagame/*``
 
 Every route but the event detail reads one format: the ``format`` query
 parameter, else the default ``/api/formats`` reports
-(``api/sql.py::default_format``, D13). The detail route takes no format; it
+(``api/sql.py::default_format``). The detail route takes no format; it
 reads one event by its key.
 """
 
@@ -56,13 +56,13 @@ FormatParam = Annotated[
 
 def _since_cutoff(since: date | None, days: int | None) -> str | None:
     """The one place `since`/`days` become an ``event_date >= ?`` cutoff,
-    shared by ``presence``, ``winrate`` and ``matchups`` so the format-reset
-    window behaves identically across all three. An explicit ``since``
-    always wins over ``days`` — this is how the frontend's "Since last
-    reset" option overrides the day-count select. With neither given, the
-    result is ``None`` — no cutoff at all, i.e. the whole corpus; only
-    ``matchups`` relies on that today, since ``presence``/``winrate`` always
-    pass a ``days`` default of their own.
+    shared by ``presence``, ``winrate``, ``matchups`` and ``events`` so the
+    format-reset window behaves identically across all four. An explicit
+    ``since`` always wins over ``days`` — this is how the frontend's "Since
+    last reset" option overrides the day-count select. With neither given,
+    the result is ``None`` — no cutoff at all, i.e. the whole corpus; only
+    ``matchups`` relies on that, since the other three always pass a
+    ``days`` default of their own.
     """
     if since is not None:
         return since.isoformat()
@@ -82,12 +82,12 @@ def _hold_out(hold: Hold) -> MetaSourceHold:
 
 @router.get("/api/metagame/status", response_model=MetagameStatus, tags=["metagame"])
 def metagame_status(conn: Conn, fmt: FormatParam = None) -> MetagameStatus:
-    """Whether the metagame layer has anything worth showing for one format:
-    how stale the downloaded archetype definitions are, how many rules the
-    format has and how often they actually name an opponent's deck for the
-    user's own completed matches of it, and how stale and how large the
-    tournament corpus itself is. Read once to decide whether either
-    downloaded layer needs attention, never polled by the live heartbeat.
+    """Whether the metagame layer has anything worth showing for one format,
+    and whether either downloaded layer needs attention: how stale the
+    downloaded archetype definitions are, how many rules the format has and
+    how often they actually name an opponent's deck for the user's own
+    completed matches of it, and how stale and how large the tournament
+    corpus itself is.
 
     The rule count, the opponent sources, the tier counts and the reset are
     the format's; the fetch stamps (age, commit, window, per-source rows)
@@ -213,8 +213,8 @@ def metagame_presence(
 
     ``since``, when given, replaces the ``days`` cutoff outright — this is
     how the dashboard's "Since last reset" window avoids pooling results
-    from across a Standard ban with the post-ban field (docs/metagame.md's
-    "format-reset boundary").
+    from across a Standard ban with the post-ban field (docs/metagame.md,
+    "The format-reset boundary").
 
     ``colors`` is the combination most of a row's lists carry, ties to the
     first in text order; a row whose every list has null colours answers
@@ -350,7 +350,7 @@ def metagame_matchups(
 ) -> list[dict[str, Any]]:
     """Archetype-vs-archetype, from real completed matches. Defaults to
     Tier A alone (paper, 64 or more players) — the highest-ranked tier with
-    a genuine round-robin matrix behind it; ``?tier=A&tier=B`` adds Tier B's
+    a genuine swiss behind it; ``?tier=A&tier=B`` adds Tier B's
     MTGO bracket rounds, usable but tiny, and ``?tier=A&tier=B&tier=D``
     folds in Tier D's own small paper swiss too (see docs/metagame.md).
     Tier C has no rounds at all — see metagame/tiers.py — so it never
@@ -360,10 +360,10 @@ def metagame_matchups(
     brief and the match report quote comes from a single tier instead,
     walked A, then B, then D (``metagame/matchup.py``).
 
-    Neither ``since`` nor ``days`` given means the whole corpus, same as
-    before this pair existed. ``since`` overrides ``days`` the same way it
-    does for ``presence``/``winrate`` — the "Since last reset" window keeps
-    a post-ban matchup matrix from pooling with the pre-ban one.
+    Neither ``since`` nor ``days`` given means the whole corpus. ``since``
+    overrides ``days`` the same way it does for ``presence``/``winrate`` —
+    the "Since last reset" window keeps a post-ban matchup matrix from
+    pooling with the pre-ban one.
     """
     cutoff = _since_cutoff(since, days)
     placeholders = ",".join("?" for _ in tier)

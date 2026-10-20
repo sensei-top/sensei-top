@@ -936,7 +936,7 @@ the same id back and a pick keeps pointing at it. `v_match_deck` joins the
 pick to MTGO matches only and reads `COALESCE(pick.deck_id, matches.deck_id)`;
 `matches.deck_id` itself stays what the projector wrote, NULL for every MTGO
 match. The pick is written by two routes: `PUT /api/matches/{id}/mtgo-pick` for
-one match, and `PUT /api/mtgo/picks` for many at once (plan 19), which
+one match, and `PUT /api/mtgo/picks` for many at once, which
 checks every item by the same rules (`_pick_problem`,
 `api/routes/matches.py`) and writes all of them in one transaction or none.
 Both answer 400 for an Arena match. The pick is never read by `project()` or
@@ -964,7 +964,7 @@ matches (`classify_seen` over the user's seat, with the corpus prior) is on
 its own route, `GET /api/mtgo/picks/hints`: building the prior was most of
 the 4.2 s the first version spent per load, the page refetches the groups
 after every confirm, and without the prior 11 of 76 hints got worse.
-Nothing is picked without the user's click (plan 12, D1).
+Nothing is picked without the user's click.
 
 **Filter a deck through `v_match_deck` by match id, never by its
 `deck_id`.** A reader that wants one deck's matches, or a set of decks',
@@ -1209,7 +1209,7 @@ not resolve to a `grp_id` — a name `_resolve_grp_id` leaves `NULL`
 (above), or a `CatId` `mtgo_card` lacks — is left out of `cards_json` with a
 warning, one per card per rebuild, never given an invented id (rule 4). The
 copies left out are counted in `cards_json`'s `unresolved` key,
-`{"maindeck": n, "sideboard": n}`, on every MTGO row (plan 12, D18), so a
+`{"maindeck": n, "sideboard": n}`, on every MTGO row, so a
 reader can tell a list it cannot fully see from a short one; an Arena row has
 no such key, since nothing is left out of it. A file that does not parse as a
 deck is skipped whole with a warning that names it, since a list missing one

@@ -32,7 +32,7 @@ export interface paths {
          * Llm Status
          * @description Whether a Claude credential is resolved right now, and which
          *     model would be used — never the key itself
-         *     (``sensei_top.llm.config``). The dashboard reads this once to
+         *     (``sensei_top.llm.config``). The dashboard reads this to
          *     decide whether a narrative surface offers a generate button or
          *     falls back to the copy-prompt path (``docs/llm.md``). No database
          *     connection needed: this is purely local config, not derived data.
@@ -106,10 +106,10 @@ export interface paths {
         /**
          * Formats
          * @description Every format, in ``formats.py``'s order, with the user's matches of it
-         *     by ``v_match_format.format_source`` (D6), whether archetype rules are
+         *     by ``v_match_format.format_source``, whether archetype rules are
          *     stored for it, how many tournament events the corpus holds for it, and
-         *     the default a page shows when its address names no format (D13,
-         *     ``api/sql.py::default_format``). A format with nothing is still listed,
+         *     the default a page shows when its address names no format
+         *     (``api/sql.py::default_format``). A format with nothing is still listed,
          *     with zeros: the dashboard decides which ones to offer.
          */
         get: operations["formats_api_formats_get"];
@@ -247,12 +247,11 @@ export interface paths {
         };
         /**
          * Winrate
-         * @description Metric 1: winrate by deck, match- and game-level.
+         * @description Winrate by deck, match- and game-level.
          *
          *     One row per deck (an Arena deck, or an MTGO deck the user picked for a
          *     match), not per maindeck content hash: a single card swap mints a new
-         *     deck_id, so grouping on the hash splits one deck into a row per version
-         *     (nine, for this project's own most-played deck).
+         *     deck_id, so grouping on the hash splits one deck into a row per version.
          *     Both filters apply before the rollup, so deck_id still means one
          *     content hash — matching the deck selector, which emits exactly that.
          *
@@ -307,7 +306,7 @@ export interface paths {
         };
         /**
          * Play Draw
-         * @description Metric 2: winrate on the play vs on the draw, per game.
+         * @description Winrate on the play vs on the draw, per game.
          *
          *     Matches with no deck, an MTGO match with no picked deck among them, share
          *     the rows whose ``deck_id`` is null. The view groups per source, and those
@@ -332,7 +331,7 @@ export interface paths {
         };
         /**
          * Game Length
-         * @description Metric 3a: game length in player-turns, with winrate per bucket.
+         * @description Game length in player-turns, with winrate per bucket.
          *     Deckless matches are added together across sources, as in play-draw.
          */
         get: operations["game_length_api_metrics_game_length_get"];
@@ -353,7 +352,7 @@ export interface paths {
         };
         /**
          * Turn Curves
-         * @description Metric 3b: per-deck life/hand/board averages by player-turn.
+         * @description Per-deck life/hand/board averages by player-turn.
          */
         get: operations["turn_curves_api_metrics_turn_curves_get"];
         put?: never;
@@ -379,8 +378,8 @@ export interface paths {
          *     the entire reason this is worth grouping. Deckless matches are added
          *     together across sources, as in play-draw; the view names a key once per
          *     format across every source, so its label is the same on both rows. One
-         *     row per format too (D14): matches with no resolved format share one row
-         *     per key and deck.
+         *     row per format too: matches with no resolved format share one row per
+         *     key and deck.
          */
         get: operations["matchups_api_metrics_matchups_get"];
         put?: never;
@@ -400,12 +399,12 @@ export interface paths {
         };
         /**
          * Metagame Status
-         * @description Whether the metagame layer has anything worth showing for one format:
-         *     how stale the downloaded archetype definitions are, how many rules the
-         *     format has and how often they actually name an opponent's deck for the
-         *     user's own completed matches of it, and how stale and how large the
-         *     tournament corpus itself is. Read once to decide whether either
-         *     downloaded layer needs attention, never polled by the live heartbeat.
+         * @description Whether the metagame layer has anything worth showing for one format,
+         *     and whether either downloaded layer needs attention: how stale the
+         *     downloaded archetype definitions are, how many rules the format has and
+         *     how often they actually name an opponent's deck for the user's own
+         *     completed matches of it, and how stale and how large the tournament
+         *     corpus itself is.
          *
          *     The rule count, the opponent sources, the tier counts and the reset are
          *     the format's; the fetch stamps (age, commit, window, per-source rows)
@@ -445,8 +444,8 @@ export interface paths {
          *
          *     ``since``, when given, replaces the ``days`` cutoff outright — this is
          *     how the dashboard's "Since last reset" window avoids pooling results
-         *     from across a Standard ban with the post-ban field (docs/metagame.md's
-         *     "format-reset boundary").
+         *     from across a Standard ban with the post-ban field (docs/metagame.md,
+         *     "The format-reset boundary").
          *
          *     ``colors`` is the combination most of a row's lists carry, ties to the
          *     first in text order; a row whose every list has null colours answers
@@ -505,7 +504,7 @@ export interface paths {
          * Metagame Matchups
          * @description Archetype-vs-archetype, from real completed matches. Defaults to
          *     Tier A alone (paper, 64 or more players) — the highest-ranked tier with
-         *     a genuine round-robin matrix behind it; ``?tier=A&tier=B`` adds Tier B's
+         *     a genuine swiss behind it; ``?tier=A&tier=B`` adds Tier B's
          *     MTGO bracket rounds, usable but tiny, and ``?tier=A&tier=B&tier=D``
          *     folds in Tier D's own small paper swiss too (see docs/metagame.md).
          *     Tier C has no rounds at all — see metagame/tiers.py — so it never
@@ -515,10 +514,10 @@ export interface paths {
          *     brief and the match report quote comes from a single tier instead,
          *     walked A, then B, then D (``metagame/matchup.py``).
          *
-         *     Neither ``since`` nor ``days`` given means the whole corpus, same as
-         *     before this pair existed. ``since`` overrides ``days`` the same way it
-         *     does for ``presence``/``winrate`` — the "Since last reset" window keeps
-         *     a post-ban matchup matrix from pooling with the pre-ban one.
+         *     Neither ``since`` nor ``days`` given means the whole corpus. ``since``
+         *     overrides ``days`` the same way it does for ``presence``/``winrate`` —
+         *     the "Since last reset" window keeps a post-ban matchup matrix from
+         *     pooling with the pre-ban one.
          */
         get: operations["metagame_matchups_api_metagame_matchups_get"];
         put?: never;
@@ -901,8 +900,8 @@ export interface paths {
          * Mtgo Picks Hints
          * @description The archetype the engine reads from the user's own played cards, for
          *     partial groups (by group key) and unsure matches (by match id) only.
-         *     Slower than the groups (the corpus prior), so the page fetches it once
-         *     and joins it to groups it refetches; never stored.
+         *     Slower than the groups (the corpus prior), so the page asks for it in
+         *     its own request once the groups have drawn; never stored.
          */
         get: operations["mtgo_picks_hints_api_mtgo_picks_hints_get"];
         put?: never;
@@ -950,13 +949,12 @@ export interface paths {
          *     ``review/leaks.py``'s module docstring for the sample-gating and
          *     the Wilson interval every rate here carries. Computed fresh on
          *     every request, same reasoning as the per-match report: it depends
-         *     on ``cards``/``decks``, neither owned by the projector — but the
+         *     on ``cards``, which the projector does not own — but the
          *     ``MatchReport`` each leak is built from is shared across requests
          *     (``api/sql.py::_shared_report_cache``), not rebuilt from scratch here.
          *
-         *     ``deck_id`` scopes the population to one deck's own matches — added
-         *     for the deck guide, which needs this endpoint's exact computation at
-         *     a different scope rather than a second implementation of it.
+         *     ``deck_id`` scopes the population to one deck's own matches, the same
+         *     computation the deck guide runs for one deck.
          */
         get: operations["review_leaks_api_review_leaks_get"];
         put?: never;
@@ -1499,12 +1497,10 @@ export interface paths {
         /**
          * Card Image
          * @description A card's picture, from the on-disk cache, fetched from Scryfall on
-         *     first miss (AGENTS.md rule 5's third sanctioned download). The reads
-         *     this route does — the card's own name, so Arena-exclusive printings
-         *     with no Scryfall arena_id can still be found by name (see
-         *     card_images.py), and its other face's (``_other_face``) — stay inside
-         *     query_only; the cache itself is plain files beside the database, so
-         *     that pragma is still the whole story for what can write to SQLite.
+         *     first miss (one of AGENTS.md rule 5's free downloads). Its database
+         *     reads, the card's own name (``card_images.py``'s by-name fallback) and
+         *     its other face's (``_other_face``), stay inside query_only; the cache is
+         *     plain files beside the database.
          *     404 covers "Scryfall has no image for this id under any name we
          *     tried" and "offline right now" alike; the dashboard falls back to
          *     the card's name either way. Sync def on purpose: FastAPI runs it in a
