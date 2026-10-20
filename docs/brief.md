@@ -311,7 +311,8 @@ record numbers rather than re-querying them, and never overwrites an
 existing `source='live'` row whose `list_hash` still matches — a brief
 written for this exact matchup, from a prompt that carried that matchup's own
 consensus staples and oracle text, is not improved by a guide's broader
-sweep. `sensei-top guide --deck KEY --import FILE` drives this.
+sweep. `sensei-top guide --deck KEY --import FILE` and `POST` or `PUT
+/api/guide/{key}/narrative` drive this.
 
 ## What this does not do
 

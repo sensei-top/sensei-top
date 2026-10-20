@@ -1,8 +1,7 @@
 """The deck guide: one deck's own play evidence, its current 75 against the
 field's tournament consensus, and the field itself around any detected
-format reset — a document once written by hand for one deck, now
-regenerated from every game the player has played and the freshest corpus.
-See ``docs/guide.md`` for the full design.
+format reset, regenerated from every game the player has played and the
+freshest corpus. See docs/guide.md, "The modules, in dependency order".
 
 Built on ``review/`` (``build_match_report``, ``find_leaks``,
 ``build_consensus``) rather than duplicating it, and follows the same two
@@ -13,12 +12,13 @@ rules that package states for itself:
    projected database, or (``narrative.py``, ``markdown.py``) of an
    already-built ``DeckGuide``. (AGENTS.md non-negotiable #1.)
 2. **The evidence bundle is never persisted.** A deck guide depends on
-   the tournament corpus, the card database and the player's own current
-   decklist, all three of which change independently of any projector
-   rebuild — the same reasoning ``review/__init__.py`` gives for why a
-   stored report would read wrong, not merely stale. The authored
-   narratives are persisted: ``deck_narrative`` (``authored.py``) and
-   ``rcq_guide`` (``rcq_authored.py``).
+   the tournament corpus and the card database, which change independently
+   of any projector rebuild, and reads a match's deck through
+   ``v_match_deck``, which the user's MTGO pick changes with no rebuild at
+   all — the same reasoning ``review/__init__.py`` gives for why a stored
+   report would read wrong, not merely stale. The authored narratives are
+   persisted: ``deck_narrative`` (``authored.py``) and ``rcq_guide``
+   (``rcq_authored.py``).
 """
 
 from sensei_top.guide.bundle import DeckGuide, Provenance, build_deck_guide

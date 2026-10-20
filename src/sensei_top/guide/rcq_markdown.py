@@ -1,6 +1,7 @@
 """The stored RCQ guide as a Markdown document: game plan, expected field,
 matchups in order of field share with IN/OUT tables, flex notes, checklist,
-and a footer naming the newest corpus event and the generation date."""
+plan problems, and a footer naming the newest corpus event and the
+generation date."""
 
 from __future__ import annotations
 

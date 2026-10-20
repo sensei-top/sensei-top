@@ -1,12 +1,12 @@
 """Render one ``DeckGuide`` (and, optionally, its ``GuideNarrative``) as a
-Markdown document: a per-deck guide regenerated from every game played and
-the freshest corpus, not hand-written.
+Markdown document. See docs/guide.md, "`markdown.py` — the exported document".
 
-One renderer, two callers: the export route (``GET /api/guide/{key}/
-markdown``) and ``guide/narrative.py``'s own prompt, which sends this
-document's evidence-only form (``narrative=None``) as the numeric spine of
-what it asks Claude to write prose around — so the model is never asked to
-re-derive a number the reader can already see rendered.
+One renderer, four callers: the export route (``GET /api/guide/{key}/
+markdown``), the CLI ``guide`` command (printed, or written by
+``--markdown``), and the guide and RCQ prompts (``guide/narrative.py``,
+``guide/rcq.py``), which send the evidence-only form (``narrative=None``)
+as the numeric spine of what they ask the model to write prose around — so
+it is never asked to re-derive a number the reader can already see rendered.
 """
 
 from __future__ import annotations
