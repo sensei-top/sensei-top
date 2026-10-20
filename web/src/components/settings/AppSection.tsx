@@ -7,13 +7,13 @@ import { Button, Card } from '../ui'
 import { PressButton, SavingSwitch } from './SaveButton'
 
 /** The shell's own preferences in one card: its version, whether it starts
- *  with the system, keeps running with the window closed (Linux only), checks
- *  for updates and writes a detailed log, then the buttons for the logs and
- *  the diagnostics zip. The server never reads any of it, so a change goes
- *  through `set`, never the config. Only a shell has any of it, so with no
- *  shell the page does not draw this section. Its last row links to the
- *  welcome steps. With no functions to call,
- *  every value is text and there is nothing to press. */
+ *  with the system (where the copy can start at login), keeps running with
+ *  the window closed (Linux only), checks for updates and writes a detailed
+ *  log, then the buttons for the logs and the diagnostics zip. The server
+ *  never reads any of it, so a change goes through `set`, never the config.
+ *  Only a shell has any of it, so with no shell the page does not draw this
+ *  section. Its last row links to the welcome steps. With no functions to
+ *  call, every value is text and there is nothing to press. */
 export function AppSection({
   app,
   set,
@@ -56,12 +56,14 @@ export function AppSection({
     <Card title={t('settings.sections.app')} subtitle={t('settings.app.subtitle')} className="max-w-3xl">
       <div className="space-y-5">
         <p className="text-body text-ink2">{t('settings.app.version', { version: app.version })}</p>
-        <SavingSwitch
-          label={app.platform === 'win32' ? t('settings.app.startWindows') : t('settings.app.startLogin')}
-          description={t('settings.app.startDescription')}
-          checked={app.startWithSystem}
-          onSave={set && ((on) => set({ startWithSystem: on }))}
-        />
+        {app.canAutostart && (
+          <SavingSwitch
+            label={app.platform === 'win32' ? t('settings.app.startWindows') : t('settings.app.startLogin')}
+            description={t('settings.app.startDescription')}
+            checked={app.startWithSystem}
+            onSave={set && ((on) => set({ startWithSystem: on }))}
+          />
+        )}
         {app.platform === 'linux' && (
           <SavingSwitch
             label={t('settings.app.keepRunning')}

@@ -25,6 +25,7 @@ function settings(version: string, model = 'm'): BridgeSettings {
       update: { state: 'idle' },
       onboarded: true,
       askAutostart: false,
+      canAutostart: true,
       rulesText: null,
       firstData: { state: 'idle' },
       version,

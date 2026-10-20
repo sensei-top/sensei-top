@@ -440,7 +440,8 @@ folder holds, which the failed backup's sentences name.
   folder; how many copies are kept (3, 7, 14 or 30); "Back up now";
   "Restore from a backup file", which asks first.
 - **App.** The version; "Start when Windows starts" ("Start when you
-  log in" elsewhere); on Linux, "Keep running when the window is
+  log in" elsewhere), shown only where the copy can start at login, which
+  is not the Linux tarball; on Linux, "Keep running when the window is
   closed"; "Check for updates" with "Check now" and one sentence on where the
   update stands, or that sentence alone where the copy cannot update
   itself; "Restart to update" once one has downloaded; "Diagnostic mode";
@@ -1108,7 +1109,9 @@ bridge: `readShellGlobal`, `shellStore`).
 says and not what a press does. `components/home/SessionHero.tsx` and
 `components/onboarding/DetailedLogsGuide.tsx` (each language's labels,
 caption and image label from its own catalogue) have one each in the same
-pattern; no other component has a test, and a hook that reads a query or the
+pattern, and so does `components/settings/AppSection.tsx`, which checks
+which rows the App section draws depending on `canAutostart`; no other
+component has a test, and a hook that reads a query or the
 address (`useFilters`, `useMatchInProgress`) has none either: what a page
 looks like and does is still checked in a browser. Three tests sit outside
 `src/`, in `scripts/`, and they are the dashboard tests that touch the
