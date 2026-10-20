@@ -33,9 +33,10 @@ Each is a pure function of the projected DB (or, for `narrative.py` and
 `markdown.py`, of an already-built `DeckGuide`) — same discipline as
 `review/`: only the modules that say so touch `sqlite3`, and the evidence
 bundle is never persisted (a rebuild is one request; see `review/__init__.py`'s
-reasoning, which applies here for the same cause — the corpus, the card
-database and the player's own decklist all change independently of any
-projector rebuild). The authored narratives are: `authored.py` writes
+reasoning, which applies here for the same cause — the corpus and the card
+database change independently of any projector rebuild, and the user's
+MTGO pick changes which deck a match reads through `v_match_deck` with no
+rebuild at all). The authored narratives are: `authored.py` writes
 `deck_narrative` and `rcq_authored.py` writes `rcq_guide`.
 
 ### `deck.py` — deck identity, stitched across list edits
@@ -297,9 +298,7 @@ the player's current 75 with oracle text, opponent-archetype sections with
 their consensus staples and oracle text (see below for which archetypes get
 a section), the detected reset and what it voided, and the bundle's own
 gaps. This is a large prompt, comparable to the evidence file the
-hand-written guide this replaces was built from — AGENTS.md's outbound-call
-standard permits that explicitly ("when sending more makes the answer
-materially better, send more and say so").
+hand-written guide this replaces was built from.
 
 **Which archetypes get a section, and why it's not just "top 6 by
 share."** The field's top `TOP_ARCHETYPES_FOR_ORACLE_TEXT` (6) archetypes by
@@ -342,10 +341,11 @@ name to whichever key has the most corpus decks behind it, ties broken by
 key.
 
 **What comes back**: a structured JSON object, not free prose —
-`GuideNarrative`. `_GUIDE_TOOL`'s schema was the forced-tool-use contract and
-is now the import contract; it travels inside the prompt so whoever writes
-the answer knows the exact shape. A structured shape is what lets `plans.validate_plans`
-check every sideboard plan before it is ever shown, and lets the frontend
+`GuideNarrative`. `_GUIDE_TOOL`'s schema is the contract for both the
+generate route's structured-output request (`llm.strict_schema`, then
+`llm.write_json`) and a pasted or imported answer; it travels inside the
+prompt so whoever writes the answer knows the exact shape. A structured
+shape is what lets `plans.validate_plans` check every sideboard plan before it is ever shown, and lets the frontend
 render each section with the same components as the deterministic evidence
 around it, rather than a Markdown-rendering dependency.
 
@@ -498,7 +498,7 @@ instead.
   data, and the hand a player actually shipped — after bottoming cards
   under the London rule — is never in the log at any point
   (`migrations/009_drop_opening_hand.sql`), unlike the pre-decision offer
-  `table/opening_hand.py` reads live for the current-match tab. The guide
+  `table/opening_hand.py` reads live for the Live page. The guide
   reports the kept-seven-vs-mulliganed record and nothing about any one
   decision, the same invariant `review/`'s own
   `test_the_report_never_judges_a_mulligan` enforces there.

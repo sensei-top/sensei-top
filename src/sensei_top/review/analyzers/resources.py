@@ -75,11 +75,10 @@ def analyze_resources(snap: MatchSnapshot) -> AnalyzerResult:
             and (last_turn.self_hand or 0) >= STRANDED_HAND_MIN
         ):
             # No `pattern=` here on purpose: this finding only ever fires in a game
-            # already lost, so a with/without win-rate comparison across it would
-            # measure the loss condition it is defined by, not a real pattern — the
-            # leak finder's own gate (test_every_pattern_..., leaks.py) would report
-            # a large "gap" that is really just this code's own definition leaking
-            # into the statistic.
+            # already lost, so the leak finder's with/without win-rate comparison
+            # across it would measure its own definition, not a real pattern.
+            # Pinned by
+            # tests/test_leaks.py::test_cards_stranded_in_a_loss_never_reaches_the_leak_ranking.
             findings.append(
                 Finding(
                     code="cards_stranded_in_a_loss",

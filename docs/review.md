@@ -4,12 +4,11 @@ Read this when touching `review/`, or deciding whether a new signal belongs
 in the per-match report versus the leak finder.
 
 **Scope note.** This document covers the per-match postmortem and the
-cross-match leak finder — what used to be the whole Review tab. The tab
-itself is now the deck guide (`docs/guide.md`, `guide/`), which uses this
-package's `build_match_report`/`find_leaks`/`build_consensus` as building
-blocks rather than duplicating them; the per-match report still lives on the
-match drill-down (`MatchReportPanel`), reachable from a leak's own match
-chips exactly as before.
+cross-match leak finder. The deck guide (`docs/guide.md`, `guide/`) uses
+this package's `build_match_report`/`find_leaks`/`build_consensus` as
+building blocks rather than duplicating them; the per-match report lives on
+the match drill-down (`MatchReportPanel`), reachable from a leak's own match
+chips.
 
 ## Why this exists
 
@@ -91,14 +90,15 @@ analyzer, whatever the registry order.
 
 ### `frame.py` — the matchup, and the role it demands
 
-Flores' *Who's the Beatdown?*: "Misassignment of Role = Game Loss." Three
-signals, applied as votes: more creatures usually means beatdown; more
-removal usually means control; more card draw and counterspells "almost
-always" means control (weighted double). The player's own side reads their
-*exact* decklist (`snap.own_cards`); the opponent's side reads the field's
-consensus list for their archetype (`snap.opp_consensus`) weighted by share
-— the best substitute for a decklist this reader never sees in full. Either
-side unclassified is a gap, never a guessed role.
+Flores' *Who's the Beatdown?* and Duke's *Role Assignment*: "Misassignment
+of Role = Game Loss." Three signals, applied as votes: more creatures
+usually means beatdown; more removal usually means control; more card draw
+and counterspells "almost always" means control (weighted double). The
+player's own side reads their *exact* decklist (`snap.own_cards`); the
+opponent's side reads the field's consensus list for their archetype
+(`snap.opp_consensus`) weighted by share — the best substitute for a
+decklist this reader never sees in full. Either side unclassified is a gap,
+never a guessed role.
 
 The creature vote needs the opponent's side to know which consensus cards
 are actually creatures — `ConsensusCard.type_line`, read from the same
@@ -112,15 +112,15 @@ that resolves but carries no signal at all — every rate at zero, a corpus
 tagging gap rather than a real absence of removal or card draw — is its own
 gap rather than a role read from nothing.
 
-Also carries the neutral game-start facts that used to live in a separate
-`opening` analyzer — mulligan count and on-play/on-draw — since AGENTS.md's
-own testing invariant (`test_the_report_never_judges_a_mulligan`) requires
-they survive: this is a post-game read over projected data, and the hand a
-player actually shipped — after bottoming cards under the London rule — is
-never in the log at any point, so nothing here states a mulligan was right
-or wrong. (`table/opening_hand.py` reads a different, earlier message live,
-for the Live page — see `docs/current-match.md` — which is why this
-still holds true for a *finished* game without contradicting that.)
+Also carries the neutral game-start facts — mulligan count and
+on-play/on-draw — and never a verdict on them
+(`test_the_report_never_judges_a_mulligan`): this is a post-game read over
+projected data, and the hand a player actually shipped — after bottoming
+cards under the London rule — is never in the log at any point, so nothing
+here states a mulligan was right or wrong. (`table/opening_hand.py` reads a
+different, earlier message live, for the Live page — see
+`docs/current-match.md` — which is why this still holds true for a
+*finished* game without contradicting that.)
 
 ### `clock.py` — the damage race
 
@@ -133,11 +133,11 @@ margin of 10+ damage is `DECISIVE`; anything smaller is a `NOTICE`. Below
 early hit is not a race yet.
 
 Leading and trailing a race are two separate codes, `race_ahead` and
-`race_behind` — not one `race_leader` code with a variable subject, which
-used to read "The opponent were ahead in the damage race" (a grammar bug a
-fixed subject removes) and, more to the point, could never become a leak
-pattern on its own: whichever side you're on changes what the finding
-*means*, so the leak finder needs two ranked patterns here, not one.
+`race_behind`, each with a fixed subject rather than one code with a
+variable one: a variable subject cannot agree with its verb ("You were
+ahead" / "The opponent was ahead"), and whichever side you're on changes
+what the finding *means*, so leading and trailing are opposite signals,
+each its own leak pattern.
 
 ### `trajectory.py` — the shape of the whole game
 
@@ -179,8 +179,7 @@ hand.
 
 Card-advantage swing per game (hand-size differential, high and low point);
 cards stranded in hand at the last recorded turn of a loss; `Countered`
-zone transfers for both sides (`card_events.category = 'Countered'`,
-projected since day one, read by no analyzer until this one). Duke's
+zone transfers for both sides (`card_events.category = 'Countered'`). Duke's
 *Tempo & Card Advantage*: a spell that never resolves is a card lost with
 nothing gained, on whichever side it lands.
 
@@ -197,10 +196,9 @@ least five matches for the pairing and naming the tier it lands on — see
 never an all-format one),
 both sample-gated
 (`MIN_PERSONAL_SAMPLE`/`MIN_FIELD_SAMPLE`). Also carries the neutral
-outcome facts that used to live in a separate `clock` analyzer under the
-old naming — game length vs. this deck's own average, timeout/concede, and
-the play/draw split — since "compared to a wider sample" is exactly what
-those are.
+outcome facts — game length vs. this deck's own average, timeout/concede,
+and the play/draw split — since "compared to a wider sample" is exactly
+what those are.
 
 `field_matchup` never pools a round from before a detected format reset into
 one from after it: `build_snapshot` windows the `v_meta_matchup` query to
@@ -336,14 +334,18 @@ report at most once per request.
 
 ## The narrative (`review/narrative.py`, `review/leaks_narrative.py`)
 
-Two separate prompts to write coaching prose from. Neither module makes the
-call itself — only `sensei_top.llm.client` imports `anthropic` (AGENTS.md
-non-negotiable #5, `docs/llm.md`) — but both now have a one-click path as
-well as the copy-paste one:
+Two separate prompts to write coaching prose from — the coaching layer over
+the report, not a summary of it. Neither module makes the call itself —
+only `sensei_top.llm.client` imports `anthropic` (AGENTS.md non-negotiable
+#5, `docs/llm.md`); both stay pure functions of already-projected data —
+but both have a one-click path as well as the copy-paste one:
 
-- `GET .../narrative` always serves the prompt, built locally, offered as
-  copyable text by `GenerateCard` (which falls back to plain
-  `CopyPromptCard` with no credential configured).
+- `GET .../narrative` serves the prompt whenever there is something to
+  narrate, built locally, offered as copyable text by `GenerateCard`
+  (which falls back to plain `CopyPromptCard` with no credential
+  configured), with the stored prose beside it once one is written
+  (`status: "ok"`; `"prompt"` before; `"no_report"`, and no prompt, when
+  there is nothing to narrate).
 - `POST .../narrative` sends the prompt without its answer contract
   (`full_prompt`; the copied one, `copied_prompt`, ends by asking for one
   `{"prose": ...}` object) through `llm.write_prose` and
@@ -355,11 +357,17 @@ well as the copy-paste one:
   training plan), in the same table, with the author `pasted` and no
   cost. It calls no model (`docs/llm.md`, "Saving a pasted answer").
 
-The match prompt carries the game's turn-by-turn shape (life/hand/board/
-power/lands, both sides' resolved spells) alongside the report's own
-findings and gaps — deliberately more than the old findings-only version,
-because a coach shown only conclusions can only restate them. The leaks
-prompt carries only the ranked pattern list, never a specific match's turns.
+The match prompt (`build_narrative_context(report, snap, field=...)`)
+carries the game's turn-by-turn shape (life/hand/board/power/lands for both
+sides, both sides' resolved spells in order) alongside the report's own
+findings and gaps, because a coach shown only conclusions can only restate
+them. Never a raw zone dump — no hands, no graveyards, no exile contents,
+and `MatchSnapshot` never carries the opponent's Arena handle or user id in
+the first place. It ends with an explicit "not tracked" block (the stack,
+counters, attachments, the exact phase or step, the opponent's hand) so
+whoever writes the review is never left to assume silence means empty
+(rule 4). The leaks prompt carries only the ranked pattern list, never a
+specific match's turns.
 
 Unlike the deck guide, neither has a CLI import path: a stored
 narrative here comes from the generate button or from an answer pasted
@@ -434,46 +442,14 @@ a transparent, fixed-weight formula over life/board/hand/mana, never fitted
 to outcomes — turns the per-turn combat and life data ("What became possible, and why" above) into the number `trajectory.py`
 anchors a game's turning point to.
 
-**The narrative is the coaching layer over all of this, not a summary of
-it** — and this module does not fetch it itself.
-`src/sensei_top/review/narrative.py` (formerly `advisor.py`, before that a
-live mid-match hint) builds the *prompt*: the match's turn-by-turn shape,
-both sides' play sequence, and the report's own findings and gaps, asking
-for a full structured review rather than a 250-word note. AGENTS.md
-non-negotiable #5 permits an opt-in, user-configured Claude call
-(`src/sensei_top/llm/`, `docs/llm.md`) but confines it to that one small
-package — `review/narrative.py` stays a pure function of already-projected
-data:
+The narrative over this report is "The narrative (`review/narrative.py`,
+`review/leaks_narrative.py`)" above.
 
-- **`build_narrative_context(report, snap, field=...)`** formats an
-  already-computed `MatchReport` together with its `MatchSnapshot`:
-  per-turn life/hand/board/power/lands for both sides, both sides' resolved
-  spells in order, then the findings and gaps. Never a raw zone dump — no
-  hands, no graveyards, no exile contents, and `MatchSnapshot` never carries
-  the opponent's Arena handle or user id in the first place, so there is
-  nothing to leak there even by accident. It ends with an explicit "not
-  tracked" block (the stack, counters, attachments, the exact phase or step,
-  the opponent's hand) so whoever writes the review is never left to assume
-  silence means empty (rule 4).
-- **`full_prompt(context)`** prepends the framing that used to travel as a
-  `system` parameter.
-- **`GET /api/matches/{id}/report/narrative`** returns the stored prose
-  (`status: "ok"`) once written, or the prompt to write one
-  (`status: "prompt"`) otherwise. **`POST`** on the same path sends that
-  prompt through `llm.write_prose` and stores the answer in
-  `match_narrative`, when a credential is configured (503 otherwise).
-  `MatchReportPanel` renders either state through `GenerateCard`, which
-  falls back to plain `CopyPromptCard` with no credential configured. There
-  is no *CLI* importer for a per-match review — it is read once, about a
-  game already played ("The narrative" above) — so a stored narrative here comes
-  from the generate button's `POST` or from a pasted answer, which a **`PUT`**
-  on the same path stores with no model call (the copy-prompt round trip).
-
-**The matchup brief still has no generate button of its own**, and that has not
-changed — but it is no longer import-only either. `POST /api/guide/{key}/
-narrative` writes `matchup_brief` rows as a second effect, via
+**The matchup brief has no generate button of its own**, but it is not
+import-only either. `POST /api/guide/{key}/narrative` writes
+`matchup_brief` rows as a second effect, via
 `brief/from_guide.py::store_guide_matchups`, for every matchup the generated
-guide covers. So a brief now arrives by several paths: a CLI `brief --import`
+guide covers. So a brief arrives by several paths: a CLI `brief --import`
 or `brief --missing --import`, a CLI `guide --import`, the guide's generate
 route, or one of the guide's three `PUT` routes for a pasted answer (one
 brief, the multi-brief coverage answer, or a guide, which backfills briefs the
