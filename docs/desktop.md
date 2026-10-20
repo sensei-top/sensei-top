@@ -131,6 +131,17 @@ starts. Until `onboarded` is true in `shell.json` the window opens at
 `/welcome`; its steps read `doctor --json`, "Which do you play?"
 writes `plays`, and finishing them writes the flag.
 
+**The Linux tarball.** `electron-builder.yml` builds two Linux targets,
+the AppImage and a `tar.gz` of the same app (x64), named
+`Sensei-Top-<version>.tar.gz`. The tarball writes no update info, so
+`latest-linux.yml` keeps naming the AppImage alone. A tarball copy never
+updates itself: the updater runs on Linux only under `$APPIMAGE`, so the
+status says "This copy does not update itself.", and a new version is a new
+download. It does not offer "Start when you log in" either, since
+`autostart.ts` writes its entry only under `$APPIMAGE`: onboarding does not
+ask, and Settings does not show the toggle. The release job attaches the
+tarball and does not send it to VirusTotal.
+
 **Card data starts on its own** (`settings.ts`'s
 `startFirstDataIfMissing`). Once per launch, after the server first
 reports `ready`, so `serve` has migrated the database before `cards`

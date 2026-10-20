@@ -19,7 +19,7 @@ body:
     id: system
     attributes:
       label: System
-      description: Windows 10, Windows 11, or the Linux distribution and desktop; and whether it is the installer, the Microsoft Store build, or the AppImage.
+      description: Windows 10, Windows 11, or the Linux distribution and desktop; and whether it is the installer, the Microsoft Store build, the AppImage or the .tar.gz.
     validations:
       required: true
   - type: textarea

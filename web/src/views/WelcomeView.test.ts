@@ -52,6 +52,7 @@ function app(change: Partial<AppSettings> = {}): AppSettings {
     update: { state: 'idle' },
     onboarded: false,
     askAutostart: false,
+    canAutostart: true,
     rulesText: null,
     firstData: { state: 'idle' },
     version: '1.0.0',

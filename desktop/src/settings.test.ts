@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
   asksAutostart,
+  canAutostart,
   CHANNELS,
   diagnosticsArgs,
   formatListing,
@@ -45,7 +46,7 @@ const DOCTOR = {
   mtgo: { discovered: null },
   cards: { arena_ids: 10, rules_text: 5 },
 };
-const NO_APP_EXTRAS = { askAutostart: false, rulesText: null, firstData: { state: 'idle' } } as const;
+const NO_APP_EXTRAS = { askAutostart: false, canAutostart: false, rulesText: null, firstData: { state: 'idle' } } as const;
 
 describe('config --json to ShellSettings', () => {
   it('carries mtgo.deck_dir into sources.mtgoDeckDir, null when unset', () => {
@@ -128,6 +129,7 @@ describe('config --json to ShellSettings', () => {
       update: { state: 'idle' },
       onboarded: false,
       askAutostart: false,
+      canAutostart: false,
       rulesText: null,
       firstData: { state: 'idle' },
       version: '1.2.3',
@@ -135,6 +137,16 @@ describe('config --json to ShellSettings', () => {
     });
     const prefs: ShellJson = { autostart: true, checkForUpdates: false, diagnostic: true, keepRunningOnClose: true };
     expect(toAppSettings(prefs, info)).toMatchObject({ startWithSystem: true, checkForUpdates: false, diagnostic: true, keepRunningOnClose: true });
+  });
+
+  it('carries askAutostart and canAutostart through as given', () => {
+    const base = { version: '1', platform: 'win32', update: { state: 'idle' } as const, rulesText: null, firstData: { state: 'idle' } } as const;
+    const installer = toAppSettings({}, { ...base, askAutostart: false, canAutostart: true });
+    expect(installer.askAutostart).toBe(false);
+    expect(installer.canAutostart).toBe(true);
+    const tarball = toAppSettings({}, { ...base, askAutostart: true, canAutostart: false });
+    expect(tarball.askAutostart).toBe(true);
+    expect(tarball.canAutostart).toBe(false);
   });
 
   it('carries a stored language through', () => {
@@ -180,11 +192,20 @@ describe('doctor --json for onboarding (S15)', () => {
     expect(settings.sources.mtgoFound).toBeNull();
   });
 
-  it('asks about autostart on Linux and the Store build only (D25)', () => {
-    expect(asksAutostart('linux', false)).toBe(true);
-    expect(asksAutostart('win32', true)).toBe(true);
-    expect(asksAutostart('win32', false)).toBe(false);
-    expect(asksAutostart('darwin', false)).toBe(false);
+  it('asks about autostart on Linux only where it can (the AppImage, not the tarball) and on the Store build (D25)', () => {
+    expect(asksAutostart('linux', false, true)).toBe(true);
+    expect(asksAutostart('linux', false, false)).toBe(false);
+    expect(asksAutostart('win32', true, true)).toBe(true);
+    expect(asksAutostart('win32', false, true)).toBe(false);
+    expect(asksAutostart('darwin', false, false)).toBe(false);
+  });
+
+  it('can autostart on Windows, the AppImage and a development run only', () => {
+    expect(canAutostart({ platform: 'win32', packaged: true, appImage: undefined })).toBe(true);
+    expect(canAutostart({ platform: 'linux', packaged: true, appImage: '/x/Sensei-Top.AppImage' })).toBe(true);
+    expect(canAutostart({ platform: 'linux', packaged: true, appImage: undefined })).toBe(false);
+    expect(canAutostart({ platform: 'linux', packaged: false, appImage: undefined })).toBe(true);
+    expect(canAutostart({ platform: 'darwin', packaged: true, appImage: undefined })).toBe(false);
   });
 
   it('reads onboarded from shell.json, false by default', () => {
@@ -462,6 +483,7 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
     version: '9.9.9',
     platform: 'linux',
     askAutostart: true,
+    canAutostart: true,
     countBackups: () => 1,
     newestBackup: () => extra.slot ?? null,
     now: () => new Date('2026-10-08T10:00:00Z'),
@@ -636,7 +658,7 @@ describe('the service', () => {
     const settings = await service.refresh();
     expect(settings?.sources.arenaLog.detailedLogs).toBe('enabled');
     expect(settings?.sources.mtgoFound).toBe('/mtgo/found');
-    expect(settings?.app).toMatchObject({ rulesText: 12, askAutostart: true, onboarded: false, firstData: { state: 'idle' } });
+    expect(settings?.app).toMatchObject({ rulesText: 12, askAutostart: true, canAutostart: true, onboarded: false, firstData: { state: 'idle' } });
   });
 
   it('reads unknown and null when doctor fails', async () => {

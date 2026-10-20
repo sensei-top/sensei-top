@@ -5,7 +5,9 @@
 //   uninstaller deletes that `Run` value), started with `--hidden`.
 // - Linux: `app.setLoginItemSettings` does nothing there, so the shell writes
 //   an XDG autostart entry itself, and only for the AppImage (`APPIMAGE`
-//   names the file to start; any other run has no stable path).
+//   names the file to start; any other run has no stable path). The tarball is
+//   such a run, so `canAutostart` (`settings.ts`) is false there: the page
+//   shows no toggle and onboarding does not ask.
 // - A development run never applies either.
 // - `first-run.json` is the installer's note of the checkbox it asked (D25) and
 //   of the language it ran in (plan 18, S7): each applied once if the user has

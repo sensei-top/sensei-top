@@ -94,6 +94,7 @@ const SAMPLE_APP: AppSettings = {
   update: { state: 'ready', version: '0.0.1-sample' },
   onboarded: true,
   askAutostart: false,
+  canAutostart: true,
   rulesText: 31000,
   firstData: { state: 'idle' },
   version: '0.0.0-sample',

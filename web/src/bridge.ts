@@ -137,6 +137,8 @@ export type AppSettings = {
   onboarded: boolean
   /** Whether onboarding's last step asks about starting with the system. */
   askAutostart: boolean
+  /** Whether this copy can start at login: not the Linux tarball. */
+  canAutostart: boolean
   /** Cards with rules text, from the shell's last read; `null` when unknown. */
   rulesText: number | null
   firstData: FirstData

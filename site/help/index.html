@@ -66,6 +66,7 @@
 <li>Download <a href="/download/linux">the AppImage</a>, a file ending in <code>.AppImage</code>, and move it to a folder of your own, such as <code>Applications</code> in your home folder. It updates itself by replacing this file, so keep it somewhere you can write to.</li>
 <li>Open the file's properties, allow it to run as a program, then double-click it. On the Steam Deck, do this in desktop mode.</li>
 </ol>
+<p>If the AppImage will not run on your system, there is also <a href="/download/linux-tar">a <code>.tar.gz</code></a>: unpack it and run <code>sensei-top</code> from the folder. It never updates itself and cannot start when you log in; the <a href="https://github.com/sensei-top/sensei-top/blob/main/INSTALL.md#the-targz">install guide</a> has the steps.</p>
 <p>On Linux, closing the window quits the app, and games you play afterwards are not recorded. To keep it running, turn on <b>Keep running when the window is closed</b> in <b>Settings</b>, under <b>App</b>. If the app does not start, the <a href="https://github.com/sensei-top/sensei-top/blob/main/INSTALL.md#linux">install guide</a> has the fix for each system.</p>
 </section>
 
@@ -77,12 +78,12 @@
 <li><b>Which do you play?</b>: <b>Arena</b>, <b>Magic Online</b> or <b>Both</b>. The next steps set up only what you pick.</li>
 <li><b>Arena</b>: the app looks for Arena's log and checks that Detailed Logs are on. If they are not, the step shows where to turn them on: in Arena, open <b>Options</b>, then <b>Account</b>, tick <b>Detailed Logs (Plugin Support)</b>, close Arena and start it again, then press <b>Check again</b>. Without Detailed Logs, no Arena match is recorded.</li>
 <li><b>Magic Online</b>: <a href="#mtgo">see below</a>.</li>
-<li><b>Ready</b>: play a match. It appears on <b>Home</b> when it ends. Where the app can update itself, this step has <b>Check for a new version once a day</b>; on Linux, it also offers <b>Start Sensei Top when you log in</b>.</li>
+<li><b>Ready</b>: play a match. It appears on <b>Home</b> when it ends. Where the app can update itself, this step has <b>Check for a new version once a day</b>; with the Linux AppImage, it also offers <b>Start Sensei Top when you log in</b>.</li>
 </ol>
 <p>Card data, about 80 MB, downloads on its own the first time the app opens, and <b>Ready</b> shows how far it has got. The deck guides need it. If the download fails, press <b>Try again</b> there, or <b>Download card data</b> in <b>Settings</b>, under <b>Sources</b>.</p>
 <p>If you play Arena, <b>Home</b> shows <b>Turn on Detailed Logs in Arena</b> until Arena's log says they are on, with the same steps and <b>Check again</b>. Arena writes that line only when it starts, so start Arena again before you check.</p>
 <p>To go through the steps again, open <b>Settings</b>, then <b>App</b>, and press <b>Go through them again</b>.</p>
-<p><strong>Keep the app running while you play.</strong> Arena empties its log every time it starts, and keeps the session before only until it starts again. A session played with Sensei Top closed is gone after two Arena launches. <b>Start when Windows starts</b>, or <b>Start when you log in</b> on Linux, under <b>App</b> in <b>Settings</b>, takes care of it.</p>
+<p><strong>Keep the app running while you play.</strong> Arena empties its log every time it starts, and keeps the session before only until it starts again. A session played with Sensei Top closed is gone after two Arena launches. <b>Start when Windows starts</b>, or <b>Start when you log in</b> with the Linux AppImage, under <b>App</b> in <b>Settings</b>, takes care of it.</p>
 </section>
 
 <section id="mtgo">

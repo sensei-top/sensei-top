@@ -104,7 +104,7 @@ jobs:
     if: github.event_name != 'push' || github.repository == 'sensei-top/sensei-top'
     # Pinned, not `ubuntu-latest`: the frozen server runs only on a glibc at least as
     # new as the build host's, so moving the runner raises the oldest Ubuntu the
-    # AppImage runs on (INSTALL.md names it).
+    # AppImage and the tarball run on (INSTALL.md names it).
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -161,6 +161,7 @@ jobs:
           name: sensei-top-linux
           path: |
             desktop/release/*.AppImage
+            desktop/release/*.tar.gz
             desktop/release/latest-linux.yml
           retention-days: 1
           if-no-files-found: error
@@ -197,7 +198,7 @@ jobs:
         env:
           TAG: ${{ github.ref_name }}
         run: uv run --no-project python scripts/release_notes.py --version "${TAG#v}" > notes.md
-      - name: Check the updater's files are all here
+      - name: Check the release's files are all here
         run: |
           shopt -s nullglob
           for name in latest.yml latest-linux.yml; do
@@ -206,7 +207,7 @@ jobs:
               exit 1
             fi
           done
-          for pattern in "Sensei-Top-Setup-*.exe" "Sensei-Top-*.AppImage"; do
+          for pattern in "Sensei-Top-Setup-*.exe" "Sensei-Top-*.AppImage" "Sensei-Top-*.tar.gz"; do
             files=(assets/$pattern)
             if [ ${#files[@]} -eq 0 ]; then
               echo "no $pattern in the build artifacts" >&2
@@ -258,4 +259,5 @@ jobs:
             assets/Sensei-Top-Setup-*.exe.blockmap \
             assets/latest.yml \
             assets/Sensei-Top-*.AppImage \
+            assets/Sensei-Top-*.tar.gz \
             assets/latest-linux.yml

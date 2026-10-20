@@ -51,7 +51,8 @@ appx:
 linux:
   icon: build/icon.png
   artifactName: Sensei-Top-${version}.${ext}
-  target: [AppImage]
+  # The tarball writes no update info, so latest-linux.yml keeps naming the AppImage.
+  target: [AppImage, tar.gz]
   category: Game
   executableName: sensei-top
   syncDesktopName: true

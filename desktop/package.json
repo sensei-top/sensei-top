@@ -13,7 +13,7 @@
     "typecheck": "tsc -p tsconfig.test.json",
     "test": "vitest run",
     "dist:win": "pnpm run build && node scripts/notices.ts && electron-builder --win nsis appx --publish never",
-    "dist:linux": "pnpm run build && node scripts/notices.ts && electron-builder --linux AppImage --publish never",
+    "dist:linux": "pnpm run build && node scripts/notices.ts && electron-builder --linux AppImage tar.gz --publish never",
     "dev": "pnpm run build && env -u ELECTRON_RUN_AS_NODE electron ."
   },
   "devDependencies": {
