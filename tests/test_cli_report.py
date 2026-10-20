@@ -1,10 +1,9 @@
 """Tests for ``sensei-top report`` over matches with no deck.
 
-An MTGO match has no ``deck_id`` until plan 12's confirmed pick lands, and an
-unpicked one keeps none after it. The report labelled each row with
-``COALESCE(name, substr(deck_id, 1, 8))``, which is ``NULL`` for such a match,
-and the play/draw section crashed slicing it — found on the Windows VM's first
-scratch run, then reproduced on a copy of the real database.
+An MTGO match has no ``deck_id`` until the user confirms a pick, and an
+unpicked one keeps none after it, so ``COALESCE(name, substr(deck_id, 1, 8))``
+is ``NULL`` for such a match: the report labels it ``(no deck)`` rather than
+crashing on a ``NULL`` label.
 
 The expectations are the fixture's own two games, as
 ``test_projector_mtgo.py::test_game_one_facts``/``test_game_two_facts`` read

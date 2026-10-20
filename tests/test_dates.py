@@ -1,12 +1,11 @@
-"""The auto day/month order (reader/dates.py; plan 3, S10 and D11).
+"""The auto day/month order (reader/dates.py; docs/arena-log.md, "Timestamps").
 
 Each step of the chain on stamps parsed from the five captured shapes, with a
 fixed last write. Stamps named after a language are real headers from
-tests/fixtures/header_languages.log (S9's capture table); the rest are
-synthetic, built in a captured shape. Every capture was made on 2026-10-06
-(S9's Facts), so the afternoon of that day is a last write whose week holds
-each captured stamp's real date, and 2026-12-01 one whose week holds neither
-of its readings.
+tests/fixtures/header_languages.log; the rest are synthetic, built in a
+captured shape. Every capture was made on 2026-10-06, so the afternoon of
+that day is a last write whose week holds each captured stamp's real date,
+and 2026-12-01 one whose week holds neither of its readings.
 """
 
 import logging

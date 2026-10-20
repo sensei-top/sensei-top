@@ -1,9 +1,9 @@
 """Tests for guide/narrative.py: the context and prompt ``full_prompt``
 builds, and ``guide_narrative_from_json`` — the parser both the CLI import
 and the API's generate route (``llm.write_json`` against this module's own
-``_GUIDE_TOOL`` schema) converge on. The module itself no longer makes the
-call (that moved to ``sensei_top.llm`` — see ``tests/test_llm.py``), so
-there is nothing here to fake an SDK response for.
+``_GUIDE_TOOL`` schema) converge on. The module itself makes no call
+(``sensei_top.llm`` does — see ``tests/test_llm.py``), so there is nothing
+here to fake an SDK response for.
 """
 
 from __future__ import annotations
@@ -215,7 +215,7 @@ def test_guide_narrative_from_json_rejects_missing_fields():
         guide_narrative_from_json(json.dumps({"engine": "ok"}), _guide())
 
 
-# --- S7: the archetypes this deck actually faces, alongside the field's top ---
+# --- the archetypes this deck actually faces, alongside the field's top ----
 
 _WINDOW = "2026-08-11"
 

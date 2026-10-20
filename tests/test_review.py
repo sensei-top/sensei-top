@@ -300,13 +300,12 @@ def test_field_matchup_rate_backs_the_tier_floor_number_with_evidence():
 
 
 def test_turning_point_labels_self_turn_index_not_the_shared_turn_counter(db):
-    """trajectory.py's turning_point finding used to print
+    """trajectory.py's turning_point finding must never print
     ``point.turn_number`` — Arena's *shared* counter, which counts both
     players' turns — as "your turn N". On the play that counter runs ahead
     of the player's own turn count, so "your turn 7" could really be their
-    4th turn. It must instead read ``self_turn_index`` off the matching
-    ``v_self_turns`` row (turn_number is still kept as the finding's own
-    anchor, unchanged)."""
+    4th turn. It reads ``self_turn_index`` off the matching ``v_self_turns``
+    row instead (turn_number is still kept as the finding's own anchor)."""
     checked = 0
     for match_id in (MATCH_LOSS, MATCH_WIN):
         for f in build_match_report(db, match_id).findings:
@@ -821,7 +820,7 @@ def _store_meta_round(
     populates v_meta_matchup's ``archetype_key = own_key, opponent_key =
     opp_key`` side directly (the other side of the symmetric pair is
     unused by these tests). The event is a ``fmt`` one: the field record
-    reads only the match's own format's rounds (plan 13, D14)."""
+    reads only the match's own format's rounds."""
     conn.execute(
         "INSERT INTO meta_event (event_id, path, blob_sha, source, name, event_date, "
         "format, tier) VALUES (?, 'p', 's', 'mtgo', 'e', ?, ?, ?)",
@@ -906,7 +905,7 @@ def test_field_matchup_is_none_when_every_round_is_pre_window_and_the_baseline_g
 
 
 def test_field_matchup_reads_only_the_matchs_own_format_and_the_memo_keeps_them_apart(conn):
-    """Plan 13, D14: the same pairing has rounds in two formats' corpora --
+    """The same pairing has rounds in two formats' corpora --
     two Standard rounds the own archetype wins, three Modern rounds it loses.
     A Standard match quotes only the Standard rounds and a Modern match only
     the Modern ones, even when both share one view_cache (whose field-matchup
@@ -945,7 +944,7 @@ def test_field_matchup_reads_only_the_matchs_own_format_and_the_memo_keeps_them_
     assert none.field_matchup is None
 
 
-# --- the own archetype's format follows the confirmed pick (plan 12, D1/D16) --
+# --- the own archetype's format follows the confirmed pick ------------------
 # Archetype definitions exist for Standard only, so "was the deck classified"
 # is the same question as "did the format resolve to Standard".
 
@@ -1001,7 +1000,7 @@ def test_own_archetype_does_not_classify_against_a_format_the_pick_rules_out(con
 
 def test_own_archetype_never_reads_an_unconfirmed_store_format_for_an_mtgo_match(conn):
     """A pick that confirms the deck but no format leaves the store's
-    FormatCode as an inference only (D1): the verdict stays unknown rather
+    FormatCode as an inference only: the verdict stays unknown rather
     than falling back to decks.format."""
     _picked_mtgo_match(conn, "mtgo-1", deck_format="Standard", pick_format=None)
     assert _own_archetype_for(conn, "mtgo-1") is None

@@ -1,4 +1,4 @@
-"""``scripts/demo_db.py``: the screenshot database (plan 21, S1).
+"""``scripts/demo_db.py``: the screenshot database.
 
 Ground truth is the fixtures, read with ``fixture_peek.py`` and
 ``scripts/mtgo_probe.py`` (AGENTS.md non-negotiable #8), never this script's
@@ -8,15 +8,15 @@ three matches are against ``OppPlayerOne`` (``AAAAAAAAAAAAAAA1``, match
 ``fd5624a4-...``) and ``OppPlayerTwo`` (``BBBBBBBBBBBBBBB2``, match
 ``fa7a4d16-...``), both in ``Traditional_Ladder``, the ranked ladder.
 ``mtgo_match_session.log`` is one match between ``Player1`` and
-``Player2000``. The tests read the same names back through SQL, as the spec
-asks, and check that the SQL found what the fixture holds.
+``Player2000``. The tests read the same names back through SQL and check
+that the SQL found what the fixture holds.
 
 The ladder allows advice (``table/queues.py``), so both are ``--live``
 candidates; no fixture holds an event's match, so the refusal test renames
 the queue in the stored payloads to an event id read off a real database.
 
-The pseudonym shape (``<given name>#<5 digits>``, the user ``Deshi``) is
-plan 21's D6.
+The pseudonym shape is ``<given name>#<5 digits>``, and the user is
+``Deshi``.
 """
 
 from __future__ import annotations

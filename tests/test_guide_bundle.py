@@ -110,7 +110,7 @@ def test_leaks_and_leaks_all_decks_are_both_present(conn):
     assert isinstance(guide.leaks_all_decks, tuple)
 
 
-# --- the deck's format (plan 13, D15) ---------------------------------------
+# --- the deck's format -----------------------------------------------------
 
 
 def _store_corpus_deck(conn, event_id, deck_ord, fmt, event_date, mainboard, wins=0, losses=0):
@@ -153,9 +153,9 @@ def _two_formats_with_one_ban_each(conn):
 
 def test_a_modern_decks_guide_reads_modern_resets_and_field(conn):
     """A ``.dek`` deck (no format on its record) picked for one Modern MTGO
-    match is a Modern deck (D15's match step): its guide windows on Modern's
-    ban, not Standard's, and its field is Modern's. The one match predates
-    that ban, and it counts through the pick (``matches.deck_id`` is NULL)."""
+    match is a Modern deck (``identity_format``'s matches step): its guide
+    windows on Modern's ban, not Standard's, and its field is Modern's. The
+    one match predates that ban, and it counts through the pick (``matches.deck_id`` is NULL)."""
     _two_formats_with_one_ban_each(conn)
     conn.execute(
         "INSERT INTO decks (deck_id, name, format, cards_json, first_seen, last_seen) "
@@ -184,9 +184,9 @@ def test_a_modern_decks_guide_reads_modern_resets_and_field(conn):
 
 
 def test_a_deck_with_no_format_gets_no_field_and_the_format_unknown_note(conn):
-    """A Draft deck whose match the log names no format for: D15 gives NULL,
-    so the guide carries no reset, no field and no list diff, and says why in
-    the ``format_unknown`` note. Standard's corpus and ban are right there,
+    """A Draft deck whose match the log names no format for: ``identity_format``
+    gives NULL, so the guide carries no reset, no field and no list diff, and
+    says why in the ``format_unknown`` note. Standard's corpus and ban are right there,
     and nothing of them is borrowed."""
     _two_formats_with_one_ban_each(conn)
     conn.execute(
@@ -219,7 +219,7 @@ def test_a_deck_with_no_format_gets_no_field_and_the_format_unknown_note(conn):
 
 
 def test_a_modern_deck_is_classified_under_modern_for_its_field_and_list_diff(conn):
-    """Plan 13, S8: the guide classifies the user's own deck under the deck's
+    """The guide classifies the user's own deck under the deck's
     format. The ``.dek`` record names none, so only the Modern pick makes it
     a Modern deck, and the Modern definition keyed ``arch`` is the one that
     names its card.

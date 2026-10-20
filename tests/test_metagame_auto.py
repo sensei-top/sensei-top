@@ -1,10 +1,11 @@
-"""The corpus-refresh loop's tick, ``metagame/auto.py`` (plan 14, S6).
+"""The corpus-refresh loop's tick, ``metagame/auto.py``.
 
 No network. fbettega's GitHub calls are monkeypatched as in
 ``test_metagame.py``; mtgo.com's and TopDeck's refreshes run for real behind
 a fetch each test supplies, with no pauses, so their own gates and freshness
-rules are the ones exercised. Expectations come from the plan's rules (S6,
-D2, D7, D12, D18, Q12, Fable's Q13.1) and from what each fake source serves.
+rules are the ones exercised. Expectations come from the loop's rules in
+docs/metagame.md, "Fetching the corpus", and from what each fake source
+serves.
 
 Two clocks: the loop's ``now`` (``_Clock``, starting at ``T``) drives
 mtgo.com, TopDeck and the loop's waits; fbettega judges its own freshness on
@@ -182,7 +183,7 @@ def test_every_source_is_asked_for_the_followed_formats_and_never_by_hand(conn, 
 
 
 def test_fresh_sources_make_no_request(conn, monkeypatch):
-    # Inside each cadence (D7): fbettega 24 h, mtgo.com 3 h, TopDeck 24 h.
+    # Inside each cadence: fbettega 24 h, mtgo.com 3 h, TopDeck 24 h.
     _fbettega_fresh(conn)
     _stamp(conn, "mtgo", T - 2 * H)
     _stamp(conn, "topdeck", T - 23 * H)
@@ -255,9 +256,9 @@ def test_a_later_stored_not_before_wins_over_the_hour(conn, monkeypatch):
 
 def test_a_429_stores_topdecks_own_time_and_the_loop_waits_its_hour(conn, monkeypatch):
     """A run a 429 ended did not complete, so the loop leaves TopDeck alone
-    for its hour (S6). The hour is the loop's own courtesy and appears in no
-    line (Fable, Q13.1): what is stored, and what the lines and the Field
-    page show, is TopDeck's own time (D18), sixty seconds here."""
+    for its hour. The hour is the loop's own courtesy and appears in no
+    line: what is stored, and what the lines and the Field page show, is
+    TopDeck's own time, sixty seconds here."""
     _fbettega_fresh(conn)
     _stamp(conn, "mtgo", T)
     asked: list[str] = []
@@ -298,7 +299,7 @@ def test_a_429_stores_topdecks_own_time_and_the_loop_waits_its_hour(conn, monkey
 def test_an_mtgo_run_a_429_cut_short_after_a_store_waits_its_hour_too(conn, monkeypatch):
     """mtgo.com served one league, then answered 429: the run kept what it
     parsed but was not stamped, so it did not complete and the loop waits
-    its hour (S6). A first 429's stored wait is at least three hours, later
+    its hour. A first 429's stored wait is at least three hours, later
     than the hour, so once the hour is over the gate holds it instead."""
     _fbettega_fresh(conn)
     # A completed run earlier this month, so no month page is read.
@@ -499,7 +500,7 @@ def test_a_stale_topdeck_no_longer_makes_fbettega_run_again(conn, monkeypatch):
 
 
 def test_fbettega_still_runs_and_stores_mtgo_paths_while_mtgo_is_paused(conn, monkeypatch):
-    """Q12 (followup3.md): the cache route keeps its cadence and its scope
+    """The cache route keeps its cadence and its scope
     while mtgo.com refuses this client, and nothing about it changes."""
     _hold(conn, "mtgo", "paused", 403, since=T - 24 * H, not_before=None)
     _mtgo_must_not_be_asked(monkeypatch)
@@ -529,9 +530,9 @@ M = timedelta(minutes=1)
 
 
 def test_serve_prints_only_the_transitions(conn, tmp_path, monkeypatch, capsys):
-    """serve's console prints a line only after its own attempt moved a hold
-    (lines.md §0): into mtgo.com's wait, with §1.4's ending, and out of it.
-    Every tick between, inside the loop's hour, held, or fresh, prints
+    """serve's console prints a line only after its own attempt moved a hold:
+    into mtgo.com's wait, with the ending serve's console gives it, and out
+    of it. Every tick between, inside the loop's hour, held, or fresh, prints
     nothing, and neither does fbettega fresh or TopDeck with no key."""
     _fbettega_fresh(conn)
     _no_github(monkeypatch)
@@ -571,13 +572,13 @@ def test_serve_prints_only_the_transitions(conn, tmp_path, monkeypatch, capsys):
     )
     assert asked == [mtgo_site.INDEX_URL]
 
-    assert tick(T + 5 * M) == ""  # inside the loop's hour (D12)
+    assert tick(T + 5 * M) == ""  # inside the loop's hour
     assert tick(T + H) == ""      # held by the stored wait
     assert asked == [mtgo_site.INDEX_URL]
 
     pausing[0] = False
     assert tick(T + 3 * H) == "mtgo: 1 tournament events stored; the wait is over.\n"
-    assert tick(T + 3 * H + 5 * M) == ""  # fresh for its three hours (D7)
+    assert tick(T + 3 * H + 5 * M) == ""  # fresh for its three hours
     assert asked == [mtgo_site.INDEX_URL, *pages]
 
 

@@ -101,7 +101,7 @@ def test_one_definition_per_format_when_a_name_repeats_across_formats(conn):
 
 
 def test_a_trailing_comma_still_parses():
-    """Five files upstream ship trailing commas, which strict JSON refuses."""
+    """Some files upstream ship trailing commas, which strict JSON refuses."""
     files, skipped = source.read_archive(
         archive({"Formats/Standard/Archetypes/Sloppy.json":
                  '{"Name": "Sloppy", "Conditions": [],}'})

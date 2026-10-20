@@ -128,7 +128,7 @@ def relaunch(live: LiveIngester) -> LiveIngester:
 
 
 def test_the_previous_session_adds_nothing_its_live_polls_stored(live, conn):
-    """D9 reads Player-prev.log whole at every watcher startup, and that file
+    """The watcher reads Player-prev.log whole at every startup, and that file
     is usually the Player.log the last watcher already tailed poll by poll.
     The digest leaves the file name out, so the whole read must find every
     entry already stored (34: fixture_peek.py index of match_session.log)."""
@@ -242,21 +242,19 @@ def test_duty_cycle_holds_the_gate_open_past_project_every(live, conn):
     """A rebuild that took real wall time must not be immediately followed
     by another one just because project_every has elapsed: the adaptive
     gate is max(project_every, _last_duration * duty_factor), so a slow
-    rebuild earns itself a proportionally longer rest — the whole point of
-    Phase 2 (a rebuild that outlasts project_every used to run back-to-back
-    forever, pegging a core for the rest of the session)."""
+    rebuild earns itself a proportionally longer rest. Otherwise a rebuild
+    that outlasts project_every would run back-to-back forever, pegging a core
+    for the rest of the session."""
     append(live.log_path, FIXTURE.read_text(encoding="utf-8", errors="replace"))
     live.poll_once(conn)  # forced by the match-room boundary
     assert live.stats.projections == 1
 
     # Simulate a rebuild that took 16s. Set explicitly rather than relying on
-    # the class default: the default itself changed (4.0 -> 1.0) once the
-    # Current match tab went Arena-only (docs/architecture.md, "Live mode's
-    # two cadences"), and this test is about the gate math, not about pinning
-    # whatever the default happens to be — duty_factor=4.0 makes the gate 64s.
+    # the class default (test_duty_factor_default_is_one pins that): this test
+    # is about the gate math — duty_factor=4.0 makes the gate 64s.
     live.duty_factor = 4.0
     live._last_duration = 16.0
-    live.project_every = 5.0  # the old fixed threshold, now just the floor
+    live.project_every = 5.0  # the floor under the duty-cycle gate
     live._last_projection = time.monotonic()
 
     append(live.log_path, NOISE_REQUEST)
@@ -399,7 +397,7 @@ def test_projection_does_not_rerun_without_new_events(live, conn):
 
 
 def test_a_watcher_with_no_arena_log_picks_one_up_when_it_appears(tmp_path):
-    """D10: started with no path, it ingests nothing, and reads a log that
+    """Started with no path, it ingests nothing, and reads a log that
     shows up later from offset 0. Expectations: the fixture's index lists 34
     entries; the 2 matches, 5 games, 16 turns are the figures
     test_poll_ingests_and_projects_new_events asserts for this fixture."""
@@ -473,7 +471,7 @@ def test_a_watcher_with_no_arena_log_looks_once_per_interval(tmp_path):
 
 
 def test_a_watcher_with_no_arena_log_still_stores_mtgo(tmp_path):
-    """D10: it watches MTGO alone while Arena's log is missing."""
+    """It watches MTGO alone while Arena's log is missing."""
     folder = tmp_path / "mtgo-share"
     folder.mkdir()
     (folder / "Match_GameLog_11111111-1111-1111-1111-111111111111.dat").write_bytes(
@@ -566,7 +564,7 @@ def _mtgo_span(text: str, occurrence: int = 0) -> tuple[int, int]:
 
 
 # Cuts where the fixture's bytes end a string, so each prefix is a state MTGO
-# really wrote: its writes are pure appends (plan 3, F14). The fixture is one
+# really wrote: its writes are pure appends. The fixture is one
 # two-game match, each game conceded and then won; the comments are line
 # numbers of `scripts/mtgo_probe.py --force --lines 400 ... | nl -ba`.
 _G1_UNDER_WAY = _mtgo_span("@PTurn 1: Player1")[1]  # line 30
@@ -634,8 +632,8 @@ def mtgo_payloads(conn) -> list[bytes]:
 
 def test_the_first_pass_stores_a_game_log_mid_game(live, conn, tmp_path):
     """The watcher's first pass catches up whatever was written while nothing
-    watched, so it stores every changed file at once, decided or not (plan 3,
-    D2): here a log cut in game 1's late turns. Only the first pass skips the
+    watched, so it stores every changed file at once, decided or not: here a
+    log cut in game 1's late turns. Only the first pass skips the
     wait; the same file's next write waits for its game to end."""
     folder = tmp_path / "mtgo-share"
     folder.mkdir()
@@ -655,8 +653,8 @@ def test_the_first_pass_stores_a_game_log_mid_game(live, conn, tmp_path):
 def test_a_mid_game_log_waits_however_long_it_stays_quiet_short_of_ten_minutes(
     live, conn, share, monkeypatch
 ):
-    """Quiet alone cannot tell a finished game from a long think (one measured
-    mid-game pause lasted 36 s, plan 3 F14), so a game in progress is never
+    """Quiet alone cannot tell a finished game from a long think
+    (docs/architecture.md, "Live mode's two cadences"), so a game in progress is never
     stored for being quiet, short of the 10-minute fallback. Game 1 is already
     won earlier in this file: what counts is the last game. Judged once for as
     long as the bytes stay the same, not on every 2 s check, so the
@@ -680,8 +678,8 @@ def test_a_mid_game_log_waits_however_long_it_stays_quiet_short_of_ten_minutes(
 
 def test_a_log_quiet_ten_minutes_is_stored_whatever_its_last_game_says(live, conn, share):
     """A disconnect, a crash or a game that ends with no winner line never
-    names a winner, so 10 minutes of quiet stores the file regardless (plan
-    3, D2), and the projector reads it as an unfinished game."""
+    names a winner, so 10 minutes of quiet stores the file regardless, and
+    the projector reads it as an unfinished game."""
     write_through(share, _G2_CAST)
     at(live, conn, 2.0)  # the check that first sees it
     at(live, conn, 400.0)
@@ -710,7 +708,7 @@ def test_a_won_game_is_stored_once_quiet_five_seconds(live, conn, share, quiet, 
     assert live._dirty is stored
 
 
-# A game's lines as MTGO writes them (plan 30, S2), card lines left out: the start
+# A game's lines as MTGO writes them, card lines left out: the start
 # block, a turn each, then one ending line.
 _ENDING_GAME = [
     "Player1 joined the game.",
@@ -742,7 +740,7 @@ def _framed_strings(lines: list[str]) -> bytes:
 def test_a_game_ended_by_a_loss_line_is_stored_at_once(live, conn, share, ending, stored):
     """The loss and draw lines decide a game, so the watcher stores it after the
     5 s quiet instead of the 10-minute fallback; a lost connection alone does
-    not (a disconnect stays undecided, plan 30, D7)."""
+    not (a disconnect stays undecided)."""
     data = _framed_strings([*_ENDING_GAME, ending])
     append_bytes(share / MATCH_LOG, data)
     at(live, conn, 2.0)  # the check that first sees it
@@ -781,9 +779,10 @@ def test_a_log_that_moves_between_scan_and_read_is_not_quiet(live, conn, share, 
 
 # One match as MTGO writes it, replayed from the fixture: each step appends the
 # bytes up to a cut and then leaves the file alone for so many seconds. The gaps
-# are of the measured kind (plan 3, F14): mid-game pauses up to 36 s, about 46 s
-# between games, nothing after the match-winner line; a concession and its
-# winner line a second apart, which a check can land between.
+# are of the kind measured on a real match (docs/architecture.md, "Live mode's
+# two cadences"): long mid-game pauses, a longer gap between games, nothing
+# after the match-winner line; a concession and its winner line a second
+# apart, which a check can land between.
 _REPLAY = [
     (_G1_UNDER_WAY, 8),
     (_G1_LATE, 36),
@@ -798,7 +797,7 @@ _REPLAY = [
 
 
 def test_a_replayed_match_ends_with_one_row_per_game(live, conn, share):
-    """Two games, two rows (plan 3, D2): game 1 as it stood once its winner
+    """Two games, two rows: game 1 as it stood once its winner
     line and the match score were written, and the whole file once game 2
     was won. Every other state the file passed through, mid-game, conceded
     without its winner line yet, or won a second ago, is passed over."""
@@ -1001,22 +1000,17 @@ def _insert_mtgo_raw_row(conn, *, source_file: str, data: bytes = b"x") -> int:
 
 
 def test_duty_factor_default_is_one(live):
-    """Pins the default (docs/architecture.md, "Live mode's two cadences"):
-    changed from 4.0 (~20% duty cycle) to 1.0 (~50%) once the Current match
-    tab went Arena-only (migrations/040_arena_only_current_match.sql) — MTGO no
-    longer needs its own off-cadence boundary trick, so the tab's own
-    latency became worth trading CPU duty for."""
+    """Pins the default, 1.0, about a 50% duty cycle: CPU traded for the
+    Live page's latency (docs/architecture.md, "Live mode's two cadences")."""
     assert live.duty_factor == 1.0
 
 
 def test_an_mtgo_flush_marks_dirty_but_does_not_force_a_rebuild(live, conn):
     """Mirror of test_a_new_match_room_bypasses_the_duty_cycle_gate, with the
-    opposite expectation. has_mtgo_boundary (former projector/mtgo/project.py
-    check) used to force an immediate rebuild on a new MTGO file; it is
-    deleted along with the Current match tab's MTGO support (there is no
-    mulligan window left to protect for MTGO), so a flush now behaves like
-    any other dirty poll — it waits for the ordinary duty-cycle gate rather
-    than forcing an off-cadence rebuild.
+    opposite expectation. An MTGO match never becomes the current match, so
+    there is no mulligan window to protect and a flush behaves like any other
+    dirty poll — it waits for the ordinary duty-cycle gate rather than forcing
+    an off-cadence rebuild.
 
     _insert_mtgo_raw_row bypasses live's own ``_poll_mtgo`` (there is no
     ``mtgo_dir`` configured here), so ``live._dirty`` is set by hand to
@@ -1076,9 +1070,9 @@ def test_external_rows_mark_the_watcher_dirty_and_the_next_due_poll_projects_the
 
 
 def test_a_failing_poll_does_not_end_the_watch(live, monkeypatch):
-    """One bad poll must never stop the watcher (brief §6).
+    """One bad poll must never stop the watcher.
 
-    Two loops now, so this covers both: a failure in ingest_once must not
+    Two loops, so this covers both: a failure in ingest_once must not
     end the ingest thread (or the projection loop), and a failure in
     project_if_due must not end the projection loop (or the ingest thread).
     """
@@ -1793,7 +1787,7 @@ def test_a_group_sigterm_then_stop_is_a_normal_shutdown(watcher_process, caplog)
     assert watcher.stopped_unexpectedly() is False
 
 
-# --- where the watcher finds Arena's log (plan 6, D11) ----------------------
+# --- where the watcher finds Arena's log -----------------------------------
 #
 # $MTGA_LOG, then [arena] log, then autodetection; a configured file that does
 # not exist yet is passed over, so the 60 s re-resolution picks it up later.

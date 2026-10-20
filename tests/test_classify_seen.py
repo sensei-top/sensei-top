@@ -1,8 +1,8 @@
 """``classify_seen`` — the per-match rule-engine/corpus/tie-break decision
-pulled out of ``classify_matches``'s own loop (S3, sideboard-intermission
-plan) — and the two "compute this at request time" companions it exists
-for: ``rank_candidates(seen_names=...)`` and ``live_opponent_colors``. Both
-let a live read (S4's break read, ``table/intermission.py``) name the
+pulled out of ``classify_matches``'s own loop — and the two "compute this
+at request time" companions it exists for: ``rank_candidates(seen_names=...)``
+and ``live_opponent_colors``. Both let a live read (the sideboarding break's
+read, ``table/intermission.py``) name the
 opponent from a name set built at request time — the live replay's revealed
 zones unioned with ``card_events`` — without touching ``opponent_archetype``
 or waiting for the next ``project()``.
@@ -14,8 +14,8 @@ rather than through ``corpus.build_prior(conn)`` — ``test_corpus_naming.py``
 already covers ``build_prior`` itself and its odds arithmetic is reused
 here unchanged (Laplace-smoothed naive-Bayes log-odds, ``corpus.py``'s own
 docstring); this file's job is only to prove ``classify_seen`` wires that
-score into the same tie-broken decision ``classify_matches`` used to make
-inline, not to re-derive the corpus math.
+score into the same tie-broken decision ``classify_matches`` makes through
+it, not to re-derive the corpus math.
 """
 
 from __future__ import annotations
@@ -75,7 +75,7 @@ def test_classify_seen_returns_none_with_no_names():
 def test_classify_seen_degrades_to_none_for_a_format_with_no_definitions_loaded():
     """classify_matches never calls this for an fmt absent from its own
     `definitions` (its pre-loop skipped_format check runs first), but a
-    direct caller (S4's live read) is not guaranteed to check that first —
+    direct caller (the break's live read) is not guaranteed to check that first —
     a missing format key must degrade to 'nothing to say', not a KeyError."""
     assert classify_seen(
         ["Anything"], "", 1, fmt="Historic", definitions={}, colors_by_name={}, prior=None,

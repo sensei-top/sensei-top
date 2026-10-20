@@ -1,4 +1,4 @@
-"""Every UTC value the server sends ends in ``Z`` (plan 24, D8).
+"""Every UTC value the server sends ends in ``Z``.
 
 The dashboard reads a bare timestamp as the log's own local clock
 (``web/src/lib/time.ts::parseTimestamp``), so a UTC value that lost its

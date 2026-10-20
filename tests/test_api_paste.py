@@ -1,7 +1,7 @@
-"""The seven paste routes (plan 24, D1/D5/D6/D12/D13): ``PUT`` on the deck
-guide, one matchup brief, the coverage card and the RCQ guide (S7, the cards
-with a CLI importer), and on the match report, the training plan and the
-coach (S8, the prose cards) stores a pasted answer, and never calls a model.
+"""The seven paste routes: ``PUT`` on the deck guide, one matchup brief, the
+coverage card and the RCQ guide (the cards with a CLI importer), and on the
+match report, the training plan and the coach (the prose cards) stores a
+pasted answer, and never calls a model.
 
 The headers the answers carry are read off the copied prompt the matching
 ``GET`` serves, the way an assistant copies them back; every other
@@ -627,7 +627,7 @@ def test_match_report_paste_stores_and_the_get_serves_it(client, match_id):
     assert row["context_hash"] == header["context"]
     assert row["input_tokens"] is None and row["output_tokens"] is None
     assert row["cost_usd"] is None
-    # The copied prompt, answer contract included (D13), not the generate one.
+    # The copied prompt, answer contract included, not the generate one.
     assert row["prompt"] == prompt
     assert CONTRACT in row["prompt"]
 

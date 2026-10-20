@@ -216,11 +216,11 @@ def test_a_picked_mtgo_match_joins_an_arena_deck_version_it_was_picked_to(conn):
     assert identity.last_played == "2026-09-02T00:00:00"
 
 
-# --- deck_format (plan 13, D15) ---------------------------------------------
+# --- deck_format -----------------------------------------------------------
 
 
 def test_deck_format_maps_arenas_traditional_standard_to_standard(conn):
-    """D15's first step: ``decks.format`` as one of the seven, Arena's
+    """``identity_format``'s first step: ``decks.format`` as one of the seven, Arena's
     ``TraditionalStandard`` spelling read as Standard. The match names no
     format, so the answer can only have come from the deck record."""
     _insert_deck(conn, "hash1", fmt="TraditionalStandard")
@@ -232,7 +232,8 @@ def test_deck_format_maps_arenas_traditional_standard_to_standard(conn):
 
 def test_deck_format_reads_the_deck_record_before_the_matches(conn):
     """A deck record that names a format answers, even against its matches'
-    majority: the record is D15's first step, the matches only its second."""
+    majority: the record is ``identity_format``'s first step, the matches
+    only its second."""
     _insert_deck(conn, "dek1", fmt="Modern")
     _insert_mtgo_match(conn, "mt1", "2026-09-20T00:00:00", pick_deck_id="dek1",
                        pick_format="Pioneer")
@@ -269,7 +270,8 @@ def test_deck_format_reads_a_draft_deck_through_to_its_matches(conn):
 
 
 def test_deck_format_is_none_when_nothing_names_one(conn):
-    """A Draft deck whose matches have no format either: D15's last step is
+    """A Draft deck whose matches have no format either: ``identity_format``'s
+    last step is
     NULL, never a default."""
     _insert_deck(conn, "hash1", fmt="Draft")
     _insert_match(conn, "m1", "hash1", "win", "2026-08-13T00:00:00")

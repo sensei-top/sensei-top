@@ -242,7 +242,7 @@ def test_a_picked_deck_does_not_turn_missing_turns_into_findings(db):
 
 
 def test_the_snapshot_names_opponent_candidates_for_an_mtgo_match_under_its_format(conn):
-    """Plan 13, phase 7: ``rank_candidates`` reads the match's
+    """``rank_candidates`` reads the match's
     ``v_match_format``, so an MTGO match picked as Modern gets Modern's
     candidates in its snapshot, and none of Standard's. The opponent's card
     is the transcript's own: "Player2000 casts @[Agents of HYDRA@:...@]"
@@ -277,11 +277,11 @@ def test_the_snapshot_names_opponent_candidates_for_an_mtgo_match_under_its_form
 
 
 def test_the_snapshot_classifies_a_picked_deck_under_the_matchs_format(conn):
-    """Plan 13, S8: our own deck is classified under the match's
-    ``v_match_format``, here the Modern pick. ``decks.format`` is NULL, and the
-    old ``arena_format`` read knows only Arena's Standard, so before this the
-    verdict was None. Card 900002 is a placeholder grp_id for a test card; the
-    only definition that names it is the Modern one."""
+    """Our own deck is classified under the match's ``v_match_format``, here
+    the Modern pick. ``decks.format`` is NULL, and an Arena-only format read
+    would know only Arena's Standard, leaving the verdict None. Card 900002
+    is a placeholder grp_id for a test card; the only definition that names
+    it is the Modern one."""
     conn.execute(
         "INSERT INTO cards (grp_id, name, type_line) "
         "VALUES (900002, 'Mosswood Dreadknight', 'Creature')"

@@ -1,4 +1,4 @@
-"""``sensei-top doctor`` and ``diagnostics`` (plan 6, S5).
+"""``sensei-top doctor`` and ``diagnostics``.
 
 ``client_header.log`` is the first 40 lines of a real ``Player.log``; its
 line 35 is ``DETAILED LOGS: ENABLED`` (found with ``grep -a -n`` on the file,

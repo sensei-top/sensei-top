@@ -372,7 +372,7 @@ def test_stored_report_prose_is_cleaned_and_web_sources_are_appended(tmp_path, m
     assert not any(s["url"] == "https://example.com/article" for s in body["sources"])
 
 
-# --- the format parameter (plan 13, D12/D13) -------------------------------
+# --- the format parameter --------------------------------------------------
 
 
 def _fake_completion(prompt, *, cfg, label, allowed_domains, max_searches=8):
@@ -383,7 +383,7 @@ def _fake_completion(prompt, *, cfg, label, allowed_domains, max_searches=8):
 
 
 def test_every_route_names_the_default_format_when_none_is_asked_for(client, empty_client):
-    """All ten matches are Standard, so D13's default is Standard; an empty
+    """All ten matches are Standard, so the default is Standard; an empty
     database has no match at all, and the default falls back to Standard."""
     assert client.get("/api/coach").json()["format"] == "Standard"
     assert client.get("/api/coach/narrative").json()["format"] == "Standard"
@@ -393,7 +393,7 @@ def test_every_route_names_the_default_format_when_none_is_asked_for(client, emp
 
 def _recent_modern_db(tmp_path):
     """Ten Standard matches in 2026-01..09, then one Modern match on
-    2026-09-20: the most recent match is Modern, so Modern is D13's default."""
+    2026-09-20: the most recent match is Modern, so Modern is the default."""
     db_path = tmp_path / "recent-modern.db"
     conn = open_database(db_path)
     for i in range(10):

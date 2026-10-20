@@ -1740,7 +1740,7 @@ def test_metrics_snapshot_round_trips_through_json(conn):
     snap = evidence_mod.metrics_snapshot(evidence)
     round_tripped = json.loads(json.dumps(snap))
     assert round_tripped == snap
-    # Version 2 (plan 13, D12): skill sections span every format, and the
+    # Version 2: skill sections span every format, and the
     # report's format is recorded.
     assert (snap["version"], snap["fmt"]) == (2, "Standard")
 

@@ -519,7 +519,7 @@ def test_a_card_with_only_a_display_title_still_imports(conn, tmp_path):
     assert conn.execute("SELECT name FROM cards").fetchone()[0] == "Crash of Rhinos"
 
 
-# --- name backfill (Phase 3c) ------------------------------------------------
+# --- name backfill -----------------------------------------------------------
 # arena_id covers only one representative printing per functional card. An
 # alternate-art/showcase/bonus-sheet sibling, or a DFC/Adventure/Omen/Room
 # second face, gets its own grpId from Arena but no arena_id from Scryfall, so
@@ -880,7 +880,7 @@ def test_arena_set_code_is_uppercased(conn, tmp_path):
     assert conn.execute("SELECT set_code FROM cards").fetchone()[0] == "WOE"
 
 
-# Magic Online's deck store names a card by its `mtgo_id` alone (plan 12, S9),
+# Magic Online's deck store names a card by its `mtgo_id` alone,
 # so every printing that has one is kept in `mtgo_card`, Arena-legal or not.
 # `scryfall_mtgo_printings.jsonl` holds five real `default_cards` lines,
 # verbatim, picked by `mtgo_id`:

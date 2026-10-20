@@ -7,7 +7,9 @@ import { DeckPicker } from './OpponentDeckLabel'
 import { Button, Card, Disclosure, Meter } from './ui'
 
 // Enough to show real disagreement without turning into the full candidate
-// list — rank_candidates() already orders these best-fit first.
+// list. rank_candidates() orders evidenced archetypes, then evidenced
+// fallbacks, each best-fit first; only with a corpus prior are the two
+// re-sorted together by fit.
 const SHORTLIST_SIZE = 3
 
 function unclearDetail(match: CurrentMatch): string | null {

@@ -1142,8 +1142,8 @@ def test_a_match_someone_else_watched_is_still_projected(conn):
 
 
 def test_a_four_player_transcript_still_warns(conn, caplog):
-    """Synthetic input: S0 transcribed no Commander file; the real one had four
-    players. The handle plays, but has three opponents."""
+    """Synthetic input: no Commander transcript is captured; a real one had
+    four players. The handle plays, but has three opponents."""
     strings = [
         GUID,
         GUID,
@@ -1173,9 +1173,6 @@ def test_v_current_match_never_shows_mtgo_however_new(tmp_path):
     """Migration 040 (migrations/040_arena_only_current_match.sql) makes
     v_current_match Arena-only: an MTGO match never becomes the current
     match, no matter how recently it started relative to Arena's own rows.
-    Inverted from this test's pre-040 self (then named
-    test_v_current_match_prefers_mtgo_when_newest, which asserted the
-    opposite) — same setup, opposite expectation.
 
     Built directly via SQL rather than through a full Arena ingest+project():
     only matches.match_id/started_at/result are required columns
@@ -1190,7 +1187,7 @@ def test_v_current_match_never_shows_mtgo_however_new(tmp_path):
             "VALUES ('arena-old', '2026-09-14T10:00:00', 'win', 'arena')"
         )
         # The MTGO match: incomplete, newest by started_at — the exact
-        # condition that used to win before migration 040.
+        # condition that would make it current if the view admitted MTGO.
         _insert_mtgo_row(conn, data=FIXTURE_BYTES[:2000], logged_at="2026-09-14T12:42:00")
         project_mtgo(conn, "Player1")
 
@@ -1923,7 +1920,7 @@ def test_a_join_after_a_decided_game_is_a_new_game_even_after_a_drop():
 
 
 def test_a_game_that_started_before_the_last_one_ended_warns_naming_no_one():
-    """Synthetic shape (D2): case 7b cut before its ending lines, plus a start
+    """Synthetic shape: case 7b cut before its ending lines, plus a start
     block."""
     lines = [*_CASE_7B[:-3], "Player2000 joined the game.", "Player1 joined the game."]
     parsed = parse_strings(lines)
