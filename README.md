@@ -34,7 +34,7 @@ real tournament metagame looks like next to it.
 - **Read-only towards both clients.** It reads their log files and never
   writes to anything Arena or Magic Online owns.
 - **Nothing to configure for Arena.** It finds Arena's log on its own,
-  including Steam and Proton installs on Linux.
+  including on Linux through Steam, Lutris, Heroic, Bottles or Wine.
 - **Written advice on your terms.** Deck guides, matchup briefs and
   coaching reports come as a prompt you paste into an assistant you
   already use, or from your own Claude key if you set one.

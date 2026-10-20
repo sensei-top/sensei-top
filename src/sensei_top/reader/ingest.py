@@ -114,7 +114,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from sensei_top import steam
+from sensei_top import steam, wine
 from sensei_top.reader.dates import AUTO, auto_resolver
 from sensei_top.reader.segmenter import LogEntry, Segmenter
 
@@ -526,31 +526,96 @@ def watch(
             time.sleep(interval)
 
 
-_STEAM_COMPATDATA_RELATIVE = (
-    f"steamapps/compatdata/{steam.MTGA_APP_ID}/pfx/drive_c/users/steamuser/"
-    "AppData/LocalLow/Wizards Of The Coast/MTGA/Player.log"
-)
+# Inside a Wine prefix, under each Wine user (Proton's is ``steamuser``, a
+# plain Wine one is the login name); ``Public`` is Windows' shared profile.
+_PREFIX_USERS = "drive_c/users"
+_PREFIX_LOG_RELATIVE = "AppData/LocalLow/Wizards Of The Coast/MTGA/Player.log"
 
 # Under the user's profile on Windows, whichever installer put Arena there
 # (Wizards', Steam or Epic): the log's folder does not follow the install.
 _WINDOWS_LOG_RELATIVE = "AppData/LocalLow/Wizards Of The Coast/MTGA/Player.log"
 
 
+_last_debug: tuple[int, str] | None = None
+
+
+def _prefix_logs(prefix: Path) -> list[Path]:
+    """The ``Player.log`` paths a prefix could hold, one per Wine user but Public."""
+    try:
+        users = sorted(p for p in (prefix / _PREFIX_USERS).iterdir() if p.name != "Public")
+    except OSError:
+        return []
+    return [user / _PREFIX_LOG_RELATIVE for user in users]
+
+
+def _mtime(path: Path) -> float | None:
+    try:
+        return path.stat().st_mtime
+    except OSError:
+        return None  # missing, or vanished since it was listed
+
+
+def _linux_logs() -> list[tuple[Path, str]]:
+    """Existing Linux logs with their source, newest first.
+
+    Candidates are every Steam library's Arena prefix, then every Wine prefix,
+    deduplicated by real path (first spelling kept). The sort is stable, so a
+    tie in mtime keeps that candidate order.
+    """
+    candidates: list[tuple[Path, str]] = []
+    for root in steam.library_roots():
+        prefix = root / "steamapps/compatdata" / steam.MTGA_APP_ID / "pfx"
+        candidates.extend((p, "Steam library") for p in _prefix_logs(prefix))
+    for prefix in wine.wine_prefixes():
+        candidates.extend((p, "Wine prefix") for p in _prefix_logs(prefix))
+    seen: set[Path] = set()
+    found: list[tuple[float, Path, str]] = []
+    for path, source in candidates:
+        try:
+            key = path.resolve()
+        except (OSError, RuntimeError):
+            key = path
+        if key in seen:
+            continue
+        seen.add(key)
+        mtime = _mtime(path)
+        if mtime is not None:
+            found.append((mtime, path, source))
+    found.sort(key=lambda item: -item[0])
+    return [(path, source) for _, path, source in found]
+
+
+def _found() -> list[tuple[Path, str]]:
+    entries: list[tuple[Path, str]] = []
+    if (env := os.environ.get("MTGA_LOG")) and Path(env).exists():
+        entries.append((Path(env), "environment"))
+    entries.extend(_linux_logs())
+    other: list[Path] = []
+    if sys.platform == "win32" and (profile := os.environ.get("USERPROFILE")):
+        other.append(Path(profile) / _WINDOWS_LOG_RELATIVE)
+    other.append(Path.home() / "Library/Logs/Wizards Of The Coast/MTGA/Player.log")  # macOS
+    entries.extend((p, "platform default") for p in other if p.exists())
+    return entries
+
+
+def found_log_paths() -> list[Path]:
+    """Every Arena log autodetection finds, the one in use first.
+
+    ``$MTGA_LOG`` leads when it exists; then the Linux logs, newest first, so a
+    stale prefix cannot shadow the live one; then the Windows and macOS places.
+    """
+    return [path for path, _ in _found()]
+
+
 def default_log_path() -> Path | None:
     """Best-effort default for the current platform. None if nothing plausible."""
-    candidates: list[Path] = []
-    if env := os.environ.get("MTGA_LOG"):
-        candidates.append(Path(env))
-    # Linux/Proton is checked first: this project's home environment runs Arena
-    # through Steam Play, where the log sits inside the compatdata prefix —
-    # under whichever library folder the game happens to be installed in.
-    candidates.extend(root / _STEAM_COMPATDATA_RELATIVE for root in steam.library_roots())
-    if sys.platform == "win32" and (profile := os.environ.get("USERPROFILE")):
-        candidates.append(Path(profile) / _WINDOWS_LOG_RELATIVE)
-    candidates.append(
-        Path.home() / "Library/Logs/Wizards Of The Coast/MTGA/Player.log"
-    )  # macOS
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    return None
+    entries = _found()
+    if not entries:
+        return None
+    # /api/live's heartbeat asks every 3 s: say it only when it changes.
+    global _last_debug
+    summary = (len(entries), entries[0][1])
+    if summary != _last_debug:
+        _last_debug = summary
+        log.debug("Arena log: %d found, using the one from %s", *summary)
+    return entries[0][0]
