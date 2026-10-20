@@ -178,7 +178,7 @@ def test_bo1_game_complete_never_sets_an_intermission():
 
 
 # ---------------------------------------------------------------------------
-# build_break_read (S4 steps 2-7): naming the opponent, finding a plan, and
+# build_break_read: naming the opponent, finding a plan, and
 # the past-boarding/caching reads around it. None of this has anything to do
 # with Player.log parsing, so there is no fixture fact to derive these
 # expectations from (AGENTS.md rule 8 names ``fixture_peek.py`` for exactly
@@ -262,12 +262,13 @@ def _live_at_break(*, game_number=1, won=True, reason="ResultReason_Concede", zo
 
 
 def test_manual_override_gives_an_exact_plan_and_beats_any_live_read(conn):
-    """Step 2's precedence: ``opponent_deck_override`` always wins, checked
-    before ``classify_seen`` is ever called (``table/intermission.py``'s
-    ``_resolve_opponent`` returns on the override row before it even looks
-    at ``fmt``/``names``) — the manual-precedence case S4 names as an
-    alternative to seeding archetype definitions. With a brief already
-    stored for the picked archetype, the plan is 'exact'."""
+    """The manual pick's precedence: ``opponent_deck_override`` always
+    wins, checked before ``classify_seen`` is ever called
+    (``table/intermission.py``'s ``_resolve_opponent`` returns on the
+    override row before it even looks at ``fmt``/``names``), which is what
+    lets this test name the opponent without seeding archetype definitions.
+    With a brief already stored for the picked archetype, the plan is
+    'exact'."""
     deck_id = "deck-exact"
     _insert_deck(
         conn, deck_id, name="Test Deck", cards={"maindeck": [101, 102], "sideboard": [201]}
@@ -319,10 +320,10 @@ def test_no_plan_when_nothing_is_named_or_stored(conn):
 
 
 def test_closest_alternative_plan_when_the_named_archetype_has_no_brief(conn):
-    """Step 5: the chosen archetype (a live rule-engine read, no override)
-    has no stored brief of its own, but a *different* archetype the
-    classifier also ranked does — offered as the closest alternative, never
-    substituted silently for the actual read.
+    """The closest plan: the chosen archetype (a live rule-engine read, no
+    override) has no stored brief of its own, but a *different* archetype
+    the classifier also ranked does — offered as the closest alternative,
+    never substituted silently for the actual read.
 
     Two ``fallback`` definitions, hand-computed against classify.py's own
     constants (read directly, not run-and-observed — AGENTS.md rule 8):
@@ -372,11 +373,11 @@ def test_closest_alternative_plan_when_the_named_archetype_has_no_brief(conn):
 
 
 def test_past_boarding_diffs_against_that_matchs_own_game_1_maindeck(conn):
-    """Step 5b: what this deck identity actually boarded, the last time it
-    faced this archetype. ``opponent_deck_override.archetype_key`` alone
-    drives ``v_match_opponent.opponent_key`` (migration 035's COALESCE puts
-    ``'archetype:' || o.archetype_key`` first), so the past match needs no
-    classifier run to be found.
+    """Past boarding: what this deck identity actually boarded, the last
+    time it faced this archetype. ``opponent_deck_override.archetype_key``
+    alone drives ``v_match_opponent.opponent_key`` (migration 035's COALESCE
+    puts ``'archetype:' || o.archetype_key`` first), so the past match needs
+    no classifier run to be found.
 
     The diff is against that *past* match's own game-1 maindeck
     (``decks.cards_json``), not the current 75 — the current 75 only flags
@@ -531,9 +532,9 @@ class _FakeRequest:
 
 
 def test_cached_break_read_builds_once_for_unchanged_inputs(conn):
-    """api/sql.py's ``_cached_break_read`` (S4 step 7): a second poll with
-    nothing new (no card_events, no reprojection, no corpus fetch) must
-    reuse the cached ``BreakRead`` rather than reclassifying the opponent —
+    """``api/sql.py::_cached_break_read``: a second poll with nothing new
+    (no card_events, no reprojection, no corpus fetch) must reuse the cached
+    ``BreakRead`` rather than reclassifying the opponent —
     checked by identity, not equality, since two independently-built
     ``BreakRead``s with the same values would compare equal regardless."""
     deck_id = "deck-cache"

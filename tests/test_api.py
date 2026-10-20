@@ -86,8 +86,10 @@ def test_live_status_reports_counts_without_a_watcher(client):
 
 
 def test_live_revision_changes_when_data_changes(tmp_path, make_client):
-    """The dashboard refetches on a new revision, so it must move when the
-    projection does — and stay put when nothing happened."""
+    """``revision`` is the per-ingest-tick heartbeat (the dashboard
+    refetches on ``projection_revision`` instead, pinned by the next test),
+    so it must move on new raw events and on a rebuild — and stay put when
+    nothing happened."""
     db_path = tmp_path / "rev.db"
     conn = open_database(db_path)
     with make_client(create_app(db_path)) as c:
@@ -246,7 +248,7 @@ def test_decks_lists_the_fixture_deck(client):
     assert decks[0]["name"] == "Spellelementals"
 
 
-# --- metric 1: winrate ------------------------------------------------------
+# --- winrate ----------------------------------------------------------------
 
 
 def test_winrate_matches_projected_record(client):
@@ -324,7 +326,7 @@ def test_winrate_by_rank_groups_matches_with_no_snapshot_together(client):
     assert row["winrate"] == pytest.approx(0.5)
 
 
-# --- metric 2: play/draw ----------------------------------------------------
+# --- play/draw --------------------------------------------------------------
 
 
 def test_play_draw_splits_by_on_play(client):
@@ -340,7 +342,7 @@ def test_play_draw_on_play_is_boolean_not_integer(client):
     assert all(isinstance(r["on_play"], bool) for r in client.get("/api/metrics/play-draw").json())
 
 
-# --- metric 3: game length + turn curves ------------------------------------
+# --- game length + turn curves ----------------------------------------------
 
 
 def test_game_length_buckets(client):
@@ -1625,7 +1627,7 @@ def test_review_leaks_routes_pass_a_per_format_consensus_window(client, monkeypa
     """Both `find_leaks` call sites — the GET list route and the narrative
     route's own `build_context` — must hand over a `consensus_window`
     resolver, so each match's report is windowed by its own format's reset
-    (plan 13, S8c) and the field record inside
+    and the field record inside
     `review/analyzers/baseline.py` never pools rounds from across one
     (`docs/metagame.md`'s format-reset boundary). The window lookup is
     replaced with one that names the format it was asked for, so this pins
@@ -3139,8 +3141,9 @@ def test_picking_a_candidate_wins_over_the_inferred_one(named_client):
 
 
 def test_picking_a_candidate_flags_it_picked_in_the_candidate_list(named_client):
-    """The advisor's hint context and the 'play around' card both need to
-    know which candidate the player chose, not just that some pick was made —
+    """The picker's "picked" mark (`OpponentDeckLabel.tsx`) and
+    `api/routes/matches.py::_one_per_label` both need to know which
+    candidate the player chose, not just that some pick was made —
     `rank_candidates` flags the matching candidate itself rather than making
     each caller re-look-up `opponent_deck_override`."""
     match_id = _match_id_by_source(named_client, "colors")

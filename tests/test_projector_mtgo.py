@@ -343,10 +343,10 @@ def test_handle_ending_in_a_hyphen_is_one_handle_in_both_begins_shapes():
     assert parsed.games[1].mulligans_by_handle == {"Player1": 0, "Player2000-": 0}
 
 
-# Plan 30's case 8: a real match's lines, card lines trimmed and handles
-# anonymized, the opponent's with the space their real handle has. Read from
-# the lines: game 1 to Player Two (Player1 concedes), games 2 and 3 to Player1
-# (Player Two concedes both), and "Player1 wins the match 2-1".
+# A real match's lines, card lines trimmed and handles anonymized, the
+# opponent's with the space their real handle has. Read from the lines:
+# game 1 to Player Two (Player1 concedes), games 2 and 3 to Player1 (Player
+# Two concedes both), and "Player1 wins the match 2-1".
 _SPACED_HANDLE_MATCH = [
     GUID,
     GUID,
@@ -538,8 +538,8 @@ def test_a_spectator_is_not_a_player():
     assert parsed.spectators == {"Player Three"}
 
 
-# Plan 30's case 9: a real match the user only watched, joined mid-game, so
-# no start block and no player line with a fixed ending.
+# A real match the user only watched, joined mid-game, so no start block
+# and no player line with a fixed ending.
 _WATCHED_MATCH = [
     GUID,
     GUID,

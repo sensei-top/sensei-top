@@ -154,8 +154,10 @@ def from_evidence(e: CoachEvidence) -> CoachEvidenceModel:
     """The explicit dataclass-to-wire-model conversion ``docs/frontend.md``'s
     contract calls for — never ``model_validate`` on a dataclass, which
     would silently start passing through a field the wire model was never
-    meant to expose (``source``, ``format_population``, the prompt-only
-    ``examples``/``decklists``)."""
+    meant to expose (``source``, ``format_population``, ``fmt``, and the
+    prompt-only ``by_source``, ``examples``, ``decklists`` and
+    ``format_counts``; ``CoachEvidenceModel``'s docstring says why each is
+    left out)."""
     return CoachEvidenceModel(
         as_of=e.as_of, population=e.population, window_start=e.window_start,
         overall=_rate_out(e.overall), overall_games=_rate_out(e.overall_games),

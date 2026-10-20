@@ -1,7 +1,7 @@
 """The keep guide: what a keepable opening hand looks like for the deck being
-played right now, from the maindeck alone — no board state, so this is as
-valid during the mulligan decision as at any later point in the game. See
-docs/current-match.md, "The keep guide (`table/keep.py`)".
+played right now, from its maindeck and its own past games — no board state,
+so this is as valid during the mulligan decision as at any later point in the
+game. See docs/current-match.md, "The keep guide (`table/keep.py`)".
 
 ``review.effects`` does the per-card classification, so a card with no
 downloaded rules text degrades to ``"unknown"`` (AGENTS.md rule 4), never

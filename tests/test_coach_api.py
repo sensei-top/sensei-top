@@ -1,16 +1,17 @@
 """Tests for api/routes/coach.py and api/models/coach.py: the coach's own
 free ``GET /api/coach`` and its ``.../narrative`` routes.
 
-Mirrors tests/test_llm.py's credential-gating and stored-report coverage
-for the other four ``POST .../narrative`` routes (match report, leak
-finder, deck guide, RCQ guide), adapted for what makes this one
-different (a plain history INSERT rather than a single overwritten slot, a
-credential resolved through ``load_coach()`` rather than ``load()``, and a
-``write_report`` call that can carry both web citations and reading-list
-ids). No network call is ever made here: ``llm.config.load_coach`` and
-``llm.client.write_report`` are monkeypatched throughout, the same objects
-``api/routes/coach.py`` imports under, so a patch made through those module
-references is visible to the route.
+Mirrors the credential-gating and stored-report coverage of the other four
+``POST .../narrative`` routes (match report, leak finder, deck guide, RCQ
+guide: tests/test_llm.py, and tests/test_api_rcq.py for the RCQ guide's
+stored guide), adapted for what makes this one different (a plain history
+INSERT rather than a single overwritten slot, a credential resolved through
+``load_coach()`` rather than ``load()``, and a ``write_report`` call that
+can carry both web citations and reading-list ids). No network call is ever
+made here: ``llm.config.load_coach`` and ``llm.client.write_report`` are
+monkeypatched throughout, the same objects ``api/routes/coach.py`` imports
+under, so a patch made through those module references is visible to the
+route.
 
 The "sufficient data" fixture builds a synthetic ten-match database
 directly against the projected schema — the same precedent

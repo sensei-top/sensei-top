@@ -202,7 +202,8 @@ export const useLLMStatus = () =>
   useQuery({ queryKey: ['llm-status'], queryFn: () => get<LLMStatus>('/api/llm/status') })
 
 /** The heartbeat. Polls on its own timer; everything else refetches only when
- *  this reports a new `revision`, so an idle dashboard does no real work. */
+ *  this reports a new `projection_revision` (`shell/Shell.tsx`), so an idle
+ *  dashboard does no real work. */
 export const useLive = () =>
   useQuery({
     ...query<LiveStatus>('live', '/api/live'),

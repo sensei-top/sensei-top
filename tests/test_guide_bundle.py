@@ -270,11 +270,11 @@ def test_a_modern_deck_is_classified_under_modern_for_its_field_and_list_diff(co
 def test_a_leak_match_of_another_format_is_measured_against_that_formats_window(
     conn, monkeypatch,
 ):
-    """Plan 13, S8c: the guide's leak rollups window each match by its own
-    format, not by the deck's. By hand, from the seeded corpus: Standard's
-    ban (last played 2026-08-01) opens its window on 2026-08-02, Modern's
-    (2026-07-01) on 2026-07-02. The Standard deck holds one match of each
-    format, so its Modern match takes Modern's window, in both rollups."""
+    """The guide's leak rollups window each match by its own format, not
+    by the deck's. By hand, from the seeded corpus: Standard's ban (last
+    played 2026-08-01) opens its window on 2026-08-02, Modern's (2026-07-01)
+    on 2026-07-02. The Standard deck holds one match of each format, so its
+    Modern match takes Modern's window, in both rollups."""
     _two_formats_with_one_ban_each(conn)
     _insert_deck_and_match(conn, "d1", "m-standard", [11], [])
     conn.execute("UPDATE matches SET format = 'Standard' WHERE match_id = 'm-standard'")

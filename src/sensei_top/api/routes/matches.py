@@ -810,9 +810,10 @@ def match_report_narrative(match_id: str, conn: Conn) -> NarrativeResponse:
 
     ``status`` is ``'ok'`` once ``POST`` on this same path has generated
     one or ``PUT`` has stored a pasted one, ``'prompt'`` when there is
-    evidence but nothing stored yet, and
-    ``'no_report'`` when there is nothing to narrate at all — an empty
-    report is an ordinary outcome, not an error. Always a 200.
+    evidence but nothing stored yet, and ``'no_report'`` when there is
+    nothing to narrate at all — an empty report is an ordinary outcome, not
+    an error. Always a 200 for a match that exists; an unknown
+    ``match_id`` is a 404.
     """
     _require_match(conn, match_id)
     env = narrative_get(_match_report_narrative_spec(conn, match_id))

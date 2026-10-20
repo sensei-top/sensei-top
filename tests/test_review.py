@@ -682,8 +682,8 @@ def _build_reset_straddling_corpus(conn):
 
 
 def test_consensus_since_excludes_pre_reset_cards_from_the_opponent_consensus(conn):
-    """review/snapshot.py:632's bug, pinned: without consensus_since the
-    opponent consensus pools every decklist regardless of a reset in
+    """review/snapshot.py::build_snapshot's opponent consensus, pinned:
+    without consensus_since it pools every decklist regardless of a reset in
     between and "Old Card" (banned, in this scenario) leaks into the
     consensus a match report would call a "usual staple". With it passed,
     only the post-reset decklists count."""
@@ -782,12 +782,12 @@ def test_a_shared_consensus_cache_keeps_each_matchs_format_apart(conn):
 
 
 # --- field_matchup must not cross a format reset either ----------------------
-# v_meta_matchup only gained a date to filter by in 044 (review/snapshot.py's
-# own field_matchup query, unwindowed until this phase). The own-archetype
-# side needs a real classification (field_matchup requires own_archetype is
-# not None), so this builds one full deck/archetype pipeline rather than
-# overriding own_archetype directly the way _role_snapshot does for the
-# opponent side.
+# review/snapshot.py::build_snapshot's field_matchup filters v_meta_matchup
+# by the date migration 044 gave it, through ranked_field_matchup's since.
+# The own-archetype side needs a real classification (field_matchup requires
+# own_archetype is not None), so this builds one full deck/archetype pipeline
+# rather than overriding own_archetype directly the way _role_snapshot does
+# for the opponent side.
 
 
 def _teach_own_archetype(conn, *, deck_id="deckA", key="test-own-archetype"):

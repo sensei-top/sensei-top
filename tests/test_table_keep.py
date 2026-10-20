@@ -222,7 +222,7 @@ def test_boarded_maindeck_wins_over_the_projected_row(conn):
     assert plain is not None and plain.land_count == 17
 
 
-# --- key_plays / mulligan_cost (Layer 2: the deck's own play evidence) -----
+# --- key_plays / mulligan_cost (the deck's own play evidence) --------------
 #
 # These reuse guide/play.py's key_card_timing and mulligan_record rather
 # than reimplementing them, so the fixture helpers below mirror
