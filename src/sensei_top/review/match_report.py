@@ -24,10 +24,9 @@ def build_match_report(
     view_cache: dict | None = None,
 ) -> MatchReport | None:
     """The post-game report for one match, computed fresh from already
-    -projected data — never stored, so it is always current with respect to
-    `cards` and `decks`, which the projector does not own (see
-    ``review/__init__.py``). Returns ``None`` when the match itself does not
-    exist, matching ``build_snapshot``.
+    -projected data and never stored (``review/__init__.py``, rule 2).
+    Returns ``None`` when the match itself does not exist, matching
+    ``build_snapshot``.
 
     ``consensus_since``/``consensus_cache``/``colors_cache``/``view_cache``
     pass straight through to ``build_snapshot`` — see its own docstring for
@@ -35,9 +34,9 @@ def build_match_report(
     correct when the caller knows this format's corpus cannot cross a
     reset; a caller rebuilding many matches' reports in one request
     (``review/leaks.py``) should pass one dict of each cache, shared across
-    calls, and each match the window of that match's own format (plan 13,
-    S8c) — the caches key on the format and the window, so matches of
-    different formats can share them.
+    calls, and each match the window of that match's own format — the
+    caches key on the format and the window, so matches of different
+    formats can share them.
     """
     snap = build_snapshot(
         conn, match_id, consensus_since=consensus_since, consensus_cache=consensus_cache,
@@ -49,8 +48,8 @@ def build_match_report(
     if snap.self_seat is None:
         # self/opp columns are meaningless without a resolved seat (the same
         # rule turns rows follow — docs/conventions.md), so every analyzer
-        # here would find nothing at all. One clear gap beats each of the
-        # eight analyzers separately reporting the same absence.
+        # here would find nothing at all. One clear gap beats each analyzer
+        # separately reporting the same absence.
         return MatchReport(
             match_id=snap.match_id,
             deck_id=snap.deck_id,

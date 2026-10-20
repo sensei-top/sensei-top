@@ -278,9 +278,9 @@ consensus, never another format's. `api/routes/review.py`'s two routes
 `guide/bundle.py` and `coach/evidence.py` pass
 `guide/window.py::consensus_window_resolver`, so a leak's own
 `field_matchup_rate` finding, when it fires, never mixes pre- and
-post-reset field data, or one format's field with another's. The older
-`consensus_since` (one window for every match) is still accepted; passing
-both raises.
+post-reset field data, or one format's field with another's.
+`consensus_since` (one window for every match) is also accepted, though no
+caller passes it; passing both raises.
 
 Both flags are read per match by `leaks.py::_mana_flags`, which answers
 `None` — not `False` — when a match has no evidence to answer from: `screwed`
@@ -315,10 +315,9 @@ pattern label would be that mistake recurring.
 to one deck's matches or a date window) and `consensus_cache`/
 `colors_cache` (shared memoization for `build_consensus` and
 `archetypes.classify._card_colors_by_name` across repeated calls in one
-request) — added for `guide/bundle.py`, which needs both a deck-scoped
-rollup and the unscoped one side by side and calls this function twice per
-request. Every default reproduces the original unscoped, uncached
-behaviour exactly, so no existing caller changed.
+request) — `guide/bundle.py` needs both a deck-scoped rollup and the
+unscoped one side by side and calls this function twice per request. Left
+out, the population is unscoped and each call memoizes on its own.
 
 It also takes `view_cache` and `report_cache`. `view_cache` is the same
 memoization pattern, shared with `build_snapshot`'s own per-request cache
@@ -401,10 +400,11 @@ registry order.
 **Computed on demand, not persisted — the same reasoning as
 `v_match_opponent` (`docs/opponent-deck.md`, "Naming the opponent's deck"), one step further.** Several analyzers read
 `cards.type_line`/`oracle_text` (to tag a card's effect, or classify a
-decklist) and `decks.cards_json`, neither owned by the projector and both
-possibly populated (`sensei-top cards`) long after a match was projected.
-A stored `findings` table would read *wrong*, not merely stale, for every
-match analyzed before that download finished. **The analyzers themselves never
+decklist), downloaded reference data the projector does not own, possibly
+populated (`sensei-top cards`) long after a match was projected; and they
+read a match's `decks.cards_json` through `v_match_deck`, which the user's
+MTGO pick changes with no rebuild. A stored `findings` table would read
+*wrong*, not merely stale, for every match analyzed before either change. **The analyzers themselves never
 touch `sqlite3`** — they are pure functions of a `MatchSnapshot`, which is what
 makes them testable from a constructed snapshot with no database at all — every
 one has the signature `analyze_*(snap: MatchSnapshot) -> AnalyzerResult`, with
