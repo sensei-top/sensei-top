@@ -459,7 +459,7 @@ def test_the_privacy_pages_carry_the_date_they_changed():
     phrases = {"/privacy/": "Last changed", "/pt-br/privacy/": "Última alteração:"}
     for url_path, phrase in phrases.items():
         _, page = load(url_path)
-        assert f"{phrase} 2026-10-13" in page.paragraphs
+        assert f"{phrase} 2026-10-19" in page.paragraphs
 
 
 def test_the_privacy_pages_name_every_request_the_app_makes():
@@ -566,13 +566,16 @@ def test_the_worker_serves_site_with_its_404_page():
 def test_the_download_buttons_go_to_the_worker_and_it_runs_only_for_them():
     """`/download/<platform>` redirects to the newest release's file (`worker/download.mjs`).
 
-    The script runs for `/download/*` and the English pages a visitor in
-    Brazil is sent from (`worker/language.mjs`); every other path is a static
-    asset that never reaches it.
+    The script runs for `/download/*`, the English pages a visitor in Brazil
+    is sent from (`worker/language.mjs`) and the Portuguese home page, which
+    gets the installer suggestion (`worker/suggest.mjs`); every other path is
+    a static asset that never reaches it.
     """
     config = json.loads((SITE.parent / "wrangler.json").read_text(encoding="utf-8"))
     assert (SITE.parent / config["main"]).is_file()
-    assert config["assets"]["run_worker_first"] == ["/download/*", *portuguese_redirects()]
+    first = config["assets"]["run_worker_first"]
+    assert first == ["/download/*", "/", "/help/", "/privacy/", "/pt-br/"]
+    assert set(first) == {"/download/*", *portuguese_redirects(), "/pt-br/"}
     assert config["assets"]["binding"] == "ASSETS"
     assert config["observability"] == {"enabled": False}
     for url_path in ("/", "/pt-br/"):
@@ -580,6 +583,29 @@ def test_the_download_buttons_go_to_the_worker_and_it_runs_only_for_them():
         buttons = [a["href"] for a in page.find("a") if "button" in (a.get("class") or "").split()]
         assert buttons == list(DOWNLOADS), url_path
         assert not [h for h in hrefs(page) if "/releases" in h], url_path
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_each_landing_carries_one_hidden_note_per_system_with_no_build(url_path):
+    _, page = load(url_path)
+    notes = [a for a in page.find("p") if "data-os" in a]
+    assert all("hidden" in a for a in notes), url_path
+    assert sorted(a["data-os"] for a in notes) == ["mac", "phone"], url_path
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_the_static_buttons_keep_windows_first_for_an_unknown_visitor(url_path):
+    _, page = load(url_path)
+    buttons = [a for a in page.find("a") if "button" in (a.get("class") or "").split()]
+    assert [(a["href"], a["class"]) for a in buttons] == [
+        ("/download/windows", "button primary"),
+        ("/download/linux", "button"),
+    ], url_path
+
+
+def test_the_stylesheet_puts_the_primary_button_first():
+    css = (SITE / "site.css").read_text(encoding="utf-8")
+    assert ".actions .primary { order: -1; }" in css
 
 
 def portuguese_redirects():

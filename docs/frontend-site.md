@@ -97,7 +97,8 @@ answers an unknown path with an empty 404. Workers static assets read
 Two things are not plain files. The Download buttons, `/download/windows`
 and `/download/linux`, run the Worker's script (`worker/index.mjs`, its
 logic in `worker/download.mjs`); so does every English page with a
-Portuguese version, for the language below. `run_worker_first` in `wrangler.json` keeps it to those paths. It fetches
+Portuguese version, for the language below, and both home pages, for the
+installer suggestion after it. `run_worker_first` in `wrangler.json` keeps it to those paths. It fetches
 the newest release's `latest.yml` or `latest-linux.yml` from GitHub — the
 feed an installed copy's updater reads — and redirects to the file it names
 in that release, so the buttons follow each release with no step of their
@@ -126,6 +127,25 @@ so a new pair of pages goes into `PORTUGUESE` and `run_worker_first` too;
 `tests/test_site.py` fails until it does. `wrangler dev`
 fills `request.cf` from the machine's own connection, so it shows only the
 local country's side; the other side is the unit test.
+
+The same script suggests the installer on the two home pages, `/` and
+`/pt-br/` (`worker/platform.mjs`, `worker/suggest.mjs`). It reads the system
+the browser names: `Sec-CH-UA-Platform`, which Chromium sends unasked over
+HTTPS, or else the platform token in `User-Agent`, checked in an order that
+is itself the rule, because Android's says Linux and an iPad's says
+Macintosh. It never sends `Accept-CH`, so no other hint is asked for. Through
+`HTMLRewriter` it moves `primary` to that system's button, which
+`.actions .primary { order: -1 }` puts first, or removes `hidden` from the
+note for a Mac or a phone; the notes' wording is in each page's HTML, and the
+markup is never reordered. The static page is the whole page for a visitor
+whose system is unknown, ChromeOS included, with Windows first. An iPad
+reports itself as a Mac, so the Mac note is written to be true on one. Both
+pages always send `Vary: Sec-CH-UA-Platform, User-Agent`. A rewritten page
+is fetched without the request's `If-None-Match` and `If-Modified-Since`, and
+drops the asset's `ETag` and `Last-Modified`, because those name the static
+page, not the one sent. The privacy pages name this read, so a new signal
+goes there first. Under `wrangler dev`, `curl -A '<User-Agent>'` shows each
+system's page.
 The Worker answers on `senseitop.com`, with `www` redirecting there, and on
 the account's `workers.dev` address. It was meant to be a Pages project
 (plan 9, D2); the dashboard's git flow now creates a Worker, and a static
