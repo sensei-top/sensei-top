@@ -4,8 +4,9 @@ Classifies the player's own current decklist with the same
 ``archetypes.classify`` rule engine ``review/snapshot.py`` already uses for
 one match at a time (``_classify_own_deck``, reused here rather than
 duplicated — one classification path, one place to fix a bug in it), then
-compares it against ``review.consensus.build_consensus`` for that archetype,
-windowed to winning post-reset lists.
+compares it against ``review.consensus.build_consensus`` for that archetype
+in the deck's format, windowed to winning post-reset lists. See
+docs/guide.md, "`list_diff.py` — your 75 against the field's consensus".
 """
 
 from __future__ import annotations
@@ -154,10 +155,9 @@ def _duplicate_names(
     *, fmt: str, since: str | None, min_wins: int, board: str = "main",
 ) -> tuple[DuplicateNames, ...]:
     """Flag (never merge) two consensus cards that share an identical
-    type_line and mana_cost and never co-occur in one decklist — the shape
-    of the guide's own third correction, for whatever ``oracle_id``
-    canonicalisation in ``build_consensus`` did not already catch (no
-    ``oracle_id`` on file for either printing)."""
+    type_line and mana_cost and never co-occur in one decklist, for whatever
+    ``oracle_id`` canonicalisation in ``build_consensus`` did not already
+    catch (no ``oracle_id`` on file for one of the printings)."""
     rows = {
         row["name"]: (row["type_line"], row["mana_cost"])
         for row in conn.execute(
@@ -231,7 +231,7 @@ def build_list_diff(
     both real gaps, never guessed around.
 
     ``fmt`` is the deck's format; omitted, it is read from ``identity``
-    (``guide/deck.py``'s ``identity_format``, D15). It classifies the deck and
+    (``guide/deck.py::identity_format``). It classifies the deck and
     picks the corpus for both consensus lists and the duplicate-warning scan,
     whether or not ``verdict`` is given. A deck with no format gets no diff.
 
@@ -282,7 +282,7 @@ def build_list_diff(
         return None
     # A separate consensus for the sideboard — comparing the player's own
     # sideboard against the field's *maindeck* staples would recommend
-    # boarding in cards they already run (the bug this split fixes).
+    # boarding in cards they already run (``build_consensus``'s docstring).
     # Missing entirely (e.g. a corpus source that never records sideboards)
     # is a real, empty consensus, not an error — every sideboard card then
     # reads as "flex" rather than the whole list diff failing.
@@ -313,8 +313,7 @@ def build_list_diff(
         main_consensus, conn, verdict.key, fmt=fmt, since=since, min_wins=min_wins, board="main",
     )
     # One warning per pair as the reader sees it: shares compared at the
-    # whole percent the sentence writes, as they were when this compared
-    # the sentences themselves.
+    # whole percent the sentence writes.
     def shown(d: DuplicateNames) -> tuple:
         return d.names, tuple(f"{share:.0%}" for share in d.shares)
 

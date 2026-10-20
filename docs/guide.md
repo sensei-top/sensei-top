@@ -108,21 +108,22 @@ had already dropped to 9%.
 
 `cards --scryfall`'s name backfill (`cards.py`'s module docstring) widens
 `legality_known`'s coverage without changing what it means: an alternate-art
-or bonus-sheet sibling grp_id that used to have no legality now carries the
-same `card_legality` rows as the printing Scryfall did attach an `arena_id`
-to, each format filled on its own, so fewer real cards fall on the wrong
-side of the "known vs. unknown" line.
+or bonus-sheet sibling grp_id Scryfall attached no `arena_id` to carries the
+same `card_legality` rows as the printing it did attach one to, each format
+filled on its own, so fewer real cards fall on the wrong side of the "known
+vs. unknown" line.
 
-`structural_change` is the check that would have caught the hand-written
-guide's own worst mistake: for each archetype with enough pre-reset decks,
-what fraction of its lists played a card the reset banned. Above
-`CHANGED_THRESHOLD` (0.30) its pre-reset matchup rate is **void, not merely
-stale** — `verdict = "changed"`, or `"gone"` if it has zero post-reset
-decks. Only `"intact"` may carry a rate forward.
+`structural_change` decides whether a pre-reset matchup rate may carry
+forward: for each archetype with enough pre-reset decks
+(`MIN_PRE_RESET_DECKS`), what fraction of its lists played a card the reset
+banned. An archetype with zero post-reset decks is `"gone"`; otherwise, at
+or above `CHANGED_THRESHOLD` (0.30), its pre-reset matchup rate is **void,
+not merely stale** — `verdict = "changed"`. Only `"intact"` may carry a
+rate forward.
 
 ### `play.py` — the deck's own play evidence
 
-Four views of one question, each scoped to a `DeckIdentity`'s `deck_ids`:
+Five views of one question, each scoped to a `DeckIdentity`'s `deck_ids`:
 `board_curve` (median hand/life/lands/opponent-permanents by the player's
 own turn, split win/loss), `zone_curve` (median card-type-bucket count per
 zone per turn, split win/loss, ranked by which buckets diverge most —
@@ -132,11 +133,11 @@ bucketed by the turn a card first resolved, cards chosen automatically —
 maindeck at ≥3 copies, ranked by `review.effects.is_finisher` then mana
 value), `mulligan_record` and `game_length`.
 
-Two bugs the hand-written version shipped once, now pinned by
-`tests/test_guide_play.py`: `turns.turn_number` counts player-turns
-*alternating seats*, so a player-turn index is `(turn_number + 1) // 2`; and
-a "first resolved by turn N" bucketing must iterate every game, not just
-games where the card resolved, or "never resolved" silently undercounts.
+Two traps, both pinned by `tests/test_guide_play.py`: `turns.turn_number`
+counts player-turns *alternating seats*, so a player-turn index is
+`(turn_number + 1) // 2`; and a "first resolved by turn N" bucketing must
+iterate every game, not just games where the card resolved, or "never
+resolved" silently undercounts.
 
 ### `list_diff.py` — your 75 against the field's consensus
 
@@ -148,16 +149,16 @@ format's archetype rules, then compares it against
 only decks from that format's events count, since one archetype key can
 name a list in more than one format's corpus, and `fmt=None` has no
 consensus rather than an all-format one. The comparison is separate
-for the maindeck and the sideboard (`board="main"` / `board="side"`;
-`build_consensus` read only `mainboard_json` before this package needed
-sideboard consensus too, and comparing a sideboard against the field's
-*maindeck* staples recommended boarding in cards the player already ran —
-see that function's own docstring). Each card gets one of four verdicts:
-`flex` for a card the player runs that the corpus has simply never
-recorded; for one the field plays at or above `STAPLE_SHARE`, `correct` at
-the consensus count, `trim` above it and `add` below it; `correct` for one
-the field plays less often; and `add` for a staple the player doesn't run
-at all.
+for the maindeck and the sideboard (`board="main"` / `board="side"`):
+comparing a sideboard against the field's *maindeck* staples would
+recommend boarding in cards the player already runs — see
+`build_consensus`'s own docstring. A corpus with no sideboard consensus
+is an empty one, not a failure: every sideboard card then reads `flex`.
+Each card gets one of four verdicts: `flex` for a card the player runs
+that the corpus has simply never recorded; for one the field plays at or
+above `STAPLE_SHARE`, `correct` at the consensus count, `trim` above it
+and `add` below it; `correct` for one the field plays less often; and
+`add` for a staple the player doesn't run at all.
 
 `duplicate_warnings` is the fallback for one card counted under two names
 that `cards.oracle_id` canonicalisation didn't already catch (no

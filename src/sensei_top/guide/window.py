@@ -1,12 +1,11 @@
 """Format resets, detected from the tournament corpus itself — no
-hand-maintained ban date.
+hand-maintained ban date. See docs/guide.md, "`window.py` — format resets,
+detected, not declared".
 
-Replaces a hand-kept ban date and banned-card list with a real computation:
-a card's ``card_legality`` row for the format (``migrations/053``,
-from Scryfall's own ``legalities``) tells us it is banned; the
-corpus tells us *when* it stopped being played. Pooling data across an
-undetected reset was an earlier hand-written guide's worst bug — it named
-two top decks that no longer existed. This module is what makes that mistake
+A card's ``card_legality`` row for the format
+(``migrations/053_card_legality.sql``, from Scryfall's own ``legalities``)
+tells us it is banned; the corpus tells us *when* it stopped being played.
+This module is what makes pooling data across an undetected reset
 structurally impossible rather than merely documented.
 """
 
@@ -95,10 +94,8 @@ def legality_known(conn: sqlite3.Connection, fmt: str = "Standard") -> bool:
     undetected no matter how plainly the corpus shows one.
 
     The first case is a fact about the format; the second is a hole in the
-    local data. Reporting them the same way is what let a real guide pool a
-    Standard corpus across a ban and open with a 20.7% share for an
-    archetype that had already fallen out of the field. Callers must say
-    which one they are in.
+    local data, and reporting it as the first pools the corpus across a ban
+    nothing detected. Callers must say which one they are in.
     """
     return conn.execute(
         "SELECT 1 FROM card_legality WHERE format = ? LIMIT 1", (fmt,)
@@ -124,7 +121,7 @@ def format_resets(conn: sqlite3.Connection, fmt: str = "Standard") -> list[Forma
         return []
 
     # One pass over the whole corpus rather than one pass per banned card —
-    # Scryfall's bulk export carries every card ever banned in Standard's
+    # Scryfall's bulk export carries every card ever banned in the format's
     # history, most of them irrelevant to this format's own corpus, so
     # scanning per-card here would cost O(banned cards x corpus size)
     # instead of O(corpus size).
@@ -187,10 +184,11 @@ def format_resets(conn: sqlite3.Connection, fmt: str = "Standard") -> list[Forma
 def consensus_window_resolver(
     conn: sqlite3.Connection, known: dict[str, str | None] | None = None
 ) -> Callable[[str], str | None]:
-    """The one per-format window resolver outside the API routes: a format
+    """The per-format window resolver ``review/leaks.py::find_leaks`` takes
+    as ``consensus_window``, for every caller outside the API routes
+    (``api/routes/review.py::_leaks_consensus_window`` is theirs): a format
     maps to the ``window_start`` of its latest reset, or ``None`` when none is
-    detected. It is the resolver ``review/leaks.py::find_leaks`` takes as
-    ``consensus_window``. Each format is resolved once per resolver, because
+    detected. Each format is resolved once per resolver, because
     ``format_resets`` scans the whole corpus. ``known`` seeds formats whose
     window the caller has already computed (a copy is taken)."""
     windows: dict[str, str | None] = dict(known or {})

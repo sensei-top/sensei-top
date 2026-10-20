@@ -1,20 +1,17 @@
-"""The deck's own play evidence — four independent views of one question:
-what does this deck actually do across the games it has played?
+"""The deck's own play evidence — five independent views of one question:
+what does this deck actually do across the games it has played? Each is
+scoped to a ``DeckIdentity``'s ``deck_ids``. See docs/guide.md, "`play.py`
+— the deck's own play evidence".
 
-Each function generalises one table from a one-off script written for a
-single deck, scoped to a ``DeckIdentity``'s ``deck_ids`` rather than a
-hard-coded deck name.
-
-Two bugs that earlier version of this analysis shipped, and this module
-must not reintroduce:
+Two traps this module must not reintroduce, both pinned by
+``tests/test_guide_play.py``:
 
 * ``turns.turn_number`` counts player-turns *alternating seats*, so a
   player-turn index is ``(turn_number + 1) // 2``
-  (``projector/game_state.py``).
+  (``projector/game_state.py``; ``_player_turn``).
 * A "how many games had this card resolve by turn N" bucketing must
   iterate every game, not just games where the card resolved at all, or
-  "never resolved" is silently undercounted — this shipped wrong once
-  (reported 1-10, the real number was 5-13).
+  "never resolved" is silently undercounted (``key_card_timing``).
 """
 
 from __future__ import annotations
@@ -49,10 +46,9 @@ class BoardCurvePoint:
 @dataclass(frozen=True, slots=True)
 class ZoneCurveSplit:
     """One card-type-bucket/zone combo's medians, by result and own-turn.
-    ``win``/``loss`` default empty rather than being absent — the same
+    ``win``/``loss`` are always present, empty when there is no data — the
     "empty dict means no data here" convention every ``.get(x, {})`` read
-    in ``guide/markdown.py`` already assumes, now made explicit as real
-    fields instead of two dynamically-present dict keys."""
+    in ``guide/markdown.py`` assumes."""
 
     win: dict[str, float]
     loss: dict[str, float]
@@ -88,26 +84,18 @@ def _deck_matches(deck_ids: Sequence[str]) -> str:
     which is NULL for every MTGO match.
 
     Used as ``m.match_id IN (...)`` so every child table (``games``, ``turns``,
-    ``turn_zones``, ``card_events``) is searched by its own ``match_id`` index.
+    ``turn_zones``, ``card_events``) is searched by its own ``match_id`` index,
+    and ``matches`` scanned once, inside the subquery (``EXPLAIN QUERY PLAN``).
     Filtering the view's COALESCEd ``deck_id`` in the outer query instead has no
     index and scans a child table whole (migration 050's header measured the
-    same trap on ``v_deck_identity``). Timings on a synthetic database of 150
-    decks and 1,200 matches (300 MTGO, picked), a ten-version identity, best of
-    five, in ms, HEAD's ``m.deck_id`` body -> ``JOIN v_match_deck`` filtered on
-    ``md.deck_id`` -> this form: board_curve 2.8 -> 23.6 -> 4.7, zone_curve
-    5.8 -> 66.8 -> 8.0, key_card_timing 1.6 -> 21.1 -> 2.9, mulligan_record
-    and game_length 0.1 -> 2.0 -> 0.6. ``EXPLAIN QUERY PLAN`` shows each child
-    table searched by ``match_id`` and ``matches`` scanned once, inside the
-    subquery."""
+    same trap on ``v_deck_identity``)."""
     return f"SELECT match_id FROM v_match_deck WHERE deck_id IN ({_placeholders(deck_ids)})"
 
 
 def _player_turn(turn_number: int) -> int:
     """A global turn counter alternating seats -> the player's own turn
-    index. Turn 1 and 2 are both "your turn 1" if you're on the draw and
-    turn_number starts at 1 for whoever goes first; this matches the
-    convention the original one-off script verified against a real
-    fixture."""
+    index (the module docstring's first trap). ``turn_number`` starts at 1
+    for whoever goes first, so turns 1 and 2 are both "your turn 1"."""
     return (turn_number + 1) // 2
 
 
@@ -188,11 +176,10 @@ def zone_curve(
     conn: sqlite3.Connection, identity: DeckIdentity, *, top_n: int = 3
 ) -> dict[str, ZoneCurveSplit]:
     """Median count of each card-type bucket in each zone on the player's
-    Nth own turn, split win/loss — generalises "instants+sorceries in the
-    graveyard" (the Izzet Spellementals guide's own mana-discount metric)
-    to any deck's own resource curve. Only the buckets whose win/loss
-    medians diverge most are returned; every zone/bucket is computed, the
-    rest are just not worth a reader's attention.
+    Nth own turn, split win/loss — any deck's own resource curve. Only the
+    ``top_n`` buckets whose win/loss medians diverge most are returned;
+    every zone/bucket is computed, the rest are just not worth a reader's
+    attention.
     """
     if not identity.deck_ids:
         return {}
@@ -256,8 +243,8 @@ def zone_curve(
 def _choose_key_cards(
     conn: sqlite3.Connection, identity: DeckIdentity, *, limit: int = 6
 ) -> list[str]:
-    """Maindeck cards at >=3 copies, ranked by is_finisher then mana value —
-    the automatic replacement for a hand-kept list of key creatures."""
+    """Maindeck cards at >=3 copies, ranked by is_finisher then mana value,
+    at most ``limit``."""
     maindeck = identity.current_cards.get("maindeck") or []
     counts: Counter = Counter(maindeck)
     grp_ids = [g for g, n in counts.items() if n >= 3]
@@ -338,13 +325,13 @@ def mulligan_split(
     """``(wins, games)`` for games kept at seven vs. mulliganed to six or
     fewer, over a caller-built ``where`` clause on ``games`` (aliased ``g``)
     joined to ``matches`` (aliased ``m``) — the same caller-builds-the-clause
-    idiom ``guide/field.py``'s ``_classified_deck_total`` already uses. Both
-    keys are always present, even at ``(0, 0)``.
+    idiom as ``guide/field.py::_classified_deck_total``. Both keys are always
+    present, even at ``(0, 0)``.
 
     The one definition of "kept seven vs. mulliganed" that ``mulligan_record``
     below (scoped to one deck identity's ``deck_ids``) and
-    ``coach/evidence.py``'s ``_build_mulligans`` (scoped to a report's own
-    match population) both call rather than repeat."""
+    ``coach/evidence.py::_build_mulligans`` (scoped to a report's own match
+    population) both call rather than repeat."""
     rows = conn.execute(
         f"""
         SELECT g.self_mulligans, g.result FROM games g
@@ -370,8 +357,9 @@ def mulligan_record(
     read over projected data; the hand actually shipped (after bottoming
     cards under the London rule) is never in the log at any point, so no
     review of a finished game can say whether a mulligan was right — see
-    review/analyzers/frame.py's own caveat, and table/opening_hand.py for
-    the live pre-decision read this is deliberately not."""
+    ``review/analyzers/frame.py::_MULLIGAN_CAVEAT``, and
+    ``table/opening_hand.py`` for the live pre-decision read this is
+    deliberately not."""
     if not identity.deck_ids:
         return {}
     where = f"m.match_id IN ({_deck_matches(identity.deck_ids)})"
