@@ -52,7 +52,9 @@ Three exceptions, all deliberate and all documented at the site:
 - **`table/` reads `raw_events` directly.** It replays the current match at
   request time rather than reading `turns`, because a full `project()` rebuild
   costs several times the 5-second cadence (see "Full rebuild, always") while
-  one match's replay costs 0.03–0.08 s. It reuses `projector/game_state.py`'s
+  one match's replay costs a small fraction of a second (measured in
+  `docs/current-match.md`, "The live replay (`table/live.py`,
+  `projector/live_state.py`)"). It reuses `projector/game_state.py`'s
   `GameStateTracker` — the *same* tracker `project()` drives — so this is one
   parser with two drivers, never a second encoding of Arena semantics. See
   [current-match.md](current-match.md).
@@ -1116,8 +1118,9 @@ runs far past the 5-second `project_every` default, so anything sourced from
 `turns` on a mature database lags `raw_events` by one rebuild at best, and
 by a rebuild, a gate interval and another rebuild at worst: one to three
 rebuilds at the default `duty_factor`. Replaying one match alone, bounded by
-its own room-opening event, costs 0.03-0.08 s regardless of how much history
-sits behind it.
+its own room-opening event, costs the same order of time however much history
+sits behind it (`docs/current-match.md`, "The live replay (`table/live.py`,
+`projector/live_state.py`)", has the measurement).
 That rebuild also runs in its own OS process now (`live.WatcherProcess`),
 not a thread inside the API's own process, because a rebuild sharing the
 API's GIL taxed every request during it ("Live mode's two cadences" has

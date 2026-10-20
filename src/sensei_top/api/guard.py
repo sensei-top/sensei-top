@@ -2,8 +2,26 @@
 answers three questions before any router runs — is this request addressed
 to us (``Host``), did a page we serve make it (``Origin``, fetch metadata),
 and — for anything that could write or spend — did *our own* dashboard make
-it (a fixed header)? It also refuses to be framed. See ``api/app.py``'s
-module docstring for why a loopback bind alone isn't enough.
+it (a fixed header)? It also refuses to be framed.
+
+A loopback bind alone isn't enough: a browser on this machine is itself a
+loopback client, so any page it has open can send requests here. Each check
+in ``_evaluate`` refuses one such page:
+
+1. A ``Host`` that doesn't name loopback: a DNS-rebinding page, which would
+   otherwise read everything as if same-origin.
+2. A foreign ``Origin``.
+3. Cross-site or same-site fetch metadata, except a top-level GET or HEAD
+   navigation.
+   Checks 2 and 3 answer the same page: a no-cors ``text/plain`` POST from
+   any web page reaches a metered ``.../narrative`` route without a
+   preflight — the attack this guard was written for.
+4. A non-GET request without the dashboard's own ``X-Tracker-Client``
+   header, which a page can't add cross-origin because the preflight it
+   forces never succeeds here.
+
+Framing is refused (``_framed``) so no other page can overlay the dashboard
+and trick a click on a button that spends a credential (clickjacking).
 
 Pure ASGI (``scope``/``receive``/``send``) and stdlib-only: nothing here
 depends on Starlette or FastAPI, so the same class wraps any ASGI app
@@ -46,9 +64,9 @@ def is_loopback_host(host: str) -> bool:
     name — a hostname that merely *resolves* to loopback today, and might
     not tomorrow, is refused rather than trusted.
 
-    Does no case-folding of its own; callers lowercase first. That keeps
-    ``cli.py``'s ``_require_loopback`` behaving exactly as it did before it
-    delegated its loopback check here.
+    Does no case-folding of its own: ``_host_is_loopback`` lowercases a
+    header first, and ``cli.py::_require_loopback`` passes ``--host`` as
+    given, so ``LOCALHOST`` is refused at bind time.
     """
     if host == "localhost":
         return True
