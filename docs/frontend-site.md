@@ -95,15 +95,18 @@ answers an unknown path with an empty 404. Workers static assets read
 `_headers` and `_redirects` the way Pages does, and never serve either file.
 
 Two things are not plain files. The Download buttons, `/download/windows`
-and `/download/linux`, run the Worker's script (`worker/index.mjs`, its
-logic in `worker/download.mjs`); so does every English page with a
-Portuguese version, for the language below, and both home pages, for the
-installer suggestion after it. `run_worker_first` in `wrangler.json` keeps it to those paths. It fetches
+and `/download/linux`, and the help pages' `/download/linux-tar` run the
+Worker's script (`worker/index.mjs`, its logic in `worker/download.mjs`);
+so does every English page with a Portuguese version, for the language
+below, and both home pages, for the installer suggestion after it. `run_worker_first` in `wrangler.json` keeps it to those paths. It fetches
 the newest release's `latest.yml` or `latest-linux.yml` from GitHub — the
 feed an installed copy's updater reads — and redirects to the file it names
 in that release, so the buttons follow each release with no step of their
-own. GitHub's `releases/latest/download/<name>` cannot do it directly,
-because the installers' names carry the version (`electron-builder.yml`).
+own. No feed lists the tarball, so `/download/linux-tar` builds its name,
+`Sensei-Top-<version>.tar.gz`, from the version in `latest-linux.yml`;
+only the two help pages link it, and the landing's buttons stay the two
+installers. GitHub's `releases/latest/download/<name>` cannot do it
+directly, because the installers' names carry the version (`electron-builder.yml`).
 The release job publishes every asset in one command, so the feed never
 names a file that is not there yet. A feed it cannot fetch or does not
 recognise sends the visitor to the releases page. The runtime takes every

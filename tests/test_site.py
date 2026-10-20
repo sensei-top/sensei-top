@@ -26,6 +26,7 @@ PROJECT = "https://github.com/sensei-top/sensei-top"
 BEACON_SRC = "https://static.cloudflareinsights.com/beacon.min.js"
 # Answered by the Worker script in `worker/`, not by a file under `site/`.
 DOWNLOADS = ("/download/windows", "/download/linux")
+TARBALL = "/download/linux-tar"
 
 # url path -> (file, html lang, the path of the same page in the other language)
 PAGES = {
@@ -271,7 +272,7 @@ def test_images_carry_alt_text_and_the_mark_is_decorative(url_path):
 def test_local_references_resolve(url_path):
     _, page = load(url_path)
     own = "/404.html" if url_path == NOT_FOUND else url_path
-    references = [h for h in hrefs(page) if h.startswith("/") and h not in DOWNLOADS]
+    references = [h for h in hrefs(page) if h.startswith("/") and h not in (*DOWNLOADS, TARBALL)]
     references += [own + h for h in hrefs(page) if h.startswith("#")]
     references += [a["src"] for a in page.find("img")]
     references += [
@@ -583,6 +584,18 @@ def test_the_download_buttons_go_to_the_worker_and_it_runs_only_for_them():
         buttons = [a["href"] for a in page.find("a") if "button" in (a.get("class") or "").split()]
         assert buttons == list(DOWNLOADS), url_path
         assert not [h for h in hrefs(page) if "/releases" in h], url_path
+
+
+@pytest.mark.parametrize("url_path", ["/help/", "/pt-br/help/"])
+def test_each_help_page_links_the_tarball_once(url_path):
+    _, page = load(url_path)
+    assert hrefs(page).count(TARBALL) == 1, url_path
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_no_landing_links_the_tarball(url_path):
+    _, page = load(url_path)
+    assert TARBALL not in hrefs(page), url_path
 
 
 @pytest.mark.parametrize("url_path", LANDINGS)
