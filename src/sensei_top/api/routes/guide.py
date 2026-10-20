@@ -1,5 +1,6 @@
 """The deck guide's whole evidence bundle, its authored narrative, the
-evidence-only markdown export, and its cached matchup briefs —
+evidence-only markdown export, its cached matchup briefs and their coverage,
+with the prompts and paste routes behind the brief and coverage cards —
 ``/api/guide/*`` (``docs/guide.md``).
 """
 
@@ -115,8 +116,9 @@ def guide_narrative_route(key: str, request: Request, conn: Conn) -> GuideNarrat
     from.
 
     ``status`` is ``'ok'`` when a narrative has been generated (``POST``
-    on this same path) or imported (``sensei-top guide --deck KEY
-    --import FILE``) for this deck, and ``'prompt'`` when none has —
+    on this same path), pasted (``PUT`` on this same path) or imported
+    (``sensei-top guide --deck KEY --import FILE``) for this deck, and
+    ``'prompt'`` when none has —
     either way ``prompt`` carries the text to write one from, so the tab
     can offer "write it" and "rewrite it" with the same affordance.
 
@@ -202,8 +204,8 @@ def generate_guide_narrative(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     try:
-        # English: the plan problems it finds are stored with the narrative
-        # (plan S4, D-c), like every other stored prose.
+        # English: the plan problems it finds are stored with the narrative,
+        # like every other stored prose.
         with english():
             narrative = guide_narrative_from_json(completion.text, deck_guide)
     except NarrativeError as exc:
@@ -213,11 +215,11 @@ def generate_guide_narrative(
         ) from exc
 
     identity = deck_guide.provenance.deck
-    # One transaction, not two: this route is the only writer that touches a
-    # second table (`matchup_brief`, via `store_guide_matchups`). A guide
-    # stored without its matchup briefs would render as a guide whose
-    # matchup section silently lost its plans, and the next request would
-    # read it as complete rather than retrying.
+    # One transaction, not two: the guide's write touches a second table
+    # (`matchup_brief`, via `store_guide_matchups`). A guide stored without
+    # its matchup briefs would render as a guide whose matchup section
+    # silently lost its plans, and the next request would read it as
+    # complete rather than retrying.
     def write() -> None:
         write_narrative(
             conn, identity.key, narrative,
@@ -306,13 +308,13 @@ def paste_guide_narrative(
 def guide_markdown(key: str, request: Request, conn: Conn) -> GuideMarkdownOut:
     """The evidence-only guide document — ``guide/markdown.py``'s
     ``render`` with no narrative, exported for copy or save. The
-    narrative sections (engine, matchups, checklist) are generated
-    client-side by the narrative route and are not included here: this
+    narrative sections (engine, matchups, checklist) come from the
+    narrative route and are not included here: this
     route makes no Claude call, so it can never carry text that call
     alone produces.
     """
-    # English, like every prompt: the export is prompt input (plan D7), and
-    # the guide it renders is built here, so the whole build is in scope.
+    # English, like every prompt: the export is prompt input, and the guide
+    # it renders is built here, so the whole build is in scope.
     with english():
         deck_guide = build_deck_guide(
             conn, key, report_cache=_shared_report_cache(request, conn),

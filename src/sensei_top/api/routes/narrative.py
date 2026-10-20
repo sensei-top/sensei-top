@@ -1,21 +1,22 @@
-"""Shared plumbing for the three ``GET``/``POST .../narrative`` route pairs
-(match report, leak finder, deck guide — ``docs/llm.md``).
+"""Shared plumbing for the ``.../narrative`` routes and the paste ``PUT``s
+(``docs/llm.md``, "What calls out, and what it sends").
 
-The match report and the leak finder are the exact same shape end to end:
-build some evidence, wrap it in a prompt, and — on ``POST`` with a
-credential configured — send it through ``llm.write_prose`` and store the
-prose verbatim. ``NarrativeSpec`` plus ``narrative_get``/``narrative_post``
-below cover both in full; ``api/app.py`` supplies only the per-route
-closures (which evidence, which store) as callables.
+The match report and the leak finder are the same shape end to end: build
+some evidence, wrap it in a prompt, and — on ``POST`` with a credential
+configured — send it through ``llm.write_prose`` and store the prose
+verbatim. ``NarrativeSpec`` plus ``narrative_get``/``narrative_post`` cover
+both; ``routes/matches.py`` and ``routes/review.py`` supply only the
+per-route closures (which evidence, which store).
 
-The deck guide is the JSON-schema-answer relative: its ``full_prompt``
-returns the finished prompt directly rather than a separate context object,
-its ``POST`` parses a structured answer instead of storing prose verbatim,
-and it writes a second table (``matchup_brief``) in the same transaction.
-Forcing it through ``NarrativeSpec`` would cost more in indirection than it
-saves, so only what is genuinely identical across all three routes —
-``require_credential``'s 503 and ``run_authored_write``'s transaction — is
-shared with it too.
+The deck guide and the RCQ guide are the JSON-schema-answer relatives: each
+builds the finished prompt directly rather than a separate context object,
+and its ``POST`` parses a structured answer instead of storing prose; the
+deck guide's also writes a second table (``matchup_brief``) in the same
+transaction. Forcing them through ``NarrativeSpec`` would cost more in
+indirection than it saves, so they share only ``require_credential``'s 503
+and ``run_authored_write``'s transaction. The coach (``routes/coach.py``)
+resolves its own credential and shares ``no_credential_detail``,
+``run_authored_write`` and the paste helpers.
 
 **The paste helpers**: every ``PUT`` that stores a pasted answer (the
 match report, the leak finder, the coach, the deck guide, a brief, the
@@ -24,23 +25,13 @@ coverage card and the RCQ guide) shares ``refusal``, ``check_pasted_length``,
 ``unreadable_answer``, so each refuses an answer with the same status and
 the same keyed sentence, and none calls a model.
 
-**Why no response model lives here**: ``NarrativeResponse`` and
-``GuideNarrativeResponse`` stay defined in ``api/app.py`` (Step 5 of the
-architecture-remediation plan relocates them). Importing either here would
-make this module depend on ``app.py``, which already depends on this one —
-so these functions return a ``NarrativeEnvelope`` instead, and each route in
-``app.py`` builds its own response model from it.
-
-**Why this module reaches into ``sensei_top.llm`` directly rather than
-taking it as a parameter**: ``tests/test_llm.py`` monkeypatches
-``sensei_top.api.app.llm_config.load`` and
-``sensei_top.api.app.llm_client.write_prose``/``write_json`` — but those
-names are the *same module objects* this file imports under the same
-aliases, so a patch made through ``app.py``'s reference is visible here too.
-Only functions ``app.py`` imports *by name* (``build_match_report``,
-``find_leaks``, and the like) have to stay called from ``app.py``'s own
-closures, since patching ``app_module.build_match_report`` cannot reach a
-separate name binding in a different module.
+**Why this module calls ``sensei_top.llm`` through its modules**:
+``tests/test_llm.py`` patches ``load``, ``write_prose`` and ``write_json``
+on ``sensei_top.llm.config``/``sensei_top.llm.client`` themselves, and this
+file calls them as ``llm_config.load``/``llm_client.write_prose``, so the
+patch reaches it. A name imported *by name* into a route module
+(``review.py``'s ``find_leaks``, say) is patched on that route module, so it
+has to stay called from that module's own closures.
 """
 
 from __future__ import annotations
@@ -118,11 +109,9 @@ def unreadable_answer(exc: Exception) -> HTTPException:
 
 @dataclass(frozen=True, slots=True)
 class NarrativeEnvelope:
-    """What both response shapes (``NarrativeResponse``'s prose,
-    ``GuideNarrativeResponse``'s structured guide) get built from.
-    ``who``/``when`` are ``model``/``generated_at`` for a prose narrative or
-    ``author``/``authored_at`` for the guide — the caller maps them onto
-    whichever field names its own response model uses."""
+    """What the match report's and the leak finder's ``NarrativeResponse``
+    is built from; the route maps ``who``/``when`` onto ``model``/
+    ``generated_at``."""
 
     status: str
     content: Any = None
@@ -134,10 +123,11 @@ class NarrativeEnvelope:
 
 
 def require_credential() -> LLMConfig:
-    """The identical 503 all three ``POST .../narrative`` routes raise with
-    nothing configured —
+    """The identical 503 the match-report, leak-finder, deck-guide and RCQ
+    ``POST .../narrative`` routes raise with nothing configured (the coach
+    resolves ``load_coach()`` itself) —
     ``tests/test_llm.py::test_no_credential_means_no_client_is_constructed``
-    pins both the status code and this exact detail string."""
+    pins the status code and the detail's ``config --set-key``."""
     cfg = llm_config.load()
     if cfg is None:
         raise HTTPException(status_code=503, detail=no_credential_detail())
@@ -145,12 +135,11 @@ def require_credential() -> LLMConfig:
 
 
 def run_authored_write(conn: sqlite3.Connection, write: Callable[[], None]) -> None:
-    """The ``BEGIN``/``COMMIT``/``ROLLBACK`` wrapper every ``POST
-    .../narrative`` route uses — added in Step 1 because ``get_writable_conn``
-    opens in autocommit mode, where a bare ``conn.commit()`` is a no-op on a
-    write that already landed (see ``api/app.py``'s ``get_writable_conn``).
+    """The ``BEGIN``/``COMMIT``/``ROLLBACK`` wrapper the narrative and paste
+    routes use: ``api/deps.py::get_writable_conn`` opens in autocommit mode,
+    where a bare ``conn.commit()`` is a no-op on a write that already landed.
     Takes a callback rather than one hardcoded statement because the guide
-    route's own write touches two tables (``deck_narrative`` and
+    routes' write touches two tables (``deck_narrative`` and
     ``matchup_brief``) that must land together or not at all.
     """
     conn.execute("BEGIN")
@@ -168,9 +157,9 @@ class NarrativeSpec:
     finder) needs beyond the shared control flow below. ``full_prompt`` is
     what ``POST`` sends the model; ``copied_prompt`` is what ``GET`` offers
     to copy, the same text plus the answer contract. Built fresh per
-    request by a small helper in ``app.py`` that closes over that request's
-    own ``conn`` and path params, so this stays a plain function rather than
-    a FastAPI dependency.
+    request by a small helper in the route module that closes over that
+    request's own ``conn`` and path params, so this stays a plain function
+    rather than a FastAPI dependency.
     """
 
     build_context: Callable[[], Any]
@@ -209,10 +198,9 @@ def narrative_post(
 ) -> NarrativeEnvelope:
     """``POST .../narrative``: write this route's evidence through
     ``llm.write_prose`` and store the answer. It sends ``spec.full_prompt``,
-    never the copyable prompt: no answer contract, the reply is prose.
-    Shared verbatim by the match-report and leak-finder routes — neither
-    varies the call itself, only what evidence goes in and where the prose
-    lands, both carried by ``spec`` and ``write``.
+    never the copyable prompt: no answer contract, the reply is prose. The
+    match-report and leak-finder routes vary only what evidence goes in and
+    where the prose lands, both carried by ``spec`` and ``write``.
     """
     cfg = require_credential()
     context = spec.build_context()

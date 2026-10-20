@@ -1,30 +1,25 @@
 """The coach: a dated, cross-deck report over every completed Arena/MTGO
 constructed match — ``/api/coach*`` (``docs/coach.md``).
 
-``GET /api/coach`` is free and local — the evidence for the tab's own
-profile tables, plus every report ever written. The
-``.../narrative`` routes are shaped like ``api/routes/narrative.py``'s
-three pairs, but this one can't reuse ``narrative_get``/``narrative_post``:
-those are hardwired to a single current row (``write_prose`` plus one
-stored slot a regenerate overwrites), while a coach report is history
-(``coach/store.py``'s own module docstring) and its ``POST`` calls
-``llm.write_report`` — the web-search entry point, not ``write_prose`` —
-and resolves its credential through ``load_coach()`` rather than
-``load()``. What *is* shared: ``no_credential_detail()`` and
-``run_authored_write``'s transaction wrapper, and the paste helpers
-(``check_pasted_length``, ``read_pasted_prose``). ``POST`` takes an optional
-body picking the model from the Coach tab's dropdown (one of
-``llm_client.REPORT_MODELS``); left out, it writes with the configured
+``GET /api/coach`` is free and local — the evidence for the page's own
+profile tables, plus every report ever written. The ``.../narrative`` routes
+can't reuse ``narrative_get``/``narrative_post``: those are hardwired to a
+single current row (``write_prose`` plus one stored slot a regenerate
+overwrites), while a coach report is history (``coach/store.py``), and its
+``POST`` calls ``llm.write_report`` — the web-search entry point — and
+resolves its credential through ``load_coach()`` rather than ``load()``.
+What *is* shared: ``no_credential_detail()``, ``run_authored_write`` and the
+paste helpers (``check_pasted_length``, ``read_pasted_prose``). ``POST``
+takes an optional body picking the model from the Coach page's dropdown (one
+of ``llm_client.REPORT_MODELS``); left out, it writes with the configured
 coach model. ``PUT`` on the same path stores an answer pasted into the card
 instead, as a new row like any other report, and calls no model.
 
-A report is for one format (plan 13, D12). ``GET /api/coach`` and the
-latest-report, generate and paste routes take an optional ``format`` query
-parameter (``CoachFormatParam``, the same vocabulary as the metagame
-routes' ``FormatParam`` with its own description); omitted,
-they use ``api/sql.py::default_format`` (D13), and every response says
-which format it used. The report list stays the whole history, every
-format, each row naming its own.
+A report is for one format. ``GET /api/coach`` and the latest-report,
+generate and paste routes take an optional ``format`` query parameter
+(``CoachFormatParam``); omitted, they use ``api/sql.py::default_format``,
+and every response says which format it used —
+``docs/coach.md``, "What the coach is".
 """
 
 from __future__ import annotations
@@ -239,13 +234,11 @@ def _sources_out(sources: list, prose: str) -> list[CoachSource]:
 
 def _report_out(report: CoachReport, *, prompt: str | None, stale: bool) -> CoachNarrativeResponse:
     """The one conversion both GET routes, the POST route and the PUT route
-    build their response from — see the module docstring for why this can't be
-    ``narrative.narrative_get``/``narrative_post``'s ``NarrativeEnvelope``
-    instead (a coach report carries fields — ``id``, ``effort``, token
-    counts, resolved sources — that shape has no room for). ``clean_report``
-    strips any narration a report's own call left before its first
-    heading (1a) — stored prose stays verbatim, so this runs here, the one
-    place all four routes pass their prose through.
+    build their response from — not ``narrative.py``'s ``NarrativeEnvelope``,
+    which has no room for a coach report's ``id``, ``effort``, token counts
+    and resolved sources. ``clean_report`` strips any narration a report's
+    own call left before its first heading — stored prose stays verbatim, so
+    this runs here, the one place all four routes pass their prose through.
     """
     return CoachNarrativeResponse(
         status="ok",

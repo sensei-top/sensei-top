@@ -248,7 +248,7 @@ def _pick_problem(
 
 def _require_mtgo_match(conn: sqlite3.Connection, match_id: str) -> sqlite3.Row:
     """The match's row, or 404 for no such match and 400 for an Arena one,
-    whose deck the log already names (plan 12, D11)."""
+    whose deck the log already names."""
     row = _match_source(conn, match_id)
     if row is None:
         raise _no_match(match_id)
@@ -384,17 +384,17 @@ def mtgo_pick_candidates(match_id: str, conn: Conn) -> dict[str, Any]:
     matches nothing is still listed, last, because the user may know better
     than the overlap. Ties break on the deck's newest file, then its id.
 
-    The format pre-fill is the format MTGO's deck store files the deck under
-    (plan 12, D16), else the last one confirmed for the same deck (plan 12,
-    D10), else the format inferred for this match from the cards it revealed
-    (``match_format_inference``), else none (plan 13, D7). The inferred
+    The format pre-fill is the format MTGO's deck store files the deck
+    under, else the last one confirmed for the same deck, else the format
+    inferred for this match from the cards it revealed
+    (``match_format_inference``), else none. The inferred
     step reads the inference itself, not ``v_match_format``, so a match the
     user already picked a format for still offers its inference to a deck
     the first two steps miss. ``format_prefill_source`` says which step
     answered. Each candidate also carries a few card names
     (``_card_names``). Nothing is
     written, and the pick is never inferred from this ranking: the user
-    always confirms (D1).
+    always confirms.
     """
     match = _require_mtgo_match(conn, match_id)
     played = {
@@ -809,7 +809,8 @@ def match_report_narrative(match_id: str, conn: Conn) -> NarrativeResponse:
     prompt to (re)write it from — see ``docs/llm.md``.
 
     ``status`` is ``'ok'`` once ``POST`` on this same path has generated
-    one, ``'prompt'`` when there is evidence but nothing stored yet, and
+    one or ``PUT`` has stored a pasted one, ``'prompt'`` when there is
+    evidence but nothing stored yet, and
     ``'no_report'`` when there is nothing to narrate at all — an empty
     report is an ordinary outcome, not an error. Always a 200.
     """

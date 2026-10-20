@@ -35,7 +35,7 @@ over the entire history — every match ever recorded — by re-running one comm
 | `metagame/` | Tournament results, evidence tiers | `Player.log`, `reader/`, `projector/` |
 | `coach/` | `review/`, `guide/`, every deck's projected matches | `reader/`, `raw_events`, files |
 | `archetypes/` | Revealed cards, archetype definitions, the corpus | `reader/`, `raw_events`, files |
-| `api/app.py` | SQL over views; the feature packages' public API | How anything was produced |
+| `api/routes/`, `api/sql.py` | SQL over views; the feature packages' public API | How anything was produced |
 
 If you find yourself importing the projector from the reader, the design has
 been violated. `live.py` exists precisely so neither has to know the other.

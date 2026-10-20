@@ -721,7 +721,7 @@ opponent-hand read and our own remaining library
 (`OpeningHandOut`/`KeepGuideOut`/`HandReadOut`/`LibraryCardOut[]`) in a
 single `CurrentMatchRead`. They share the same current match and one live
 replay (see above), and the tab rides its own unconditional 1s timer while
-mounted — several round trips per beat for one screen would be waste that
+mounted — several round trips per poll for one screen would be waste that
 one isn't, and a fast replay makes an unconditional 1s poll affordable in a
 way it wasn't when the same timer had to wait on `project()`.
 
@@ -729,8 +729,8 @@ way it wasn't when the same timer had to wait on `project()`.
 even when that lookup finds nothing, per its own section above. Everything
 else still gates on a match row exactly as it always did.
 
-`build_consensus` scans `meta_deck` and parses JSON per archetype; at a
-heartbeat cadence that cost would be constant while a game runs.
+`build_consensus` scans `meta_deck` and parses JSON per archetype; at the
+read's 1s poll that cost would be constant while a game runs.
 `api/sql.py`'s `_cached_consensus(request, conn, opponent_key, fmt)` keeps
 one consensus on `app.state`, keyed on `(archetype_key, fmt, corpus token,
 window)`: the consensus is the match's format's, built from that format's

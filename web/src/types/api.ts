@@ -166,10 +166,12 @@ export interface paths {
          *     ``docs/brief.md``.
          *
          *     Deliberately has no generate route of its own, unlike the match
-         *     report and the deck guide (``docs/llm.md``): a brief is written by
-         *     ``sensei-top brief --import``, or — far more often — filled as a
-         *     side effect of generating or importing a full deck guide
-         *     (``POST /api/guide/{key}/narrative``, ``brief/from_guide.py``).
+         *     report and the deck guide (``docs/llm.md``): a brief is pasted into its
+         *     card (``PUT /api/guide/{key}/briefs/{archetype_key}``) or the coverage
+         *     card (``PUT /api/guide/{key}/coverage``), written by ``sensei-top brief
+         *     --import``, or — far more often — filled as a side effect of
+         *     generating, pasting or importing a full deck guide
+         *     (``POST``/``PUT /api/guide/{key}/narrative``, ``brief/from_guide.py``).
          */
         get: operations["current_match_brief_api_current_match_brief_get"];
         put?: never;
@@ -195,9 +197,9 @@ export interface paths {
          *     ``sensei_top.table``).
          *
          *     One route for all of it: they share the same current match, and the
-         *     tab refetches on every heartbeat, so several round trips per beat
-         *     for one screen would be waste. It also means one live replay of
-         *     ``raw_events`` (``table/live.py``), not three: ``live_state`` below
+         *     page polls it every second (``useCurrentMatchRead``), so several round
+         *     trips per poll for one screen would be waste. It also means one live
+         *     replay of ``raw_events`` (``table/live.py``), not three: ``live_state`` below
          *     is built once and its ``offer``/board-state pieces are handed to
          *     ``build_opening_hand_read``/``build_hand_read`` instead of letting
          *     each replay independently — the difference between one pass over
@@ -205,10 +207,10 @@ export interface paths {
          *
          *     ``opening_hand`` is built from that same replay and returned even
          *     when ``v_current_match`` finds nothing: it does not wait on
-         *     ``project()`` at all, because the mulligan decision it informs has a
-         *     measured 5-second median in real play and a full rebuild cannot
-         *     land in that window (``projector/live_state.py``'s module docstring
-         *     has the numbers). `deck_id` enriches it with this deck's land band and
+         *     ``project()`` at all, because the mulligan decision it informs is
+         *     over before a full rebuild could land (``docs/current-match.md``,
+         *     "The opening-hand read (`table/opening_hand.py`)"). `deck_id` enriches
+         *     it with this deck's land band and
          *     mulligan record — and comes from ``live_state.deck_id`` itself (the
          *     replay's own ``connectResp.deckMessage``) rather than ``v_current_match``
          *     whenever the replay resolved one, so the very first mulligan of a match
@@ -646,17 +648,17 @@ export interface paths {
          *     matches nothing is still listed, last, because the user may know better
          *     than the overlap. Ties break on the deck's newest file, then its id.
          *
-         *     The format pre-fill is the format MTGO's deck store files the deck under
-         *     (plan 12, D16), else the last one confirmed for the same deck (plan 12,
-         *     D10), else the format inferred for this match from the cards it revealed
-         *     (``match_format_inference``), else none (plan 13, D7). The inferred
+         *     The format pre-fill is the format MTGO's deck store files the deck
+         *     under, else the last one confirmed for the same deck, else the format
+         *     inferred for this match from the cards it revealed
+         *     (``match_format_inference``), else none. The inferred
          *     step reads the inference itself, not ``v_match_format``, so a match the
          *     user already picked a format for still offers its inference to a deck
          *     the first two steps miss. ``format_prefill_source`` says which step
          *     answered. Each candidate also carries a few card names
          *     (``_card_names``). Nothing is
          *     written, and the pick is never inferred from this ranking: the user
-         *     always confirms (D1).
+         *     always confirms.
          */
         get: operations["mtgo_pick_candidates_api_matches__match_id__mtgo_pick_candidates_get"];
         put?: never;
@@ -819,7 +821,8 @@ export interface paths {
          *     prompt to (re)write it from — see ``docs/llm.md``.
          *
          *     ``status`` is ``'ok'`` once ``POST`` on this same path has generated
-         *     one, ``'prompt'`` when there is evidence but nothing stored yet, and
+         *     one or ``PUT`` has stored a pasted one, ``'prompt'`` when there is
+         *     evidence but nothing stored yet, and
          *     ``'no_report'`` when there is nothing to narrate at all — an empty
          *     report is an ordinary outcome, not an error. Always a 200.
          */
@@ -1058,8 +1061,9 @@ export interface paths {
          *     from.
          *
          *     ``status`` is ``'ok'`` when a narrative has been generated (``POST``
-         *     on this same path) or imported (``sensei-top guide --deck KEY
-         *     --import FILE``) for this deck, and ``'prompt'`` when none has —
+         *     on this same path), pasted (``PUT`` on this same path) or imported
+         *     (``sensei-top guide --deck KEY --import FILE``) for this deck, and
+         *     ``'prompt'`` when none has —
          *     either way ``prompt`` carries the text to write one from, so the tab
          *     can offer "write it" and "rewrite it" with the same affordance.
          *
@@ -1117,8 +1121,8 @@ export interface paths {
          * Guide Markdown
          * @description The evidence-only guide document — ``guide/markdown.py``'s
          *     ``render`` with no narrative, exported for copy or save. The
-         *     narrative sections (engine, matchups, checklist) are generated
-         *     client-side by the narrative route and are not included here: this
+         *     narrative sections (engine, matchups, checklist) come from the
+         *     narrative route and are not included here: this
          *     route makes no Claude call, so it can never carry text that call
          *     alone produces.
          */
