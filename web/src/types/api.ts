@@ -1608,8 +1608,9 @@ export interface components {
          * BriefPromptOut
          * @description The single-brief prompt for one archetype, fetched on demand — the
          *     same text ``sensei-top brief --deck KEY --archetype KEY --prompt``
-         *     prints. Always a 200: no field consensus is an ordinary outcome for a
-         *     corpus that hasn't classified that archetype yet, not a server error.
+         *     prints. A 200 for any known deck; an unknown deck key is a 404. No
+         *     field consensus is an ordinary outcome for a corpus that hasn't
+         *     classified that archetype yet, not a server error.
          */
         BriefPromptOut: {
             /**
@@ -1659,13 +1660,13 @@ export interface components {
         };
         /**
          * CoachEvidenceModel
-         * @description Mirrors ``coach.evidence.CoachEvidence``, minus three fields: ``source``
-         *     (always ``"all"`` in v1 — there is no source query parameter, see
+         * @description Mirrors ``coach.evidence.CoachEvidence``, minus ``source`` (always
+         *     ``"all"`` — there is no source query parameter, see
          *     ``api/routes/coach.py``), ``format_population`` (the ``gaps`` lines
-         *     already say how many matches each exclusion reason removed), and
-         *     ``examples``/``decklists`` (prompt-only, per the module docstring
-         *     above). ``fmt`` is carried once, as ``CoachResponse.format``, and
-         *     ``format_counts`` is prompt-only too.
+         *     already say how many matches each exclusion reason removed), and the
+         *     prompt-only ``by_source``, ``examples``, ``decklists`` and
+         *     ``format_counts``. ``fmt`` is carried once, as
+         *     ``CoachResponse.format``.
          */
         CoachEvidenceModel: {
             /** As Of */
@@ -1751,12 +1752,11 @@ export interface components {
          *     three-state shape as ``NarrativeResponse``, extended with the coach's
          *     own measured web-search cost and its resolved source list.
          *
-         *     ``status`` is ``'ok'`` once a report has been generated, ``'prompt'``
-         *     when there is evidence but nothing stored yet, ``'no_report'`` when
-         *     there isn't even enough evidence for a prompt. The GET routes are
-         *     always a 200; only the POST route's missing-credential and
-         *     insufficient-data cases are errors (503/404 — see
-         *     ``api/routes/coach.py``).
+         *     ``status`` is ``'ok'`` once a report has been generated or pasted,
+         *     ``'prompt'`` when there is evidence but nothing stored yet,
+         *     ``'no_report'`` when there isn't even enough evidence for a prompt. The
+         *     latest-report GET is always a 200; the by-id GET, the POST and the PUT
+         *     have their own error codes (see ``api/routes/coach.py``).
          */
         CoachNarrativeResponse: {
             /**
@@ -1777,12 +1777,12 @@ export interface components {
             id?: number | null;
             /**
              * Narrative
-             * @description the stored prose, once generated
+             * @description the stored prose, once generated or pasted
              */
             narrative?: string | null;
             /**
              * Prompt
-             * @description the full text to write the report from — pass it to POST on this same path to generate it with Claude (see docs/llm.md), or into an assistant you already pay for — coach reports have no import path, so that answer stays there
+             * @description the full text to write the report from — pass it to POST /api/coach/narrative to generate it with Claude (see docs/llm.md), or into an assistant you already pay for and PUT the answer to /api/coach/narrative. The by-id route serves that report's own stored prompt
              */
             prompt?: string | null;
             /**
@@ -1802,7 +1802,7 @@ export interface components {
             generated_at?: string | null;
             /**
              * Cost Usd
-             * @description measured cost of the call that wrote it, including web search
+             * @description measured cost of the call that wrote it, including web search; null for a pasted one, and for a model with no price on file
              */
             cost_usd?: number | null;
             /**
@@ -1905,7 +1905,7 @@ export interface components {
         /**
          * CoachSource
          * @description One citation a stored report actually used — either a reading-list
-         *     entry (``coach.canon.CANON``) or a web page ``llm.write_report``'s
+         *     entry (``coach.canon.CANON``) or a web page ``llm.client.write_report``'s
          *     search tool visited.
          */
         CoachSource: {
@@ -1960,8 +1960,9 @@ export interface components {
          * CoveragePromptOut
          * @description The multi-brief prompt for every ``missing``/``stale`` coverage row —
          *     the same text ``sensei-top brief --deck KEY --missing --prompt``
-         *     prints. Always a 200: nothing missing, or no field consensus for any
-         *     missing/stale archetype, are both ordinary outcomes.
+         *     prints. A 200 for any known deck; an unknown deck key is a 404.
+         *     Nothing missing, or no field consensus for any missing/stale
+         *     archetype, are both ordinary outcomes.
          */
         CoveragePromptOut: {
             /**
@@ -2097,7 +2098,7 @@ export interface components {
             opponent_signature_cards?: string[];
             /**
              * Started At
-             * @description how stale this is; an abandoned match stays current until the next one. For source='arena' this is when the match room opened; for source='mtgo' it is the game-log file's own mtime, since MTGO's transcript carries no in-game start event
+             * @description when the match room opened, which says how stale this is: an abandoned match stays current until the next one
              */
             started_at?: string | null;
             /** Games Won */
@@ -2111,19 +2112,18 @@ export interface components {
             cards: components["schemas"]["CurrentCardEvent"][];
             /**
              * Source
-             * @description which client wrote this match — always 'arena': v_current_match (migrations/040_arena_only_current_match.sql) only ever returns an Arena match, so an MTGO match can never reach this model. Kept as a real column passthrough rather than dropped, to avoid an API break and a type-regeneration churn for a value that no longer varies
+             * @description which client wrote this match — always 'arena': v_current_match (migrations/040_arena_only_current_match.sql) only ever returns an Arena match, so an MTGO match can never reach this model
              * @default arena
              */
             source: string;
         };
         /**
          * CurrentMatchRead
-         * @description The current-match reads that replaced the old board-math / play-
-         *     around / scoreboard cards: an opening-hand read for a pending mulligan
+         * @description The current-match reads: an opening-hand read for a pending mulligan
          *     decision, a keep guide for the deck in play, a read on what the
-         *     opponent may be holding, and our own remaining library. One route
-         *     rather than several — the tab refetches all of it on every heartbeat,
-         *     and it's one current match either way.
+         *     opponent may be holding, and our own remaining library. One route,
+         *     polled every second while the page is open — see docs/current-match.md,
+         *     "Wiring: one route".
          *
          *     ``opening_hand`` is populated even with ``status == "no_match"``: it
          *     reads straight from ``raw_events`` and does not wait on a projected
@@ -2142,12 +2142,12 @@ export interface components {
             library?: components["schemas"]["LibraryCardOut"][];
             /**
              * Library Count
-             * @description our own library size right now, from the same live replay as `library` above — deliberately not the projected turns.self_library, which can run 8-15s+ stale mid-combat on a real database (projector/live_state.py)
+             * @description our own library size right now, from the same live replay as `library` above — deliberately not the projected turns.self_library, which runs a rebuild behind (projector/live_state.py)
              */
             library_count?: number | null;
             /**
              * Source
-             * @description which client wrote the current match — always 'arena': v_current_match (migrations/040_arena_only_current_match.sql) only ever returns an Arena match, so this is 'arena' both when a match is current and when there is none at all, preserving today's no-match behaviour
+             * @description which client wrote the current match — always 'arena': v_current_match (migrations/040_arena_only_current_match.sql) only ever returns an Arena match, so this is 'arena' both when a match is current and when there is none at all
              * @default arena
              */
             source: string;
@@ -2257,10 +2257,9 @@ export interface components {
          * DeckIdentityOut
          * @description One deck, stitched across list edits via ``deck_guids`` — see
          *     ``guide/deck.py``. ``key`` is what every other guide route takes.
-         *     ``deck_ids`` is every content-hash version this identity groups — the
-         *     dashboard's global deck filter selects a bare ``deck_id``, so the
-         *     frontend needs this list to find which guide identity a filter
-         *     selection belongs to.
+         *     ``deck_ids`` is every content-hash version this identity groups — a
+         *     match's deck and a version's address name a bare ``deck_id``, so the
+         *     frontend needs this list to find which guide identity one belongs to.
          */
         DeckIdentityOut: {
             /** Key */
@@ -2407,7 +2406,7 @@ export interface components {
         /**
          * FormatMatchCounts
          * @description The user's matches of one format, by where ``v_match_format`` read the
-         *     format from (D6).
+         *     format from.
          */
         FormatMatchCounts: {
             /**
@@ -2499,7 +2498,8 @@ export interface components {
         /**
          * GuideNarrativeResponse
          * @description Mirrors ``NarrativeResponse`` closely, with the structured guide
-         *     attached when ``status == 'ok'``. Always a 200, same reasoning.
+         *     attached when ``status == 'ok'``. A 200 for any known deck; an unknown
+         *     deck key is a 404.
          */
         GuideNarrativeResponse: {
             /**
@@ -2507,11 +2507,11 @@ export interface components {
              * @description ok | prompt | no_report
              */
             status: string;
-            /** @description the stored narrative, once generated or imported for this deck */
+            /** @description the stored narrative, once generated, pasted or imported for this deck */
             guide?: components["schemas"]["GuideNarrativeOut"] | null;
             /**
              * Prompt
-             * @description the full text to write the narrative from — pass it to POST on this same path to generate it with Claude, or into an assistant you already pay for and `sensei-top guide --deck KEY --import FILE` the answer back
+             * @description the full text to write the narrative from — pass it to POST on this same path to generate it with Claude, or into an assistant you already pay for and PUT the answer back on this same path, or import it with `sensei-top guide --deck KEY --import FILE`
              */
             prompt?: string | null;
             /**
@@ -2526,7 +2526,7 @@ export interface components {
             author?: string | null;
             /**
              * Cost Usd
-             * @description measured cost of the call that wrote it; null for a hand-written one
+             * @description measured cost of the call that wrote it; null for a pasted or imported answer, and for a model with no price on file
              */
             cost_usd?: number | null;
             /**
@@ -2585,7 +2585,7 @@ export interface components {
             p_in_hand: number;
             /**
              * Castable Now
-             * @description instant-speed and within the opponent's open mana; null if unknown
+             * @description an instant within the opponent's open mana plus other_mana_sources; null if unknown
              */
             castable_now?: boolean | null;
         };
@@ -2756,8 +2756,8 @@ export interface components {
         /**
          * KeepGuideOut
          * @description What a keepable opening hand looks like for the deck being played,
-         *     from its own maindeck curve alone — no board state, so this is valid
-         *     from the mulligan decision onward (``table/keep.py``).
+         *     from its own maindeck and match history — no board state, so this is
+         *     valid from the mulligan decision onward (``table/keep.py``).
          */
         KeepGuideOut: {
             /** Maindeck Size */
@@ -2838,10 +2838,11 @@ export interface components {
         };
         /**
          * KeyPlayOut
-         * @description One card this deck's own match history says wins games, and the turn
-         *     band where it does it best (``table/keep.py``'s ``KeyPlay``) — the
-         *     evidence the opening-hand verdict checks for "pressure" before it calls
-         *     a hand an unconditional keep.
+         * @description One of this deck's key cards, chosen from its decklist and card text,
+         *     with its record from the turn band where it does best in this deck's own
+         *     games (``table/keep.py``'s ``KeyPlay``) — the evidence the opening-hand
+         *     verdict checks for "pressure" before it calls a hand an unconditional
+         *     keep.
          */
         KeyPlayOut: {
             /** Card */
@@ -2874,7 +2875,7 @@ export interface components {
         /**
          * LLMStatus
          * @description Whether a Claude credential is resolved right now — never the key
-         *     itself. The frontend reads this once to decide whether a narrative
+         *     itself. The frontend reads this to decide whether a narrative
          *     surface offers a generate button or falls back to ``CopyPromptCard``.
          */
         LLMStatus: {
@@ -2944,7 +2945,7 @@ export interface components {
             leaks: components["schemas"]["LeakOut"][];
             /**
              * Narrative Available
-             * @description kept for wire compatibility; GET .../narrative always serves a prompt, and POST there generates it with Claude when a credential is configured
+             * @description always true, kept for wire compatibility; GET .../narrative serves a prompt whenever there is something to narrate, and POST there generates it with Claude when a credential is configured
              * @default true
              */
             narrative_available: boolean;
@@ -2952,7 +2953,7 @@ export interface components {
         /**
          * LibraryCardOut
          * @description One maindeck card and how many copies are still unaccounted for in
-         *     the library this game — the tab's primary panel once a game is under
+         *     the library this game — the page's primary panel once a game is under
          *     way (``table/live.py``). ``left`` is never negative, and a card stays in
          *     the list at 0 once every copy is seen.
          */
@@ -3007,14 +3008,14 @@ export interface components {
         };
         /**
          * LiveStatus
-         * @description Heartbeat for the dashboard's auto-refresh.
+         * @description Heartbeat for the dashboard's auto-refresh — see docs/frontend.md,
+         *     "Data fetching".
          *
          *     Everything is read from the database, including ``watching``'s
          *     companion ``last_projection_at``: ``serve --watch`` runs the watcher in
-         *     its own OS process now, not this one (``live.py``'s ``WatcherProcess`` —
-         *     a rebuild sharing this process's GIL taxed every request ~5x), so
+         *     its own OS process, not this one (``live.py``'s ``WatcherProcess``), so
          *     nothing here can be read from in-memory watcher state. Only
-         *     ``watching``, ``mtgo_watching`` and ``watcher_stopped`` are still asked
+         *     ``watching``, ``mtgo_watching`` and ``watcher_stopped`` are asked
          *     of the watcher object directly (``is_alive()`` on the child process, the
          *     MTGO directory it was started with, and ``stopped_unexpectedly()``, which
          *     serve's own monitor thread sets), since none needs shared memory to
@@ -3061,7 +3062,7 @@ export interface components {
             last_event_at?: string | null;
             /**
              * Last Projection At
-             * @description when project()'s full rebuild last completed — the actual freshness of turns/matches, which lags last_ingest_at by up to project_every plus the rebuild's own duration (read from projection_state, written by whichever process last ran project(); null before any watcher has ever completed a rebuild against this database).
+             * @description when project()'s full rebuild last completed — the actual freshness of turns/matches, which lags last_ingest_at by up to one rebuild gate (project_every, or longer when rebuilds run slow) plus the rebuild's own duration. Read from projection_state, which is written only by the watcher's `LiveIngester.project_if_due` in live.py; a bare `project` command never writes it. Null before any watcher has ever completed a rebuild against this database.
              */
             last_projection_at?: string | null;
             /** Events */
@@ -3074,7 +3075,7 @@ export interface components {
             turns: number;
             /**
              * Revision
-             * @description changes on every ingest tick while Arena is running (roughly once a second) — drives only the live badge/heartbeat, never a query refetch. See projection_revision for the one that should invalidate the dashboard's own queries.
+             * @description changes on every ingest tick while Arena is running (roughly once a second); nothing in the dashboard refetches on it. See projection_revision for the one that should invalidate the dashboard's own queries.
              */
             revision: string;
             /**
@@ -3299,7 +3300,7 @@ export interface components {
             position_track?: components["schemas"]["PositionPoint"][];
             /**
              * Narrative Available
-             * @description kept for wire compatibility; GET .../narrative always serves a prompt, and POST there generates it with Claude when a credential is configured
+             * @description always true, kept for wire compatibility; GET .../narrative serves a prompt whenever there is something to narrate, and POST there generates it with Claude when a credential is configured
              * @default true
              */
             narrative_available: boolean;
@@ -3413,9 +3414,8 @@ export interface components {
         /**
          * MatchupBriefResponse
          * @description The live brief's answer, or why there isn't one yet. Always a 200:
-         *     no key configured, no live match, an unidentified opponent, and a brief
-         *     the watcher hasn't written yet are all ordinary outcomes for an
-         *     auto-firing, best-effort feature, not server errors.
+         *     no live match, an unidentified opponent, and a brief not stored
+         *     yet are all ordinary outcomes, not server errors.
          */
         MatchupBriefResponse: {
             /**
@@ -3425,7 +3425,7 @@ export interface components {
             status: string;
             /**
              * Deck Key
-             * @description this match's deck identity — for the `brief --import` command line
+             * @description this match's deck identity — the {key} of PUT /api/guide/{key}/briefs/{archetype_key}, and the --deck of `brief --import`
              */
             deck_key?: string | null;
             /**
@@ -3433,16 +3433,16 @@ export interface components {
              * @description the opponent's archetype key
              */
             archetype_key?: string | null;
-            /** @description the imported brief for this matchup, when one has been stored */
+            /** @description the stored brief for this matchup, when there is one */
             brief?: components["schemas"]["MatchupBriefOut"] | null;
             /**
              * Prompt
-             * @description the full text to write this brief from — copy it into an assistant you already pay for, then `sensei-top brief --deck KEY --archetype KEY --import FILE`
+             * @description the full text to write this brief from — copy it into an assistant you already pay for, then PUT the answer to /api/guide/{deck_key}/briefs/{archetype_key} or `sensei-top brief --deck KEY --archetype KEY --import FILE` it
              */
             prompt?: string | null;
             /**
              * Stale
-             * @description the corpus has moved since this brief was written
+             * @description the corpus or this deck's 75 has moved since this brief was written
              * @default false
              */
             stale: boolean;
@@ -3728,7 +3728,8 @@ export interface components {
          * @description Wins/losses/draws are summed from ``Standings[]`` — each deck's real
          *     whole-event match record — never inferred from ``Decks[].Result``, which
          *     every real Tier A/B/D file carries as a bare placement string ("1st
-         *     Place"), not a score. See docs/metagame.md.
+         *     Place"), not a score. See docs/metagame.md, "A trap: `Decks[].Result` is
+         *     not a score".
          */
         MetaWinrate: {
             /** Archetype Key */
@@ -4146,7 +4147,7 @@ export interface components {
         };
         /**
          * MulliganCostOut
-         * @description This deck's own kept-seven vs. mulliganed-to-six win rates
+         * @description This deck's own kept-seven vs. mulliganed-to-six-or-fewer records
          *     (``table/keep.py``'s ``MulliganCost``) — the brake that keeps a
          *     borderline hand marginal instead of letting it slide to mulligan when
          *     shipping it has a measured, wide cost for this deck.
@@ -4180,11 +4181,12 @@ export interface components {
          *     match-report and leak-finder narrative routes — both are "one prose
          *     blob over some evidence", so one shape serves them.
          *
-         *     ``status`` is ``'ok'`` once ``POST .../narrative`` has generated one,
-         *     ``'prompt'`` when there is evidence but nothing stored yet, ``'no_report'``
-         *     when there is nothing to narrate at all. The GET route is always a 200:
-         *     'nothing to narrate' is an ordinary outcome for an opt-in feature, not a
-         *     server error. A missing credential only matters to the POST route
+         *     ``status`` is ``'ok'`` once ``POST .../narrative`` has generated one or
+         *     ``PUT`` has stored a pasted one, ``'prompt'`` when there is evidence but
+         *     nothing stored yet, ``'no_report'`` when there is nothing to narrate at
+         *     all. The GET route answers that last one with a 200: 'nothing to
+         *     narrate' is an ordinary outcome for an opt-in feature, not a server
+         *     error. A missing credential only matters to the POST route
          *     (503 there) — the GET route never needs one, since it only serves what
          *     is already stored plus the copyable prompt.
          */
@@ -4196,12 +4198,12 @@ export interface components {
             status: string;
             /**
              * Narrative
-             * @description the stored prose, once generated or (match report only) imported
+             * @description the stored prose, once generated or pasted
              */
             narrative?: string | null;
             /**
              * Prompt
-             * @description the full text to write the narrative from — pass it to POST on this same path to generate it with Claude (see docs/llm.md), or into an assistant you already pay for and store the answer through the CLI import path
+             * @description the full text to write the narrative from — pass it to POST on this same path to generate it with Claude (see docs/llm.md), or into an assistant you already pay for and PUT the answer back on this same path
              */
             prompt?: string | null;
             /**
@@ -4216,7 +4218,7 @@ export interface components {
             generated_at?: string | null;
             /**
              * Cost Usd
-             * @description measured cost of the call that wrote it; null for a hand-written one
+             * @description measured cost of the call that wrote it; null for a pasted answer, and for a model with no price on file
              */
             cost_usd?: number | null;
             /**
@@ -4263,21 +4265,20 @@ export interface components {
             tags_known: boolean;
             /**
              * Castable Turn
-             * @description earliest turn this hand's own lands can pay for it; null for a land, or when the read's colors_known is false
+             * @description earliest turn this hand's own lands can pay for it; null for a land, an unparseable cost, or one these lands never pay. With colors_known false, a land whose colors are unknown counts as colorless
              */
             castable_turn?: number | null;
             /**
              * Reduced Castable Turn
-             * @description earliest turn this hand's own lands *and its own in-hand or on-board fuel* can pay for it, for a card with a cost-reduction clause (e.g. 'costs {1} less for each instant/sorcery in your graveyard'); null for a land, when colors_known is false, when this card carries no cost-reduction clause, or when the reduction's shape or fuel could not be parsed — never overwrites castable_turn, which always stays the printed-cost answer
+             * @description earliest turn this hand's own lands *and its own in-hand or on-board fuel* can pay for it, for a card with a cost-reduction clause (e.g. 'costs {1} less for each instant/sorcery in your graveyard'); null for a land, when this card carries no cost-reduction clause, when the reduction's shape or fuel could not be parsed, or when this hand never reaches it. Same colorless reading as castable_turn, which it never overwrites: castable_turn always stays the printed-cost answer
              */
             reduced_castable_turn?: number | null;
         };
         /**
          * OpeningHandOut
-         * @description The hand on offer right now, read straight from the log before the
-         *     keep/mulligan decision — see ``table/opening_hand.py`` for why this is
-         *     the one read in ``table/`` that bypasses the projection entirely, and
-         *     what the verdict is and is not.
+         * @description The hand on offer right now, read from a replay of ``raw_events``
+         *     before the keep/mulligan decision, never from the projection — see
+         *     docs/current-match.md, "The opening-hand read (`table/opening_hand.py`)".
          */
         OpeningHandOut: {
             /** Seat */
@@ -4310,7 +4311,7 @@ export interface components {
             unnamed_count: number;
             /**
              * Colors Known
-             * @description false when any land in hand has no produced_mana on file
+             * @description false when a land in hand resolves to neither produced_mana nor a chosen basic land type
              */
             colors_known: boolean;
             /**
@@ -4423,7 +4424,7 @@ export interface components {
          * OpponentDeckLabelIn
          * @description A pick from the candidate list, or ``'Rogue'`` for a deck with no
          *     established archetype. An empty label clears the override. There is no
-         *     free-text path any more — the label always names either an
+         *     free-text path — the label always names either an
          *     ``archetype_key`` the picker showed, or the fixed ``'Rogue'`` category.
          */
         OpponentDeckLabelIn: {
@@ -4564,11 +4565,11 @@ export interface components {
         };
         /**
          * PlayEvidenceOut
-         * @description Four views of the deck's own play — see ``guide/play.py``. Each
-         *     field is a nested JSON object keyed by turn, card name, or result
-         *     ('win'/'loss'), not a fixed schema; the frontend renders these
-         *     directly rather than the API imposing a shape on data whose keys are
-         *     inherently dynamic.
+         * @description Views of the deck's own play — see ``guide/play.py``. Each field is
+         *     a nested JSON object keyed by turn, card name, result ('win'/'loss') or
+         *     mulligan bucket ('kept_seven'/'mulliganed'), not a fixed schema; the
+         *     frontend renders these directly rather than the API imposing a shape
+         *     on data whose keys are inherently dynamic.
          */
         PlayEvidenceOut: {
             /** Board Curve */
@@ -4647,11 +4648,12 @@ export interface components {
         };
         /**
          * RankWinrate
-         * @description One rank tier's match record — the one rank-conditioned metric this
-         *     round adds, so a Platinum grind and a Mythic run stop being averaged
-         *     into the same winrate. Grouped by (constructed_class, constructed_level)
-         *     at the rank observed closest before each match started; both fields are
-         *     null together for any match with no rank_snapshot preceding it at all.
+         * @description One rank tier's match record, so a Platinum grind and a Mythic run
+         *     are not averaged into the same winrate. Grouped by (constructed_class,
+         *     constructed_level) at the latest rank observed at or before each
+         *     match's start; both fields are null together for an Arena match with no
+         *     rank_snapshot before it and for every MTGO match
+         *     (``migrations/046_rank_winrate_arena_only.sql``).
          */
         RankWinrate: {
             /** Constructed Class */
@@ -4883,9 +4885,8 @@ export interface components {
         };
         /**
          * ReportEvidence
-         * @description One named number a finding was computed from — the same identity a
-         *     Phase B aggregate rollup would later group and average on, which is why
-         *     ``key`` is a stable identifier rather than free text.
+         * @description One named number a finding was computed from. ``key`` is a stable
+         *     identifier rather than free text; ``label`` names it for a reader.
          */
         ReportEvidence: {
             /** Key */
@@ -4982,7 +4983,8 @@ export interface components {
          * SideboardCardOut
          * @description One card whose copy count changed between two consecutive games'
          *     decks — the sideboarding decision itself, not the plan someone wrote
-         *     down (see brief/'s own BoardCardOut for that authored version).
+         *     down (``BoardCardOut`` in ``api/models/common.py`` is that authored
+         *     version).
          */
         SideboardCardOut: {
             /** Grp Id */

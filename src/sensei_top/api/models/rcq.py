@@ -1,4 +1,4 @@
-"""The RCQ guide's four routes — ``/api/guide/{key}/rcq*`` (``docs/guide.md``).
+"""The RCQ guide's routes — ``/api/guide/{key}/rcq*`` (``docs/guide.md``).
 
 Field names are the frontend's contract (``web/src/lib/rcq.ts``).
 """

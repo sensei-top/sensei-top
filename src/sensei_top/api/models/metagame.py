@@ -130,7 +130,7 @@ class MetagameStatus(BaseModel):
 
 class FormatMatchCounts(BaseModel):
     """The user's matches of one format, by where ``v_match_format`` read the
-    format from (D6)."""
+    format from."""
 
     log: int = Field(description="Arena matches whose log names the format")
     pick: int = Field(description="MTGO matches the user confirmed in this format")
@@ -179,7 +179,8 @@ class MetaWinrate(BaseModel):
     """Wins/losses/draws are summed from ``Standings[]`` — each deck's real
     whole-event match record — never inferred from ``Decks[].Result``, which
     every real Tier A/B/D file carries as a bare placement string ("1st
-    Place"), not a score. See docs/metagame.md."""
+    Place"), not a score. See docs/metagame.md, "A trap: `Decks[].Result` is
+    not a score"."""
 
     archetype_key: str
     label: str
