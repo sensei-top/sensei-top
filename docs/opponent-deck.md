@@ -18,18 +18,17 @@ match's format comes from and how the classifier uses it.
 
 The label itself is a **view**, `v_match_opponent`, layering
 `manual override > classified archetype > colours and a signature card`
-(`classified archetype` itself is now two evidence sources combined — see
-"A second evidence source" below — but the view only ever sees one written
-verdict per match, so this layering is unchanged). It is
-a view rather than a stored column because it depends on `cards` and
+(`classified archetype` combines two evidence sources — see "A second
+evidence source" below — but the view sees one written verdict per match).
+It is a view rather than a stored column because it depends on `cards` and
 `archetypes`, which the projector does not own and which the user may populate
 long after a match was projected: a column would read stale until the next
 rebuild, and a view is always current. In the moment between `project()` and
 `classify_matches()` committing, the label degrades to the colours layer rather
-than showing a blank. Since `032_corpus_naming.sql`, that colours layer also
-carries up to three revealed nonland cards (`opponent_signature_cards`), not
-just one — genuinely unnamed matches (no rule definition, no corpus
-archetype) now say more than a single card's worth.
+than showing a blank. That colours layer carries up to three revealed
+nonland cards (`opponent_signature_cards`, from `032_corpus_naming.sql`), so
+a genuinely unnamed match (no rule definition, no corpus archetype) says more
+than a single card's worth.
 
 `serve` also refreshes the definitions on a background thread with its own
 connection, so the process briefly has two writers. WAL plus the existing
@@ -38,13 +37,15 @@ connection, so the process briefly has two writers. WAL plus the existing
 connection, ticking every five minutes, and its Arena-card step
 (`cards.refresh_arena_cards`) only ever inserts the handful of grpIds an
 Arena patch actually added, so the write stays short even though the thread
-itself never stops. A write that loses to the rebuild's 5.7 s lock is caught
-by the loop and retried on the next tick. The corpus refresh (plan 14) is a
-writer too, on its own connection, with one difference: it waits for the
-lock rather than losing to it. Its connection sets `busy_timeout` to 60 s
-(`cli.py::_CORPUS_BUSY_TIMEOUT_MS`), because the watcher's rebuild has held
-the write lock 5.7 s, a busy error would cost the run and then the source's
-hour (D12), and nothing waits on this thread. Its own writes are short: each
+itself never stops. A write that loses to the rebuild's write lock (measured
+in `docs/architecture.md`, "Live mode's two cadences") is caught by the loop
+and retried on the next tick. The corpus refresh is a writer too, on its own
+connection, with one difference: it waits for the lock rather than losing to
+it. Its connection sets `busy_timeout` to 60 s
+(`cli.py::_CORPUS_BUSY_TIMEOUT_MS`), because a busy error against the
+watcher's rebuild would cost the run and then hold the source for an hour
+(`docs/metagame.md`, "Fetching the corpus"), and nothing waits on this
+thread. Its own writes are short: each
 event's store, and `reclassify_corpus`, which reads every corpus deck first
 and then replaces every classification in one transaction. Measured on a
 copy of the real database (458 events, 11,685 decks, 2026-10-05): the
@@ -162,20 +163,19 @@ built.
 
 ### Ranking by fit, not by raw condition count
 
-`choose()` used to rank archetypes by counting met conditions, with fewer
-unknowns as the tiebreak. That let a definition one requirement short of
-proof outrank one that never had a second requirement to begin with: a real
-match named its opponent "Dimir Harmonizer" off a single generic card (one of
-the two the Harmonizer definition needs) for twenty-odd turns, while the
-actual signature card — the whole of a one-condition Excruciator definition —
-sat unseen. It also never checked a definition's own colours against what had
-actually been shown; that wrong guess was green, the opponent was straight
-Dimir.
+Ranking archetypes by a count of met conditions, with fewer unknowns as the
+tiebreak, lets a definition one requirement short of proof outrank one that
+never had a second requirement to begin with: ranked that way, a real match
+named its opponent "Dimir Harmonizer" off a single generic card (one of the
+two the Harmonizer definition needs) for twenty-odd turns, while the actual
+signature card — the whole of a one-condition Excruciator definition — sat
+unseen. A count also never checks a definition's own colours against what has
+actually been shown; that wrong guess was green, the opponent straight Dimir.
 
-`classify.py` now scores every candidate as a single **fit** in `[0, 1]`:
-`proof` (the fraction of a definition's *observable* requirements that came
-back met) times `support` (diminishing returns on raw proof count, so one
-lone hit never outweighs two independent ones) times `colour_factor` (how
+`classify.py` scores every candidate as a single **fit** in `[0, 1]`:
+`proof` (the fraction of a definition's requirements that came back met)
+times `support` (diminishing returns on raw proof count, so one lone hit
+never outweighs two independent ones) times `colour_factor` (how
 well the definition's own required colours — derived from the local `cards`
 table, unioned across an `all` condition or intersected across a `one-of`
 one — agree with the colours the opponent has actually shown; a mismatch
@@ -201,10 +201,8 @@ disagreed with it).
 
 ### A second evidence source: the corpus's own decklists
 
-`choose()`'s rule engine is exact but silent on two counts: a new set's
-archetypes score zero on every hand-written definition until
-`archetypes/source.py`'s downloaded MTGOFormatData catches up, and even a
-well-defined archetype's fit saturates fast, because `_fit_score` counts
+`choose()`'s rule engine is exact, but a well-defined archetype's fit
+saturates fast, because `_fit_score` counts
 *conditions* met, not cards seen — a definition with one condition reaches
 its ceiling on the first confirming card and cannot be pushed any further by
 a fifth or sixth signature card revealed later in the match. Measured against
@@ -220,10 +218,14 @@ archetype-labelled by the same rule engine over *complete* decklists — see
 log-odds score over card presence, `log P(archetype) + Σ log(P(card |
 archetype) / P(card))` summed over every card this match actually revealed.
 It strengthens additively with each card (the property the rule engine's fit
-lacks), needs no hand-written definition, and is silent by the same
-discipline as everything else here (rule 4): `build_prior()` returns `None`
-on a corpus with nothing to say, and a machine that has never run
-`sensei-top meta` classifies exactly as it did before this source existed.
+lacks), and needs no definition that names the cards this match revealed —
+but it can only name labels the definitions gave its decks
+(`metagame/classify_meta.py::classify_meta_decks`, which labels each corpus
+deck with `choose()` over its complete list and skips a deck with no
+verdict). It is silent by the same discipline as everything else here
+(rule 4): `build_prior()` returns `None` on a corpus with nothing to say, and
+a machine that has never fetched or classified the corpus names every match
+by the rule engine alone.
 
 **The prior is per format.** `build_prior(conn, fmt)` learns only from the
 corpus decks of `fmt` (`meta_event.format`), and its reset and `"gone"`
@@ -251,17 +253,16 @@ each format it is about to name a match under, and combines
 the two verdicts by **confidence rank, the rule engine breaking an exact
 tie** — the more legible answer of the two when both agree. Neither source is
 ever changed to accommodate the other: `choose()`, `evaluate()` and
-`_fit_score` are untouched, and the corpus source has its own floors
-(`CORPUS_MIN_CARDS`, `CORPUS_MIN_ODDS` and the medium/high tiers in
+`_fit_score` know nothing of the corpus, and the corpus source has its own
+floors (`CORPUS_MIN_CARDS`, `CORPUS_MIN_ODDS` and the medium/high tiers in
 `classify.py`) on an entirely different scale (unbounded log-odds, not a
 bounded `[0, 1]` fit) rather than reusing the rule engine's numbers. A
 corpus-won verdict is written with `method = 'corpus'`, flows through
-`opponent_source` for free (that column already reads `a.method` directly),
+`opponent_source` unchanged (that column reads `a.method` directly),
 and reuses `_archetype_label`/`color_label` so it renders identically to a
 rule-named deck. `rank_candidates()` takes the same prior as an optional
 argument to nudge (never invent) a candidate's `fit` in the picker's
-shortlist; omitted, its behaviour is unchanged from before this source
-existed.
+shortlist; omitted, the shortlist is the rule engine's alone.
 
 Every constant here — `CORPUS_MIN_CARDS = 3`, `CORPUS_MIN_ODDS = 25.0`,
 `MIN_CORPUS_DECKS = 8` — was fitted against one snapshot of one player's real
