@@ -6,7 +6,7 @@
     "directory": "./site",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/download/*", "/", "/help/", "/privacy/"]
+    "run_worker_first": ["/download/*", "/", "/help/", "/privacy/", "/pt-br/"]
   },
   "workers_dev": true,
   "preview_urls": false,
