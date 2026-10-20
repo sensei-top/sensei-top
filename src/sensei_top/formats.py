@@ -1,15 +1,16 @@
 """The seven constructed formats, and the facts about them that more than one
-module needs (plan 13).
+module needs.
 
-One home, so the projector, the API and the readers share a tuple instead of
-each keeping a copy. It imports nothing from ``reader/``, ``projector/`` or
+One home, so every module that needs them shares a tuple instead of keeping
+a copy. It imports nothing from ``reader/``, ``projector/`` or
 ``archetypes/``, so any of them may import it.
 
 ``FORMATS`` is MTGO's spelling. ``SCRYFALL_KEYS`` maps each to the key in
-Scryfall's ``legalities`` object. ``BROADER`` is the inclusion order (D4): a
+Scryfall's ``legalities`` object. ``BROADER`` is the inclusion order: a
 partial order, not a line. Standard, Pioneer, Modern, Legacy and Vintage nest;
 Premodern sits inside Legacy; Pauper sits inside Vintage only. Inference over
-it (the single narrowest fitting format) is not done here.
+it (the single narrowest fitting format) is not done here: see
+docs/opponent-deck.md, "A match's format".
 """
 
 from __future__ import annotations
@@ -97,7 +98,7 @@ def arena_format(deck_format: str | None, event_id: str | None) -> str | None:
 
 
 def deck_format_name(deck_format: str | None) -> str | None:
-    """A ``decks.format`` value as one of ``FORMATS``, or None (D15).
+    """A ``decks.format`` value as one of ``FORMATS``, or None.
 
     Arena's own spelling maps (``TraditionalStandard`` is Standard); the MTGO
     deck store's names are already the seven. Draft, and anything else that is

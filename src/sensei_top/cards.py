@@ -7,25 +7,22 @@ somewhere else. There are two sources, and the local one is preferred:
    the Arena install. No network, always in step with the client that wrote
    the log, and complete: it names tokens, the back faces of double-faced
    cards and alternate-art basics, none of which Scryfall's ``arena_id``
-   covers. Refresh it by hand with the command after an Arena patch, or let
-   ``serve`` notice on its own (``_start_reference_refresh`` in ``cli.py``,
-   below) — that path is a local file read, not a network call, so it needs
-   no button and no credential (non-negotiable #5 governs metered/networked
-   calls; this is neither).
+   covers. Re-run ``sensei-top cards`` after an Arena patch, or let ``serve``
+   notice on its own (below) — that path is a local file read, not a network
+   call, so it needs no button and no credential (non-negotiable #5 governs
+   metered/networked calls; this is neither).
 2. **Scryfall's bulk export** — the fallback for when Arena is not installed
-   on this machine (reading a log copied from elsewhere). This is one of the
-   sanctioned outbound calls (brief §3), and it only ever downloads: no game
-   data leaves the machine.
+   on this machine (reading a log copied from elsewhere). It is one of the
+   free downloads (docs/llm.md, "The standard for the free downloads"), and
+   it only ever downloads: no game data leaves the machine.
 
-``ingest`` and ``project`` never touch this module. ``serve`` now does, but
-only the installed-client leg (1): ``arena_cards_missing``/
-``refresh_arena_cards`` at the bottom of this file, run from a background
-thread at startup and every few minutes after, so a grpId the client
-database defines but this table doesn't yet (a Cube pack card, most often)
-stops staying "unknown" until someone remembers to re-run the CLI. The
-Scryfall leg (2) is still the user's own call — ``sensei-top cards
---scryfall`` once, and until they do, rules text and legality stay NULL
-rather than showing numbers at people.
+``ingest`` and ``project`` never touch this module. ``serve`` runs leg 1
+alone, through ``refresh_arena_cards``: ``cli.py::_start_reference_refresh``
+calls it on a background thread at startup, then again on any tick of its
+loop that finds the client database's path or mtime changed. It imports only
+the grpIds this table lacks (the Cube-pack gap, at the end). The Scryfall leg
+(2) is the user's own call — ``sensei-top cards --scryfall`` once, and until
+they do, rules text and legality stay NULL.
 
 Scryfall's ``default_cards`` export is the right one: it lists every English
 printing, and ``arena_id`` (the same number as Arena's ``grpId``) is attached
@@ -33,78 +30,79 @@ per printing. ``oracle_cards`` collapses to one printing per card and drops
 ``arena_id`` for many of them; ``all_cards`` adds every other language for a
 tenfold size increase and no extra Arena coverage.
 
-The export is served as gzipped JSONL — one card object per line, ~75 MB
-compressed — so it is decompressed and parsed a line at a time and never held
-in memory whole. Only the Arena-legal minority survives into the ``cards``
-table under its ``arena_id``, plus one row per MTGO-only card under a synthetic
-negative ``grp_id`` = -(its lowest ``mtgo_id``) (``_write_synthetic_cards``);
-a positive id is always Arena's. The same pass also keeps every printing's ``mtgo_id`` and name in
-``mtgo_card`` (``_mtgo_row``): Magic Online's deck store names its cards by
-that number alone, and an MTGO printing need not have an ``arena_id``.
+The export is served as gzipped JSONL, one card object per line, so it is
+decompressed and parsed a line at a time and never held in memory whole. Only
+the Arena-legal minority survives into the ``cards`` table under its
+``arena_id``, plus one row per MTGO-only card under a synthetic negative
+``grp_id`` = -(its lowest ``mtgo_id``) (``_write_synthetic_cards``); a
+positive id is always Arena's. The same pass also keeps every printing's
+``mtgo_id`` and name in ``mtgo_card`` (``_mtgo_row``): Magic Online's deck
+store names its cards by that number alone, and an MTGO printing need not
+have an ``arena_id``.
 
-Name backfill. ``arena_id`` alone leaves a real gap: Arena assigns
-its *own* grpId to every alternate-art, showcase or bonus-sheet copy of a
-card, and to each face of a double-faced, Adventure, Omen or Room card, but
-Scryfall's bulk export attaches ``arena_id`` to only one representative
-printing per functional card. Every sibling grpId — real, playable, and
-already sitting in the local table from the installed-client import — was
-left with no Standard legality at all (measured: 1,043 rows across
-TLA/FIN/OM1/ECL/TDM/DSK/WOE alone), and the same gap left plenty of rows with
-an ``oracle_id`` (filled by a Cube pack's own ``arena_id`` printing) but no
-``oracle_text`` at all — a Cube pack card is exactly this shape (measured: 39
-of 276 Powered Cube grpIds). ``upsert_cards`` fixes both with a second pass,
-entirely local: while streaming the export it also indexes every non-token
-printing's legality in each of the seven formats, oracle id, rules text and body fields
+Name backfill. ``arena_id`` alone leaves a real gap: Arena assigns its *own*
+grpId to every alternate-art, showcase or bonus-sheet copy of a card, and to
+each face of a double-faced, Adventure, Omen or Room card, but Scryfall's bulk
+export attaches ``arena_id`` to only one representative printing per
+functional card. Every sibling grpId — real, playable, and already sitting in
+the local table from the installed-client import — would have no Standard
+legality at all (measured: 1,043 rows across TLA/FIN/OM1/ECL/TDM/DSK/WOE
+alone), and the same gap leaves rows with an ``oracle_id`` (filled by a Cube
+pack's own ``arena_id`` printing) but no ``oracle_text`` — a Cube pack card is
+exactly this shape (measured: 39 of 276 Powered Cube grpIds).
+``upsert_cards`` fixes both with a second pass, entirely local: while
+streaming the export it also indexes every non-token printing's legality in
+each of the seven formats, oracle id, rules text and body fields
 (``mana_cost``, ``type_line``, ``power``, ``toughness``, ``keywords``,
-``produced_mana``) by *name* — the combined top-level name, each
-``card_faces[].name``, and (for a localized/reskinned product like OM1's
-Marvel names) ``printed_name`` and each face's ``printed_name`` too, since
-Scryfall's own om1 objects already carry the correct Standard legality under
-that name and need no cross-set alias to SPM. A face's own name carries that
-face's own rules text/cost/type/body, never the merged top-level card's — the
-same front-face fallback ``_row`` uses is only for the *combined* name.
+``produced_mana``) by *name* (``_index_names``) — the combined top-level
+name, each ``card_faces[].name``, and (for a localized/reskinned product like
+OM1's Marvel names) ``printed_name`` and each face's ``printed_name`` too:
+Arena shows "Verilax the Havenskin", Scryfall's ``printed_name``, not
+"Anti-Venom, Horrifying Healer", its ``name``, and Scryfall's own om1 objects
+already carry the correct Standard legality under that name, so no
+cross-set alias to SPM is needed. A face's own name carries that face's own
+rules text/cost/type/body, never the merged top-level card's — the
+front-face fallback ``_row`` uses is only for the *combined* name.
 ``produced_mana``/``keywords`` are whole-card properties with no per-face
 form, so every name a card answers to carries the same value for them. After
-the ``arena_id`` upsert, any row still NULL is backfilled by exact name
-match, COALESCE-only (never overwrites a value a row already has) — except
-legality, which the backfill *owns* on the rows it fills and replaces on every
-run (below).
+the ``arena_id`` upsert, any row still NULL is backfilled by exact name match,
+COALESCE-only (never overwrites a value a row already has) — except legality,
+which the backfill *owns* on the rows it fills and replaces on every run
+(below).
 
 A name is skipped **entirely** only when its Standard legality or its
 oracle_id resolves to more than one distinct value across the export — that
-disagreement is the actual signal that two different cards share a name, the
-same check this backfill has always made. When those two agree, oracle_id is
-filled as before, each of the seven formats' ``card_legality`` rows is filled
-*independently* (a row is written when every printing that has a value for that
-format agrees on it, and none when they disagree), and each of the other seven
-fields is then filled *independently*: only when that field alone resolves to a single value, left
-NULL — never guessed (non-negotiable #4) — when it doesn't. A ``keywords``
-ordering quirk or a ``type_line`` erratum on one printing must never blank
-the legality fix this backfill exists for in the first place (measured:
-1,043 rows across TLA/FIN/OM1/ECL/TDM/DSK/WOE alone). Tokens are excluded on
-both sides: a token printing never enters the index, and a row whose
-``type_line`` says Token is never filled — Arena's Treasure and Spirit tokens
-share their names with non-token Scryfall objects.
+disagreement is the signal that two different cards share a name. When those
+two agree, oracle_id is filled, each of the seven formats' ``card_legality``
+rows is filled *independently* (a row is written when every printing that has
+a value for that format agrees on it, and none when they disagree), and each
+of the other seven fields is then filled *independently*: only when that
+field alone resolves to a single value, left NULL — never guessed
+(non-negotiable #4) — when it doesn't. A ``keywords`` ordering quirk or a
+``type_line`` erratum on one printing must never blank the legality fix this
+backfill exists for. Tokens are excluded on both sides: a token printing
+never enters the index, and a row whose ``type_line`` says Token is never
+filled — Arena's Treasure and Spirit tokens share their names with non-token
+Scryfall objects.
 
 Legality is not fill-only, because unlike rules text it changes: a release
-date, a ban, a rotation. Fill-only froze the first answer for good — Reality
-Fracture (FRA) was filled on 2026-09-29, before its 2026-10-02 release, when
-Scryfall still listed 389 of its 417 Arena grpIds ``not_legal`` in Standard,
-and a refresh after release changed none of them (no FRA printing carried an
-``arena_id`` yet, so the name backfill was those rows' only source). So a
+date, a ban, a rotation. Fill-only would keep a set's pre-release
+``not_legal`` for good once its rows were filled before release, as Reality
+Fracture's were: none of its printings carried an ``arena_id`` yet, so the
+name backfill was those rows' only source (docs/architecture.md, "Who owns
+which table"). So a
 resolved name's rows are replaced with the current consensus each run, and a
 format the printings now disagree on loses its row rather than keeping a
 stale one (rule 4). A grpId the ``arena_id`` write covered in the same run is
 never touched: its own printing's answer outranks a name consensus.
 
-Cube packs specifically also lose grpIds outright: a Cube's own pack cards
-never carry Scryfall's ``arena_id`` at all for some printings that only exist
-in the installed client's own database (measured: 4 of 276 Powered Cube
-grpIds). ``arena_cards_missing``/``refresh_arena_cards`` below close that gap
-without a Scryfall run — a plain re-import of the installed client's own
-database, which already names every grpId it defines, run automatically by
-``serve`` whenever that database's own file changes (``cli.py``'s
-``_start_reference_refresh``).
+Cube packs also lose grpIds outright: some of a Cube's own pack cards exist
+only in the installed client's database and never carry Scryfall's
+``arena_id`` (measured: 4 of 276 Powered Cube grpIds). ``refresh_arena_cards``
+closes that gap without a Scryfall run, by a plain re-import of the client
+database's grpIds this table lacks, the way ``serve`` runs it (above).
+``arena_cards_missing`` counts the same grpIds without writing; ``serve``
+does not call it.
 """
 
 from __future__ import annotations
@@ -263,18 +261,16 @@ def _row(card: dict[str, Any]) -> tuple[Any, ...] | None:
     colors = card.get("colors")
     if colors is None:
         colors = front.get("colors")
-    # produced_mana lives only on the top-level card, never per-face — a
-    # land's two faces (if it even has them) tap for the same mana. Left
-    # as None (not `[]`) when the key is genuinely absent, same as
-    # oracle_text below, so the COALESCE in _write can tell "Scryfall
-    # says this produces nothing" from "this row never asked Scryfall".
+    # produced_mana and keywords live only on the top-level card in
+    # Scryfall's schema, never per-face (a land's two faces tap for the same
+    # mana), so neither has a front-face fallback. Each stays None (not
+    # `[]`) when the key is absent, like oracle_text, so the COALESCE in
+    # `_insert_cards` can tell "Scryfall says none" from "this row never
+    # asked Scryfall".
     produced_mana = card.get("produced_mana")
-    # power/toughness/keywords: same front-face fallback as
-    # mana_cost/type_line above — a DFC's top-level card carries neither,
-    # only its faces do (Delver of Secrets has no top-level "power").
-    # keywords lives only at the top level in Scryfall's own schema (it
-    # is a whole-card property, e.g. ["Flying", "Trample"]), never
-    # per-face, so it has no front-face fallback to reach for.
+    # power/toughness: the front-face fallback the returned tuple also gives
+    # mana_cost and type_line — a DFC's top-level card carries neither, only
+    # its faces do (Delver of Secrets has no top-level "power").
     power = card.get("power") or front.get("power")
     toughness = card.get("toughness") or front.get("toughness")
     keywords = card.get("keywords")
@@ -328,7 +324,7 @@ def _rows(cards: Iterable[dict[str, Any]]) -> Iterator[tuple[Any, ...]]:
 
 
 # Objects that are not real, playable cards. They must never seed the name
-# backfill below — an Arena token grp_id often carries a token's own generic
+# backfill (`_index_names`) — an Arena token grp_id often carries a token's own generic
 # name ("Food", "Clue", "Ally"), and indexing a token would risk handing that
 # name's legality to an unrelated real card that happens to share it (or vice
 # versa). Measured: no such collision exists today, but the exclusion is what
@@ -345,10 +341,10 @@ def _is_non_card(card: dict[str, Any]) -> bool:
 # Keeps the per-format keys apart from column names in the name index.
 _LEGALITY_PREFIX = "legality:"
 
-# Every column the name backfill can fill, in the order the UPDATE below
-# binds them. `oracle_id`/`produced_mana`/`keywords` are
-# whole-card properties; `oracle_text`/`mana_cost`/`type_line`/`power`/
-# `toughness` are face-specific — see `_index_names`.
+# Every column the name backfill can fill, in the order
+# `_backfill_by_name`'s UPDATE binds them. `oracle_id`/`produced_mana`/
+# `keywords` are whole-card properties; `oracle_text`/`mana_cost`/
+# `type_line`/`power`/`toughness` are face-specific — see `_index_names`.
 _BACKFILL_FIELDS = (
     "oracle_id", "oracle_text", "produced_mana",
     "power", "toughness", "keywords", "mana_cost", "type_line",
@@ -359,24 +355,17 @@ def _index_names(
     card: dict[str, Any],
     index: dict[str, dict[str, set[str]]],
 ) -> None:
-    """Record one printing's backfill fields (`_BACKFILL_FIELDS`) under every
-    name Arena might show it by.
+    """Record one printing's backfill fields (`_BACKFILL_FIELDS`) and
+    per-format legalities (as `legality:<format>`) under every name Arena
+    might show it by: the top-level `name`, each `card_faces[].name`, and the
+    `printed_name` of both (the module docstring's "Name backfill" says why).
 
-    Beyond the top-level `name`, this indexes each `card_faces[].name` — a
-    double-faced, Adventure, Omen or Room card's own faces carry Arena grpIds
-    of their own. The per-format legalities (indexed as
-    `legality:<format>`), `oracle_id`, `produced_mana` and
-    `keywords` are whole-card properties, so every name a card answers to
-    gets the same value for them. The other five — `oracle_text`,
-    `mana_cost`, `type_line`, `power`, `toughness` — are face-specific: a
-    face's own name is indexed under *that face's own* value, never the
-    combined card's front-face fallback (that fallback — `card.get(x) or
-    front.get(x)` — is only for the top-level "Front // Back" name, matching
-    `_row`). It also indexes `printed_name` (top-level and per-face): OM1's
-    Marvel-skinned reprints show Arena a name Scryfall calls `printed_name`
-    ("Verilax the Havenskin") rather than `name` ("Anti-Venom, Horrifying
-    Healer") — and Scryfall's own om1 printing already carries the correct
-    Standard legality under that name, so no om1->spm set alias is needed.
+    The legalities, `oracle_id`, `produced_mana` and `keywords` are
+    whole-card: every name gets the same value. The other five —
+    `oracle_text`, `mana_cost`, `type_line`, `power`, `toughness` — are
+    face-specific: a face's own name is indexed under *that face's own*
+    value, and only the top-level "Front // Back" name takes the front-face
+    fallback (`card.get(x) or front.get(x)`, matching `_row`).
 
     Tokens, emblems and art-series objects are skipped entirely (`_is_non_card`).
     """
@@ -437,31 +426,18 @@ def _backfill_by_name(
     direct: Iterable[int],
 ) -> tuple[int, int, int, int, frozenset[str]]:
     """Fill every still-NULL column in `_BACKFILL_FIELDS`, by exact name
-    match against the index `_index_names` built. COALESCE-only — a row that
-    already has a value in any of these columns is never touched.
+    match against the index `_index_names` built. Each column is COALESCE'd
+    on its own: a value a row already has is never overwritten, and the
+    row's other NULL columns are still filled. Which names are skipped, and
+    how each field and format resolves on its own, is the module
+    docstring's "Name backfill"; a name whose printings differ only in
+    Pauper still gets the other six formats.
 
-    A name is skipped entirely only when its Standard legality or its
-    `oracle_id` resolves to more than one distinct value across the export —
-    that disagreement is the original ambiguity check this backfill has
-    always made, the actual signal that two different cards share a name.
-    When those two agree, `oracle_id` is filled as usual, and each of the
-    other fields is filled *independently* of the rest: only when that field
-    alone resolves to exactly one value, left NULL — never guessed
-    (non-negotiable #4) — when it doesn't. This keeps a `keywords` ordering
-    quirk or a `type_line` erratum on one printing from blanking the
-    legality/oracle_id fix this backfill exists for in the first place.
-
-    The seven formats' `card_legality` rows follow the same rule, one format
-    at a time: a format's row is written when every printing that has a value
-    for it agrees, and not written when they disagree, so a name whose
-    printings differ only in Pauper still gets the other six. Only a
-    disagreement on Standard or `oracle_id` skips the name.
-
-    Legality is the one thing this pass replaces rather than fills (module
-    docstring): every non-token row of a resolved name has its rows deleted
-    and rewritten from today's consensus, unless its grp_id is in `direct`,
-    the grp_ids `upsert_cards` just wrote from their own printing. A name
-    skipped as ambiguous keeps whatever rows it has.
+    Legality is the one thing this pass replaces rather than fills: every
+    non-token row of a resolved name has its rows deleted and rewritten
+    from today's consensus, unless its grp_id is in `direct`, the grp_ids
+    `upsert_cards` just wrote from their own printing. A name skipped as
+    ambiguous keeps whatever rows it has.
 
     Returns (Standard `card_legality` rows added, legality rows changed or
     removed, oracle_text rows filled, names left ambiguous, the names whose
@@ -873,12 +849,7 @@ def _write(conn: sqlite3.Connection, rows: Iterable[tuple[Any, ...]]) -> int:
     return len(rows)
 
 
-# The installed client ships the mapping it uses itself, as a plain SQLite file.
-# It is the better source: it needs no network, it always matches the client
-# that wrote the log, and it covers what Scryfall's arena_id cannot — tokens,
-# the back faces of double-faced cards, and alternate-art basics, all of which
-# appear in a game log like any other card.
-
+# The installed client's own card database: source 1 of the module docstring.
 _ARENA_DB_IN_INSTALL = "MTGA_Data/Downloads/Raw/Raw_CardDatabase_*.mtga"
 _ARENA_DB_GLOB = f"steamapps/common/MTGA/{_ARENA_DB_IN_INSTALL}"
 
@@ -978,8 +949,9 @@ def read_arena_cards(path: Path) -> Iterator[tuple[Any, ...]]:
                 # oracle id, mana-production data or body/keywords at all —
                 # see migrations/015_card_text.sql,
                 # migrations/021_produced_mana.sql and migrations/031_card_body.sql.
-                # _write's COALESCE keeps whatever a prior Scryfall run already
-                # supplied rather than erasing it with these Nones.
+                # The COALESCE in `_insert_cards` keeps whatever a prior
+                # Scryfall run already supplied rather than erasing it with
+                # these Nones.
                 None,
                 None,
                 None,
@@ -1011,10 +983,11 @@ def _arena_grp_ids(path: Path) -> set[int]:
 
 def arena_cards_missing(conn: sqlite3.Connection, path: Path) -> int:
     """Count grpIds the installed client's own database defines but this
-    table doesn't have a row for yet — a Cube pack card most often
-    (measured: 4 of 276 Powered Cube grpIds, module docstring). One SELECT
-    against the Arena file (`_arena_grp_ids`); the local side is one SELECT
-    on `cards` already open on `conn`.
+    table doesn't have a row for yet — a Cube pack card most often (the
+    module docstring's Cube-pack gap). Writes nothing. One SELECT against
+    the Arena file (`_arena_grp_ids`); the local side is one SELECT on
+    `cards` already open on `conn`. `refresh_arena_cards` computes the same
+    difference itself rather than calling this.
     """
     existing = {row[0] for row in conn.execute("SELECT grp_id FROM cards")}
     return len(_arena_grp_ids(path) - existing)
