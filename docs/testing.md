@@ -158,10 +158,12 @@ and a push there shows a run whose jobs are skipped. The public repository,
   build is needed there. `.gitattributes` marks `tests/fixtures/**` as `-text`
   so Git for Windows' CRLF conversion never touches the raw captures.
 
-The privacy scan has its own gate, outside CI: the tracked hook
-`scripts/git-hooks/pre-push`, enabled in a clone with
-`git config core.hooksPath scripts/git-hooks`, runs
-`privacy_scan.py --pre-push` over the commits a push sends.
+The privacy scan has its own gate, outside CI: the tracked hooks in
+`scripts/git-hooks`, enabled in a clone with
+`git config core.hooksPath scripts/git-hooks`. `pre-commit` runs
+`privacy_scan.py` over the tracked tree, with the files being committed, and
+refuses the commit on a hit; `pre-push` runs `privacy_scan.py --pre-push`
+over the commits a push sends.
 
 `verify.py --full` runs the same drift check after `pnpm build`, so a stale
 `api.ts` fails locally before it fails in CI; the fix it names is

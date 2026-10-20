@@ -88,6 +88,8 @@ once, in your clone, and give the clone its own name:
     git config core.hooksPath scripts/git-hooks
     git config user.name "<the name your commits should carry>"
 
+The `pre-commit` hook scans the tracked tree, including the files you are
+committing, and refuses the commit if one of your own identifiers is in it.
 The `pre-push` hook then scans what a push sends: the files, messages and
 author fields of every commit the remote doesn't have yet. It refuses the
 push if one of your own identifiers is in them. It finds those identifiers
