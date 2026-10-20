@@ -18,8 +18,9 @@ copying its output (AGENTS.md rule 8):
   31 now holds [289, 288, 287, 286, 285, 284, 283], resolving to grpIds
   [102774, 68738, 102774, 86835, 102698, 91584, 102578]. gameObjects in
   this same message also lists instanceId 46 (grpId 86836) at zoneId 31 —
-  a stale leftover NOT present in zone 31's own objectInstanceIds, which is
-  exactly the trap this file's docstring describes and this suite pins.
+  a stale leftover NOT present in zone 31's own objectInstanceIds. Filtering
+  gameObjects by zoneId over-counts the hand: docs/arena-log.md, "The
+  traps", trap 14. This suite pins it.
 """
 
 from __future__ import annotations

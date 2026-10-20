@@ -249,13 +249,11 @@ def test_duty_cycle_holds_the_gate_open_past_project_every(live, conn):
     live.poll_once(conn)  # forced by the match-room boundary
     assert live.stats.projections == 1
 
-    # Simulate a rebuild that took 16s, same order of magnitude as the one
-    # measured against the real 238k-event database this plan was written
-    # against. Set explicitly rather than relying on the class default: the
-    # default itself changed (4.0 -> 1.0) once the Current match tab went
-    # Arena-only (live.py's module docstring), and this test is about the
-    # gate math, not about pinning whatever the default happens to be —
-    # duty_factor=4.0 makes the gate 64s.
+    # Simulate a rebuild that took 16s. Set explicitly rather than relying on
+    # the class default: the default itself changed (4.0 -> 1.0) once the
+    # Current match tab went Arena-only (docs/architecture.md, "Live mode's
+    # two cadences"), and this test is about the gate math, not about pinning
+    # whatever the default happens to be — duty_factor=4.0 makes the gate 64s.
     live.duty_factor = 4.0
     live._last_duration = 16.0
     live.project_every = 5.0  # the old fixed threshold, now just the floor
@@ -1003,9 +1001,9 @@ def _insert_mtgo_raw_row(conn, *, source_file: str, data: bytes = b"x") -> int:
 
 
 def test_duty_factor_default_is_one(live):
-    """Pins the new default (live.py's module docstring): changed from 4.0
-    (~20% duty cycle) to 1.0 (~50%) once the Current match tab went
-    Arena-only (migrations/040_arena_only_current_match.sql) — MTGO no
+    """Pins the default (docs/architecture.md, "Live mode's two cadences"):
+    changed from 4.0 (~20% duty cycle) to 1.0 (~50%) once the Current match
+    tab went Arena-only (migrations/040_arena_only_current_match.sql) — MTGO no
     longer needs its own off-cadence boundary trick, so the tab's own
     latency became worth trading CPU duty for."""
     assert live.duty_factor == 1.0

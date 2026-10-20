@@ -1,4 +1,4 @@
-"""MTGO decode/parse/project tests — the "Live MTGO matches" plan's step 11.
+"""MTGO decode/parse/project tests.
 
 Ground truth is read from the real fixture
 (``tests/fixtures/mtgo_match_session.log``, 7838 bytes) with
@@ -30,7 +30,9 @@ is Turn 4, but 8 ``Turn N:`` lines total (1/1/2/2/3/3/4/4) — ``turn_count``
 is 8, not 4; Player2000 concedes again, Player1 wins the game; the final line
 reads "Player1 wins the match 2-0" — the only line that sets
 ``winner_handle``. 17 card events.
-28 + 17 = 45 total, matching the plan's full-fixture ``project()`` expectation.
+28 + 17 = 45 card events in the whole fixture, which is what a full
+``project()`` of it must store
+(``test_full_fixture_projects_one_match_two_games_45_card_events``).
 
 *** 26 bracketed names, 25 card events ***
 26 distinct bracketed ``@[Name@:i1,i2:@]`` references appear somewhere in
@@ -52,20 +54,14 @@ ability from" line anywhere in the fixture (tokens are never "cast" or
 "played" in MTGO's own log text). See
 ``test_25_of_26_bracketed_names_become_card_events`` below.
 
-*** Also checked against the plan's own Verification section ***
-The plan says (line ~494) "a deleted `wins the game` line -> exactly one
-cross-check warning and the counted value kept." No such cross-check exists
-anywhere in parse.py or project.py: the ``wins_game`` handler unconditionally
-sets ``current.winner_handle`` with no comparison against anything, and
-nothing else in either module reacts to a missing "wins the game" line — so
-deleting one produces zero warnings, not one. The plan's own Step 2
-implementation spec (the only place such logic would be added) describes a
-*different*, real cross-check: "begins the game with <n> sets mulligans = 7-n
-authoritatively. Cross-check against any `mulligans to` value; warn on
-disagreement" — and that one *is* implemented (parse.py's "mulligan count
-mismatch" warning) and *is* the "counted value kept" pattern the Verification
-section is almost certainly describing. Tested here as the mulligan
-cross-check instead of the (nonexistent) "wins the game" one; see
+*** The one counted-value cross-check is the mulligan count ***
+Game 2 above carries both mulligan sources: the running "mulligans to six
+cards" line and the authoritative "begins the game with six cards in hand"
+line (mulligans = 7 - n). parse.py warns "mulligan count mismatch" when the
+two disagree and keeps the authoritative value. A missing "wins the game"
+line has no such check: the ``wins_game`` handler sets
+``current.winner_handle`` without comparing it to anything, so deleting
+that line produces no warning. See
 ``test_mulligan_cross_check_disagreement_warns_once_and_keeps_the_authoritative_count``.
 """
 
@@ -282,12 +278,12 @@ def test_25_of_26_bracketed_names_become_card_events():
 
 
 def test_mulligan_cross_check_disagreement_warns_once_and_keeps_the_authoritative_count():
-    """The real cross-check this parser implements (see the module docstring
-    above for why this replaces the plan's literal "deleted `wins the game`
-    line" scenario, which corresponds to no code that exists): "begins the
-    game with <n>" is authoritative (mulligans = 7 - n) and disagreement with
-    a preceding "mulligans to <n> cards" line must warn exactly once, keeping
-    the authoritative (counted) value rather than the running one.
+    """The counted-value cross-check this parser implements (the module
+    docstring's "The one counted-value cross-check is the mulligan count"):
+    "begins the game with <n>" is authoritative (mulligans = 7 - n), and
+    disagreement with a preceding "mulligans to <n> cards" line must warn
+    exactly once, keeping the authoritative (counted) value rather than the
+    running one.
 
     Built from a minimal synthetic string list (not the real fixture, since
     the real fixture's two mulligan sources always agree) — isolating the
@@ -678,7 +674,7 @@ def test_no_parser_warning_names_a_player():
 # (decode.py's module docstring), a 7-bit length prefix (one byte, for a
 # string under 128 bytes) and then its UTF-8 bytes. So a string is located
 # with bytes.index and checked against the byte before it. MTGO's writes are
-# pure appends (plan 3, F14): a prefix ending at a string boundary is a state
+# pure appends: a prefix ending at a string boundary is a state
 # MTGO really wrote, and one ending inside a string is what a half-done copy
 # looks like. Probe line numbers are those of
 # `scripts/mtgo_probe.py --force --lines 400 ... | nl -ba`.
@@ -1135,9 +1131,9 @@ def test_a_watched_match_is_skipped_without_a_warning(conn, caplog):
 
 
 def test_a_match_someone_else_watched_is_still_projected(conn):
-    """The skip needs the configured handle to be the watcher: plan 30's
-    measurement found 14 spectators across the user's own matches in the real
-    history, and those matches must still be stored."""
+    """The skip needs the configured handle to be the watcher: the real
+    history has 14 spectators across the user's own matches, and those
+    matches must still be stored."""
     data = FIXTURE_BYTES + _framed("@PPlayer3000 has started watching.")
     _insert_mtgo_row(conn, data=data, logged_at="2026-09-14T12:42:37")
     result = project_mtgo(conn, "Player1")
@@ -1317,7 +1313,7 @@ def test_resolve_grp_id_reversible_name_resolves_to_the_arena_id(conn):
 
 
 
-# --- the ending lines (plan 30, S2) --------------------------------------------
+# --- the ending lines ----------------------------------------------------------
 #
 # Real games' lines from the user's history, anonymized (the user is Player1, the
 # other player Player2000), card and draw lines trimmed. What each says, read from
@@ -1698,7 +1694,7 @@ def test_a_mtgo_concession_is_worded_in_the_report(conn):
     assert [_reason_text(r) for r in reasons] == ["conceded", "conceded"]
 
 
-# --- a reconnect is not a new game (plan 30, S3) -------------------------------
+# --- a reconnect is not a new game ---------------------------------------------
 #
 # Real games' lines, anonymized as above. What each says, read from the lines:
 #   1   the user loses connection and rejoins mid-game 1 (7 `Turn` lines, won by

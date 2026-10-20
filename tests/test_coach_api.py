@@ -1,8 +1,9 @@
 """Tests for api/routes/coach.py and api/models/coach.py: the coach's own
-free ``GET /api/coach`` and its three ``.../narrative`` routes.
+free ``GET /api/coach`` and its ``.../narrative`` routes.
 
 Mirrors tests/test_llm.py's credential-gating and stored-report coverage
-for the other three narrative routes, adapted for what makes this one
+for the other four ``POST .../narrative`` routes (match report, leak
+finder, deck guide, RCQ guide), adapted for what makes this one
 different (a plain history INSERT rather than a single overwritten slot, a
 credential resolved through ``load_coach()`` rather than ``load()``, and a
 ``write_report`` call that can carry both web citations and reading-list
