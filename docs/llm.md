@@ -82,7 +82,8 @@ Claude" buttons that call the API server-side and store the answer. No
 credential, no difference from before — every generate route returns 503 and
 the frontend falls back to `CopyPromptCard`.
 
-**Decided 2026-10-07: both paths stay, and both are the user's own.** The
+**Decided 2026-10-07: both paths stay, and both are the user's own.** That
+decision also ruled out a paid tier, a hosted proxy and an account. The
 2026-10-01 decision (writing Pro-only through a hosted proxy, the copy
 prompt removed, three tiers, an account) is reversed. **Amended
 2026-10-12:** a paid subscription is planned, not built, and its monthly
@@ -430,6 +431,19 @@ built on the API, not resold access to it. Someone who runs a modified
 copy as a service for others owes its users the source under AGPL
 section 13, which is the licence working as intended, not a case this
 project has to design for.
+
+Two paid things are planned, and what each waits on is in
+`docs/status.md`. The Microsoft Store listing is the same build as the free
+download, listed free when it goes up and priced once the blockers there
+clear. The subscription comes at around 3,000 monthly active users, gated by
+feature, never by the player's rank or event type. It is the one thing behind
+an account, made at checkout: an email code, or Google, Discord or X. The
+account lives in the hosted service; the local server keeps no login and
+stays loopback-only. Selling tokens, credits or a prepaid balance would be
+reselling the Services, which Anthropic's Commercial Terms (D.4) allow only
+with its express approval. Until the subscription is built, the two paths
+that generate prose are the user's own: the prompt round trip and a
+credential the user configures, and both stay free beside the allowance.
 
 The `writer` under "The fallback" above is where the allowance would
 enter the dashboard, as a third case beside nobody and a key; it is not
