@@ -9,9 +9,9 @@ straight to ``decode.py`` (see "Whether the last game is decided" below).
 
 Grammar recognised. The fixture holds the start block, the turns, the card
 lines, the concessions, the wins and the match lines; the ending, reconnect
-and watching lines come from the real history plan 30 measured
-(2026-10-19), and ``tests/test_projector_mtgo.py`` carries them as
-transcribed lines. ``<H>`` is a handle, read as "Handles" below says:
+and watching lines come from the real history (2026-10-19), and
+``tests/test_projector_mtgo.py`` carries them as transcribed lines. ``<H>``
+is a handle, read as "Handles" below says:
 
 * the bare GUID appearing as (one of) the first decoded string(s) -> match id
 * ``<H> rolled a <n>.`` -> discovers a handle (the pre-game die roll)
@@ -31,16 +31,14 @@ transcribed lines. ``<H>`` is a handle, read as "Handles" below says:
 * ``Turn <n>: <H>`` -> turn number + active handle. **Not** the primary
   game-boundary signal (see Bug B below) — a fallback only.
 * ``<H> plays @[Name@:i1,i2:@].`` -> a card event, category ``PlayLand``
-  (MTG's own rules vocabulary: you *play* a land, never a spell — so this
-  verb alone tells us the category, matching Arena's own ``PlayLand``
-  annotation category without needing separate evidence)
+  (you *play* a land, never a spell, so the verb alone gives the category,
+  Arena's own ``PlayLand``)
 * ``<H> casts @[Name@:i1,i2:@].`` -> a card event, category ``CastSpell``
-  (same reasoning, and again matches Arena's own vocabulary)
+  (the same reasoning, and Arena's own vocabulary again)
 * ``<H> activates an ability of @[Name@:i1,i2:@] ...`` -> a card event,
-  category ``Activate`` (MTGO-only vocabulary; Arena's annotation categories
-  have no equivalent single tag for this, so this parser mints one rather
-  than reusing a category that would imply zone/annotation semantics MTGO's
-  log doesn't carry)
+  category ``Activate``, minted here: Arena has no single equivalent
+  category, and reusing one would imply zone/annotation semantics MTGO's log
+  doesn't carry
 * ``<H> puts a triggered ability from @[Name@:i1,i2:@] onto the stack ...``
   -> a card event, category ``Trigger`` (same reasoning as ``Activate``)
 * ``<H> has conceded from the game.`` -> the current game's result reason
@@ -66,15 +64,17 @@ transcribed lines. ``<H>`` is a handle, read as "Handles" below says:
 
 Deliberately **not** parsed, even though real and present in the fixture:
 ``draws a card``, ``discards``, ``is being attacked by``, ``creates a ...
-Token``, ``chooses <color> for`` — none of these appear in the plan's
-grammar table, and every card name in the one real sample already surfaces
-through the plays/casts/activates/triggers lines above (verified: 26 distinct
-``@[...]`` names in the fixture, all 26 reachable through just those four
-line shapes). Nor are ``Match Tied <a>-<b>``, MTGO's running score while the
-match is level (``score_line`` would be its only reader, and it is a
-self-check, see below), or ``has left the game``: a game that ends with a
-player leaving, or with a lost connection and no return, has no result here,
-since the log never says who MTGO awarded it to.
+Token``, ``chooses <color> for``. The fixture brackets 26 distinct ``@[...]``
+names; 25 surface through the plays/casts/activates/triggers lines above,
+and the 26th, ``Zombie Druid Token``, only as the target of a triggered
+ability, which the ``Trigger`` pattern does not capture
+(``tests/test_projector_mtgo.py::test_25_of_26_bracketed_names_become_card_events``).
+Nor are ``Match Tied
+<a>-<b>``, MTGO's running score while the match is level (``score_line``
+would be its only reader, and it is a self-check, see below), or ``has left
+the game``: a game that ends with a player leaving, or with a lost connection
+and no return, has no result here, since the log never says who MTGO awarded
+it to.
 
 Handles
 -------
@@ -84,37 +84,34 @@ players' handles come first from the lines whose ending is fixed
 everything before that ending is the handle; a spectator's come from
 ``has started watching.`` and are kept apart. Every other line is read as
 led by one of the players' handles, longest first, then a space, so
-``Bob Two`` is tried before ``Bob``. A transcript with none of those lines
-falls back to ``\\S+``. Two opponents in the real history had a space in
-their handle, and both matches read wrong before this rule.
+``Bob Two`` is tried before ``Bob``, and a line led by any other handle
+matches nothing. A transcript with none of those lines falls back to
+``\\S+``.
 
 Bug B — game boundaries are per-game start markers, not "turn resets to 1"
 ---------------------------------------------------------------------------
 MTGO numbers turns **per player**, not globally: a single real game emits
 both ``Turn 1: <H1>`` and ``Turn 1: <H2>`` (each player's own first turn).
-The previous version of this parser treated *every* ``Turn 1: <H>`` line as
-"a new game started", which double-counted every real game into two —
-confirmed by running the real decoder+parser against
-``tests/fixtures/mtgo_match_session.log`` and finding 4 ``GameRecord``s for a
-match that is provably 2 games (``tests/test_projector_mtgo.py``). Worse, the
-*real* pre-game facts (who's on the play, who mulliganed) landed on the
-phantom second-turn "game" rather than the real one, and the parser raised no
-warning — exactly the two facts this live feature exists to show.
+Reading every ``Turn 1: <H>`` line as "a new game started" splits every
+real game in two: the fixture's 2 games read as 4 ``GameRecord``s
+(``tests/test_projector_mtgo.py``), with no warning, and the pre-game facts
+(who is on the play, who mulliganed) land on the wrong record.
 
-The fix: every real game in the fixture is preceded by an explicit start
-block — ``joined the game`` (both handles), then ``chooses to play first``,
-then ``begins the game with <n> cards in hand`` (both handles, always) and
+Every real game in the fixture is preceded by an explicit start block —
+``joined the game`` (both handles), then ``chooses to play first``, then
+``begins the game with <n> cards in hand`` (both handles, always) and
 optionally ``mulligans to <n> cards`` — and all of it happens *before* that
-game's first ``Turn 1:`` line. So a new ``GameRecord`` starts on the first of
-those four start-block signals seen after the previous game already has some
-action recorded (``GameRecord.has_action()``), not on ``Turn 1``.
-``Turn 1: <H>`` remains a **fallback** boundary — only for a prefix whose
-start block was lost (a decode resync landing mid-game, or a truncated live
-read) — gated on ``current is None or current.turn_count >= 2`` so that the
-*second* player's ``Turn 1`` within one real game does not retrigger it: the
-gate reads ``turn_count`` *before* counting the line being processed, and at
-that point only the first player's own ``Turn 1`` has been counted, so
-``turn_count`` is still 1. The gate reads the printed ``N`` off the line
+game's first ``Turn 1:`` line. So a new ``GameRecord`` starts on a
+start-block signal, not on ``Turn 1``: a ``joined`` once the current game has
+any action (``GameRecord.has_action()``), and the other three once it has
+begun (``GameRecord.has_begun()``; see "A concession inside a start block"
+below). ``Turn 1: <H>`` remains a **fallback** boundary — only for a prefix
+whose start block was lost (a decode resync landing mid-game, or a truncated
+live read) — gated on ``current is None or current.turn_count >= 2`` so that
+the *second* player's ``Turn 1`` within one real game does not retrigger it:
+the gate reads ``turn_count`` *before* counting the line being processed,
+and at that point only the first player's own ``Turn 1`` has been counted,
+so ``turn_count`` is still 1. The gate reads the printed ``N`` off the line
 (``turn_number == 1``), never the ordinal ``turn_count`` stores (see "Turn
 units" below). Because ``turn_count`` counts lines, it is already 2 once both
 players' ``Turn 1`` lines are in, so a bare ``Turn 1`` as a game's third
@@ -130,9 +127,7 @@ line. The set of such handles lasts the whole game (a player can drop
 twice); a drop is ignored once the game has a result, and the set is
 emptied when the next game opens. Every other ``joined`` opens a game as
 above, and opening one while the last has action and no result warns that
-a game started before the last one ended. Before this rule, the real
-history held 9 phantom games in 8 matches, each pushing every later game
-of its match one number up.
+a game started before the last one ended.
 
 A concession inside a start block
 ---------------------------------
@@ -141,35 +136,29 @@ writes the rest of that game after the concession. One real game reads
 ``mulligans to five cards``, ``has conceded from the game``, then the same
 player's ``puts two cards on the bottom of their library and begins the game
 with five cards in hand.``, their ``Turn 1``, and the opponent's ``wins the
-game``. The concession counts as action (``has_action()``), so that
-``begins`` line opened a second game, which took the turn and the win and
-left the first with no result. So only ``joined``, the line that opens a
-start block, starts a new game after a bare concession; ``chooses to play
-first``, ``mulligans to`` and ``begins the game with`` start one only once
-the current game has a turn, a card event or a result
-(``GameRecord.has_begun()``). A ``joined`` after a concession with no result
-line still opens the next game, with the warning above.
+game``. The concession counts as action (``has_action()``), so had any
+start-block line opened a game after it, that ``begins`` line would have
+opened a second game, taken the turn and the win, and left the first with no
+result. So only ``joined``, the line that opens a start block, starts a new
+game after a bare concession; ``chooses to play first``, ``mulligans to``
+and ``begins the game with`` start one only once the current game has a
+turn, a card event or a result (``GameRecord.has_begun()``). A ``joined``
+after a concession with no result line still opens the next game, with the
+warning above.
 
 Turn units — this parser's ``turn_count``/``turn_number`` are Arena's units,
 not MTGO's printed ones
 -------------------------------------------------------------------------
-MTGO's own log *prints* turn numbers per player (``Turn 1: <H1>``,
-``Turn 1: <H2>``, ``Turn 2: <H1>``…), but ``GameRecord.turn_count`` and
-``CardEvent.turn_number`` do **not** store that printed number — they count
-**player-turns globally**, the same unit Arena's own ``turnNumber`` already
-uses (``projector/matches.py``: 1 (you), 2 (them), 3 (you)…), so a consumer
-that pools both sources (the coach, ``v_deck_game_length``,
-``review/analyzers/baseline.py``, ``guide/play.py``) reads one unit, not two.
-Concretely: each ``Turn N: <H>`` *line* is one player-turn, so
-``turn_count`` is the count of ``Turn`` lines seen in the game so far (not
-the highest printed ``N``), and a card event's ``turn_number`` is that same
-running count at the moment the event was parsed — an ordinal, reset to 0
-every time a new ``GameRecord`` starts (``ensure_fresh_game``) so that a card
-event between a new game's start block and its own first ``Turn`` line gets
-``turn_number=None`` rather than inheriting the previous game's last count
-(the same class of bug Bug B fixed for game boundaries, applied here to the
-per-event field). A game with only ``Turn 1: <H1>`` and ``Turn 1: <H2>`` —
-two lines, one per player — therefore has ``turn_count == 2``, not ``1``.
+``GameRecord.turn_count`` and ``CardEvent.turn_number`` never store the
+printed per-player ``N``: each ``Turn N: <H>`` *line* is one player-turn, so
+``turn_count`` is the count of ``Turn`` lines seen in the game so far, and a
+card event's ``turn_number`` is that running count when the event was
+parsed. Why, and who reads it: docs/architecture.md, "What a turn snapshot
+holds". The running count is reset to ``None`` every time a new
+``GameRecord`` starts (``ensure_fresh_game``), so a card event between a new
+game's start block and its own first ``Turn`` line gets ``turn_number=None``
+rather than the previous game's last count. A game with only ``Turn 1:
+<H1>`` and ``Turn 1: <H2>`` has ``turn_count == 2``, not ``1``.
 
 ``score_line`` is deliberately self-check only: ``games_won``/``games_lost``
 are always derived by *counting* each game's result as
@@ -183,9 +172,9 @@ only ``wins the match`` — never ``leads the match`` — sets the authoritative
 
 Whether the last game is decided
 --------------------------------
-The watcher stores a game log once a game ends (plan 3, D2; ``live.py``), and
-"has a game ended" is a question about what the text means, so the reader
-cannot answer it (``reader/mtgo.py``'s module docstring): ``last_game_decided``
+The watcher stores a game log once a game ends (``live.py``), and "has a
+game ended" is a question about what the text means, so the reader cannot
+answer it (``reader/mtgo.py``'s module docstring): ``last_game_decided``
 answers it here, from the same decode and parse ``project.py`` uses, so the
 watcher judges a file by the reading the projector will give it.
 
@@ -198,10 +187,11 @@ game`` as two strings, and a read can land between them. The next game's
 first start-block line (``joined the game``) opens a new record, so between
 games the answer stays true until that line lands, then false until the new
 game names a winner, a loser or a draw. A game that ends with none of these
-(a disconnect, a crash) is never decided here; the watcher's 10-minute quiet
-fallback stores it. Since only a complete string can match the grammar, a
-read cut mid-string (MTGO's own write, or a copy's, half done) loses the
-string at the cut rather than deciding anything from it.
+(a disconnect, a crash) is never decided here; the watcher's quiet fallback
+stores it (docs/architecture.md, "Live mode's two cadences"). Since only a
+complete string can match the grammar, a read cut mid-string (MTGO's own
+write, or a copy's, half done) loses the string at the cut rather than
+deciding anything from it.
 """
 
 from __future__ import annotations
@@ -219,13 +209,8 @@ _GUID_RE = re.compile(
 )
 _CARD_REF = r"@\[(?P<name>[^@]+)@:\d+,\d+:@\]"
 
-# The handle rule (plan 30, D5). A handle may hold a space ("Player Two"), so
-# `\S+` read only its first word. The players' handles are taken first from
-# the lines whose ending is fixed, where everything before that ending is the
-# handle; every other line's handle is then one of those, longest first, so
-# "Bob Two" is tried before "Bob". A transcript with none of these lines
-# falls back to `\S+`, and with them, a line led by any other handle matches
-# nothing.
+# The fixed-ending lines the players' handles are read from (module
+# docstring's "Handles").
 _PLAYER_HANDLE_RES = (
     re.compile(r"^(?P<handle>.+) rolled a \d+\.$"),
     re.compile(r"^(?P<handle>.+) joined the game\.$"),
@@ -319,10 +304,8 @@ def _patterns(known: set[str]) -> _Patterns:
         draw=re.compile(rf"^(?P<a>{alternation}) and (?P<b>{alternation}) lose the game\.$"),
         wins_game=re.compile(rf"^{h} wins the game\.$"),
         wins_match=re.compile(rf"^{h} wins the match \d+-\d+$"),
-        # Self-check only (see module docstring): both "leads the match"
-        # (running, mid-match) and "wins the match" (final) carry the same
-        # score shape, so both feed `score_line` even though only the latter
-        # sets `winner_handle`.
+        # Both "leads" and "wins" feed `score_line`, a self-check only
+        # (module docstring).
         leads_match=re.compile(
             rf"^{h} (?:leads|wins) the match (?P<a>\d+)-(?P<b>\d+)$"
         ),
@@ -364,9 +347,9 @@ def _ascii_int(text: str) -> int | None:
 
 def _strip_at_p_prefix(s: str) -> str:
     """Strip one or more leading ``@P`` markers. Real content, not framing
-    noise (recon: ``"player handles as @PHandle"``) — some lines carry it
-    twice (``"@P@PPlayer1 joined the game."``), most once; the marker's own
-    repeat count carries no signal this parser needs.
+    noise — some lines carry it twice (``"@P@PPlayer1 joined the game."``),
+    most once; the marker's own repeat count carries no signal this parser
+    needs.
     """
     while s.startswith("@P"):
         s = s[2:]
@@ -378,10 +361,9 @@ class CardEvent:
     handle: str
     category: str
     name: str
-    # Arena's units (see module docstring's "Turn units" section): the
-    # running count of `Turn` lines seen in this game so far, not MTGO's own
-    # printed per-player number. None when no `Turn` line has been seen yet
-    # in this game (before the game's own first turn, or no game at all).
+    # Arena's units (module docstring's "Turn units"). None when no `Turn`
+    # line has been seen yet in this game (before the game's own first turn,
+    # or no game at all).
     turn_number: int | None
 
 
@@ -390,9 +372,7 @@ class GameRecord:
     game_number: int
     on_play_handle: str | None = None
     mulligans_by_handle: dict[str, int] = field(default_factory=dict)
-    # Arena's units, not MTGO's printed ones (module docstring's "Turn
-    # units"): the count of `Turn` lines seen in this game, i.e. total
-    # player-turns, not the highest printed per-player N.
+    # Arena's units (module docstring's "Turn units").
     turn_count: int = 0
     winner_handle: str | None = None
     conceded_handle: str | None = None
@@ -410,11 +390,10 @@ class GameRecord:
 
     def has_action(self) -> bool:
         """True once this game has recorded anything beyond the pre-game
-        start block — used to decide whether a new start-block signal begins
-        a *new* game or merely fills in the still-empty current one (the
-        start block is several lines wide: ``joined``, ``chooses to play
-        first``, ``begins the game with``, an optional ``mulligans to``, all
-        before that game's first real turn)."""
+        start block, a bare concession included — used to decide whether a
+        ``joined`` line begins a *new* game or merely fills in the
+        still-empty current one. The start block's other lines ask
+        ``has_begun()`` instead (module docstring's "Bug B")."""
         return bool(
             self.turn_count or self.card_events
             or self.winner_handle or self.conceded_handle
@@ -423,9 +402,7 @@ class GameRecord:
 
     def has_begun(self) -> bool:
         """``has_action()`` without a bare concession: a turn, a card event
-        or a result. A player can concede in the middle of their own
-        mulligan, and MTGO still writes the rest of that start block after
-        the concession (module docstring's "A concession inside a start
+        or a result (module docstring's "A concession inside a start
         block")."""
         return bool(self.turn_count or self.card_events or self.has_result())
 
@@ -445,9 +422,7 @@ class GameRecord:
 class ParsedMatch:
     match_id: str | None
     # The players: the handles the fixed-suffix lines name, plus any the
-    # `\S+` fallback read. A watching line never adds one: `project.py` skips
-    # a match with other than exactly one opponent, so a spectator counted
-    # here would lose the user's own match.
+    # `\S+` fallback read. A watching line never adds one (`_WATCHING_RE`).
     handles: set[str]
     # Whoever wrote "has started watching." (`_WATCHING_RE`), player or not.
     spectators: set[str]
@@ -493,14 +468,9 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
     def ensure_fresh_game(*, joined: bool = False) -> None:
         """Start a new GameRecord for a start-block signal, unless the
         current one is still the empty shell an earlier start-block signal
-        already created for this same game. Resets the per-game turn
-        ordinal (``current_turn``) on an actual new game so a card event
-        seen before the new game's own first ``Turn`` line gets
-        ``turn_number=None`` rather than inheriting the previous game's last
-        count (module docstring's "Turn units"). A ``joined`` line opens a
-        game after any action, a concession included; the start block's
-        later lines only after a turn, a card event or a result (module
-        docstring's "A concession inside a start block")."""
+        already created for this same game (module docstring's "Bug B" and
+        "A concession inside a start block"). Resets ``current_turn`` on an
+        actual new game (module docstring's "Turn units")."""
         nonlocal current, current_turn
         if current is None or (current.has_action() if joined else current.has_begun()):
             if current is not None and not current.has_result():
@@ -590,10 +560,8 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
         if m:
             handle = m.group("handle")
             handles.add(handle)
-            # The printed per-player number — used only by the fallback gate
-            # below, never stored. See the module docstring's "Turn units":
-            # what gets stored is an ordinal count of `Turn` lines, Arena's
-            # own units, not this raw MTGO number.
+            # The printed per-player number: read by the fallback gate below,
+            # never stored (module docstring's "Turn units").
             turn_number = _ascii_int(m.group("n"))
             if turn_number is None:
                 warnings.append(f"unrecognised turn number {m.group('n')!r}")
@@ -610,8 +578,6 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
                 current = _start_new_game(games)
                 lost_connection.clear()
             if current is not None:
-                # One `Turn` line = one player-turn (Arena's units): count
-                # lines, don't track the printed N's own max.
                 current.turn_count += 1
                 current_turn = current.turn_count
             else:

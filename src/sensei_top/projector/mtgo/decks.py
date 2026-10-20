@@ -2,11 +2,13 @@
 
 Reads the ``raw_events`` rows ``reader/mtgo_decks.py`` stored
 (``source = 'mtgo_deck'``, one row per distinct file content) and writes one
-``decks`` row per distinct maindeck. In two halves, like ``project.py``:
-``read_mtgo_decks`` parses before ``projector/matches.py::project()`` opens
-its transaction, and ``write_mtgo_decks`` inserts inside it, right after the
-MTGO matches, so there is no ``BEGIN``/``COMMIT`` here, and from scratch like
-every projection: ``project()`` has already emptied ``decks``.
+``decks`` row per distinct maindeck. The design — the two kinds of file, how
+an MTGO row differs from an Arena one, and why ``matches.deck_id`` stays
+``NULL`` — is docs/architecture.md, "What a turn snapshot holds". In two
+halves, like ``project.py``: ``read_mtgo_decks`` parses before
+``projector/matches.py::project()`` opens its transaction, and
+``write_mtgo_decks`` inserts inside it, so there is no ``BEGIN``/``COMMIT``
+here.
 
 This is the one place that reads a deck file's contents; the reader moved the
 bytes and knows nothing of XML or card names.
@@ -15,38 +17,34 @@ Two kinds of row
 ----------------
 The reader's label says which kind a row holds, from the file's name:
 
-* ``MtgoDeckFile``, a ``.dek`` the user exported (plan 12, D6). Every card is
-  a ``Cards`` element with a ``Name``, a ``Quantity`` and ``Sideboard``.
-* ``MtgoDeckGrouping``, a ``grouping *.xml`` from MTGO's own deck store
-  (plan 12, S9 and D14). The root is ``CardGrouping``; every card is an
-  ``Item`` with a ``CatId``, a ``Quantity`` and ``IsSideboard``, and **no
-  name**. A ``CatId`` is Scryfall's ``mtgo_id``, so ``mtgo_card`` (filled by
-  ``cards --scryfall``) gives its name. Only ``GroupingType="Deck"`` with a
-  ``FormatCode`` that ``mtgo/formats.py::FORMAT_CODES`` maps to one of the
-  seven formats is a deck. A binder, a wishlist or a deck in another format
-  (Commander, Freeform...) is no warning: the user keeps those on purpose, so
-  the pass logs one count of them at INFO level instead.
+* ``MtgoDeckFile``, a ``.dek`` the user exported. Every card is a ``Cards``
+  element with a ``Name``, a ``Quantity`` and ``Sideboard``.
+* ``MtgoDeckGrouping``, a ``grouping *.xml`` from MTGO's own deck store. The
+  root is ``CardGrouping``; every card is an ``Item`` with a ``CatId``, a
+  ``Quantity`` and ``IsSideboard``, and **no name**. Only
+  ``GroupingType="Deck"`` with a ``FormatCode`` that
+  ``mtgo/formats.py::FORMAT_CODES`` maps to one of the seven formats is a
+  deck; the rest (a binder, a wishlist, a Commander deck) are counted once
+  at INFO level, never warned about, since the user keeps those on purpose.
 
 Identity
 --------
-``deck_id`` is a sha256 over the maindeck's ``(name, total quantity)`` pairs,
-sorted by name, behind an ``mtgo-deck:`` prefix (see ``mtgo_deck_identity``).
-The prefix means the text it hashes can never equal the text an Arena id
-hashes, which starts ``[[``. Names rather than ``CatId`` values, because one
-card carries a different ``CatId`` per printing and swapping a printing is not
-a different deck, and because a ``.txt`` export of the same list would carry
-names only (plan 12, D13). The sideboard stays out for the reason
-``projector/matches.py::deck_identity`` gives: the same deck is resaved with
-another sideboard, and those must not fragment.
+See ``mtgo_deck_identity`` for the hashed text. The ``mtgo-deck:`` prefix
+means it can never equal the text an Arena id hashes, which starts ``[[``.
+Names, never ``grp_id``s, so a list with a card Arena lacks still gets a
+stable id; and names rather than ``CatId`` values, because one card carries
+a different ``CatId`` per printing and swapping a printing is not a
+different deck, and because a ``.txt`` export of the same list would carry
+names only. The sideboard stays out for the reason
+``projector/matches.py::deck_identity`` gives: a list resaved with another
+sideboard is the same deck.
 
-A grouping's names are spelled the way a ``.dek`` spells them, so a list saved
-in the store and exported too is one deck. ``mtgo_card`` holds Scryfall's
-name, ``Front // Back`` for a card with two faces, and a ``.dek`` writes the
-front face only (all 8 such cards in the sample exports: 7 modal double-faced
-cards and an adventure). So a grouping's card is named by the text before the
-first `` // ``. A split card has never been seen in an export, so whether MTGO
-writes its full name is not known; until it is, a split card in a grouping and
-the same card in a ``.dek`` would be two spellings of one deck.
+``mtgo_card`` holds Scryfall's name, ``Front // Back`` for a card with two
+faces, and a ``.dek`` writes the front face only. So a grouping's card is
+named by the text before the first `` // ``. A split card has never been
+seen in an export, so whether MTGO writes its full name is not known; until
+it is, a split card in a grouping and the same card in a ``.dek`` would be
+two spellings of one deck.
 
 A ``CatId`` that ``mtgo_card`` lacks has no name to hash. It enters the
 identity as ``[CatId <number>]`` (``_UnmappedCatId``), a text no card's name
@@ -55,47 +53,34 @@ two ``.dek`` lists that differ only in a card Arena lacks do. When a later
 ``cards --scryfall`` maps that ``CatId``, the deck's id changes, which orphans
 a pick made on the old one; there is no id to keep stable without a name.
 
-Resolving a name to a ``grp_id`` plays no part in identity, so a list with a
-card Arena lacks still gets a stable id.
-
 One row per distinct maindeck
 -----------------------------
-An older version of a file is a deck row too, since the user may have played
-it, and Arena keeps every version of a deck as well. The newest row holding a
-maindeck (by ``logged_at``, then ``id``) supplies its sideboard; ``name`` and
-``format`` are each the newest such row's that carries one. A ``.dek``'s name
-is the file's stem (Arena's "most recent name" rule) and it carries no format;
-a grouping's name is its ``Name`` attribute and its format the mapped
-``FormatCode``, one of the seven strings ``mtgo_match_pick.format`` takes, so
-a grouping's format can pre-fill the pick (plan 12, D16). A grouping with no
-``Name`` (never seen) carries no name. ``first_seen`` and ``last_seen`` are
-the earliest and latest ``logged_at`` over every row that holds the maindeck:
-the file's mtime, as local-clock text in the shape Arena's timestamps have, so
-the columns compare as text. A grouping's own ``Timestamp`` is not read.
-
-``matches.deck_id`` is not touched. Nothing in an MTGO game log says which
-deck was played, and joining a match to a deck by guesswork would break rule 4;
-that link is the user's own pick (``mtgo_match_pick``).
+The newest row holding a maindeck (by ``logged_at``, then ``id``) supplies
+its sideboard; ``name`` and ``format`` are each the newest such row's that
+carries one. A ``.dek``'s name is the file's stem (Arena's "most recent name"
+rule) and it carries no format; a grouping's name is its ``Name`` attribute
+and its format the mapped ``FormatCode``, so a grouping's format can pre-fill
+the user's pick. A grouping with no ``Name`` (never seen) carries no name.
+``first_seen`` and ``last_seen`` are the earliest and latest ``logged_at``
+over every row that holds the maindeck: the file's mtime, as local-clock text
+in the shape Arena's timestamps have, so the columns compare as text. A
+grouping's own ``Timestamp`` is not read.
 
 ``cards_json``
 --------------
 ``{"maindeck": [...], "sideboard": [...], "unresolved": {"maindeck": n,
 "sideboard": n}}``. The two lists are ``grp_id``, one entry per copy and
 sorted, the shape Arena's rows have. A card is resolved by
-``project.py::_resolve_grp_id`` (exact name, token, then front face), the same
-rule that gives MTGO ``card_events`` their ``grp_id``, so the two agree. A card
-that does not resolve is **left out** of its list with a warning, never given a
-made-up id (rule 4): a name Arena does not have, or a grouping's ``CatId`` that
-``mtgo_card`` lacks. One cache and one ``_Warner`` serve the whole pass, so
-such a card warns once per rebuild however many decks hold it. Only boards
-that are written are resolved, so an older version's sideboard cannot raise a
-warning about a card that goes nowhere.
+``project.py::_resolve_grp_id``, the same rule that gives MTGO
+``card_events`` their ``grp_id``, so the two agree. A card that does not
+resolve is **left out** of its list with a warning, never given a made-up id
+(rule 4), once per rebuild however many decks hold it (``_Resolver``). Only
+boards that are written are resolved, so an older version's sideboard cannot
+raise a warning about a card that goes nowhere.
 
-``unresolved`` counts the copies left out, per board (plan 12, D18), so a
-reader can tell a short list from a list it cannot fully see without counting
-to 60: ``v_deck_land_count.unresolved_count`` reads ``unresolved.maindeck``.
-Every MTGO row carries it, ``0`` included; an Arena row has no such key,
-because Arena's list is ``grp_id`` already and nothing is left out of it.
+``unresolved`` counts the copies left out, per board, on every MTGO row,
+``0`` included: ``v_deck_land_count.unresolved_count`` reads
+``unresolved.maindeck``.
 
 A file that is not a readable deck
 ----------------------------------
@@ -114,12 +99,11 @@ judged.
 The quantity ceiling is not a game rule. ``cards_json`` holds one entry per
 copy, so an absurd count would be an out-of-memory error that halts the whole
 rebuild, which rule 4 forbids; it sits far above the largest count in the
-three sample files, which is 6.
+three sample files.
 
 A half-written file (``reader/mtgo_decks.py`` stores what it saw) is one of
-these. Its row stays, since raw events are never discarded (rule 2), so its
-warning repeats on every rebuild. Accepted: it is real information, and the
-finished file is a row of its own that projects normally.
+these, and its warning repeats on every rebuild; the finished file is a row
+of its own that projects normally.
 """
 
 from __future__ import annotations

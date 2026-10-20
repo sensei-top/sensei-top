@@ -101,6 +101,7 @@ ALLOW: dict[str, str] = {
     "TimerStateMessage": ARENA,
     "QueuedGameStateMessage": ARENA,
     "application_settings": "a file MTGO writes on Windows",
+    "mtgo_game_history": "a file MTGO writes on Windows",
     "LICENSES.chromium.html": "a file electron-builder writes into the build",
     "BxMidrange": "an archetype key in the downloaded corpus",
     "GenericTron": "an archetype key in the downloaded corpus",

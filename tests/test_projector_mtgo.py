@@ -32,15 +32,13 @@ reads "Player1 wins the match 2-0" — the only line that sets
 ``winner_handle``. 17 card events.
 28 + 17 = 45 total, matching the plan's full-fixture ``project()`` expectation.
 
-*** Correction to parse.py's own module docstring ***
-The docstring claims "26 distinct @[...] names in the fixture, all 26
-reachable through just those four line shapes." The first half is right:
-26 distinct bracketed ``@[Name@:i1,i2:@]`` references do appear somewhere in
+*** 26 bracketed names, 25 card events ***
+26 distinct bracketed ``@[Name@:i1,i2:@]`` references appear somewhere in
 the file (cross-checked with a ``grep -oP '(?<=@\\[)[^@]+(?=@:)'`` extraction
 over the probe's own decoded output, plus a manual add-back for the 5
 occurrences of ``Kíli the Resourceful`` that the probe's ASCII-only scanner
-corrupts by splitting on the two-byte UTF-8 sequence for 'í'). The second half
-does not hold: only 25 of those 26 names are ever the *captured* name of a
+corrupts by splitting on the two-byte UTF-8 sequence for 'í'). Only 25 of
+those 26 names are ever the *captured* name of a
 plays/casts/activates/triggered-from line. The 26th, "Zombie Druid Token", is
 bracketed exactly once in the whole fixture — as the *target* clause of
 Thorin, Mountain-king's second triggered-ability line ("...puts a triggered
@@ -52,8 +50,7 @@ on the same line. Zombie Druid Token is a token: it is never played, cast,
 given its own "activates an ability of", or given its own "puts a triggered
 ability from" line anywhere in the fixture (tokens are never "cast" or
 "played" in MTGO's own log text). See
-``test_25_of_26_bracketed_names_become_card_events`` below and the handoff
-note.
+``test_25_of_26_bracketed_names_become_card_events`` below.
 
 *** Also checked against the plan's own Verification section ***
 The plan says (line ~494) "a deleted `wins the game` line -> exactly one
@@ -69,8 +66,7 @@ disagreement" — and that one *is* implemented (parse.py's "mulligan count
 mismatch" warning) and *is* the "counted value kept" pattern the Verification
 section is almost certainly describing. Tested here as the mulligan
 cross-check instead of the (nonexistent) "wins the game" one; see
-``test_mulligan_cross_check_disagreement_warns_once_and_keeps_the_authoritative_count``
-and the handoff note.
+``test_mulligan_cross_check_disagreement_warns_once_and_keeps_the_authoritative_count``.
 """
 
 from __future__ import annotations
@@ -275,8 +271,8 @@ def test_kili_the_resourceful_is_a_card_event_name():
 
 
 def test_25_of_26_bracketed_names_become_card_events():
-    """See the module docstring's "Correction to parse.py's own module
-    docstring" section above: 26 distinct @[...] names exist in the fixture,
+    """See the module docstring's "26 bracketed names, 25 card events"
+    section above: 26 distinct @[...] names exist in the fixture,
     but "Zombie Druid Token" — the target of a triggered ability, never its
     source — is never captured as a CardEvent. 25, not 26, is the real count.
     """
@@ -824,8 +820,8 @@ def test_resolve_grp_id_token_resolves_via_base_name_and_token_type_line(conn):
     """The fixture's own token spelling (`uv run python scripts/mtgo_probe.py
     tests/fixtures/mtgo_match_session.log --force --lines 400`): "Zombie
     Druid Token" is the target of Thorin, Mountain-king's second triggered
-    ability (see this module's own "Correction to parse.py's own module
-    docstring" note above). Arena's real DB row for it is grp_id 95829, name
+    ability (see this module's own "26 bracketed names, 25 card events"
+    note above). Arena's real DB row for it is grp_id 95829, name
     'Zombie Druid', type_line 'Token Creature — Zombie Druid'."""
     conn.execute(
         "INSERT INTO cards (grp_id, name, type_line) VALUES "
