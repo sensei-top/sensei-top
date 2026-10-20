@@ -70,11 +70,14 @@ there is no tray icon unless the
 [AppIndicator extension](https://extensions.gnome.org/extension/615/appindicator-support/)
 is installed, so leave this setting off there unless you have that extension.
 
-**Arena on Linux.** Arena run through Steam (Proton) is found on its own,
-including in a Steam library on a second drive. If you run it
-another way (Lutris, Bottles, or a Wine prefix of your own), setup won't
-find the log. Set it under **Settings → Sources → Arena → Log file**. It is
-inside the prefix, at:
+**Arena on Linux.** Arena is found on its own when you run it through
+Steam (Proton), installed natively, as a Flatpak or as a Snap, with the
+game in any of your Steam libraries; through Lutris, Heroic or Bottles,
+installed natively or as a Flatpak; or with plain Wine, in `~/.wine` or
+the prefix `WINEPREFIX` names. When more than one of these holds a log,
+the one Arena wrote to last is read. If yours isn't found (a prefix
+kept somewhere none of these launchers records it, say), set it under
+**Settings → Sources → Arena → Log file**. It is inside the prefix, at:
 
     <prefix>/drive_c/users/<user>/AppData/LocalLow/Wizards Of The Coast/MTGA/Player.log
 

@@ -39,9 +39,11 @@ English. What comes first after it:
    up. A name with a space in it reads as one player, and a match you
    only watched is left out without a warning. Each fix also mends
    every match you already recorded.
-3. **Finding Arena on more Linux setups.** Every Steam library, Flatpak
-   and Snap Steam, Lutris, Bottles and Heroic, and the newest log when
-   more than one is found.
+3. **Finding Arena on more Linux setups.** Arena's log is found under
+   Steam installed natively, as a Flatpak or as a Snap, with the game in
+   any Steam library; under Lutris, Heroic and Bottles; and in plain Wine
+   prefixes. When more than one holds a log, the one Arena wrote to last
+   is read.
 
 Outside this order, because it waits on Microsoft rather than on the
 work: **the Microsoft Store build** of the same app, which the Store

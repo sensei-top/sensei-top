@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Arena's log is found on its own on more Linux setups: Steam as a
+  Flatpak or a Snap, Lutris, Heroic and Bottles (native or Flatpak), and
+  plain Wine in `~/.wine` or `WINEPREFIX`, whatever the Wine user is
+  called. When more than one prefix holds a log, the one Arena wrote to
+  last is read, and `sensei-top doctor` lists the others.
+
 ## [1.1.0] - 2026-10-19
 
 ### Added

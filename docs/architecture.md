@@ -572,12 +572,43 @@ of a log, never a client's data, and where nothing is found it answers
   `cards.arena_card_database_path` all ask): an existing `$MTGA_LOG`, then an
   existing `[arena] log` in `config.toml`, then `reader/ingest.py::default_log_path`
   (`--file` outranks all three, applied by the caller): `MTGA_LOG`, then
-  the Steam/Proton prefix in each Steam library (`steam.py`), then on
+  the newest `Player.log` in any Wine prefix on the machine, then on
   Windows `%USERPROFILE%\AppData\LocalLow\Wizards Of The Coast\MTGA\Player.log`,
   then macOS's. The watcher reads `Player-prev.log` once at startup, before
   the live file, when it exists (`docs/arena-log.md`, "File handling"); the
   digest makes a re-read free (0 new of 1,269 entries on the real database,
   plan 3's phase 4a).
+- **The Wine prefixes** (plan 31). `steam.py` gives every Steam library:
+  the data directories `~/.steam/steam`, `~/.local/share/Steam`,
+  `~/.steam/root`, Flatpak's and Snap's, then Flatpak's older one, each
+  computed from `Path.home()` at call time, and every library their
+  `libraryfolders.vdf` names (the first two keep their place from before,
+  so an existing install's log keeps its spelling: `ingest_state` is keyed
+  by the path string, and a new spelling would re-read the log); each
+  library's `steamapps/compatdata/2141910/pfx` is a candidate. `wine.py` gives every
+  other prefix: `$WINEPREFIX`, each one Lutris, Heroic and Bottles name in
+  their own config files, native and Flatpak, each folder in their
+  default prefix locations, then `~/.wine`; a folder counts only when it
+  holds `drive_c/`. Which files and folders each launcher keeps, and the
+  source line behind each, are in `wine.py`'s docstrings. Under every
+  prefix the log is looked for under each Wine user but `Public`, since only
+  Proton's is always `steamuser`. Candidates are deduplicated by realpath,
+  keeping the first spelling, and the newest `Player.log` by mtime wins,
+  with a tie going to candidate order (Steam, `$WINEPREFIX`, Lutris,
+  Heroic, Bottles, `~/.wine`), so a prefix left behind can't shadow the one
+  in use.
+  `reader/ingest.py::found_log_paths()` returns every log found, an
+  existing `$MTGA_LOG` first, then these newest first, then the Windows
+  and macOS places; `default_log_path()` takes its first, and `doctor`
+  lists the rest. `/api/live` resolves the log on every heartbeat, so the
+  scan runs every 3 s while `serve` is up: a few `stat` calls per prefix,
+  and its debug line is written only when the count or the chosen source
+  changes. `wine.py` is filesystem only, as `steam.py` and
+  `arena_install.py` are: it knows where launchers keep prefixes and
+  nothing about Arena, and an unreadable or odd config file yields nothing
+  from that file. Tests never see a real prefix: `tests/conftest.py`
+  points `HOME` and `XDG_DATA_HOME` at empty folders and unsets
+  `WINEPREFIX`.
 - **Arena's install** (`arena_install.py`), for the card database. Unity
   writes the folder its managed assemblies load from as the log's first line
   (`Mono path[0] = '<install>/MTGA_Data/Managed'`), so the client itself

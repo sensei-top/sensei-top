@@ -209,9 +209,13 @@ to a bug report"; the desktop shell drives both.
 
 - **`sensei-top doctor [--json] [--file PATH]`** (`doctor.py`). Reports the
   Arena log's path and source (`flag`, `environment`, `config`, `autodetect`
-  or `none`), Detailed Logs, the MTGO directories and whether a handle is
-  set, the card counts, the schema version beside the code's, the config
-  path and the keyring backend. It never creates, migrates or writes the
+  or `none`); under `autodetect`, `arena_log.found` lists every
+  `Player.log` discovery found, the one in use first, and the text form
+  adds an "Also found" line for each other one, so a support report shows
+  a second prefix without a back-and-forth (`docs/architecture.md`,
+  "Finding the clients' files"); Detailed Logs, the MTGO directories and
+  whether a handle is set, the card counts, the schema version beside the
+  code's, the config path and the keyring backend. It never creates, migrates or writes the
   database: that is opened through a `?mode=ro` URI (`connect()` sets
   `journal_mode=WAL`, which writes; a read-only open can still leave an empty
   `-wal` and a 32 KB `-shm` beside a WAL database nothing else has open,
