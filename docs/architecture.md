@@ -197,10 +197,10 @@ every 2 s and holds a changed file back until one of two things is true:
 Quiet alone cannot tell a finished game from a long think: in the measured
 match one mid-game pause lasted 36 s and the gap between games 46 s, and a
 turn has no upper bound. Quiet is measured on the watcher's own clock, from
-the check that first saw the file's current size and mtime, never from the
-mtime itself: a copied file carries the other machine's clock. The result is
-about one row per game, each marking the projection dirty for the next
-ordinary rebuild. There is no boundary rebuild: an MTGO match never becomes
+the check that first saw the file's current size, mtime and inode, never
+from the mtime itself: a copied file carries the other machine's clock. The
+result is about one row per game, each marking the projection dirty for the
+next ordinary rebuild. There is no boundary rebuild: an MTGO match never becomes
 the current match, however fast it is projected (`has_mtgo_boundary`, which
 forced one, went with the Current match tab's MTGO support).
 
@@ -268,12 +268,13 @@ it by file name and skips it. The export folder resolves in order —
 normal case, not a failure. The store needs no setting of its own; it is read
 wherever `dir` is, and `--no-mtgo` skips it with the rest of the MTGO leg.
 
-The boundary check scans `raw_events` after the watermark of the last
-committed rebuild, stored as `_projected_through` on the `LiveIngester` and
-persisted to `projection_state.projected_through_id` so a process restart
-restores it instead of resetting to 0 — which would otherwise force the first
-boundary check after a restart to scan every row ever ingested rather than
-just the tail since the last rebuild.
+The boundary check looks at `raw_events` after the watermark of the last
+committed rebuild: an index search on `label` past that id, then a `LIKE`
+over the room-state payloads it finds. The watermark is stored as
+`_projected_through` on the `LiveIngester` and persisted to
+`projection_state.projected_through_id`, so a process restart restores it
+instead of resetting to 0. At 0, the high-water-mark check above would find
+every row unprojected, so every restart would rebuild once with nothing new.
 
 The watermark alone would leave a fixed projector's old rows in place: a
 watcher restarted after an upgrade restores it, finds nothing new past it,
@@ -306,11 +307,14 @@ lock with the watcher is under `docs/opponent-deck.md`, "Naming the opponent's d
 
 **The watcher is a child process, and it dies with `serve`** (`procs.py`;
 plan 3, S5). `serve --watch` runs it as `live.WatcherProcess`, so a rebuild
-never contends with the API for one interpreter's GIL ("What a turn snapshot
-holds" below). `serve` can end three ways, and each has its own mechanism.
-An orderly shutdown (Ctrl+C, or a SIGTERM that uvicorn turns into one) stops
-the watcher from the app's lifespan, because uvicorn re-raises SIGTERM once
-its own shutdown is done, before anything after `server.run` would run. On
+never contends with the API for one interpreter's GIL: every API route is a
+sync `def`, and with the watcher as a thread, `/api/current-match/read`
+measured ~27 ms with the thread idle against ~145–160 ms with a rebuild
+holding the GIL, about a 5x tax, even with `orjson` as the parser. `serve`
+can end three ways, and each has its own mechanism. An orderly shutdown
+(Ctrl+C, or a SIGTERM that uvicorn turns into one) stops the watcher from
+the app's lifespan, because uvicorn re-raises SIGTERM once its own shutdown
+is done, before anything after `server.run` would run. On
 Linux, a `serve` killed outright is noticed by the kernel: the child set
 `PR_SET_PDEATHSIG`, and it is started with `fork` rather than Python 3.14's
 `forkserver` default, since the signal watches the child's OS parent. On
@@ -535,7 +539,8 @@ restored into the same or a newer version of this code — never an older one.
 Every launch appends to `<db dir>/logs/sensei-top.log` (`logs.py`; plan 3,
 D10), so a reported problem arrives with the lines that led up to it, and a
 scratch `--db` keeps its lines out of the real install's file. A line is UTC
-(`2026-10-06T14:03:22.418Z`), then an 8-hex session id per launch, which
+(`2026-10-06T14:03:22.418Z`), so a file compares across machines and across
+a DST change without arithmetic, then an 8-hex session id per launch, which
 tells `serve` from a hand-run `ingest-mtgo` appending to the same file, then
 the level, the logger and the message, with the home directory written as
 `~`. The desktop shell passes its launch's id to every subcommand it
@@ -738,7 +743,9 @@ Everything is safe to re-run, and this is tested rather than assumed:
   rotated from). `card_events` accumulates instead of snapshotting, so
   `GameStateTracker` dedupes it directly, keyed on the `ZoneTransfer`
   annotation's own `id` (verified unique per `(match, game)`, never reused for
-  different content — see `projector/game_state.py`).
+  different content except across an undo, which rewinds Arena's ids with the
+  rest of the game and so drops the undone transfers' ids from the dedup set
+  — see `projector/game_state.py`).
 - **Projecting twice yields identical rows**, including `turns`.
 
 ## Aggregation: views versus Python
@@ -1105,17 +1112,21 @@ That same bypass now covers more than the opening hand.
 reads the board state as it stands *right now*, mid-turn — not the last
 turn boundary `project()` happened to reach. The reason is a number, not a
 guess: a real database's `project()` rebuild (see "Full rebuild, always")
-runs far past the 5-second `project_every` default, so anything
-sourced from `turns` on a mature database runs roughly one rebuild's
-duration stale. Replaying one match alone, bounded by its own room-opening
-event, costs 0.03-0.08 s regardless of how much history sits behind it.
+runs far past the 5-second `project_every` default, so anything sourced from
+`turns` on a mature database lags `raw_events` by one rebuild at best, and
+by a rebuild, a gate interval and another rebuild at worst: one to three
+rebuilds at the default `duty_factor`. Replaying one match alone, bounded by
+its own room-opening event, costs 0.03-0.08 s regardless of how much history
+sits behind it.
 That rebuild also runs in its own OS process now (`live.WatcherProcess`),
 not a thread inside the API's own process, because a rebuild sharing the
-API's GIL taxed every request during it (`live.py`'s module docstring has
+API's GIL taxed every request during it ("Live mode's two cadences" has
 the contention numbers). `docs/current-match.md` has the full design.
 
-What is still **not** available: counters, attackers and blockers, the mana
-pool, the stack, and any per-step timeline. See [arena-log.md](arena-log.md).
+What is still **not** available: counters, the mana pool, the stack, and any
+per-step timeline. See [arena-log.md](arena-log.md). Attackers and blockers
+are not in the snapshot either, but they are projected, into `combat_attacks`
+and `combat_blocks` (`projector/combat.py`, migration `014_combat.sql`).
 
 **None of this exists for MTGO.** `projector/mtgo/project.py` writes only
 `matches`, `games` and `card_events` for an MTGO match — never `turns`,
