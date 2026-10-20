@@ -6,7 +6,7 @@
                                                       read MTGO game logs and deck files
     sensei-top mtgo-status [--dir <path>]            diagnose the MTGO pipeline
     sensei-top project                                raw_events -> matches/games/turns
-    sensei-top report [winrate|playdraw|gamelength|curves]
+    sensei-top report [winrate|playdraw|gamelength|curves|meta]
                                                       CLI metrics (pre-dashboard)
     sensei-top ingest --watch --project             follow a log, rebuild as it grows
     sensei-top serve [--port N]                      local dashboard + JSON API (loopback only)
@@ -110,8 +110,8 @@ def _resolve_log(argument: str | None) -> Path:
 
 
 def _resolve_locale(args) -> None:
-    """``--locale`` when given, else ``[arena] date_order``, else ``auto``
-    (D11). Sets ``args.locale`` in place, before any watcher is built."""
+    """``--locale`` when given, else ``[arena] date_order``, else ``auto``.
+    Sets ``args.locale`` in place, before any watcher is built."""
     if getattr(args, "locale_given", False):
         return
     from sensei_top.arena_config import load_date_order
@@ -121,7 +121,7 @@ def _resolve_locale(args) -> None:
 
 def _resolve_serve_log(argument: str | None) -> Path | None:
     """``serve --watch``'s Arena log: ``None`` when there is none to be
-    found yet (D10), where ``_resolve_log`` exits. An explicit ``--file`` that
+    found yet, where ``_resolve_log`` exits. An explicit ``--file`` that
     does not exist still exits."""
     if argument:
         return _resolve_log(argument)
@@ -292,9 +292,9 @@ def cmd_ingest_mtgo(args) -> None:
             f"  {total_bytes:,} bytes of base64 payload stored for source='mtgo' "
             "(docs/architecture.md's storage note explains why this grows faster than the raw logs)"
         )
-        # MTGO keeps its deck store, ``grouping *.xml``, beside the game logs
-        # (plan 12, D14): read it from the same directory. A deck folder that
-        # is this directory is read once, below only if it is a different one.
+        # MTGO keeps its deck store, ``grouping *.xml``, beside the game logs:
+        # read it from the same directory. A deck folder that is this
+        # directory is read once, below only if it is a different one.
         grouping_stats = ingest_deck_dir(conn, directory, from_start=args.from_start)
         print(f"{directory}: {grouping_stats}")
         print("  deck store files (grouping *.xml) stored for source='mtgo_deck'")
@@ -332,11 +332,7 @@ def _fmt_age(seconds: float) -> str:
 def cmd_mtgo_status(args) -> None:
     """Diagnose the MTGO pipeline in one command: is a handle configured, is
     a log directory configured, and does it exist, how old is its newest
-    file, and how far did the database get. Reproduces, in one place, the
-    manual debugging steps behind ``.claude/handoffs/mtgo-config-diagnostic.md``
-    — the session that found a blank Current-match tab was two unmet
-    prerequisites (no handle, a stale transport), neither a code defect, and
-    neither visible anywhere without reading raw_events by hand.
+    file, and how far did the database get.
 
     Never raises on a missing directory or an empty database — a health
     check that crashes on the unhealthy case defeats its own purpose. Prints
@@ -436,10 +432,10 @@ def _build_watcher(args, path: Path):
 def _build_watcher_process(args, path: Path | None):
     """Same construction as ``_build_watcher``, but for ``serve --watch``:
     the rebuild has to run outside the API's own process, or it contends
-    with every request for the GIL (``live.py``'s ``WatcherProcess``
-    docstring has the measurements). ``ingest --watch`` has no API to
-    contend with, so it keeps using ``_build_watcher``'s in-process
-    ``LiveIngester`` unchanged."""
+    with every request for the GIL (measured in
+    docs/architecture.md, "Live mode's two cadences"). ``ingest --watch`` has
+    no API to contend with, so it uses ``_build_watcher``'s in-process
+    ``LiveIngester``."""
     from sensei_top.live import WatcherProcess
 
     return WatcherProcess(
@@ -487,7 +483,7 @@ def cmd_project(args) -> None:
 
 
 def cmd_restore(args) -> None:
-    """Replace the database with a backup (D19). Stop ``serve`` first; the
+    """Replace the database with a backup. Stop ``serve`` first; the
     command cannot tell whether one is running."""
     from sensei_top.archetypes import classify_matches
     from sensei_top.backup import RestoreError, restore_files
@@ -619,9 +615,8 @@ def cmd_meta(args) -> None:
     conn = _open(args)
     if args.reclassify:
         # No network at all: re-run the classifier over whatever corpus is
-        # already stored, e.g. after an archetype-definition refresh. Also
-        # how an existing corpus gets cleaned of duplicate tournament events
-        # with no network at all — see metagame/dedup.py.
+        # already stored, e.g. after an archetype-definition refresh, and set
+        # aside duplicate tournament events (metagame/dedup.py).
         duplicates, counts = reclassify_corpus(conn)
         if duplicates:
             print(f"{duplicates} duplicate tournament events set aside.")
@@ -629,8 +624,8 @@ def cmd_meta(args) -> None:
               f"({counts['skipped_format']} skipped, other formats)")
         return
 
-    # D8: the formats serve's loop follows, plus any --format, so the
-    # command and the loop never fetch different sets.
+    # The formats serve's loop follows, plus any --format, so the command
+    # and the loop never fetch different sets.
     formats = followed_formats(conn, args.formats or ())
     if args.source in ("cache", "all"):
         _run_metagame_refresh(conn, args, formats)
@@ -648,9 +643,9 @@ def cmd_meta(args) -> None:
 def cmd_backup(args) -> None:
     """Take (or check on) today's ``VACUUM INTO`` snapshot of the database.
 
-    One deliberate divergence from ``cmd_archetypes`` (cli.py:282): that
-    command exits 0 on a failed refresh because the cached definitions still
-    name decks, so nothing was actually lost. A failed backup is different —
+    One deliberate divergence from ``cmd_archetypes``: that command exits 0
+    on a failed refresh because the cached definitions still name decks, so
+    nothing was actually lost. A failed backup is different —
     the user (or the scheduler) asked for a safety copy and did not get one,
     so **this command exits non-zero on failure**, naming the error and the
     age of whatever good backup is still sitting there untouched.
@@ -666,10 +661,8 @@ def cmd_backup(args) -> None:
     try:
         result = run_backup(conn, db_path, cfg=cfg, force=args.force, deep_verify=args.deep_verify)
     except KeyboardInterrupt:
-        # run_backup's own `finally` still ran on the way up (Python runs a
-        # `finally` block during exception propagation, KeyboardInterrupt
-        # included), so the temp file is already gone and the claim already
-        # released — there is nothing left to clean up here.
+        # run_backup's own `finally` ran on the way up, KeyboardInterrupt
+        # included: the temp file is gone and the claim released already.
         sys.exit("Backup cancelled; any existing backup was left untouched.")
 
     if result.status == "ok":
@@ -728,11 +721,10 @@ def cmd_backup(args) -> None:
 def _read_config_tables() -> dict[str, dict[str, object]]:
     """Every top-level table this config file holds, read tolerantly.
 
-    Both credential writers below go through this pair of functions rather
-    than reading/writing their own table directly — the file holds two
-    unrelated tables now (``[claude]``, ``[topdeck]``), and the original
-    single-table writer would have silently dropped whichever one it wasn't
-    asked to write. A value is a string, a bool, or — one level deep only,
+    Every writer below goes through this pair of functions rather than
+    reading and writing its own table: the file holds several unrelated
+    tables, and a writer that rewrote only its own would silently drop the
+    others. A value is a string, a bool, or — one level deep only,
     e.g. ``[claude.coach]`` — another such table; anything else is dropped
     rather than round-tripped imperfectly.
     """
@@ -827,8 +819,8 @@ def _write_llm_config(
     coach_web_search: bool | None = None,
 ) -> None:
     """Merge the given fields into the existing ``[claude]`` table (if any)
-    and its ``[claude.coach]`` sub-table, leaving any other table
-    (``[topdeck]``) untouched. ``None`` leaves a field as it is and an empty
+    and its ``[claude.coach]`` sub-table, leaving every other table
+    untouched. ``None`` leaves a field as it is and an empty
     string removes it (``_merge``). The key need not be in this file for the
     other fields to be written: it may live in the keyring or the
     environment, or be set later."""
@@ -852,8 +844,8 @@ def _write_llm_config(
 
 
 def _write_topdeck_config(*, api_key: str) -> None:
-    """Merge into the existing ``[topdeck]`` table (if any), leaving
-    ``[claude]`` untouched."""
+    """Merge into the existing ``[topdeck]`` table (if any), leaving every
+    other table untouched."""
     tables = _read_config_tables()
     topdeck = dict(tables.get("topdeck", {}))
     topdeck["api_key"] = api_key
@@ -877,18 +869,16 @@ def _drop_file_key(table_name: str) -> bool:
 def _write_mtgo_config(
     *, handle: str | None = None, directory: str | None = None, deck_dir: str | None = None
 ) -> None:
-    """Merge into the existing ``[mtgo]`` table (if any), leaving ``[claude]``
-    and ``[topdeck]`` untouched -- and, like ``_write_backup_config`` below,
-    merging **within its own table field by field** too: ``--set-mtgo-dir``
-    alone must not erase a ``handle`` set earlier by ``--set-mtgo-handle``, or
-    vice versa, since the flags are independent and typically run on separate
-    occasions: the three fields merge independently, so each flag leaves the
-    other two as they were. An empty string clears its field (``_merge``). No
-    field is a secret — the handle is the user's own MTGO account name, needed
-    only because MTGO's log carries no auth event to learn "which player is
-    us" from, and the directories are paths on the user's own machine
-    (``mtgo/config.py``'s module docstring covers all three) — so unlike the
-    two API keys, nothing here masks any of them."""
+    """Merge into the existing ``[mtgo]`` table (if any), leaving every
+    other table untouched, and **within its own table field by field** too:
+    ``--set-mtgo-dir`` alone must not erase a ``handle`` set earlier by
+    ``--set-mtgo-handle``, or vice versa, since the flags are independent and
+    typically run on separate occasions. An empty string clears its field
+    (``_merge``). No field is a secret — the handle is the user's own MTGO
+    account name, needed only because MTGO's log carries no auth event to
+    learn "which player is us" from, and the directories are paths on the
+    user's own machine (``mtgo/config.py``'s module docstring covers all
+    three) — so unlike the two API keys, nothing here masks any of them."""
     tables = _read_config_tables()
     table = dict(tables.get("mtgo", {}))
     _merge(table, "handle", handle)
@@ -901,17 +891,12 @@ def _write_mtgo_config(
 def _write_backup_config(
     *, directory: str | None = None, keep: int | str | None = None
 ) -> None:
-    """Merge into the existing ``[backup]`` table (if any), leaving
-    ``[claude]``/``[topdeck]``/``[mtgo]`` untouched -- and, like
-    ``_write_mtgo_config`` above, merging **within its own table field by
-    field** too: ``--set-backup-keep`` alone must not erase a ``dir`` set
-    earlier by ``--set-backup-dir``, or vice versa, since ``--set-backup-dir``
-    and ``--set-backup-keep`` are two independent flags that can be run on
-    two separate occasions. An empty string clears its field. ``keep`` is
-    written through ``_write_config_tables`` the same as every other value
-    there -- as a quoted string -- which is exactly the shape
-    ``backup.config._parse_keep`` exists to accept back as a number rather
-    than mistake for "not configured" (see its docstring)."""
+    """Merge into the existing ``[backup]`` table (if any), field by field
+    for the same reason as ``_write_mtgo_config``; an empty string clears its
+    field. ``keep`` is written through ``_write_config_tables`` the same as
+    every other value there -- as a quoted string -- which is exactly the
+    shape ``backup.config._parse_keep`` exists to accept back as a number
+    rather than mistake for "not configured" (see its docstring)."""
     tables = _read_config_tables()
     table = dict(tables.get("backup", {}))
     _merge(table, "dir", directory)
@@ -921,8 +906,8 @@ def _write_backup_config(
 
 
 def _write_arena_config(*, log: str | None = None, date_order: str | None = None) -> None:
-    """Merge into the ``[arena]`` table (D11), field by field like the two
-    writers above; an empty string clears its field."""
+    """Merge into the ``[arena]`` table, field by field like
+    ``_write_mtgo_config``; an empty string clears its field."""
     tables = _read_config_tables()
     table = dict(tables.get("arena", {}))
     _merge(table, "log", log)
@@ -953,7 +938,7 @@ def _key_source(which: str) -> str | None:
 
 
 def _source_label(which: str) -> str:
-    """``config``'s summary names where a key came from (D3)."""
+    """``config``'s summary names where a key came from."""
     from sensei_top import secrets
     from sensei_top.llm.config import config_path
 
@@ -968,8 +953,8 @@ def _source_label(which: str) -> str:
 
 def _key_value(raw: str) -> str:
     """The key ``--set-key``/``--set-topdeck-key`` was given. ``-`` reads one
-    line from stdin (D4: any process on the machine can read another's
-    argv), without echo when stdin is a terminal. The value is never printed
+    line from stdin (any process on the machine can read another's argv),
+    without echo when stdin is a terminal. The value is never printed
     or logged, here or by any caller."""
     if raw == "-":
         if sys.stdin is not None and sys.stdin.isatty():
@@ -986,7 +971,7 @@ def _key_value(raw: str) -> str:
 
 def _store_key(which: str, key: str) -> None:
     """The system keyring when it takes the key, and then the file's copy is
-    removed; else the file (mode 600), saying why (D3)."""
+    removed; else the file (mode 600), saying why."""
     from sensei_top import secrets
     from sensei_top.llm.config import config_path
 
@@ -1071,7 +1056,7 @@ def _move_keys_to_keyring() -> None:
 
 
 def _config_json(db_path: Path) -> dict[str, object]:
-    """Every value the Settings page shows (plan 6, S3), and no secret: for
+    """Every value the Settings page shows, and no secret: for
     each key only whether one is set and where it comes from (``env``,
     ``keyring``, ``file`` or ``null``). Other values are the file's own,
     with the built-in default where one exists; the backup folder and count
@@ -1124,28 +1109,25 @@ def _written(what: str, value: str) -> None:
 
 def cmd_config(args) -> None:
     """``--set-*`` and ``--clear-*`` write; ``--json`` prints every setting
-    for the desktop shell, which never writes the file itself (D2); with no
-    flag, or ``--show``, a summary: the two resolved credentials (source and
-    the key masked to its last 4 characters) plus the configured MTGO handle,
-    log directory and deck directory, each shown in full with its own source —
-    none is a secret: the handle is the user's own account name, the
-    directories paths on their own machine — and where backups go. This never echoes a full
-    key, on disk or in the config file's own directory listing — only in the
+    for the desktop shell, which never writes the file itself; with no flag,
+    or ``--show``, a summary: the two resolved credentials (source and the
+    key masked to its last 4 characters) plus the configured MTGO handle, log
+    directory and deck directory, each shown in full with its own source
+    (none is a secret, see ``_write_mtgo_config``), and where backups go. It
+    never prints a full key; outside the keyring the only full copy is the
     file's contents, which is why ``_write_config_tables`` chmods it 600.
 
     A key goes to the system keyring when there is one, and to the file
-    otherwise (D3); ``-`` reads it from stdin instead of argv (D4). An empty
-    value clears any other setting. Every given flag is applied in one run.
+    otherwise; ``-`` reads it from stdin instead of argv. An empty value
+    clears any other setting. Every given flag is applied in one run.
 
     Five independent groups share one file: the metered Claude key
     (AGENTS.md non-negotiable #5), the free, rate-limited TopDeck.gg key (the
     "free downloads" standard), the ``[mtgo]`` table (the handle
     ``project()`` needs to know which seat in an MTGO game log is ours, and
-    the game-log directory and the deck-export directory its files are read
-    from — three fields, one table, each settable on its own), the
-    ``[arena]`` table (D11), and the backup destination and retention count.
-    A flag for one never touches another's table — see
-    ``_write_llm_config``/``_write_topdeck_config``/``_write_mtgo_config``/``_write_arena_config``/``_write_backup_config``.
+    the game-log and deck-export directories), the ``[arena]`` table, and
+    the backup destination and retention count. A flag for one never touches
+    another's table (``_read_config_tables``).
     """
     from sensei_top.llm import config as llm_config
     from sensei_top.metagame import config as topdeck_config
@@ -1573,12 +1555,8 @@ def cmd_guide(args) -> None:
     if guide is None:
         sys.exit(f"No deck found for key {args.deck!r}. Run `guide` with no --deck to list keys.")
 
-    # --prompt: print the text to hand an assistant, and stop -- the
-    # no-credential path (AGENTS.md non-negotiable #5, docs/llm.md). Paste
-    # it into a Claude Code session on a subscription that is already paid
-    # for, then feed the answer back with --import. The Deck guide tab's own
-    # "Write the guide" button does the same round trip in one click when
-    # `sensei-top config --set-key` has been run.
+    # --prompt prints the text to hand an assistant, and stops: the
+    # no-credential path, answered with --import. See docs/guide.md, "CLI".
     if args.prompt:
         from sensei_top.guide.narrative import full_prompt
 
@@ -1609,7 +1587,7 @@ def cmd_guide(args) -> None:
         write_narrative(
             conn, identity.key, narrative,
             # The 75 the answer says it was written for, so one written for
-            # an older list reads as stale (plan 24, D13).
+            # an older list reads as stale.
             list_hash=(
                 answer.context if answer.context is not None
                 else list_hash(identity.current_cards)
@@ -1891,13 +1869,10 @@ def _start_reference_refresh(db_path: Path) -> None:
 
     Written as a list of steps, each a no-argument callable run in order on
     every tick, so a later step can be appended without restructuring this
-    loop. (17lands' bulk stats were the second step until the draft
-    assistant was deleted, 2026-10-01.) One step's exception is caught
-    and logged at warning level on its own — never fatal, and never lets one
-    step's failure stop the others from running this tick or the next.
-    Starting the thread returns immediately; the loop's own body — including
-    its first run — happens entirely on that thread, so this never blocks
-    ``serve``'s own startup the way a synchronous first check would.
+    loop. One step's exception is caught and logged at warning level on its
+    own — never fatal, and never stops the others, this tick or the next.
+    The first run happens on the thread too, so this never blocks ``serve``'s
+    startup.
     """
     import time
 
@@ -1946,16 +1921,14 @@ def _start_reference_refresh(db_path: Path) -> None:
 
 
 # How often the corpus refresh asks whether a source is due. Each source keeps
-# its own cadence (metagame/auto.py: fbettega 24 h, mtgo.com 3 h, TopDeck
-# 24 h), and a tick with none due reads their stamps and sends nothing, so
-# 300 s only bounds how late a due source is noticed.
+# its own cadence (docs/metagame.md, "Fetching the corpus"), and a tick with
+# none due reads their stamps and sends nothing, so this only bounds how late
+# a due source is noticed.
 _CORPUS_REFRESH_INTERVAL = 300.0
 
-# How long the corpus refresh's connection waits for the write lock. Its
-# stores and its reclassification contend with the watcher's rebuild, whose
-# write lock measured 5.7 s (live.py), past connect()'s 5 s; a busy error
-# would cost the run and then the loop's hour (D12). Nothing waits on this
-# thread, so the long wait costs nothing.
+# How long the corpus refresh's connection waits for the write lock: long
+# enough to outlast the watcher's rebuild rather than lose the run to a busy
+# error. See docs/opponent-deck.md, "Naming the opponent's deck".
 _CORPUS_BUSY_TIMEOUT_MS = 60_000
 
 
@@ -1966,12 +1939,12 @@ def _corpus_refresh_tick(
     on a connection of its own, then each source's result, printed or logged.
 
     A line is printed only when ``fetch_lines.render`` gives one on
-    ``serve``, which is only when the server's own attempt moved a hold
-    (``lines.md`` §0). Everything else is logged: a run that was attempted
-    at warning level, where ordinary successes and generic failures stay
-    (§0), and a source that was not due, held or has no key at debug, since
-    that is most ticks. A result ``render`` refuses is logged, and the
-    other sources' lines still print.
+    ``serve``, which is only when the server's own attempt moved a hold.
+    Everything else is logged: a run that was attempted at warning level,
+    ordinary successes and generic failures included, and a source that was
+    not due, held or has no key at debug, since that is most ticks. A result
+    ``render`` refuses is logged, and the other sources' lines still print.
+    See docs/metagame.md, "Fetching the corpus".
 
     An exception from opening the connection or from ``refresh_corpus``
     itself (``followed_formats`` reads the database outside its per-source
@@ -2025,14 +1998,14 @@ def _start_corpus_refresh(
     interval: float = _CORPUS_REFRESH_INTERVAL,
     stop: threading.Event | None = None,
 ) -> threading.Thread:
-    """Keep the tournament corpus current while ``serve`` runs (plan 14, S6;
-    D7, D13): one ``_corpus_refresh_tick`` every ``interval`` seconds, the
-    first at once, on a daemon thread of its own, "corpus-refresh", modelled
-    on ``_start_reference_refresh``.
+    """Keep the tournament corpus current while ``serve`` runs: one
+    ``_corpus_refresh_tick`` every ``interval`` seconds, the first at once, on
+    a daemon thread of its own, "corpus-refresh", modelled on
+    ``_start_reference_refresh``.
 
     The loop's ``RefreshState`` lives as long as the thread: its hour after
-    an incomplete run (D12) is forgotten on a restart, while a stored
-    not-before is not. An exception is logged at warning level and never ends
+    an incomplete run is forgotten on a restart, while a stored not-before
+    is not. An exception is logged at warning level and never ends
     the loop; the next tick tries again. ``stop`` ends it, which only a test
     does: ``serve`` lets the thread die with the process, as its siblings do.
     Returns the started thread.
@@ -2078,9 +2051,8 @@ def _start_backup(db_path: Path):
 def _require_loopback(host: str) -> None:
     """Refuse to bind anywhere but loopback, before anything else in
     ``cmd_serve`` runs (no watcher, no refresh thread, no backup scheduler,
-    no ``open_database`` call). AGENTS.md non-negotiable #5: "Loopback binds
-    only ... this is why no part of this app needs an authentication story";
-    changing that means building one first, not quietly widening ``--host``.
+    no ``open_database`` call). AGENTS.md non-negotiable #5: widening
+    ``--host`` means building an authentication story first.
 
     Delegates the actual rule (``'localhost'`` accepted by name with no DNS
     resolution, everything else parsed as a literal IP address) to
@@ -2108,8 +2080,8 @@ def _bind_listening_socket(host: str, port: int) -> socket.socket:
 
     ``socket.create_server`` sets SO_REUSEADDR on POSIX (a restart is not
     refused for TIME_WAIT) and nothing on Windows: there SO_REUSEADDR would
-    let a second socket bind a port another holds, defeating "pick a new port
-    only when it is taken" (the shell's D5), while SO_EXCLUSIVEADDRUSE can
+    let a second socket bind a port another holds, defeating the shell's
+    "pick a new port only when it is taken", while SO_EXCLUSIVEADDRUSE can
     refuse a rebind while the old listener's connections linger, so a restart
     would look taken. Windows' default already refuses a held port."""
     family = socket.AF_INET6 if ":" in host else socket.AF_INET
@@ -2198,7 +2170,7 @@ def cmd_serve(args) -> None:
         # The watcher writes, so it may create the database; a read-only serve
         # must not, since an empty file is indistinguishable from "no games yet".
         _open(args).close()
-        # D10: with no --file and no log anywhere, the watcher waits for one
+        # With no --file and no log anywhere, the watcher waits for one
         # (an explicit --file that is missing still exits, in _resolve_log).
         path = _resolve_serve_log(args.file)
         _resolve_locale(args)
@@ -2273,7 +2245,7 @@ def cmd_serve(args) -> None:
         _start_archetype_refresh(db_path)
     if not args.no_reference_refresh:
         _start_reference_refresh(db_path)
-    # D13: with or without --watch. Its own lines print only when a hold
+    # With or without --watch. Its own lines print only when a hold
     # moves (_corpus_refresh_tick), so a running refresh says nothing here.
     if args.no_corpus_refresh:
         print("Not downloading tournament results (--no-corpus-refresh)")
@@ -2372,9 +2344,9 @@ def _add_watch_arguments(sub_parser: argparse.ArgumentParser) -> None:
         ),
     )
     # Only the CLI defaults to auto: ingest_file and the watcher keep None and
-    # pass whatever they are given through unchanged (plan 3, S10). The parsed
-    # default stays auto; _resolve_locale puts [arena] date_order in its place
-    # when the flag was not given (D11), which _GivenLocale records.
+    # pass whatever they are given through unchanged. The parsed default
+    # stays auto; _resolve_locale puts [arena] date_order in its place when
+    # the flag was not given, which _GivenLocale records.
     sub_parser.add_argument(
         "--locale", choices=(AUTO, *DATE_ORDERS), default=AUTO, action=_GivenLocale,
         help=(
@@ -2586,12 +2558,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_brief.set_defaults(func=cmd_brief)
 
     p_serve = sub.add_parser("serve", help="run the local dashboard + JSON API")
-    # Loopback by default and on purpose (AGENTS.md non-negotiable #5): the
-    # brief forbids exposing game data to the network. --host still exists
-    # for picking a *different* loopback address (a container's own lo, an
-    # IPv6 ::1 setup) — never for binding somewhere reachable from outside
-    # this machine. cmd_serve's own _require_loopback enforces that no
-    # other value gets past argument parsing.
+    # Loopback by default and on purpose (AGENTS.md non-negotiable #5).
+    # --host still exists for picking a *different* loopback address (a
+    # container's own lo, an IPv6 ::1 setup) — never for binding somewhere
+    # reachable from outside this machine. cmd_serve's own _require_loopback
+    # enforces that no other value gets past argument parsing.
     p_serve.add_argument(
         "--host", default="127.0.0.1",
         help="loopback bind address only (default 127.0.0.1) — rejected otherwise",
@@ -2632,9 +2603,10 @@ def build_parser() -> argparse.ArgumentParser:
     _add_watch_arguments(p_serve)
     p_serve.set_defaults(func=cmd_serve)
 
-    # Card names are the one thing an Arena log cannot supply on its own. Read
-    # from the installed client by default; --scryfall is for machines without
-    # Arena on them, and is the project's only network call.
+    # Read from the installed client by default; --scryfall downloads card
+    # names plus the rules text and legality the installed client never
+    # carries, which the deck guide needs at least once. See
+    # docs/user/getting-started.md, "Card names".
     p_cards = sub.add_parser("cards", help="load card names (from the installed Arena client)")
     p_cards.add_argument(
         "--scryfall", action="store_true",
@@ -2722,11 +2694,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_restore.set_defaults(func=cmd_restore)
 
-    # Opt-in only (AGENTS.md non-negotiable #5): nothing here makes a Claude
-    # API call until a credential is set. Needs no --db at all. The TopDeck.gg
+    # Opt-in only (AGENTS.md non-negotiable #5): config itself never calls
+    # out, and a Claude credential set here only turns the generate buttons
+    # on. Of --db it uses only the backup lines (the default backup folder
+    # sits beside it, and the last backup's state is read from it, read-only)
+    # and, as every command does, the log folder beside it. The TopDeck.gg
     # key lives in the same file but is a separate, free/rate-limited
     # credential, governed by the free-download standard instead — see
-    # "The standard for the free downloads" in docs/llm.md.
+    # docs/llm.md, "The standard for the free downloads".
     p_config = sub.add_parser(
         "config",
         help="set or show keys, the Arena log, MTGO and backups (no flags: show them)",
@@ -2800,8 +2775,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="how many backup slots to retain (default: 1)",
     )
     # Coach-only overrides: written to a separate [claude.coach] table,
-    # never touching the [claude] defaults the other three narrative routes
-    # use via load().
+    # never touching the [claude] defaults the other four POST .../narrative
+    # routes use via load().
     p_config.add_argument(
         "--set-coach-model", default=None, metavar="ID",
         help="the coach report's default model, which the Coach tab's model picker "
