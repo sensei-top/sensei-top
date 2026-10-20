@@ -73,6 +73,20 @@ test('/download/windows and /download/linux redirect to the newest file', async 
   assert.deepEqual(asked, [`${RELEASES}/latest/download/latest.yml`, `${RELEASES}/latest/download/latest-linux.yml`])
 })
 
+test('/download/linux-tar builds the tarball name from the feed version', async () => {
+  const feed = `${RELEASES}/latest/download/latest-linux.yml`
+  serve({ [feed]: LINUX_FEED })
+  const tar = await get('/download/linux-tar')
+  assert.equal(tar.status, 302)
+  assert.equal(tar.headers.get('Location'), `${RELEASES}/download/v0.7.0/Sensei-Top-0.7.0.tar.gz`)
+  serve({ [feed]: LINUX_FEED.replace('version: 0.7.0', 'version: latest') })
+  assert.equal((await get('/download/linux-tar')).headers.get('Location'), `${RELEASES}/latest`)
+  serve({ [feed]: '<!DOCTYPE html>' })
+  assert.equal((await get('/download/linux-tar')).headers.get('Location'), `${RELEASES}/latest`)
+  serve({})
+  assert.equal((await get('/download/linux-tar')).headers.get('Location'), `${RELEASES}/latest`)
+})
+
 test('without a usable feed the redirect goes to the releases page', async () => {
   serve({})
   assert.equal((await get('/download/windows')).headers.get('Location'), `${RELEASES}/latest`)
@@ -84,7 +98,7 @@ test('without a usable feed the redirect goes to the releases page', async () =>
 
 test('any other path is the static assets', async () => {
   const asked = serve({})
-  for (const path of ['/download/', '/download/mac', '/download/constructor', '/download/windows/', '/']) {
+  for (const path of ['/download/', '/download/mac', '/download/constructor', '/download/windows/', '/download/linux-', '/download/linux-foo', '/']) {
     assert.equal(await (await get(path)).text(), 'asset', path)
   }
   assert.deepEqual(asked, [])
