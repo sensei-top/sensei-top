@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   plain Wine in `~/.wine` or `WINEPREFIX`, whatever the Wine user is
   called. When more than one prefix holds a log, the one Arena wrote to
   last is read, and `sensei-top doctor` lists the others.
+- A `.tar.gz` of the Linux app beside the AppImage, for systems where the
+  AppImage won't run. It never updates itself, and Settings doesn't offer
+  to start it when you log in.
 
 ## [1.1.0] - 2026-10-19
 

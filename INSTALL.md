@@ -6,7 +6,7 @@ There is nothing to sign up for.
 
 - [Windows](#windows)
 - [Linux](#linux): [Arch-based](#arch-based-distributions-cachyos-endeavouros-manjaro),
-  [Ubuntu](#ubuntu), [SteamOS](#steamos-desktop-mode)
+  [Ubuntu](#ubuntu), [SteamOS](#steamos-desktop-mode), [the .tar.gz](#the-targz)
 - [Where your data lives](#where-your-data-lives)
 - [Updates](#updates)
 
@@ -42,7 +42,8 @@ Uninstalling keeps your match history; see
 ## Linux
 
 The Linux build is one file, an AppImage. It is not installed: you keep the
-file somewhere and run it.
+file somewhere and run it. If it won't run on your system, the same app is
+also a [`.tar.gz`](#the-targz).
 
 1. Download `Sensei-Top-<version>.AppImage`.
 2. Move it to a folder of your own, such as `~/Applications`. It updates
@@ -141,6 +142,36 @@ closes it with the rest of the desktop, so play Arena in desktop mode
 while you want your games recorded. Starting it from Game Mode hasn't been
 tried yet.
 
+### The .tar.gz
+
+Use the AppImage if you can: it updates itself, and it can start when you
+log in. The `.tar.gz` is the same app as a plain folder, for a system where
+the AppImage won't run. It never updates itself, and Settings doesn't offer
+to start it when you log in. Like the AppImage, it needs a C library
+(glibc) of version 2.39 or newer: Ubuntu 24.04, Debian 13, Fedora 40 or
+later.
+
+1. Download `Sensei-Top-<version>.tar.gz` and unpack it into a folder of
+   your own:
+
+       mkdir -p ~/Applications
+       tar -xzf Sensei-Top-*.tar.gz -C ~/Applications
+
+2. Run `sensei-top` from the unpacked folder, which carries the version
+   in its name the way the file does:
+
+       ~/Applications/Sensei-Top-<version>/sensei-top
+
+On Ubuntu 24.04 and later, the AppImage's launcher turns Chromium's sandbox
+off when the system blocks it (see [Ubuntu](#ubuntu)); the `.tar.gz` has no
+launcher to do that. If it exits with a sandbox error, run it with
+`--no-sandbox` added to the command.
+
+To update, download the new `.tar.gz`, quit Sensei Top, delete the old
+folder and unpack the new one in its place. To uninstall, delete the
+folder. Your match history isn't in it either way; see
+[where your data lives](#where-your-data-lives).
+
 ## Where your data lives
 
 Your match history is one database file in a folder of its own. Settings
@@ -155,9 +186,9 @@ A Claude or TopDeck.gg key you add is kept in Windows Credential Manager,
 or in the system keyring on Linux. Only when no keyring exists does it go
 in `config.toml`.
 
-Uninstalling the app, or deleting the AppImage, leaves these folders where
-they are, so reinstalling picks up where you left off. Delete them yourself
-to remove everything.
+Uninstalling the app, or deleting the AppImage or the `.tar.gz`'s folder,
+leaves these folders where they are, so reinstalling picks up where you
+left off. Delete them yourself to remove everything.
 
 ## Updates
 
@@ -167,3 +198,6 @@ address and the app's version among it, and nothing about your games. A
 newer version downloads in the background and installs when you quit, or
 straight away from **Restart to update** in Settings. To stop checking,
 turn off **Check for updates** in Settings.
+
+The `.tar.gz` doesn't check for updates: download each new version
+yourself, as [the .tar.gz](#the-targz) says.
