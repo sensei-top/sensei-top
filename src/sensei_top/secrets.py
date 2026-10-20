@@ -9,10 +9,11 @@ for the free TopDeck.gg one), never here.
 
 Nothing here raises. A machine with no usable backend (``keyring``'s ``fail``
 and ``null`` backends count as none) reads as "nothing stored" without a
-warning; a backend that exists but errors logs a WARNING — never the value —
-and reads as "nothing stored" too, so the caller falls back to the config
-file. ``keyring`` is imported inside the functions: probing a backend can be
-slow and must not cost unrelated commands at import time.
+warning; a keyring that fails to load, or a backend that errors, logs a
+WARNING — never the value — and reads as "nothing stored" too, so the
+caller falls back to the config file. ``keyring`` is imported inside the
+functions: probing a backend can be slow and must not cost unrelated
+commands at import time.
 """
 
 from __future__ import annotations

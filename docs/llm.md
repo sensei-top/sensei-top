@@ -141,8 +141,10 @@ Order, first match wins:
    that exists but errors logs a WARNING (never the value) and resolution
    moves on to the file.
 3. `~/.config/sensei-top/config.toml` (`$XDG_CONFIG_HOME` if set), or on
-   Windows `%APPDATA%\sensei-top\config.toml` (`llm/config.py::config_path`),
-   a `[claude]` table:
+   Windows `%APPDATA%\sensei-top\config.toml` (`llm/config.py::config_path`;
+   a file left at the old `~/.config` path is still read there, with a
+   warning to move it, until the `%APPDATA%` one exists), a `[claude]`
+   table:
    ```toml
    [claude]
    api_key = "sk-ant-..."
@@ -206,11 +208,14 @@ the resolved coach override alongside the base model/effort when one is set.
 The TopDeck.gg key follows the same order (`TOPDECK_API_KEY`, keyring username
 `topdeck`, `[topdeck]` in the file) in `metagame/config.py`.
 
-Missing or malformed input at either layer resolves to "not configured"
-(`load()` returns `None`) plus a `log.warning` — never an exception. This is
-the same fail-soft posture `metagame/source.py` and `card_images.py` already
-use for the free downloads: an unreachable or misconfigured feature degrades
-the one surface that needs it, not the whole app.
+Missing or malformed input, in `[claude]` or `[claude.coach]`, never
+raises. With no key from any source the answer is "not configured"
+(`load()` returns `None`): a missing file says nothing, while a file that
+does not parse, or one with no key when nothing else supplied one, logs a
+warning. A malformed `[claude.coach]` value is ignored with a warning. This
+is the same fail-soft posture `metagame/source.py` and `card_images.py`
+already use for the free downloads: an unreachable or misconfigured feature
+degrades the one surface that needs it, not the whole app.
 
 ## What calls out, and what it sends
 
@@ -309,7 +314,8 @@ Default `claude-opus-5-5`, `thinking: {"type": "adaptive"}`,
 requests structured output (`output_config.format`) against the existing
 `_GUIDE_TOOL["input_schema"]` schema, so the generate path returns the exact
 JSON shape `guide_narrative_from_json` already parses — one validation path,
-not two.
+not two. The RCQ guide does the same with `guide/rcq.py`'s
+`_RCQ_TOOL["input_schema"]` and `rcq_from_json`.
 
 Every generated artifact records `model`, `input_tokens`, `output_tokens`, and
 `cost_usd` computed from the response's own `usage` block against a small

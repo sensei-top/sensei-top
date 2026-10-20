@@ -1,26 +1,28 @@
 """Where the Claude credential comes from — the only question this module
-answers.
+answers, and the only place a metered credential is resolved (AGENTS.md
+non-negotiable #5). See docs/llm.md, "Credential resolution".
 
 Resolution order, first match wins:
 
 1. ``ANTHROPIC_API_KEY`` in the environment.
 2. The system keyring (``secrets.get("claude")``), where one exists.
-3. ``[claude]`` in ``config_path()`` (``~/.config/sensei-top/config.toml``;
-   ``$XDG_CONFIG_HOME`` if set; ``%APPDATA%\\sensei-top\\config.toml`` on
-   Windows, where an old ``~/.config`` file is still used until moved),
-   written by ``sensei-top config --set-key``.
+3. ``[claude]`` in ``config_path()``'s file, written by ``sensei-top config
+   --set-key`` only when there is no usable keyring.
 
-Nothing here raises. A missing file, a missing table, or a malformed one all
-resolve the same way ``metagame/source.py`` treats an unreachable host: log a
-warning and hand back the "not configured" state (``None``) rather than an
-exception, because a feature this optional must never be what breaks a
-request. Every caller checks for ``None`` and falls back to the prompt/import
-path — see ``docs/llm.md``.
+Nothing here raises, because a feature this optional must never be what
+breaks a request. With no key from any source the answer is the "not
+configured" state (``None``), the way ``metagame/source.py`` treats an
+unreachable host. A missing file says nothing; a file that does not parse
+always logs a warning, and one with no key logs one only when no other
+source supplied a key. Every caller handles ``None``: the generate routes
+answer 503 and the dashboard falls back to the prompt/import path.
 
 ``load_coach()`` is the same resolution, with the ``[claude.coach]`` table's
 ``model``/``effort``/``web_search`` overriding the base ``[claude]`` values
-for the coach report only. The other three narrative routes keep calling
-``load()``, which this table never affects.
+for the coach report only. The other four ``POST .../narrative`` routes (the
+match report, the leak finder, the deck guide and the RCQ guide) resolve
+through ``api/routes/narrative.py::require_credential``, which calls
+``load()``, so this table never affects them.
 """
 
 from __future__ import annotations
@@ -168,11 +170,11 @@ def _read_claude_table(path: Path) -> dict | None:
 def _load_coach_overrides() -> tuple[str | None, str | None, bool | None] | None:
     """``(model, effort, web_search)``, each ``None`` when absent or
     malformed — never raises, same warn-and-fall-back posture as
-    ``_read_claude_table``. Returns ``None`` outright when there is no
-    ``[claude.coach]`` table at all, so ``load_coach()`` can tell "no
-    overrides" apart from "every override absent" (same result either way,
-    but this keeps the malformed-table warning distinct from the common
-    case of a user who has simply never set a coach override)."""
+    ``_read_claude_table``: a malformed value warns, an absent one does not.
+    Returns ``None`` outright, without a warning, when the file is missing
+    or there is no ``[claude.coach]`` table (the common case of a user who
+    has never set a coach override); ``load_coach()`` then returns the base
+    config unchanged, the same result as every override absent."""
     path = config_path()
     if not path.exists():
         return None
