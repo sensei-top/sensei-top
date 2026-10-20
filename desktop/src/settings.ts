@@ -123,6 +123,8 @@ export type AppSettings = {
   onboarded: boolean;
   /** Whether onboarding's last step asks about starting with the system (D25). */
   askAutostart: boolean;
+  /** Whether this copy can start with the system at all; the page hides the toggle when not. */
+  canAutostart: boolean;
   /** Cards with rules text, from doctor; `null` when unknown. */
   rulesText: number | null;
   firstData: FirstData;
@@ -291,10 +293,22 @@ export function toShellSettings(config: ConfigJson, doctor: DoctorArena | null, 
   };
 }
 
-/** D25: no install wizard asked, so onboarding asks: the AppImage and
- *  anything on Linux, and the Store build (`process.windowsStore`). */
-export function asksAutostart(platform: string, windowsStore: boolean): boolean {
-  return platform === 'linux' || windowsStore;
+/** Whether this copy can start with the system. Windows: the login item.
+ *  Linux: the AppImage (its `APPIMAGE` names the file the XDG entry starts),
+ *  and a development run, which records the choice and applies nothing; a
+ *  packaged copy without `APPIMAGE` (the tarball) has no stable path to
+ *  start. Anything else: no. */
+export function canAutostart(options: { platform: string; packaged: boolean; appImage: string | undefined }): boolean {
+  if (options.platform === 'win32') return true;
+  if (options.platform === 'linux') return !options.packaged || Boolean(options.appImage);
+  return false;
+}
+
+/** D25: no install wizard asked, so onboarding asks: on Linux wherever
+ *  `canAutostart` is true (the AppImage and a development run, not the
+ *  tarball), and on the Store build (`process.windowsStore`). */
+export function asksAutostart(platform: string, windowsStore: boolean, canStart: boolean): boolean {
+  return (platform === 'linux' && canStart) || windowsStore;
 }
 
 export function toAppSettings(
@@ -304,6 +318,7 @@ export function toAppSettings(
     platform: string;
     update: UpdateStatus;
     askAutostart: boolean;
+    canAutostart: boolean;
     rulesText: number | null;
     firstData: FirstData;
   },
@@ -318,6 +333,7 @@ export function toAppSettings(
     update: info.update,
     onboarded: prefs.onboarded ?? false,
     askAutostart: info.askAutostart,
+    canAutostart: info.canAutostart,
     rulesText: info.rulesText,
     firstData: info.firstData,
     version: info.version,
@@ -547,8 +563,10 @@ export interface SettingsDeps {
   dataDir: string;
   version: string;
   platform: string;
-  /** `asksAutostart(process.platform, process.windowsStore === true)`. */
+  /** `asksAutostart(process.platform, process.windowsStore === true, canAutostart)`. */
   askAutostart: boolean;
+  /** `canAutostart({platform, packaged, appImage})`. */
+  canAutostart: boolean;
   /** How many backups the folder holds. */
   countBackups(dir: string): number;
   /** The newest `<db>.backup` slot in `dir`: its modification time (ISO) and size. */
@@ -642,6 +660,7 @@ export class SettingsService {
       platform: this.deps.platform,
       update: this.deps.updateStatus(),
       askAutostart: this.deps.askAutostart,
+      canAutostart: this.deps.canAutostart,
       rulesText: this.doctor?.rulesText ?? null,
       firstData: this.firstDataState,
     });
