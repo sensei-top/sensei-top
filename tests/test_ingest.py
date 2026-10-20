@@ -12,14 +12,14 @@ from pathlib import Path
 
 import pytest
 
-from sensei_top import db
+from sensei_top import db, steam
 from sensei_top.cli import build_parser
 from sensei_top.db import open_database
 from sensei_top.reader import dates
 from sensei_top.reader.ingest import (
-    _STEAM_COMPATDATA_RELATIVE,
     compute_digest,
     default_log_path,
+    found_log_paths,
     ingest_file,
     ingest_with_recovery,
     previous_log_path,
@@ -716,6 +716,12 @@ def test_migration_062_adds_nullable_header_columns_and_the_learned_order_table(
 
 # --- default log path discovery ---------------------------------------------
 
+_STEAM_COMPATDATA_RELATIVE = (
+    f"steamapps/compatdata/{steam.MTGA_APP_ID}/pfx/drive_c/users/steamuser/"
+    "AppData/LocalLow/Wizards Of The Coast/MTGA/Player.log"
+)
+_LOG_IN_PREFIX = "AppData/LocalLow/Wizards Of The Coast/MTGA/Player.log"
+
 
 def test_env_var_takes_priority_over_everything(monkeypatch, tmp_path):
     explicit = tmp_path / "Custom.log"
@@ -778,3 +784,125 @@ def test_the_windows_profile_is_not_searched_elsewhere(monkeypatch, tmp_path):
     monkeypatch.setenv("USERPROFILE", str(profile))
     _windows_log(profile)
     assert default_log_path() is None
+
+
+# --- Linux candidates: every Steam library and every Wine prefix -------------
+
+
+def _linux_home(monkeypatch, tmp_path) -> Path:
+    home = tmp_path / "fakehome"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.delenv("MTGA_LOG", raising=False)
+    monkeypatch.delenv("WINEPREFIX", raising=False)
+    return home
+
+
+def _prefix_log(prefix: Path, user: str, mtime: float | None = None) -> Path:
+    log_path = prefix / "drive_c/users" / user / _LOG_IN_PREFIX
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text("")
+    if mtime is not None:
+        os.utime(log_path, (mtime, mtime))
+    return log_path
+
+
+def test_proton_prefix_with_a_user_other_than_steamuser(monkeypatch, tmp_path):
+    """The Wine user is whatever folder sits under drive_c/users; a hard-coded
+    name hid every prefix whose user was something else."""
+    home = _linux_home(monkeypatch, tmp_path)
+    prefix = home / ".local/share/Steam/steamapps/compatdata" / steam.MTGA_APP_ID / "pfx"
+    log_path = _prefix_log(prefix, "someone")
+    assert default_log_path() == log_path
+
+
+def test_public_wine_user_is_skipped(monkeypatch, tmp_path):
+    """Public is Windows' shared profile, never the player's."""
+    home = _linux_home(monkeypatch, tmp_path)
+    _prefix_log(home / ".wine", "Public")
+    assert default_log_path() is None
+    assert found_log_paths() == []
+
+
+def test_a_newer_lutris_log_beats_a_stale_steam_one(monkeypatch, tmp_path):
+    """A stale prefix must not shadow the one Arena wrote to last."""
+    home = _linux_home(monkeypatch, tmp_path)
+    steam_prefix = home / ".local/share/Steam/steamapps/compatdata" / steam.MTGA_APP_ID / "pfx"
+    stale = _prefix_log(steam_prefix, "steamuser", mtime=1_000_000)
+    lutris_prefix = tmp_path / "elsewhere/arena-prefix"
+    fresh = _prefix_log(lutris_prefix, "me", mtime=2_000_000)
+    games = Path(os.environ["XDG_CONFIG_HOME"]) / "lutris/games"
+    games.mkdir(parents=True)
+    (games / "arena.yml").write_text(f"game:\n  prefix: {lutris_prefix}\n")
+    assert default_log_path() == fresh
+    assert found_log_paths() == [fresh, stale]
+
+
+def test_an_mtime_tie_keeps_candidate_order(monkeypatch, tmp_path):
+    """Steam comes before Wine prefixes when nothing separates them."""
+    home = _linux_home(monkeypatch, tmp_path)
+    steam_prefix = home / ".local/share/Steam/steamapps/compatdata" / steam.MTGA_APP_ID / "pfx"
+    first = _prefix_log(steam_prefix, "steamuser", mtime=1_500_000)
+    second = _prefix_log(home / ".wine", "me", mtime=1_500_000)
+    assert found_log_paths() == [first, second]
+
+
+def test_the_same_prefix_reached_twice_counts_once(monkeypatch, tmp_path):
+    """A symlinked root (as ~/.steam/steam is) must list its log once, under
+    the first spelling, which the watcher keys its offset by."""
+    home = _linux_home(monkeypatch, tmp_path)
+    real = home / ".local/share/Steam"
+    prefix = real / "steamapps/compatdata" / steam.MTGA_APP_ID / "pfx"
+    log_path = _prefix_log(prefix, "steamuser")
+    (home / ".steam").mkdir()
+    (home / ".steam/steam").symlink_to(real)
+    assert found_log_paths() == [home / ".steam/steam" / log_path.relative_to(real)]
+
+
+def test_mtga_log_leads_whatever_its_mtime(monkeypatch, tmp_path):
+    """An explicit $MTGA_LOG is a choice, not a candidate to out-age."""
+    home = _linux_home(monkeypatch, tmp_path)
+    prefix_log = _prefix_log(home / ".wine", "me", mtime=2_000_000)
+    explicit = tmp_path / "Custom.log"
+    explicit.write_text("")
+    os.utime(explicit, (1_000_000, 1_000_000))
+    monkeypatch.setenv("MTGA_LOG", str(explicit))
+    assert found_log_paths() == [explicit, prefix_log]
+
+
+def test_a_wine_user_without_a_log_is_skipped(monkeypatch, tmp_path):
+    """A user folder that holds no Player.log (or one that vanished) must be
+    skipped, never raise."""
+    home = _linux_home(monkeypatch, tmp_path)
+    (home / ".wine/drive_c/users/empty").mkdir(parents=True)
+    kept = _prefix_log(home / ".wine", "kept", mtime=1_000_000)
+    assert found_log_paths() == [kept]
+
+
+def test_wineprefix_naming_the_proton_prefix_counts_once(monkeypatch, tmp_path):
+    """The same prefix reached as a Steam library and as $WINEPREFIX is one
+    log, listed under the Steam spelling (the first candidate)."""
+    home = _linux_home(monkeypatch, tmp_path)
+    prefix = home / ".local/share/Steam/steamapps/compatdata" / steam.MTGA_APP_ID / "pfx"
+    log_path = _prefix_log(prefix, "steamuser")
+    monkeypatch.setenv("WINEPREFIX", str(prefix))
+    assert found_log_paths() == [log_path]
+    assert default_log_path() == log_path
+
+
+def test_the_debug_line_repeats_only_when_it_changes(monkeypatch, tmp_path, caplog):
+    """The dashboard's heartbeat resolves the log every few seconds."""
+    from sensei_top.reader import ingest
+
+    home = _linux_home(monkeypatch, tmp_path)
+    monkeypatch.setattr(ingest, "_last_debug", None)
+    _prefix_log(home / ".wine", "me")
+    with caplog.at_level(logging.DEBUG, logger=ingest.log.name):
+        default_log_path()
+        default_log_path()
+        assert len(caplog.records) == 1
+        _prefix_log(home / ".wine", "other")
+        default_log_path()
+        assert len(caplog.records) == 2
+        assert str(tmp_path) not in caplog.text
