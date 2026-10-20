@@ -2,36 +2,16 @@
 it stands right now, never waiting on ``project()``'s turn-boundary
 snapshots or its full-rebuild cadence (``live.py``).
 
-This is the general form of what ``projector/mulligan.py`` already did for
-one narrow question ("is a mulligan pending"): reuse ``GameStateTracker``
-(the same one ``project()`` uses) over a window of ``raw_events`` anchored to
-the current match's own room-opening event, and read off whatever the
-caller needs from the accumulated state — mid-turn, not at the last turn
-boundary ``project()`` happened to reach.
+It reuses ``GameStateTracker`` (the same one ``project()`` uses) over a
+window of ``raw_events`` anchored to the current match's own room-opening
+event. Why it replays rather than reading ``turns``/``matches``, and what it
+costs: docs/current-match.md, "The live replay (`table/live.py`,
+`projector/live_state.py`)".
 
-Measured against a real database (~173k raw events, ~800 MB): a full
-``project()`` rebuild costs **~11.6 s** wall time, of which parsing every
-payload is **~3.9 s** with ``orjson`` (was ~7.55 s under the stdlib ``json``
-this module used before — see ``live.py``'s module docstring for why the
-switch alone doesn't make the rebuild affordable per-request), while
-replaying one match (990-4,276 events, bounded by the anchor) costs
-**0.03-0.08 s**. That gap is the reason this module exists rather than
-reading ``turns``/``matches`` for the live tab: a full rebuild cannot land
-inside a 1-second poll, let alone the 5-second median mulligan decision
-window ``mulligan.py`` was already built to beat.
-
-``mulligan.py`` is now a thin wrapper around this module (kept as its own
-file because ``table/opening_hand.py`` and its tests still import
-``MulliganOffer``/``replay_pending_offer`` from there) — see its module
-docstring.
-
-Self/opponent seat resolution reuses the hand asymmetry
-``docs/arena-log.md`` documents and ``mulligan.py`` already proved: our own
-hand always resolves to real ``gameObjects``; the opponent's hand zone never
-does, at any point in the game, not only during a mulligan. That lets this
-module identify seats without a separate ``authenticateResponse`` lookup —
-useful since the mulligan fixture this module's tests share starts at the
-room event itself, with no preceding auth message in the window.
+Seats are resolved from the hand asymmetry, with no ``authenticateResponse``
+lookup: our own hand always resolves to real ``gameObjects``, the opponent's
+never does (``_find_self_seat``). The mulligan fixture this module's tests share
+starts at the room event itself, with no auth message in the window.
 """
 
 from __future__ import annotations
@@ -102,15 +82,14 @@ class LiveState:
     graveyard: dict[int, int]
     open_mana: dict[int, int]
     # Untapped non-land mana sources (rocks, dorks, Treasures) — a sibling
-    # count to open_mana, never merged into it (see GameStateTracker's own
-    # docstring on this). Empty unless replay_live_state was given
+    # count to open_mana, never merged into it (see
+    # TurnRow.other_mana_sources). Empty unless replay_live_state was given
     # mana_source_grp_ids; table/live.py is what supplies it.
     other_mana_sources: dict[int, int]
     zone_cards: tuple[ZoneCard, ...]
     offer: MulliganOffer | None
-    # None outside a Bo3 break. Given a default so the handful of synthetic
-    # LiveState(...) call sites elsewhere (tests, mostly) that predate this
-    # field keep constructing without it.
+    # None outside a Bo3 break. Defaulted, like the fields below, so a
+    # synthetic LiveState(...) in a test can leave it out.
     intermission: Intermission | None = None
     # deck_maindeck is the latest SubmitDeckResp's maindeck of this match once
     # the replay has seen one (the deck held for the game after a sideboarding
@@ -177,9 +156,8 @@ def _find_self_seat(tracker: GameStateTracker) -> int | None:
     real objects. The opponent's hand zone ships ids with no matching
     ``gameObjects``, so it can never satisfy this — the same fact that
     makes the opponent's hand genuinely hidden everywhere else in this
-    project. Unlike ``mulligan.py``'s original ``_find_our_seat``, this is
-    not restricted to seats currently pending a mulligan decision: our own
-    hand resolves this way for the entire game, not only during mulligans."""
+    project. Not restricted to a seat pending a mulligan decision: our own
+    hand resolves this way for the entire game."""
     for zone in tracker.zones.values():
         if zone.get("type") != "ZoneType_Hand":
             continue
@@ -348,15 +326,13 @@ def replay_live_state(
 
     ``mana_source_grp_ids`` is optional and only widens
     ``LiveState.other_mana_sources`` beyond an empty dict — see
-    ``GameStateTracker``'s own docstring for what it counts and why it is a
+    ``TurnRow.other_mana_sources`` for what it counts and why it is a
     sibling to ``open_mana`` rather than folded into it.
 
     ``pre_anchor_payloads`` resolves ``LiveState.deck_maindeck``/``deck_id``
     for the common case where ``connectResp.deckMessage`` lands just
     *before* the room-opening anchor rather than inside ``payloads`` itself
-    (measured against a real database: the nearest connectResp to every
-    room-opening row landed one row before or one row after it, never
-    further — see ``table/live.py``'s ``_DECK_MESSAGE_LOOKBACK``). Only
+    (``table/live.py``'s ``_DECK_MESSAGE_LOOKBACK`` has how far). Only
     consulted when ``payloads`` itself carried no connectResp; a connectResp
     inside the main window wins over it. A SubmitDeckResp inside the main
     window sets ``deck_maindeck`` (the latest one wins, and a later connectResp
@@ -496,12 +472,9 @@ def replay_live_state(
 
     deck_id: str | None = None
     if connect_deck is not None:
-        # Local import: projector/matches.py imports this module's own
+        # Local import: projector/matches.py imports this module's
         # _game_result_entry at module level, so a module-level import back
-        # here would be a true circular import — fails regardless of which
-        # module loads first. deck_identity itself is a pure function (a
-        # sha256 hash over sorted (grpId, count) pairs), so a call-time
-        # import costs nothing worth avoiding.
+        # here would be circular whichever module loads first.
         from sensei_top.projector.matches import deck_identity
 
         deck_id, _ = deck_identity(list(connect_deck))

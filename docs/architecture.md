@@ -51,11 +51,10 @@ Three exceptions, all deliberate and all documented at the site:
 
 - **`table/` reads `raw_events` directly.** It replays the current match at
   request time rather than reading `turns`, because a full `project()` rebuild
-  costs ~11.6 s against a 5-second cadence while one match's replay costs
-  0.03–0.08 s. It reuses `projector/game_state.py`'s `GameStateTracker` — the
-  *same* tracker `project()` drives — so this is one parser with two drivers,
-  never a second encoding of Arena semantics. See
-  `projector/live_state.py`'s module docstring and
+  costs several times the 5-second cadence (see "Full rebuild, always") while
+  one match's replay costs 0.03–0.08 s. It reuses `projector/game_state.py`'s
+  `GameStateTracker` — the *same* tracker `project()` drives — so this is one
+  parser with two drivers, never a second encoding of Arena semantics. See
   [current-match.md](current-match.md).
 - **`brief/` and the narrative stores persist their output.** An authored
   narrative is not a derivation, so a rebuild cannot recompute it. See rule 6
@@ -70,9 +69,13 @@ Three exceptions, all deliberate and all documented at the site:
 
 ## Full rebuild, always
 
-`project()` deletes every derived row and recomputes from scratch. At this
-scale that is cheap — measured **0.28 s over 4,595 events**, roughly 60 µs per
-event — and it removes an entire class of incremental-state bugs.
+`project()` deletes every derived row and recomputes from scratch. That
+removes an entire class of incremental-state bugs, and it makes a fix
+retroactive: a corrected parsing rule reaches every stored match on the next
+rebuild. The cost grows with total history. Measured 2026-10-20 on a copy of
+a real database (421,879 raw events, 755 matches, 1,806 games): about
+**33 s** wall per full `project` (three runs, 32.8–33.3 s). Every other
+figure for the rebuild's cost points here.
 
 Deletion order matters and is fixed by foreign keys:
 
@@ -121,8 +124,8 @@ separate threads rather than one:
   floor.** New rows mark the projection dirty; a later tick does the work.
   Rebuilding on every ingest would be waste today and unaffordable after a
   year of play — but a full rebuild's own cost grows with total history, and
-  once it outlasts `project_every` (measured: ~16 s a rebuild against a 238k
-  event, 1.33 GB database), the old fixed threshold stopped doing anything:
+  once it outlasts `project_every` (as it does on a real database: see
+  "Full rebuild, always"), the old fixed threshold stopped doing anything:
   every dirty poll already found `elapsed >= project_every` true, so the
   watcher rebuilt back-to-back, pinning a core for the life of the process.
   `project_if_due` (`live.py`) instead gates on
@@ -458,13 +461,13 @@ temp-then-verify-then-`os.replace` sequence above, not the claim.
 **WAL interaction: documented, not mitigated.** `VACUUM INTO` holds a read
 transaction for its whole duration, so frames written at or after its
 snapshot cannot be checkpointed until it finishes, and `data/sensei-top.db-wal`
-grows while the watcher keeps writing. Estimated, not yet measured: each
-`project()` rewrites ~50–70 MB of frames with churn, and the live-mode
-rebuild gate is `max(--project-every, duty factor × last rebuild)` — with
-the default duty factor now 1.0 and a full rebuild at ~13–23 s, a backup
-window of a few minutes plausibly overlaps 4–10 rebuilds, roughly
-200–700 MB of WAL. (The first estimate here, 150–350 MB, assumed the old
-duty factor of 4.) Every run records its real duration in
+grows while the watcher keeps writing. The live-mode rebuild gate is
+`max(--project-every, duty factor × last rebuild)`, so at the default duty
+factor 1.0 a rebuild starts about every two rebuild durations (cost in
+"Full rebuild, always"). Each `project()` rewrites an estimated, not
+measured, ~50–70 MB of frames with churn, and the WAL grows by about that
+much for every rebuild that overlaps the backup window. Every run records
+its real duration in
 `backup_state.last_duration_ms` (a by-hand `sensei-top backup` also prints
 it as `Took:`); the WAL peak is recorded nowhere and needs watching
 `data/sensei-top.db-wal` during a run. It self-corrects logically but
@@ -1033,6 +1036,11 @@ turn** — there is exactly one snapshot per turn, so no mid-turn or per-step
 board can be reconstructed from them. `card_events` is the only intra-turn
 ordering there is.
 
+Library size is counted from `ZoneType_Library` itself, not by subtracting
+draws from the decklist: Arena sends the zone's `objectInstanceIds`, so the
+count is observed rather than derived, and a Bo3 sideboard changing the deck
+between games needs no special case.
+
 `turn_zones.zone` is one of `hand`, `battlefield`, `graveyard`, `exile`.
 `007_board_detail.sql` added the last of those plus `is_tapped`, `power` and
 `toughness`, all of which Arena had always sent and the projector had always
@@ -1096,8 +1104,8 @@ That same bypass now covers more than the opening hand.
 `projector/live_state.py` replays a match's `raw_events` on request and
 reads the board state as it stands *right now*, mid-turn — not the last
 turn boundary `project()` happened to reach. The reason is a number, not a
-guess: a real database's `project()` rebuild measured **~11.6 s** wall
-time, already past the 5-second `project_every` default, so anything
+guess: a real database's `project()` rebuild (see "Full rebuild, always")
+runs far past the 5-second `project_every` default, so anything
 sourced from `turns` on a mature database runs roughly one rebuild's
 duration stale. Replaying one match alone, bounded by its own room-opening
 event, costs 0.03-0.08 s regardless of how much history sits behind it.
