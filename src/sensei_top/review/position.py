@@ -6,19 +6,15 @@ Deliberately not fitted to this player's own outcomes: a heuristic that
 predicts nothing is information about the heuristic, not a reason to fit it.
 Verified against a real database of 116-117 completed games (2026-08-20):
 at turn 6 the index's sign matched the eventual result only 59.5% of the
-time (mean +0.003 in wins vs. -0.067 in losses) — turn 6 in a real game is
-often still genuinely close, and this index says so rather than
-overclaiming. The same check at turn 10 reaches 70.9%, and at each game's
-own last recorded turn reaches 92.3% (mean +0.283 in wins vs. -0.341 in
-losses). Read together: this index tracks how decided a game has *become*,
-correctly weak early and correctly strong once a game is actually over — a
-caller anchoring "the moment it turned" to a late, large drop is on solid
-ground; a caller expecting a confident verdict at turn 6 is asking the
-wrong question of it. These numbers were not tuned toward; report them
-again if a change here moves them meaningfully.
+time (mean +0.003 in wins vs. -0.067 in losses), at turn 10 70.9%, and at
+each game's own last recorded turn 92.3% (mean +0.283 in wins vs. -0.341 in
+losses). So the index tracks how decided a game has *become*: a caller
+anchoring "the moment it turned" to a late, large drop is on solid ground;
+a caller expecting a confident verdict at turn 6 is asking the wrong
+question of it. These numbers were not tuned toward; report them again if
+a change here moves them meaningfully.
 
-Every weight below is commented with the principle it encodes; an
-unexplained constant here is exactly what ``docs/conventions.md`` forbids.
+Every weight below is commented with the principle it encodes.
 """
 
 from __future__ import annotations
@@ -49,9 +45,9 @@ _CARDS_WEIGHT_EARLY = 0.15    # card advantage barely matters turn 1
 _CARDS_WEIGHT_LATE = 0.35     # (0.15 + 0.20 at full stage)
 _MANA_WEIGHT = 0.10           # a steady, minor tiebreaker throughout
 
-# Words for a swing's size, shared by trajectory.py's severity call and the
-# match summary's own phrasing — one threshold, not two copies that could
-# drift apart. Not fitted to outcomes any more than the index itself is.
+# Words for a swing's size, shared by trajectory.py's severity call and
+# summary.py's phrasing. See docs/review.md,
+# "`trajectory.py` — the shape of the whole game".
 SWING_DECISIVE = 0.30
 SWING_NOTABLE = 0.15
 
