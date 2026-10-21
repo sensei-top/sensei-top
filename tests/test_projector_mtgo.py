@@ -975,6 +975,25 @@ def test_resolve_grp_id_front_face_is_tried_before_the_back_face(conn):
     assert _resolve_grp_id(conn, {}, "Test Face", _Warner()) == 1
 
 
+def test_resolve_grp_id_prefers_a_row_with_legality_over_the_lowest(conn):
+    """The real cards table carries Swords to Plowshares as 59771,
+    with no `card_legality` row, and 77489, with seven (measured
+    2026-10-21). The lowest id lost the card's legality; the judged row wins.
+    A name with no judged row still takes the lowest."""
+    conn.execute(
+        "INSERT INTO cards (grp_id, name) VALUES "
+        "(59771, 'Swords to Plowshares'), (77489, 'Swords to Plowshares'), "
+        "(83565, 'Ancestral Recall'), (104063, 'Ancestral Recall')"
+    )
+    conn.execute(
+        "INSERT INTO card_legality (grp_id, format, legality) "
+        "VALUES (77489, 'Legacy', 'legal')"
+    )
+    cache: dict[str, int | None] = {}
+    assert _resolve_grp_id(conn, cache, "Swords to Plowshares", _Warner()) == 77489
+    assert _resolve_grp_id(conn, cache, "Ancestral Recall", _Warner()) == 83565
+
+
 def test_resolve_grp_id_cache_hit_issues_no_query(conn):
     """The cache stores the final answer — None included — so a second call
     for a name already resolved (or already known unresolved) costs no

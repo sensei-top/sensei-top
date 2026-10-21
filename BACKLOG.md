@@ -771,22 +771,6 @@ rule-4 answer.
 **Needs:** A way to tell the shared name's cards apart, or a decision that
 NULL stays.
 
-### BL-049 · MTGO's lookup lands on rows without legality
-
-type: fix · priority: P2 · status: ready · area: projector mtgo cards
-
-`_lookup` (`projector/mtgo/project.py`) takes the lowest positive id among
-same-name rows. That lands Swords to Plowshares (59771), Ancestral Recall
-(59671) and Fast // Furious (76075) on rows with no legality, though another
-row of the same name has one, so a match revealing them can't be judged on
-that card.
-
-**Why deferred:** Predates plan 13; found in its review. Not pinned by a
-test, nor is the shared single front-face candidate.
-
-**Needs:** Preferring a row that carries legality, with a fixture-backed
-test (rule 7).
-
 ### BL-050 · Corpus names without spaces
 
 type: fix · priority: P3 · status: needs-decision · area: archetypes metagame

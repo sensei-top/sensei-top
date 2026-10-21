@@ -15,8 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [Microsoft Store](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN), free.
   The Store version is signed, so Windows doesn't warn before installing
   it, and the Store keeps it up to date. The site and the install guide
-  now offer it beside the installer, which is still unsigned. Nothing in
-  the app itself changed.
+  now offer it beside the installer, which is still unsigned.
+
+### Fixed
+
+- A Magic Online match that reveals Swords to Plowshares, Ancestral Recall
+  or Fast // Furious can now be judged on that card's legality in the
+  match's format. The card was matched to a copy with no legality on file.
 
 ## [1.2.0] - 2026-10-21
 
