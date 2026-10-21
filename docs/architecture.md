@@ -118,7 +118,11 @@ separate threads:
   1.8 s. Reading and decoding those game logs inside the transaction
   instead held the lock 15–18 s on the same database, and the Live page
   stalled that long once a rebuild, about every 75 s of a game; both ways
-  built every derived table byte-identical.
+  built every derived table byte-identical. The dashboard's writes wait on
+  the same lock: after a rebuild's lock outlasted an MTGO pick's own 5 s
+  wait on 2026-10-17, the API's writes wait 60 s
+  (`api/deps.py::WRITE_BUSY_TIMEOUT_MS`) and answer 503 past that, rather
+  than a 500.
 - **Rebuild, gated to a duty cycle, `project_every` (default 5 s) as a
   floor.** New rows mark the projection dirty; a later tick does the work.
   Rebuilding on every ingest would be waste today and unaffordable after a
@@ -150,8 +154,10 @@ the mulligan offer itself still reaches `raw_events` within one ingest tick
 even while the rebuild the room opening triggered is still running — only the
 *projected* view of the match waits, and `table/live.py`'s own replay routes
 the opening-hand read around that wait rather than through `matches`/`turns`.
-A completed match carries the same event type and gets the same early rebuild
-as a side effect, which is a bonus rather than a case worth excluding.
+The 2026-09-24 replay that measured the offer's lag before and after is in
+[current-match.md](current-match.md), "The live replay". A completed match
+carries the same event type and gets the same early rebuild as a side
+effect, which is a bonus rather than a case worth excluding.
 
 **No Arena log yet.** `serve --watch` with no `--file`, no
 `$MTGA_LOG` and nothing autodetected starts anyway: `LiveIngester.log_path`
