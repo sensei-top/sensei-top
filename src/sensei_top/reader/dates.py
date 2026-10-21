@@ -12,7 +12,7 @@ Two contracts the doc doesn't spell out at this level:
   commits or rolls back with the read's rows and ``ingest_state``.
 
 An entry stored with no time can get a dated twin on a later read
-(docs/status.md, "Correctness: latent or unmeasured").
+(BACKLOG.md, BL-041).
 """
 
 from __future__ import annotations

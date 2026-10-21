@@ -14,7 +14,7 @@ is safe beside a running ``serve``:
   nothing else has open; the main file is untouched.
 - Detailed Logs is read from the first 200 lines of the Arena log. Arena
   writes ``DETAILED LOGS: ENABLED`` there; ``disabled`` needs the matching
-  ``DISABLED`` line, which no capture has shown yet (docs/status.md), so the
+  ``DISABLED`` line, which no capture has shown yet (BL-034), so the
   answer is ``unknown`` for any log that carries neither line.
 
 The keys of the dict ``report()`` returns are a contract: the desktop shell

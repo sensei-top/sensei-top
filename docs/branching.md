@@ -51,7 +51,7 @@ followed by a version.
 ## Two branches open at once
 
 Before `develop` existed, work ran one branch at a time and nothing here
-could collide. Three things in this repository do not merge like ordinary
+could collide. Four things in this repository do not merge like ordinary
 text.
 
 ### Migration numbers
@@ -93,6 +93,19 @@ files is never resolved by hand: merge `develop` in, resolve the Python, run
 The same goes for `uv.lock` and `web/pnpm-lock.yaml`. Take `develop`'s copy,
 then run `uv lock` or `pnpm install`, which writes the branch's own
 dependency changes back in.
+
+### Backlog IDs
+
+A new item in `BACKLOG.md` takes the ID its `Next ID` line names, and that
+line moves on by one. Two branches that both add an item take the same ID.
+When each adds as many items as the other, both move `Next ID` to the same
+value, and git merges that line without a conflict. The file conflicts only
+where both added an item at the end of the same section, so the merge may not
+stop at all. The ID is settled when the branch merges, like a migration
+number: the branch that merges second gives its items the next free IDs and
+moves every reference to them along. `scripts/check_backlog.py` fails on two
+items with one ID, but not on a reference that now names the other branch's
+item, so grep for each old ID before merging.
 
 ## Where the real install runs
 
