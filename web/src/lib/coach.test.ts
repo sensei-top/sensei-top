@@ -480,7 +480,7 @@ describe('variantsWords', () => {
         ['Mono Red', 4],
         ['Red Deck', 2],
       ], t),
-    ).toBe('Red Aggro 43, Mono Red 4, Red Deck 2')
+    ).toBe('Red Aggro 43, Mono Red 4, and Red Deck 2')
   })
 
   it('names the three most met of four, and one more', () => {
@@ -491,7 +491,7 @@ describe('variantsWords', () => {
         ['Red Deck', 2],
         ['Burn', 1],
       ], t),
-    ).toBe(`Red Aggro 43, Mono Red 4, Red Deck 2 and 1${NBSP}more`)
+    ).toBe(`Red Aggro 43, Mono Red 4, Red Deck 2, and 1${NBSP}more`)
   })
 
   it('names the three most met of seven, and four more', () => {
@@ -505,7 +505,7 @@ describe('variantsWords', () => {
         ['Red Two', 1],
         ['Red Three', 1],
       ], t),
-    ).toBe(`Red Aggro 1,043, Mono Red 4, Red Deck 2 and 4${NBSP}more`)
+    ).toBe(`Red Aggro 1,043, Mono Red 4, Red Deck 2, and 4${NBSP}more`)
   })
 })
 

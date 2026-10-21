@@ -434,7 +434,7 @@ project has to design for.
 
 Two paid things are planned, and what each waits on is in `BACKLOG.md`, BL-070
 and BL-006. The Microsoft Store listing is the same build as the free download,
-listed free when it goes up and priced once the blockers there clear. The
+listed free since 2026-10-21 and priced once the blockers there clear. The
 subscription comes at around 3,000 monthly active users, gated by feature,
 never by the player's rank or event type. It is the one thing behind an
 account, made at checkout: an email code, or Google, Discord or X. The account

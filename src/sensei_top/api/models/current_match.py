@@ -364,6 +364,11 @@ class OpeningHandOut(BaseModel):
     docs/current-match.md, "The opening-hand read (`table/opening_hand.py`)"."""
 
     seat: int
+    game_number: int | None = Field(
+        None,
+        description="the game this hand is for, from the same live replay; null when no "
+        "gameInfo has named one. The projected game lags in a game 2 or 3 hand",
+    )
     mulligan_count: int = Field(description="0 on the first offer; already-mulliganed count")
     on_the_play: bool | None = None
     cards: list[OpeningHandCardOut] = Field(default_factory=list)
@@ -466,6 +471,14 @@ class IntermissionOut(BaseModel):
             "This deck identity's earlier games 2 and 3 against the named or picked "
             "archetype, best-of-three matches only, the current match excluded; null when "
             "there is no archetype, no identity, or no such game."
+        ),
+    )
+    record: PostboardRecordOut | None = Field(
+        None,
+        description=(
+            "This match's games so far, the one just ended included, a drawn game in "
+            "neither — from the break's own live read, so it never trails `won` the way "
+            "the projected match can. Null when any of those games is unresolved."
         ),
     )
     prompt: str | None = Field(

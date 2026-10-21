@@ -709,23 +709,6 @@ predate it.
 **Needs:** A decision on which grain the table should have, then the same
 grain for both, with a fixture-backed test (rule 7).
 
-### BL-044 · The Live strip's lagging Game numeral
-
-type: fix · priority: P2 · status: ready · area: table api web
-
-In a game 2 or 3 hand, the Live status strip's Game numeral lags beside a
-live play or draw, since `OpeningHandOut` has no game number and the strip
-reads the last projected game. In the sideboard break the strip's record and
-Game numeral read the projected match too, so they can trail the plan card's
-"Lost game 1".
-
-**Why deferred:** Found in plan 26's reviews of phases 3a and 3c. A server
-field is outside that plan ("No server-side change").
-
-**Needs:** A game number on `OpeningHandOut` (`IntermissionOut` already
-carries the game that just ended), read by the strip in place of the
-projected game's.
-
 ### BL-046 · Matchup rows keyed on the opponent alone
 
 type: fix · priority: P3 · status: ready · area: web
@@ -770,22 +753,6 @@ rule-4 answer.
 
 **Needs:** A way to tell the shared name's cards apart, or a decision that
 NULL stays.
-
-### BL-049 · MTGO's lookup lands on rows without legality
-
-type: fix · priority: P2 · status: ready · area: projector mtgo cards
-
-`_lookup` (`projector/mtgo/project.py`) takes the lowest positive id among
-same-name rows. That lands Swords to Plowshares (59771), Ancestral Recall
-(59671) and Fast // Furious (76075) on rows with no legality, though another
-row of the same name has one, so a match revealing them can't be judged on
-that card.
-
-**Why deferred:** Predates plan 13; found in its review. Not pinned by a
-test, nor is the shared single front-face candidate.
-
-**Needs:** Preferring a row that carries legality, with a fixture-backed
-test (rule 7).
 
 ### BL-050 · Corpus names without spaces
 
@@ -860,21 +827,6 @@ Results come from each game's own lines, never from a score line.
 disagrees with the last score line), then `Match Tied` beside `leads the
 match`.
 
-### BL-055 · MTGO's extra turns, uncounted
-
-type: fix · priority: P2 · status: ready · area: projector mtgo
-
-MTGO's extra-turn line, `Turn <n>: <H> - <word> Turn`, does not match
-`projector/mtgo/parse.py`'s turn pattern, so that turn is not counted in
-`turn_count` and its card events carry the turn before it (3 files, 4 lines
-in the real history, 2026-10-19).
-
-**Why deferred:** Seen while transcribing plan 30's cases, outside its
-scope.
-
-**Needs:** The line transcribed from the real history as a test case (rule
-8), then the pattern widened.
-
 ### BL-056 · A warning on every rebuild without [mtgo]
 
 type: fix · priority: P2 · status: ready · area: projector mtgo
@@ -885,17 +837,6 @@ with a Claude key, say) logs a warning on every rebuild.
 
 **Needs:** Loading the handle only when MTGO `raw_events` exist, or a silent
 absence like `resolve_log_dir()`'s.
-
-### BL-057 · Lists joined by hand in the dashboard
-
-type: fix · priority: P2 · status: ready · area: web i18n
-
-About 17 lists in `web/src` are joined by hand with `", "`, not through
-`lib/format.ts`'s `formatList` (`docs/i18n.md`, "Keying a string in the
-dashboard"), so they read as English in another language.
-
-**Needs:** Finding them (a `join(', ')` in `web/src`), then `formatList` at
-each, with the test the file already has.
 
 ### BL-080 · Two cutoffs for an early play
 
@@ -1158,7 +1099,7 @@ Such an item closes when the answer is recorded in `docs/attribution.md`.
 
 ### BL-070 · The Microsoft Store listing
 
-type: chore · priority: P1 · status: in-progress · area: release legal
+type: chore · priority: P1 · status: blocked · area: release legal
 
 The paid Microsoft Store listing (decided 2026-10-12, `ROADMAP.md`): the
 Store build is the same app as the free download, listed free at release and
@@ -1169,11 +1110,11 @@ signing").
 **Why deferred:** The first release shipped without it. The Partner Center
 account was created on 2026-10-20 as Individual (registration has been free
 since Microsoft dropped the fee in September 2025), and the product identity
-is reserved as an MSIX app, which the Store signs. The listing is the last
-step before the next release cut, in progress on `feature/store-identity`,
-with the appx building under the reserved identity and the release job
-attaching it, and the listing not yet submitted. The maintainer stays an
-individual, not a company, until income asks otherwise.
+is reserved as an MSIX app, which the Store signs. 1.2.0's appx was
+submitted on 2026-10-21 and passed certification the same day: the listing
+(Store ID 9NZ5GQMCG1ZN) is live and free, in every market. What is left is
+the price. The maintainer stays an individual, not a company, until income
+asks otherwise.
 
 **Needs:** Microsoft's answer on selling from an Individual developer
 account, whose eligibility text names "non-commercial purposes" and "not in

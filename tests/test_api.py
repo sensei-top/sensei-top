@@ -974,7 +974,7 @@ def test_current_match_read_serves_the_opening_hand_before_any_match_row(tmp_pat
         '"type": "GameStateType_Diff", "gameStateId": 2, '
         '"players": [{"systemSeatNumber": 1, '
         '"pendingMessageType": "ClientMessageType_MulliganResp"}], '
-        '"turnInfo": {"activePlayer": 2}, '
+        '"turnInfo": {"activePlayer": 2}, "gameInfo": {"gameNumber": 2}, '
         '"zones": [{"zoneId": 31, "type": "ZoneType_Hand", "ownerSeatId": 1, '
         '"objectInstanceIds": [1, 2]}], '
         '"gameObjects": [' + ",".join(
@@ -999,6 +999,7 @@ def test_current_match_read_serves_the_opening_hand_before_any_match_row(tmp_pat
     assert body["status"] == "no_match"
     assert body["opening_hand"] is not None
     assert body["opening_hand"]["seat"] == 1
+    assert body["opening_hand"]["game_number"] == 2  # the replay's, no game row exists
     assert body["opening_hand"]["mulligan_count"] == 0
     assert body["opening_hand"]["land_count"] == 2
     assert {c["grp_id"] for c in body["opening_hand"]["cards"]} == {1, 2}

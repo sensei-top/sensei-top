@@ -6,7 +6,7 @@ import { ageText, seenOpponentCards } from '../lib/brief'
 import { isPasted } from '../lib/written'
 import { CopyPromptCard } from './CopyPromptCard'
 import { Card, Chip, EmptyState, Loading, Prose, SectionLabel } from './ui'
-import { formatPercent, formatRecord } from '../lib/format'
+import { formatList, formatPercent, formatRecord } from '../lib/format'
 
 function recordText(brief: MatchupBriefOut, t: TFunction): string | null {
   if (brief.personal_matches == null || brief.personal_matches === 0) return null
@@ -115,10 +115,10 @@ export function BoardPlan({
       <SectionLabel as="h4">{title}</SectionLabel>
       <p className="mt-1 text-body">
         <span className="font-medium text-s1">{t('matchups.plan.inLabel')}</span>{' '}
-        {boardIn.length > 0 ? boardIn.map((c) => `+${c.n} ${c.card}`).join(', ') : '—'}
+        {boardIn.length > 0 ? formatList(boardIn.map((c) => `+${c.n} ${c.card}`), { type: 'unit' }) : '—'}
         <br />
         <span className="font-medium text-s2">{t('matchups.plan.outLabel')}</span>{' '}
-        {boardOut.length > 0 ? boardOut.map((c) => `−${c.n} ${c.card}`).join(', ') : '—'}
+        {boardOut.length > 0 ? formatList(boardOut.map((c) => `−${c.n} ${c.card}`), { type: 'unit' }) : '—'}
       </p>
       {problems.map((p) => (
         <p key={p.message} className="mt-1 text-caption text-s2">

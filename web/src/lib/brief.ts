@@ -2,7 +2,7 @@ import type { CoverageOut, CoveragePromptOut, CoverageRowOut, CurrentMatch } fro
 import type { TFunction } from '../i18n'
 import { archetypeName } from './decks'
 import type { TileText } from './matchups'
-import { formatPercent } from './format'
+import { formatList, formatPercent } from './format'
 import { formatCount, parseTimestamp } from './time'
 
 /** A row a prompt can close: its brief `missing` or `stale`. A row
@@ -89,7 +89,7 @@ export function coverageTiles(coverage: CoverageOut, t: TFunction): [TileText, T
 /** The notes under the prompt for every gap: the archetypes it left out
  *  for too few lists, then those left for the next prompt, each key named
  *  by its coverage row (`coverageName`) and by `archetypeName(key)` when
- *  it has no row; names joined by ", ". A list with no key has no note. */
+ *  it has no row; names joined as a list in the language read. A list with no key has no note. */
 export function coveragePromptNotes(
   prompt: Pick<CoveragePromptOut, 'no_consensus' | 'deferred'>,
   rows: CoverageRowOut[],
@@ -97,12 +97,12 @@ export function coveragePromptNotes(
 ): string[] {
   const byKey = new Map(rows.map((row) => [row.archetype_key, row]))
   const names = (keys: string[]) =>
-    keys
-      .map((key) => {
+    formatList(
+      keys.map((key) => {
         const row = byKey.get(key)
         return row ? coverageName(row) : archetypeName(key)
-      })
-      .join(', ')
+      }),
+    )
   const notes: string[] = []
   if (prompt.no_consensus.length > 0) {
     notes.push(t('matchups.coverage.notes.tooFew', { names: names(prompt.no_consensus) }))

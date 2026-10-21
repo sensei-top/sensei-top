@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { DraftPayload, SharedDraft } from '../../bridge'
 import type { TFunction } from '../../i18n'
+import { formatList } from '../../lib/format'
 import { ago, useNow } from '../../lib/time'
 import { Card, Disclosure, SectionLabel } from '../ui'
 
@@ -182,5 +183,5 @@ function gameLine(game: Game, t: TFunction): string {
   }
   if (game.turns !== null) parts.push(t('prompts.sharing.payload.turns', { count: game.turns }))
   if (game.against !== null) parts.push(t('prompts.sharing.payload.against', { colours: game.against }))
-  return parts.join(', ')
+  return formatList(parts, { type: 'unit' })
 }

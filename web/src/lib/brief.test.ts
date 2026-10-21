@@ -163,15 +163,15 @@ describe('coverageName', () => {
 describe('coveragePromptNotes', () => {
   const rows = [row('Control', 'missing', { label: 'Jeskai Control' }), row('UBMidrange', 'stale')]
 
-  it('names each key by its row’s label, or the key spaced, joined by commas', () => {
+  it('names each key by its row’s label, or the key spaced, joined as a list', () => {
     // Control has a label; BorosBurn has no row, spaced; UBMidrange has a
     // row with no label, and no lower-case letter before a capital, so it
     // stays as it is; Lifegain has no row and nothing to space.
     expect(
       coveragePromptNotes({ no_consensus: ['Control', 'BorosBurn'], deferred: ['UBMidrange', 'Lifegain'] }, rows),
     ).toEqual([
-      'Too few lists to write: Jeskai Control, Boros Burn.',
-      'Left for the next prompt: UBMidrange, Lifegain. Save this answer, then build it again.',
+      'Too few lists to write: Jeskai Control and Boros Burn.',
+      'Left for the next prompt: UBMidrange and Lifegain. Save this answer, then build it again.',
     ])
   })
 

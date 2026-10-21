@@ -22,7 +22,7 @@ asks for with their own key. The order itself is `ROADMAP.md`'s alone.
 **The paid tier, 2026-10-12.** Amends the repositioning below: the licence
 stays AGPL-3.0-only and the tracker stays free with no account, and two
 paid things are planned. The Microsoft Store listing is the same build as
-the free download, listed free when it goes up and priced once the
+the free download, listed free since 2026-10-21 and priced once the
 blockers in `BACKLOG.md`'s BL-070 (its Needs) clear. At around 3,000
 monthly active users, an optional subscription gated by feature, with a
 monthly report allowance inside it written through a hosted proxy, and the

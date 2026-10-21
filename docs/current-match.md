@@ -1020,10 +1020,14 @@ seen), and the opponent's identity: pips, name, confidence. From
 48rem up it is one line, and the facts are cut to fit it. Under 48rem
 it is two: game, turn, pips and confidence on the first; the
 opponent's name and then the facts on the second, wrapping, none cut.
-While sideboarding the phase reads "Sideboarding, game 2 next", and the
-opponent's identity and cards seen come from the break read
-("The break read", above), so they agree with the plan card beside
-them.
+While a hand is on offer the game numeral is the hand's own
+(`OpeningHandOut.game_number`, the `gameNumber` the live replay last
+read), since the projected game lags in a game 2 or 3 hand. While
+sideboarding the phase reads "Sideboarding, game 2 next", and the game
+numeral, the record, the opponent's identity and cards seen come from
+the break read ("The break read", above), so they agree with the plan
+card beside them. The record there is Arena's own cumulative
+`results[]`, a drawn game in neither column.
 
 **The status strip flags a likely-abandoned match.** `v_current_match`
 stays current until the next match begins even if the current one never
