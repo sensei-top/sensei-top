@@ -161,7 +161,7 @@ def secret_free_config(path: Path) -> str | None:
     try:
         with path.open("rb") as f:
             data = tomllib.load(f)
-    except (OSError, tomllib.TOMLDecodeError):
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
         return None
     mtgo = data.get("mtgo")
     if isinstance(mtgo, dict):

@@ -37,8 +37,9 @@ class PlayDrawWinrate(BaseModel):
     )
     deck_name: str | None = None
     on_play: bool
-    games_completed: int
+    games_completed: int = Field(description="won, lost and drawn")
     games_won: int
+    games_lost: int
     winrate: float | None = None
 
 

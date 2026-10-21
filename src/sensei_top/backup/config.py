@@ -136,7 +136,7 @@ def _load_table() -> dict[str, object]:
     try:
         with path.open("rb") as f:
             data = tomllib.load(f)
-    except (OSError, tomllib.TOMLDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as exc:
         log.warning("could not read %s: %s", path, exc)
         return {}
     table = data.get("backup")

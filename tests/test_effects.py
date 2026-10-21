@@ -93,8 +93,16 @@ def test_mana_value_sums_generic_and_colored_pips():
     assert mana_value("{3}{U}{U}") == 5
 
 
-def test_mana_value_counts_a_hybrid_pip_as_one():
-    assert mana_value("{2/W}{2/W}") == 2
+def test_mana_value_counts_each_hybrid_pip_at_its_largest_component():
+    """CR 202.3f's own examples: {1}{W/U}{W/U} is mana value 3, and
+    {2/B}{2/B}{2/B} is 6."""
+    assert mana_value("{1}{W/U}{W/U}") == 3
+    assert mana_value("{2/B}{2/B}{2/B}") == 6
+
+
+def test_mana_value_counts_a_phyrexian_pip_as_one():
+    """CR 202.3g: each Phyrexian mana symbol contributes 1."""
+    assert mana_value("{1}{U/P}{U/P}") == 3
 
 
 def test_mana_value_of_free_spell_is_zero_not_none():
@@ -145,9 +153,17 @@ def test_mana_requirement_monocolored_hybrid_keeps_only_the_color():
 
 
 def test_mana_requirement_preserves_mana_value_invariant():
-    for cost in ("{3}{U}{U}", "{1}{G}", "{U/R}{U/R}", "{2/W}", "{0}", "{X}{U}{R}"):
+    for cost in ("{3}{U}{U}", "{1}{G}", "{U/R}{U/R}", "{0}", "{X}{U}{R}"):
         req = mana_requirement(cost)
         assert req.generic + len(req.pips) == mana_value(cost)
+
+
+def test_a_monocolored_hybrid_pip_is_one_colored_pip_but_two_mana_value():
+    """{2/W} is paid with one white mana at its cheapest, but CR 202.3f
+    counts its larger component, 2, toward the mana value."""
+    req = mana_requirement("{2/W}")
+    assert req.generic + len(req.pips) == 1
+    assert mana_value("{2/W}") == 2
 
 
 def test_mana_requirement_of_none_is_none_not_empty():

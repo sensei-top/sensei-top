@@ -786,10 +786,8 @@ reads neither, so nothing else on that tab would show the failure. A
 failed matches read therefore shows two notes on the Overview, Matchups and
 a pairing, the strip's and the page's own.
 
-One known gap in Play vs draw: `/api/metrics/play-draw` has no games-lost
-field and its `games_completed` counts draws, so a drawn game lowers a
-side's rate and reads as a loss in its record (`docs/design-system.md`,
-"Numbers"; the debt is `BACKLOG.md`, BL-045).
+Play vs draw counts a side's games won and lost, so a drawn game is in
+neither its record nor its ten games (`docs/design-system.md`, "Numbers").
 
 **The Overview** (`DeckOverviewView`, `views/DeckOverviewView.tsx`) is,
 top to bottom: the version switcher; a "By rank" table (Rank · Matches ·

@@ -651,10 +651,9 @@ behind a subtraction. A share of a corpus is not a record and stays
 **A draw is never a loss.** A record counts wins and losses; a draw is
 neither, and neither is a match still in progress. Where a caller has
 only a count played and a count won, losses are played minus won minus
-draws, never played minus won. One known gap: `/api/metrics/play-draw`
-has no losses field and counts draws in `games_completed`, so the deck
-strip's Play vs draw side record still writes a drawn game as a loss,
-listed in `BACKLOG.md`, BL-045.
+draws, never played minus won. `/api/metrics/play-draw`'s
+`games_completed` counts draws, so the deck strip's Play vs draw reads
+`games_won` and `games_lost` instead.
 
 **Ten finished matches before a rate, five before a rough one.** A
 personal record has two thresholds, `RATE_MIN_MATCHES` (10) and

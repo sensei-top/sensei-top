@@ -109,11 +109,8 @@ def mana_value(mana_cost: str | None) -> int | None:
 
     Returns ``None`` for an unparseable or absent cost — never 0, which
     would claim "free to cast" for a card whose cost was simply not read.
-    A hybrid pip (``{U/R}``, ``{2/W}``) counts as 1. That is the
-    comprehensive rules' value for a two-color hybrid, but they count a
-    monocolored hybrid at its largest component, so ``{2/W}`` reads one
-    lower here than its rules mana value. A Phyrexian pip (``{U/P}``) counts
-    as 1, its worst-case colored value.
+    A hybrid pip counts its largest component (CR 202.3f): ``{U/R}`` is 1,
+    ``{2/W}`` is 2. A Phyrexian pip (``{U/P}``) counts as 1 (CR 202.3g).
 
     A ``//`` cost (Adventure, MDFC) is read from its front face alone —
     see ``_front_face`` — so this is the cost this card is *normally* cast
@@ -132,7 +129,7 @@ def mana_value(mana_cost: str | None) -> int | None:
         elif pip.upper() == "X":
             continue  # X is 0 off the stack, and every card read here is off it
         else:
-            total += 1
+            total += max([int(part) for part in pip.split("/") if part.isdigit()], default=1)
     return total
 
 
@@ -176,7 +173,8 @@ def mana_requirement(mana_cost: str | None) -> ManaRequirement | None:
     cost was simply not read. Uses the same pip tokenizer as ``mana_value()``
     and keeps its invariant: ``generic + len(pips) == mana_value(cost)`` for
     any cost with no ``X`` (X is excluded from both, the same X-is-0 rule as
-    ``mana_value``).
+    ``mana_value``) and no monocolored-hybrid pip, which counts 2 toward the
+    mana value but is one colored pip here (``_pip_colors``).
 
     Reads a ``//`` cost's front face alone, the same as ``mana_value()`` —
     see ``_front_face``.

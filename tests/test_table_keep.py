@@ -67,6 +67,25 @@ def test_land_odds_sum_to_one_and_match_hypergeometric_by_hand(conn):
     assert guide.early_plays == early_slot.count
 
 
+def test_a_five_land_hand_with_two_early_plays_drops_the_creature_slot(conn):
+    """40 lands, 8 two-drops and 12 seven-drops, every spell a creature. By
+    hand: cheap share 8/20 = 40% (land_min 2), average mana value
+    (8*2 + 12*7)/20 = 5.0 (land_max 5), round(7*40/60) = 5 lands, 8 cheap
+    cards = 2 early plays, creature share 100% asks for a creature slot. An
+    opening hand is seven cards, so 5 + 2 leaves no room for that slot."""
+    _insert_card(conn, 1, "Forest", mana_cost=None, type_line="Basic Land — Forest")
+    _insert_card(conn, 2, "Bear", mana_cost="{1}{G}", type_line="Creature — Bear")
+    _insert_card(conn, 3, "Wurm", mana_cost="{5}{G}{G}", type_line="Creature — Wurm")
+    _insert_deck(conn, "d1", [1] * 40 + [2] * 8 + [3] * 12)
+    conn.commit()
+
+    guide = build_keep_guide(conn, "d1")
+    assert guide is not None
+    assert guide.land_min == 2 and guide.land_max == 5
+    assert [slot.count for slot in guide.ideal_hand] == [5, 2]
+    assert guide.early_plays == 2
+
+
 def test_unnamed_cards_suppress_the_keepable_hand_band(conn):
     """A maindeck card missing from the `cards` table means the land count
     behind it can't be trusted (a land counted as unnamed would silently

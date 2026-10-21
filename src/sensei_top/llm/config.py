@@ -158,7 +158,7 @@ def _read_claude_table(path: Path) -> dict | None:
     try:
         with path.open("rb") as f:
             data = tomllib.load(f)
-    except (OSError, tomllib.TOMLDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as exc:
         log.warning("could not read %s: %s", path, exc)
         return None
     claude = data.get("claude")
@@ -181,7 +181,7 @@ def _load_coach_overrides() -> tuple[str | None, str | None, bool | None] | None
     try:
         with path.open("rb") as f:
             data = tomllib.load(f)
-    except (OSError, tomllib.TOMLDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as exc:
         log.warning("could not read %s: %s", path, exc)
         return None
 

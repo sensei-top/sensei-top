@@ -362,7 +362,9 @@ Two coarse, explicitly-labelled heuristics, not a simulation:
   clamped into the band above. Early plays = 2 when the deck has at least 8
   cards at mana value ≤ 2, else 1 (`early_plays`, also exposed as a bare
   int for the opening-hand verdict above). A creature slot appears when
-  creatures are at least 35% of nonlands. Whatever's left of the 7 is
+  creatures are at least 35% of nonlands and the lands and early plays
+  leave room for it (five lands and two early plays fill the hand, so it
+  drops there). Whatever's left of the 7 is
   "flex." This is the "3 lands, 2 plays at 1-2 mana, 1 creature, 1 flex"
   line the tab renders as chips.
 
