@@ -528,7 +528,7 @@ def test_a_modern_decks_window_note_asks_for_modern_legality_not_standards(conn)
 
 
 def test_field_record_line_counts_only_the_decks_own_formats_rounds(conn):
-    """Plan 13, D14: the same pairing has rounds in two formats' corpora --
+    """The same pairing has rounds in two formats' corpora --
     two Standard rounds the own archetype wins, one Modern round it loses.
     A Modern deck's brief quotes the Modern round alone. No legality is
     seeded, so nothing is windowed and the line carries no "since"."""

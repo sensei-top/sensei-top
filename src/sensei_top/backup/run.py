@@ -8,7 +8,8 @@ Contract mirrors ``archetypes/source.py``'s ``RefreshResult``/
 this module can anticipate comes back as ``BackupResult(status="failed"...)``
 or ``"interrupted"``, not an exception a caller has to wrap.
 
-Four things below are load-bearing, not stylistic:
+The design is in docs/architecture.md, "Backups". Four things below are
+load-bearing, not stylistic:
 
 - **``_vacuum_into`` opens its own connection.** Measured empirically: an
   open, partly-consumed cursor on the *same* connection ``VACUUM INTO`` runs
@@ -16,12 +17,9 @@ Four things below are load-bearing, not stylistic:
   It uses ``db.connect()``, not ``open_database()`` -- migrations already
   ran on the caller's connection, and re-running them on a throwaway one
   buys nothing. No extra pragma tuning either: whatever ``db.connect()``
-  already sets is what runs here, on purpose (see that function's own
-  reasoning) -- this is not the place to guess at something faster.
+  already sets is what runs here, on purpose.
 - **Rotation only ever unlinks a path it reconstructed itself** via
-  ``config.slot_path`` -- never a glob. This code deletes files in a
-  directory the user configured; a glob would happily eat a same-looking
-  file that isn't one of ours.
+  ``config.slot_path`` -- never a glob (see ``_prune_surplus_slots``).
 - **A failed run never touches the backup that already exists.** Every
   write lands in a pid-suffixed temp file first; only a *verified* temp file
   is ever renamed onto a real slot, and the temp is unlinked on every exit
@@ -106,11 +104,11 @@ def last_backup_age_seconds(conn: sqlite3.Connection) -> float | None:
 def last_error_age_seconds(conn: sqlite3.Connection) -> float | None:
     """Seconds since the most recent *failed* run, or ``None`` when none has
     ever failed. This is the one channel a failure actually reaches a user
-    through: ``cli.main()`` sets logging to ERROR unless ``--verbose``, so a
-    scheduled run's ``log.warning`` is otherwise invisible, and
-    ``cmd_config``'s display block reads this back next to the last good
-    backup's own age -- the reason ``last_error``/``last_error_at`` are
-    columns on ``backup_state`` at all."""
+    through: ``logs.install`` keeps the console at ERROR unless
+    ``--verbose``, so a scheduled run's ``log.warning`` lands only in the log
+    file, and ``cmd_config``'s display block reads this back next to the
+    last good backup's own age -- the reason ``last_error``/``last_error_at``
+    are columns on ``backup_state`` at all."""
     row = read_state(conn)
     if row is None or not row["last_error_at"]:
         return None
@@ -160,13 +158,11 @@ def run_backup(
     promptly (``BackupScheduler`` passes its own stop event so ``serve``
     shuts down without waiting out a multi-minute VACUUM).
     """
-    # 4.1 -- the freshness gate. No I/O beyond one indexed SELECT already
-    # open on `conn`.
+    # The freshness gate: no I/O beyond one indexed SELECT on `conn`.
     age = last_backup_age_seconds(conn)
     if not force and age is not None and age < max_age_seconds:
         return BackupResult(status="fresh", age_seconds=age)
 
-    # 4.2 -- preconditions.
     if not db_path.exists():
         error = f"No database at {db_path}"
         return BackupResult(status="failed", age_seconds=age, error=error)
@@ -197,7 +193,7 @@ def run_backup(
             status="failed", age_seconds=age, source_bytes=source_bytes, error=error
         )
 
-    # 4.3 -- the claim. Everything from here on releases it and cleans up
+    # The claim. Everything from here on releases it and cleans up
     # the temp file on every exit path via the single `finally` below.
     claimed, abandoned_pid = _claim(conn)
     if not claimed:
@@ -213,7 +209,7 @@ def run_backup(
 
     temp = temp_path(cfg, db_path)
     try:
-        # 4.4 -- source facts, read before the copy. Sound only because
+        # Source facts, read before the copy. Sound only because
         # raw_events is append-only (non-negotiable #2): nothing can shrink
         # between this read and the verification read of the copy.
         source_version = (
@@ -221,7 +217,6 @@ def run_backup(
         )
         source_rows = conn.execute("SELECT COUNT(*) AS n FROM raw_events").fetchone()["n"]
 
-        # 4.5 -- the copy.
         temp.unlink(missing_ok=True)  # VACUUM INTO refuses a non-empty target
         started = time.monotonic()
         try:
@@ -238,8 +233,6 @@ def run_backup(
                 error=error,
             )
 
-        # 4.6 -- verification: three cheap invariants, a fourth (quick_check)
-        # only under --deep-verify (measured 67.7s on the real database).
         try:
             _verify(
                 temp,
@@ -255,7 +248,6 @@ def run_backup(
 
         backup_bytes = temp.stat().st_size
 
-        # 4.7 -- rotation: oldest-first shift, then the atomic publish.
         try:
             numbered_kept = _rotate(cfg, db_path, temp)
         except BackupError as exc:
@@ -266,7 +258,6 @@ def run_backup(
         duration = time.monotonic() - started
         final_path = slot_path(cfg, db_path, 0)
 
-        # 4.8 -- record. A measured fact, never an estimate.
         _record_success(
             conn,
             path=final_path,
@@ -417,9 +408,9 @@ def _verify(
     temp: Path, *, source_version: int, source_rows: int, deep_verify: bool
 ) -> None:
     """Three cheap invariants, in increasing order of what they catch; a
-    fourth (``quick_check``) only under ``--deep-verify``, measured at 67.7s
-    on the real 1.7 GB database -- roughly doubling a run for a check the
-    other three already make redundant in the failure modes that matter
+    fourth (``quick_check``) only under ``--deep-verify``, since it roughly
+    doubles a run (measured in docs/architecture.md, "Backups") for a check
+    the other three already make redundant in the failure modes that matter
     here (a truncated write, a copy of the wrong database, an empty one).
     Opened ``immutable=1`` so nothing here creates a ``-wal``/``-shm``
     sidecar beside a file meant to sit untouched until it is restored.

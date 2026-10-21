@@ -92,7 +92,7 @@ class OpponentDeckCandidate(BaseModel):
 class OpponentDeckLabelIn(BaseModel):
     """A pick from the candidate list, or ``'Rogue'`` for a deck with no
     established archetype. An empty label clears the override. There is no
-    free-text path any more — the label always names either an
+    free-text path — the label always names either an
     ``archetype_key`` the picker showed, or the fixed ``'Rogue'`` category."""
 
     label: str = Field(max_length=80)
@@ -103,7 +103,7 @@ class OpponentDeckLabelIn(BaseModel):
 
 # The formats an MTGO match can be played in, read from the one list
 # (`mtgo/formats.py`); migration 049's CHECK is the same list. There is no
-# "other" (plan 12, D9). Type checkers reject a variable inside `Literal`, so
+# "other". Type checkers reject a variable inside `Literal`, so
 # the ignore below is safe: at runtime the tuple expands to the seven formats.
 MtgoFormat = Literal[MTGO_FORMATS]  # type: ignore[valid-type]
 
@@ -310,7 +310,7 @@ class Match(BaseModel):
     event_id: str | None = None
     deck_id: str | None = None
     deck_name: str | None = None
-    # Kept although the dashboard no longer shows it: it is what Arena said,
+    # Kept although no page shows it from this model: it is what Arena said,
     # and dropping honest data from the contract to enforce a display choice
     # would put that decision in the wrong layer.
     opponent_name: str | None = None
@@ -386,9 +386,8 @@ class MatchDetail(Match):
 
 
 class ReportEvidence(BaseModel):
-    """One named number a finding was computed from — the same identity a
-    Phase B aggregate rollup would later group and average on, which is why
-    ``key`` is a stable identifier rather than free text."""
+    """One named number a finding was computed from. ``key`` is a stable
+    identifier rather than free text; ``label`` names it for a reader."""
 
     key: str
     label: str
@@ -498,15 +497,17 @@ class MatchReportOut(BaseModel):
         description="one point per turn with both life totals recorded; see review/position.py",
     )
     narrative_available: bool = Field(
-        True, description="kept for wire compatibility; GET .../narrative always serves a "
-        "prompt, and POST there generates it with Claude when a credential is configured"
+        True, description="always true, kept for wire compatibility; GET .../narrative serves "
+        "a prompt whenever there is something to narrate, and POST there generates it with "
+        "Claude when a credential is configured"
     )
 
 
 class SideboardCardOut(BaseModel):
     """One card whose copy count changed between two consecutive games'
     decks — the sideboarding decision itself, not the plan someone wrote
-    down (see brief/'s own BoardCardOut for that authored version)."""
+    down (``BoardCardOut`` in ``api/models/common.py`` is that authored
+    version)."""
 
     grp_id: int
     card: str | None = Field(

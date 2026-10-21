@@ -1,66 +1,27 @@
 """The opening-hand read: whether the specific 7 cards just dealt are worth
-keeping — not a generic guess about what a good hand of this deck usually
-looks like. ``table/keep.py``'s own read stays exactly as useful once a game
-is under way (and is what backs this read's deck-relative half — land band,
-ideal-hand shape, this deck's own mulligan record — via ``build_keep_guide``,
-never recomputed here).
+keeping, read from the log before the decision. The deck-relative half
+(land band, ideal-hand shape, the deck's mulligan record) is
+``table/keep.py``'s ``build_keep_guide``, never recomputed here. See
+docs/current-match.md, "The opening-hand read (`table/opening_hand.py`)".
 
-This is one of the reads in ``table/`` that reads ``raw_events`` directly
-rather than projected tables, and that is a deliberate, narrow exception,
-not a crack in the stage boundary (AGENTS.md non-negotiable #1): the
-mulligan decision window measures a 5-second median in real play, and
-``project()`` is a full rebuild that measured ~11.6 seconds wall time on a
-real database — the projection can never land in time. What actually reads
-``raw_events`` and knows Arena's message shapes is still the projector
-(``projector/live_state.py``, reusing the same ``GameStateTracker``
-``project()`` uses); ``table/live.py`` anchors the replay window and this
-module only turns the result into a read, the same job every other file in
-this package does for already-projected data. Nothing here writes anything,
-so every route built on it stays in the API's read-only majority
-(non-negotiable #6).
+Traps a reader of this file would hit:
 
-By default this module replays the match itself (via ``table/live.py``),
-the same self-contained behaviour it always had — every existing caller and
-test keeps working unchanged. A caller building the wider live state anyway
-(the ``/api/current-match/read`` route, which also needs it for the
-opponent-hand read and the library panel) can pass an already-resolved
-``offer`` in instead, so one request does one replay of ``raw_events``, not
-two.
-
-Land identification does not depend on the ``cards`` table at all: each card
-in the offered hand carries Arena's own ``CardType_Land`` straight from the
-log (``MulliganCard.card_types``), so ``land_count`` is exact even for a
-maindeck ``sensei-top cards`` has never named — a real improvement over
-``v_deck_land_count``'s em-dash split, which needs ``type_line`` and
-undercounts exactly there. Everything else about a card — its name, cost,
-effect tags, and (for a land) what colors it produces — still needs the
-``cards`` table, and degrades the same way ``keep.py`` and ``hand_read.py``
-already do: an honest gap, never a guess (rule 4).
-
-Castability is a real search, not a heuristic mana-value comparison: for each
-spell, ``_castable_turn`` finds the smallest number of this hand's own lands
-(played one per turn, in whatever order is best) that can pay its colored
-requirement, via ``effects.mana_requirement`` and exhaustive matching over at
-most seven lands. It only ever looks at this hand's own lands, never a
-hypothetical future draw — a keep/mulligan decision is about the 7 cards on
-screen, not the deck behind them. A land with no ``produced_mana`` on file
-first falls back to ``effects.chosen_basic_type_colors`` (Multiversal
-Passage: no fixed mana ability to export, but its own text still names a
-real color set) before counting as genuinely unknown. A land still unknown
-after that no longer blanks the whole verdict the way it once did: castability
-is computed twice — once treating every such land as colorless, once as
-every color — and the verdict is published only when both bounds agree (see
-``_verdict`` and the caveats it attaches for the disagreeing case). Per-card
-``castable_turn``/``reduced_castable_turn`` always show the colorless
-(pessimistic) reading, never the optimistic one.
-
-The verdict is one more coarse, named heuristic in ``keep.py``'s own
-style — a cutoff on land count and early castability, not a simulation — and
-is withheld (``None``) rather than guessed whenever an input is unknown: an
-unnamed card, no land band for this deck yet, or a still-unknown land whose
-color the hand's own castability actually turns on. The evidence (land
-count, per-card castability) still renders in every case; only the headline
-call is held back, with a caveat saying why.
+1. The offer comes from a replay of ``raw_events`` (``table/live.py``), not
+   from projected tables: the mulligan window is shorter than one full
+   rebuild (docs/architecture.md, "Full rebuild, always"). The code that
+   knows Arena's message shapes stays in ``projector/live_state.py``; this
+   module only turns the offer into a read, and writes nothing.
+2. ``is_land`` is Arena's own ``CardType_Land`` from the offer
+   (``MulliganCard.card_types``), never the ``cards`` table, so
+   ``land_count`` is exact even for a card ``sensei-top cards`` never named.
+   Everything else about a card needs the ``cards`` table and degrades to
+   ``None`` (a nonland's tags to ``()`` with ``tags_known`` False)
+   without it.
+3. A land whose colors neither ``produced_mana`` nor
+   ``effects.chosen_basic_type_colors`` resolves is read twice, as colorless
+   and as every color; the verdict is published only when both agree.
+   Per-card ``castable_turn``/``reduced_castable_turn`` always carry the
+   colorless reading.
 """
 
 from __future__ import annotations
@@ -87,9 +48,9 @@ from sensei_top.table.keep import (
 )
 
 _LAND_TYPE = "CardType_Land"
-# "Castable by turn 3" mirrors keep.py's own "play(s) at 1-3 mana" framing
-# for the ideal-hand shape (_CHEAP_MANA_VALUE there), so the verdict compares
-# like against like rather than inventing a second cutoff.
+# "Castable by turn 3" is this verdict's own threshold. keep.py's early-play
+# slot ("play(s) at 1-2 mana") counts mana value <= 2 (_CHEAP_MANA_VALUE),
+# a different cutoff.
 _EARLY_TURN_THRESHOLD = 3
 # Sentinel distinguishing "caller didn't pass an offer, replay it yourself"
 # from "caller passed offer=None, meaning a live replay already found
@@ -111,12 +72,13 @@ class OpeningHandCard:
     tags: tuple[str, ...]
     tags_known: bool
     castable_turn: int | None  # earliest turn this hand's own lands can pay for it;
-    # None for a land, or when colors_known is False on the read as a whole
+    # None for a land, an unparseable cost, or one these lands never pay. With
+    # colors_known False, the colorless reading of the unresolved land(s)
     reduced_castable_turn: int | None  # earliest turn this hand's own lands *and its own
     # in-hand fuel* can pay for it, for a card with a cost-reduction clause (see
-    # cost_reduction() / _reduced_castable_turn below); None for a land, when
-    # colors_known is False, or when this card carries no cost-reduction clause at all —
-    # never overwrites castable_turn, which stays the printed-cost answer
+    # _reduced_castable_turn below); None for a land, a card with no recognized
+    # clause, or one this hand can't reach. Same colorless reading as castable_turn,
+    # which it never overwrites: castable_turn stays the printed-cost answer
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,18 +98,16 @@ class OpeningHandRead:
     mulligan_record: tuple[MulliganRecord, ...]
     unnamed_count: int
     colors_known: bool  # False when any land in hand resolves to neither produced_mana
-    # nor effects.chosen_basic_type_colors — the API contract's meaning is unchanged
-    # ("every land's production is on file"), it's just resolved from two sources now
-    verdict: str | None  # "keep" | "mulligan" | "marginal" | None (withheld — see notes)
+    # nor effects.chosen_basic_type_colors
+    verdict: str | None  # "keep" | "mulligan" | "marginal" | None (withheld — see caveats)
     reasons: tuple[str, ...]
     caveats: tuple[str, ...]
     keep_guide: KeepGuide | None = None
     # The KeepGuide this read already built from deck_id (None when deck_id
-    # was None, same as every other keep-derived field above) — exposed so a
-    # caller that also wants the full guide (``/api/current-match/read``)
-    # can reuse it instead of calling build_keep_guide a second time, which
-    # re-runs list_identities (~40 queries) and the mulligan aggregate at
-    # 1 Hz for no new information.
+    # was None, same as every other keep-derived field above) — exposed so
+    # ``/api/current-match/read`` can reuse it instead of calling
+    # build_keep_guide, which re-runs list_identities and the mulligan
+    # aggregate, a second time on every 1 Hz poll.
 
 
 def _resolve_cards(
@@ -283,14 +243,12 @@ def _castable_turn(
     return None
 
 
-# Layer 1 (cost-reduction clauses): at mulligan time the graveyard is empty,
-# so a cost-reduction card's *printed* cost (castable_turn above) is the honest answer to "what does
-# this cost right now" — but the useful mulligan question is whether this
-# specific hand can feed the reduction. Two fuel kinds are on file
-# (effects.cost_reduction): a per-card graveyard count (Eddymurk Crab,
-# Hearth Elemental), and a board-state lookup that is not a count at all
-# (Sunderflock). Both searches use only this hand's own cards, in the style
-# of _castable_turn: never a hypothetical draw.
+# Cost-reduction clauses: at mulligan time the graveyard is empty, so the
+# printed cost (castable_turn above) is the honest answer to "what does this
+# cost right now", but the useful question is whether this hand can feed the
+# reduction. Two fuel kinds are on file (effects.cost_reduction): a per-card
+# graveyard count and a board-state lookup that is not a count at all. Both
+# searches use only this hand's own cards, never a hypothetical draw.
 
 
 def _is_instant_or_sorcery(type_line: str | None) -> bool:
@@ -411,9 +369,8 @@ def _with_castability(
     once when every land's color is on file (directly or via the chosen-type
     fallback), and twice (pessimistic, then optimistic) when one or more
     lands are still genuinely unknown, so the two bounds can be compared.
-    Two passes over ``cards``, exactly as the single-reading code used to
-    run inline: the second needs every card's own (already reassigned)
-    ``castable_turn`` from the first as its fuel evidence."""
+    Two passes over ``cards``: the second needs every card's own (already
+    reassigned) ``castable_turn`` from the first as its fuel evidence."""
     cards = tuple(
         card
         if card.is_land
@@ -436,21 +393,15 @@ def _with_castability(
     )
 
 
-# Layer 3 (deck-aware mulligan/keep): the land-band and early-castable
-# cutoffs below answer "can this hand function" -- lands to cast spells,
-# spells cheap enough to play on curve. They say nothing about whether the
-# hand is actually going anywhere. The pressure check below answers that
-# from this deck's own measured record (table/keep.py's key_plays): does
-# this hand hold, or can it reach, one of the threats that deck has
-# actually won with -- or is every card in it a card the deck could win
-# without ever drawing. Only *measured* evidence moves the verdict this
-# way; an authored mulligan plan (Layer 4) never does.
+# The pressure check: the land-band and early-castable cutoffs answer "can
+# this hand function"; _pressure asks whether it is going anywhere, from this
+# deck's own measured record (table/keep.py's key_plays). Only *measured*
+# evidence moves the verdict this way; an authored mulligan plan never does.
 
-# The Spellementals identity's own numbers (see the plan this module
-# implements): 97-71 (58%) kept at seven vs. 49-61 (45%) after a mulligan --
-# a 13-point gap. That deck pays enough for mulliganing that a marginal hand
-# lacking pressure should stay marginal rather than slide to a mulligan; a
-# deck that pays little for it should not get the same protection.
+# The mulligan brake's threshold, set from one real deck's kept-seven vs.
+# mulliganed gap (docs/current-match.md, "The keep guide (`table/keep.py`)").
+# A deck that pays this much for mulliganing keeps a marginal hand lacking
+# pressure at marginal; a deck that pays little gets no such protection.
 _MULLIGAN_BRAKE_POINTS = 13
 
 
@@ -598,10 +549,9 @@ def _verdict(
     if not in_band or castable_early == 0:
         return "mulligan", tuple(reasons), tuple(caveats)
 
-    # Layer 3: this deck's own evidence-backed threats, when there are any.
-    # No key_plays at all means this deck hasn't cleared _MIN_EVIDENCE_GAMES
-    # yet (table/keep.py) -- thin evidence, so nothing below moves the
-    # verdict; it falls through exactly as it did before Layer 3 existed.
+    # The pressure check. No key_plays at all means this deck hasn't cleared
+    # _MIN_EVIDENCE_GAMES yet (table/keep.py) -- thin evidence, so nothing
+    # below moves the verdict off the plain land/curve cutoff.
     key_plays = keep.key_plays
     pressure = _pressure(cards, key_plays) if key_plays else None
     if key_plays:
@@ -635,7 +585,7 @@ def _verdict(
             return "keep", tuple(reasons), tuple(caveats)
         return "marginal", tuple(reasons), tuple(caveats)
 
-    # castable_early < early_plays: the pre-Layer-3 "marginal" verdict.
+    # castable_early < early_plays: "marginal" by the land/curve cutoff.
     # Pressure (or no measured evidence at all) leaves it there unchanged;
     # its absence, with measured evidence available, is grounds to slide
     # further to "mulligan" -- unless this deck's own mulligan_cost brake
@@ -662,8 +612,9 @@ def build_opening_hand_read(
     boarded: bool = False,
 ) -> OpeningHandRead | None:
     """The read for a mulligan decision pending right now, or ``None`` when
-    nothing is (the caller — ``api/app.py`` — decides how "nothing pending"
-    renders: a mulligan phase with no offer yet, or no match at all).
+    nothing is (the caller, ``api/routes/current_match.py`` through
+    ``api/convert.py``, decides how "nothing pending" renders: a mulligan
+    phase with no offer yet, or no match at all).
 
     ``deck_id`` is optional and only enriches the read with this deck's own
     land band, ideal-hand shape and mulligan record (``build_keep_guide``) —
@@ -677,12 +628,11 @@ def build_opening_hand_read(
     forwarded the same way (``LiveState.deck_boarded``).
 
     ``offer`` defaults to replaying ``raw_events`` itself
-    (``table/live.py``'s anchor plus ``projector/live_state.py``'s replay) —
-    every existing caller keeps working exactly as before. Pass an
-    already-resolved ``offer`` (including explicitly ``None``, meaning a
-    live replay already ran and found nothing pending) when the caller is
-    building the wider live state anyway, so one request does one replay of
-    ``raw_events`` rather than two — see ``/api/current-match/read``.
+    (``table/live.py``'s anchor plus ``projector/live_state.py``'s replay).
+    Pass an already-resolved ``offer`` (including explicitly ``None``,
+    meaning a live replay already ran and found nothing pending) when the
+    caller is building the wider live state anyway, so one request does one
+    replay of ``raw_events`` rather than two — see ``/api/current-match/read``.
     """
     if offer is _NOT_GIVEN:
         state = live.build_live_state(conn)
@@ -723,12 +673,12 @@ def build_opening_hand_read(
         )
     else:
         # Neither produced_mana nor chosen_basic_type_colors resolved every
-        # land in hand. Rather than blank the verdict outright (the old
-        # behaviour), bracket it: the pessimistic reading (every unresolved
-        # land pays only generic costs) and the optimistic one (every
-        # unresolved land pays any colored pip) can only ever disagree about
-        # a hand the unresolved land's real color would actually decide —
-        # everywhere else they land on the same call.
+        # land in hand. Rather than blank the verdict outright, bracket it:
+        # the pessimistic reading (every unresolved land pays only generic
+        # costs) and the optimistic one (every unresolved land pays any
+        # colored pip) can only ever disagree about a hand the unresolved
+        # land's real color would actually decide — everywhere else they
+        # land on the same call.
         pessimistic_colors = [
             colors_by_grp[g] if colors_by_grp.get(g) is not None else _PESSIMISTIC_UNKNOWN_LAND
             for g in land_grp_ids

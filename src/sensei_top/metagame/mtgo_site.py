@@ -1,11 +1,11 @@
-"""Results read straight from mtgo.com's decklist pages — a third
-source for the corpus, added because the fbettega mirror lagged days behind
-the site (measured 2026-10-03). Same discipline as ``topdeck.py``: normalise
-a page's embedded data into the ``CacheItem`` shape ``source.parse_event``
-already parses, then store through the existing path, so tiering, dedup and
-the handle-dropping privacy guarantee are inherited, not re-implemented. A
-player handle is only ever a join key inside this module's output; it never
-reaches SQLite.
+"""Results read straight from mtgo.com's decklist pages — a third source for
+the corpus, read because the fbettega mirror lags the site. See
+docs/metagame.md, "A third source: mtgo.com". Same discipline as
+``topdeck.py``: normalise a page's embedded data into the ``CacheItem`` shape
+``source.parse_event`` already parses, then store through the existing path,
+so tiering, dedup and the handle-dropping privacy guarantee are inherited,
+not re-implemented. A player handle is only ever a join key inside this
+module's output; it never reaches SQLite.
 
 Each event page embeds ``window.MTGO.decklists.data = {...};`` on one line. A
 challenge carries ``decklists``, ``standings``, ``winloss``, ``final_rank``
@@ -18,21 +18,11 @@ Fetching is paced and limited to results pages, with a descriptive
 User-Agent; the terms reading is in ``docs/attribution.md``. Fail-soft: a
 network error keeps what is stored.
 
-A run (plan 14, S4) passes the source's hold first (``holds.gate``), then
-reads the index, the month pages a gap needs and the event pages, one second
-apart, and stops rather than adapts when the site answers with something
-other than a page — the answers table in ``docs/metagame.md``.
-
-The event pages are read newest first, at most 40, from three lists: the
-index's slugs not stored yet; a month page's (``/decklists/YYYY/MM``) not
-stored yet and dated on or after its format's start; and the stored leagues
-R3 reads again (D10), today's on every run and yesterday's once after 12:00
-UTC, because leagues republish through the day. A format's start is the day
-of the last completed run or, with none, of the format's newest stored MTGO
-event; never before the format's window (``guide.window``), and never more
-than 90 days back. Month pages run from the earliest start's month through
-the previous month, newest first, while the list is under 40, so after a
-completed run this month there are none. Traps this module exists to avoid:
+A run passes the source's hold first (``holds.gate``), then reads the index,
+the month pages a gap needs and the event pages, one second apart, and stops
+rather than adapts when the site answers with something other than a page —
+the answers table in the same doc section, which also says which event and
+month pages a run reads. Traps this module exists to avoid:
 
 1. **An HTTP status is never sent again.** ``HTTPError`` is a ``URLError``,
    so catching the one retries the other; only a timeout, or a URL error
@@ -41,12 +31,12 @@ completed run this month there are none. Traps this module exists to avoid:
    it are stored, and the answer goes to ``holds.apply_outcome``; only a run
    that completed stamps ``meta_fetch_source('mtgo')``.
 3. **A page that is gone is not an answer.** A 404 or 410 at a month or
-   event page, or a redirect away from it (D19: the site answers a removed
-   event that way), skips the page and stamps a stored event ``'gone'``. The
+   event page, or a redirect away from it (the site answers a removed event
+   that way), skips the page and stamps a stored event ``'gone'``. The
    index is not special-cased: a 404 there is a generic answer, and a
    redirect is followed and read as the index.
-4. **Three unparsable pages in a row end the run as a completed one** (k8),
-   so a changed layout costs four requests, not forty. A gone page neither
+4. **Three unparsable pages in a row end the run as a completed one**, so a
+   changed layout costs four requests, not forty. A gone page neither
    counts towards the three nor breaks the row; another format's page does
    break it, since its data read.
 5. **The clock is read when each answer arrives.** A ``Retry-After`` in
@@ -112,15 +102,15 @@ _SLUG_DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
 _STORED_PATH_RE = re.compile(r"^Tournaments/MTGO/(\d{4})/(\d{1,2})/(\d{1,2})/([^/]+)\.json$")
 # ``meta_event.source`` of an MTGO event, whichever copy stored it.
 _MTGO_EVENTS = "MTGO"
-# The gap's floor (S4): no format starts further back than this, and one
+# The gap's floor: no format starts further back than this, and one
 # with no detected reset starts here.
 GAP_DAYS = 90
 _BRACKET_ROUNDS = {4: "Quarterfinals", 2: "Semifinals", 1: "Finals"}
 
 # A month or event page answered with one of these is skipped, never an
-# Answer; at the index they are generic (S3).
+# Answer; at the index they are generic.
 GONE_STATUSES = frozenset({404, 410})
-# k8: this many unparsable event pages in a row end the run as completed.
+# This many unparsable event pages in a row end the run as completed.
 UNPARSABLE_IN_A_ROW = 3
 INDEX_PLACE = "index"
 # An index with no event link is a changed page, not an empty day: generic.
@@ -131,7 +121,7 @@ class RedirectedError(Exception):
     """A page answered with a redirect away from the address requested.
     ``urllib`` follows redirects on its own; this is how ``fetch_page`` says
     it did. ``body`` is what the landing page sent, which only the index
-    reads (D19)."""
+    reads."""
 
     def __init__(self, url: str, final_url: str, body: bytes) -> None:
         super().__init__(f"redirected to {final_url}")
@@ -157,7 +147,7 @@ def fetch_with_retry(
 ) -> str:
     """One retry, after ``pause_s``, on a timeout or a URL error that is not
     an HTTP status. An ``HTTPError`` is the site's answer and is never sent
-    again (defect 2); a second failure propagates."""
+    again (trap 1); a second failure propagates."""
     try:
         return fetch(url)
     except urllib.error.HTTPError:
@@ -435,7 +425,7 @@ def _answer(exc: BaseException, *, place: str, first_request: bool, at: datetime
 
 class _Requests:
     """One run's requests: paced, counted (an answer to the run's very first
-    request is the one the 503 day rule counts, k2), and turned into an
+    request is the one the 503 day rule counts), and turned into an
     ``_AnswerError`` when the site says anything other than a page."""
 
     def __init__(
@@ -510,7 +500,7 @@ class _Requests:
 class _Outcome:
     """What a run read. ``reads`` are ``(event_id, outcome)`` stamps for
     stored events that were read but not stored again; ``page_read`` is
-    whether the index opened (k1)."""
+    whether the index opened."""
 
     events: list[ParsedEvent] = field(default_factory=list)
     skipped: int = 0
@@ -552,7 +542,7 @@ def _unknown_slugs(
 def _rereads(
     conn: sqlite3.Connection, formats: Sequence[str], started: datetime
 ) -> list[tuple[str, str]]:
-    """R3 (D10): the stored leagues read again, as ``(slug, path)`` — today's
+    """The stored leagues read again, as ``(slug, path)`` — today's
     (UTC) on every run, and yesterday's once at or after 12:00 UTC, while the
     later of its two read stamps is before today's 12:00 (an unstamped read
     counts as before). Only MTGO leagues (tier C) of ``formats`` that are not
@@ -588,7 +578,7 @@ def _rereads(
 def _starts(
     conn: sqlite3.Connection, formats: Sequence[str], today: date, last_run: datetime | None
 ) -> dict[str, date]:
-    """``start(F)`` for each followed format (S4, "The gap"): the day of the
+    """``start(F)`` for each followed format: the day of the
     last completed run when there is one, otherwise the day of the format's
     newest stored MTGO event that is not a duplicate; never before the
     format's window (the day after its newest detected reset), and never
@@ -676,7 +666,7 @@ def _fill_gap(
 def _newest_first(work: Mapping[str, str]) -> list[tuple[str, str]]:
     """``work`` (path -> slug) as ``(slug, path)``, the newest slug day
     first; a day's pages keep the order they were added in (the index's,
-    then R3's, then the month pages')."""
+    then ``_rereads``', then the month pages')."""
     return sorted(
         ((slug, path) for path, slug in work.items()),
         key=lambda item: _day(item[1]) or date.min,
@@ -777,8 +767,7 @@ def refresh_mtgo_site(
     now: Callable[[], datetime] = _utc_now,
     by_hand: bool = False,
 ) -> RefreshResult:
-    """Fetch new events of ``formats`` from mtgo.com, through the source's
-    hold (plan 14, S3 and S4).
+    """Fetch new events of ``formats`` from mtgo.com, through the source's hold.
 
     ``now`` is the run's clock, an aware UTC time read at the start, when an
     answer arrives and at the end. ``by_hand`` is whether the user ran it
@@ -786,7 +775,7 @@ def refresh_mtgo_site(
 
     ``held`` and ``fresh`` make no request. Otherwise the run reads the
     index, the month pages a gap needs and at most ``max_pages`` event pages
-    (the module docstring), and completes
+    (docs/metagame.md, "A third source: mtgo.com"), and completes
     (``updated``, stamped, the hold lifted) or the site's answer ends it
     (``failed``, ``error`` the answer's reason, unstamped). Either way it
     stores what it parsed, and ``events`` counts what ``store_events``

@@ -60,11 +60,30 @@ def test_land_odds_sum_to_one_and_match_hypergeometric_by_hand(conn):
 
     assert sum(slot.count for slot in guide.ideal_hand) == 7
 
-    # early_plays is the same number ideal_hand's "play(s) at 1-3 mana" slot
+    # early_plays is the same number ideal_hand's "play(s) at 1-2 mana" slot
     # carries as a formatted label — exposed as a bare int too, since
     # table/opening_hand.py's verdict needs to compare against it directly.
     early_slot = next(s for s in guide.ideal_hand if "mana" in s.label)
     assert guide.early_plays == early_slot.count
+
+
+def test_a_five_land_hand_with_two_early_plays_drops_the_creature_slot(conn):
+    """40 lands, 8 two-drops and 12 seven-drops, every spell a creature. By
+    hand: cheap share 8/20 = 40% (land_min 2), average mana value
+    (8*2 + 12*7)/20 = 5.0 (land_max 5), round(7*40/60) = 5 lands, 8 cheap
+    cards = 2 early plays, creature share 100% asks for a creature slot. An
+    opening hand is seven cards, so 5 + 2 leaves no room for that slot."""
+    _insert_card(conn, 1, "Forest", mana_cost=None, type_line="Basic Land — Forest")
+    _insert_card(conn, 2, "Bear", mana_cost="{1}{G}", type_line="Creature — Bear")
+    _insert_card(conn, 3, "Wurm", mana_cost="{5}{G}{G}", type_line="Creature — Wurm")
+    _insert_deck(conn, "d1", [1] * 40 + [2] * 8 + [3] * 12)
+    conn.commit()
+
+    guide = build_keep_guide(conn, "d1")
+    assert guide is not None
+    assert guide.land_min == 2 and guide.land_max == 5
+    assert [slot.count for slot in guide.ideal_hand] == [5, 2]
+    assert guide.early_plays == 2
 
 
 def test_unnamed_cards_suppress_the_keepable_hand_band(conn):
@@ -222,7 +241,7 @@ def test_boarded_maindeck_wins_over_the_projected_row(conn):
     assert plain is not None and plain.land_count == 17
 
 
-# --- key_plays / mulligan_cost (Layer 2: the deck's own play evidence) -----
+# --- key_plays / mulligan_cost (the deck's own play evidence) --------------
 #
 # These reuse guide/play.py's key_card_timing and mulligan_record rather
 # than reimplementing them, so the fixture helpers below mirror

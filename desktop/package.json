@@ -4,7 +4,7 @@
   "description": "A local Magic: The Gathering match tracker and coach.",
   "author": "The Sensei Top authors",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "license": "AGPL-3.0-only",
   "desktopName": "sensei-top.desktop",
   "main": "dist/main.js",
@@ -13,7 +13,7 @@
     "typecheck": "tsc -p tsconfig.test.json",
     "test": "vitest run",
     "dist:win": "pnpm run build && node scripts/notices.ts && electron-builder --win nsis appx --publish never",
-    "dist:linux": "pnpm run build && node scripts/notices.ts && electron-builder --linux AppImage --publish never",
+    "dist:linux": "pnpm run build && node scripts/notices.ts && electron-builder --linux AppImage tar.gz --publish never",
     "dev": "pnpm run build && env -u ELECTRON_RUN_AS_NODE electron ."
   },
   "devDependencies": {

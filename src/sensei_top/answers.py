@@ -5,15 +5,15 @@ A copied prompt leaves the app and its answer comes back by hand — pasted
 into a card, or saved to a file for ``guide``, ``brief`` or ``rcq
 --import``. Nothing ties the two together except the text itself, so the
 prompt asks for one JSON object whose first fields say which card it is for
-and which data it was written for, and the answer itself under ``"answer"``
-(plan 24, D12):
+and which data it was written for, and the answer itself under ``"answer"``:
 
     {"for": "guide:KEY", "context": "<hash>", "answer": {...}}
 
 ``answer_format`` writes that instruction (English, like every prompt,
 ``docs/i18n.md``); ``read_answer`` reads it back. Every card's ``for`` is
 built by one of the ``*_for`` functions below, so a prompt and the code that
-stores its answer can never spell it differently.
+stores its answer can never spell it differently. How the dashboard's
+paste box and the CLI imports use it: docs/llm.md, "Saving a pasted answer".
 
 Traps this module exists to avoid:
 
@@ -21,8 +21,8 @@ Traps this module exists to avoid:
    compared with the card's own; it is never echoed into SQL, a path or a
    message (``AnswerError.belongs_to`` carries the *kind* it names, and only
    a kind this module knows). ``context`` is stored — it is what lets the
-   card's existing staleness say an answer was written for older data
-   (D13) — so it must first have the shape of the hash it stands for
+   card's existing staleness say an answer was written for older data —
+   so it must first have the shape of the hash it stands for
    (``CONTEXT_SHAPE``); anything else means it was edited.
 2. **The header nests the body rather than sitting beside it.** No body
    schema has a ``for`` or ``context`` field today; nesting means none can
@@ -77,8 +77,8 @@ CONTEXT_SHAPE = re.compile(r"[0-9a-f]{64}")
 # A body past this is 413: no card's answer comes near it.
 MAX_ANSWER_BYTES = 256 * 1024
 
-# Who a pasted-in answer says wrote it (plan 24, D5): stored where a model id
-# would be; the dashboard shows it as keyed text, never as this word.
+# Who a pasted-in answer says wrote it: stored where a model id would be;
+# the dashboard shows it as keyed text, never as this word.
 PASTED_AUTHOR = "pasted"
 
 LEAKS_FOR = "leaks"
@@ -109,7 +109,7 @@ _SUBJECTS = {
 # The one card whose prompt carries no context: an RCQ guide records one
 # pasted list and has no staleness hash. Every other card's answer must
 # bring its context back, since it is stored as the hash the answer was
-# written for (D13) and a missing one would have to be guessed (rule 4).
+# written for and a missing one would have to be guessed (rule 4).
 _NO_CONTEXT = frozenset({"rcq"})
 
 _FENCE = re.compile(r"```[A-Za-z]*[ \t]*\r?\n(.*?)```", re.DOTALL)

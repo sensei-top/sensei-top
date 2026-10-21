@@ -1,11 +1,10 @@
 """One read of the database per match, shared by every analyzer.
 
-``build_snapshot`` is the only function in this package that touches
-``sqlite3`` directly. Everything downstream of it — every analyzer in
-``analyzers/`` — is a pure function of an already-fetched ``MatchSnapshot``,
-which is what keeps them testable without a database and keeps the whole
-report at a fixed, small number of queries regardless of how many analyzers
-exist.
+Every analyzer in ``analyzers/`` is a pure function of the ``MatchSnapshot``
+built here, which keeps them testable without a database and keeps the
+whole report at a fixed number of queries however many analyzers exist.
+Which other modules of this package query the database: docs/review.md,
+"The match report, and its optional narrative".
 """
 
 from __future__ import annotations
@@ -40,8 +39,8 @@ class SelfTurnRow:
     ``self_power``/``opp_power`` and ``opp_lands`` are not in ``turns``
     itself (the projector has no ``opp_lands`` column at all, and power is
     per-object, not a turn-level count) — both are aggregated here from
-    ``turn_zones`` in the same query that builds this row, so every analyzer
-    reasoning about the position index gets them without a second read.
+    ``turn_zones``, one query per match, so every analyzer reasoning about
+    the position index gets them without a read of its own.
     """
 
     game_number: int
@@ -83,8 +82,8 @@ class DeckLandRatio:
     ``unnamed_count`` above zero means the deck is not fully named yet —
     every caller must treat that as "unknown", never compute a ratio from
     a partial list. It also counts an MTGO deck's unresolved maindeck copies
-    (``v_deck_land_count.unresolved_count``, plan 12 D18): a list with copies
-    missing is as partial as one with a card still unnamed."""
+    (``v_deck_land_count.unresolved_count``): a list with copies missing is
+    as partial as one with a card still unnamed."""
 
     maindeck_size: int
     land_count: int
@@ -162,11 +161,8 @@ class PersonalMatchup:
 class FieldMatchup:
     """The field's own numbers for this archetype pairing, from exactly one
     tier — never blended across tiers, which is what makes ``n`` here a real
-    sample size, not an inflated one. ``tier`` names which one:
-    ``metagame.matchup.ranked_field_matchup`` walks the ranked tiers (A, then
-    B, then D — Tier C never carries a round) and picks the highest-ranked
-    one with at least ``MIN_WALK_MATCHES`` rounds, or failing that the
-    highest-ranked one with any rounds at all."""
+    sample size, not an inflated one. ``tier`` names which one, chosen by
+    ``metagame.matchup.ranked_field_matchup``'s walk."""
 
     n: int
     matches_won: int
@@ -194,12 +190,15 @@ class MatchSnapshot:
     self_plays: tuple[CardPlay, ...]
     # (turn_count, games, games_won) for this deck, from v_deck_game_length
     deck_game_length: tuple[tuple[int, int, int], ...]
-    # (on_play, games_completed, games_won) for this deck, from v_play_draw_winrate
+    # (on_play, games_won, games_lost) for this deck, from v_play_draw_winrate;
+    # a drawn game is in neither, so a side's record is won plus lost
     play_draw: tuple[tuple[bool, int, int], ...]
     candidates: tuple[Candidate, ...]
     own_cards: tuple[OwnCard, ...]
     own_archetype: Verdict | None
-    opponent_key: str | None       # v_match_opponent's own vocabulary; see its docstring
+    # v_match_opponent's key: archetype:/manual:/colors:<…>, or the literal
+    # "unknown"; None when the view had no row for this match
+    opponent_key: str | None
     opponent_label: str | None
     opponent_archetype_key: str | None  # bare key, only when opponent_key names one
     opponent_revealed_names: frozenset[str]
@@ -212,8 +211,8 @@ class MatchSnapshot:
     # the format-reset window field_matchup was counted from, or None when it
     # wasn't windowed (no reset detected, or no legality data yet) — carried
     # so a caller rendering field_matchup can say which window it means
-    # rather than showing a bare number. Last and defaulted: tests construct
-    # MatchSnapshot by keyword.
+    # rather than showing a bare number. Defaulted, so last: tests construct
+    # MatchSnapshot by keyword without it.
     field_since: str | None = None
 
     def turns_in(self, game_number: int) -> list[SelfTurnRow]:
@@ -236,25 +235,20 @@ def _classify_own_deck(
 ) -> tuple[Verdict | None, tuple[OwnCard, ...]]:
     """Our own archetype, from our exact decklist — normally the same
     ``complete=True`` path ``metagame.classify_meta`` runs over a corpus
-    decklist, applied here to a deck we already know in full instead of a
-    dozen revealed opponent cards (a deck with unresolved copies is the
-    exception, below). Never stored (``review/__init__.py``'s own
-    rule): a deck classified once could point at a definition set that was
-    later refreshed by ``sensei-top archetypes``.
+    decklist (a deck with unresolved copies is the exception, below). Never
+    stored (``review/__init__.py``'s own rule): a deck classified once could
+    point at a definition set later refreshed by ``sensei-top archetypes``.
 
-    ``colors_by_name``, when given, is used instead of recomputing
-    ``_card_colors_by_name`` — see ``build_snapshot``'s own docstring; it
-    depends only on ``cards``, so a caller rebuilding this for many matches
-    in one request may compute it once and share it.
+    ``colors_by_name``, when given, replaces the ``_card_colors_by_name``
+    scan (see ``build_snapshot``'s ``colors_cache``).
 
     The format is ``fmt`` when the caller knows it, already one of
     ``formats.FORMATS``: a match's ``v_match_format.format`` (``build_snapshot``)
-    or a deck's format (``guide/deck.py``'s ``identity_format``, plan 13 D15).
+    or a deck's format (``guide/deck.py``'s ``identity_format``, which
+    ``guide/field.py``, ``guide/list_diff.py`` and ``coach/evidence.py`` pass).
     Without one, ``decks.format`` is read through ``formats.arena_format``,
     unless the caller passes ``use_deck_format=False``: an MTGO match does, since
-    its deck's format is the store's FormatCode, which only pre-fills the pick
-    (plan 12, D1, D16). A caller passing neither (the coach) reads
-    ``decks.format`` as before.
+    its deck's format is the store's FormatCode, which only pre-fills the pick.
 
     A deck whose ``cards_json`` counts unresolved maindeck copies is a partial
     list, so it is classified with ``complete=False``: the evidence gates apply
@@ -275,10 +269,9 @@ def _classify_own_deck(
     except json.JSONDecodeError:
         return None, ()
     maindeck: list[int] = deck_json.get("maindeck") or []
-    # An MTGO deck's copies that resolved to no card are counted, not listed
-    # (plan 12, D18): the maindeck below is then a partial list, and absence
-    # from a partial list is not evidence (docs/metagame.md). Arena rows have
-    # no such key, so they stay complete.
+    # An MTGO deck's copies that resolved to no card are counted under
+    # "unresolved", not listed. Arena rows have no such key, so they stay
+    # complete.
     unresolved = (deck_json.get("unresolved") or {}).get("maindeck") or 0
     if not maindeck:
         return None, ()
@@ -349,53 +342,50 @@ def build_snapshot(
     colors_cache: dict[str, dict[str, frozenset[str]]] | None = None,
     view_cache: dict | None = None,
 ) -> MatchSnapshot | None:
-    """``consensus_since`` is passed straight through to ``build_consensus``
-    as its own ``since`` — the format-reset window that keeps the opponent's
-    consensus from aggregating decklists from both sides of a ban
-    (``guide/window.py``'s ``window_start``). ``None`` is not a neutral
-    default; it is the pre-reset-inclusive answer, and is only correct when
-    the caller knows the corpus cannot cross a reset — no reset detected in
+    """``consensus_since`` is the format-reset window start
+    (``guide/window.py``'s ``window_start``), passed straight through as
+    ``build_consensus``'s ``since`` and ``ranked_field_matchup``'s, so
+    neither the opponent's consensus nor the field record pools decklists
+    or rounds from both sides of a ban. ``None`` is not a neutral default;
+    it is the pre-reset-inclusive answer, and is only correct when the
+    caller knows the corpus cannot cross a reset — no reset detected in
     this format, or no legality data yet to detect one from. A caller that
     *can* see a reset (``coach/evidence.py``, the API routes under
-    ``api/routes/matches.py``) must compute it the same way
-    ``coach/evidence.py`` does and pass it here; this module never imports
-    ``guide.window`` itself, since ``guide/`` is built on ``review/`` and a
-    reverse import would be a package cycle.
+    ``api/routes/matches.py``) must compute it and pass it here; this module
+    never imports ``guide.window`` itself, since ``guide/`` is built on
+    ``review/`` and a reverse import would be a package cycle.
 
-    ``consensus_cache``, when given, memoizes ``build_consensus`` calls
-    across repeated invocations of this function within one caller's own
-    request — ``build_consensus``'s own docstring asks callers needing it
-    more than once to cache it themselves rather than have it cache
-    silently underneath them. ``review/leaks.py``'s ``find_leaks`` is that
-    caller: it rebuilds a snapshot per completed match, and many matches
-    share an opponent archetype. The cache key is ``(opponent_archetype_key,
-    fmt, consensus_since)`` rather than the archetype key alone, so two
-    callers sharing one cache dict with different formats or windows never
-    hand each other a consensus built from the wrong corpus or the wrong
-    side of a reset.
+    ``consensus_cache``, when given, memoizes ``build_consensus`` across
+    repeated calls within one caller's request, as ``build_consensus`` asks
+    of a caller needing it more than once — ``review/leaks.py``'s
+    ``find_leaks`` and ``coach/evidence.py`` rebuild a snapshot per match,
+    and many matches share an opponent archetype. The key is
+    ``(opponent_archetype_key, fmt, consensus_since)`` rather than the
+    archetype key alone, so two callers sharing one cache dict with
+    different formats or windows never hand each other a consensus built
+    from the wrong corpus or the wrong side of a reset.
 
     ``colors_cache`` is the same idea for ``archetypes.classify.
     _card_colors_by_name`` — a full-table scan of ``cards`` that both
-    ``rank_candidates`` and ``_classify_own_deck`` run independently below,
-    and whose result depends only on ``cards``, not on the match. This
-    function computes it at most once per call and stores it back into the
-    dict under the key ``"colors_by_name"`` so a caller shares one scan
-    across every match in its own request, the same way ``consensus_cache``
-    shares ``build_consensus``.
+    ``rank_candidates`` and ``_classify_own_deck`` need, and whose result
+    depends only on ``cards``, not on the match. It is computed at most once
+    and stored in the dict under ``"colors_by_name"``, so a caller shares
+    one scan across every match in its request.
 
-    ``view_cache`` follows the same pattern for four statements that would
-    otherwise rescan a whole view per match — each costs one query across
-    the whole call, filled lazily on first use and read from memory after:
+    ``view_cache`` follows the same pattern for statements that would
+    otherwise rescan a whole view per match. The first call given the dict
+    fills ``"opponents"`` and ``"opponent_cards"`` (one query each) and
+    later calls read them from memory:
 
     - ``"opponents"``: one pass over ``matches JOIN v_match_opponent JOIN
       v_match_deck`` (exactly one row per match; the deck is ``v_match_deck``'s,
       so an MTGO match's pick, not ``matches.deck_id``), split into a
-      per-match_id map for the opponent_key/label lookup and a ``(opponent_key, deck_id)`` -> rows
-      map for the personal-matchup aggregate below, computed here in Python
-      with the SQL's exact semantics (``matches_completed``/``matches_won``
-      filtered by ``result``; ``games_won``/``games_lost`` summed with
-      ``COALESCE(..., 0)`` over every other matching row regardless of
-      ``result``).
+      per-match_id map for the opponent_key/label lookup and a
+      ``(opponent_key, deck_id)`` -> rows map for the personal-matchup
+      aggregate, computed in Python with the uncached SQL's exact semantics
+      (``matches_completed``/``matches_won`` filtered by ``result``;
+      ``games_won``/``games_lost`` summed with ``COALESCE(..., 0)`` over every
+      other matching row regardless of ``result``).
     - ``"opponent_cards"``: one pass over ``v_opponent_cards`` (the
       expensive CTE ``rank_candidates`` would otherwise query once per
       match — ``api/sql.py::_cached_match_opponent``'s docstring records
@@ -404,11 +394,7 @@ def build_snapshot(
     - ``"field_matchup"``: a memo keyed ``(own_archetype.key,
       opponent_archetype_key, fmt, consensus_since)``, since ``v_meta_matchup``'s
       windowed result for one format depends only on those four, not on the
-      match: the same pairing in two formats is two corpora (D14).
-
-    Every entry is absent until first needed, so a caller that never
-    reaches, say, the field-matchup block never pays for
-    ``v_opponent_cards``'s scan on its behalf.
+      match: the same pairing in two formats is two corpora.
     """
     colors_by_name = None
     if colors_cache is not None:
@@ -487,9 +473,7 @@ def build_snapshot(
         )
     )
 
-    # Board power and opponent lands, per (game, turn, seat): turn_zones is
-    # the identities behind turns' bare counts, and neither figure exists as
-    # a turns column (no per-turn power total, no opp_lands at all).
+    # Board power and opponent lands, per (game, turn, seat) — see SelfTurnRow.
     # `card_types` here is Arena's own projected vocabulary, not
     # `cards.type_line` -- no em-dash split needed, so this is not a case
     # for review/effects.py::is_land.
@@ -604,9 +588,8 @@ def build_snapshot(
         )
     )
 
-    # Our own side of the same play-by-play — narrative.py's "every card cast
-    # and when" needs both; no analyzer reads this yet, but it costs the same
-    # one query opponent_plays already pays for.
+    # Our own side of the same play-by-play, for narrative.py's prompt; no
+    # analyzer reads it.
     self_plays = tuple(
         CardPlay(
             game_number=row["game_number"],
@@ -655,9 +638,9 @@ def build_snapshot(
 
     play_draw = (
         tuple(
-            (bool(row["on_play"]), row["games_completed"], row["games_won"])
+            (bool(row["on_play"]), row["games_won"], row["games_lost"])
             for row in conn.execute(
-                "SELECT on_play, games_completed, games_won FROM v_play_draw_winrate "
+                "SELECT on_play, games_won, games_lost FROM v_play_draw_winrate "
                 "WHERE deck_id = ?",
                 (deck_id,),
             )
@@ -677,10 +660,10 @@ def build_snapshot(
         deck_id,
         match["event_id"],
         colors_by_name=colors_by_name,
-        # The match's own read-time format (D6), the one rank_candidates
-        # names the opponent under too: an Arena match's from the log, an
-        # MTGO match's pick, else its inference. A database whose 055
-        # matches.format is not projected yet falls back to decks.format
+        # The match's own read-time format, the one rank_candidates names
+        # the opponent under too: an Arena match's from the log, an MTGO
+        # match's pick, else its inference. A database whose matches.format
+        # (migration 055) is not projected yet falls back to decks.format
         # for an Arena match, as rank_candidates does.
         fmt=match["match_format"],
         use_deck_format=match["source"] != "mtgo",

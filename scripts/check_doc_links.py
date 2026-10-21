@@ -1,9 +1,9 @@
 """Check that every `docs/<name>.md, "<Section>"` reference still resolves.
 
 A doc is split or a section renamed, and the sentence elsewhere that says
-"see docs/<name>.md, 'Y'" quietly points nowhere. Plan 22 (D3) keeps section
-titles verbatim when text moves, so a mover only changes the file name, and
-this script is the check that says it did.
+"see docs/<name>.md, 'Y'" quietly points nowhere. Section titles stay
+verbatim when text moves, so a mover only changes the file name, and this
+script is the check that says it did.
 
 A reference is a file name followed within 12 characters by a quoted title
 (the quote may open on the next line, after comment markers), or a

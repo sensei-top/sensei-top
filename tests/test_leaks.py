@@ -272,10 +272,10 @@ def _flood_deck_and_turns(conn, deck_id, cards_json):
 def test_mana_flags_flooded_is_none_with_unresolved_maindeck_copies(conn):
     """Every card the list holds is named, so ``unnamed_count`` is zero, but
     an MTGO deck that dropped copies it could not resolve
-    (``unresolved_count`` above zero, plan 12 D18) has a land ratio computed
-    from a partial list. The control deck, with the same list and nothing
-    dropped, shows the same turns do read as flooded, so the guard is what
-    turns the answer into unknown."""
+    (``unresolved_count`` above zero) has a land ratio computed from a
+    partial list. The control deck, with the same list and nothing dropped,
+    shows the same turns do read as flooded, so the guard is what turns the
+    answer into unknown."""
     _flood_deck_and_turns(
         conn, "whole",
         '{"maindeck": [7001, 7002], "unresolved": {"maindeck": 0, "sideboard": 0}}',
@@ -681,11 +681,11 @@ def test_consensus_since_is_forwarded_to_build_match_report_and_keys_the_report_
 def test_each_match_is_measured_against_its_own_formats_consensus_window(
     conn, monkeypatch,
 ):
-    """Plan 13, S8c: with ``consensus_window``, a Modern match's report is
-    built under Modern's reset window, not Standard's, and a match no source
-    names a format for gets no window at all rather than borrowing one. The
-    formats come from the rows below, through ``v_match_format`` (D6): the
-    Arena match's ``matches.format``, the MTGO match's pick."""
+    """With ``consensus_window``, a Modern match's report is built under
+    Modern's reset window, not Standard's, and a match no source names a
+    format for gets no window at all rather than borrowing one. The formats
+    come from the rows below, through ``v_match_format``: the Arena match's
+    ``matches.format``, the MTGO match's pick."""
     _insert_match(conn, "standard-arena", "win")
     conn.execute("UPDATE matches SET format = 'Standard' WHERE match_id = 'standard-arena'")
     _insert_match(conn, "modern-mtgo", "loss")

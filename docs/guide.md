@@ -33,24 +33,25 @@ Each is a pure function of the projected DB (or, for `narrative.py` and
 `markdown.py`, of an already-built `DeckGuide`) — same discipline as
 `review/`: only the modules that say so touch `sqlite3`, and the evidence
 bundle is never persisted (a rebuild is one request; see `review/__init__.py`'s
-reasoning, which applies here for the same cause — the corpus, the card
-database and the player's own decklist all change independently of any
-projector rebuild). The authored narratives are: `authored.py` writes
+reasoning, which applies here for the same cause — the corpus and the card
+database change independently of any projector rebuild, and the user's
+MTGO pick changes which deck a match reads through `v_match_deck` with no
+rebuild at all). The authored narratives are: `authored.py` writes
 `deck_narrative` and `rcq_authored.py` writes `rcq_guide`.
 
 ### `deck.py` — deck identity, stitched across list edits
 
 `decks.deck_id` is a content hash of the maindeck
-(`projector/matches.py`'s `deck_identity`), so a single sideboard swap mints
-a new row for what is, to the player, the same Arena deck. `deck_guids`
-records Arena's own stable GUID beside each content hash and is written on
-every match. The grouping itself lives in the SQL view `v_deck_identity`
-(migration `033_deck_identity.sql`), which `/api/metrics/winrate` also
-reads, though no page calls that route. One content hash resolves to
-exactly one identity, tie-broken by `deck_guids.last_seen` (whichever
-Arena deck used the list most recently owns it) with `arena_deck_id`
-breaking an exact tie, falling back to a bare `deck:<deck_id>` key for
-a truncated log that never paired the two.
+(`projector/matches.py`'s `deck_identity`; the sideboard is not hashed), so
+changing a single maindeck card mints a new row for what is, to the player,
+the same Arena deck. `deck_guids` records Arena's own stable GUID beside
+each content hash and is written on every match. The grouping itself lives
+in the SQL view `v_deck_identity` (migration `033_deck_identity.sql`),
+which `/api/metrics/winrate` also reads, though no page calls that route.
+One content hash resolves to exactly one identity, tie-broken by
+`deck_guids.last_seen` (whichever Arena deck used the list most recently
+owns it) with `arena_deck_id` breaking an exact tie, falling back to a bare
+`deck:<deck_id>` key for a truncated log that never paired the two.
 `list_identities` reads that view and attaches each group's match record,
 name and current cards; `resolve` looks up one by its API key
 (`"guid:<arena_deck_id>"` or `"deck:<deck_id>"`).
@@ -71,13 +72,6 @@ reads the field of this one format — the guide's resets, field, consensus
 and own archetype; the brief and its coverage (`docs/brief.md`); the RCQ
 guide's evidence — and a deck with no format gets no field at all rather
 than another format's.
-
-Before the view existed, `list_identities` grouped by hand and double-counted
-a content hash that `deck_guids` had registered under two different
-`arena_deck_id`s (the same list re-registered as a second Arena deck): it
-added that hash's matches to both groups, inflating one identity's total past
-its true match count. The view's tie-break is what makes deck_id → identity
-a function instead of a relation.
 
 ### `window.py` — format resets, detected, not declared
 
@@ -107,21 +101,22 @@ had already dropped to 9%.
 
 `cards --scryfall`'s name backfill (`cards.py`'s module docstring) widens
 `legality_known`'s coverage without changing what it means: an alternate-art
-or bonus-sheet sibling grp_id that used to have no legality now carries the
-same `card_legality` rows as the printing Scryfall did attach an `arena_id`
-to, each format filled on its own, so fewer real cards fall on the wrong
-side of the "known vs. unknown" line.
+or bonus-sheet sibling grp_id Scryfall attached no `arena_id` to carries the
+same `card_legality` rows as the printing it did attach one to, each format
+filled on its own, so fewer real cards fall on the wrong side of the "known
+vs. unknown" line.
 
-`structural_change` is the check that would have caught the hand-written
-guide's own worst mistake: for each archetype with enough pre-reset decks,
-what fraction of its lists played a card the reset banned. Above
-`CHANGED_THRESHOLD` (0.30) its pre-reset matchup rate is **void, not merely
-stale** — `verdict = "changed"`, or `"gone"` if it has zero post-reset
-decks. Only `"intact"` may carry a rate forward.
+`structural_change` decides whether a pre-reset matchup rate may carry
+forward: for each archetype with enough pre-reset decks
+(`MIN_PRE_RESET_DECKS`), what fraction of its lists played a card the reset
+banned. An archetype with zero post-reset decks is `"gone"`; otherwise, at
+or above `CHANGED_THRESHOLD` (0.30), its pre-reset matchup rate is **void,
+not merely stale** — `verdict = "changed"`. Only `"intact"` may carry a
+rate forward.
 
 ### `play.py` — the deck's own play evidence
 
-Four views of one question, each scoped to a `DeckIdentity`'s `deck_ids`:
+Five views of one question, each scoped to a `DeckIdentity`'s `deck_ids`:
 `board_curve` (median hand/life/lands/opponent-permanents by the player's
 own turn, split win/loss), `zone_curve` (median card-type-bucket count per
 zone per turn, split win/loss, ranked by which buckets diverge most —
@@ -131,11 +126,11 @@ bucketed by the turn a card first resolved, cards chosen automatically —
 maindeck at ≥3 copies, ranked by `review.effects.is_finisher` then mana
 value), `mulligan_record` and `game_length`.
 
-Two bugs the hand-written version shipped once, now pinned by
-`tests/test_guide_play.py`: `turns.turn_number` counts player-turns
-*alternating seats*, so a player-turn index is `(turn_number + 1) // 2`; and
-a "first resolved by turn N" bucketing must iterate every game, not just
-games where the card resolved, or "never resolved" silently undercounts.
+Two traps, both pinned by `tests/test_guide_play.py`: `turns.turn_number`
+counts player-turns *alternating seats*, so a player-turn index is
+`(turn_number + 1) // 2`; and a "first resolved by turn N" bucketing must
+iterate every game, not just games where the card resolved, or "never
+resolved" silently undercounts.
 
 ### `list_diff.py` — your 75 against the field's consensus
 
@@ -147,16 +142,16 @@ format's archetype rules, then compares it against
 only decks from that format's events count, since one archetype key can
 name a list in more than one format's corpus, and `fmt=None` has no
 consensus rather than an all-format one. The comparison is separate
-for the maindeck and the sideboard (`board="main"` / `board="side"`;
-`build_consensus` read only `mainboard_json` before this package needed
-sideboard consensus too, and comparing a sideboard against the field's
-*maindeck* staples recommended boarding in cards the player already ran —
-see that function's own docstring). Each card gets one of four verdicts:
-`flex` for a card the player runs that the corpus has simply never
-recorded; for one the field plays at or above `STAPLE_SHARE`, `correct` at
-the consensus count, `trim` above it and `add` below it; `correct` for one
-the field plays less often; and `add` for a staple the player doesn't run
-at all.
+for the maindeck and the sideboard (`board="main"` / `board="side"`):
+comparing a sideboard against the field's *maindeck* staples would
+recommend boarding in cards the player already runs — see
+`build_consensus`'s own docstring. A corpus with no sideboard consensus
+is an empty one, not a failure: every sideboard card then reads `flex`.
+Each card gets one of four verdicts: `flex` for a card the player runs
+that the corpus has simply never recorded; for one the field plays at or
+above `STAPLE_SHARE`, `correct` at the consensus count, `trim` above it
+and `add` below it; `correct` for one the field plays less often; and
+`add` for a staple the player doesn't run at all.
 
 `duplicate_warnings` is the fallback for one card counted under two names
 that `cards.oracle_id` canonicalisation didn't already catch (no
@@ -197,7 +192,9 @@ number that looks current.
 
 **The field**, the Guide's reading of this (`components/guide/FieldCard.tsx`),
 draws up to three tiles above the table (the deck's own archetype's win
-rate in the field, the most played archetype, and, only once a reset was
+rate in the field, from the tiers with standings only, A, B and D, as
+`docs/metagame.md`, "The evidence tiers", licenses; the most played
+archetype; and, only once a reset was
 found, how many of the shown archetypes changed at it), then a table of
 every archetype's share, most played first. Its `Before` column is drawn
 only when a row carries a pre-reset share. A row whose personal record
@@ -232,36 +229,31 @@ comparison) for many splits; the all-decks column gives a thin sample
 context without the two ever being confused for one another. Both measure
 each match against its own format's consensus window (one
 `consensus_window_resolver`, seeded with the deck's format's window), since
-the all-decks history spans every format. This is also
-why the per-match postmortem was left exactly where it was
-(`MatchReportPanel` on the match drill-down, `docs/review.md`) rather than
-folded in here — it is the evidence behind any single match a leak cites.
+the all-decks history spans every format. The per-match postmortem stays
+on the match drill-down (`MatchReportPanel`, `docs/review.md`) rather than
+folded in here: it is the evidence behind any single match a leak cites.
 
 `gaps` states what could not be computed and why, in place of guessing:
 a deck with no format, an unclassifiable deck, missing oracle text (with the
 exact fix — `sensei-top cards --scryfall`), no detected reset — or,
 distinctly, no legality data to detect one *with* — and a never-played deck.
 
-**Performance note.** Two real inefficiencies were found and fixed while
-building this: `archetypes.classify._card_colors_by_name` — a full scan of
-`cards` — used to run twice per match report (once via `rank_candidates`,
-once via `_classify_own_deck`); `build_snapshot`/`build_match_report`/
-`find_leaks` now accept an optional `colors_cache`/`consensus_cache` pair
-that `bundle.py` shares across its two `find_leaks` calls, so the scan
-happens at most once per request rather than once per match. The same three
-functions later gained a `view_cache` (memoizing four of `build_snapshot`'s
-own statements that otherwise rescanned a whole view per match) and
-`find_leaks` gained a `report_cache` (reusing a whole `MatchReport` built
-under a repeated match_id instead of rebuilding it); `bundle.py` shares one
-of each across its two `find_leaks` calls the same way it shares the first
-pair. `window.py`'s
-`format_resets` used to scan the whole corpus once per banned card
-(Scryfall's bulk export carries every card ever banned in Standard's
-history, not just this format's own bans); it is now one pass over the
-corpus, checking each deck's cards against the banned set instead. Together
-these took a real ~536-deck, ~80-match corpus from ~34s to ~10s per guide
-build — still the single most expensive route in this API, acceptable for
-a click-triggered, non-heartbeat page rather than something polled.
+**Performance note.** `build_snapshot`/`build_match_report`/`find_leaks`
+accept optional caches, and `bundle.py` shares one of each across its two
+`find_leaks` calls: `colors_cache` and `consensus_cache`, so
+`archetypes.classify._card_colors_by_name` — a full scan of `cards`, reached
+through both `rank_candidates` and `_classify_own_deck` — runs at most once
+per request rather than twice per match report; `view_cache`, memoizing
+four of `build_snapshot`'s own statements that would otherwise rescan a
+whole view per match; and `find_leaks`'s `report_cache`, reusing a whole
+`MatchReport` built under a repeated match_id. `window.py`'s
+`format_resets` makes one pass over the corpus, checking each deck's cards
+against the banned set, rather than one scan per banned card (Scryfall's
+bulk export carries every card ever banned in Standard's history, not just
+this format's own bans). Together these took a real ~536-deck, ~80-match
+corpus from ~34s to ~10s per guide build — still the single most expensive
+route in this API, acceptable for a click-triggered, non-heartbeat page
+rather than something polled.
 
 ### `narrative.py` — the prompt, and the shape of the answer
 
@@ -297,9 +289,7 @@ the player's current 75 with oracle text, opponent-archetype sections with
 their consensus staples and oracle text (see below for which archetypes get
 a section), the detected reset and what it voided, and the bundle's own
 gaps. This is a large prompt, comparable to the evidence file the
-hand-written guide this replaces was built from — AGENTS.md's outbound-call
-standard permits that explicitly ("when sending more makes the answer
-materially better, send more and say so").
+hand-written guide this replaces was built from.
 
 **Which archetypes get a section, and why it's not just "top 6 by
 share."** The field's top `TOP_ARCHETYPES_FOR_ORACLE_TEXT` (6) archetypes by
@@ -342,10 +332,11 @@ name to whichever key has the most corpus decks behind it, ties broken by
 key.
 
 **What comes back**: a structured JSON object, not free prose —
-`GuideNarrative`. `_GUIDE_TOOL`'s schema was the forced-tool-use contract and
-is now the import contract; it travels inside the prompt so whoever writes
-the answer knows the exact shape. A structured shape is what lets `plans.validate_plans`
-check every sideboard plan before it is ever shown, and lets the frontend
+`GuideNarrative`. `_GUIDE_TOOL`'s schema is the contract for both the
+generate route's structured-output request (`llm.strict_schema`, then
+`llm.write_json`) and a pasted or imported answer; it travels inside the
+prompt so whoever writes the answer knows the exact shape. A structured
+shape is what lets `plans.validate_plans` check every sideboard plan before it is ever shown, and lets the frontend
 render each section with the same components as the deterministic evidence
 around it, rather than a Markdown-rendering dependency.
 
@@ -354,9 +345,9 @@ around it, rather than a Markdown-rendering dependency.
 `render(guide, narrative=None)` — one renderer, used by the markdown route,
 `guide --markdown`, and the guide and RCQ prompts (`narrative.py`, `rcq.py`;
 `narrative=None`, the evidence-only form).
-Section order follows the hand-written guide this replaces: Scope → How it
-works → Your play (curves, then the leak finder and its fix, deck-scoped
-beside all-decks) → The list → The field → Matchups → Between rounds.
+Section order: Scope → How it works → Your play (curves, then the leak
+finder and its fix, deck-scoped beside all-decks) → The list → The field →
+Matchups → Between rounds.
 
 ## API surface
 
@@ -466,7 +457,7 @@ prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
   (`PUT …/rcq/narrative`, the generate body plus `answer`): the server
   rebuilds the prompt from that body and checks the answer's
   `for: rcq:{key}` line. The RCQ prompt carries no `context` hash
-  (`docs/status.md`).
+  (`BACKLOG.md`, BL-033).
   `sensei-top rcq --deck KEY --decklist FILE [--expect K1,K2] [--own K]
   --prompt` prints the prompt and makes no call; `--import FILE [--author
   NAME]` stores a written answer.
@@ -498,7 +489,7 @@ instead.
   data, and the hand a player actually shipped — after bottoming cards
   under the London rule — is never in the log at any point
   (`migrations/009_drop_opening_hand.sql`), unlike the pre-decision offer
-  `table/opening_hand.py` reads live for the current-match tab. The guide
+  `table/opening_hand.py` reads live for the Live page. The guide
   reports the kept-seven-vs-mulliganed record and nothing about any one
   decision, the same invariant `review/`'s own
   `test_the_report_never_judges_a_mulligan` enforces there.

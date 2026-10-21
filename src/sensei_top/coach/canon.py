@@ -1,21 +1,10 @@
-"""The coach's reading list — the strategy writing a report may cite, and
-the sites its web search may read.
+"""The coach's reading list, the strategy writing a report may cite, and
+the sites its web search may read. See docs/coach.md, "The reading list"
+and docs/coach.md, "The domain allowlist".
 
-Every entry here was checked by hand against the live page (title and
-author as the page shows them) on 2026-09-18, and its ``summary`` was
-written from that page's own content in this project's words — never a
-quote, never recalled from memory (non-negotiable #4: an entry nobody
-could verify is dropped, not guessed). Two entries were checked through
-their publisher's search index rather than the rendered page, because
-TCGplayer serves its articles as a script-rendered app no fetch can read;
-their ``note`` says so.
-
-``entries_for`` picks only what a report's own evidence calls for — the
-full list never goes into a prompt. ``topics`` mixes ``Finding.code``s
-(``review/analyzers/``, plus the leak finder's own ``mana_screwed``/
-``mana_flooded``) with broad tags the evidence always carries
-(``sideboarding`` for the game-1-vs-post-board split, ``tournament-prep``
-for the LGS section).
+An entry nobody could verify against its live page is dropped, not guessed
+(non-negotiable #4), and every ``summary`` is in this project's words, never
+a quote. An entry checked some other way says how in its ``note``.
 """
 
 from __future__ import annotations
@@ -204,8 +193,8 @@ CANON: tuple[CanonEntry, ...] = (
 CORE_IDS: tuple[int, ...] = (1, 13, 18)
 
 # The topics that are not a ``Finding.code``: the leak finder's two
-# synthetic codes, and the broad tags ``coach/narrative.py`` derives from
-# which evidence sections a report actually has.
+# synthetic codes, and the broad tags. ``coach/narrative.py::reading_list``
+# derives every tag but "tilt" from the evidence sections a report has.
 LEAK_CODES = frozenset({"mana_screwed", "mana_flooded"})
 BROAD_TAGS = frozenset({
     "sideboarding", "mulligans", "play-draw", "deckbuilding",

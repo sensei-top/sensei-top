@@ -1,8 +1,9 @@
 """The only module in this project that imports ``anthropic``.
 
-Three entry points: two for free-form prose (the match report, the leak
-finder) and structured guide answers, and one for the coach report, which
-adds the server-side web search tool. All three stream — a guide generation
+Three entry points: ``write_prose`` for free-form prose (the match report,
+the leak finder), ``write_json`` for structured answers (the deck guide, the
+RCQ guide), and ``write_report`` for the coach report, which adds the
+server-side web search tool. All three stream — a guide generation
 at ``effort: high`` genuinely runs for minutes, well past what a
 non-streaming request can wait out — and all three return a ``Completion``
 carrying its own measured cost, never a guessed one (AGENTS.md
@@ -366,8 +367,8 @@ def write_report(
                 "messages": messages,
                 # Automatic caching, five-minute TTL: the one call that
                 # re-reads its own prefix (search iterations, pause_turn
-                # re-sends). Why no other call is marked: docs/llm.md's
-                # caching paragraph.
+                # re-sends). Why no other call is marked: see docs/llm.md,
+                # "Model, effort, and cost".
                 "cache_control": {"type": "ephemeral"},
             }
             if tools:

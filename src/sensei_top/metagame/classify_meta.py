@@ -1,13 +1,8 @@
 """Naming every stored tournament decklist's archetype — the field side of
-the personal-vs-field matchup join.
-
-Reuses ``archetypes.classify``'s rule engine in its ``complete=True`` mode
-(see that module's docstring on the governing asymmetry, and this project's
-own inversion of it for a full decklist): a cache decklist is 60 cards plus a
-real sideboard, not a dozen revealed cards, so absence is real evidence and
-the same ``Definition`` objects that classify a personal match classify a
-corpus decklist too — one rule vocabulary, one place to fix a bug, and one
-``archetype_key`` both sides can join on.
+the personal-vs-field matchup join — with ``archetypes.classify``'s rule
+engine in its ``complete=True`` mode, so both sides share one
+``archetype_key``. See docs/metagame.md, "Complete decklists invert the
+classifier's own rule".
 """
 
 from __future__ import annotations

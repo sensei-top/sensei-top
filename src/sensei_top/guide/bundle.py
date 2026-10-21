@@ -1,5 +1,7 @@
 """Assembly: one deck guide, everything else in this package pulled
-together for one deck, under the deck's own format (plan 13, D15).
+together for one deck, under the deck's own format
+(``guide/deck.py::identity_format``). See docs/guide.md,
+"`bundle.py` — assembly".
 """
 
 from __future__ import annotations
@@ -32,8 +34,8 @@ from sensei_top.guide.window import window_start as _window_start
 from sensei_top.i18n import N_, _, ngettext
 from sensei_top.review.leaks import Leak, find_leaks
 
-# The format_unknown note (plan 13, S8), verbatim. Translated where it is
-# used; the English stays importable for the tests that look for it.
+# The format_unknown note. Translated where it is used; the English stays
+# importable for the tests that look for it.
 FORMAT_UNKNOWN_GAP = N_(
     "This deck's format is unknown: its deck record names no constructed format, and "
     "none of its matches has one from the log, a pick or inference. Without a format "
@@ -101,7 +103,7 @@ def build_deck_guide(
     conn: sqlite3.Connection, key: str, *, report_cache: dict | None = None,
 ) -> DeckGuide | None:
     """One deck's whole guide bundle, under the deck's format
-    (``guide/deck.py``'s ``identity_format``, D15): its resets, its field and
+    (``guide/deck.py``'s ``identity_format``): its resets, its field and
     its own archetype are that format's. A deck with no format gets no field
     block, no list diff and no reset, and the ``FORMAT_UNKNOWN_GAP`` note in
     their place; its own play evidence and leaks are still built.
@@ -111,13 +113,12 @@ def build_deck_guide(
     ``review/leaks.py::report_cache_key``: ``(match_id, window)`` in
     English, with the request's language added otherwise, so a prompt
     (always built under ``english()``) never reuses a report a Portuguese
-    page built. Pass
-    ``api/sql.py::_shared_report_cache(request, conn)`` from a route so a
-    report this guide builds can be reused by a Leaks or Coach request in
-    the same process rather than rebuilt from scratch, instead of the fresh,
-    request-scoped dict below. ``None`` (the CLI ``guide`` command's own
-    call, and this function's default) keeps today's behaviour exactly: a
-    dict that lives only as long as this one call.
+    page built. A route passes
+    ``api/sql.py::_shared_report_cache(request, conn)``, so a report this
+    guide builds can be reused by a Leaks or Coach request in the same
+    process rather than rebuilt from scratch. ``None`` (the CLI ``guide``
+    command's own call, and this function's default) is a fresh dict that
+    lives only as long as this one call.
     """
     identity = resolve(conn, key)
     if identity is None:
@@ -155,25 +156,20 @@ def build_deck_guide(
     # a subset of the all-decks one, so most opponent archetypes, the
     # classifier's card-colour table, and build_snapshot's own repeated view
     # lookups all recur between them (find_leaks/build_consensus/
-    # build_snapshot docstrings) — and a match reported in both populations
-    # (report_cache) needs its MatchReport built only once, since the cache
-    # is keyed by review/leaks.py::report_cache_key — (match_id, window) in
-    # English, plus the request's language otherwise, so a prompt (always
-    # under english()) never reuses a Portuguese page's report — never by
-    # find_leaks's own scoping, and both calls give a match the same
-    # window and language. report_cache
-    # itself may be the caller's shared, cross-request dict (see this
-    # function's own docstring) rather than one scoped to this call alone.
+    # build_snapshot docstrings). A match reported in both populations needs
+    # its MatchReport built only once: report_cache_key (this function's
+    # docstring) never includes find_leaks's own scoping, and both calls give
+    # a match the same window and language.
     consensus_cache: dict = {}
     colors_cache: dict = {}
     view_cache: dict = {}
     if report_cache is None:
         report_cache = {}
     # Both calls measure each match against its own format's consensus
-    # window (plan 13, S8c): the opponent consensus a finding is measured
-    # against must not be aggregated across that format's reset. The all-decks
-    # rollup spans every format; this deck's own matches are mostly in its
-    # format, whose window is already known above.
+    # window: the opponent consensus a finding is measured against must not
+    # be aggregated across that format's reset. The all-decks rollup spans
+    # every format; this deck's own matches are mostly in its format, whose
+    # window is already known above.
     consensus_window = consensus_window_resolver(
         conn, {fmt: window_start} if fmt is not None else None,
     )

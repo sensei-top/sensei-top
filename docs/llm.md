@@ -82,7 +82,8 @@ Claude" buttons that call the API server-side and store the answer. No
 credential, no difference from before — every generate route returns 503 and
 the frontend falls back to `CopyPromptCard`.
 
-**Decided 2026-10-07: both paths stay, and both are the user's own.** The
+**Decided 2026-10-07: both paths stay, and both are the user's own.** That
+decision also ruled out a paid tier, a hosted proxy and an account. The
 2026-10-01 decision (writing Pro-only through a hosted proxy, the copy
 prompt removed, three tiers, an account) is reversed. **Amended
 2026-10-12:** a paid subscription is planned, not built, and its monthly
@@ -118,7 +119,7 @@ and neither ever needs an account. What follows from that:
   `test_only_authored_artifact_routes_write` pins.
 
 This document describes the code as it stands. The adapter is listed in
-`docs/status.md`, "Features not built".
+`BACKLOG.md`, BL-007.
 
 The structural-fact-to-configuration-fact trade this makes is stated above,
 along with what pins it down.
@@ -141,8 +142,10 @@ Order, first match wins:
    that exists but errors logs a WARNING (never the value) and resolution
    moves on to the file.
 3. `~/.config/sensei-top/config.toml` (`$XDG_CONFIG_HOME` if set), or on
-   Windows `%APPDATA%\sensei-top\config.toml` (`llm/config.py::config_path`),
-   a `[claude]` table:
+   Windows `%APPDATA%\sensei-top\config.toml` (`llm/config.py::config_path`;
+   a file left at the old `~/.config` path is still read there, with a
+   warning to move it, until the `%APPDATA%` one exists), a `[claude]`
+   table:
    ```toml
    [claude]
    api_key = "sk-ant-..."
@@ -206,11 +209,14 @@ the resolved coach override alongside the base model/effort when one is set.
 The TopDeck.gg key follows the same order (`TOPDECK_API_KEY`, keyring username
 `topdeck`, `[topdeck]` in the file) in `metagame/config.py`.
 
-Missing or malformed input at either layer resolves to "not configured"
-(`load()` returns `None`) plus a `log.warning` — never an exception. This is
-the same fail-soft posture `metagame/source.py` and `card_images.py` already
-use for the free downloads: an unreachable or misconfigured feature degrades
-the one surface that needs it, not the whole app.
+Missing or malformed input, in `[claude]` or `[claude.coach]`, never
+raises. With no key from any source the answer is "not configured"
+(`load()` returns `None`): a missing file says nothing, while a file that
+does not parse, or one with no key when nothing else supplied one, logs a
+warning. A malformed `[claude.coach]` value is ignored with a warning. This
+is the same fail-soft posture `metagame/source.py` and `card_images.py`
+already use for the free downloads: an unreachable or misconfigured feature
+degrades the one surface that needs it, not the whole app.
 
 ## What calls out, and what it sends
 
@@ -309,7 +315,8 @@ Default `claude-opus-5-5`, `thinking: {"type": "adaptive"}`,
 requests structured output (`output_config.format`) against the existing
 `_GUIDE_TOOL["input_schema"]` schema, so the generate path returns the exact
 JSON shape `guide_narrative_from_json` already parses — one validation path,
-not two.
+not two. The RCQ guide does the same with `guide/rcq.py`'s
+`_RCQ_TOOL["input_schema"]` and `rcq_from_json`.
 
 Every generated artifact records `model`, `input_tokens`, `output_tokens`, and
 `cost_usd` computed from the response's own `usage` block against a small
@@ -424,6 +431,19 @@ built on the API, not resold access to it. Someone who runs a modified
 copy as a service for others owes its users the source under AGPL
 section 13, which is the licence working as intended, not a case this
 project has to design for.
+
+Two paid things are planned, and what each waits on is in `BACKLOG.md`, BL-070
+and BL-006. The Microsoft Store listing is the same build as the free download,
+listed free when it goes up and priced once the blockers there clear. The
+subscription comes at around 3,000 monthly active users, gated by feature,
+never by the player's rank or event type. It is the one thing behind an
+account, made at checkout: an email code, or Google, Discord or X. The account
+lives in the hosted service; the local server keeps no login and stays
+loopback-only. Selling tokens, credits or a prepaid balance would be reselling
+the Services, which Anthropic's Commercial Terms (D.4) allow only with its
+express approval. Until the subscription is built, the two paths that generate
+prose are the user's own: the prompt round trip and a credential the user
+configures, and both stay free beside the allowance.
 
 The `writer` under "The fallback" above is where the allowance would
 enter the dashboard, as a third case beside nobody and a key; it is not

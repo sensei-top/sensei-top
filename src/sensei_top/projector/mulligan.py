@@ -1,36 +1,18 @@
 """Reading the pending mulligan decision straight from ``raw_events`` — not
 the projection.
 
-Contrary to what ``migrations/009_drop_opening_hand.sql`` concluded, Arena
-does log the opening hand before the keep/mulligan decision: a
-``GameStateMessage`` diff sets ``pendingMessageType:
-"ClientMessageType_MulliganResp"`` on a player and, in the same or a later
-diff, includes that seat's hand as real ``gameObjects`` (``grpId``
-included) — but only for our own seat; the opponent's hand zone always
-carries ids with no matching objects (``docs/arena-log.md``'s 11b, "Arena
-never sends the opponent's decklist", extended here to mulligans: their
-hand is exactly as hidden pre-keep as it is at every other point in the
-game). What 009 got right is narrower than it reads: the *kept* hand's zone
-transfers really do arrive only after the decision, which is why that
-reconstruction failed. This module reads a different message entirely — the
-offer diff itself, before any decision.
+Arena logs the offered hand before the keep/mulligan decision, for our own
+seat only. See docs/arena-log.md, "The traps", trap 14 and the instance-id
+reuse trap after it, which every replay here must be anchored against. This
+reads the offer diff itself; the *kept* hand's zone transfers arrive only
+after the decision, which is why ``migrations/009_drop_opening_hand.sql``'s
+reconstruction failed. Verified against 503 real mulligan decisions: every
+offer resolves to exactly 7 cards.
 
-Verified against every one of 503 real mulligan decisions captured in a live
-session: every offer resolves to exactly 7 cards (Magic's own London
-mulligan rule — always see 7, bottom cards only after keeping), with zero
-failures, once the replay is anchored to the *current match's own start*
-(``docs/arena-log.md``'s anchoring trap: Arena reuses small instance ids and
-``gameStateId`` counters game to game, even match to match).
-
-This module is now a thin wrapper: the actual replay — resolving seats,
-tracking the pending mulligan state, walking ``GameStateMessage`` diffs via
-``GameStateTracker.apply()`` — lives in ``projector/live_state.py``, the
-general form of the same technique extended to the whole board state, not
-only the mulligan offer (see its module docstring for the numbers that
-motivated generalizing this). Kept as its own module, rather than folded
-away, because ``table/opening_hand.py`` and its tests import
-``MulliganOffer``/``MulliganCard``/``replay_pending_offer`` from here by
-name; those names are re-exported unchanged.
+A thin wrapper: the replay lives in ``projector/live_state.py``. Kept as
+its own module because ``table/opening_hand.py`` and
+``tests/test_projector_mulligan.py`` import from here by name; the names
+in ``__all__`` are re-exported unchanged.
 """
 
 from __future__ import annotations
@@ -53,9 +35,9 @@ def replay_pending_offer(payloads: Iterable[str]) -> MulliganOffer | None:
     newest thing that happened was our own submitted decision.
 
     ``payloads`` must start at or before the current match's own room-start
-    event — see the module docstring's anchoring trap. This function trusts
-    its caller to have anchored the window; ``table/live.py`` is what
-    enforces it for every reader built on this (``table/opening_hand.py``
-    included).
+    event — see docs/arena-log.md, "The traps", the instance-id reuse
+    paragraph after trap 14. This function trusts its caller to have
+    anchored the window; ``table/live.py`` is what enforces it for every
+    reader built on this (``table/opening_hand.py`` included).
     """
     return replay_live_state(payloads).offer

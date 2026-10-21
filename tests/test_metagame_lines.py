@@ -1,19 +1,21 @@
-"""The fetch lines (plan 14, S3): every entry of the line catalog's §1,
-mtgo.com's (``lines.md`` §1.1, §1.2 and §1.4) and TopDeck's (§1.3), rendered
-from the result its condition describes, and ``serve``'s silence when the
-hold did not move.
+"""The fetch lines: every entry of the line catalog the CLI's lines were
+written to (kept outside the repo), rendered from the result its condition
+describes, and ``serve``'s silence when the hold did not move. A key's first
+part is the catalog's section: 1.1 an mtgo.com run with no pause standing,
+1.2 an mtgo.com hand run while a hold stands, 1.3 TopDeck, 1.4 the mtgo.com
+lines whose ending differs on ``serve``'s console.
 
 The expected lines are the catalog's, copied into ``LINES`` by script and
 never retyped. Each case builds a ``RefreshResult`` by hand whose values are
-the entry's examples (``lines.md`` line 3: a date, a not-before time, the
-stored copy's age, the count stored, the status, the page): the holds are the
-ones S3's transitions leave, worked out from the rules rather than produced
-by ``apply_outcome``, so a case says what the line is for, not what the code
+the entry's examples (a date, a not-before time, the stored copy's age, the
+count stored, the status, the page): the holds are the ones the hold rules'
+transitions leave, worked out from the rules rather than produced by
+``apply_outcome``, so a case says what the line is for, not what the code
 did. No database, no network.
 
 A line the catalog states as a substitution of an entry (``(no cached
 copy)``, "HTTP 503 in place of HTTP 429", the date rule, the hand-run after-N
-rule of ``followup4.md:83-88``) is built from that entry by the substitution
+rule) is built from that entry by the substitution
 the catalog names. A ``serve`` case is the server's own attempt, never a
 hand run, so it passes ``by_hand=False``.
 """
@@ -27,185 +29,185 @@ from sensei_top.metagame.fetch_lines import render
 from sensei_top.metagame.holds import MTGO, TOPDECK, Hold, HoldStatus
 from sensei_top.metagame.source import Answer, AnswerKind, RefreshResult, answer_kind
 
-# lines.md §1.1, §1.2 and §1.4, every entry, copied by script and never
-# retyped. The key is the section and a short name for the entry, whose
-# label is the comment above it.
+# mtgo.com's entries, sections 1.1, 1.2 and 1.4, every one, copied by script
+# and never retyped. The key is the section and a short name for the entry,
+# whose label is the comment above it.
 LINES = {
-    # §1.1 success
+    # success
     ("1.1", "success"): "mtgo: 4 tournament events stored, 2 skipped.",
-    # §1.1 fresh
+    # fresh
     ("1.1", "fresh"): "mtgo: corpus is 1.2h old; nothing to do.",
-    # §1.1 generic failure (timeout, connection, other 5xx, index 404 or 410), nothing stored
+    # generic failure (timeout, connection, other 5xx, index 404 or 410), nothing stored
     ("1.1", "generic"): "mtgo: could not refresh (timed out); keeping what is stored (5h old).",
-    # §1.1 generic failure after events were stored
+    # generic failure after events were stored
     ("1.1", "generic after"): "mtgo: could not refresh (timed out) after 2 tournament events stored; keeping those.",  # noqa: E501
-    # §1.1 refused 403 at the index
+    # refused 403 at the index
     ("1.1", "403 index"): "mtgo: refused (HTTP 403) at the index; keeping what is stored (5h old); paused until you run 'sensei-top meta' again — re-read Daybreak's Terms of Service first.",  # noqa: E501
-    # §1.1 refused 403 at a month page
+    # refused 403 at a month page
     ("1.1", "403 month"): "mtgo: refused (HTTP 403) at the 2026-09 archive page; keeping what is stored (5h old); paused until you run 'sensei-top meta' again — re-read Daybreak's Terms of Service first.",  # noqa: E501
-    # §1.1 refused 403 at an event page
+    # refused 403 at an event page
     ("1.1", "403 event"): "mtgo: refused (HTTP 403) at an event page (standard-league-2026-10-03); keeping what is stored (5h old); paused until you run 'sensei-top meta' again — re-read Daybreak's Terms of Service first.",  # noqa: E501
-    # §1.1 refused 403 after events were stored
+    # refused 403 after events were stored
     ("1.1", "403 after"): "mtgo: refused (HTTP 403) after 2 tournament events stored; keeping those; paused until you run 'sensei-top meta' again — re-read Daybreak's Terms of Service first.",  # noqa: E501
-    # §1.1 login 401 at the index
+    # login 401 at the index
     ("1.1", "401 index"): "mtgo: asked for a login (HTTP 401) at the index; keeping what is stored (5h old); paused until you run 'sensei-top meta' again — Sensei Top never logs in to mtgo.com; re-read Daybreak's Terms of Service first.",  # noqa: E501
-    # §1.1 login 401 at a month page
+    # login 401 at a month page
     ("1.1", "401 month"): "mtgo: asked for a login (HTTP 401) at the 2026-09 archive page; keeping what is stored (5h old); paused until you run 'sensei-top meta' again — Sensei Top never logs in to mtgo.com; re-read Daybreak's Terms of Service first.",  # noqa: E501
-    # §1.1 login 401 at an event page
+    # login 401 at an event page
     ("1.1", "401 event"): "mtgo: asked for a login (HTTP 401) at an event page (standard-league-2026-10-03); keeping what is stored (5h old); paused until you run 'sensei-top meta' again — Sensei Top never logs in to mtgo.com; re-read Daybreak's Terms of Service first.",  # noqa: E501
-    # §1.1 login 401 after events were stored
+    # login 401 after events were stored
     ("1.1", "401 after"): "mtgo: asked for a login (HTTP 401) after 2 tournament events stored; keeping those; paused until you run 'sensei-top meta' again — Sensei Top never logs in to mtgo.com; re-read Daybreak's Terms of Service first.",  # noqa: E501
-    # §1.1 legal 451 at the index
+    # legal 451 at the index
     ("1.1", "451 index"): "mtgo: refused for legal reasons (HTTP 451) at the index; keeping what is stored (5h old); paused until you run 'sensei-top meta' again — open mtgo.com in your browser and read the notice there first.",  # noqa: E501
-    # §1.1 legal 451 at a month page
+    # legal 451 at a month page
     ("1.1", "451 month"): "mtgo: refused for legal reasons (HTTP 451) at the 2026-09 archive page; keeping what is stored (5h old); paused until you run 'sensei-top meta' again — open mtgo.com in your browser and read the notice there first.",  # noqa: E501
-    # §1.1 legal 451 at an event page
+    # legal 451 at an event page
     ("1.1", "451 event"): "mtgo: refused for legal reasons (HTTP 451) at an event page (standard-league-2026-10-03); keeping what is stored (5h old); paused until you run 'sensei-top meta' again — open mtgo.com in your browser and read the notice there first.",  # noqa: E501
-    # §1.1 legal 451 after events were stored
+    # legal 451 after events were stored
     ("1.1", "451 after"): "mtgo: refused for legal reasons (HTTP 451) after 2 tournament events stored; keeping those; paused until you run 'sensei-top meta' again — open mtgo.com in your browser and read the notice there first.",  # noqa: E501
-    # §1.1 first 429 at the index
+    # first 429 at the index
     ("1.1", "429 index"): "mtgo: asked for a pause (HTTP 429) at the index; keeping what is stored (5h old); try again after 17:10 UTC.",  # noqa: E501
-    # §1.1 first 429 at a month page
+    # first 429 at a month page
     ("1.1", "429 month"): "mtgo: asked for a pause (HTTP 429) at the 2026-09 archive page; keeping what is stored (5h old); try again after 17:10 UTC.",  # noqa: E501
-    # §1.1 first 429 at an event page
+    # first 429 at an event page
     ("1.1", "429 event"): "mtgo: asked for a pause (HTTP 429) at an event page (standard-league-2026-10-03); keeping what is stored (5h old); try again after 17:10 UTC.",  # noqa: E501
-    # §1.1 first 429 after events were stored
+    # first 429 after events were stored
     ("1.1", "429 after"): "mtgo: asked for a pause (HTTP 429) after 2 tournament events stored; keeping those; try again after 17:10 UTC.",  # noqa: E501
-    # §1.1 second 429 in a row, this time at the index
+    # second 429 in a row, this time at the index
     ("1.1", "429 twice index"): "mtgo: asked for a pause twice in a row (HTTP 429), this time at the index; keeping what is stored (3h old); paused until you run 'sensei-top meta' again — not before 17:10 UTC.",  # noqa: E501
-    # §1.1 second 429 in a row, this time at a month page
+    # second 429 in a row, this time at a month page
     ("1.1", "429 twice month"): "mtgo: asked for a pause twice in a row (HTTP 429), this time at the 2026-09 archive page; keeping what is stored (3h old); paused until you run 'sensei-top meta' again — not before 17:10 UTC.",  # noqa: E501
-    # §1.1 second 429 in a row, this time at an event page
+    # second 429 in a row, this time at an event page
     ("1.1", "429 twice event"): "mtgo: asked for a pause twice in a row (HTTP 429), this time at an event page (standard-league-2026-10-03); keeping what is stored (3h old); paused until you run 'sensei-top meta' again — not before 17:10 UTC.",  # noqa: E501
-    # §1.1 second 429 in a row, this time after events were stored
+    # second 429 in a row, this time after events were stored
     ("1.1", "429 twice after"): "mtgo: asked for a pause twice in a row (HTTP 429), this time after 2 tournament events stored; keeping those; paused until you run 'sensei-top meta' again — not before 17:10 UTC.",  # noqa: E501
-    # §1.1 503, nothing stored (any place; `(no cached copy)` when none)
+    # 503, nothing stored (any place; `(no cached copy)` when none)
     ("1.1", "503"): "mtgo: could not refresh (HTTP 503 Service Unavailable); keeping what is stored (5h old); try again after 17:10 UTC.",  # noqa: E501
-    # §1.1 503 after events were stored
+    # 503 after events were stored
     ("1.1", "503 after"): "mtgo: HTTP 503 after 2 tournament events stored; keeping those; try again after 17:10 UTC.",  # noqa: E501
-    # §1.1 503 for a whole day (pause), no Retry-After ahead
+    # 503 for a whole day (pause), no Retry-After ahead
     ("1.1", "503 day"): "mtgo: HTTP 503 for a whole day; keeping what is stored (26h old); paused until you run 'sensei-top meta' again — check that mtgo.com opens in your browser first.",  # noqa: E501
-    # §1.1 503 for a whole day, the latest 503 carrying a Retry-After still ahead
+    # 503 for a whole day, the latest 503 carrying a Retry-After still ahead
     ("1.1", "503 day not before"): "mtgo: HTTP 503 for a whole day; keeping what is stored (26h old); paused until you run 'sensei-top meta' again, not before 17:10 UTC — check that mtgo.com opens in your browser first.",  # noqa: E501
-    # §1.1 the attempt after a wait succeeds (the server's, or a hand run's)
+    # the attempt after a wait succeeds (the server's, or a hand run's)
     ("1.1", "wait over"): "mtgo: 4 tournament events stored, 2 skipped; the wait is over.",
-    # §1.2 waiting (503), before the not-before: no attempt
+    # waiting (503), before the not-before: no attempt
     ("1.2", "waiting 503"): "mtgo: waiting until 17:10 UTC after HTTP 503 at 14:10 UTC; nothing fetched; keeping what is stored (5h old).",  # noqa: E501
-    # §1.2 waiting (429), before the not-before: no attempt
+    # waiting (429), before the not-before: no attempt
     ("1.2", "waiting 429"): "mtgo: waiting until 17:10 UTC after HTTP 429 at 14:10 UTC; nothing fetched; keeping what is stored (5h old).",  # noqa: E501
-    # §1.2 waiting, the answer and the not-before on different dates (the date rule, §0)
+    # waiting, the answer and the not-before on different dates (the date rule)
     ("1.2", "waiting dated"): "mtgo: waiting until 2026-10-06 16:00 UTC after HTTP 503 at 2026-10-05 23:40 UTC; nothing fetched; keeping what is stored (5h old).",  # noqa: E501
-    # §1.2 paused, with a not-before still ahead: no attempt ("HTTP 503" in place of "HTTP
+    # paused, with a not-before still ahead: no attempt ("HTTP 503" in place of "HTTP
     # 429" when a 503 set the time, F4:146)
     ("1.2", "paused ahead"): "mtgo: still paused since 2026-10-05; nothing fetched after HTTP 429 at 14:10 UTC; keeping what is stored (5h old); run 'sensei-top meta' again after 17:10 UTC.",  # noqa: E501
-    # §1.2 paused, the attempt succeeds
+    # paused, the attempt succeeds
     ("1.2", "pause lifted"): "mtgo: 4 tournament events stored, 2 skipped; the pause since 2026-10-05 is lifted.",  # noqa: E501
-    # §1.2 paused on 403, refused again
+    # paused on 403, refused again
     ("1.2", "403 again"): "mtgo: refused again (HTTP 403); still paused since 2026-10-05; keeping what is stored (31h old) — re-read Daybreak's Terms of Service before the next run.",  # noqa: E501
-    # §1.2 paused on 401, 401 again
+    # paused on 401, 401 again
     ("1.2", "401 again"): "mtgo: asked for a login again (HTTP 401); still paused since 2026-10-05; keeping what is stored (31h old) — Sensei Top never logs in to mtgo.com; re-read Daybreak's Terms of Service before the next run.",  # noqa: E501
-    # §1.2 paused on 451, 451 again
+    # paused on 451, 451 again
     ("1.2", "451 again"): "mtgo: refused for legal reasons again (HTTP 451); still paused since 2026-10-05; keeping what is stored (31h old) — open mtgo.com in your browser and read the notice there before the next run.",  # noqa: E501
-    # §1.2 paused on 503, 503 again
+    # paused on 503, 503 again
     ("1.2", "503 again"): "mtgo: HTTP 503 again; still paused since 2026-10-05; keeping what is stored (31h old).",  # noqa: E501
-    # §1.2 paused on 503, 503 again with a Retry-After still ahead
+    # paused on 503, 503 again with a Retry-After still ahead
     ("1.2", "503 again not before"): "mtgo: HTTP 503 again; still paused since 2026-10-05; keeping what is stored (31h old) — not before 18:10 UTC.",  # noqa: E501
-    # §1.2 paused on 429, 429 again
+    # paused on 429, 429 again
     ("1.2", "429 again"): "mtgo: asked for a pause again (HTTP 429); still paused since 2026-10-05; keeping what is stored (31h old) — not before 18:10 UTC.",  # noqa: E501
-    # §1.2 paused, answered 403 while the cause is another (no "again", since kept)
+    # paused, answered 403 while the cause is another (no "again", since kept)
     ("1.2", "403 other"): "mtgo: refused (HTTP 403); still paused since 2026-10-05; keeping what is stored (31h old) — re-read Daybreak's Terms of Service before the next run.",  # noqa: E501
-    # §1.2 paused, answered 401 while the cause is another
+    # paused, answered 401 while the cause is another
     ("1.2", "401 other"): "mtgo: asked for a login (HTTP 401); still paused since 2026-10-05; keeping what is stored (31h old) — Sensei Top never logs in to mtgo.com; re-read Daybreak's Terms of Service before the next run.",  # noqa: E501
-    # §1.2 paused, answered 451 while the cause is another
+    # paused, answered 451 while the cause is another
     ("1.2", "451 other"): "mtgo: refused for legal reasons (HTTP 451); still paused since 2026-10-05; keeping what is stored (31h old) — open mtgo.com in your browser and read the notice there before the next run.",  # noqa: E501
-    # §1.2 paused on a refusal or a 429, answered 503
+    # paused on a refusal or a 429, answered 503
     ("1.2", "503 other"): "mtgo: HTTP 503; still paused since 2026-10-05; keeping what is stored (31h old).",  # noqa: E501
-    # §1.2 paused on a refusal or a 429, answered 503 with a Retry-After still ahead
+    # paused on a refusal or a 429, answered 503 with a Retry-After still ahead
     ("1.2", "503 other not before"): "mtgo: HTTP 503; still paused since 2026-10-05; keeping what is stored (31h old) — not before 18:10 UTC.",  # noqa: E501
-    # §1.2 paused on a refusal or a 503, answered 429
+    # paused on a refusal or a 503, answered 429
     ("1.2", "429 other"): "mtgo: asked for a pause (HTTP 429); still paused since 2026-10-05; keeping what is stored (31h old) — not before 18:10 UTC.",  # noqa: E501
-    # §1.2 paused, generic failure
+    # paused, generic failure
     ("1.2", "generic"): "mtgo: could not refresh (timed out); still paused since 2026-10-05; keeping what is stored (31h old).",  # noqa: E501
-    # §1.2 paused, generic failure with an HTTP reason
+    # paused, generic failure with an HTTP reason
     ("1.2", "generic http"): "mtgo: could not refresh (HTTP 404 Not Found); still paused since 2026-10-05; keeping what is stored (31h old).",  # noqa: E501
-    # §1.2 paused, refused again after events were stored
+    # paused, refused again after events were stored
     ("1.2", "403 again after"): "mtgo: refused again (HTTP 403) after 2 tournament events stored; keeping those; still paused since 2026-10-05 — re-read Daybreak's Terms of Service before the next run.",  # noqa: E501
-    # §1.2 paused, generic failure after events were stored
+    # paused, generic failure after events were stored
     ("1.2", "generic after"): "mtgo: could not refresh (timed out) after 2 tournament events stored; keeping those; still paused since 2026-10-05.",  # noqa: E501
-    # §1.4 first 429 at the index
+    # first 429 at the index
     ("1.4", "429 index"): "mtgo: asked for a pause (HTTP 429) at the index; keeping what is stored (5h old); the next fetch is after 17:10 UTC.",  # noqa: E501
-    # §1.4 first 429 at a month page
+    # first 429 at a month page
     ("1.4", "429 month"): "mtgo: asked for a pause (HTTP 429) at the 2026-09 archive page; keeping what is stored (5h old); the next fetch is after 17:10 UTC.",  # noqa: E501
-    # §1.4 first 429 at an event page
+    # first 429 at an event page
     ("1.4", "429 event"): "mtgo: asked for a pause (HTTP 429) at an event page (standard-league-2026-10-03); keeping what is stored (5h old); the next fetch is after 17:10 UTC.",  # noqa: E501
-    # §1.4 first 429 after events were stored
+    # first 429 after events were stored
     ("1.4", "429 after"): "mtgo: asked for a pause (HTTP 429) after 2 tournament events stored; keeping those; the next fetch is after 17:10 UTC.",  # noqa: E501
-    # §1.4 503, nothing stored (any place; `(no cached copy)` when none)
+    # 503, nothing stored (any place; `(no cached copy)` when none)
     ("1.4", "503"): "mtgo: could not refresh (HTTP 503 Service Unavailable); keeping what is stored (5h old); the next fetch is after 17:10 UTC.",  # noqa: E501
-    # §1.4 503 after events were stored
+    # 503 after events were stored
     ("1.4", "503 after"): "mtgo: HTTP 503 after 2 tournament events stored; keeping those; the next fetch is after 17:10 UTC.",  # noqa: E501
 }
 
-# lines.md §1.3, every entry, copied by script and never retyped, keyed
-# the same way.
+# TopDeck's entries, section 1.3, every one, copied by script and never
+# retyped, keyed the same way.
 TOPDECK_LINES = {
-    # §1.3 success
+    # success
     ("1.3", "success"): "topdeck: 3 tournament events stored.",
-    # §1.3 some formats unanswered (timeouts, 5xx)
+    # some formats unanswered (timeouts, 5xx)
     ("1.3", "unanswered"): "topdeck: no answer for Modern; run 'sensei-top meta --format Modern' to retry them.",  # noqa: E501
-    # §1.3 every format unanswered
+    # every format unanswered
     ("1.3", "all unanswered"): "topdeck: could not refresh (timed out); keeping what is stored (24h old).",  # noqa: E501
-    # §1.3 no key (only with `--source topdeck`)
+    # no key (only with `--source topdeck`)
     ("1.3", "no key"): "topdeck: no API key configured — run 'sensei-top config --set-topdeck-key KEY'.",  # noqa: E501
-    # §1.3 401, the key
+    # 401, the key
     ("1.3", "401"): "topdeck: the key was not accepted (HTTP 401); paused until you run 'sensei-top meta' again — set a working key with 'sensei-top config --set-topdeck-key KEY' first.",  # noqa: E501
-    # §1.3 401 after a format was fetched
+    # 401 after a format was fetched
     ("1.3", "401 after"): "topdeck: the key was not accepted (HTTP 401) after Standard; Modern was not fetched; paused until you run 'sensei-top meta' again — set a working key with 'sensei-top config --set-topdeck-key KEY' first.",  # noqa: E501
-    # §1.3 403 after a format was fetched
+    # 403 after a format was fetched
     ("1.3", "403 after"): "topdeck: refused (HTTP 403) after Standard; Modern was not fetched; paused until you run 'sensei-top meta' again — re-read TopDeck.gg's API terms first.",  # noqa: E501
-    # §1.3 403 at the first format
+    # 403 at the first format
     ("1.3", "403 at"): "topdeck: refused (HTTP 403) at Standard; nothing fetched; paused until you run 'sensei-top meta' again — re-read TopDeck.gg's API terms first.",  # noqa: E501
-    # §1.3 451 at the first format
+    # 451 at the first format
     ("1.3", "451 at"): "topdeck: refused for legal reasons (HTTP 451) at Standard; nothing fetched; paused until you run 'sensei-top meta' again — open topdeck.gg in your browser and read the notice there first.",  # noqa: E501
-    # §1.3 451 after a format was fetched
+    # 451 after a format was fetched
     ("1.3", "451 after"): "topdeck: refused for legal reasons (HTTP 451) after Standard; Modern was not fetched; paused until you run 'sensei-top meta' again — open topdeck.gg in your browser and read the notice there first.",  # noqa: E501
-    # §1.3 first 429 after a format was fetched
+    # first 429 after a format was fetched
     ("1.3", "429 after"): "topdeck: asked for a pause (HTTP 429, 42 s) after Standard; Modern was not fetched; run 'sensei-top meta --format Modern' after 14:03:10 UTC.",  # noqa: E501
-    # §1.3 first 429 at the first format
+    # first 429 at the first format
     ("1.3", "429 at"): "topdeck: asked for a pause (HTTP 429, 42 s) at Standard; nothing fetched; run 'sensei-top meta' after 14:03:10 UTC.",  # noqa: E501
-    # §1.3 second 429 in a row, this time at the first format
+    # second 429 in a row, this time at the first format
     ("1.3", "429 twice at"): "topdeck: asked for a pause twice in a row (HTTP 429), this time at Standard; nothing fetched; keeping what is stored (24h old); paused until you run 'sensei-top meta' again — not before 14:03:10 UTC.",  # noqa: E501
-    # §1.3 second 429 in a row, this time after a format was fetched
+    # second 429 in a row, this time after a format was fetched
     ("1.3", "429 twice after"): "topdeck: asked for a pause twice in a row (HTTP 429), this time after Standard; Modern was not fetched; paused until you run 'sensei-top meta' again — not before 14:03:10 UTC.",  # noqa: E501
-    # §1.3 hand run, waiting: no attempt
+    # hand run, waiting: no attempt
     ("1.3", "waiting"): "topdeck: waiting until 14:03:10 UTC after HTTP 429; nothing fetched; keeping what is stored (24h old).",  # noqa: E501
-    # §1.3 hand run, paused with a not-before still ahead: no attempt
+    # hand run, paused with a not-before still ahead: no attempt
     ("1.3", "paused ahead"): "topdeck: still paused since 2026-10-05; nothing fetched after HTTP 429; keeping what is stored (24h old); run 'sensei-top meta' again after 14:03:10 UTC.",  # noqa: E501
-    # §1.3 hand run, paused, the attempt succeeds
+    # hand run, paused, the attempt succeeds
     ("1.3", "pause lifted"): "topdeck: 3 tournament events stored; the pause since 2026-10-05 is lifted.",  # noqa: E501
-    # §1.3 paused on 401, 401 again
+    # paused on 401, 401 again
     ("1.3", "401 again"): "topdeck: the key was not accepted again (HTTP 401); still paused since 2026-10-05; keeping what is stored (31h old) — set a working key with 'sensei-top config --set-topdeck-key KEY' before the next run.",  # noqa: E501
-    # §1.3 paused on 403, 403 again
+    # paused on 403, 403 again
     ("1.3", "403 again"): "topdeck: refused again (HTTP 403); still paused since 2026-10-05; keeping what is stored (31h old) — re-read TopDeck.gg's API terms before the next run.",  # noqa: E501
-    # §1.3 paused on 451, 451 again
+    # paused on 451, 451 again
     ("1.3", "451 again"): "topdeck: refused for legal reasons again (HTTP 451); still paused since 2026-10-05; keeping what is stored (31h old) — open topdeck.gg in your browser and read the notice there before the next run.",  # noqa: E501
-    # §1.3 paused on 429, 429 again
+    # paused on 429, 429 again
     ("1.3", "429 again"): "topdeck: asked for a pause again (HTTP 429); still paused since 2026-10-05; keeping what is stored (31h old) — not before 14:03:10 UTC.",  # noqa: E501
-    # §1.3 paused, every format unanswered
+    # paused, every format unanswered
     ("1.3", "paused unanswered"): "topdeck: could not refresh (timed out); still paused since 2026-10-05; keeping what is stored (31h old).",  # noqa: E501
-    # §1.3 paused, answered 401 while the cause is another
+    # paused, answered 401 while the cause is another
     ("1.3", "401 other"): "topdeck: the key was not accepted (HTTP 401); still paused since 2026-10-05; keeping what is stored (31h old) — set a working key with 'sensei-top config --set-topdeck-key KEY' before the next run.",  # noqa: E501
-    # §1.3 paused, answered 403 while the cause is another
+    # paused, answered 403 while the cause is another
     ("1.3", "403 other"): "topdeck: refused (HTTP 403); still paused since 2026-10-05; keeping what is stored (31h old) — re-read TopDeck.gg's API terms before the next run.",  # noqa: E501
-    # §1.3 paused, answered 451 while the cause is another
+    # paused, answered 451 while the cause is another
     ("1.3", "451 other"): "topdeck: refused for legal reasons (HTTP 451); still paused since 2026-10-05; keeping what is stored (31h old) — open topdeck.gg in your browser and read the notice there before the next run.",  # noqa: E501
-    # §1.3 paused, answered 429 while the cause is another
+    # paused, answered 429 while the cause is another
     ("1.3", "429 other"): "topdeck: asked for a pause (HTTP 429); still paused since 2026-10-05; keeping what is stored (31h old) — not before 14:03:10 UTC.",  # noqa: E501
-    # §1.3 the server's own attempt ends a wait
+    # the server's own attempt ends a wait
     ("1.3", "wait over"): "topdeck: 3 tournament events stored; the wait is over.",
 }
 
-# Q13.7's several-formats form (followup3.md:204), copied by script.
+# The catalog's several-formats form, copied by script.
 SEVERAL = "Standard and Pioneer; Modern and Legacy were not fetched"
 
 H = 3600.0
@@ -285,20 +287,20 @@ def _serve(result: RefreshResult) -> RefreshResult:
     return replace(result, by_hand=False)
 
 
-# The holds S3's transitions leave at NOW.
+# The holds the hold rules' transitions leave at NOW.
 # A first 429: three hours from 14:10, with no Retry-After.
 WAIT_429 = _hold(WAITING, 429, since=NOW, not_before=_t(17, 10))
 # A first 503 whose Retry-After (17:10) is later than the hour's floor (15:10).
 WAIT_503 = _hold(WAITING, 503, since=NOW, answers=1, not_before=_t(17, 10))
-# The same after a page was read: the count restarts at 0 (k1).
+# The same after a page was read: the count restarts at 0.
 WAIT_503_READ = _hold(WAITING, 503, since=NOW, answers=0, not_before=_t(17, 10))
 # A wait whose not-before has passed, so the gate let the run through.
 WAITED_429 = _hold(WAITING, 429, since=_t(10), not_before=_t(13))
 WAITED_503 = _hold(WAITING, 503, since=_t(12), answers=1, not_before=_t(13))
-# A second 429 in a row, its Retry-After 17:10: paused from now (Q13.5).
+# A second 429 in a row, its Retry-After 17:10: paused from now.
 PAUSED_429_TWICE = _hold(PAUSED, 429, since=NOW, not_before=_t(17, 10))
 # Two first-request 503s since 13:00 yesterday; the third, at NOW, is 25 h
-# after the first, so the day rule pauses the source (Q13.4, k2).
+# after the first, so the day rule pauses the source.
 DAY_BEFORE = _hold(WAITING, 503, since=_t(13, day=4), answers=2, last_at=_t(12),
                    not_before=_t(13))
 DAY_PAUSED = _hold(PAUSED, 503, since=NOW, answers=3)
@@ -312,7 +314,7 @@ def _paused(cause: int, *, not_before: datetime | None = None) -> Hold:
 
 def _paused_after(cause: int, answered: int, *, not_before: datetime | None = None) -> Hold:
     """The pause a hand run leaves: cause (or a refusal's new cause) and date
-    kept (Q13.3, k3), the latest answer at NOW."""
+    kept, the latest answer at NOW."""
     return _hold(PAUSED, cause, since=PAUSED_SINCE, last_status=answered, last_at=NOW,
                  not_before=not_before)
 
@@ -329,7 +331,7 @@ def _first_503(place: str = INDEX, events: int = 0, *, age_h: float | None = 5) 
 
 
 def _refused(code: int, place: str, events: int = 0) -> RefreshResult:
-    # From no hold, a refusal pauses from the moment it arrives (k4).
+    # From no hold, a refusal pauses from the moment it arrives.
     after = _hold(PAUSED, code, since=NOW)
     return _result(after=after, answer=_http(code, place=place), events=events)
 
@@ -402,7 +404,7 @@ CASES = [
     (("1.2", "403 again"), "meta", NOW, _hand(403, _http(403), _paused_after(403, 403))),
     (("1.2", "401 again"), "meta", NOW, _hand(401, _http(401), _paused_after(401, 401))),
     (("1.2", "451 again"), "meta", NOW, _hand(451, _http(451), _paused_after(451, 451))),
-    # A bare 503 during a pause clears the not-before (lines.md §0).
+    # A bare 503 during a pause clears the not-before.
     (("1.2", "503 again"), "meta", NOW, _hand(503, _http(503), _paused_after(503, 503))),
     (("1.2", "503 again not before"), "meta", NOW,
      _hand(503, _http(503, ra=_t(18, 10)), _paused_after(503, 503, not_before=_t(18, 10)))),
@@ -479,7 +481,8 @@ def test_serve_is_silent_when_the_hold_did_not_move(result, why):
     ids=lambda v: " ".join(v) if isinstance(v, tuple) else None,
 )
 def test_serve_prints_on_every_other_transition(key, result):
-    """lines.md §1.4: every other line serve prints is the meta line."""
+    """Every line serve prints is the meta line, but for section 1.4's
+    entries, whose ending differs."""
     assert render("mtgo", result, surface="serve", now=NOW) == [LINES[key]]
 
 
@@ -545,7 +548,7 @@ _AFTER_N = " after 2 tournament events stored; keeping those; still paused since
 @pytest.mark.parametrize(("key", "surface", "now", "result"), HAND_RUN_ANSWERS,
                          ids=[" ".join(case[0]) for case in HAND_RUN_ANSWERS])
 def test_every_hand_run_answer_takes_its_after_n_form(key, surface, now, result):
-    """followup4.md:83-88: drop "keeping what is stored (31h old)", put
+    """The after-N rule: drop "keeping what is stored (31h old)", put
     "after 2 tournament events stored; keeping those" after the status
     phrase, keep the tail. The catalog's two after-N hand-run entries are
     this rule applied to "403 again" and "generic"."""
@@ -560,10 +563,10 @@ def test_a_source_with_no_lines_is_refused():
         render("fbettega", _result(status="updated"), surface="meta", now=NOW)
 
 
-# TopDeck (§1.3). The catalog's examples: Standard answered with 3 tournament
-# events and Modern was next; a 429 at 14:02:28 whose retryAfterSeconds was
-# 42, so its not-before is 14:03:10, to the second (D18); a stored copy 24h
-# old, and 31h for a hand run during a pause, as §1.2's.
+# TopDeck (section 1.3). The catalog's examples: Standard answered with 3
+# tournament events and Modern was next; a 429 at 14:02:28 whose
+# retryAfterSeconds was 42, so its not-before is 14:03:10, to the second; a
+# stored copy 24h old, and 31h for a hand run during a pause, as section 1.2's.
 STANDARD = "Standard"
 MODERN = "Modern"
 PIONEER = "Pioneer"
@@ -592,12 +595,12 @@ def _td_http(status: int, place: str = STANDARD, *, seconds: float | None = None
 
 TD_TIMED_OUT = Answer(kind=AnswerKind.GENERIC, reason="timed out", at=TD_NOW)
 
-# The holds S3's transitions leave at TD_NOW. TopDeck holds no 503.
+# The holds the hold rules' transitions leave at TD_NOW. TopDeck holds no 503.
 # A first 429: TopDeck's own 42 s.
 TD_WAIT = _hold(WAITING, 429, since=TD_NOW, not_before=TD_NOT_BEFORE, source=TOPDECK)
 # A wait whose not-before has passed, so the gate let the run through.
 TD_WAITED = _hold(WAITING, 429, since=_s(13, 0, 0), not_before=_s(13, 0, 42), source=TOPDECK)
-# A second 429 in a row: paused from now, not before its own 42 s (Q13.5).
+# A second 429 in a row: paused from now, not before its own 42 s.
 TD_TWICE = _hold(PAUSED, 429, since=TD_NOW, not_before=TD_NOT_BEFORE, source=TOPDECK)
 
 
@@ -615,7 +618,7 @@ def _td_stopped(status: int, after: Hold, *, before: Hold | None = None,
 
 
 def _td_refused(code: int, *, fetched: bool = False) -> RefreshResult:
-    # From no hold, a refusal pauses from the moment it arrives (k4).
+    # From no hold, a refusal pauses from the moment it arrives.
     return _td_stopped(code, _hold(PAUSED, code, since=TD_NOW, source=TOPDECK), fetched=fetched)
 
 
@@ -628,7 +631,7 @@ def _td_paused(cause: int, *, last_status: int | None = None, last_at: datetime 
 
 def _td_paused_after(cause: int, answered: int, *, not_before: datetime | None = None) -> Hold:
     """The pause a hand run leaves: cause (or a refusal's new cause) and date
-    kept (Q13.3, k3), the latest answer at TD_NOW."""
+    kept, the latest answer at TD_NOW."""
     return _td_paused(cause, last_status=answered, last_at=TD_NOW, not_before=not_before)
 
 
@@ -646,7 +649,7 @@ def _td_hand(cause: int, answer: Answer, after: Hold | object | None = _UNCHANGE
 def _td_success(before: Hold | None = None, *, unanswered: tuple[str, ...] = (),
                 skipped: int = 0) -> RefreshResult:
     """A run that completed: Standard's 3 events stored, and Modern's too
-    unless it went unanswered. A completed run lifts the hold (k6)."""
+    unless it went unanswered. A completed run lifts the hold."""
     answered = (STANDARD,) if unanswered else (STANDARD, MODERN)
     return _result(status="updated", before=before, after=None, events=3, skipped=skipped,
                    answered=answered, unanswered=unanswered)
@@ -703,7 +706,7 @@ TOPDECK_CASES = [
 TD_CASE = {case[0]: case for case in TOPDECK_CASES}
 
 # The lines printed ahead of an entry's own: "no answer for" follows the
-# success line, as cli.py has always printed it (S3, "as today").
+# success line, as cli.py has always printed it.
 TD_AHEAD = {("1.3", "unanswered"): [TOPDECK_LINES["1.3", "success"]]}
 
 
@@ -759,11 +762,11 @@ def test_serve_is_silent_for_topdeck_when_the_hold_did_not_move(result, why):
     ids=lambda v: " ".join(v) if isinstance(v, tuple) else None,
 )
 def test_topdeck_prints_the_same_line_on_serve(key, result):
-    """S3: TopDeck's lines are the same on both surfaces."""
+    """TopDeck's lines are the same on both surfaces."""
     assert render("topdeck", _serve(result), surface="serve", now=TD_NOW) == [TOPDECK_LINES[key]]
 
 
-# Every §1.3 hand-run answer but the generic one: a run where every format
+# Every TopDeck hand-run answer but the generic one: a run where every format
 # went unanswered stored nothing.
 TD_HAND_RUN_ANSWERS = [
     case for case in TOPDECK_CASES
@@ -776,8 +779,8 @@ _TD_AFTER_N = " after 3 tournament events stored; keeping those; still paused si
 @pytest.mark.parametrize(("key", "surface", "now", "result"), TD_HAND_RUN_ANSWERS,
                          ids=[" ".join(case[0]) for case in TD_HAND_RUN_ANSWERS])
 def test_every_topdeck_hand_run_answer_takes_its_after_n_form(key, surface, now, result):
-    """§0's after-N rule, which composes with every hand-run line
-    (followup4.md:85-88): Standard's 3 events stored, then Modern answered."""
+    """The after-N rule, which composes with every hand-run line: Standard's
+    3 events stored, then Modern answered."""
     expected = TOPDECK_LINES[key].replace(_KEPT, _TD_AFTER_N)
     assert expected != TOPDECK_LINES[key]
     result = replace(result, events=3, answered=(STANDARD,), unfetched=(),
@@ -792,8 +795,8 @@ def test_every_topdeck_hand_run_answer_takes_its_after_n_form(key, surface, now,
     ids=["pause lifted", "wait over"],
 )
 def test_no_answer_follows_the_line_that_lifts_the_hold(key, before, surface):
-    """k6 (followup4.md:256-262): the "no answer for" line after the lifted
-    line is "the existing per-format handling doing its job"."""
+    """The "no answer for" line after the lifted line is the per-format
+    handling doing its job, as after any completed run."""
     result = replace(_td_success(before, unanswered=(MODERN,)), by_hand=surface == "meta")
     assert render("topdeck", result, surface=surface, now=TD_NOW) == [
         TOPDECK_LINES[key], TOPDECK_LINES["1.3", "unanswered"]
@@ -801,7 +804,7 @@ def test_no_answer_follows_the_line_that_lifts_the_hold(key, before, surface):
 
 
 def test_a_429_that_names_no_wait_prints_none():
-    """Q13.7: "(HTTP 429)" without ", 42 s" when the wait is the app's own
+    """"(HTTP 429)" without ", 42 s" when the wait is the app's own
     hour."""
     hold = replace(TD_WAIT, not_before=TD_NOW + timedelta(hours=1))
     result = _result(after=hold, answer=_td_http(429), age_h=24, unfetched=(MODERN,))
@@ -821,7 +824,7 @@ def test_a_429_whose_wait_is_only_in_the_header_names_it():
 
 @pytest.mark.parametrize("name", ["403 after", "429 after"])
 def test_several_formats_on_each_side(name):
-    """Q13.7: "Standard and Pioneer; Modern and Legacy were not fetched", and
+    """"Standard and Pioneer; Modern and Legacy were not fetched", and
     the hint names every format not fetched."""
     _, _, now, case = TD_CASE["1.3", name]
     result = replace(case, answered=(STANDARD, PIONEER), unfetched=(LEGACY,))
@@ -853,7 +856,7 @@ def test_a_format_left_unanswered_before_a_first_answer_keeps_the_at_form():
 
 
 def test_a_topdeck_time_on_another_date_carries_it():
-    """§0's date rule, to the second: 42 s after 23:59:50 is 00:00:32 on the
+    """The date rule, to the second: 42 s after 23:59:50 is 00:00:32 on the
     6th."""
     late = _s(23, 59, 50)
     hold = replace(TD_WAIT, since=late, not_before=_s(0, 0, 32, day=6))
@@ -874,8 +877,8 @@ def test_a_topdeck_wait_off_the_second_prints_rounded_up():
 
 
 def test_several_formats_unanswered_are_listed_as_cli_py_listed_them():
-    """S3, "as today": cli.py printed the error's formats, ", "-joined, and
-    a ``--format`` for each."""
+    """As cli.py printed them: the error's formats, ", "-joined, and a
+    ``--format`` for each."""
     result = _td_success(unanswered=(PIONEER, MODERN))
     expected = (TOPDECK_LINES["1.3", "unanswered"].replace("for Modern;", "for Pioneer, Modern;")
                 .replace("--format Modern'", "--format Pioneer --format Modern'"))
@@ -891,8 +894,8 @@ def test_several_formats_unanswered_are_listed_as_cli_py_listed_them():
     ids=["success", "pause lifted", "wait over"],
 )
 def test_skipped_events_are_counted_as_cli_py_counted_them(key, before):
-    """cli.py:507-508, the success entry's source: ", 2 skipped" after the
-    count, as mtgo.com's success line has it."""
+    """", 2 skipped" after the count, as cli.py printed it and as mtgo.com's
+    success line has it."""
     skipped = LINES["1.1", "success"].removeprefix("mtgo: 4 tournament events stored")[:-1]
     expected = TOPDECK_LINES[key].replace("events stored", "events stored" + skipped)
     result = _td_success(before, skipped=2)
@@ -900,9 +903,8 @@ def test_skipped_events_are_counted_as_cli_py_counted_them(key, before):
 
 
 def test_topdeck_fresh_prints_as_cli_py_printed_it():
-    """Not in the catalog; S3 keeps TopDeck's lines "as today", and cli.py
-    printed TopDeck's fresh line with the age to a whole hour, where
-    mtgo.com's has a tenth."""
+    """Not in the catalog, so TopDeck's fresh line keeps cli.py's wording:
+    the age to a whole hour, where mtgo.com's has a tenth."""
     expected = LINES["1.1", "fresh"].replace("mtgo:", "topdeck:").replace("1.2h", "5h")
     result = _result(status="fresh", age_h=5)
     assert render("topdeck", result, surface="meta", now=TD_NOW) == [expected]
@@ -917,7 +919,7 @@ def test_topdeck_with_no_stored_copy_reads_no_cached_copy(name):
 
 
 def test_a_topdeck_503_is_never_an_answer():
-    """S5: TopDeck's 5xx is "no answer for" its format, never a hold."""
+    """TopDeck's 5xx is "no answer for" its format, never a hold."""
     result = _result(answer=_td_http(503), age_h=24, unfetched=(MODERN,))
     with pytest.raises(ValueError, match="no answer for"):
         render("topdeck", result, surface="meta", now=TD_NOW)

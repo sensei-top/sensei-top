@@ -102,9 +102,9 @@ def test_event_label_comes_from_header_context():
 # --- labeled inline events (human-draft fixture) ----------------------------
 #
 # "[UnityCrossThreadLogger]Draft.Notify {...}" carries its label on the same
-# line as its payload: no "==>" arrow, no header context. These lines used to
-# be discarded outright, which is why the draft tab stayed blank for a human
-# (Premier/Traditional/Cube) draft. Expectations below are read off the
+# line as its payload: no "==>" arrow, no header context. Discarding these lines
+# would leave a human (Premier/Traditional/Cube) draft with no events.
+# Expectations below are read off the
 # fixture, never off the parser (AGENTS.md non-negotiable #8).
 
 HUMAN_DRAFT_FIXTURE = Path(__file__).parent / "fixtures" / "human_draft_session.log"
@@ -395,9 +395,9 @@ def test_segment_lines_warns_on_a_dropped_pending(caplog):
 
 # --- timestamp parsing ------------------------------------------------------
 #
-# A stamp below that is one of plan 3's S9 capture-table examples is a real
-# header from header_languages.log; the rest are synthetic, built in the
-# captured shapes.
+# A stamp below that is one of the capture table's examples
+# (docs/arena-log.md, "Timestamps") is a real header from
+# header_languages.log; the rest are synthetic, built in the captured shapes.
 
 
 def _time_under(stamp: str, hint: str | None) -> str | None:
@@ -543,7 +543,7 @@ def test_a_stamp_that_is_no_date_in_either_order_is_in_no_shape():
     ("stamp", "expected"),
     [
         ("2026-10-06 오후 2:38:24", "2026-10-06T14:38:24"),   # captured
-        # 오전 (AM) is in no capture: accepted by symmetry with 오후 (plan 3, D12)
+        # 오전 (AM) is in no capture: accepted by symmetry with 오후
         ("2026-10-06 오전 9:38:24", "2026-10-06T09:38:24"),
         ("2026-10-06 오전 12:05:00", "2026-10-06T00:05:00"),
         ("2026-10-06 오후 12:05:00", "2026-10-06T12:05:00"),
@@ -571,8 +571,8 @@ def test_a_year_first_header_replaces_the_previous_headers_time():
 
 
 def test_an_impossible_date_never_keeps_the_previous_headers_time():
-    # A day-first log read as mdy: the second header's day is above 12. It
-    # used to leave the first header's time in place for its entries.
+    # A day-first log read as mdy: the second header's day is above 12. Its
+    # entries must not keep the first header's time.
     lines = [
         UNITY_PREFIX + "06/10/2026 23:59:58",
         '{"a": 1}',
@@ -722,8 +722,9 @@ def test_restore_carry_still_takes_two_values():
 # header_languages.log was captured on 2026-10-06 by switching Arena's in-game
 # language: one English response, then per language one DeckUpsertDeckV3
 # response and one ClientToGreuimessage event. The pairs, in file order, are
-# Japanese, Korean, Spanish, German, then Italian and French; matched to S9's
-# capture table by the second each example shows and its payload's LastPlayed.
+# Japanese, Korean, Spanish, German, then Italian and French; matched to the
+# capture table (docs/arena-log.md, "Timestamps") by the second each example
+# shows and its payload's LastPlayed.
 HEADER_LANGUAGES = Path(__file__).parent / "fixtures" / "header_languages.log"
 HEADER_RELAUNCH = Path(__file__).parent / "fixtures" / "header_relaunch.log"
 _PAIR_SHAPES = [
@@ -776,7 +777,7 @@ def test_year_first_and_english_entries_right_under_mdy():
     assert [e.logged_at for e in year_first] == _payload_times(year_first)
     assert [e.label for e in year_first] == _PAIR_LABELS * 2
     # The English response ({"MatchesV3": []}) carries no time of its own: its
-    # stamp is S9's "10/6/2026 2:37:04 PM", and its date is the session's,
+    # stamp is the capture table's "10/6/2026 2:37:04 PM", and its date is the session's,
     # which the Japanese response's LastPlayed fixes.
     session_date = _payload_times(year_first)[0][:10]
     assert english.label == "EventGetActiveMatches"
@@ -786,7 +787,7 @@ def test_year_first_and_english_entries_right_under_mdy():
 
 def test_header_is_each_captured_stamp_exactly_as_written():
     entries = segment_lines(_lines(HEADER_LANGUAGES), "dmy")
-    # S9's capture table: the response of each language whose example it shows
+    # The capture table: the response of each language whose example it shows
     assert [entries[i].header for i in (1, 3, 5, 7)] == [
         "2026/10/06 14:37:42",
         "2026-10-06 오후 2:38:24",
@@ -804,5 +805,5 @@ def test_relaunch_request_before_the_first_header_has_no_time_and_no_header(capl
     # The relaunch came up in Portuguese: day first, on the capture day.
     assert [_shape_of(e.header) for e in responses] == ["slash-24h", "slash-24h"]
     assert all(e.logged_at and e.logged_at.startswith("2026-10-06T") for e in responses)
-    # Every digit-led prefixed line in it is a captured shape (S9's Facts).
+    # Every digit-led prefixed line in it is a captured shape.
     assert not caplog.records

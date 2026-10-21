@@ -1,82 +1,18 @@
-"""Coach evidence — the population every coaching report reasons over, and
-a first layer of rollups on top of it.
+"""Coach evidence: the one match population every coach report reasons
+over, and the rollups on top of it. Every rollup draws from that same set,
+so no two lines of a report can disagree about which matches counted.
 
-``build_coach_evidence`` defines *the* population once — every rollup below
-draws from the same filtered match set, so a number on one line of a report
-can never silently disagree with another about which matches counted.
-A match is in it when it is a completed Constructed match with a format:
-``v_match_format.format`` (the log's, else the user's MTGO pick, else the
-format its revealed cards fit, ``match_format_inference``; plan 13, D6) is
-not NULL. Arena is first asked about its event, three exclusions:
+The population and every exclusion from it: docs/coach.md, "Scope". Which
+sections span all of it and which only the report format's window since its
+latest reset: docs/coach.md, "The two windows". Each rollup:
+docs/coach.md, "The evidence sections".
 
-* ``event_id IS NULL`` — a truncated session that never got one recorded.
-  Genuinely rare on Arena; kept because ``event_id`` is otherwise trusted
-  completely, and a future gap in it should read as a gap, not silently
-  vanish.
-* ``event_id`` in ``_EXCLUDED_EVENTS`` — events that are not a real ladder
-  result (``DualColorPrecons``, a preconstructed-deck event).
-* ``_is_limited_event(event_id)`` — a Limited queue (Quick, Premier,
-  Traditional, Cube or Pick-Two Draft), out of scope for a Constructed-focused report.
-
-MTGO writes no ``event_id`` (``projector/mtgo/project.py`` always inserts
-``NULL``), so it has no event to ask that of. Its ``matches.deck_id`` is
-``NULL`` too, and MTGO's ``decks`` rows come from the exported deck files
-(``projector/mtgo/decks.py``), reached only through the user's own pick
-(``mtgo_match_pick``, read through ``v_match_deck``).
-
-Then, for either client, a match with no format is excluded, never counted
-under a guessed one (rule 4): an MTGO match under the reason its inference
-gave (``archetypes/classify.py``'s ``FORMAT_REASONS``: ``unresolved_cards``,
-``unknown_legality``, ``no_fit``, ``too_few_cards``, ``ambiguous``), anything
-else under ``no_format``. A kept MTGO match carries ``deck_id = NULL`` until
-the user picks its deck: it counts in the skill sections but not in
-``by_deck`` (rule 4 forbids inventing a deck identity for it), and ``gaps``
-says so whenever at least one such match is included. With a pick it counts
-under that deck like an Arena match.
-
-Every match that survives those exclusions is the population.
-Every exclusion reason that actually removed at least one match earns its
-own line in ``gaps``, with a count — silence about an exclusion would look
-like the report never noticed those matches existed.
-
-A report is built for one format, ``fmt`` (plan 13, S9), and two kinds of
-section sit on that one population. The *skill* sections (``overall``,
-``overall_games``, ``g1``/``post_board``, ``on_play``/``on_draw``,
-``mulligans``, ``leaks``, ``deck_leaks``, ``turning_points``, ``examples``,
-``by_source``) span all of it, every format played, because how you
-mulligan or which patterns cost you games are habits rather than format
-knowledge. The *format* sections (``by_deck``, ``by_role``, ``by_opponent``,
-``decklists``, ``field``) cover only ``fmt``'s matches since
-``window_start(latest fmt reset)`` — the same never-window-across-a-ban rule
-``guide/window.py`` exists to enforce, applied here because an
-opponent-archetype rate from before the archetype changed is void, not
-merely stale (``guide/field.py``'s own docstring). ``format_population``
-counts that set; ``format_counts`` names every format in the population.
-
-Every match report behind either kind is built under its own format's
-consensus window (``guide/window.py``'s ``consensus_window_resolver``), the
-window ``review/leaks.py::find_leaks(consensus_window=...)`` gives the same
-match, so the two share ``report_cache`` keys.
-
-``_build_match_reports`` returns a private ``match_id -> MatchReport`` map
-rather than a field on ``CoachEvidence``: match ids must never appear on the
-evidence at all (privacy), so they stay inside a private helper's return
-value instead. A caller needing per-match reports again can call this same
-helper over the same population and cache set rather than paying for a
-second scan — the cross-module reuse of a leading-underscore helper already
-has precedent here (``_classify_own_deck``, ``_card_colors_by_name``).
-
-**The one exception to "match ids must never appear":**
-``ExampleGame.match_id``. The report carries a handful of worked examples — real
-games the report can point at — and the Coach tab needs a real match id to
-link each one to its match page. That one field is the single place a match
-id is allowed anywhere on this evidence; every other rollup still resolves
-through a deck identity, an opponent archetype key, or a bare count. The
-prompt builder (``coach/narrative.py``) must never render
-``ExampleGame.match_id`` into a prompt — it exists for the UI link only, and
-``tests/test_coach_evidence.py``'s privacy test asserts every other string on
-the evidence contains no match id, opponent name, opponent user id, or deck
-GUID, carving out only that one field.
+No opponent name, opponent user id or deck GUID appears anywhere on
+``CoachEvidence``, and no match id except ``ExampleGame.match_id`` (see
+``ExampleGame``): every rollup resolves through a deck identity, an
+opponent archetype key or a count. That is why ``_build_match_reports``
+returns its ``match_id -> MatchReport`` map rather than storing it on the
+evidence.
 """
 
 from __future__ import annotations
@@ -113,10 +49,8 @@ from sensei_top.review.narrative import _finding_line, _play_lines, _turn_lines
 from sensei_top.review.snapshot import _classify_own_deck, build_snapshot
 
 # Arena's event-name prefix for each draft queue: "QuickDraft_SOS_20260831".
-# Read off real captures when the draft assistant parsed them (archive/draft,
-# projector/draft.py); an unrecognized prefix is not Limited. "PickTwoDraft"
-# came from a real database event id (the one tests/test_table_queues.py
-# records), not from the draft captures, which did not supply it.
+# Read off real captures, "PickTwoDraft" off a real event id (the one
+# tests/test_table_queues.py records). An unrecognized prefix is not Limited.
 _LIMITED_PREFIXES = frozenset({"QuickDraft", "PremierDraft", "TradDraft", "CubeDraft",
                                 "PickTwoDraft"})
 
@@ -148,9 +82,8 @@ class Rate:
 
     ``rate`` is ``None`` at ``n == 0`` — never ``0.0``, which would read as
     "always loses" rather than "never happened" (rule 4). ``anecdotal`` flags
-    every rate below ``MIN_SAMPLE`` the same way the leak finder already
-    gates its own comparisons, so a caller rendering this can grey out or
-    caveat a rate on sight rather than re-deriving the threshold itself.
+    every rate below ``MIN_SAMPLE``, the leak finder's own gate, so a caller
+    can caveat a rate without re-deriving the threshold.
     """
 
     wins: int
@@ -186,12 +119,10 @@ class MatchupLine:
 @dataclass(frozen=True, slots=True)
 class LeakLine:
     """One ``review/leaks.py::Leak``, re-shaped through this package's own
-    ``Rate`` so a coach report renders every number — leak or otherwise —
-    through the same ``format_rate``. ``present``/``absent`` are rebuilt from
-    ``Leak``'s own win-rate-and-n pair (``round(win_rate * n)`` for the win
-    count Leak itself never stores, since it only ever kept the rate) rather
-    than carrying ``Leak`` itself, so this package's public shape never leaks
-    ``review/leaks.py``'s own dataclass to a caller that shouldn't need it.
+    ``Rate`` so every number renders through ``format_rate``.
+    ``present``/``absent`` are rebuilt from ``Leak``'s win rate and n: the
+    win count is ``round(win_rate * n)``, since ``Leak`` stores only the
+    rate. ``Leak`` itself, with its match ids, never reaches a caller.
     """
 
     code: str
@@ -213,8 +144,7 @@ class TurningBucket:
     """One (stage, severity) cell of the turning-point breakdown across every
     lost population game — always one of exactly 6 cells (3 stages x 2
     severities), even at ``games == 0``, so a caller can render a fixed grid
-    rather than guess which cells exist this time (``mulligans``' own
-    fixed-two-bucket precedent, extended to six)."""
+    rather than guess which cells exist this time."""
 
     stage: str      # "early" (your turns 1-3) / "mid" (4-6) / "late" (7+)
     severity: str    # the turning_point finding's own Severity value
@@ -223,9 +153,12 @@ class TurningBucket:
 
 @dataclass(frozen=True, slots=True)
 class ExampleGame:
-    """One worked example game, fully rendered — the only place a match id
-    appears anywhere on ``CoachEvidence`` (module docstring). ``opponent`` is
-    always the opponent's *deck label*, never a player name or handle."""
+    """One worked example game, fully rendered. ``match_id`` is the one match
+    id anywhere on ``CoachEvidence``, kept only so the Coach page can link the
+    example to its match: ``coach/narrative.py`` never renders it into a
+    prompt, and ``tests/test_coach_evidence.py``'s privacy tests carve out
+    this field alone. ``opponent`` is always the opponent's *deck label*,
+    never a player name or handle."""
 
     match_id: str
     date: str | None
@@ -242,9 +175,8 @@ class ExampleGame:
 
 @dataclass(frozen=True, slots=True)
 class DeckList:
-    """One kept ``by_deck`` identity's current 75, read the same way
-    ``brief/narrative.py::_own_seventy_five_block`` reads its own deck's —
-    ``(count, name)`` pairs, sorted by name. A grp_id with no matching
+    """One kept identity's current 75 as ``(count, name)`` pairs, sorted by
+    name, two printings of one card merged. A grp_id with no matching
     ``cards`` row is counted in ``unnamed`` rather than rendered as ``"?"``
     (rule 4): the copy count is real, the name just isn't known yet."""
 
@@ -267,8 +199,6 @@ class FieldLine:
 class CoachEvidence:
     """The cross-deck report's own evidence base — never persisted itself
     (``coach/store.py`` persists the *report* written from this, not this).
-    ``fmt`` and ``format_counts`` sit after ``gaps`` only because they were
-    added after it; ``format_counts`` keeps its empty default.
     """
 
     source: str
@@ -306,11 +236,10 @@ class _PopMatch:
     """One population match's own fields, carried through every rollup below
     instead of re-querying ``matches`` per rollup.
 
-    ``source`` defaults to ``"arena"`` and ``format`` to ``None`` only so
-    every pre-existing direct construction (mostly in tests, predating MTGO's
-    and formats' own inclusion here) keeps working unchanged; ``_population``
-    below always passes both explicitly, from ``matches.source`` and
-    ``v_match_format.format`` (never ``None`` for a population match).
+    ``source`` and ``format`` default only for a direct construction (the
+    tests build some); ``_population`` always passes both, from
+    ``matches.source`` and ``v_match_format.format`` (never ``None`` for a
+    population match).
     """
 
     match_id: str
@@ -327,11 +256,9 @@ def _rate(wins: int, n: int) -> Rate:
 
 
 def _build_by_source(population_rows: list[_PopMatch]) -> dict[str, Rate]:
-    """The same population, split the other way from ``by_deck`` — by
-    ``matches.source`` rather than by deck identity. Always both keys, even
+    """The population split by ``matches.source``. Always both keys, even
     at ``n == 0``, so a caller renders a fixed two-row table rather than
-    guessing which source this report actually has data for (``mulligans``'
-    own fixed-bucket precedent)."""
+    guessing which source this report actually has data for."""
     by_source: dict[str, list[_PopMatch]] = {"arena": [], "mtgo": []}
     for m in population_rows:
         by_source[m.source].append(m)
@@ -474,7 +401,7 @@ def _own_archetype(
     ``deck_id`` under this identity from its full 60, event_id-less (rule 4 —
     an event-conditioned format guess is not this function's job), against
     ``fmt``'s definitions: ``by_deck`` keeps only identities whose own format
-    (``identity_format``, D15) is ``fmt``."""
+    (``identity_format``) is ``fmt``."""
     if not identity.deck_ids:
         return None
     placeholders = ",".join("?" for _ in identity.deck_ids)
@@ -532,26 +459,19 @@ def _build_by_deck(
     fmt: str,
 ) -> tuple[tuple[DeckLine, ...], list[str], list[tuple[str, DeckIdentity, list[_PopMatch]]]]:
     """A format section: one line per deck whose own format
-    (``guide/deck.py::identity_format``, D15) is ``fmt``, over ``format_rows``
+    (``guide/deck.py::identity_format``) is ``fmt``, over ``format_rows``
     (``fmt``'s matches since its window). A deck of another format gets no
     line even when some of its matches were played as ``fmt``; those
     matches still count in the other ``fmt`` records, and a gap line says
     how many.
 
-    ``colors_by_name`` is ``_card_colors_by_name(conn)``'s own table,
-    passed in rather than scanned here — the caller shares one scan of
-    ``cards`` across this and every ``build_match_report`` call below.
-    ``identities`` is likewise ``list_identities(conn)``'s own result,
-    computed once by the caller: ``_build_examples`` needs every identity's
-    label, not just the kept top-``TOP_DECKS`` ones, so ``build_coach_evidence``
-    calls ``list_identities`` exactly once and shares it here rather than
-    this function scanning ``v_deck_identity`` again for its own subset.
+    ``colors_by_name`` and ``identities`` are the caller's one scan of
+    ``cards`` and of ``list_identities``, shared with the report builds and
+    ``_build_examples`` rather than repeated here.
 
     Returns the kept ``(label, identity, rows)`` triples as a third value,
-    beyond the usual ``(lines, gaps)`` pair — ``_build_decklists`` needs the
-    same top-``TOP_DECKS`` identities and their own rows this function
-    already computed. (``deck_leaks`` is a skill section and ranks its own
-    decks over the whole population instead.)
+    for ``_build_decklists``. (``deck_leaks`` is a skill section and ranks
+    its own decks over the whole population instead.)
     """
     candidates = []
     other_format_matches = 0
@@ -617,33 +537,26 @@ def _build_match_reports(
     view_cache: dict,
     report_cache: ReportCache,
 ) -> dict[str, MatchReport]:
-    """Every population match's own post-game report, built once. Private on
-    purpose (see module docstring) — reusing this over the same population
-    and cache pair costs nothing extra; a fresh call over a different
-    population still shares the caches passed in.
+    """Every population match's own post-game report, built once, keyed by
+    match id. Private, and returned rather than stored on ``CoachEvidence``,
+    because a match id must not appear on the evidence (module docstring).
+    A second call over the same rows and caches builds nothing again.
 
     ``consensus_window`` maps a format to its consensus window
     (``guide/window.py::consensus_window_resolver``) and must be the *same*
     resolver passed to every other ``find_leaks``/``build_snapshot`` call
     this module makes. Each match is built under its own format's window
-    (``_match_window``); it is required (no default) so a new call site here
-    cannot silently forget it the way ``review/snapshot.py:632`` and
-    ``api/sql.py:142`` once did.
+    (``_match_window``). It has no default, so a new call site cannot fall
+    back to no window and read an opponent consensus across a reset.
 
-    ``report_cache`` is filled here and reused across it: a caller pairing
-    this with a later ``find_leaks(..., report_cache=...)`` call over the
-    same matches builds nothing twice, since a ``MatchReport`` depends only
-    on ``match_id``, its window and the database, never on either caller's
-    own scoping (``find_leaks``'s own docstring). The key is
-    ``review/leaks.py::report_cache_key`` — match, window and the current
-    language — the same one ``find_leaks`` reads, so a report a Portuguese
-    page built is never what an English prompt gets.
+    ``report_cache`` is keyed by ``review/leaks.py::report_cache_key``
+    (match, window, language), the key ``find_leaks`` reads, so a later
+    ``find_leaks(..., report_cache=...)`` over the same matches builds
+    nothing twice, and a report a Portuguese page built is never what an
+    English prompt gets.
 
-    ``build_match_report`` only returns ``None`` when the match itself is
-    missing from ``matches`` (its own docstring) — unreachable for a
-    match_id this module already read from that same table — but skipping a
-    ``None`` here rather than raising keeps this defensive without pretending
-    to explain an absence that cannot happen.
+    A ``None`` report (the match missing from ``matches``, which cannot
+    happen for a row just read from it) is skipped, not raised.
     """
     reports: dict[str, MatchReport] = {}
     for m in rows:
@@ -689,22 +602,16 @@ def _build_by_role(
         bucket[1] += 1
         if m.result == "win":
             bucket[0] += 1
-    # Unlike `mulligans` below, a role bucket that never occurred (e.g. no
-    # "mixed" match in this population) is omitted rather than shown at
-    # n=0 — the role vocabulary isn't a fixed two-way split the way kept/
-    # mulliganed is, so an empty "control": Rate(n=0) line would just be
-    # noise for whichever roles this population never produced.
+    # A role that never occurred is omitted, not shown at n=0: unlike
+    # kept/mulliganed, the role vocabulary isn't a fixed split.
     return {role: _rate(wins, n) for role, (wins, n) in counts.items() if n > 0}
 
 
 def _build_mulligans(conn: sqlite3.Connection, match_ids: tuple[str, ...]) -> dict[str, Rate]:
-    """Game-level, scoped to this report's own match population instead of
-    one deck identity's ``deck_ids`` — ``guide/play.py``'s ``mulligan_split``
-    bucket definitions (``self_mulligans == 0`` vs. ``> 0``, games with no
-    recorded count excluded), the same definition ``mulligan_record`` itself
-    now calls. Both keys are always present, even at n=0 — unlike ``by_role``
-    above this is a fixed two-way split where "no mulliganed games in this
-    population" is itself worth being able to show rather than omit.
+    """Game-level, over this report's match population, with
+    ``guide/play.py::mulligan_split``'s buckets (``self_mulligans == 0``
+    vs. ``> 0``, games with no recorded count excluded). Both keys are
+    always present, even at n=0: "no mulliganed games" is worth showing.
     """
     empty = {"kept_seven": _rate(0, 0), "mulliganed": _rate(0, 0)}
     if not match_ids:
@@ -719,30 +626,21 @@ def _build_by_opponent(
 ) -> tuple[tuple[MatchupLine, ...], list[str], dict[str, tuple[int, int]]]:
     """Match-level rate per opponent archetype, over the format window only.
 
-    Resolved from ``v_match_opponent.opponent_key``/``opponent_label`` —
-    the same view ``v_matchup_winrate`` and ``guide/field.py``'s
-    ``_personal_rate_rows`` are themselves built on — rather than
-    re-deriving archetype resolution here. Unlike ``_personal_rate_rows``,
-    which groups on ``archetype_name`` alone and so *deliberately* drops a
-    manually-labelled match with no matching classifier verdict (its own
-    docstring), this groups on ``opponent_key``: a manual pick that named a
-    real archetype (``api/routes/matches.py``'s ``set_opponent_deck``, which
-    sets ``archetype_key`` from the chosen candidate) produces
+    Groups on ``v_match_opponent.opponent_key``, not ``archetype_name``
+    (which only an automatic classification fills): a manual pick that named
+    a real archetype (``api/routes/matches.py``'s ``set_opponent_deck``,
+    which sets ``archetype_key`` from the chosen candidate) produces
     ``'archetype:' + archetype_key`` — the same key an automatic
-    classification of the same archetype would produce — so the two merge
-    correctly. A manual pick with no archetype at all (the ``Rogue`` label)
-    produces ``'manual:Rogue'``, which the ``LIKE 'archetype:%'`` filter
-    below excludes, landing it in the unclassified gap line rather than
-    being named — same treatment as a colour-only or fully unknown opponent.
+    classification of the same archetype would produce — so the two merge.
+    A manual pick with no archetype at all (the ``Rogue`` label) produces
+    ``'manual:Rogue'``, which the ``LIKE 'archetype:%'`` filter below
+    excludes, landing it in the unclassified gap line rather than being
+    named — same treatment as a colour-only or fully unknown opponent.
 
     Returns a third value beyond the usual ``(lines, gaps)`` pair: every
-    opponent_key's own ``(wins, n)``, not just the top ``TOP_OPPONENTS`` kept
-    as ``MatchupLine``s. ``_build_field``'s own ``your_rate`` needs a rate
-    for any archetype key the field corpus names — including one this
-    report's opponent table itself cut for sample size — and an unfaced key
-    needs to resolve to ``_rate(0, 0)`` rather than being missing entirely;
-    recomputing this same scan a second time just to get it would repeat
-    the exact grouping this function already did.
+    opponent_key's own ``(wins, n)``, not just the top ``TOP_OPPONENTS``,
+    for ``_build_field``'s ``your_rate`` against any archetype the field
+    names, including one this table cut for sample size.
     """
     gaps: list[str] = []
     if not format_rows:
@@ -778,10 +676,7 @@ def _build_by_opponent(
     variants_by_key: dict[str, tuple[tuple[str, int], ...]] = {}
     candidates = []
     for key, mids in match_ids_by_key.items():
-        # Every row sharing one opponent_key should already carry the same
-        # opponent_label (same archetype_key names the same archetype
-        # whether reached by manual pick or automatic classification); the
-        # vote just picks the label a rename left the majority on. A tie
+        # The vote picks the label a rename left the majority on. A tie
         # (e.g. one automatic classification plus one manual override with
         # different wording) breaks alphabetically rather than by row
         # order, which SQLite does not guarantee for a query with no
@@ -789,9 +684,7 @@ def _build_by_opponent(
         label = min(label_votes[key].items(), key=lambda kv: (-kv[1], kv[0]))[0]
         wins = sum(1 for mid in mids if results_by_id.get(mid) == "win")
         full_counts[key] = (wins, len(mids))
-        # Every distinct label this key has been given, count desc then
-        # name — the same order-independent tie-break as the vote above,
-        # just kept instead of collapsed to one winner.
+        # Every label this key has carried, with the vote's tie-break.
         variants_by_key[key] = tuple(
             sorted(label_votes[key].items(), key=lambda lv: (-lv[1], lv[0]))
         )
@@ -835,20 +728,12 @@ def _build_leaks(
     view_cache: dict,
     report_cache: ReportCache,
 ) -> tuple[list[Leak], tuple[LeakLine, ...], list[str]]:
-    """The population's own recurring patterns, ranked by win-rate gap —
-    ``find_leaks`` already returns them in that order, so this only
-    truncates to the top ``TOP_LEAKS``.
+    """The population's own recurring patterns, top ``TOP_LEAKS`` of
+    ``find_leaks``' gap-ranked list. ``consensus_window`` must be the one
+    resolver (``_build_match_reports``).
 
-    ``consensus_window`` must be the same per-format resolver passed to
-    ``_build_match_reports``/``_build_deck_leaks``/``_build_examples`` — see
-    ``_build_match_reports``'s docstring; sharing ``report_cache`` across
-    them only avoids rebuilding a report when every caller agrees on it.
-
-    Returns the raw kept ``Leak`` objects too, beyond the rendered
-    ``LeakLine`` tuple: ``_build_examples``' own selection needs
-    ``Leak.match_ids_with`` and ``Leak.win_rate_with``/``win_rate_without``,
-    neither of which survives into ``LeakLine`` (module docstring's privacy
-    rule keeps a match id off every public shape but ``ExampleGame``).
+    Returns the raw kept ``Leak`` objects too: ``_build_examples`` needs
+    ``Leak.match_ids_with``, which stays off ``LeakLine`` (module docstring).
     """
     all_leaks = find_leaks(
         conn, match_ids=match_ids, source=source, consensus_window=consensus_window,
@@ -881,14 +766,10 @@ def _build_deck_leaks(
 ) -> tuple[tuple[DeckLeaks, ...], list[str]]:
     """Per-deck leak rollups, a skill section: ``kept_decks`` is the top
     ``TOP_DECKS`` identities by whole-population match count (every format,
-    not ``by_deck``'s format-only set), and one rollup is built for each
-    with enough of its own population sample to clear ``_leak_from_counts``'s
-    per-side gate at all: that gate needs ``MIN_SAMPLE`` matches *with* a pattern and
-    ``MIN_SAMPLE`` *without*, out of this deck's own matches, not the whole
-    report's — a deck below ``DECK_LEAK_MIN`` (``2 * MIN_SAMPLE``) cannot
-    clear it even in the best possible case (every one of its matches
-    falling on one side of some future comparison), so it is skipped rather
-    than scanned for nothing.
+    not ``by_deck``'s format-only set). ``_leak_from_counts`` needs
+    ``MIN_SAMPLE`` of the deck's own matches *with* a pattern and
+    ``MIN_SAMPLE`` *without*, so a deck below ``DECK_LEAK_MIN`` can never
+    clear it and is skipped rather than scanned for nothing.
     """
     lines = []
     below = 0
@@ -940,31 +821,16 @@ def _build_turning_points(
     population_rows: list[_PopMatch], reports: dict[str, MatchReport]
 ) -> tuple[tuple[TurningBucket, ...], list[str]]:
     """Every lost *game* in the population's own reports (not every lost
-    *match* — a match won 2-1 can still have dropped its first game, and
-    that game's own turning point belongs in this breakdown exactly as much
-    as one from a match lost outright) gets its own ``turning_point``
-    finding (Part 0's own fix: keyed on ``self_turn_index``, never the
-    shared ``turn_number``), bucketed by which third of the game it fell in
-    and how decisive it was.
+    *match* — a match won 2-1 can still have dropped a game), placed by its
+    ``turning_point`` finding's ``self_turn_index`` (never the shared
+    ``turn_number``) and severity into the six ``TurningBucket`` cells.
 
-    Always all 6 (stage, severity) cells, even at 0 (``mulligans``' own
-    fixed-bucket precedent extended from two cells to six) — a caller
-    renders a fixed grid, never a sparse list whose shape changes from one
-    report to the next.
-
-    A lost game with no ``turning_point`` finding at all — ``never_behind``
-    fired instead, too few turns had a position index, or the match's
-    report could not be built — is counted in the gap rather than guessed
-    into a bucket (rule 4); ``never_behind`` in particular carries no
-    ``self_turn_index``, so it is excluded by the same lookup that would
-    otherwise have to special-case it. A missing report can only be charged
-    against a match that was itself lost overall — a missing report for a
-    won match makes no claim about any lost game at all, since there
-    cannot be one to omit if the match was never dropped to begin with...
-    except a game won 2-1 can still have one lost game inside it, which a
-    missing report has no way to reveal either; this is therefore a
-    slight undercount of the gap for exactly that one rare shape, stated
-    here rather than silently absorbed.
+    A lost game with no ``turning_point`` finding — ``never_behind`` fired
+    instead, too few turns had a position index, or the match's report
+    could not be built — is counted in the gap rather than guessed into a
+    bucket (rule 4). A missing report is charged once, and only for a match
+    lost overall: it cannot reveal a lost game inside a match won 2-1, so
+    the gap undercounts that one shape.
     """
     no_turning_point = 0
     counts: dict[tuple[str, str], int] = defaultdict(int)
@@ -1029,20 +895,9 @@ def _select_examples(
     at all. ``leak_candidates`` is this report's own kept ``leaks``, already
     in gap-descending order; ``recent_losses`` is every population match
     with ``result = 'loss'`` and at least one ``turns`` row (the only losses
-    this module can actually render a turn-by-turn account of).
-
-    (1) Walk ``leak_candidates`` in order to the first whose pattern
-    actually goes with losing (``win_rate_with < win_rate_without`` — a
-    pattern that is even or winning-direction is skipped, never chosen, and
-    only the first qualifying leak is ever used). Its own
-    ``match_ids_with``, filtered to ``recent_losses``, are the candidates;
-    ``chosen_for`` is that leak's own code.
-    (2) Order those candidates most-recent-first (``started_at`` desc, then
-    ``match_id`` asc) and keep up to ``MAX_EXAMPLES``.
-    (3) If that yielded fewer than ``MAX_EXAMPLES`` (including none at all,
-    when no leak qualified in the first place), fill the rest from every
-    recent loss in the same order, skipping anything already chosen, with
-    ``chosen_for="recent_loss"``.
+    this module can render turn by turn). Returns ``(match_id, chosen_for)``
+    pairs, ``chosen_for`` a leak code or ``"recent_loss"``. The rule:
+    docs/coach.md, "How the example games are chosen".
     """
     eligible = set(recent_losses)
     chosen: list[tuple[str, str]] = []
@@ -1087,21 +942,14 @@ def _build_examples(
     colors_cache: dict,
     view_cache: dict,
 ) -> tuple[tuple[ExampleGame, ...], list[str]]:
-    """Up to ``MAX_EXAMPLES`` fully-rendered worked examples — the only
-    place a match id appears anywhere on this evidence (module docstring).
+    """Up to ``MAX_EXAMPLES`` fully-rendered worked examples
+    (``ExampleGame``), plus the ``chosen_for`` of each one skipped.
 
-    ``reports`` is the same population-wide map ``build_coach_evidence``
-    already built via ``_build_match_reports``; nothing here builds a
-    ``MatchReport`` a second time. A ``MatchSnapshot``, unlike a report, is
-    never cached anywhere upstream of this call, so each of the (at most
-    ``MAX_EXAMPLES``) selected matches costs one fresh ``build_snapshot`` —
-    cheap on its own, and it shares every cache a repeated report build
-    would have used anyway. ``consensus_window`` must be the same per-format
-    resolver passed to ``_build_match_reports``/``_build_leaks``/
-    ``_build_deck_leaks``: each example is built under its own match's
-    format window (``_match_window``), so the rendered example's own opponent
-    consensus (if the analyzers ever surface one) agrees with the report it
-    is shown alongside.
+    ``reports`` is ``build_coach_evidence``'s population-wide map, so no
+    ``MatchReport`` is built twice; each selected match costs one fresh
+    ``build_snapshot``, which nothing upstream caches. ``consensus_window``
+    must be the one resolver (``_build_match_reports``), so an example is
+    built under the same window as the report it is shown beside.
     """
     losses = [m for m in population_rows if m.result == "loss"]
     loss_ids = tuple(m.match_id for m in losses)
@@ -1178,16 +1026,9 @@ def _card_names(conn: sqlite3.Connection, grp_ids: list[int]) -> dict[int, str]:
 def _deck_list_for(
     conn: sqlite3.Connection, label: str, identity: DeckIdentity
 ) -> tuple[DeckList, bool]:
-    """One kept identity's ``DeckList``, read the same way ``brief/
-    narrative.py``'s ``_own_seventy_five_block`` reads its own deck's —
-    ``(count, name)`` pairs, sorted by name — except a grp_id with no
-    matching ``cards`` row is counted in ``unnamed`` here rather than
-    rendered as that function's ``"?"`` (rule 4: the copy count is real,
-    the name just isn't known yet).
-
-    The second return value flags whether this identity hid any such
-    grp_id — the caller rolls every deck's own flag into one shared gap
-    line instead of one per deck.
+    """One kept identity's ``DeckList`` (see there for the unnamed rule).
+    The second return value flags whether any grp_id went unnamed — the
+    caller rolls every deck's flag into one shared gap line.
     """
     maindeck: list[int] = identity.current_cards.get("maindeck") or []
     sideboard: list[int] = identity.current_cards.get("sideboard") or []
@@ -1199,8 +1040,7 @@ def _deck_list_for(
         counts: dict[int, int] = {}
         for grp_id in grp_ids:
             counts[grp_id] = counts.get(grp_id, 0) + 1
-        # Two printings of one card are two grp_ids; merge them by name so
-        # the list reads "3 Rest in Peace", not "1 ..." and "2 ..." lines.
+        # Two printings of one card are two grp_ids: merged by name.
         by_name: dict[str, int] = {}
         for grp_id, count in counts.items():
             name = names.get(grp_id)
@@ -1222,12 +1062,8 @@ def _build_decklists(
     format_rows: list[_PopMatch],
 ) -> tuple[tuple[DeckList, ...], list[str]]:
     """The current 75 of up to ``TOP_DECKLISTS`` kept decks, ordered by
-    format-window match count — the same window ``by_opponent`` uses, since
-    a decklist from before the last reset is exactly as void as an opponent
-    matchup rate from before it (``guide/field.py``'s own reasoning). A
-    kept identity with zero format-window matches (all its population
-    matches predate the reset) is omitted rather than shown as this
-    report's "current" deck, which it is not.
+    format-window match count. A kept identity with no format-window match
+    is omitted: its list is not "current" by this report's window.
     """
     format_counts: dict[str, int] = defaultdict(int)
     for m in format_rows:
@@ -1266,23 +1102,13 @@ def _build_field(
     opponent_counts_by_key: dict[str, tuple[int, int]],
     fmt: str,
 ) -> tuple[tuple[FieldLine, ...], list[str]]:
-    """The classified field itself, in this report's own format window —
-    the same window ``guide/field.py``'s ``field_window`` builds (``e.format
-    = fmt`` plus ``e.event_date >= window_start`` once a reset
-    exists), grouped by ``archetype_key`` with the true classified-deck
-    total as the share denominator via ``guide/field.py``'s ``field_by_key``
-    (reused rather than recomputed — never the truncated top-N sum, the
-    exact bug that module's own docstring exists to prevent).
-
-    Grouped one level up from ``_shares_for_window`` itself: that groups on
-    ``archetype_name`` (a display string) for one format guide's own
-    consensus diff, this on ``archetype_key`` (the classifier's stable
-    identifier) so a renamed archetype still gets one row here, with every
-    name it has carried kept as ``variants``. ``your_rate`` joins this
-    report's own population through the exact vocabulary ``by_opponent``
-    already resolves opponents into (``'archetype:' + archetype_key``); an
-    unfaced key correctly reads ``_rate(0, 0)`` from
-    ``opponent_counts_by_key``'s own default rather than being absent.
+    """The classified field in this report's format window, from
+    ``guide/field.py::field_by_key``: grouped by ``archetype_key`` so a
+    renamed archetype keeps one row (every name it carried as
+    ``variants``), with the true classified-deck total as the share
+    denominator, never the truncated top-N sum. ``your_rate`` joins through
+    ``by_opponent``'s ``'archetype:' + archetype_key`` vocabulary; an
+    unfaced key reads ``_rate(0, 0)``.
     """
     by_key, total = field_by_key(conn, fmt, win_start)
     if total == 0:
@@ -1322,12 +1148,11 @@ def build_coach_evidence(
     every caller names the format it was asked for.
 
     The skill sections span the whole population, every format played; the
-    format sections only ``fmt``'s matches since ``fmt``'s latest reset (the
-    module docstring names which is which).
+    format sections only ``fmt``'s matches since ``fmt``'s latest reset
+    (docs/coach.md, "The two windows", names which is which).
 
-    ``source`` reuses ``review/leaks.py::_scope_clause``'s own vocabulary:
-    ``"all"`` (the default here, unlike that module's own ``"arena"``
-    default — a player-level coach has no reason to default away from MTGO)
+    ``source`` reuses ``review/leaks.py::_scope_clause``'s vocabulary:
+    ``"all"`` (the default here, unlike ``_scope_clause``'s ``"arena"``)
     or ``"arena"``/``"mtgo"``. An MTGO match counts under its
     ``v_match_format.format`` (a confirmed pick, else its inference), so
     ``"mtgo"`` still returns ``None`` on a database that has never run
@@ -1335,14 +1160,11 @@ def build_coach_evidence(
     legality), unless MTGO matches carry a confirmed format, which needs no
     legality data.
 
-    ``report_cache`` is the ``MatchReport`` cache, keyed by
-    ``review/leaks.py::report_cache_key`` (match, window, language), that
-    ``review/leaks.py::find_leaks`` reads and writes; pass
-    ``api/sql.py::_shared_report_cache(request, conn)`` from a route so
-    a report this coach report builds can be reused by a Leaks or Guide
-    request in the same process, instead of the fresh, call-scoped dict
-    below. ``None`` (this function's default) keeps today's behaviour
-    exactly: a dict that lives only as long as this one call.
+    ``report_cache`` is the ``MatchReport`` cache ``find_leaks`` reads and
+    writes (``_build_match_reports``); pass
+    ``api/sql.py::_shared_report_cache(request, conn)`` from a route so a
+    Leaks or Guide request in the same process can reuse these reports.
+    ``None`` builds a dict that lives only as long as this one call.
     """
     population_rows, excluded = _population(conn, source)
     population = len(population_rows)
@@ -1448,15 +1270,10 @@ def build_coach_evidence(
     overall_games = _game_rate(conn, match_ids)
     g1, post_board, on_play, on_draw = _deck_game_split(conn, match_ids)
 
-    # fmt's format-reset window — computed once, here, before any report is
-    # built. It scopes the format sections, and seeds the per-format resolver
-    # threaded as `consensus_window` into every build_match_report/
-    # build_snapshot/find_leaks call below, so each match's report is built
-    # under its own format's window (this module's docstring's "never window
-    # metagame data across a ban" rule, guide/window.py). Every one of those
-    # calls must receive this one resolver, never a window it computes for
-    # itself (review/snapshot.py:632 and api/sql.py:142 used to skip this and
-    # silently aggregate an opponent consensus across a reset).
+    # fmt's reset window, computed once before any report is built: it
+    # scopes the format sections and seeds the one resolver every
+    # build_match_report/build_snapshot/find_leaks call below must receive
+    # (_build_match_reports), never a window a call computes for itself.
     resets = format_resets(conn, fmt)
     reset = resets[0] if resets else None
     win_start = window_start(reset) if reset is not None else None
@@ -1466,10 +1283,8 @@ def build_coach_evidence(
         if m.format == fmt and (win_start is None or (m.started_at or "") >= win_start)
     ]
     if win_start is None:
-        # Same two-answer split guide/bundle.py's own "no reset" gap uses:
-        # genuinely no ban detected vs. no legality data to detect one from
-        # at all are different claims, and only the first says the corpus
-        # has no reset in it.
+        # No ban detected and no legality data to detect one from are
+        # different claims (guide/bundle.py splits them the same way).
         if legality_known(conn, fmt):
             gaps.append(_(
                 "No {fmt} format reset was detected — the format sections span every "
@@ -1499,14 +1314,10 @@ def build_coach_evidence(
                 "played, and the field section still shows the {fmt} field."
             ).format(fmt=fmt))
 
-    # One cache set shared across by_deck's own archetype classification and
-    # every build_match_report call below — guide/bundle.py's own precedent
-    # for why a repeated opponent archetype, the classifier's card-colour
-    # table, and build_snapshot's own repeated view lookups should cost one
-    # scan each, not one per match (or, short of sharing it here, one scan
-    # for by_deck plus a second for the report loop). report_cache is handed
-    # to _build_match_reports so any later find_leaks(..., report_cache=...)
-    # over these same matches reuses these reports instead of rebuilding them.
+    # One cache set shared by by_deck's archetype classification and every
+    # report build below, as guide/bundle.py does: a repeated opponent
+    # archetype, the card-colour table and the view lookups cost one scan
+    # each, not one per match.
     consensus_cache: dict = {}
     colors_cache: dict = {}
     colors_cache["colors_by_name"] = _card_colors_by_name(conn)
@@ -1629,22 +1440,18 @@ def format_rate(rate: Rate) -> str:
 
 
 def metrics_snapshot(evidence: CoachEvidence) -> dict:
-    """A compact, JSON-safe snapshot of one report's headline numbers,
-    meant to be stored (``coach/store.py``) and handed back into
-    ``progress_since`` at some later ``as_of`` — never reconstructed into a
-    ``CoachEvidence`` itself, so it only needs to carry what a later "since
-    last time" comparison actually reads.
+    """A compact snapshot of one report's headline numbers, stored
+    (``coach/store.py``) and handed back into ``progress_since`` later. See
+    docs/coach.md, "Progress".
 
-    Every value here is a plain ``dict``/``list``/``str``/``int``/``float``/
-    ``None`` — nothing here is a tuple or a dataclass, both of which would
-    come back reshaped (a tuple as a list, a dataclass not at all) after a
-    ``json.dumps``/``json.loads`` round trip. That round trip is this
-    function's own contract, not an incidental property of it.
+    Every value is a plain ``dict``/``list``/``str``/``int``/``float``/
+    ``None``: a tuple or a dataclass would come back reshaped from the
+    ``json.dumps``/``json.loads`` round trip, which is this function's
+    contract.
 
-    Version 2 (plan 13, D12): the skill sections ``overall`` and ``leaks``
-    span every format played, and ``fmt`` names the report's format. A
-    version 1 snapshot counted Standard alone, so the two are not comparable
-    (``coach/narrative.py::build_coach_prompt`` says so instead of diffing).
+    Version 2: ``overall`` and ``leaks`` span every format played, and
+    ``fmt`` names the report's format. A version 1 snapshot counted Standard
+    alone, so ``coach/narrative.py::build_coach_prompt`` never diffs the two.
     """
     return {
         "version": 2,
@@ -1654,11 +1461,8 @@ def metrics_snapshot(evidence: CoachEvidence) -> dict:
         "overall": {
             "wins": evidence.overall.wins, "n": evidence.overall.n, "rate": evidence.overall.rate,
         },
-        # Not read by progress_since (it never diffs by_source across
-        # reports, only the plain fields above) — carried here only so a
-        # caller rendering the *current* snapshot's prompt has it without a
-        # second build_coach_evidence call. Purely additive: a stored report
-        # missing this key is still valid (progress_since never reads it).
+        # Stored, but read by nothing: progress_since never diffs by_source.
+        # A stored report missing this key is still valid.
         "by_source": {
             src: {"wins": rate.wins, "n": rate.n, "rate": rate.rate}
             for src, rate in evidence.by_source.items()
@@ -1674,26 +1478,15 @@ def progress_since(
     conn: sqlite3.Connection, metrics: dict, *, source: str = "all",
 ) -> list[str]:
     """Prose progress lines comparing a fresh read of the population against
-    a ``metrics_snapshot()`` dict saved at some earlier ``as_of`` — the
-    Coach tab's own "since last time" panel.
-
-    Pure prose, not a dataclass: ``metrics_snapshot()``'s dict is the one
-    persisted shape, so a caller diffs that stored dict against a fresh
-    database read directly rather than rebuilding a second full
-    ``CoachEvidence`` and diffing two of those, which would pay for every
-    other rollup in this module just to answer "what changed".
+    a ``metrics_snapshot()`` dict saved at some earlier ``as_of`` — the lines
+    ``build_coach_prompt`` sets under the previous report's focus areas.
+    See docs/coach.md, "Progress".
 
     A previously-known leak ``code`` is checked for raw presence among the
-    *new* matches alone (not re-run through ``find_leaks``, whose own
-    ``MIN_SAMPLE`` gate a handful of new matches will almost never clear) —
-    every resulting rate is expected to read ``anecdotal`` most of the time,
-    and is labelled as such rather than presented with false confidence.
-
-    Progress is a skill reading: the new matches are every format's, like
-    the ``overall`` and ``leaks`` a ``metrics_snapshot`` stores, and each
-    one's report is built under its own format's window. Which stored report
-    ``metrics`` comes from (the previous one of the same format) is the
-    caller's choice.
+    *new* matches alone, not re-run through ``find_leaks``, whose
+    ``MIN_SAMPLE`` gate a handful of new matches will almost never clear.
+    Which stored report ``metrics`` comes from (the previous one of the same
+    format) is the caller's choice.
     """
     as_of = metrics.get("as_of")
     population_rows, _ = _population(conn, source)
@@ -1719,13 +1512,9 @@ def progress_since(
     colors_cache: dict = {"colors_by_name": _card_colors_by_name(conn)}
     view_cache: dict = {}
     report_cache: ReportCache = {}
-    # Each new match under its own format's window, resolved the same way
-    # build_coach_evidence resolves it (guide/window.py's
-    # consensus_window_resolver) — this is an independent entry point with
-    # its own fresh caches, not a continuation of that call, so it has no
-    # shared resolver to reuse and must build its own rather than falling
-    # back to build_match_report's None default, which would be the
-    # pre-reset-inclusive (wrong) answer whenever a reset exists.
+    # Its own resolver, since this entry point shares none with
+    # build_coach_evidence: build_match_report's None default would read
+    # across a reset whenever one exists.
     reports = _build_match_reports(
         conn, new_rows, consensus_window=consensus_window_resolver(conn),
         consensus_cache=consensus_cache, colors_cache=colors_cache, view_cache=view_cache,
@@ -1736,9 +1525,9 @@ def progress_since(
         if code in ("mana_screwed", "mana_flooded"):
             flag_index = 0 if code == "mana_screwed" else 1
             flags_by_id = {mid: _mana_flags(conn, mid)[flag_index] for mid in new_match_ids}
-            # Rule 4: a match with no turns rows at all (every MTGO match) is
-            # unknown for this flag, not "clean" -- it must not silently swell
-            # either the denominator or the "not observed" reading below.
+            # Rule 4: a match with no turns rows (every MTGO match) is
+            # unknown for this flag, not "clean": it must not swell the
+            # denominator or the "not observed" reading below.
             known_ids = [mid for mid, flag in flags_by_id.items() if flag is not None]
             if not known_ids:
                 lines.append(f'"{code}" could not be measured in any new match (no turn data).')

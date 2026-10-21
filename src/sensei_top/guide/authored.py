@@ -12,7 +12,7 @@ them.
 One import fills two tables: the deck-level half (engine, fix, card notes,
 checklist) lands here in ``deck_narrative``, and every matchup plan lands in
 ``matchup_brief`` via ``brief/from_guide.py`` — so writing one guide also
-lights up the live matchup brief on the Current match tab.
+lights up the live matchup brief on the Live page.
 """
 
 from __future__ import annotations
@@ -68,9 +68,9 @@ def write_narrative(
     is how a guide gets revised, so an upsert is the whole update story.
 
     Uses ``author``/``authored_at`` rather than the ``model``/``generated_at``
-    names ``AuthoredRecord`` holds for the other three authored tables — a
-    guide can be hand-authored as well as Claude-written, so it builds its
-    own columns dict instead of that shared shape.
+    names ``AuthoredRecord`` holds — a guide can be hand-authored as well as
+    Claude-written, so it builds its own columns dict instead of that shared
+    shape.
     """
     upsert_authored(
         conn, "deck_narrative", {"deck_key": deck_key},

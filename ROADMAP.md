@@ -26,29 +26,15 @@ The order below follows from that.
 
 1.0.0 shipped on 2026-10-17, with the Windows installer, the Linux
 AppImage, updates that apply themselves, and Brazilian Portuguese beside
-English. What comes first after it:
+English. Since then: games 1 and 2–3 apart in every matchup, fixes to how
+Magic Online's log is read, and Arena found on more Linux setups
+([CHANGELOG.md](CHANGELOG.md)). What comes before the next release:
 
-1. **Game 1 and games 2 and 3, apart.** Your record in each matchup split
-   into the first game and the games after sideboarding, for best-of-three
-   matches, from Arena and Magic Online alike: on a deck's Matchups, on
-   each pairing, and, for Arena, between games on Live.
-2. **Fixes to how Magic Online's log is read.** Games that end on time,
-   to inaction or in a draw are read as such, and a match lost on time
-   is no longer left unfinished. A player who reconnects no longer opens
-   a phantom game that pushed every later game of the match one number
-   up. A name with a space in it reads as one player, and a match you
-   only watched is left out without a warning. Each fix also mends
-   every match you already recorded.
-3. **Finding Arena on more Linux setups.** Every Steam library, Flatpak
-   and Snap Steam, Lutris, Bottles and Heroic, and the newest log when
-   more than one is found.
-
-Outside this order, because it waits on Microsoft rather than on the
-work: **the Microsoft Store build** of the same app, which the Store
-signs. It is listed free at first and priced once Microsoft confirms an
-individual developer may sell and the other blockers `docs/status.md`
-names clear. The direct download stays unsigned for
-now: the open-source signing programme asks for more public use first.
+1. **The Microsoft Store build** of the same app, which the Store signs.
+   It is listed free at first and priced once Microsoft confirms an
+   individual developer may sell and the other blockers clear. The direct
+   download stays unsigned for now: the open-source signing programme
+   asks for more public use first. (BL-070, BL-072)
 
 ## Next
 
@@ -58,19 +44,19 @@ In this order, unless Discussions says otherwise.
    log is, when it was last read, how many matches came from it, and
    whether Arena's Detailed Logs setting is off, with the exact place to
    turn it on; a warning when a match looks missing; and what changed in
-   each release, dated, inside the app.
+   each release, dated, inside the app. (BL-001)
 2. **Your data out, and every column explained.** Your matches and games
    as a CSV file; a one-line definition on every table column; and a tour
    of the dashboard in the help pages, in both languages, which says what
-   the tracker reads and that it sends nothing.
+   the tracker reads and that it sends nothing. (BL-002, BL-003)
 3. **Sideboard help without a model.** The cards in your 75 that answer
    what the opponent's deck does, as candidate ins, and a link to a
    published sideboard guide for the pairing, found through the Skill
    Issue Magic guide index, with credit to its author on every link.
-   Nothing is generated and no "outs" are invented.
+   Nothing is generated and no "outs" are invented. (BL-005)
 4. **Win rates per card**, from your own games: with the card in your
    opening hand, drawn, and cast, with the number of games beside each
-   rate.
+   rate. (BL-004)
 
 ## Later
 
@@ -79,26 +65,26 @@ In this order, unless Discussions says otherwise.
   assistant you already use, or from an Anthropic key you set yourself.
   Later: any provider that speaks the OpenAI format, and local models
   through Ollama or LM Studio, with the model named on every report it
-  wrote.
+  wrote. (BL-007)
 - **macOS, Arena only.** An unsigned build from GitHub's runners first;
-  notarization when donations cover Apple's fee.
+  notarization when donations cover Apple's fee. (BL-009)
 - **MTGO on the Live page**: the opponent's revealed cards during a game
   and the between-games plan, read from MTGO's game log the way Arena's
-  Live page reads Arena's.
+  Live page reads Arena's. (BL-013)
 - **Caution cards**: the cards to watch for from the deck your opponent
-  most likely plays, with their rules text.
+  most likely plays, with their rules text. (BL-020)
 - **Finding your history faster**: date ranges, a search, your matches
-  grouped by day, and league runs with their trophies.
+  grouped by day, and league runs with their trophies. (BL-021)
 - **Historic, Explorer and Timeless**, the Arena-only formats other than
   Alchemy and Brawl, with the field data and format features the MTGO
-  formats have.
+  formats have. (BL-012)
 - **An optional paid tier**, once a few thousand players use the tracker
   regularly. A subscription for deeper features, with a monthly allowance
   of written reports inside it, so you never set up a key or paste a
   prompt. It is gated by feature, never by your rank or the events you
   play. It is the only thing that asks for an account, made when you
   subscribe: a code sent to your email, or Google, Discord or X. The free
-  tracker, the copy prompt and your own key stay as they are.
+  tracker, the copy prompt and your own key stay as they are. (BL-006)
 - **A Discord server**, once there are enough people to staff one.
   Discussions on GitHub come first.
 
@@ -174,7 +160,7 @@ These are decisions, not gaps. Each one was considered and refused.
 - **A fix for a security promise** ([SECURITY.md](SECURITY.md)) ships on
   its own, outside the normal cadence.
 - Everything known to be wrong or missing is listed in
-  [docs/status.md](docs/status.md), which is the project's own backlog.
+  [BACKLOG.md](BACKLOG.md), each item with an ID this page cites.
 
 ## Donations
 

@@ -1,4 +1,5 @@
-"""``sensei-top doctor``: what the app can find, read-only (plan 6, D15).
+"""``sensei-top doctor``: what the app can find, read-only. See
+docs/desktop.md, "Support commands".
 
 One function builds the report, ``report()``; ``cmd_doctor`` prints it and
 ``diagnostics.py`` zips it. Nothing here writes, migrates or downloads, so it
@@ -13,13 +14,13 @@ is safe beside a running ``serve``:
   nothing else has open; the main file is untouched.
 - Detailed Logs is read from the first 200 lines of the Arena log. Arena
   writes ``DETAILED LOGS: ENABLED`` there; ``disabled`` needs the matching
-  ``DISABLED`` line, which no capture has shown yet (docs/status.md), so the
+  ``DISABLED`` line, which no capture has shown yet (BL-034), so the
   answer is ``unknown`` for any log that carries neither line.
 
 The keys of the dict ``report()`` returns are a contract: the desktop shell
-reads ``doctor --json`` (``docs/desktop.md``, "Support commands").
-``mtgo.discovered`` is the folder ``mtgo/discover.py`` finds (Windows only,
-``None`` elsewhere): a suggestion for onboarding, never a configured value.
+reads ``doctor --json``. ``mtgo.discovered`` is the folder
+``mtgo/discover.py`` finds (Windows only, ``None`` elsewhere): a suggestion
+for onboarding, never a configured value.
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ from sensei_top.db import discover_migrations
 from sensei_top.llm.config import config_path
 from sensei_top.mtgo import discover
 from sensei_top.mtgo.config import load_handle, resolve_deck_dir, resolve_log_dir
+from sensei_top.reader.ingest import found_log_paths
 
 HEADER_LINES = 200
 ENABLED_LINE = "DETAILED LOGS: ENABLED"
@@ -112,12 +114,24 @@ def report(db_path: Path, file: str | None = None) -> dict:
     finally:
         if conn is not None:
             conn.close()
+    arena_log: dict = {
+        "path": str(arena_path) if arena_path is not None else None,
+        "source": source,
+        "detailed_logs": detailed_logs(arena_path),
+    }
+    if source == "autodetect" and arena_path is not None:
+        # found_log_paths() is a second scan: the path in use goes first so
+        # found[0] always equals the path reported above.
+        found = [arena_path]
+        seen = {arena_path.resolve()}
+        for other in found_log_paths():
+            other = other.absolute()
+            if other.resolve() not in seen:
+                seen.add(other.resolve())
+                found.append(other)
+        arena_log["found"] = [str(p) for p in found]
     return {
-        "arena_log": {
-            "path": str(arena_path) if arena_path is not None else None,
-            "source": source,
-            "detailed_logs": detailed_logs(arena_path),
-        },
+        "arena_log": arena_log,
         "mtgo": {
             "log_dir": str(log_dir[0].absolute()) if log_dir else None,
             "log_dir_source": log_dir[1] if log_dir else None,
@@ -148,6 +162,7 @@ def lines(data: dict) -> list[str]:
     database = data["database"]
     out = [
         f"Arena log: {arena['path'] or 'not found'} (from {arena['source']})",
+        *(f"  Also found: {p}" for p in arena.get("found", [])[1:]),
         f"  Detailed Logs: {arena['detailed_logs']}",
     ]
     if arena["detailed_logs"] == "unknown" and arena["path"]:

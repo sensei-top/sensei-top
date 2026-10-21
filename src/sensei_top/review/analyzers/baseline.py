@@ -1,8 +1,6 @@
-"""This game against a wider sample — Reid Duke's own review method: "have
-you lost enough games in this same way to reveal a fatal flaw?" A single
-game cannot answer that; a personal record in the same matchup and the
-field's own numbers for it can at least say whether this result was
-ordinary or a real outlier.
+"""This game against a wider sample: a personal record in the same matchup
+and the field's own numbers for it. See docs/review.md, "`baseline.py` —
+this game against a wider sample".
 
 Both comparisons are match-level, not per-game: ``personal_matchup`` and
 ``field_matchup`` are win/loss records over a matchup, computed once in
@@ -39,10 +37,9 @@ _CONCEDE_REASONS = {"ResultReason_Concede"}
 
 def _outcome_findings(snap: MatchSnapshot) -> tuple[list[Finding], list[Gap]]:
     """How each game ended, and how its length compares to this deck's own
-    average — neutral outcome facts, not mana/land content (the user's own
-    call). Reuses ``deck_game_length``/``play_draw``, aggregates this deck
-    already carries in every snapshot regardless of which analyzers read
-    them.
+    average — neutral outcome facts, never mana/land content (that is the
+    leak finder's). Reads ``deck_game_length``/``play_draw``, which every
+    snapshot carries.
     """
     findings: list[Finding] = []
     gaps: list[Gap] = []
@@ -105,8 +102,10 @@ def _outcome_findings(snap: MatchSnapshot) -> tuple[list[Finding], list[Gap]]:
                     pattern=_("Game ran short against this deck's own average"),
                 ))
 
-    play_games = sum(g for on_play, g, _w in snap.play_draw if on_play)
-    draw_games = sum(g for on_play, g, _w in snap.play_draw if not on_play)
+    # A side's games are its won and lost ones: a draw is in neither the
+    # record nor the sample (docs/design-system.md, "Numbers").
+    play_games = sum(w + lost for on_play, w, lost in snap.play_draw if on_play)
+    draw_games = sum(w + lost for on_play, w, lost in snap.play_draw if not on_play)
     if play_games == 0 and draw_games == 0:
         gaps.append(Gap(ANALYZER, _("Not enough completed games with this deck yet to compare "
                                     "on-play and on-draw records."), cause="small_sample"))
@@ -117,8 +116,8 @@ def _outcome_findings(snap: MatchSnapshot) -> tuple[list[Finding], list[Gap]]:
                              play_games=play_games, draw_games=draw_games),
                          cause="small_sample"))
     else:
-        play_wins = sum(w for on_play, _g, w in snap.play_draw if on_play)
-        draw_wins = sum(w for on_play, _g, w in snap.play_draw if not on_play)
+        play_wins = sum(w for on_play, w, _lost in snap.play_draw if on_play)
+        draw_wins = sum(w for on_play, w, _lost in snap.play_draw if not on_play)
         findings.append(Finding(
             "play_draw_split", ANALYZER, Category.BASELINE, Severity.NOTE, Confidence.OBSERVED,
             _("Your deck's own play/draw record"),

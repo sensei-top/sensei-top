@@ -1,20 +1,10 @@
-"""Deck identity, stitched across list edits.
-
-``decks.deck_id`` is a content hash of the maindeck
-(``projector/matches.py``'s ``deck_identity``), so one Arena deck — the same
-GUID the client itself uses — mints a new row every time a single card
-changes. ``deck_guids`` records that stable GUID beside each content hash
-and is written on every match.
-
-The grouping itself lives in ``v_deck_identity`` (migration 033), a SQL view
-``/api/metrics/winrate`` reads too, so the two can never disagree.
-The view resolves each content hash to exactly one identity
-(tie-broken by ``deck_guids.last_seen``, so a hash registered under two Arena
-decks is not double-counted) — this module just reads it and attaches match
-records, names and current cards.
-
-``deck_format`` is a deck's format (plan 13, D15), the one the guide and the
-brief read the field under.
+"""Deck identity, stitched across list edits: one Arena deck mints a new
+``decks`` row every time a maindeck card changes, and the SQL view
+``v_deck_identity`` (which ``/api/metrics/winrate`` reads too, so the two
+never disagree) groups them back by Arena's GUID. This module reads that view and attaches match
+records, names and current cards; ``deck_format`` is the format the guide
+and the brief read the field under. See docs/guide.md,
+"`deck.py` — deck identity, stitched across list edits".
 """
 
 from __future__ import annotations
@@ -51,11 +41,7 @@ def _played_per_deck(conn: sqlite3.Connection) -> dict[str, sqlite3.Row]:
     id with no ``decks`` row still has its record, and no cards or format.
 
     One pass, not a scan of ``matches`` per identity: nothing indexes the
-    view's COALESCEd ``deck_id`` (migration 050's header). Measured on a
-    synthetic database of 150 decks under 15 GUIDs and 1,200 matches (300 MTGO,
-    picked), ``list_identities`` in ms, best of seven, HEAD's ``matches.deck_id``
-    body -> three scans of ``matches`` per identity, filtered on ``md.deck_id``
-    -> this: 37.9 -> 71.5 -> 41.0 (``v_deck_identity`` alone is about 36 of it).
+    view's COALESCEd ``deck_id`` (migration 050's header).
     """
     return {
         row["deck_id"]: row
@@ -156,7 +142,7 @@ def resolve(conn: sqlite3.Connection, key: str) -> DeckIdentity | None:
 
 
 def identity_format(conn: sqlite3.Connection, identity: DeckIdentity) -> str | None:
-    """``identity``'s format (D15): its ``decks.format`` as one of
+    """``identity``'s format: its ``decks.format`` as one of
     ``formats.FORMATS`` (``TraditionalStandard`` is Standard; Draft and every
     other non-constructed spelling is nothing), else the format most of its
     matches resolve to in ``v_match_format`` (log, pick, then inference), else
@@ -187,7 +173,7 @@ def identity_format(conn: sqlite3.Connection, identity: DeckIdentity) -> str | N
 
 
 def deck_format(conn: sqlite3.Connection, key: str) -> str | None:
-    """The format of the deck with API key ``key`` (D15; ``identity_format``),
+    """The format of the deck with API key ``key`` (``identity_format``),
     or ``None`` for an unknown key or a deck nothing names a format for."""
     identity = resolve(conn, key)
     if identity is None:

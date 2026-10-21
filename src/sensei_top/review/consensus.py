@@ -1,14 +1,13 @@
 """What an archetype's decklist typically looks like, from the metagame
-corpus (``metagame/``) — the *Thoughtseize You* view: knowing an opponent's
-consensus staples is what makes "what was still live" a real computation
-instead of a guess.
+corpus (``metagame/``). See docs/review.md, "What became possible, and why".
 
-Presence is licensed for every evidence tier (``docs/metagame.md``): a
-consensus card list answers "what fraction of decks play this", never a win
-rate, so it may read Tier C (MTGO league) decks too — the survivorship bias
-that makes a league's *share* misleading says nothing about whether a card
-appears in a winning list at all. Win rates stay gated to Tier A/B/D by
-``v_meta_winrate`` alone; this module never touches that view.
+Unless ``tiers`` narrows it, reads every evidence tier, Tier C (MTGO
+league) included: a consensus answers "what fraction of decks play this",
+never a win rate, and a league's survivorship bias skews its *share* of the
+field, not whether a card appears in a winning list (docs/metagame.md, "The
+evidence tiers"). Tier C is kept out of win rates outside this module, by
+``v_meta_winrate``'s tier filter and, for the field matchup, by
+``metagame/tiers.py``'s ``MATCHUP_TIERS``; this module reads neither.
 """
 
 from __future__ import annotations
@@ -81,11 +80,9 @@ def _card_rows_by_name(conn: sqlite3.Connection, names: list[str]) -> dict[str, 
     its front face alone (``"Hearth Elemental"``), while Arena's own card
     database — where this project's ``cards`` table gets its names — stores
     the combined name (``"Hearth Elemental // Stoke Genius"``). An exact
-    match misses every one of these, which silently produced ``tags =
-    "unknown"`` for a card whose text was on file all along, under a name
-    one join away. A name with no counterpart in ``cards`` at all still
-    resolves to nothing here, same as before — rule 4 is unaffected, only
-    the *reach* of a real match is.
+    match would read such a card as ``tags = "unknown"`` with its text on
+    file. A name with no counterpart in ``cards`` at all still resolves to
+    nothing (rule 4).
     """
     if not names:
         return {}
@@ -144,32 +141,28 @@ def build_consensus(
     (the stored ``FORMATS`` spelling) count. ``fmt=None`` returns ``None`` —
     a deck whose format is unknown has no consensus, never an all-format one.
 
-    Returns ``None`` below ``min_decks`` — the same sample-gating discipline
-    ``PLAY_DRAW_MIN_GAMES`` already uses elsewhere in this package: a
-    consensus list from 2 decklists is not a consensus, it is 2 decklists.
-    Costs one scan of ``meta_deck``; callers needing this more than once
-    per request should cache it themselves rather than this module caching
-    silently underneath them.
+    Returns ``None`` below ``min_decks``: a consensus list from 2 decklists
+    is not a consensus, it is 2 decklists. Costs one scan of ``meta_deck``;
+    callers needing this more than once per request should cache it
+    themselves rather than this module caching silently underneath them.
 
     ``since``/``min_wins``/``tiers`` narrow the corpus to, respectively,
     events on or after a date, decks with at least that many recorded wins,
-    and a set of evidence tiers (``docs/metagame.md``) — added for
-    ``guide/``'s "consensus among winning post-reset lists" question. For a
-    Tier C deck (a league) every stored record already reads as a win
-    (``d.result`` is always ``"5-0"``), so ``min_wins`` is a no-op there by
-    construction, not by a special case here.
+    and a set of evidence tiers (``docs/metagame.md``). For a Tier C deck (a
+    league) every stored record already reads as a win (``d.result`` is
+    always ``"5-0"``), so ``min_wins`` is a no-op there by construction, not
+    by a special case here.
 
-    ``board`` selects ``"main"`` (the default, and every caller before
-    ``guide/`` ever needed only this — role assignment reads an opponent's
-    likely *maindeck*, not their sideboard) or ``"side"``. The two boards
-    are entirely different card pools reported separately, never merged:
-    comparing a player's own sideboard against the field's *maindeck*
-    consensus would recommend they board in cards they already run.
+    ``board`` selects ``"main"`` (the default: role assignment reads an
+    opponent's likely *maindeck*) or ``"side"``. The two boards are reported
+    separately, never merged: comparing a player's own sideboard against the
+    field's *maindeck* consensus would recommend they board in cards they
+    already run.
 
     Card names are canonicalised on ``cards.oracle_id`` where it is known
-    for *every* name being merged — the fix for one card counted under two
-    Universes Beyond printings (see ``migrations/017_card_legality.sql``).
-    A name with no ``oracle_id`` on file is left alone rather than merged.
+    for *every* name being merged, so one card printed under two Universes
+    Beyond names counts once (``migrations/017_card_legality.sql``). A name
+    with no ``oracle_id`` on file is left alone rather than merged.
     """
     if fmt is None:
         return None

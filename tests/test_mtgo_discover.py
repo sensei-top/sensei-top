@@ -1,4 +1,4 @@
-"""MTGO folder discovery and its suggestion (release plan 3, D8).
+"""MTGO folder discovery and its suggestion.
 
 Windows behaviour is simulated on any host by patching ``sys.platform`` and
 ``LOCALAPPDATA`` into ``tmp_path`` trees; creation time cannot be set on

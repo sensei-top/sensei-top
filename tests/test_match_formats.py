@@ -1,7 +1,7 @@
 """infer_formats() and narrowest_format() (archetypes/classify.py), and the
 tables classify_matches() rebuilds from them (migrations/056_format_fit.sql).
 
-Every card's legality is read from the S0 fixture,
+Every card's legality is read from the fixture
 tests/fixtures/scryfall_format_printings.jsonl: real Scryfall `default_cards`
 objects whose `legalities` differ by format. The few cards no fixture line
 carries (a Premodern-only card, a card not legal anywhere) are built here in
@@ -229,7 +229,7 @@ def test_mox_opal_and_reckless_waif_with_rares_give_modern(conn, seed):
 
 
 def test_a_card_banned_in_modern_still_fits_modern(conn, seed):
-    """D3: Scryfall's ban list is today's, so a ban never rules a format out."""
+    """Scryfall's ban list is today's, so a ban never rules a format out."""
     _mtgo_match(conn, "m1")
     _reveal(
         conn, "m1",
@@ -305,7 +305,7 @@ def test_an_unresolved_card_event_is_unresolved_cards(conn, seed):
 
 def test_an_unresolved_token_is_left_out_of_the_fit(conn, seed):
     """MTGO's token spellings "Map Token" and "Wizard Token" were observed
-    unresolved in a real MTGO history (plan 13, S5d). A token says nothing
+    unresolved in a real MTGO history. A token says nothing
     about the format, resolved or not, so the five rares decide it."""
     _mtgo_match(conn, "m1")
     _reveal(conn, "m1", seed.named(*RARES))

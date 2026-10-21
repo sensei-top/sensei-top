@@ -1,13 +1,13 @@
 """Stage 2: project MTGO's ``raw_events`` rows into ``matches``, ``games``
 and ``card_events``.
 
-Scope, per the user's own decision (``.claude/handoffs/mtgo-implementation.md``):
-through ``card_events`` only. **Never writes** ``turns``, ``turn_zones``,
-``combat_*``, ``damage_events``, ``life_events``, ``game_decks``,
-``deck_guids``, ``decks`` or ``rank_snapshot`` — MTGO's log has no life
-totals or board state to put in them, and half-filling those tables would be
-worse than leaving them empty (every ``self_*``/``opp_*`` column would be a
-guess dressed as data).
+Through ``card_events`` only, by the user's own decision. **Never writes**
+``turns``, ``turn_zones``, ``combat_*``, ``damage_events``, ``life_events``,
+``game_decks``, ``deck_guids``, ``decks`` or ``rank_snapshot`` — MTGO's log
+has no life totals or board state to put in them, and half-filling those
+tables would be worse than leaving them empty (every ``self_*``/``opp_*``
+column would be a guess dressed as data). See docs/architecture.md, "What a
+turn snapshot holds".
 
 Self/opponent and the seat convention
 --------------------------------------
@@ -15,40 +15,37 @@ MTGO's log has no auth event and no seat concept at all — both are Arena-isms
 this parser has nothing to read. Who is "us" comes from ``mtgo/config.py``'s
 configured handle, checked against the two handles this specific match's log
 actually mentions; no match, no guess (rule 4) — the match is skipped with a
-warning, exactly like a missing handle skips *every* match. The exception
-(plan 30, D6): a match the configured handle only watched, with its ``has
-started watching.`` line and no player line, is skipped with a debug line,
-since nothing failed.
+warning, exactly like a missing handle skips *every* match. The exception: a
+match the configured handle only watched, with its ``has started watching.``
+line and no player line, is skipped with a debug line, since nothing failed.
 
 ``self_seat = 1`` / ``opponent_seat = 2`` is a fixed, made-up convention, not
 observed data — but it has to exist anyway: ``v_opponent_cards`` (the view
 that makes the matchups tab work at all) joins on
 ``ce.seat = m.opponent_seat``, so ``card_events.seat`` has to agree with
-whatever ``matches.opponent_seat`` says. Documented here as exactly what it
-is: an internal join key, chosen once and applied consistently, never
-presented as something MTGO's log told us.
+whatever ``matches.opponent_seat`` says. It is an internal join key, chosen
+once and applied consistently, never presented as something MTGO's log told
+us.
 
 Picking one payload per match
 ------------------------------
-``reader/mtgo.py`` stores a new ``raw_events`` row every time a game-log
-file's size changes (MTGO flushes progressively during a match), so several
-rows can share one ``source_file`` — each a longer prefix of the same
-eventual file. The **longest** payload per ``source_file`` is the most
-complete transcript, so that is the one decoded; the shorter, earlier
-snapshots are real history (append-only, rule 2) but not projected.
+Every row ``reader/mtgo.py`` stores is the whole game-log file as it was then
+(docs/architecture.md, "Storage"), so several rows can share one
+``source_file``, each a longer prefix of the same eventual file. The
+**longest** payload per ``source_file`` is the most complete transcript, so
+that is the one decoded; the shorter, earlier snapshots are real history
+(append-only, rule 2) but not projected.
 
 ``started_at`` / ``ended_at`` honesty
 --------------------------------------
 ``started_at`` is the ``logged_at`` (file mtime) of the *first* ``raw_events``
 row ever stored for this match's ``source_file`` — not the match's true start
-time, which this log format cannot express. The live watcher's MTGO leg reads
-the share once, at its own startup, and never polls it again (``live.py``) —
-so for a match already under way when the process started, this is whatever
-the file already held at that instant, not a value trailing the true first
-flush by a bounded interval the way a polling leg's proxy would have been;
-back-filled from a directory of already-finished matches (or from a hand-run
-``sensei-top ingest-mtgo`` mid-session), it is roughly when the match
-*ended* (the first and only time the tracker ever saw the file). Honest
+time, which this log format cannot express. The watcher stores a game log
+once a game ends (docs/architecture.md, "Live mode's two cadences"), so for
+a match it watched from the start this is about when its first stored
+game ended (game 1, unless a mirrored folder folded it into the next);
+back-filled from a directory of already-finished matches (or by a hand-run
+``sensei-top ingest-mtgo``), it is roughly when the match *ended*. Honest
 under the name "first observed" either way — never claimed to be more than
 that.
 
@@ -56,29 +53,26 @@ that.
 winner** (a "wins the match" line, or a "has run out of time and has lost the
 match" line, which makes the other player the winner); otherwise ``NULL``.
 Writing a timestamp into a column named ``ended_at`` is a claim that the
-match ended — an in-progress match (still in mulligans, or mid-game
-with no winner recorded yet) must not make that claim, even though a row for
-it already exists so the live tab has something to show.
+match ended — a match with no winner recorded yet (still in mulligans, or
+mid-game) must not make that claim, even though a row for it exists.
 
 Never discarded, even with zero games
 ---------------------------------------
-Earlier versions of this projector discarded a parsed file entirely when it
-had not reached a full game yet (``if not parsed.games: continue``) — but a
-match still choosing mulligans, or one abandoned mid-file-write, has no
-``Turn 1`` yet and *is* exactly the window this live feature exists to show.
+A parsed file with no game yet (die rolls written, no ``joined the game``)
+still gets its match row; one still choosing mulligans already has game 1,
+with no turn.
 ``_match_rows`` already tolerates empty ``games_rows``/``card_event_rows``
 (``won = lost = 0``, ``result = 'incomplete'``), so nothing downstream needs
 a nonzero game count to behave correctly.
 
 ⚠️ One consequence, accepted rather than special-cased: a ``.dat`` abandoned
-while still tiny (a client crash between the opening die roll and the first
-``joined the game`` line, so ``parsed.handles`` never resolves against the
-configured handle) will re-emit the same "configured MTGO handle is not among
-the players" warning on **every** rebuild, forever — the file never changes
-again, so nothing about the input ever satisfies the check. This is
-acceptable: it is real information (a match genuinely never got past that
-point) and the file itself does not grow to invalidate it, so it does not
-worsen over time.
+before its die-roll lines (only the match GUID written, so ``parsed.handles``
+never holds the configured handle) re-emits the same "configured MTGO handle
+is not among the players" warning on **every** rebuild, forever — the file
+never changes again, so nothing about the input ever satisfies the check.
+This is acceptable: it is real information (a match genuinely never got past
+that point) and the file itself does not grow to invalidate it, so it does
+not worsen over time.
 """
 
 from __future__ import annotations
@@ -97,10 +91,10 @@ log = logging.getLogger(__name__)
 SELF_SEAT = 1
 OPPONENT_SEAT = 2
 
-# A real file resyncs into well over a hundred strings (115, on the one real
-# sample). Anything this much shorter is more likely a resync failure than a
-# genuinely tiny match, and is worth a distinct warning rather than a silent
-# "0 games" result.
+# A real file resyncs into well over a hundred strings (decode.py's module
+# docstring has the one real sample's count). Anything this much shorter is
+# more likely a resync failure than a genuinely tiny match, and is worth a
+# distinct warning rather than a silent "0 games" result.
 _MIN_PLAUSIBLE_STRINGS = 10
 
 
@@ -124,8 +118,7 @@ def _select_latest_payload_per_file(
     A single windowed query rather than materialising every stored prefix in
     Python to compare ``len()`` — on a rebuild, the losing (shorter) prefixes
     for a long-lived match can be many times the winner's own bytes, decoded
-    or not; this never brings them into Python at all. Window functions are
-    already used elsewhere in this schema (migrations 004/016/033/035).
+    or not; this never brings them into Python at all.
     """
     rows = conn.execute(
         """
@@ -224,18 +217,16 @@ def _resolve_grp_id(
       the last ``" // "``), each taken only when it identifies exactly one
       combined name. More than one match is left unresolved with a warning
       naming them (rule 4: an ambiguous face is not resolved by guessing
-      which card it names) rather than picking one. Both are exact and
-      case-sensitive ``substr`` comparisons, never ``LIKE``.
+      which card it names) rather than picking one.
 
     Tried in order, stopping at the first hit: exact name, then token, then
     front-face prefix, then back-face suffix. A name ``_lookup`` finds on
     both a positive and a negative row stops the search too, unresolved: the
     exact name was found, only ambiguously, and a later rule must not turn it
-    into another answer.
-    ``cache`` is keyed
-    by the MTGO name and remembers the final answer — ``None`` included — so
-    a name repeated across many card events costs one query (and, when
-    unresolved, one warning) for the whole projection run, not one per event.
+    into another answer. ``cache`` is keyed by the MTGO name and remembers
+    the final answer — ``None`` included — so a name repeated across many
+    card events costs one query (and, when unresolved, one warning) for the
+    whole projection run, not one per event.
     """
     if name in cache:
         return cache[name]
@@ -422,7 +413,7 @@ def _match_rows(
 
     # `format` is left out on purpose: MTGO's log never names one, so it is NULL.
     # best_of is 3: the MTGO constructed matches this tracker reads are best of
-    # three (D2, the user's call); its log names no structure.
+    # three (the user's call); its log names no structure.
     rows.matches.append(
         (
             parsed.match_id, SELF_SEAT, OPPONENT_SEAT, opponent_handle,
@@ -512,12 +503,12 @@ def read_mtgo(conn: sqlite3.Connection, handle: str | None) -> MtgoRows:
         strings = decode_strings(data)
         if len(strings) < _MIN_PLAUSIBLE_STRINGS:
             # A warning, not a skip: a match still in its opening die-roll
-            # exchange decodes to only a handful of strings and is real, live
-            # data (the window this feature exists for), not a resync
-            # failure. It is still worth flagging — a genuine resync failure
-            # looks identical from here — but the handle-resolution guard
-            # below already refuses to write anything without two identified
-            # players, so nothing is invented if this really was a failure.
+            # exchange decodes to only a handful of strings and is real data,
+            # not a resync failure. It is still worth flagging — a genuine
+            # resync failure looks identical from here — but the
+            # handle-resolution guard below already refuses to write anything
+            # without two identified players, so nothing is invented if this
+            # really was a failure.
             warner.warn(
                 f"{source_file} decoded to only {len(strings)} string(s) — "
                 "framing may not match expectations; not falling back to a "
@@ -562,11 +553,8 @@ def read_mtgo(conn: sqlite3.Connection, handle: str | None) -> MtgoRows:
             continue
         opponent_handle = next(iter(others))
 
-        # ended_at only when the parser actually found a match winner — see
-        # the module docstring's "started_at / ended_at honesty" section.
-        # Writing last_logged_at unconditionally would claim an in-progress
-        # match had ended just because this rebuild happens to be its most
-        # recent read.
+        # ended_at only with a match winner (module docstring's "started_at /
+        # ended_at honesty").
         ended_at = (
             last_logged_at
             if _match_winner(parsed, handle, opponent_handle) is not None

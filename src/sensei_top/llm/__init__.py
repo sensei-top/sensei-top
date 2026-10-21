@@ -1,11 +1,13 @@
-"""The one opt-in metered call this project makes.
+"""The opt-in metered Claude call (AGENTS.md non-negotiable #5).
 
-AGENTS.md non-negotiable #5 used to forbid any call to a paid API at all;
-it now permits exactly one, gated on the user configuring a credential
-themselves. ``config.py`` is the only place that credential is resolved, and
+``config.py`` is the only place its credential is resolved, and
 ``client.py`` is the only module in the whole project that imports
 ``anthropic`` — nothing else needs to, because every route that wants written
-prose calls through here. See ``docs/llm.md`` for the full design: what gets
-sent, what it costs, and what happens with nothing configured (exactly what
-happened before this package existed).
+prose calls through here. With no credential configured no client is ever
+constructed: every generate route answers 503 and the dashboard falls back to
+the copy prompt. ``provenance.py`` is the authored-prose tables' shared
+timestamp and upsert, which pasted and imported answers write through too.
+
+See docs/llm.md, "What calls out, and what it sends", and docs/llm.md,
+"The fallback".
 """

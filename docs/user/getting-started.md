@@ -18,9 +18,12 @@ settings behind that setup.
 
 ## Arena's log
 
-The log path is found automatically for Steam and Proton installs and for
-Arena's default place on Windows. Anywhere else, point `MTGA_LOG` at the
-file (quote it — the path contains spaces):
+The log path is found automatically for Arena's default place on Windows,
+and on Linux for Steam (native, Flatpak or Snap), Lutris, Heroic, Bottles
+and plain Wine (`$WINEPREFIX`, `~/.wine`); when several prefixes hold a
+log, the newest is used, and `sensei-top doctor` lists the others.
+Anywhere else, point `MTGA_LOG` at the file (quote it — the path contains
+spaces):
 
     export MTGA_LOG="/path/to/SteamLibrary/steamapps/compatdata/2141910/pfx/drive_c/users/steamuser/AppData/LocalLow/Wizards Of The Coast/MTGA/Player.log"
 

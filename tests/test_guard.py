@@ -57,7 +57,7 @@ def app(tmp_path):
         ("127.0.0.1", True),
         ("127.0.0.2", True),
         ("::1", True),
-        ("LOCALHOST", False),  # no case folding at this layer — callers fold first
+        ("LOCALHOST", False),  # no folding here; Host/Origin parsing folds, serve --host doesn't
         ("localhost.", False),
         ("foo.localhost", False),
         ("rebind.evil.example", False),

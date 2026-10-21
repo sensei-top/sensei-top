@@ -277,10 +277,11 @@ def _expected_deck_id(maindeck) -> str:
 
 
 def test_deck_maindeck_resolves_from_a_connectresp_before_the_anchor(conn):
-    """The dominant real shape this was built for: a connectResp landing one
+    """The real shape the lookback was built for: a connectResp landing one
     row *before* the room-opening anchor (measured read-only against a real
-    database — see table/live.py's own _DECK_MESSAGE_LOOKBACK comment: 73 of
-    288 matches had their nearest connectResp at anchor-1). replay_from_anchor's
+    database; the count is in docs/current-match.md, "The opening-hand read
+    (`table/opening_hand.py`)", and table/live.py's own
+    _DECK_MESSAGE_LOOKBACK comment points there). replay_from_anchor's
     forward window alone (id >= anchor) would never see this row; the
     pre-anchor lookback is what resolves it."""
     maindeck = [1, 1, 2]
@@ -304,8 +305,9 @@ def test_deck_maindeck_resolves_from_a_connectresp_before_the_anchor(conn):
 
 
 def test_deck_maindeck_resolves_from_a_connectresp_after_the_anchor(conn):
-    """The other real shape (215 of 288 matches): connectResp landing inside
-    the main forward window itself, no lookback needed."""
+    """The other real shape (counted in the same docs/current-match.md
+    section): connectResp landing inside the main forward window itself, no
+    lookback needed."""
     maindeck = [7] * 60
     conn.execute(
         "INSERT INTO raw_events (digest, source_file, kind, label, payload) "
@@ -348,7 +350,7 @@ def test_deck_maindeck_lookback_reaches_exactly_the_configured_bound(conn):
     query is ``id >= anchor - _DECK_MESSAGE_LOOKBACK``, so a connectResp
     exactly that many rows back is the farthest one still found, and one row
     farther is missed — an honest None past the measured margin, never a
-    wider guess than what step 1 actually measured."""
+    wider guess than the measurement behind _DECK_MESSAGE_LOOKBACK."""
     maindeck = [3, 3, 3]
 
     def _build(gap_rows: int) -> int:

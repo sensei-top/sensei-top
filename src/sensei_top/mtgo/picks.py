@@ -1,12 +1,12 @@
-"""Grouping the MTGO matches that wait for a deck (plan 19, D2).
+"""Grouping the MTGO matches that wait for a deck.
 
 Pure: no SQL, no files. The route loads the matches and the lists and
 decorates what this returns; this module only decides who belongs with whom.
 Nothing here picks a deck for anyone: a group is a proposal the user confirms
-with one click (plan 12, D1; rule 4).
+with one click (rule 4).
 
-The thresholds were measured on a real history (plan 19, S0); the rule's
-reasoning belongs in ``docs/architecture.md``.
+The thresholds were measured on a real history; the rule and that evidence
+are in docs/architecture.md, "Picking many MTGO matches at once".
 """
 
 from __future__ import annotations

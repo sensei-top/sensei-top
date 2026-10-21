@@ -390,8 +390,8 @@ def test_old_environment_variables_are_named_never_valued(tmp_path, mi):
 
 
 def test_a_prefix_matching_a_name_still_read_says_to_leave_it(tmp_path, mi):
-    """``MTGA_LOG`` names Arena's own log and kept its spelling in the rename
-    (the plan's S2), so an old prefix that also matches it must not tell the
+    """``MTGA_LOG`` names Arena's own log and kept its spelling in the rename,
+    so an old prefix that also matches it must not tell the
     user to rename it."""
     paths = dataclasses.replace(_install(tmp_path, mi), env_prefix="MTGA")
     code, out = _run(mi, paths, apply=False, environ={"MTGA_LOG": ENV_MARKER})
@@ -426,7 +426,7 @@ def test_a_failed_rename_puts_back_what_already_moved(tmp_path, mi, monkeypatch)
 def test_the_command_line_resolves_new_paths_from_the_package(tmp_path, mi, monkeypatch):
     """The new config directory and database are the product's own:
     ``sensei-top`` under the config root, ``data/sensei-top.db`` under the
-    working directory (the plan's S2 forms table)."""
+    working directory."""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg"))
     monkeypatch.chdir(tmp_path)
 
@@ -472,8 +472,8 @@ def test_a_process_opening_the_database_after_the_check_refuses_before_its_renam
 ):
     """A real process opens the database between the checkpoint-and-close
     check and the database's own rename: its side files appear beside the old
-    name, and the script refuses with nothing moved (S10: never move a
-    database another process holds)."""
+    name, and the script refuses with nothing moved: it never moves a
+    database another process holds."""
     paths = _install(tmp_path, mi)
     (paths.old_backup_dir / "old.db.backup").write_bytes(b"slot 0")
     holders: list[subprocess.Popen] = []
@@ -773,8 +773,8 @@ def test_an_interrupt_mid_move_renames_everything_back(tmp_path, mi, monkeypatch
 def test_a_figure_mismatch_after_the_move_fails_and_leaves_the_files_moved(
     tmp_path, mi, monkeypatch
 ):
-    """S10: any difference between the before and after figures is a
-    failure. The orchestrator's ruling: no roll-back on a mismatch."""
+    """Any difference between the before and after figures is a failure,
+    and a mismatch rolls nothing back."""
     paths = _install(tmp_path, mi)
     (paths.old_backup_dir / "old.db.backup").write_bytes(b"slot 0")
     real_figures = mi._figures
@@ -851,7 +851,7 @@ def test_slots_follow_the_database_to_its_new_directory(tmp_path, mi, monkeypatc
 
 
 def test_a_move_across_filesystems_refuses(tmp_path, mi, monkeypatch):
-    """S10: every move must be a rename, so a pair on two filesystems refuses."""
+    """Every move must be a rename, so a pair on two filesystems refuses."""
     paths = _install(tmp_path, mi)
     monkeypatch.setattr(mi, "_same_filesystem", lambda src, directory: False)
     before = _tree(tmp_path)

@@ -10,12 +10,9 @@ typed by hand.
 
 The one exception is ``_EXPECTED_SYSTEM_PROMPT`` below: it is a standalone
 transcription of the authored prompt text, with Modern written in where the
-template says ``{fmt}``, not read from
-``.claude/handoffs/coach/coach_system_prompt.txt`` at test time (that
-directory is gitignored, so a test that opened it would not run the same
-way for anyone without this session's scratchpad), and not imported from
-``coach/narrative.py`` itself (which would make the comparison test nothing
-but the module agreeing with itself).
+template says ``{fmt}``, not imported from ``coach/narrative.py`` itself
+(which would make the comparison test nothing but the module agreeing with
+itself).
 """
 
 from __future__ import annotations

@@ -78,7 +78,7 @@ def _run_ingest_mtgo(db_path: Path, *extra: str) -> None:
 
 def test_one_row_per_dek_file_and_nothing_else_is_read(tmp_path):
     folder = _folder(tmp_path, "Alpha.dek", "Beta.dek")
-    (folder / "notes.txt").write_text("not a deck")  # D13: .txt waits
+    (folder / "notes.txt").write_text("not a deck")  # .txt export not read yet
     (folder / "nested").mkdir()
     shutil.copy(FIXTURE, folder / "nested" / "Gamma.dek")  # not recursive
     conn = open_database(tmp_path / "t.db")

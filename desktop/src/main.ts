@@ -30,6 +30,7 @@ import { setLanguage, setSystemTags, t } from './i18n';
 import { logPath, newSessionId, ShellLog } from './log';
 import {
   asksAutostart,
+  canAutostart,
   CHANNELS,
   diagnosticsArgs,
   formatListing,
@@ -54,6 +55,13 @@ if (typeof electron.app !== 'object' || electron.app === null) {
 
 const { app, BrowserWindow, Menu, Tray, dialog, ipcMain, nativeImage, screen, shell } = electron;
 const packaged = app.isPackaged;
+const onWindowsStore = process.windowsStore === true;
+const canStartWithSystem = canAutostart({
+  platform: process.platform,
+  packaged,
+  appImage: process.env.APPIMAGE,
+  windowsStore: onWindowsStore,
+});
 
 const { dir: dataDir, overridden } = resolveDataDir({
   platform: process.platform,
@@ -264,7 +272,9 @@ function run(): void {
     dataDir,
     version: app.getVersion(),
     platform: process.platform,
-    askAutostart: asksAutostart(process.platform, process.windowsStore === true),
+    askAutostart: asksAutostart(process.platform, onWindowsStore, canStartWithSystem),
+    canAutostart: canStartWithSystem,
+    windowsStore: onWindowsStore,
     newestBackup: (dir) => {
       try {
         const stat = fs.statSync(path.join(dir, `${DB_NAME}.backup`));

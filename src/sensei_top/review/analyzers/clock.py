@@ -132,10 +132,10 @@ def analyze_clock(snap: MatchSnapshot) -> AnalyzerResult:
             Evidence("pace_self", _("Your damage per player-turn"), round(pace_self, 1)),
             Evidence("pace_opp", _("Opponent's damage per player-turn"), round(pace_opp, 1)),
         )
-        # Two codes rather than one code plus a variable subject: "the opponent were
-        # ahead" is a grammar bug this used to have, and a bare "race_leader" code
-        # cannot become a leak pattern — leading and trailing a race are opposite
-        # signals, not one pattern with two subjects.
+        # Two codes rather than one code plus a variable subject: a variable
+        # subject cannot agree with its verb ("You were ahead" / "The opponent
+        # was ahead"), and leading and trailing a race are opposite signals,
+        # each its own leak pattern.
         if state.self_dealt > state.opp_dealt:
             findings.append(
                 Finding(

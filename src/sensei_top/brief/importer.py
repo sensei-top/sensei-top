@@ -1,23 +1,23 @@
-"""Store an authored matchup brief.
+"""Store an authored matchup brief: resolve the deck's format, validate the
+plan against the actual 75 and record the provenance, with the prose
+supplied by whoever (or whatever) wrote it. This module never calls a model and has no
+automatic path; a scheduled or triggered call is a different feature from
+the button-pressed one AGENTS.md non-negotiable #5 permits.
 
-This replaces what used to be ``brief/worker.py``: a background thread that
-polled for a live, unbriefed opponent and made a Claude API call to fill the
-gap. That thread is gone for good — a scheduled or triggered call is a
-different feature from the opt-in, button-pressed one AGENTS.md
-non-negotiable #5 now permits elsewhere (``docs/llm.md``), and this module
-still has no automatic path at all. What is left is the half that was always
-the real work — resolving the deck, validating the plan against the actual
-75, and recording the provenance — with the prose supplied by whoever (or
-whatever) wrote it, never fetched by this module itself.
+The ways in, all landing in ``matchup_brief``:
 
-Two ways in, both landing in the same ``matchup_brief`` table:
+* ``import_brief`` — one matchup, from ``brief/narrative.py``'s
+  ``full_prompt``: ``sensei-top brief --deck KEY --archetype KEY --import
+  FILE``, or an answer pasted into a brief card, on the Live page or a
+  pairing's page (``PUT /api/guide/{key}/briefs/{archetype_key}``).
+* ``import_briefs`` — several, from ``full_multi_prompt``: ``brief --deck
+  KEY --missing --import FILE``, or the answer pasted into the coverage
+  card (``PUT /api/guide/{key}/coverage``).
+* Not this module: every matchup a deck-guide narrative covers, via
+  ``brief/from_guide.py`` — the ordinary path; per-matchup imports are for
+  filling a gap the guide missed.
 
-* ``sensei-top brief --deck KEY --archetype KEY --import FILE`` — one
-  matchup, written from ``brief/narrative.py``'s own prompt.
-* ``sensei-top guide --deck KEY --import FILE`` or ``POST
-  /api/guide/{key}/narrative`` — every matchup a full deck-guide narrative
-  covers, via ``brief/from_guide.py``. This is the ordinary path;
-  per-matchup imports are for filling a gap the guide missed.
+See docs/brief.md, "Prompt out, answer in — this feature has no generate button".
 """
 
 from __future__ import annotations
@@ -152,8 +152,8 @@ def import_brief(
     own stored numbers to. A sideboard plan that does not
     balance, or names a card the deck does not hold, is **stored with the
     problem recorded** rather than rejected or silently repaired — the same
-    posture ``guide/plans.py`` has always taken, so the dashboard shows the
-    problem next to the plan.
+    posture as ``guide/plans.py``, so the dashboard shows the problem next to
+    the plan.
 
     ``written_for`` is the ``list_hash`` the answer says it was written for
     (its ``context``, ``answers.read_answer``), stored in place of the

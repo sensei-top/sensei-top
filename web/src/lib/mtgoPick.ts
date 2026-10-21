@@ -1,7 +1,7 @@
 import type { FormatsOut, MtgoFormat, PrefillSource } from '../api'
 import type { TFunction } from '../i18n'
 
-/** The seven formats an MTGO pick may confirm (plan 12, D9): no "other". */
+/** The seven formats an MTGO pick may confirm: no "other". */
 export const MTGO_FORMATS: readonly MtgoFormat[] = [
   'Standard',
   'Pioneer',

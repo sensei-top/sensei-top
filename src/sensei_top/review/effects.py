@@ -4,14 +4,10 @@ Keyword matching over ``cards.oracle_text``/``type_line`` — deliberately not
 a rules engine. Each pattern is commented with the real card that motivated
 it, so a false negative can be traced back to what the pattern was actually
 checking for. ``oracle_text`` is ``NULL`` whenever a card was only ever named
-by the Arena-client import (``migrations/015_card_text.sql``); every
-function here returns ``"unknown"`` in that case rather than guessing a tag
-from the name alone (AGENTS.md rule 4) — a caller must treat "unknown"
-differently from "confirmed absent".
-
-``EffectTags`` is a frozenset of the tags that matched, empty (not
-"unknown") when text was available but nothing matched — that is a real,
-observed absence, unlike a missing oracle_text.
+by the Arena-client import (``migrations/015_card_text.sql``); ``classify``
+returns ``"unknown"`` in that case rather than guessing a tag from the name
+alone (AGENTS.md rule 4) — a caller must treat "unknown" differently from an
+empty ``EffectTags``, which is a confirmed absence.
 """
 
 from __future__ import annotations
@@ -58,8 +54,7 @@ _PATTERNS: dict[str, re.Pattern[str]] = {
 
 # Finisher is not a rules-text concept, so it is not in _PATTERNS: a big
 # creature or planeswalker rarely announces itself as a "finisher" in its
-# own text. Approximated instead from mana value + type, and named as an
-# approximation everywhere it is used — see finisher_tag()'s own docstring.
+# own text. Approximated from mana value + type instead — see is_finisher.
 _FINISHER_MANA_VALUE = 5
 _FINISHER_TYPES = ("Creature", "Planeswalker")
 
@@ -75,11 +70,10 @@ def _front_face(mana_cost: str) -> str:
 
     Arena/Scryfall-style cost strings for a split cost print both faces
     joined by ``" // "`` — e.g. Hearth Elemental // Stoke Genius is
-    ``"{5}{R} // {1}{R}"``. Summing pips across the whole string (the bug
-    this fixes) double-counts both faces as if they were one cost; a card is
-    only ever cast from one face at a time, so ``mana_value``/
-    ``mana_requirement`` read only this one. ``alternate_costs`` below
-    surfaces the rest for a caller that needs it.
+    ``"{5}{R} // {1}{R}"``. Summing pips across the whole string would count
+    both faces as one cost; a card is only ever cast from one face at a
+    time, so ``mana_value``/``mana_requirement`` read only this one.
+    ``alternate_costs`` surfaces the rest for a caller that needs it.
     """
     return _FACE_SEP_RE.split(mana_cost, maxsplit=1)[0]
 
@@ -115,9 +109,8 @@ def mana_value(mana_cost: str | None) -> int | None:
 
     Returns ``None`` for an unparseable or absent cost — never 0, which
     would claim "free to cast" for a card whose cost was simply not read.
-    A hybrid pip (``{U/R}``, ``{2/W}``) counts as 1, matching how mana value
-    is defined for a hybrid symbol in the comprehensive rules; a Phyrexian
-    pip (``{U/P}``) also counts as 1, its worst-case colored value.
+    A hybrid pip counts its largest component (CR 202.3f): ``{U/R}`` is 1,
+    ``{2/W}`` is 2. A Phyrexian pip (``{U/P}``) counts as 1 (CR 202.3g).
 
     A ``//`` cost (Adventure, MDFC) is read from its front face alone —
     see ``_front_face`` — so this is the cost this card is *normally* cast
@@ -134,9 +127,9 @@ def mana_value(mana_cost: str | None) -> int | None:
         if _HYBRID_GENERIC_RE.match(pip):
             total += int(pip)
         elif pip.upper() == "X":
-            continue  # X costs 0 on the stack until chosen; never observed here
+            continue  # X is 0 off the stack, and every card read here is off it
         else:
-            total += 1
+            total += max([int(part) for part in pip.split("/") if part.isdigit()], default=1)
     return total
 
 
@@ -179,8 +172,9 @@ def mana_requirement(mana_cost: str | None) -> ManaRequirement | None:
     requirement, which would claim "castable off any land" for a card whose
     cost was simply not read. Uses the same pip tokenizer as ``mana_value()``
     and keeps its invariant: ``generic + len(pips) == mana_value(cost)`` for
-    any cost with no ``X`` (X is excluded from both, the same "0 until
-    chosen" rule ``mana_value`` already documents).
+    any cost with no ``X`` (X is excluded from both, the same X-is-0 rule as
+    ``mana_value``) and no monocolored-hybrid pip, which counts 2 toward the
+    mana value but is one colored pip here (``_pip_colors``).
 
     Reads a ``//`` cost's front face alone, the same as ``mana_value()`` —
     see ``_front_face``.
@@ -224,11 +218,9 @@ _EM_DASH = "—"
 
 
 def is_creature(type_line: str | None) -> bool:
-    """No em-dash split needed, unlike ``is_land``: unlike "Land", nothing in
-    Magic's own type vocabulary embeds "Creature" as a spurious substring of
-    an unrelated type. Lifted out of ``review/analyzers/frame.py`` once
-    ``table/keep.py`` needed the same rule, rather than adding a second
-    private copy."""
+    """No em-dash split needed, unlike ``is_land``: nothing in Magic's own
+    type vocabulary embeds "Creature" as a spurious substring of an
+    unrelated type."""
     return type_line is not None and "Creature" in type_line
 
 
@@ -236,9 +228,7 @@ def is_land(type_line: str | None) -> bool:
     """Same em-dash split every SQL view in this project uses to keep a land
     out of a spell count (``migrations/011_review_views.sql``'s own comment
     explains why the whole line can't be tested: ``"Token Artifact — Lander"``
-    would misread). Lifted out of ``table/keep.py`` once another caller (the
-    draft assistant's pool read, deleted 2026-10-01) needed the same rule,
-    rather than adding a second private copy."""
+    would misread)."""
     if not type_line:
         return False
     head = type_line.split(_EM_DASH, 1)[0]
@@ -320,9 +310,9 @@ def cost_reduction(oracle_text: str | None) -> CostReduction | str | None:
     two recognized clause shapes in this codebase's fixtures. Returns
     ``UNPARSED_REDUCTION`` — a plain sentinel, mirroring ``classify()``'s
     ``UNKNOWN`` — when a "less to cast" clause exists but matches neither
-    pattern: the card renders at printed cost with that flag, which
-    suppresses a deck-level curve/band claim rather than silently
-    understating it. Same discipline as ``keep.py``'s ``unnamed_count``.
+    pattern: the card keeps its printed cost, and no fuel kind is guessed
+    for it (``table/opening_hand.py::_reduced_castable_turn`` gives it no
+    reduced turn).
     """
     if oracle_text is None:
         return None
@@ -342,8 +332,8 @@ def is_finisher(
 
     A creature or planeswalker at mana value 5+ — deliberately coarse (many
     5-drops are not finishers, and a real finisher can cost less with an
-    alternative cost this cannot see), used only where the caller already
-    says "approximately" or "likely" rather than stating it as fact.
+    alternative cost this cannot see), so a caller must never state it as
+    fact.
     """
     if oracle_text is None or type_line is None:
         return False

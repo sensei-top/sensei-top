@@ -1,5 +1,6 @@
 """The ``/api/metrics/*`` winrate/curve endpoints — each a thin ``SELECT``
-over one metric view (``docs/architecture.md``'s "views versus Python").
+over one metric view. See docs/architecture.md, "Aggregation: views versus
+Python".
 
 These drive the OpenAPI schema, which openapi-typescript turns into the
 frontend's types — so field names here are the frontend's contract.
@@ -36,8 +37,9 @@ class PlayDrawWinrate(BaseModel):
     )
     deck_name: str | None = None
     on_play: bool
-    games_completed: int
+    games_completed: int = Field(description="won, lost and drawn")
     games_won: int
+    games_lost: int
     winrate: float | None = None
 
 
@@ -71,11 +73,12 @@ class TurnCurve(BaseModel):
 
 
 class RankWinrate(BaseModel):
-    """One rank tier's match record — the one rank-conditioned metric this
-    round adds, so a Platinum grind and a Mythic run stop being averaged
-    into the same winrate. Grouped by (constructed_class, constructed_level)
-    at the rank observed closest before each match started; both fields are
-    null together for any match with no rank_snapshot preceding it at all."""
+    """One rank tier's match record, so a Platinum grind and a Mythic run
+    are not averaged into the same winrate. Grouped by (constructed_class,
+    constructed_level) at the latest rank observed at or before each
+    match's start; both fields are null together for an Arena match with no
+    rank_snapshot before it and for every MTGO match
+    (``migrations/046_rank_winrate_arena_only.sql``)."""
 
     constructed_class: str | None = None
     constructed_level: int | None = None

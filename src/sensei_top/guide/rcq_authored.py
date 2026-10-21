@@ -1,7 +1,8 @@
 """The RCQ guide's authored prose, stored and read back.
 
-Like ``coach_report``, every generation keeps its own row: a guide is
-written against the field of its day, so a later one never replaces it.
+Like ``coach_report``, every guide keeps its own row, generated, pasted or
+imported: a guide is written against the field of its day, so a later one
+never replaces it.
 ``project()`` never reads this table.
 """
 

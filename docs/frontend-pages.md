@@ -315,7 +315,7 @@ saying it is too few for a rate; with nothing finished an em
 dash and a line that says so. The band is not drawn from
 `/api/metrics/winrate` or `/api/metrics/play-draw`, which did not answer for
 every source when the page was built; they do now, and play and draw are
-still to join the page (`docs/status.md`).
+still to join the page (`BACKLOG.md`, BL-023).
 
 **A row** (`components/MatchRow.tsx`) is one link to its match, at least
 44 px high, with no button inside it. Home's "Recent matches" draws the
@@ -490,8 +490,10 @@ timer," and it exists
 because the opening-hand read's decision window has a measured 5-second
 median in real play that the ~3s heartbeat alone would eat too much of. It
 used to gate on a match actually being in progress (a `matchInProgress`
-flag); that gate is gone, since the request it drives now costs 0.03-0.08s
-regardless (see `docs/frontend.md`, "Data fetching" and `docs/current-match.md`).
+flag); that gate is gone, since the request it drives replays only the
+current match (see `docs/frontend.md`, "Data fetching", and
+`docs/current-match.md`, "The live replay (`table/live.py`,
+`projector/live_state.py`)", for its cost).
 
 An AI-suggested line of play (`AskClaudeCard`) used to live in this tab too,
 asking *what should I do on this board right now* — a question the
@@ -784,10 +786,8 @@ reads neither, so nothing else on that tab would show the failure. A
 failed matches read therefore shows two notes on the Overview, Matchups and
 a pairing, the strip's and the page's own.
 
-One known gap in Play vs draw: `/api/metrics/play-draw` has no games-lost
-field and its `games_completed` counts draws, so a drawn game lowers a
-side's rate and reads as a loss in its record (`docs/design-system.md`,
-"Numbers"; the debt is in `docs/status.md`).
+Play vs draw counts a side's games won and lost, so a drawn game is in
+neither its record nor its ten games (`docs/design-system.md`, "Numbers").
 
 **The Overview** (`DeckOverviewView`, `views/DeckOverviewView.tsx`) is,
 top to bottom: the version switcher; a "By rank" table (Rank · Matches ·

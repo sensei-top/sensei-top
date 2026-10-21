@@ -90,7 +90,7 @@ def test_a_card_whose_faces_disagree_takes_the_whole_names_colours(monkeypatch):
     ``Elusive Otter // Grove's Bounty`` is blue, while ``Grove's Bounty`` alone
     is green, so the face's key merges to blue-green. The lookup must answer
     with the whole name's colours whatever order normalize()'s set yields —
-    here forced face-first, the order that used to turn a blue deck green."""
+    here forced face-first, the order that would turn a blue deck green."""
     table = {
         "elusive otter // grove's bounty": frozenset("U"),
         "elusive otter": frozenset("U"),
@@ -557,8 +557,8 @@ def test_confidence_needs_fit_margin_and_a_look_at_the_deck():
     assert confidence_of(generic, cards_seen=15) == "medium"
 
 
-# classify_matches under every format (plan 13, S4). Legality is read from
-# the S0 fixture, tests/fixtures/scryfall_format_printings.jsonl: Thought
+# classify_matches under every format. Legality is read from
+# tests/fixtures/scryfall_format_printings.jsonl: Thought
 # Scour is legal in Modern, Pauper, Legacy and Vintage; the Foundations
 # commons everywhere but Premodern; Mox Opal and Reckless Waif in Modern,
 # Legacy and Vintage. So Thought Scour with four commons fits Modern, Pauper,
@@ -766,7 +766,7 @@ def test_opponent_source_breakdown_counts_a_formats_completed_matches(db):
 
 
 def test_a_modern_match_given_the_modern_prior_gets_its_corpus_reason(db):
-    """Plan 13, S8: the prior is the caller's, built for the match's format,
+    """The prior is the caller's, built for the match's format,
     so a Modern match folds a Modern prior in. The rule names ModArch on one
     of two conditions (a low read). Every labelled Modern corpus deck runs all
     four revealed cards: 4 matched (CORPUS_MIN_CARDS is 3) and no rival

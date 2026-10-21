@@ -110,14 +110,16 @@ def test_leaks_and_leaks_all_decks_are_both_present(conn):
     assert isinstance(guide.leaks_all_decks, tuple)
 
 
-# --- the deck's format (plan 13, D15) ---------------------------------------
+# --- the deck's format -----------------------------------------------------
 
 
-def _store_corpus_deck(conn, event_id, deck_ord, fmt, event_date, mainboard, wins=0, losses=0):
+def _store_corpus_deck(
+    conn, event_id, deck_ord, fmt, event_date, mainboard, wins=0, losses=0, tier="B",
+):
     conn.execute(
         "INSERT OR IGNORE INTO meta_event (event_id, path, blob_sha, source, name, "
-        "event_date, format, tier) VALUES (?, 'p', 's', 'mtgo', 'e', ?, ?, 'B')",
-        (event_id, event_date, fmt),
+        "event_date, format, tier) VALUES (?, 'p', 's', 'mtgo', 'e', ?, ?, ?)",
+        (event_id, event_date, fmt, tier),
     )
     conn.execute(
         "INSERT INTO meta_deck (event_id, deck_ord, wins, losses, mainboard_json, "
@@ -153,9 +155,9 @@ def _two_formats_with_one_ban_each(conn):
 
 def test_a_modern_decks_guide_reads_modern_resets_and_field(conn):
     """A ``.dek`` deck (no format on its record) picked for one Modern MTGO
-    match is a Modern deck (D15's match step): its guide windows on Modern's
-    ban, not Standard's, and its field is Modern's. The one match predates
-    that ban, and it counts through the pick (``matches.deck_id`` is NULL)."""
+    match is a Modern deck (``identity_format``'s matches step): its guide
+    windows on Modern's ban, not Standard's, and its field is Modern's. The
+    one match predates that ban, and it counts through the pick (``matches.deck_id`` is NULL)."""
     _two_formats_with_one_ban_each(conn)
     conn.execute(
         "INSERT INTO decks (deck_id, name, format, cards_json, first_seen, last_seen) "
@@ -184,9 +186,9 @@ def test_a_modern_decks_guide_reads_modern_resets_and_field(conn):
 
 
 def test_a_deck_with_no_format_gets_no_field_and_the_format_unknown_note(conn):
-    """A Draft deck whose match the log names no format for: D15 gives NULL,
-    so the guide carries no reset, no field and no list diff, and says why in
-    the ``format_unknown`` note. Standard's corpus and ban are right there,
+    """A Draft deck whose match the log names no format for: ``identity_format``
+    gives NULL, so the guide carries no reset, no field and no list diff, and
+    says why in the ``format_unknown`` note. Standard's corpus and ban are right there,
     and nothing of them is borrowed."""
     _two_formats_with_one_ban_each(conn)
     conn.execute(
@@ -219,7 +221,7 @@ def test_a_deck_with_no_format_gets_no_field_and_the_format_unknown_note(conn):
 
 
 def test_a_modern_deck_is_classified_under_modern_for_its_field_and_list_diff(conn):
-    """Plan 13, S8: the guide classifies the user's own deck under the deck's
+    """The guide classifies the user's own deck under the deck's
     format. The ``.dek`` record names none, so only the Modern pick makes it
     a Modern deck, and the Modern definition keyed ``arch`` is the one that
     names its card.
@@ -227,8 +229,11 @@ def test_a_modern_deck_is_classified_under_modern_for_its_field_and_list_diff(co
     By hand, from the seeded corpus: Modern's window starts 2026-07-02 (the
     ban on 2026-07-01). ``arch`` decks in it are mod2's one (0-0) and mod3's
     five (5-0, 4-1, 3-2, 3-1, 4-2): 6 decks, 19 wins, 6 losses, 19/25 = 0.76.
-    mod1 (before the window) and std1 (Standard) are left out. The list diff's
-    consensus is the five with at least 3 wins."""
+    mod1 (before the window) and std1 (Standard) are left out, and so is
+    mod4, a Tier C league whose 5-0 a win rate may not count
+    (docs/metagame.md, "The evidence tiers"). The list diff's consensus
+    pools every tier, so it is the six with at least 3 wins, mod4's among
+    them."""
     _two_formats_with_one_ban_each(conn)
     conn.execute("INSERT INTO cards (grp_id, name) VALUES (12, 'Arch Card')")
     conn.execute(
@@ -243,6 +248,8 @@ def test_a_modern_deck_is_classified_under_modern_for_its_field_and_list_diff(co
     for ord_, (wins, losses) in enumerate([(5, 0), (4, 1), (3, 2), (3, 1), (4, 2)]):
         _store_corpus_deck(conn, "mod3", ord_, "Modern", "2026-07-25", ["Arch Card"],
                            wins=wins, losses=losses)
+    _store_corpus_deck(conn, "mod4", 0, "Modern", "2026-07-26", ["Arch Card"],
+                       wins=5, losses=0, tier="C")
     conn.execute(
         "INSERT INTO decks (deck_id, name, format, cards_json, first_seen, last_seen) "
         "VALUES ('dek1', 'My Deck', NULL, ?, 't', 't')",
@@ -264,17 +271,17 @@ def test_a_modern_deck_is_classified_under_modern_for_its_field_and_list_diff(co
     assert (perf.decks, perf.wins, perf.losses, perf.win_rate) == (6, 19, 6, 0.76)
     assert guide.list_diff is not None
     assert guide.list_diff.archetype_key == "arch"
-    assert guide.list_diff.winning_decks == 5
+    assert guide.list_diff.winning_decks == 6
 
 
 def test_a_leak_match_of_another_format_is_measured_against_that_formats_window(
     conn, monkeypatch,
 ):
-    """Plan 13, S8c: the guide's leak rollups window each match by its own
-    format, not by the deck's. By hand, from the seeded corpus: Standard's
-    ban (last played 2026-08-01) opens its window on 2026-08-02, Modern's
-    (2026-07-01) on 2026-07-02. The Standard deck holds one match of each
-    format, so its Modern match takes Modern's window, in both rollups."""
+    """The guide's leak rollups window each match by its own format, not
+    by the deck's. By hand, from the seeded corpus: Standard's ban (last
+    played 2026-08-01) opens its window on 2026-08-02, Modern's (2026-07-01)
+    on 2026-07-02. The Standard deck holds one match of each format, so its
+    Modern match takes Modern's window, in both rollups."""
     _two_formats_with_one_ban_each(conn)
     _insert_deck_and_match(conn, "d1", "m-standard", [11], [])
     conn.execute("UPDATE matches SET format = 'Standard' WHERE match_id = 'm-standard'")

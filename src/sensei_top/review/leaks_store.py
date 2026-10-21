@@ -1,8 +1,8 @@
 """The leak finder's training-plan prose, stored and read back.
 
-Single row, not a table of them: ``GET /api/review/leaks/narrative`` calls
-``find_leaks(conn)`` unfiltered (no ``deck_id`` scope), so there is exactly
-one narrative to store, ever. See ``review/narrative_store.py`` for the
+Single row, not a table of them: the leaks narrative routes call
+``find_leaks`` with no deck scope, so there is exactly one narrative to
+store, ever. See ``review/narrative_store.py`` for the
 shared ``context_hash`` staleness signal this mirrors.
 """
 

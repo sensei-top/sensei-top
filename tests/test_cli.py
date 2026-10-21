@@ -13,6 +13,7 @@ fail loudly here rather than actually starting a server.
 
 from __future__ import annotations
 
+import argparse
 import io
 import json
 import os
@@ -106,7 +107,7 @@ def test_serve_with_an_ipv6_loopback_host_passes_the_gate(monkeypatch, tmp_path)
     assert "No database at" in str(exc_info.value)  # never reached the loopback message
 
 
-# ui-copy.md §5, the startup line when --no-corpus-refresh is given.
+# The startup line when --no-corpus-refresh is given.
 NO_CORPUS_REFRESH = "Not downloading tournament results (--no-corpus-refresh)"
 
 
@@ -153,7 +154,7 @@ def _serve(monkeypatch, tmp_path, *flags: str) -> tuple[Path, list[Path]]:
 def test_serve_watch_with_no_arena_log_starts_and_live_says_null(
     monkeypatch, tmp_path, capsys, make_client
 ):
-    """D10: nothing found anywhere is not a reason to exit, and /api/live
+    """Nothing found anywhere is not a reason to exit, and /api/live
     reports arena_log as null. An explicit --file that is missing still exits."""
     from sensei_top.api import create_app
 
@@ -232,8 +233,8 @@ def empty_log(tmp_path) -> Path:
 def test_serve_starts_the_corpus_refresh_with_or_without_watch(
     watch, monkeypatch, tmp_path, empty_log, capsys
 ):
-    """D13: the refresh runs whether or not serve watches the logs, and its
-    start prints nothing (ui-copy.md §5)."""
+    """The refresh runs whether or not serve watches the logs, and its
+    start prints nothing."""
     flags = ["--watch", "--file", str(empty_log), "--no-mtgo"] if watch else []
     if not watch:
         from sensei_top.db import open_database
@@ -379,7 +380,7 @@ def _one_pauper_event(db_path: Path) -> None:
 
 
 def test_meta_fetches_the_followed_formats_by_hand(monkeypatch, tmp_path, capsys):
-    """D8: the formats serve's loop follows (Standard, Modern and every
+    """The formats serve's loop follows (Standard, Modern and every
     stored one, here Pauper), plus --format, in FORMATS order, from every
     source; mtgo.com and TopDeck run by hand, on a clock. With every source
     fresh, each prints its fresh line, and with no decks stored the
@@ -426,7 +427,7 @@ def test_meta_fetches_the_followed_formats_by_hand(monkeypatch, tmp_path, capsys
 def test_meta_names_a_missing_topdeck_key_only_when_asked_for_topdeck(
     source_flag, monkeypatch, tmp_path, capsys
 ):
-    """lines.md §1.3: the no-key line is printed only with --source topdeck;
+    """The no-key line is printed only with --source topdeck;
     otherwise an unconfigured TopDeck is silent. No key is configured here
     (conftest), so TopDeck's own refresh answers without a request."""
     from sensei_top.metagame import mtgo_site, source
@@ -511,7 +512,7 @@ def test_main_writes_utf8_to_a_console_whose_default_is_not(monkeypatch, tmp_pat
     assert "—" in raw.getvalue().decode("utf-8")
 
 
-# --- MTGO folder suggestion wiring (release plan 3, D8) ----------------------
+# --- MTGO folder suggestion wiring ----------------------------------------
 
 
 @pytest.fixture
@@ -775,9 +776,9 @@ def test_serve_exits_nonzero_on_a_port_another_socket_holds(tmp_path):
     assert "Cannot listen" in result.stderr
 
 
-# --- config: the settings the desktop shell drives (plan 6, S3) -------------
+# --- config: the settings the desktop shell drives -------------------------
 #
-# Expectations come from S3 and D2-D4/D11: --json carries every value the
+# What these pin: --json carries every value the
 # Settings page shows and no key; a key goes to the keyring when one exists
 # (here, conftest's in-memory one) and to the file otherwise; '-' reads it
 # from stdin; an empty value clears a setting.
@@ -1052,7 +1053,7 @@ def _arena_log_config(path: Path) -> None:
 
 
 def test_resolve_log_honours_arena_after_mtga_log(tmp_path, monkeypatch):
-    """D11: --file, then $MTGA_LOG, then [arena] log, then autodetection."""
+    """--file, then $MTGA_LOG, then [arena] log, then autodetection."""
     autodetected = tmp_path / "autodetected" / "Player.log"
     configured = tmp_path / "configured" / "Player.log"
     from_env = tmp_path / "env" / "Player.log"
@@ -1175,3 +1176,17 @@ def test_version_flag_prints_the_pyproject_version(capsys):
         cli_module.main(["--version"])
     assert exit_info.value.code == 0
     assert capsys.readouterr().out.strip() == expected
+
+
+def test_help_description_names_every_registered_subcommand():
+    # The module docstring is --help's description; a subcommand added to the
+    # parser without a line there is invisible to anyone who reads --help.
+    parser = cli_module.build_parser()
+    subparsers = next(
+        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
+    )
+    assert subparsers.choices
+    missing = [
+        name for name in subparsers.choices if f"sensei-top {name}" not in parser.description
+    ]
+    assert missing == []

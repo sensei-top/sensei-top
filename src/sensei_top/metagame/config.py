@@ -4,24 +4,21 @@ answers.
 Resolution order, first match wins:
 
 1. ``TOPDECK_API_KEY`` in the environment.
-2. The system keyring (``secrets.get("topdeck")``), where one exists.
+2. The system keyring (``secrets.get(secrets.TOPDECK)``), where one exists.
 3. ``[topdeck]`` in ``llm.config.config_path()`` — the same
    ``~/.config/sensei-top/config.toml`` the Claude credential lives in
-   (``$XDG_CONFIG_HOME`` if set), written by ``sensei-top config
-   --set-topdeck-key``.
+   (``$XDG_CONFIG_HOME`` if set), which ``sensei-top config
+   --set-topdeck-key`` writes only when the keyring does not take the key.
 
 Nothing here raises. A missing file, a missing table, or a malformed one all
 resolve the same way ``llm/config.py`` and ``metagame/source.py`` do: log a
 warning and hand back the "not configured" state (``None``), never an
 exception.
 
-This is a sibling to ``llm/config.py``, sharing only ``config_path()`` — not
-an extension of it. TopDeck is not the metered, billing credential
-AGENTS.md's non-negotiable #5 governs (the key exists for rate-limiting and
-attribution, never billing); it is one of "the free downloads that remain",
-so it is configured the same way but by its own module, and an unconfigured
-TopDeck key means the metagame corpus refresh simply skips that source —
-no different from any other unreachable download.
+A sibling to ``llm/config.py``, sharing only ``config_path()``: TopDeck's key
+is a free download source's, not the metered credential AGENTS.md's
+non-negotiable #5 governs. See docs/metagame.md, "A second source:
+TopDeck.gg".
 """
 
 from __future__ import annotations
@@ -78,7 +75,7 @@ def _load_file(*, warn: bool) -> str | None:
     try:
         with path.open("rb") as f:
             data = tomllib.load(f)
-    except (OSError, tomllib.TOMLDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as exc:
         log.warning("could not read %s: %s", path, exc)
         return None
 

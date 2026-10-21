@@ -1,9 +1,6 @@
-"""Tests for ``sensei-top mtgo-status`` -- the CLI diagnostic added by
-``.claude/handoffs/mtgo-config-diagnostic.md`` to make the "no handle
-configured" / "stale directory" failure modes legible instead of presenting as a
-blank Current-match tab (see that handoff, and
-``.claude/handoffs/mtgo-live.md``'s "Why the real database has zero MTGO
-matches rows" section for the failure this reproduces).
+"""Tests for ``sensei-top mtgo-status`` -- the CLI diagnostic that makes the
+"no handle configured" / "stale directory" failure modes legible, where
+otherwise they show only as zero MTGO matches rows.
 
 Every test isolates ``XDG_CONFIG_HOME`` and clears ``MTGO_HANDLE`` so this
 suite never reads or depends on a real ``~/.config/sensei-top/config.toml``.
@@ -107,8 +104,7 @@ def test_reports_the_configured_handle_files_and_row_counts_after_ingest(
 
 
 def test_reports_a_projected_match_once_project_has_run(monkeypatch, tmp_path, capsys):
-    """Closes the loop the plan's own verification section can only run
-    manually against the real database: with a handle configured, the two
+    """With a handle configured, the two
     MTGO raw_events rows already on disk project into a real match, and
     mtgo-status reports that count rather than the fail-soft zero pinned by
     test_projector_mtgo.py::test_no_handle_configured_projects_nothing_but_warns_once.

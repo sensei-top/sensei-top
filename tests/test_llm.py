@@ -1,6 +1,8 @@
 """Tests for src/sensei_top/llm/ — the opt-in Claude call AGENTS.md
-non-negotiable #5 now permits — and for the three ``POST .../narrative``
-routes it feeds.
+non-negotiable #5 now permits — and for the four ``POST .../narrative``
+routes that resolve their credential through ``llm_config.load()``: the match
+report, the leak finder, the deck guide and the RCQ guide (the coach's, the
+fifth, resolves ``load_coach()``).
 
 No test here ever makes a network call: ``llm/config.py`` is exercised
 against real env vars and a scratch config file (never a real key),
@@ -8,7 +10,7 @@ against real env vars and a scratch config file (never a real key),
 socket, and the API routes against monkeypatched ``llm_config.load`` /
 ``llm_client.write_prose`` / ``llm_client.write_json``.
 ``test_no_credential_means_no_client_is_constructed`` is the one that pins
-the actual guarantee: with nothing configured, none of the three routes may
+the actual guarantee: with nothing configured, none of the four routes may
 even try to build a client.
 """
 
@@ -103,6 +105,50 @@ def test_malformed_toml_yields_none_not_an_exception(monkeypatch, tmp_path):
     (config_dir / "config.toml").write_text("this is not { valid toml at all")
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     assert load() is None
+
+
+def _write_latin1_config(tmp_path):
+    """A config file saved in Latin-1 rather than UTF-8 — what an editor
+    that defaults to the system code page writes for an accented value.
+    ``tomllib`` raises ``UnicodeDecodeError`` on it, not ``TOMLDecodeError``."""
+    config_dir = tmp_path / "sensei-top"
+    config_dir.mkdir()
+    path = config_dir / "config.toml"
+    path.write_bytes(
+        '[claude]\napi_key = "file-key"\n[mtgo]\nhandle = "Jos\xe9"\n'
+        '[arena]\nlog = "/tmp/Player.log"\n[backup]\nkeep = "3"\n'
+        '[topdeck]\napi_key = "td-key"\n'.encode("latin-1")
+    )
+    return path
+
+
+def test_a_non_utf8_file_is_unreadable_for_every_reader_not_an_exception(monkeypatch, tmp_path):
+    from sensei_top import arena_config, diagnostics
+    from sensei_top.backup import config as backup_config
+    from sensei_top.metagame import config as topdeck_config
+    from sensei_top.mtgo import config as mtgo_config
+
+    path = _write_latin1_config(tmp_path)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+
+    assert load() is None
+    assert llm_config_module.load_coach() is None
+    assert mtgo_config.load_handle() is None
+    assert arena_config.load_log() is None
+    assert topdeck_config.load() is None
+    assert backup_config.resolve(tmp_path / "sensei-top.db").keep_source == "default"
+    assert diagnostics.secret_free_config(path) is None
+    assert cli_module._read_config_tables() == {}
+
+
+def test_llm_status_answers_unconfigured_for_a_non_utf8_file(monkeypatch, tmp_path, make_client):
+    _write_latin1_config(tmp_path)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+
+    response = make_client(create_app(tmp_path / "unused.db")).get("/api/llm/status")
+
+    assert response.status_code == 200
+    assert response.json() == {"configured": False, "model": None}
 
 
 def test_a_file_with_no_claude_table_yields_none(monkeypatch, tmp_path):
@@ -879,13 +925,12 @@ def test_write_llm_config_round_trips_the_coach_table_and_preserves_other_keys(
 def test_write_topdeck_config_after_coach_overrides_preserves_the_coach_table(
     monkeypatch, tmp_path
 ):
-    """Coach overrides written first, topdeck key second -- this used to
-    corrupt ``[claude.coach]`` into a stringified dict, because
+    """Coach overrides written first, topdeck key second: ``[claude.coach]``
+    must survive as a table, not a stringified dict, because
     ``_write_topdeck_config`` reads and rewrites every table through
-    ``_read_config_tables``/``_write_config_tables``, and those two used to
-    flatten every value to a string, unable to represent a nested sub-table
-    or a real boolean. Both helpers now round-trip one level of nesting and
-    booleans, so this order is safe too."""
+    ``_read_config_tables``/``_write_config_tables``. Those helpers must
+    round-trip one level of nesting and real booleans for this order to be
+    safe."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("TOPDECK_API_KEY", raising=False)
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
@@ -1323,7 +1368,7 @@ def test_context_hash_is_a_plain_sha256_of_the_context_string():
     assert context_hash("hello") == hashlib.sha256(b"hello").hexdigest()
 
 
-# --- the three POST .../narrative routes ---------------------------------
+# --- the four credential-gated POST .../narrative routes -------------------
 
 
 @pytest.fixture
@@ -1481,8 +1526,8 @@ def test_generate_guide_narrative_converges_with_the_hand_import_parser(
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "ok"
-    # The generate path keeps its own prompt (plan 24, D12); the answer
-    # contract ends only the copied one the GET serves.
+    # The generate path keeps its own prompt; the answer contract ends only
+    # the copied one the GET serves.
     assert "Answer as a single JSON object matching this schema" in prompts[0]
     assert "Answer with exactly one JSON object" not in prompts[0]
     copied = client.get(f"/api/guide/{guide_key}/narrative").json()["prompt"]
@@ -1508,7 +1553,7 @@ def test_generate_guide_narrative_converges_with_the_hand_import_parser(
     conn.close()
 
 
-# --- config_path() on Windows (release plan 3, D6) --------------------------
+# --- config_path() on Windows ------------------------------------------------
 # These monkeypatch sys.platform and the environment into tmp_path trees, so
 # on real Windows they exercise the same branch; none needs to skip there.
 

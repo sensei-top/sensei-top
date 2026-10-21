@@ -9,13 +9,10 @@ Two of these carry the design's honesty rules:
   low-confidence ``Finding``; it is the absence of one, said out loud, kept
   in its own list so silence is never mistaken for "nothing was wrong".
 * ``Evidence.key`` and ``Finding.code`` are stable identifiers, not prose.
-  Phase B's aggregate rollup (not built yet) groups on ``code`` and averages
-  ``evidence[key]`` across matches — renaming either silently breaks a trend
-  that Phase B would otherwise report cleanly.
-
-Every field here is a scalar or a tuple of scalars, so if these are ever
-persisted (they are not — see ``review/__init__.py`` for why), ``Finding``
-is one flat row and ``Evidence`` a child table with no reshaping needed.
+  ``summary.py`` and ``coach/evidence.py`` match specific codes and look
+  evidence up by ``key``, and ``coach/evidence.py::progress_since`` compares
+  against leak codes stored in an earlier coach report, so a renamed code
+  silently reads as "not observed in any new match".
 """
 
 from __future__ import annotations
@@ -77,7 +74,7 @@ class Evidence:
     value: int | float | str | bool | None
     unit: str | None = None
     display: str | None = None  # a human phrase for `value`, e.g. "0.49 — a decisive swing";
-    # `value` itself stays the raw number a rollup groups on — this is presentation only.
+    # `value` itself stays the raw number; this is presentation only.
 
 
 @dataclass(frozen=True, slots=True)

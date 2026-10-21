@@ -1,93 +1,31 @@
 """Log entry segmentation for Arena's Player.log.
 
-Verified against a real 2026.62 log (Steam/Proton, Linux host), for the first
-five of the six entry shapes that matter; the sixth has never been captured.
-Everything else is engine noise:
+Seven entry shapes matter and everything else is engine noise; each is
+described in docs/arena-log.md, "Entry shapes". Shapes 1-5 are verified
+against a real 2026.62 log (Steam/Proton, Linux host), 6 against a real
+draft capture; 7 has never been captured:
 
-1. Single-line request::
-
-       [UnityCrossThreadLogger]==> GetFormats {"id":"...","request":"{ }"}
-
-   Method name after the arrow, JSON to end of line. The ``request`` field is
-   string-escaped JSON-in-JSON; the reader stores it raw, the projector does
-   the second deserialization pass.
-
-2. Response::
-
-       [UnityCrossThreadLogger]8/13/2026 2:40:28 PM
-       <== GetFormats(7bef1bb4-...)
-       {"NodeStates":{...}}
-
-   The ``<==`` line is bare (no prefix), carries method + request UUID, and the
-   payload starts on the *next* line and may span many lines.
-
-3. Prefixed event with header, payload on following line(s)::
-
-       [UnityCrossThreadLogger]8/13/2026 2:49:21 PM: D67C... to Match: ClientToGremessage
-       {
-         "requestId": 3,
-         ...multi-line...
-       }
-
-4. Bare JSON event line(s) with no preceding header at all (match service
-   events such as ``matchGameRoomStateChangedEvent`` and ``greToClientEvent``
-   often appear this way).
-
-5. Response with a non-JSON body — observed for real on ``DeckDeleteDeck``::
-
-       [UnityCrossThreadLogger]9/23/2026 5:30:38 PM
-       <== DeckDeleteDeck(00000000-0000-0000-0000-000000000001)
-       Success
-       Can't find pet for deck Some Deck (00000000-0000-0000-0000-000000000002)
-
-   A response's payload is expected to start with ``{`` on the line right
-   after ``<==``. When it doesn't, that first line is emitted verbatim as the
-   response's payload instead of being fed to the JSON accumulator — which
-   would otherwise never see a ``{``/``}`` pair balance and swallow every
-   following line, requests included, until one happened to balance by
-   accident. This is structural, not semantic: the reader still learns
-   nothing about what ``DeckDeleteDeck``/``Success`` means, and the
-   projector's "unparseable payload" warning on that row is correct.
-
-6. A summarized message, known only from other projects' documentation (no
-   capture exists as of 2026-10-19)::
-
-       [Message summarized because one or more GameStateMessages exceeded the
-       50 GameObject or 50 Annotation limit.]
-       ::: GameStateMessage
-       :: GameObject Count = 61
-
-   Arena replaces the message with this block, so its content is not in the
-   log. The segmenter warns once per block and stores nothing.
+1. Single-line request: ``[UnityCrossThreadLogger]==> Method {json}``.
+2. Response: a bare ``<== Method(uuid)`` line, usually right after a header
+   line, then the payload from the next line on.
+3. Prefixed event with header, payload on the following line(s).
+4. Bare JSON with no header at all.
+5. Response with a non-JSON body (``DeckDeleteDeck``'s ``Success``).
+6. Labeled inline event: ``[UnityCrossThreadLogger]Draft.Notify {json}``.
+7. Summarized message: a ``[Message summarized because …]`` block, warned
+   once and never stored.
 
 JSON payloads are extracted by brace-depth counting that respects string
-literals and backslash escapes — payloads legitimately contain ``{``/``}``
+literals and backslash escapes: payloads legitimately contain ``{``/``}``
 inside strings (card text, escaped nested JSON), so naive counting corrupts.
 
-Timestamps (captures of 2026-10-06, every in-game language):
-
-1. Arena writes the header in its *in-game language*, not the OS locale, and
-   one file can switch shape mid-session (a saved language applies from the
-   next launch's first header). A prefixed body that starts with a digit and
-   holds an ``H:MM:SS`` time before its first ``": "`` is a header; the text
-   up to that ``": "`` is its *stamp*, the rest its context. Five stamp shapes
-   have been captured (``_SHAPES``). ``Startup Timestamp:`` is letter-led and
-   unprefixed digit-led lines (``… PM LoadWrapperScene``) carry no prefix:
-   neither is a header.
-2. A header whose stamp is in no captured shape, or in one but is no real
-   date and time either way (``13:00:00 PM``, hour 24, month 13 both ways),
-   is still a header, with an unknown time. Every header replaces the
-   time, context and stamp entries inherit — the old regex matched two
-   shapes only, so a Japanese, Korean or German header was no header at all
-   and its entries kept the *previous* header's time: a wrong date where
-   rule 4 wants ``None``.
-3. A slash or dot stamp does not say which field is the month (``3/7/2026``).
-   Parsing never decides it: a *resolver* (``DateResolver``) does, one call
-   per header, in file order. ``locale_hint`` is the shorthand for the fixed
-   one (``fixed_resolver``); a year-first stamp reads as written under any.
-   Unknown or impossible means ``logged_at`` is ``None`` — never synthesized
-   (brief §6), because a guessed timestamp corrupts ordering and dedupe for
-   good.
+What a header is, and why every header replaces the last one's time even
+when its own can't be read, is in docs/arena-log.md, "Timestamps". Parsing
+never decides which field of a slash or dot stamp is the month: a
+*resolver* (``DateResolver``) does, one call per header, in file order.
+``locale_hint`` is the shorthand for the fixed one (``fixed_resolver``); a
+year-first stamp reads as written under any. Unknown or impossible means
+``logged_at`` is ``None``, never synthesized (non-negotiable #4).
 """
 
 from __future__ import annotations
@@ -122,8 +60,8 @@ DATE_ORDERS = ("mdy", "dmy")
 
 _TIME = r"(?P<hour>\d{1,2}):(?P<min>\d{2}):(?P<sec>\d{2})"
 _SLASH_DATE = r"(?P<a>\d{1,2})/(?P<b>\d{1,2})/(?P<year>\d{4})\s+"
-# 오전 (AM) is in no capture; accepted by symmetry with the captured 오후 (plan
-# 3, D12). Every other designator is the captured English pair.
+# 오전 (AM) is in no capture; accepted by symmetry with the captured 오후.
+# Every other designator is the captured English pair.
 _PM_DESIGNATORS = frozenset({"PM", "오후"})
 
 
@@ -157,8 +95,8 @@ def _shape(key: str, pattern: str, *, year_first: bool = False) -> _Shape:
 # Every stamp shape a real client has written (tests/fixtures/
 # header_languages.log, header_relaunch.log), matched whole against the stamp.
 # A key names its shape wherever it is stored, so it never changes. A shape
-# with no real capture is not added (plan 3, D5): its stamp stays a header
-# with no time until one is captured. Group ``a`` is the first non-year date
+# with no real capture is not added (rule 7): its stamp stays a header with
+# no time until one is captured. Group ``a`` is the first non-year date
 # field as written, ``b`` the second; ``ampm`` a 12-hour designator.
 _SHAPES = (
     # English, month first: "10/6/2026 2:37:04 PM"
@@ -381,8 +319,7 @@ class Segmenter:
 
     Stateful so the live tailer can feed partial reads. Two kinds of state
     carry across calls to ``feed_line``, and both matter across a *poll*
-    boundary too (``reader/ingest.py``, which used to build a fresh
-    ``Segmenter`` per read and lose both):
+    boundary too, where ``reader/ingest.py`` builds a new ``Segmenter``:
 
     - ``_last_ts``/``_last_context``/``_last_header`` — the most recent
       header's time, the context label a following bare ``{`` line consumes,
@@ -444,11 +381,10 @@ class Segmenter:
                 and not line.lstrip().startswith("{")
             ):
                 # The first line offered to a response's accumulator isn't
-                # JSON at all (entry shape 5 in the module docstring, e.g.
-                # DeckDeleteDeck's bare "Success"). Emit it verbatim as the
-                # whole response and clear pending, rather than feeding it to
-                # a JSON accumulator that will never see a brace balance and
-                # would otherwise swallow every following line looking for one.
+                # JSON at all (shape 5, e.g. DeckDeleteDeck's bare "Success").
+                # Emit it verbatim as the whole response and clear pending,
+                # rather than feeding it to a JSON accumulator that will never
+                # see a brace balance and would swallow every following line.
                 out.append(
                     LogEntry(
                         kind=EntryKind.RESPONSE,
@@ -492,9 +428,8 @@ class Segmenter:
             if header is not None:
                 self._take_header(header)
                 return out
-            # "Draft.Notify {...}" and friends: the label is on the same line as
-            # the payload, with no header context and no "==>" arrow. Without
-            # this these lines were dropped outright.
+            # Shape 6, "Draft.Notify {...}" and friends: the label is on the
+            # same line as the payload, with no header context and no arrow.
             labeled = _LABELED_EVENT_RE.match(body)
             if labeled:
                 entry = self._extract_inline(
@@ -594,7 +529,7 @@ class Segmenter:
     def _take_header(self, header: Header) -> None:
         # Every header replaces all three, an unreadable one included: keeping
         # the previous header's time would store its date on these entries —
-        # a wrong value where rule 4 wants None (module docstring, timestamps 2).
+        # a wrong value where rule 4 wants None.
         if header.parsed is None:
             _warn_unknown_shape(header.stamp)
             self._last_ts = None

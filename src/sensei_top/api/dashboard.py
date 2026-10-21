@@ -1,23 +1,8 @@
 """The built dashboard, served from ``web_dist``, with a page's address
-answered by the page.
-
-The dashboard is one page, and an address inside it (``/matches/abc``,
-``/decks/x/guide``) names no file in ``web_dist``. Starlette's
-``StaticFiles`` answers ``index.html`` at ``/`` and 404 everywhere else,
-so a reload or a bookmark on any other address would fail.
-``DashboardFiles`` answers ``index.html`` where the parent would answer
-404 and leaves what to show for the address to the page.
-
-Two kinds of path keep their 404:
-
-1. ``api`` and everything under it. This mount is at ``/``, so an API
-   path that no route takes arrives here. It stays a JSON 404: a page
-   with status 200 in answer to a mistyped API path would tell its
-   caller that the request succeeded.
-2. Everything under ``assets``. Vite names each file there by its hash,
-   so a missing one is a page from an older build asking for a file the
-   new build replaced. HTML in answer to a request for a script fails
-   later and less clearly than a 404 does.
+answered by the page: ``index.html`` wherever the parent ``StaticFiles``
+would answer 404, except under ``api`` (this mount is at ``/``, so an API
+path no route takes arrives here and stays a JSON 404) and ``assets``.
+Why each keeps its 404: docs/frontend.md, "Ports".
 
 Traps:
 
@@ -51,11 +36,11 @@ from starlette.responses import Response
 from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
 
-# The dashboard's Content-Security-Policy (plan D28). Starts from
+# The dashboard's Content-Security-Policy. Starts from
 # ``default-src 'self'``; each other directive is there for something in the
 # built bundle (src/sensei_top/web_dist), found by reading it:
-# - style-src 'unsafe-inline': React ``style={...}`` props in ten files under
-#   web/src (and the chart library's) set style attributes, which only
+# - style-src 'unsafe-inline': React ``style={...}`` props under web/src
+#   (and the chart library's) set style attributes, which only
 #   'unsafe-inline' allows. No script is inline, so script-src stays 'self'.
 # - font-src 'self' data:: the fonts are self-hosted under /assets, and
 #   index-*.css also inlines two small woff2 files as ``url(data:font/woff2...)``.

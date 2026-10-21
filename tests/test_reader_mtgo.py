@@ -139,7 +139,7 @@ def test_a_file_vanishing_between_glob_and_read_warns_and_the_rest_still_ingest(
 
 # --- scan_game_logs, read_game_log, store_game_log ----------------------------
 #
-# The live watcher (plan 3, D2) scans every 2 s and stores a changed file only
+# The live watcher scans every 2 s and stores a changed file only
 # once its last game is decided, so the scan has to keep reporting a file until
 # a store records exactly the bytes it stored — and must never write anything
 # itself.

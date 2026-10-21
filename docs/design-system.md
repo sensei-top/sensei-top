@@ -444,7 +444,7 @@ colours.
 
 **The boundary rule:** mana colours are identity chrome: beside a deck
 or archetype name, or as a table row's label. **They never colour a
-chart mark.** `PoolReadCard`'s colour-pool bars and the share `Meter`s
+chart mark.** `ColorBars`' colour-pool bars and the share `Meter`s
 on Field and Home stay one hue, per docs/frontend.md's "one hue for
 nominal categories" and "color follows the entity" rules; a pip may
 label the row a bar belongs to, the bar itself never changes colour to
@@ -651,10 +651,10 @@ behind a subtraction. A share of a corpus is not a record and stays
 **A draw is never a loss.** A record counts wins and losses; a draw is
 neither, and neither is a match still in progress. Where a caller has
 only a count played and a count won, losses are played minus won minus
-draws, never played minus won. One known gap: `/api/metrics/play-draw`
-has no losses field and counts draws in `games_completed`, so the deck
-strip's Play vs draw side record still writes a drawn game as a loss,
-listed in `docs/status.md`.
+draws, never played minus won. `/api/metrics/play-draw`'s
+`games_completed` counts draws, so the deck strip's Play vs draw, the
+match report's play/draw record and `sensei-top report` read `games_won`
+and `games_lost` instead.
 
 **Ten finished matches before a rate, five before a rough one.** A
 personal record has two thresholds, `RATE_MIN_MATCHES` (10) and

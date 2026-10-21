@@ -221,7 +221,7 @@ def test_a_shared_archetype_name_is_filed_under_its_majority_key(conn):
 def test_briefs_carry_the_hash_the_guide_was_written_for(conn):
     """An imported guide answered for an older 75 (``answers.read_answer``'s
     ``context``) stores its briefs with that 75's hash, so they read as
-    stale like the guide itself (plan 24, D13); none given is today's."""
+    stale like the guide itself; none given is today's."""
     _archetype_row(conn, "mardu_discard", "Mardu Discard")
     conn.commit()
     identity = _identity()

@@ -2,11 +2,13 @@
 
 Filesystem discovery only — nothing here knows what Arena's data *means*. Two
 things need it: the reader looking for ``Player.log``, and the card importer
-looking for Arena's own card database. Both live inside the game's install,
-and the game can be installed in any library folder the user has added (a
-second drive, an external mount), not just the one Steam itself sits in. Steam
+looking for Arena's own card database. Both live in the game's library folder
+(the log in its Proton prefix under ``steamapps/compatdata``, the database in
+its install), and that can be any library folder the user has added (a second
+drive, an external mount), not just the one Steam itself sits in. Steam
 records those in ``libraryfolders.vdf``, so that file — rather than a fixed
-path — is what this module follows.
+path — is what this module follows. See docs/architecture.md,
+"Finding the clients' files".
 """
 
 from __future__ import annotations
@@ -16,14 +18,45 @@ from pathlib import Path
 
 MTGA_APP_ID = "2141910"
 
-# Steam's own data directory, which is also where libraryfolders.vdf lives.
-# Both spellings exist in the wild; the first is usually a symlink to the second.
-STEAM_DATA_DIRS: tuple[Path, ...] = (
-    Path.home() / ".steam/steam",
-    Path.home() / ".local/share/Steam",
-)
+# Test seam: ``None`` means "compute from the home directory at call time"
+# (``steam_data_dirs()``). A test that wants a specific set of data directories
+# assigns a tuple here.
+STEAM_DATA_DIRS: tuple[Path, ...] | None = None
 
 _VDF_PATH_RE = re.compile(r'"path"\s*"([^"]+)"')
+
+# Steam is closed source; these are the two places other launchers read the
+# file from. Heroic reads the first, Lutris the second (Lutris's
+# ``util/steam/config.py:216``). Both are tried, and the dedupe drops repeats.
+_VDF_RELATIVE = ("steamapps/libraryfolders.vdf", "config/libraryfolders.vdf")
+
+
+def steam_data_dirs() -> tuple[Path, ...]:
+    """Steam's own data directories, computed from ``Path.home()`` now.
+
+    ``~/.steam/root`` and ``~/.steam/steam`` are usually symlinks to the native
+    folder; the Flatpak and Snap builds keep their own copy under the app's
+    sandbox home (the older Flatpak layout used ``data/Steam``). Sources (read 2026-10-19):
+    Flatpak ``steam_wrapper.py:24,330-345``
+    (flathub/com.valvesoftware.Steam); the older ``data/Steam`` from Lutris's
+    ``util/steam/config.py:22-28``; Snap ``snapcraft.yaml:551``
+    (canonical/steam-snap), where ``HOME`` is ``$SNAP_USER_COMMON``.
+
+    ``~/.steam/steam`` and ``~/.local/share/Steam`` stay first: the
+    deduplication keeps the first spelling, and the watcher keys
+    ``ingest_state`` by the log's path string, so a new spelling of an
+    existing install's log would re-read it from offset 0.
+    """
+    home = Path.home()
+    flatpak = home / ".var/app/com.valvesoftware.Steam"
+    return (
+        home / ".steam/steam",
+        home / ".local/share/Steam",
+        home / ".steam/root",
+        flatpak / ".local/share/Steam",
+        home / "snap/steam/common/.local/share/Steam",
+        flatpak / "data/Steam",
+    )
 
 
 def library_roots() -> list[Path]:
@@ -32,16 +65,28 @@ def library_roots() -> list[Path]:
     Best-effort: a missing or unreadable ``libraryfolders.vdf`` simply yields
     the default data directories, so a plain single-library install still works.
     """
-    roots = list(STEAM_DATA_DIRS)
-    for data_dir in STEAM_DATA_DIRS:
-        try:
-            text = (data_dir / "steamapps/libraryfolders.vdf").read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            # Missing, unreadable, or not text at all. Discovery is best-effort:
-            # a mangled file means no extra libraries, never a failure to start.
-            continue
-        roots.extend(Path(match) for match in _VDF_PATH_RE.findall(text))
-    # Deduplicate while keeping order: the same root is listed both as a default
-    # and inside the vdf on a normal install.
+    data_dirs = STEAM_DATA_DIRS if STEAM_DATA_DIRS is not None else steam_data_dirs()
+    roots = list(data_dirs)
+    for data_dir in data_dirs:
+        for relative in _VDF_RELATIVE:
+            try:
+                text = (data_dir / relative).read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                # Missing, unreadable, or not text at all. Discovery is
+                # best-effort: a mangled file means no extra libraries, never
+                # a failure to start.
+                continue
+            roots.extend(Path(match) for match in _VDF_PATH_RE.findall(text))
+    # Deduplicate by real path while keeping the first spelling: the same root
+    # is listed as a default and inside the vdf, and ~/.steam/* are symlinks.
     seen: set[Path] = set()
-    return [root for root in roots if not (root in seen or seen.add(root))]
+    unique: list[Path] = []
+    for root in roots:
+        try:
+            key = root.resolve()
+        except (OSError, RuntimeError):
+            key = root
+        if key not in seen:
+            seen.add(key)
+            unique.append(root)
+    return unique

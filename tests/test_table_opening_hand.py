@@ -549,7 +549,7 @@ def test_verdict_withheld_when_a_card_is_unnamed(conn):
     assert any("card table" in c.lower() for c in read.caveats)
 
 
-# -- reduced_castable_turn (Layer 1: fuel-in-hand castability) --------------
+# -- reduced_castable_turn (fuel-in-hand castability) -----------------------
 #
 # Real oracle text from the Spellementals fixtures (data/sensei-top.db, cards
 # 91584/98392) — the two reduction clauses effects.cost_reduction()
@@ -738,14 +738,13 @@ def test_reduced_castable_turn_unparsed_shape_withholds_rather_than_guesses(conn
     assert reducer.reduced_castable_turn is None
 
 
-# -- pressure / mulligan brake (Layer 3: the deck's own evidence moves the
-# -- verdict) --------------------------------------------------------------
+# -- pressure / mulligan brake (the deck's own evidence moves the verdict) --
 #
-# key_plays/mulligan_cost come from table/keep.py's own Layer 2 (tested
-# independently in tests/test_table_keep.py), so these tests build just
-# enough match/game/card_event history for build_keep_guide to produce them,
-# reusing the same insert-row style tests/test_table_keep.py's own Layer 2
-# tests use.
+# key_plays/mulligan_cost come from table/keep.py's own play evidence
+# (tested independently in tests/test_table_keep.py), so these tests build
+# just enough match/game/card_event history for build_keep_guide to produce
+# them, reusing the same insert-row style tests/test_table_keep.py's own
+# key_plays/mulligan_cost tests use.
 
 THREAT_GRP = 20  # {2}{U} creature, >=3 copies -- this deck's own key play
 
@@ -927,7 +926,7 @@ def test_no_mulligan_brake_lets_a_pressureless_marginal_hand_slide_to_mulligan(c
 def test_no_key_plays_leaves_the_pre_layer_3_verdict_unchanged(conn):
     """Below _MIN_EVIDENCE_GAMES (no matches played at all here): thin
     evidence means the pressure/brake machinery never engages, and the
-    land-band/early-play verdict from before Layer 3 stands exactly as
+    land-band/early-play verdict stands exactly as
     test_verdict_keep_when_lands_in_band_and_early_plays_castable pins it."""
     _insert_test_deck_with_threat(conn)
     hand = [

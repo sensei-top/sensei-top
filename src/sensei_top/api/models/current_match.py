@@ -115,9 +115,8 @@ class CurrentMatch(BaseModel):
     )
     started_at: str | None = Field(
         None,
-        description="how stale this is; an abandoned match stays current until the next one. "
-        "For source='arena' this is when the match room opened; for source='mtgo' it is the "
-        "game-log file's own mtime, since MTGO's transcript carries no in-game start event",
+        description="when the match room opened, which says how stale this is: an abandoned "
+        "match stays current until the next one",
     )
     games_won: int | None = None
     games_lost: int | None = None
@@ -128,15 +127,13 @@ class CurrentMatch(BaseModel):
         "arena",
         description="which client wrote this match — always 'arena': v_current_match "
         "(migrations/040_arena_only_current_match.sql) only ever returns an Arena match, "
-        "so an MTGO match can never reach this model. Kept as a real column passthrough "
-        "rather than dropped, to avoid an API break and a type-regeneration churn for a "
-        "value that no longer varies",
+        "so an MTGO match can never reach this model",
     )
 
 
 class HandSlotOut(BaseModel):
     count: int
-    label: str = Field(description="e.g. 'lands', 'creature', 'plays at 1-3 mana'")
+    label: str = Field(description="e.g. 'lands', 'creature', 'plays at 1-2 mana'")
 
 
 class MulliganRecordOut(BaseModel):
@@ -146,10 +143,11 @@ class MulliganRecordOut(BaseModel):
 
 
 class KeyPlayOut(BaseModel):
-    """One card this deck's own match history says wins games, and the turn
-    band where it does it best (``table/keep.py``'s ``KeyPlay``) — the
-    evidence the opening-hand verdict checks for "pressure" before it calls
-    a hand an unconditional keep."""
+    """One of this deck's key cards, chosen from its decklist and card text,
+    with its record from the turn band where it does best in this deck's own
+    games (``table/keep.py``'s ``KeyPlay``) — the evidence the opening-hand
+    verdict checks for "pressure" before it calls a hand an unconditional
+    keep."""
 
     card: str
     best_band: str = Field(
@@ -168,7 +166,7 @@ class KeyPlayOut(BaseModel):
 
 
 class MulliganCostOut(BaseModel):
-    """This deck's own kept-seven vs. mulliganed-to-six win rates
+    """This deck's own kept-seven vs. mulliganed-to-six-or-fewer records
     (``table/keep.py``'s ``MulliganCost``) — the brake that keeps a
     borderline hand marginal instead of letting it slide to mulligan when
     shipping it has a measured, wide cost for this deck."""
@@ -183,8 +181,8 @@ class MulliganCostOut(BaseModel):
 
 class KeepGuideOut(BaseModel):
     """What a keepable opening hand looks like for the deck being played,
-    from its own maindeck curve alone — no board state, so this is valid
-    from the mulligan decision onward (``table/keep.py``)."""
+    from its own maindeck and match history — no board state, so this is
+    valid from the mulligan decision onward (``table/keep.py``)."""
 
     maindeck_size: int
     land_count: int
@@ -209,7 +207,7 @@ class KeepGuideOut(BaseModel):
         default_factory=list, description="sums to 7 when present"
     )
     early_plays: int | None = Field(
-        None, description="ideal_hand's own 'play(s) at 1-3 mana' count, as a bare int"
+        None, description="ideal_hand's own 'play(s) at 1-2 mana' count, as a bare int"
     )
     land_odds: list[list[float]] = Field(
         description="[k, P(exactly k lands in an opening 7)] for k = 0..7"
@@ -260,7 +258,9 @@ class HandCardOut(BaseModel):
     )
     p_in_hand: float = Field(description="hypergeometric odds this card is in hand right now")
     castable_now: bool | None = Field(
-        None, description="instant-speed and within the opponent's open mana; null if unknown"
+        None,
+        description="an instant within the opponent's open mana plus other_mana_sources; "
+        "null if unknown",
     )
 
 
@@ -309,7 +309,7 @@ class HandReadOut(BaseModel):
 
 class LibraryCardOut(BaseModel):
     """One maindeck card and how many copies are still unaccounted for in
-    the library this game — the tab's primary panel once a game is under
+    the library this game — the page's primary panel once a game is under
     way (``table/live.py``). ``left`` is never negative, and a card stays in
     the list at 0 once every copy is seen."""
 
@@ -343,24 +343,25 @@ class OpeningHandCardOut(BaseModel):
     castable_turn: int | None = Field(
         None,
         description="earliest turn this hand's own lands can pay for it; null for a land, "
-        "or when the read's colors_known is false",
+        "an unparseable cost, or one these lands never pay. With colors_known false, a land "
+        "whose colors are unknown counts as colorless",
     )
     reduced_castable_turn: int | None = Field(
         None,
         description="earliest turn this hand's own lands *and its own in-hand or on-board "
         "fuel* can pay for it, for a card with a cost-reduction clause (e.g. 'costs {1} "
-        "less for each instant/sorcery in your graveyard'); null for a land, when "
-        "colors_known is false, when this card carries no cost-reduction clause, or when "
-        "the reduction's shape or fuel could not be parsed — never overwrites "
-        "castable_turn, which always stays the printed-cost answer",
+        "less for each instant/sorcery in your graveyard'); null for a land, when this "
+        "card carries no cost-reduction clause, when the reduction's shape or fuel could "
+        "not be parsed, or when this hand never reaches it. Same colorless reading as "
+        "castable_turn, which it never overwrites: castable_turn always stays the "
+        "printed-cost answer",
     )
 
 
 class OpeningHandOut(BaseModel):
-    """The hand on offer right now, read straight from the log before the
-    keep/mulligan decision — see ``table/opening_hand.py`` for why this is
-    the one read in ``table/`` that bypasses the projection entirely, and
-    what the verdict is and is not."""
+    """The hand on offer right now, read from a replay of ``raw_events``
+    before the keep/mulligan decision, never from the projection — see
+    docs/current-match.md, "The opening-hand read (`table/opening_hand.py`)"."""
 
     seat: int
     mulligan_count: int = Field(description="0 on the first offer; already-mulliganed count")
@@ -374,7 +375,8 @@ class OpeningHandOut(BaseModel):
     mulligan_record: list[MulliganRecordOut] = Field(default_factory=list)
     unnamed_count: int = 0
     colors_known: bool = Field(
-        description="false when any land in hand has no produced_mana on file"
+        description="false when a land in hand resolves to neither produced_mana nor a "
+        "chosen basic land type"
     )
     verdict: str | None = Field(
         None, description="keep | mulligan | marginal | null (withheld — see caveats)"
@@ -480,12 +482,11 @@ class IntermissionOut(BaseModel):
 
 
 class CurrentMatchRead(BaseModel):
-    """The current-match reads that replaced the old board-math / play-
-    around / scoreboard cards: an opening-hand read for a pending mulligan
+    """The current-match reads: an opening-hand read for a pending mulligan
     decision, a keep guide for the deck in play, a read on what the
-    opponent may be holding, and our own remaining library. One route
-    rather than several — the tab refetches all of it on every heartbeat,
-    and it's one current match either way.
+    opponent may be holding, and our own remaining library. One route,
+    polled every second while the page is open — see docs/current-match.md,
+    "Wiring: one route".
 
     ``opening_hand`` is populated even with ``status == "no_match"``: it
     reads straight from ``raw_events`` and does not wait on a projected
@@ -499,15 +500,14 @@ class CurrentMatchRead(BaseModel):
     library_count: int | None = Field(
         None,
         description="our own library size right now, from the same live replay as `library` "
-        "above — deliberately not the projected turns.self_library, which can run 8-15s+ "
-        "stale mid-combat on a real database (projector/live_state.py)",
+        "above — deliberately not the projected turns.self_library, which runs a rebuild "
+        "behind (projector/live_state.py)",
     )
     source: str = Field(
         "arena",
         description="which client wrote the current match — always 'arena': v_current_match "
         "(migrations/040_arena_only_current_match.sql) only ever returns an Arena match, so "
-        "this is 'arena' both when a match is current and when there is none at all, "
-        "preserving today's no-match behaviour",
+        "this is 'arena' both when a match is current and when there is none at all",
     )
     intermission: IntermissionOut | None = Field(
         None,

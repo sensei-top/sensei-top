@@ -17,6 +17,7 @@ from sensei_top.api.models.common import LeakOut
 class LeaksOut(BaseModel):
     leaks: list[LeakOut]
     narrative_available: bool = Field(
-        True, description="kept for wire compatibility; GET .../narrative always serves a "
-        "prompt, and POST there generates it with Claude when a credential is configured"
+        True, description="always true, kept for wire compatibility; GET .../narrative serves "
+        "a prompt whenever there is something to narrate, and POST there generates it with "
+        "Claude when a credential is configured"
     )

@@ -440,10 +440,13 @@ folder holds, which the failed backup's sentences name.
   folder; how many copies are kept (3, 7, 14 or 30); "Back up now";
   "Restore from a backup file", which asks first.
 - **App.** The version; "Start when Windows starts" ("Start when you
-  log in" elsewhere); on Linux, "Keep running when the window is
-  closed"; "Check for updates" with "Check now" and one sentence on where the
-  update stands, or that sentence alone where the copy cannot update
-  itself; "Restart to update" once one has downloaded; "Diagnostic mode";
+  log in" elsewhere), shown only where the copy can start at login, which
+  is not the Linux tarball, and not the Microsoft Store build, which shows
+  a note pointing to Windows' Startup settings instead; on Linux, "Keep
+  running when the window is closed"; "Check for updates" with "Check now"
+  and one sentence on where the update stands, or that sentence alone
+  where the copy cannot update itself; "Restart to update" once one has
+  downloaded; "Diagnostic mode";
   "Show logs" and "Export diagnostics", with one caption that says what
   the export holds and that matches are never in it; last, the sentence
   naming the welcome steps and "Go through them again", a link to
@@ -467,7 +470,7 @@ they are drawn only on `/design/surfaces`.
 longer reads** (the draft assistant was deleted on 2026-10-01). They were
 kept for plan 10's match-data contribution, which was refused on
 2026-10-19 (`ROADMAP.md`, "Never"), so their removal is owed
-(`docs/status.md`). The Overlay section went with the pivot, since no
+(`BACKLOG.md`, BL-062). The Overlay section went with the pivot, since no
 overlay is planned.
 
 **Inside the desktop shell** every section above is drawn but Draft
@@ -557,7 +560,7 @@ Notes the table does not carry:
 - **Ready holds the two preferences**: the update check, where the
   build has an updater, and autostart, where the shell asks. Both are
   preferences, and Ready is where the person stops reading. Ready
-  links to no tour: the tour is after 1.0.0 (`docs/status.md`), and
+  links to no tour: the tour is after 1.0.0 (`BACKLOG.md`, BL-003), and
   its label, `welcome.done.tour`, is in both catalogues, not drawn.
 
 **The Detailed Logs drawing** (`components/onboarding/DetailedLogsGuide.tsx`)
@@ -743,9 +746,9 @@ projected table. `useCurrentMatchRead`'s opening-hand read has
 a 5-second median decision window in real play that the ~3s heartbeat alone
 would eat too much of — see `docs/frontend-pages.md`, "The current-match reads". It used to gate
 the fast timer on a match actually being in progress; that gate is gone now that the route it drives
-replays only the current match (0.03-0.08s) rather than reading data a
-`project()` rebuild produced (which can now take ~16s+ to land, and is
-gated to run even less often than that suggests) — the fast poll runs
+replays only the current match rather than reading data a `project()`
+rebuild produced (what each costs: `docs/current-match.md`, "The live
+replay (`table/live.py`, `projector/live_state.py`)") — the fast poll runs
 unconditionally whenever `CurrentMatchView` is mounted, which is the only
 time this hook is called at all, so an idle dashboard on another tab still
 does none of this work. (`useDraft` was a second exception until the draft
@@ -1108,8 +1111,10 @@ bridge: `readShellGlobal`, `shellStore`).
 says and not what a press does. `components/home/SessionHero.tsx` and
 `components/onboarding/DetailedLogsGuide.tsx` (each language's labels,
 caption and image label from its own catalogue) have one each in the same
-pattern; no other component has a test, and a hook that reads a query or the
-address (`useFilters`, `useMatchInProgress`) has none either: what a page
+pattern, and so does `components/settings/AppSection.tsx`, which checks
+which rows the App section draws depending on `canAutostart` and
+`windowsStore`; no other component has a test, and a hook that reads a
+query or the address (`useFilters`, `useMatchInProgress`) has none either: what a page
 looks like and does is still checked in a browser. Three tests sit outside
 `src/`, in `scripts/`, and they are the dashboard tests that touch the
 filesystem: `thirdPartyNotices.test.ts`, for the build step that writes the

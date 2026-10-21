@@ -1,11 +1,10 @@
-"""The report's analyzer registry.
+"""The report's analyzer registry: one module per concept in the
+postmortem's arc. See docs/review.md, "The analyzers, one per module in
+`review/analyzers/`".
 
-Replaces the single ``analyzers.py`` module: one file per concept in the
-postmortem's own arc (``docs/review.md`` walks through why each one exists
-and the article it comes from), rather than one file growing indefinitely.
 ``match_report.py`` runs every entry in ``ANALYZERS`` over one
-``MatchSnapshot`` and concatenates the results — the registry, not import
-order, is what determines which analyzers run.
+``MatchSnapshot`` and sorts the results — the registry, not import order,
+decides which analyzers run.
 """
 
 from __future__ import annotations

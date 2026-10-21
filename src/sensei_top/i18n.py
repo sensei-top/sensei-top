@@ -1,18 +1,16 @@
 """The dashboard's prose in the reader's language — and every prompt in English.
 
-The dashboard sends ``Accept-Language`` on every request (it holds the
-language setting; this server stores none), and ``api/app.py``'s middleware
-enters ``use_language`` for that request. Every user-facing sentence the API
-builds goes through ``_()`` or ``ngettext()``, with the English text as the
-msgid: a missing catalogue, a missing entry or an English request all give
-back exactly the English the code wrote.
+``api/app.py``'s middleware enters ``use_language`` for each request's
+``Accept-Language``; this server stores no language setting (see
+docs/i18n.md, "The language, from setting to sentence"). Every user-facing
+sentence the API builds goes through ``_()`` or ``ngettext()``, with the
+English text as the msgid: a missing catalogue, a missing entry or an
+English request all give back exactly the English the code wrote.
 
 Catalogues are ``locale/<lang>/LC_MESSAGES/sensei_top.po``, read once at
-import with ``polib`` and compiled in memory into a ``GNUTranslations`` —
-no ``.mo`` file is ever written or tracked, so the ``.po`` a translator
-edits is the only artifact. ``locale/sensei_top.pot`` is the template,
-written by ``scripts/i18n_extract.py`` from every ``_()``, ``ngettext()``
-and ``N_()`` call; ``tests/test_i18n.py`` fails when it is stale.
+import with ``polib`` and compiled in memory into a ``GNUTranslations``; no
+``.mo`` file is ever written. For the template and its extractor, see
+docs/i18n.md, "Keying a string in the API".
 
 Traps this module exists to avoid:
 

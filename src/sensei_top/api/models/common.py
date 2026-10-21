@@ -1,9 +1,6 @@
-"""Pydantic response models shared by more than one router: leaves that
-appear inside a model defined in another ``api/models/`` file (``LeakOut``
-in both ``guide.py`` and ``review.py``; ``BoardCardOut``/``PlanProblemOut``
-in ``guide.py``'s own matchup plan), plus the handful of top-level models
-(``Health``, ``LiveStatus``, ``Deck``, ``LLMStatus``, ``NarrativeResponse``)
-with no router of their own worth a whole file.
+"""Pydantic models shared by more than one router: leaves that appear
+inside models defined in other ``api/models/`` files, plus the top-level
+models with no router of their own worth a whole file.
 
 These drive the OpenAPI schema, which openapi-typescript turns into the
 frontend's types — so field names here are the frontend's contract.
@@ -24,14 +21,14 @@ class Health(BaseModel):
 
 
 class LiveStatus(BaseModel):
-    """Heartbeat for the dashboard's auto-refresh.
+    """Heartbeat for the dashboard's auto-refresh — see docs/frontend.md,
+    "Data fetching".
 
     Everything is read from the database, including ``watching``'s
     companion ``last_projection_at``: ``serve --watch`` runs the watcher in
-    its own OS process now, not this one (``live.py``'s ``WatcherProcess`` —
-    a rebuild sharing this process's GIL taxed every request ~5x), so
+    its own OS process, not this one (``live.py``'s ``WatcherProcess``), so
     nothing here can be read from in-memory watcher state. Only
-    ``watching``, ``mtgo_watching`` and ``watcher_stopped`` are still asked
+    ``watching``, ``mtgo_watching`` and ``watcher_stopped`` are asked
     of the watcher object directly (``is_alive()`` on the child process, the
     MTGO directory it was started with, and ``stopped_unexpectedly()``, which
     serve's own monitor thread sets), since none needs shared memory to
@@ -65,9 +62,11 @@ class LiveStatus(BaseModel):
     last_projection_at: str | None = Field(
         None,
         description="when project()'s full rebuild last completed — the actual freshness of "
-        "turns/matches, which lags last_ingest_at by up to project_every plus the rebuild's own "
-        "duration (read from projection_state, written by whichever process last ran project(); "
-        "null before any watcher has ever completed a rebuild against this database).",
+        "turns/matches, which lags last_ingest_at by up to one rebuild gate (project_every, "
+        "or longer when rebuilds run slow) plus the rebuild's own duration. Read from "
+        "projection_state, which is written only by the watcher's "
+        "`LiveIngester.project_if_due` in live.py; a bare `project` command never writes it. "
+        "Null before any watcher has ever completed a rebuild against this database.",
     )
     events: int
     matches: int
@@ -75,7 +74,7 @@ class LiveStatus(BaseModel):
     turns: int
     revision: str = Field(
         description="changes on every ingest tick while Arena is running (roughly once a "
-        "second) — drives only the live badge/heartbeat, never a query refetch. See "
+        "second); nothing in the dashboard refetches on it. See "
         "projection_revision for the one that should invalidate the dashboard's own queries."
     )
     projection_revision: str = Field(
@@ -102,7 +101,7 @@ class Deck(BaseModel):
 
 class LLMStatus(BaseModel):
     """Whether a Claude credential is resolved right now — never the key
-    itself. The frontend reads this once to decide whether a narrative
+    itself. The frontend reads this to decide whether a narrative
     surface offers a generate button or falls back to ``CopyPromptCard``."""
 
     configured: bool
@@ -114,29 +113,32 @@ class NarrativeResponse(BaseModel):
     match-report and leak-finder narrative routes — both are "one prose
     blob over some evidence", so one shape serves them.
 
-    ``status`` is ``'ok'`` once ``POST .../narrative`` has generated one,
-    ``'prompt'`` when there is evidence but nothing stored yet, ``'no_report'``
-    when there is nothing to narrate at all. The GET route is always a 200:
-    'nothing to narrate' is an ordinary outcome for an opt-in feature, not a
-    server error. A missing credential only matters to the POST route
+    ``status`` is ``'ok'`` once ``POST .../narrative`` has generated one or
+    ``PUT`` has stored a pasted one, ``'prompt'`` when there is evidence but
+    nothing stored yet, ``'no_report'`` when there is nothing to narrate at
+    all. The GET route answers that last one with a 200: 'nothing to
+    narrate' is an ordinary outcome for an opt-in feature, not a server
+    error. A missing credential only matters to the POST route
     (503 there) — the GET route never needs one, since it only serves what
     is already stored plus the copyable prompt.
     """
 
     status: str = Field(description="ok | prompt | no_report")
     narrative: str | None = Field(
-        None, description="the stored prose, once generated or (match report only) imported"
+        None, description="the stored prose, once generated or pasted"
     )
     prompt: str | None = Field(
         None,
         description="the full text to write the narrative from — pass it to POST on this "
         "same path to generate it with Claude (see docs/llm.md), or into an assistant you "
-        "already pay for and store the answer through the CLI import path",
+        "already pay for and PUT the answer back on this same path",
     )
     model: str | None = Field(None, description="what wrote the stored narrative")
     generated_at: str | None = Field(None, description="when the stored narrative was written")
     cost_usd: float | None = Field(
-        None, description="measured cost of the call that wrote it; null for a hand-written one"
+        None,
+        description="measured cost of the call that wrote it; null for a pasted answer, and "
+        "for a model with no price on file",
     )
     stale: bool = Field(False, description="the evidence has changed since this was written")
     error: str | None = Field(None, description="set when something could not be built")
@@ -172,10 +174,8 @@ class PlanProblemOut(BaseModel):
     message: str
 
 
-# See brief/__init__.py for why this is the one computed package allowed to
-# persist its own output, and brief/narrative.py for what is (and is never)
-# sent — no board state, no game, ever, which is what makes it a function of
-# two decklists rather than a description of play under AGENTS.md rule 5.
+# A brief is a function of two decklists, never of a game: see docs/brief.md,
+# "Why this question is worth writing down once" and "Why a brief is persisted".
 
 
 class PlayAroundOut(BaseModel):
@@ -215,26 +215,30 @@ class MatchupBriefOut(BaseModel):
 
 class MatchupBriefResponse(BaseModel):
     """The live brief's answer, or why there isn't one yet. Always a 200:
-    no key configured, no live match, an unidentified opponent, and a brief
-    the watcher hasn't written yet are all ordinary outcomes for an
-    auto-firing, best-effort feature, not server errors.
+    no live match, an unidentified opponent, and a brief not stored
+    yet are all ordinary outcomes, not server errors.
     """
 
     status: str = Field(description="ok | prompt | unclassified | no_match | no_consensus | "
         "format_unknown (the deck has no format, so there is no field to read)")
     deck_key: str | None = Field(
-        None, description="this match's deck identity — for the `brief --import` command line"
+        None,
+        description="this match's deck identity — the {key} of PUT "
+        "/api/guide/{key}/briefs/{archetype_key}, and the --deck of `brief --import`",
     )
     archetype_key: str | None = Field(None, description="the opponent's archetype key")
     brief: MatchupBriefOut | None = Field(
-        None, description="the imported brief for this matchup, when one has been stored"
+        None, description="the stored brief for this matchup, when there is one"
     )
     prompt: str | None = Field(
         None,
         description="the full text to write this brief from — copy it into an assistant you "
-        "already pay for, then `sensei-top brief --deck KEY --archetype KEY --import FILE`",
+        "already pay for, then PUT the answer to /api/guide/{deck_key}/briefs/{archetype_key} "
+        "or `sensei-top brief --deck KEY --archetype KEY --import FILE` it",
     )
-    stale: bool = Field(False, description="the corpus has moved since this brief was written")
+    stale: bool = Field(
+        False, description="the corpus or this deck's 75 has moved since this brief was written"
+    )
     error: str | None = Field(None, description="set when something could not be built")
 
 

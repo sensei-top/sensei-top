@@ -135,7 +135,7 @@ function Groups({
 }
 
 /** Every MTGO match still waiting for a deck, grouped by the saved list that
- *  holds most of the cards played in it (plan 19): the groups that fit, the
+ *  holds most of the cards played in it: the groups that fit, the
  *  ones close to a list (collapsed), and the matches to pick one at a time.
  *  A confirm refetches the groups, and the line it leaves says what it did. */
 export function MtgoPicksView() {

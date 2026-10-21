@@ -1,25 +1,10 @@
-"""A second evidence source for naming the opponent's deck: what real
-tournament decklists actually look like, from the metagame corpus
-(``metagame/``) — the same 10,000-plus classified decks
-``review/consensus.py`` aggregates into a card list.
-
-``classify.py``'s rule engine (``choose()``) proves an archetype from a
-handful of *specific* cards a definition names. That is exact when a
-definition exists and lists the right cards, and it is silent otherwise: a
-brand-new set's archetypes score zero on every rule until someone writes a
-definition for them, and even a well-defined archetype's fit saturates fast
-(``_fit_score``'s own docstring) because it counts *conditions*, not cards —
-a fifth unlisted signature card revealed late in a match can't move a verdict
-that a rule definition already considers "proved".
-
-This module is deliberately a different kind of evidence, not a replacement:
-a naive-Bayes score over *every* card the corpus has ever seen an archetype
-run, weighted by how much more often that archetype runs it than the field
-as a whole. It strengthens additively with every card revealed (log-odds
-sum), it needs no hand-written definition — an archetype only has to appear
-in enough classified corpus decks — and ``classify.py`` combines its verdict
-with the rule engine's by confidence rank rather than letting either replace
-the other outright (see that module's ``classify_matches``).
+"""A second evidence source for naming the opponent's deck: a naive-Bayes
+read of what real tournament decklists look like, from the metagame corpus
+(``metagame/``) — the same classified decks ``review/consensus.py``
+aggregates into a card list. ``classify.py`` combines its verdict with the
+rule engine's by confidence rank (``classify_matches``). See
+docs/opponent-deck.md, "A second evidence source: the corpus's own
+decklists".
 
 The governing asymmetry from ``classify.py`` carries over unchanged: a card
 never revealed this match contributes nothing for or against any archetype.
@@ -29,16 +14,16 @@ penalized — there is no ``DoesNotContain`` here, because a corpus deck's
 *absence* of a card is not the kind of fact this module observes (it counts
 presence across decks, not one deck's true negative).
 
-Ban-awareness is inherited, not reimplemented: ``guide/window.py`` already
-detects a format reset from the corpus itself (a banned card's last
-appearance) and can say which archetypes did not survive it
-(``structural_change``). ``build_prior`` imports it at function scope,
-never at module scope — ``guide/bundle.py`` imports ``review/``, which
-imports ``archetypes.classify`` at module scope
+Ban-awareness comes from ``guide/window.py``, which detects a format reset
+from the corpus itself (a banned card's last appearance) and says which
+archetypes did not survive it (``structural_change``). ``build_prior``
+imports it at function scope, never at module scope — ``guide/bundle.py``
+imports ``review/``, which imports ``archetypes.classify`` at module scope
 (``review/consensus.py``'s ``from sensei_top.archetypes.classify import
 normalize``), so importing ``guide`` at the top of this module would risk a
 cycle the moment something imports ``archetypes`` before ``guide`` finishes
-initializing. Verified with a cold ``python -c "import sensei_top.archetypes"``.
+initializing. Verified with a cold
+``python -c "import sensei_top.archetypes"``.
 """
 
 from __future__ import annotations
@@ -111,17 +96,16 @@ def build_prior(conn: sqlite3.Connection, fmt: str = "Standard") -> CorpusPrior 
     decks of that format at all, or nothing clears ``MIN_CORPUS_DECKS`` for any
     single archetype. Callers must treat ``None`` exactly like "no corpus
     evidence" rather than raising: this is a downloaded, best-effort corpus
-    (AGENTS.md rule 5), and a machine that has never run ``sensei-top
-    meta`` has every right to keep working without it.
+    (AGENTS.md rule 5), and a machine that has never fetched or classified
+    the corpus has every right to keep working without it.
     """
     # Function-scoped import: see this module's own docstring for the cycle
     # this avoids.
     from sensei_top.guide.window import format_resets, structural_change
 
-    # ORDER BY makes deck iteration order reproducible across runs — see the
-    # comment further down on why order matters here at all (float addition
-    # is not associative, and `labels`/`kinds`/`display_names` keep the
-    # first row seen for a key).
+    # ORDER BY makes deck iteration order reproducible across runs:
+    # `labels`/`kinds`/`display_names` keep the first row seen for a key, and
+    # accumulation order matters (see the sorted() comment below).
     rows = conn.execute(
         """
         SELECT d.mainboard_json, a.archetype_key, a.archetype_name, a.method
@@ -175,12 +159,11 @@ def build_prior(conn: sqlite3.Connection, fmt: str = "Standard") -> CorpusPrior 
         decks_by_key_all[key] = decks_by_key_all.get(key, 0) + 1
 
         # sorted(), not the raw set: Python's string hash is randomized per
-        # process (PYTHONHASHSEED), so a set's own iteration order — and
-        # therefore the order display_names.setdefault(), global_counts and
-        # card_counts accumulate in — would otherwise vary between two runs
-        # over the exact same corpus. Float addition below is not
-        # associative, so that would let a near-tie score in read_corpus
-        # flip between runs on no real change to the data.
+        # process (PYTHONHASHSEED), so a set's own iteration order varies
+        # between two runs over the exact same corpus. Sorting keeps which
+        # spelling display_names.setdefault() records first for a canonical
+        # card, and the order the count dicts are filled in, the same from
+        # run to run.
         canon_this_deck: set[str] = set()
         for name in sorted(raw_names):
             canon = _canon_card(name)
@@ -221,11 +204,8 @@ def read_corpus(prior: CorpusPrior, seen_names: frozenset[str]) -> list[tuple[st
     Laplace-smoothed (``+0.5``/``+1``) so a card no deck of an archetype has
     ever run does not zero out its odds outright — a corpus of a few dozen
     decks has not seen everything a real 60-card list could hold. A card
-    never revealed this match — the overwhelming majority of any deck — never
-    enters the sum at all: this mirrors ``classify.py``'s own governing
-    asymmetry (absence proves nothing) applied to presence-only corpus data,
-    where there is no ``DoesNotContain`` to make an absence meaningful in the
-    first place.
+    never revealed this match never enters the sum at all (the asymmetry in
+    this module's docstring).
 
     Ties (and the empty case) resolve deterministically by archetype key, the
     same discipline ``_rank_archetypes`` uses, so a repeat run over unchanged

@@ -1,21 +1,12 @@
-"""The coach report's prompt — built here, sent from ``sensei_top.llm``
-only when the user has opted in.
+"""The coach report's prompt: every rollup ``coach/evidence.py`` computes,
+the reading list ``coach/canon.py`` offers and the player's previous report,
+folded into one prompt. See docs/coach.md, "The prompt and the report".
 
-Unlike ``review/narrative.py`` (one match) or ``review/leaks_narrative.py``
-(recurring patterns alone), this is the cross-deck view: every rollup
-``coach/evidence.py`` computes over the player's whole recent history, plus
-the reading list ``coach/canon.py`` offers and the player's own previous
-report, all folded into one prompt.
-
-Like every other Claude-facing module in this project, this one **never
-makes the call itself** — only ``sensei_top.llm.client`` imports
-``anthropic`` (AGENTS.md non-negotiable #5). ``build_coach_context``
-assembles the evidence, ``full_prompt`` wraps it with ``system_prompt(fmt)``, and
-``build_coach_prompt`` is the one entry point that turns a connection into a
-complete, storable prompt — the API (a later phase) calls it for both a GET
-(copy-this-prompt: ``CoachPrompt.copied``, which ends with the answer
-contract) and a POST (``CoachPrompt.prompt`` through ``llm.write_report``)
-route.
+This module never makes the call itself: only ``sensei_top.llm.client``
+imports ``anthropic`` (AGENTS.md non-negotiable #5). ``build_coach_prompt``
+is the one entry point; ``api/routes/coach.py`` calls it from the GET
+(``CoachPrompt.copied``, which ends with the answer contract), the POST
+(``CoachPrompt.prompt`` through ``llm.write_report``) and the paste PUT.
 
 **Unknowns are stated, never guessed (rule 4).** Every rate goes through
 ``format_rate``, which reads "no data" at n=0 rather than a bare 0%; an
@@ -24,10 +15,9 @@ a report's own gaps and the reader's permanently-untracked mechanics both get
 their own named section, so the model is never left to assume silence means
 "nothing happened".
 
-**No third-party identifiers, ever.** ``CoachEvidence`` already carries none
-except ``ExampleGame.match_id`` (kept only for the dashboard to link back to
-a match; documented on the dataclass as the one exception) — this module
-never renders it into a prompt.
+**No third-party identifiers, ever.** ``CoachEvidence`` carries none except
+``ExampleGame.match_id`` (see there), which this module never renders into a
+prompt.
 """
 
 from __future__ import annotations
@@ -176,7 +166,7 @@ def system_prompt(fmt: str) -> str:
 
 
 # The seven "## " section headings, in the order system_prompt requires them.
-# The frontend (a later phase) splits a stored report's prose on these.
+# clean_report looks for these; the Coach page splits on any "## " line.
 HEADINGS: tuple[str, ...] = (
     "## Player profile",
     "## Since your last report",
@@ -190,15 +180,12 @@ HEADINGS: tuple[str, ...] = (
 
 def clean_report(prose: str) -> str:
     """Drops any narration a report's own call left before its first
-    section heading (``docs/coach.md``'s "narration can swallow the first
-    heading"). Runs at read time only — stored prose stays verbatim
-    (``coach/store.py`` never mutates a row once written), so both of the
-    reports measured on 2026-09-22 get this fix with no data change.
+    section heading. See docs/coach.md, "The prompt and the report". Runs at
+    read time only: stored prose stays verbatim.
 
     Finds the first occurrence of ``"## "`` immediately followed by one of
     ``HEADINGS``' own text, even glued mid-line to whatever narration came
-    before it (one measured report opened
-    ``"...this player faces.## Player profile"`` with no separator at all).
+    before it (``"...this player faces.## Player profile"``, no separator).
     Falls back to the first ``"## "`` that starts a line, for a heading a
     future prompt version names that this tuple doesn't yet know. Returns
     ``prose`` unchanged if neither is found.
@@ -223,23 +210,18 @@ _TRAILING_SEPARATOR_RE = re.compile(r"\s*[—:-]\s*$")
 
 def web_sources(prose: str) -> list[dict]:
     """The web pages a report's own ``## Sources`` section named, read back
-    from prose rather than ``sources_json`` — the API returned no
-    ``web_search_result_location`` citation objects for either report
-    measured on 2026-09-22, so ``sources_json`` holds reading ids only and
-    every web page the model actually searched would otherwise be lost.
+    from prose because ``sources_json`` holds no web citation. See
+    docs/coach.md, "The prompt and the report".
 
     Scans only the ``## Sources`` section of ``clean_report(prose)`` and
-    takes each line carrying an ``http(s)://`` URL — the reading-list lines
-    above it carry none, so no label is needed to tell the two apart, and
-    this reads the same regardless of whether that section labels its own
-    subheads ``"Web sources:"`` or ``"Web:"`` (both were seen on real
-    reports). A URL is kept only when its host equals, or is a subdomain
-    of, an entry in ``coach/canon.py::ALLOWED_DOMAINS`` — the search tool
-    itself is restricted to that list, so any other URL came from the
-    model's own memory, not a search result, and is dropped rather than
-    shown as a source (rule 4: never present a guess as data).
-    Dropped and duplicate URLs (keeping the first occurrence) are counted
-    and logged once, not per line.
+    takes each line carrying an ``http(s)://`` URL, whatever the section
+    labels its subheads. A URL is kept only when its host equals, or is a
+    subdomain of, an entry in ``coach/canon.py::ALLOWED_DOMAINS``; any
+    other came from the model's memory, not a search, and is dropped (rule
+    4). Dropped URLs are counted and logged once, not per line; a repeated
+    URL keeps its first occurrence and is skipped silently. Each item is
+    ``{"url", "title", "cited_text"}``, ``title`` ``None`` when the line
+    carries none and ``cited_text`` always ``None``.
     """
     cleaned = clean_report(prose)
     start = cleaned.find("## Sources")
@@ -346,10 +328,9 @@ def _variant_suffix(variants: tuple[tuple[str, int], ...]) -> str:
 
 
 def _leak_line(leak: LeakLine) -> str:
-    """One recurring pattern as a prompt line. The leak finder's own ``gap``
-    is unsigned — it ranks patterns that move the win rate either way — so
-    the sign here comes from the two rates: negative means the pattern shows
-    up alongside losing, positive alongside winning."""
+    """One recurring pattern as a prompt line, its sign from the two rates
+    (``Leak.gap`` is unsigned). See docs/coach.md, "The leak line's signed
+    difference"."""
     if leak.present.rate is not None and leak.absent.rate is not None:
         delta = f"win rate {(leak.present.rate - leak.absent.rate) * 100:+.0f} points with it"
     else:
@@ -374,7 +355,6 @@ def build_coach_context(
     """
     lines: list[str] = []
 
-    # 1. Scope.
     lines.append("Scope:")
     as_of_date = evidence.as_of[:10] if evidence.as_of else "unknown"
     source_words = _SOURCE_WORDS.get(evidence.source, "Arena and MTGO")
@@ -414,24 +394,20 @@ def build_coach_context(
             f"the two rates may be the client's opposition as much as the player."
         )
 
-    # 2. Overall.
     lines.append("Overall:")
     lines.append(f"Matches: {format_rate(evidence.overall)}.")
     lines.append(f"Games: {format_rate(evidence.overall_games)}.")
 
-    # 3. Splits.
     lines.append("Splits:")
     lines.append(f"Game 1: {format_rate(evidence.g1)}.")
     lines.append(f"Post-sideboard games: {format_rate(evidence.post_board)}.")
     lines.append(f"On the play: {format_rate(evidence.on_play)}.")
     lines.append(f"On the draw: {format_rate(evidence.on_draw)}.")
 
-    # 4. Mulligans.
     lines.append("Mulligans:")
     lines.append(f"Kept seven: {format_rate(evidence.mulligans['kept_seven'])}.")
     lines.append(f"Mulliganed: {format_rate(evidence.mulligans['mulliganed'])}.")
 
-    # 5. By deck.
     if evidence.by_deck:
         lines.append("By deck:")
         for d in evidence.by_deck:
@@ -442,25 +418,21 @@ def build_coach_context(
                 f"on the play {format_rate(d.on_play)}; on the draw {format_rate(d.on_draw)}."
             )
 
-    # 6. By role.
     if evidence.by_role:
         lines.append("By role:")
         for role in _ordered_roles(evidence.by_role):
             lines.append(f"- {role}: {format_rate(evidence.by_role[role])}.")
 
-    # 7. Against opponent archetypes (format window).
     if evidence.by_opponent:
         lines.append("Against opponent archetypes (format window):")
         for m in evidence.by_opponent:
             lines.append(f"- {m.archetype}{_variant_suffix(m.variants)} — {format_rate(m.rate)}.")
 
-    # 8. Recurring patterns, all decks.
     if evidence.leaks:
         lines.append("Recurring patterns, all decks:")
         for leak in evidence.leaks:
             lines.append(_leak_line(leak))
 
-    # 9. Recurring patterns, per deck.
     if evidence.deck_leaks:
         lines.append("Recurring patterns, per deck (every format the deck was played in):")
         for dl in evidence.deck_leaks:
@@ -468,13 +440,13 @@ def build_coach_context(
             for leak in dl.leaks:
                 lines.append(_leak_line(leak))
 
-    # 10. Where lost games turned — all 6 buckets, including zeros.
+    # All 6 turning-point buckets, including zeros.
     lines.append("Where lost games turned:")
     for bucket in evidence.turning_points:
         stage_label = _STAGE_LABELS.get(bucket.stage, bucket.stage)
         lines.append(f"- {stage_label} ({bucket.severity}): {bucket.games} game(s).")
 
-    # 11. Example losses. Never render ExampleGame.match_id.
+    # Never render ExampleGame.match_id.
     if evidence.examples:
         lines.append("Example losses:")
         for i, ex in enumerate(evidence.examples, start=1):
@@ -510,7 +482,6 @@ def build_coach_context(
                 lines.append("Findings:")
                 lines.extend(ex.finding_lines)
 
-    # 12. Current decklists.
     if evidence.decklists:
         lines.append("Current decklists:")
         for dl in evidence.decklists:
@@ -524,7 +495,6 @@ def build_coach_context(
             for count, name in dl.side:
                 lines.append(f"{count} {name}")
 
-    # 13. The field.
     if evidence.field:
         window_str = evidence.window_start or "the earliest tracked results"
         latest_event = evidence.field_latest_event or "unknown"
@@ -538,7 +508,6 @@ def build_coach_context(
                 f"field; your record {format_rate(f.your_rate)}."
             )
 
-    # 14. Previous report.
     if previous is not None:
         lines.append(
             f"Your previous {fmt} report ({previous.generated_at[:10]}) set these focus areas:"
@@ -551,7 +520,6 @@ def build_coach_context(
             "This is the player's first report: omit the 'Since your last report' section."
         )
 
-    # 15. Reading list.
     lines.append("Reading list (cite as [R<n>]):")
     for entry in entries:
         line = f'[{entry.label}] {entry.author}, "{entry.title}" ({entry.url}): {entry.summary}'
@@ -559,13 +527,12 @@ def build_coach_context(
             line += f" ({entry.note})"
         lines.append(line)
 
-    # 16. Gaps.
     if evidence.gaps:
         lines.append("Not evaluated, or partly evaluated — treat as unknown, not as evidence:")
         for g in evidence.gaps:
             lines.append(f"- {g}")
 
-    # 17. The untracked sentence — shared verbatim with review/narrative.py.
+    # The untracked sentence, shared verbatim with review/narrative.py.
     lines.append(UNTRACKED)
 
     return "\n".join(lines)
@@ -634,9 +601,8 @@ def build_coach_prompt(
     source: str = "all",
     report_cache: dict | None = None,
 ) -> CoachPrompt | None:
-    """The one entry point a coach-report route calls, for both a GET
-    (copy-this-prompt) and a POST (send it through ``llm.write_report``), for
-    a report on ``fmt``. Returns ``None`` exactly when
+    """The one entry point a coach-report route calls (module docstring),
+    for a report on ``fmt``. Returns ``None`` exactly when
     ``build_coach_evidence`` does — too few matches to report on at all.
     ``report_cache`` is passed straight through to ``build_coach_evidence``
     (the API's cross-request cache, ``api/sql.py::_shared_report_cache``;
@@ -673,13 +639,10 @@ def build_coach_prompt(
                         "measured.",)
 
     context = build_coach_context(evidence, entries, previous, progress)
-    # Hashed over the evidence alone (previous=None, progress=()), never the
-    # full context: the full context embeds "previous", so hashing it would
-    # make a freshly-stored report register as stale the instant the next
-    # build lists it as its own "previous". A report should read stale only
-    # when new matches actually change the evidence, and only then. The
-    # evidence names its format (the scope block), so a report on one format
-    # never hashes the same as a report on another.
+    # Hashed over the evidence alone (previous=None, progress=()): the full
+    # context embeds "previous", so a freshly-stored report would read stale
+    # the instant the next build lists it as "previous". The scope block
+    # names the format, so two formats never share a hash.
     evidence_only_context = build_coach_context(evidence, entries, None, ())
 
     context_hash = _context_hash(evidence_only_context)

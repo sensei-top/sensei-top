@@ -1,4 +1,4 @@
-"""MTGO decode/parse/project tests — the "Live MTGO matches" plan's step 11.
+"""MTGO decode/parse/project tests.
 
 Ground truth is read from the real fixture
 (``tests/fixtures/mtgo_match_session.log``, 7838 bytes) with
@@ -30,17 +30,17 @@ is Turn 4, but 8 ``Turn N:`` lines total (1/1/2/2/3/3/4/4) — ``turn_count``
 is 8, not 4; Player2000 concedes again, Player1 wins the game; the final line
 reads "Player1 wins the match 2-0" — the only line that sets
 ``winner_handle``. 17 card events.
-28 + 17 = 45 total, matching the plan's full-fixture ``project()`` expectation.
+28 + 17 = 45 card events in the whole fixture, which is what a full
+``project()`` of it must store
+(``test_full_fixture_projects_one_match_two_games_45_card_events``).
 
-*** Correction to parse.py's own module docstring ***
-The docstring claims "26 distinct @[...] names in the fixture, all 26
-reachable through just those four line shapes." The first half is right:
-26 distinct bracketed ``@[Name@:i1,i2:@]`` references do appear somewhere in
+*** 26 bracketed names, 25 card events ***
+26 distinct bracketed ``@[Name@:i1,i2:@]`` references appear somewhere in
 the file (cross-checked with a ``grep -oP '(?<=@\\[)[^@]+(?=@:)'`` extraction
 over the probe's own decoded output, plus a manual add-back for the 5
 occurrences of ``Kíli the Resourceful`` that the probe's ASCII-only scanner
-corrupts by splitting on the two-byte UTF-8 sequence for 'í'). The second half
-does not hold: only 25 of those 26 names are ever the *captured* name of a
+corrupts by splitting on the two-byte UTF-8 sequence for 'í'). Only 25 of
+those 26 names are ever the *captured* name of a
 plays/casts/activates/triggered-from line. The 26th, "Zombie Druid Token", is
 bracketed exactly once in the whole fixture — as the *target* clause of
 Thorin, Mountain-king's second triggered-ability line ("...puts a triggered
@@ -52,25 +52,17 @@ on the same line. Zombie Druid Token is a token: it is never played, cast,
 given its own "activates an ability of", or given its own "puts a triggered
 ability from" line anywhere in the fixture (tokens are never "cast" or
 "played" in MTGO's own log text). See
-``test_25_of_26_bracketed_names_become_card_events`` below and the handoff
-note.
+``test_25_of_26_bracketed_names_become_card_events`` below.
 
-*** Also checked against the plan's own Verification section ***
-The plan says (line ~494) "a deleted `wins the game` line -> exactly one
-cross-check warning and the counted value kept." No such cross-check exists
-anywhere in parse.py or project.py: the ``wins_game`` handler unconditionally
-sets ``current.winner_handle`` with no comparison against anything, and
-nothing else in either module reacts to a missing "wins the game" line — so
-deleting one produces zero warnings, not one. The plan's own Step 2
-implementation spec (the only place such logic would be added) describes a
-*different*, real cross-check: "begins the game with <n> sets mulligans = 7-n
-authoritatively. Cross-check against any `mulligans to` value; warn on
-disagreement" — and that one *is* implemented (parse.py's "mulligan count
-mismatch" warning) and *is* the "counted value kept" pattern the Verification
-section is almost certainly describing. Tested here as the mulligan
-cross-check instead of the (nonexistent) "wins the game" one; see
-``test_mulligan_cross_check_disagreement_warns_once_and_keeps_the_authoritative_count``
-and the handoff note.
+*** The one counted-value cross-check is the mulligan count ***
+Game 2 above carries both mulligan sources: the running "mulligans to six
+cards" line and the authoritative "begins the game with six cards in hand"
+line (mulligans = 7 - n). parse.py warns "mulligan count mismatch" when the
+two disagree and keeps the authoritative value. A missing "wins the game"
+line has no such check: the ``wins_game`` handler sets
+``current.winner_handle`` without comparing it to anything, so deleting
+that line produces no warning. See
+``test_mulligan_cross_check_disagreement_warns_once_and_keeps_the_authoritative_count``.
 """
 
 from __future__ import annotations
@@ -275,8 +267,8 @@ def test_kili_the_resourceful_is_a_card_event_name():
 
 
 def test_25_of_26_bracketed_names_become_card_events():
-    """See the module docstring's "Correction to parse.py's own module
-    docstring" section above: 26 distinct @[...] names exist in the fixture,
+    """See the module docstring's "26 bracketed names, 25 card events"
+    section above: 26 distinct @[...] names exist in the fixture,
     but "Zombie Druid Token" — the target of a triggered ability, never its
     source — is never captured as a CardEvent. 25, not 26, is the real count.
     """
@@ -286,12 +278,12 @@ def test_25_of_26_bracketed_names_become_card_events():
 
 
 def test_mulligan_cross_check_disagreement_warns_once_and_keeps_the_authoritative_count():
-    """The real cross-check this parser implements (see the module docstring
-    above for why this replaces the plan's literal "deleted `wins the game`
-    line" scenario, which corresponds to no code that exists): "begins the
-    game with <n>" is authoritative (mulligans = 7 - n) and disagreement with
-    a preceding "mulligans to <n> cards" line must warn exactly once, keeping
-    the authoritative (counted) value rather than the running one.
+    """The counted-value cross-check this parser implements (the module
+    docstring's "The one counted-value cross-check is the mulligan count"):
+    "begins the game with <n>" is authoritative (mulligans = 7 - n), and
+    disagreement with a preceding "mulligans to <n> cards" line must warn
+    exactly once, keeping the authoritative (counted) value rather than the
+    running one.
 
     Built from a minimal synthetic string list (not the real fixture, since
     the real fixture's two mulligan sources always agree) — isolating the
@@ -351,10 +343,10 @@ def test_handle_ending_in_a_hyphen_is_one_handle_in_both_begins_shapes():
     assert parsed.games[1].mulligans_by_handle == {"Player1": 0, "Player2000-": 0}
 
 
-# Plan 30's case 8: a real match's lines, card lines trimmed and handles
-# anonymized, the opponent's with the space their real handle has. Read from
-# the lines: game 1 to Player Two (Player1 concedes), games 2 and 3 to Player1
-# (Player Two concedes both), and "Player1 wins the match 2-1".
+# A real match's lines, card lines trimmed and handles anonymized, the
+# opponent's with the space their real handle has. Read from the lines:
+# game 1 to Player Two (Player1 concedes), games 2 and 3 to Player1 (Player
+# Two concedes both), and "Player1 wins the match 2-1".
 _SPACED_HANDLE_MATCH = [
     GUID,
     GUID,
@@ -546,8 +538,8 @@ def test_a_spectator_is_not_a_player():
     assert parsed.spectators == {"Player Three"}
 
 
-# Plan 30's case 9: a real match the user only watched, joined mid-game, so
-# no start block and no player line with a fixed ending.
+# A real match the user only watched, joined mid-game, so no start block
+# and no player line with a fixed ending.
 _WATCHED_MATCH = [
     GUID,
     GUID,
@@ -682,7 +674,7 @@ def test_no_parser_warning_names_a_player():
 # (decode.py's module docstring), a 7-bit length prefix (one byte, for a
 # string under 128 bytes) and then its UTF-8 bytes. So a string is located
 # with bytes.index and checked against the byte before it. MTGO's writes are
-# pure appends (plan 3, F14): a prefix ending at a string boundary is a state
+# pure appends: a prefix ending at a string boundary is a state
 # MTGO really wrote, and one ending inside a string is what a half-done copy
 # looks like. Probe line numbers are those of
 # `scripts/mtgo_probe.py --force --lines 400 ... | nl -ba`.
@@ -824,8 +816,8 @@ def test_resolve_grp_id_token_resolves_via_base_name_and_token_type_line(conn):
     """The fixture's own token spelling (`uv run python scripts/mtgo_probe.py
     tests/fixtures/mtgo_match_session.log --force --lines 400`): "Zombie
     Druid Token" is the target of Thorin, Mountain-king's second triggered
-    ability (see this module's own "Correction to parse.py's own module
-    docstring" note above). Arena's real DB row for it is grp_id 95829, name
+    ability (see this module's own "26 bracketed names, 25 card events"
+    note above). Arena's real DB row for it is grp_id 95829, name
     'Zombie Druid', type_line 'Token Creature — Zombie Druid'."""
     conn.execute(
         "INSERT INTO cards (grp_id, name, type_line) VALUES "
@@ -1139,9 +1131,9 @@ def test_a_watched_match_is_skipped_without_a_warning(conn, caplog):
 
 
 def test_a_match_someone_else_watched_is_still_projected(conn):
-    """The skip needs the configured handle to be the watcher: plan 30's
-    measurement found 14 spectators across the user's own matches in the real
-    history, and those matches must still be stored."""
+    """The skip needs the configured handle to be the watcher: the real
+    history has 14 spectators across the user's own matches, and those
+    matches must still be stored."""
     data = FIXTURE_BYTES + _framed("@PPlayer3000 has started watching.")
     _insert_mtgo_row(conn, data=data, logged_at="2026-09-14T12:42:37")
     result = project_mtgo(conn, "Player1")
@@ -1150,8 +1142,8 @@ def test_a_match_someone_else_watched_is_still_projected(conn):
 
 
 def test_a_four_player_transcript_still_warns(conn, caplog):
-    """Synthetic input: S0 transcribed no Commander file; the real one had four
-    players. The handle plays, but has three opponents."""
+    """Synthetic input: no Commander transcript is captured; a real one had
+    four players. The handle plays, but has three opponents."""
     strings = [
         GUID,
         GUID,
@@ -1181,9 +1173,6 @@ def test_v_current_match_never_shows_mtgo_however_new(tmp_path):
     """Migration 040 (migrations/040_arena_only_current_match.sql) makes
     v_current_match Arena-only: an MTGO match never becomes the current
     match, no matter how recently it started relative to Arena's own rows.
-    Inverted from this test's pre-040 self (then named
-    test_v_current_match_prefers_mtgo_when_newest, which asserted the
-    opposite) — same setup, opposite expectation.
 
     Built directly via SQL rather than through a full Arena ingest+project():
     only matches.match_id/started_at/result are required columns
@@ -1198,7 +1187,7 @@ def test_v_current_match_never_shows_mtgo_however_new(tmp_path):
             "VALUES ('arena-old', '2026-09-14T10:00:00', 'win', 'arena')"
         )
         # The MTGO match: incomplete, newest by started_at — the exact
-        # condition that used to win before migration 040.
+        # condition that would make it current if the view admitted MTGO.
         _insert_mtgo_row(conn, data=FIXTURE_BYTES[:2000], logged_at="2026-09-14T12:42:00")
         project_mtgo(conn, "Player1")
 
@@ -1321,7 +1310,7 @@ def test_resolve_grp_id_reversible_name_resolves_to_the_arena_id(conn):
 
 
 
-# --- the ending lines (plan 30, S2) --------------------------------------------
+# --- the ending lines ----------------------------------------------------------
 #
 # Real games' lines from the user's history, anonymized (the user is Player1, the
 # other player Player2000), card and draw lines trimmed. What each says, read from
@@ -1702,7 +1691,7 @@ def test_a_mtgo_concession_is_worded_in_the_report(conn):
     assert [_reason_text(r) for r in reasons] == ["conceded", "conceded"]
 
 
-# --- a reconnect is not a new game (plan 30, S3) -------------------------------
+# --- a reconnect is not a new game ---------------------------------------------
 #
 # Real games' lines, anonymized as above. What each says, read from the lines:
 #   1   the user loses connection and rejoins mid-game 1 (7 `Turn` lines, won by
@@ -1931,7 +1920,7 @@ def test_a_join_after_a_decided_game_is_a_new_game_even_after_a_drop():
 
 
 def test_a_game_that_started_before_the_last_one_ended_warns_naming_no_one():
-    """Synthetic shape (D2): case 7b cut before its ending lines, plus a start
+    """Synthetic shape: case 7b cut before its ending lines, plus a start
     block."""
     lines = [*_CASE_7B[:-3], "Player2000 joined the game.", "Player1 joined the game."]
     parsed = parse_strings(lines)

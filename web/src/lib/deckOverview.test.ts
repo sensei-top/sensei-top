@@ -51,8 +51,14 @@ function results(prefix: string, result: string, count: number, rest: Partial<Ma
   return Array.from({ length: count }, (_, index) => match(`${prefix}${index}`, { result, ...rest }))
 }
 
-function side(deckId: string, onPlay: boolean, games: number, won: number): PlayDrawWinrate {
-  return { deck_id: deckId, on_play: onPlay, games_completed: games, games_won: won } as PlayDrawWinrate
+function side(deckId: string, onPlay: boolean, games: number, won: number, drawn = 0): PlayDrawWinrate {
+  return {
+    deck_id: deckId,
+    on_play: onPlay,
+    games_completed: games + drawn,
+    games_won: won,
+    games_lost: games - won,
+  } as PlayDrawWinrate
 }
 
 describe('versionsInOrder', () => {
@@ -168,6 +174,11 @@ describe('playDrawTotals', () => {
   it('adds every version’s rows by side', () => {
     const rows = [side('a', true, 50, 30), side('a', false, 40, 20), side('b', true, 31, 17), side('b', false, 37, 20)]
     expect(playDrawTotals(rows)).toEqual({ play: { games: 81, won: 47 }, draw: { games: 77, won: 40 } })
+  })
+
+  it('counts a drawn game toward neither the games nor the wins', () => {
+    const rows = [side('a', true, 9, 5, 1), side('a', false, 10, 4)]
+    expect(playDrawTotals(rows)).toEqual({ play: { games: 9, won: 5 }, draw: { games: 10, won: 4 } })
   })
 })
 

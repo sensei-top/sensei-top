@@ -1,11 +1,10 @@
 """The field, after a reset — the data behind the guide's "The field" section.
+See docs/guide.md, "`field.py` — the field, after the reset".
 
-Two rules this module exists to enforce mechanically, both taken from real
-mistakes an earlier hand-written guide made and then corrected:
+Two rules this module exists to enforce mechanically:
 
 * **The share denominator is every classified deck in the window, not the
-  displayed top-N** — dividing by a truncated list inflated every share by
-  about 6 points in that guide's first draft.
+  displayed top-N** (``_classified_deck_total``).
 * **A pre-reset matchup rate is void, not merely stale, once the opponent
   archetype has changed** (``guide.window.ArchetypeChange``) — it must be
   rendered as absent, never as a number that looks current.
@@ -24,6 +23,7 @@ from sensei_top.guide.window import (
     structural_change,
     window_start,
 )
+from sensei_top.metagame.tiers import MATCHUP_TIERS
 from sensei_top.review.snapshot import _classify_own_deck
 
 
@@ -68,14 +68,18 @@ class FieldEvidence:
 
 def _classified_deck_total(conn: sqlite3.Connection, where: str, params: list) -> int:
     """The TRUE total classified-deck count for a windowed query — the
-    denominator every share divides by, which must never be the truncated
-    top_n sum. The single source for this query: ``brief/narrative.py``'s
-    ``_archetype_share`` shares it rather than repeating it, since both
-    guard against the exact same truncated-denominator bug. Their *count*
-    queries stay separate — this one's caller groups by every archetype
-    name up to ``top_n`` for display, that one filters to a single
-    archetype_key with no truncation at all, so there is nothing left to
-    share once the denominator is factored out.
+    denominator every windowed share divides by, which must never be the
+    truncated top_n sum. Its three callers, ``_shares_for_window``,
+    ``field_by_key`` and ``brief/narrative.py::_archetype_share``, share it
+    rather than repeating it, since each guards against the exact same
+    truncated-denominator bug. The one copy is ``build_field``'s
+    ``pre_total_scoped``: the same count written out inline over
+    ``e.event_date <= ?``, the denominator ``share_before_reset`` divides
+    by. The callers' *count* queries stay separate — ``_shares_for_window``
+    groups by archetype name up to ``top_n`` for display, ``field_by_key``
+    by key and name with no cap, ``_archetype_share`` filters to a single
+    archetype_key — so there is nothing left to share once the denominator
+    is factored out.
     """
     return conn.execute(
         f"""
@@ -89,11 +93,12 @@ def _classified_deck_total(conn: sqlite3.Connection, where: str, params: list) -
 def field_window(fmt: str, since: str | None) -> tuple[str, list]:
     """The field's own window clause: ``e.format = ?``, plus ``e.event_date
     >= ?`` once a window start exists — assumes the caller's query aliases
-    ``meta_event`` as ``e``. The one definition of "the field's window"
-    shared by ``_shares_for_window`` and ``field_by_key`` here,
-    ``brief/coverage.py``'s ``_field_counts``, ``brief/narrative.py``'s
-    ``_archetype_share``, and ``coach/evidence.py``'s ``_build_field`` —
-    five places that used to build this clause by hand.
+    ``meta_event`` as ``e``. The definition of "the field's window" used by
+    ``_shares_for_window``, ``field_by_key`` (and so every caller of it) and
+    ``build_field`` here, and ``brief/narrative.py::_archetype_share``.
+    ``guide/window.py::structural_change`` writes the same post-reset clause
+    out by hand, since this module imports ``guide/window.py`` and the
+    reverse import would be a cycle.
     """
     clauses = ["e.format = ?"]
     params: list = [fmt]
@@ -109,8 +114,7 @@ def field_by_key(
     """The classified field grouped by ``archetype_key``, never by display
     name: two keys can share one name (a "Midrange" label reused across
     colour pairs), and a name -> key lookup then hands one key's share to
-    the other — measured on the real corpus before this was keyed properly.
-    Each key maps to every name it has carried in the window, as
+    the other. Each key maps to every name it has carried in the window, as
     ``(name, deck_count)`` pairs sorted by ``(-deck_count, name)`` — the
     first entry is always the key's most common name, lowest name on ties.
 
@@ -121,10 +125,10 @@ def field_by_key(
     (``_classified_deck_total``), the shared denominator every caller's
     share divides by.
 
-    Shared by ``brief/coverage.py``'s ``_field_counts`` (a thin adapter that
-    keeps only each key's top name and its summed count) and
-    ``coach/evidence.py``'s ``_build_field`` (which keeps every variant,
-    plus its own ``TOP_FIELD`` cut and sort).
+    Shared by ``brief/coverage.py::_field_counts`` (a thin adapter that
+    keeps only each key's top name and its summed count),
+    ``coach/evidence.py::_build_field`` (which keeps every variant, plus its
+    own ``TOP_FIELD`` cut and sort) and ``guide/rcq.py::_expected``.
     """
     where, params = field_window(fmt, since)
     total = _classified_deck_total(conn, where, params)
@@ -149,9 +153,8 @@ def field_by_key(
 def _shares_for_window(
     conn: sqlite3.Connection, fmt: str, since: str | None, *, top_n: int = 25
 ) -> tuple[list[tuple[str, int]], int]:
-    """(archetype, deck_count) pairs, and the TRUE total classified deck
-    count for the window — the denominator every share divides by, which
-    must never be the truncated top_n sum."""
+    """(archetype, deck_count) pairs for the ``top_n`` most played names, and
+    the window's TRUE classified-deck total (``_classified_deck_total``)."""
     where, params = field_window(fmt, since)
 
     total = _classified_deck_total(conn, where, params)
@@ -202,12 +205,12 @@ def archetype_key_by_name(conn: sqlite3.Connection) -> dict[str, str]:
     and ``brief/from_guide.py`` share, so a matchup plan named in one is
     filed under the same key by the other.
 
-    A name is not unique to a key: the corpus labels 290 decks "Dimir
-    Midrange" under one key and a handful under two others. Each name maps
-    to the key with the most decks behind it (ties by key), never whichever
-    row a ``SELECT DISTINCT`` happened to return last — which is what this
-    replaced, and it had been resolving the field's #3 archetype to a key too
-    thin for a consensus, dropping it from every guide prompt.
+    A name is not unique to a key, so each name maps to the key with the
+    most decks behind it (ties by key), never whichever row a ``SELECT
+    DISTINCT`` happens to return last: that can resolve a popular
+    archetype to a key too thin for a consensus and drop it from every
+    guide prompt. See docs/guide.md, "`narrative.py` — the prompt, and the
+    shape of the answer".
     """
     best: dict[str, tuple[int, str]] = {}
     for row in conn.execute(
@@ -301,7 +304,7 @@ def build_field(
     top_n: int = 25,
 ) -> FieldEvidence:
     """The field of ``fmt``, the deck's format; omitted, it is read from
-    ``identity`` (``guide/deck.py``'s ``identity_format``, D15). A deck with
+    ``identity`` (``guide/deck.py::identity_format``). A deck with
     no format has no field to read: the evidence comes back empty, with
     ``fmt`` ``None``, rather than borrowing another format's field.
     """
@@ -394,7 +397,11 @@ def build_field(
             verdict_key = verdict.key if verdict else None
 
     if verdict_key is not None:
+        # A win rate pools only the tiers with standings, as v_meta_winrate
+        # does: a Tier C league's every list is a 5-0 (docs/metagame.md,
+        # "The evidence tiers"), and the list count is the same set's.
         field_clause, field_params = field_window(fmt, since)
+        placeholders = ", ".join("?" for _ in MATCHUP_TIERS)
         row = conn.execute(
             f"""
             SELECT COUNT(*) AS decks, SUM(d.wins) AS w, SUM(d.losses) AS l
@@ -402,8 +409,9 @@ def build_field(
               JOIN meta_deck d ON d.event_id = a.event_id AND d.deck_ord = a.deck_ord
               JOIN meta_event e ON e.event_id = a.event_id
              WHERE a.archetype_key = ? AND {field_clause}
+               AND e.tier IN ({placeholders})
             """,
-            [verdict_key, *field_params],
+            [verdict_key, *field_params, *MATCHUP_TIERS],
         ).fetchone()
         if row and row["decks"]:
             w, losses = row["w"] or 0, row["l"] or 0

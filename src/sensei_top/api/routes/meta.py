@@ -36,7 +36,7 @@ def health(request: Request, conn: Conn) -> Health:
 def llm_status() -> LLMStatus:
     """Whether a Claude credential is resolved right now, and which
     model would be used — never the key itself
-    (``sensei_top.llm.config``). The dashboard reads this once to
+    (``sensei_top.llm.config``). The dashboard reads this to
     decide whether a narrative surface offers a generate button or
     falls back to the copy-prompt path (``docs/llm.md``). No database
     connection needed: this is purely local config, not derived data.
@@ -72,27 +72,21 @@ def live(request: Request, conn: Conn) -> LiveStatus:
     }
     # raw_events.id is INTEGER PRIMARY KEY (a rowid alias) on a table that is
     # never deleted from (non-negotiable #2) and only ever inserted into with
-    # no explicit id — so MAX(id) and COUNT(*) are the same number, verified
-    # exactly equal against a real 238,520-row capture (min=1, max=count, no
-    # gaps). MAX(id) is an O(1) index lookup; COUNT(*) here was a 300ms+ scan
-    # of idx_raw_events_label on every 3s poll for a fact MAX(id) already
-    # tells us for free — so raw_events is deliberately absent from the
-    # counts dict above, and this one query does both jobs.
+    # no explicit id — so MAX(id) and COUNT(*) are the same number, and MAX(id)
+    # is an index lookup where COUNT(*) walks a whole index on every heartbeat.
+    # That is why raw_events is absent from the counts dict above.
     newest_event = conn.execute("SELECT MAX(id) FROM raw_events").fetchone()[0]
     # ingest_state.updated_at moves on every poll, so it answers "is the
     # reader alive", not "is the data fresh". The dashboard needs the
     # latter, which is when a row was last actually written.
     #
-    # MAX(ingested_at) used to be a full-table scan (ingested_at carries no
-    # index, and never will: it's assigned by DEFAULT at insert time, so it
-    # is monotonic with id by construction) — replaced with a tail read in
-    # id order, verified against real data to return the identical value at
-    # a fraction of the cost (an unindexed full scan of a 1GB+ table taxed
-    # every 3s poll, measured 4-7s once raw_events passes a season of play).
+    # ingested_at carries no index, and needs none: it is assigned by DEFAULT
+    # at insert time, so it is monotonic with id, and a tail read in id order
+    # returns what MAX(ingested_at) would without scanning the table.
     # logged_at is different: it is Arena's own header timestamp, and a
     # Player-prev.log recovery pass can insert an older-logged_at event
-    # after a newer one, so it is *not* guaranteed monotonic with id and
-    # still needs the index migrations/034 added.
+    # after a newer one, so it is *not* monotonic with id and needs the
+    # index migrations/034 added.
     #
     # last_event_at is the newest in-game timestamp, and an MTGO deck file's
     # logged_at is its mtime, the time the user saved it, so those rows are
@@ -114,13 +108,11 @@ def live(request: Request, conn: Conn) -> LiveStatus:
     ).fetchone()
     last_event = last_event_row[0] if last_event_row else None
     watcher = getattr(request.app.state, "watcher", None)
-    # projection_state (migrations/026) is how this crosses the process
-    # boundary now that serve --watch runs the watcher in its own
-    # process (live.py's WatcherProcess) rather than a thread sharing
-    # this one's GIL. Read defensively: a database that predates 026 and
-    # has never been touched by 'ingest'/'project' since (which migrate
-    # on open) simply hasn't got the table yet — an ordinary outcome,
-    # not a 500.
+    # projection_state (migrations/026) is how the rebuild count crosses the
+    # process boundary: serve --watch runs the watcher in its own process
+    # (live.py's WatcherProcess). serve migrates at startup, so the table is
+    # there; an app built over an unmigrated database (create_app on its
+    # own) reads no row rather than answering 500.
     try:
         projection_row = conn.execute(
             "SELECT last_projection_at, projections FROM projection_state WHERE id = 1"
@@ -149,22 +141,15 @@ def live(request: Request, conn: Conn) -> LiveStatus:
         # has to follow that.
         revision=f"{newest_event or 0}:{counts['matches']}:"
         f"{counts['games']}:{counts['turns']}:{counts['card_events']}",
-        # A deliberately narrower signal than revision above: revision moves
-        # on every ingest tick (roughly once a second while Arena runs),
-        # which is why keying the dashboard's query invalidation on it turned
-        # "refetch when the data changes" into "refetch everything every 3s
-        # forever" (the dashboard's heartbeat keyed on revision). This one
-        # leads with projections — the watcher's own rebuild counter,
-        # incremented once per completed project() regardless of whether any
-        # derived row COUNT actually moved (a match flipping from incomplete
-        # to won rewrites its row without changing matches' row count) — so
-        # it catches a live rebuild's content-only changes that the counts
-        # alone would miss. The counts stay appended for the case nothing
-        # increments projections at all: a bare `project(conn)` call with no
-        # watcher attached (tests, or `sensei-top project` followed by
-        # `serve` without --watch) never touches projection_state, so
-        # without the counts this would never move outside a watched
-        # session.
+        # Narrower than revision, which moves on every ingest tick: see
+        # docs/frontend.md, "Data fetching". It leads with projections, the
+        # watcher's rebuild counter, incremented once per completed project()
+        # whether or not any derived row count moved (a match flipping from
+        # incomplete to won rewrites its row without changing matches' row
+        # count). The counts stay appended for the case nothing increments
+        # projections: a bare `project(conn)` with no watcher attached
+        # (tests, or `sensei-top project` then `serve` without --watch)
+        # never touches projection_state.
         projection_revision=f"{projections}:{counts['matches']}:"
         f"{counts['games']}:{counts['turns']}:{counts['card_events']}",
     )
@@ -209,10 +194,10 @@ def decks(conn: Conn) -> list[dict[str, Any]]:
 @router.get("/api/formats", response_model=FormatsOut, tags=["meta"])
 def formats(conn: Conn) -> FormatsOut:
     """Every format, in ``formats.py``'s order, with the user's matches of it
-    by ``v_match_format.format_source`` (D6), whether archetype rules are
+    by ``v_match_format.format_source``, whether archetype rules are
     stored for it, how many tournament events the corpus holds for it, and
-    the default a page shows when its address names no format (D13,
-    ``api/sql.py::default_format``). A format with nothing is still listed,
+    the default a page shows when its address names no format
+    (``api/sql.py::default_format``). A format with nothing is still listed,
     with zeros: the dashboard decides which ones to offer.
     """
     matches: dict[str, dict[str, int]] = {fmt: {} for fmt in FORMATS}

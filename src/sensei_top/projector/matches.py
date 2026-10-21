@@ -1,13 +1,10 @@
-"""Stage 2, M1: project ``raw_events`` into ``decks``, ``matches`` and ``games``.
+"""Stage 2: project ``raw_events`` into ``decks``, ``matches``, ``games`` and
+the per-game tables ``game_state.py`` accumulates.
 
-All Arena semantics live here. The projector is a pure function of
-``raw_events`` and is always run as a **full rebuild**: derived rows are deleted
-and recomputed from scratch. At this scale (a heavy session is ~3k events, a
-year of play well under a million) a full pass costs under a second, and it
-removes an entire class of incremental-state bugs. When a parsing rule is fixed,
-re-running applies the fix to every match ever recorded.
+``project()`` is a pure function of ``raw_events``, always run as a full
+rebuild: see docs/architecture.md, "Full rebuild, always".
 
-Field paths verified against client 2026.62.10 (see brief §6):
+Field paths verified against client 2026.62.10:
 
 * ``authenticateResponse.clientId`` — our own user id.
 * ``matchGameRoomStateChangedEvent`` / ``MatchGameRoomStateType_Playing`` —
@@ -33,22 +30,20 @@ Field paths verified against client 2026.62.10 (see brief §6):
   or ``AnnotationType_ModifiedLife`` — damage and life attribution, same
   module.
 
-M2 adds ``turns`` (per-game board state by turn number); the accumulation
-logic for that lives in ``game_state.py`` — see its module docstring. This
-module only decides *when* a tracker is fresh (one per ``GameState``) and
-*when* to finalize the trailing turn (at ``GameOver``).
+``game_state.py`` accumulates each game's board state (``turns`` and the
+rest). This module only decides *when* a tracker is fresh (one per
+``GameState``) and *when* to finalize the trailing turn (at ``GameOver``).
 
-Three traps this code exists to avoid:
+Three traps this code exists to avoid, numbered as in docs/arena-log.md,
+"The traps":
 
-1. **Double-counted games.** Arena emits ``GameStage_GameOver`` twice for the
-   final game — once with ``MatchState_GameComplete`` and again with
+1. **Double-counted games.** ``GameStage_GameOver`` comes twice for the final
+   game, with ``MatchState_GameComplete`` and again with
    ``MatchState_MatchComplete``. Only the former is counted.
-2. **Cumulative results.** ``gameInfo.results`` is not the result of *this*
-   game; it is every result so far this match. The current game's outcome is
-   the ``MatchScope_Game`` entry at index ``gameNumber - 1``.
-3. **Batched messages.** Most events carry two or more ``GameStateMessage``
-   entries in ``greToClientMessages[]``. Every element is iterated; a
-   find-first approach drops turn changes.
+2. **Cumulative results.** ``gameInfo.results`` is every result so far this
+   match; this game's is the ``MatchScope_Game`` entry at ``gameNumber - 1``.
+3. **Batched messages.** Every element of ``greToClientMessages[]`` is
+   iterated; a find-first approach drops turn changes.
 """
 
 from __future__ import annotations
@@ -76,9 +71,9 @@ WIN, LOSS, DRAW, INCOMPLETE = "win", "loss", "draw", "incomplete"
 
 # The literal Arena sends for a match starting to play — the one event that
 # both `has_match_boundary` (below, for live.py's force-projection) and
-# `table/opening_hand.py` (the mulligan read's replay anchor) key off. A
-# plain substring match on the raw payload text, not a parsed field: cheap
-# enough to run as a SQL LIKE filter without touching the projection.
+# `table/live.py` (the current-match replay's anchor) key off. A plain
+# substring match on the raw payload text, not a parsed field: cheap enough
+# to run as a SQL LIKE filter without touching the projection.
 MATCH_ROOM_PLAYING_MARKER = "MatchGameRoomStateType_Playing"
 
 
@@ -110,7 +105,7 @@ class GameState:
     mulligans: dict[int, int] = field(default_factory=dict)  # seat -> count
     # One tracker per game: GameState is constructed once per game_number
     # (via MatchState.game()'s setdefault), so this default factory is what
-    # gives M2 a fresh board-state accumulator at every game boundary.
+    # gives every game a fresh board-state accumulator.
     tracker: GameStateTracker = field(default_factory=GameStateTracker)
 
 
@@ -232,7 +227,7 @@ class Projector:
             return
         try:
             self._dispatch(kind, label, payload, logged_at)
-        except Exception as exc:  # never let one bad event halt ingestion (brief §6)
+        except Exception as exc:  # never let one bad event halt ingestion (rule 4)
             self._warn(f"projection error on {label!r}: {exc}")
 
     def finish(self) -> None:
@@ -298,7 +293,7 @@ class Projector:
         for message in _messages(payload):
             try:
                 self._handle_gre_message(message, logged_at)
-            except Exception as exc:  # never let one bad message halt ingestion (brief §6)
+            except Exception as exc:  # never let one bad message halt ingestion (rule 4)
                 gsm = message.get("gameStateMessage") if isinstance(message, dict) else None
                 state_id = gsm.get("gameStateId") if isinstance(gsm, dict) else None
                 kind_of = message.get("type") if isinstance(message, dict) else None
@@ -581,10 +576,8 @@ class Projector:
             return
         game = state.game(number)
         # Trap 2: results is cumulative across the match. _game_result_entry
-        # (projector/live_state.py) already gets this right and is reused
-        # rather than re-implemented: None when results is empty, or shorter
-        # than gameNumber (a game whose results simply haven't arrived yet),
-        # never a guess by falling back to some other game's entry.
+        # (live_state.py) picks this game's entry, or None when it hasn't
+        # arrived yet, never another game's.
         entry = _game_result_entry(info, number)
         if entry is None:
             self._warn(
@@ -600,12 +593,9 @@ class Projector:
 
 def has_match_boundary(conn: sqlite3.Connection, *, after_event_id: int) -> bool:
     """True when raw events newer than ``after_event_id`` include a match
-    room opening — the one boundary worth a rebuild on sight rather than on
-    the next slow-cadence tick (``live.py``). It is what puts a deck on the
-    Current match tab, and the mulligan decision that read informs arrives
-    about eleven seconds later (measured on real captures) — comfortably
-    inside a poll tick, but not inside the up-to-``project_every``-second
-    wait for the next scheduled rebuild.
+    room opening — the one boundary ``live.py`` rebuilds on sight rather
+    than at the next gated rebuild. See docs/architecture.md, "Live mode's
+    two cadences".
     """
     row = conn.execute(
         "SELECT 1 FROM raw_events WHERE id > ? AND label = 'MatchGameRoomStateChangedEvent' "
@@ -623,17 +613,11 @@ def _first_request_occurrences(
     the ``raw_events.id`` of its *first* replayed row, plus the earliest
     non-``NULL`` ``logged_at`` among all rows sharing that request id.
 
-    Exists because a poll boundary used to make one real request hash to two
-    different digests — a ``logged_at``-``NULL`` row from the poll that saw
-    it first, and a fully-timestamped twin from the whole-file read that saw
-    it again later (``docs/architecture.md``'s Idempotency section; fixed
-    going forward by migration 042, but the old rows are append-only and
-    stay). The twin is inserted *after* its own header timestamp would have
-    placed it, so replaying ``raw_events`` in ``id`` order — the order every
-    other rule in this module depends on — plays it out of order relative to
-    the request it duplicates. ``project()``'s main loop uses this map to
-    skip every occurrence but the first and, when that first occurrence
-    itself has no timestamp, to borrow the twin's.
+    A database ingested before migration 042 holds poll-boundary twins: a
+    ``logged_at``-``NULL`` row and a later, fully-timestamped copy of the
+    same request, replayed out of order. ``project()`` uses this map to skip
+    every occurrence but the first and, when that first one has no
+    timestamp, to borrow the twin's. See docs/architecture.md, "Idempotency".
 
     ``json_valid(payload)`` guards ``json_extract`` in the same query: a
     malformed payload must not abort this pass, and the main replay loop
@@ -664,24 +648,10 @@ def project(conn: sqlite3.Connection) -> dict[str, int]:
     """Rebuild ``decks``/``matches``/``games`` from ``raw_events``.
 
     Always a full rebuild — see module docstring; there is no incremental
-    mode to opt into.
-
-    Requests replayed here are additionally deduplicated by their own payload
-    ``id`` (see ``_first_request_occurrences``): a fixed reader bug (migration
-    042) still left old databases holding, for some requests, an earlier
-    ``logged_at``-``NULL`` row and a later fully-timestamped twin, inserted
-    out of order relative to each other. The *first* twin in ``raw_events.id``
-    order wins — that is replay order, the order every other rule here
-    depends on, and the order the out-of-order twin would otherwise violate
-    (e.g. a stale deck name from a twin replayed after the request that
-    should have won). This is retroactive with no re-ingest needed: it reads
-    straight off rows already in ``raw_events``, the same append-only table
-    every other rebuild reads.
+    mode to opt into. Requests are replayed once each, by their own payload
+    ``id``: see ``_first_request_occurrences``.
     """
     projector = Projector()
-    # See _first_request_occurrences' own docstring for why this pre-pass
-    # exists: an old request-dedup gap left twin rows in raw_events that
-    # migration 042 stops from recurring but cannot retroactively remove.
     first_request_id, first_request_logged_at = _first_request_occurrences(conn)
     duplicate_requests = 0
     for row in conn.execute(
@@ -699,16 +669,12 @@ def project(conn: sqlite3.Connection) -> dict[str, int]:
             request_id = payload.get("id")
             if isinstance(request_id, str) and request_id in first_request_id:
                 if first_request_id[request_id] != row["id"]:
-                    # A later twin of a request already replayed under this
-                    # id — skip it rather than replay
-                    # it a second time out of order (see
-                    # _first_request_occurrences).
+                    # A later twin of a request already replayed.
                     duplicate_requests += 1
                     continue
                 if logged_at is None:
                     # Not a guess (rule 4): the same request's own header
-                    # timestamp, read from the twin the poll boundary split
-                    # off, not a fabricated one.
+                    # timestamp, read from its twin.
                     logged_at = first_request_logged_at.get(request_id)
 
         projector.feed_parsed(row["kind"], row["label"], payload, logged_at)
@@ -718,8 +684,7 @@ def project(conn: sqlite3.Connection) -> dict[str, int]:
     # lock is held: the live watcher's ingest thread appends to raw_events on
     # its own connection and waits out this lock, so every second spent
     # reading or parsing inside it is a second the Live page stops moving
-    # (docs/architecture.md, "Live mode's two cadences"). Measured on a real
-    # 2.4 GB database, the lock went from ~15 s to the inserts alone.
+    # (docs/architecture.md, "Live mode's two cadences").
     rows, counts = _arena_rows(projector, duplicate_requests)
     # MTGO: a second source, same tables, same full-rebuild pass, entirely
     # independent of the Arena replay above (which is itself scoped to
@@ -775,8 +740,8 @@ def project(conn: sqlite3.Connection) -> dict[str, int]:
 
 # One INSERT per derived Arena table, in the order project() runs them: a
 # parent before its children, for the foreign keys. `_arena_rows` builds a
-# list of parameter tuples for each, in the order the old row-by-row loop
-# inserted them, so every table's rowids come out as they always did.
+# list of parameter tuples for each in replay order, so every table's rowids
+# come out the same on every rebuild.
 _ARENA_INSERTS: dict[str, str] = {
     "rank_snapshot": """
         INSERT INTO rank_snapshot
@@ -878,9 +843,8 @@ def _arena_rows(
         "game_decks": 0,
         "rank_observations": len(projector.rank_observations),
         "warnings": projector.warnings,
-        # Old poll-boundary twins skipped this run — see
-        # _first_request_occurrences. Zero on a database ingested
-        # entirely under migration 042's fix.
+        # Poll-boundary twins skipped this run (_first_request_occurrences):
+        # zero on a database ingested entirely after migration 042.
         "duplicate_requests": duplicate_requests,
     }
     seen_decks: set[str] = set()
@@ -912,9 +876,10 @@ def _arena_rows(
             and not any(w in (deck_format or "").lower() for w in _NOT_CONSTRUCTED_STANDARD)
             and state.event_id not in unmapped_event_ids
         ):
-            # Limited and Arena-only queues are NULL by design (D8); only an
-            # event id that looks constructed and still maps to nothing is
-            # news, and once per id rather than once per match.
+            # Limited and Arena-only queues are NULL by design
+            # (docs/opponent-deck.md, "A match's format"); only an event id
+            # that looks constructed and still maps to nothing is news, and
+            # once per id rather than once per match.
             unmapped_event_ids.add(state.event_id)
             log.warning("no format for constructed event id %r", state.event_id)
             counts["warnings"] += 1
@@ -965,9 +930,7 @@ def _arena_rows(
             # An attacker with an observed block is no longer "unknown
             # whether blocked" (rule 4) — see migrations/014_combat.sql for
             # why the reverse (marking an attack unblocked on the absence of
-            # a block row) is not done. The key is what the old
-            # `UPDATE ... WHERE turn_number = ? AND instance_id = ?` matched,
-            # and SQL's `=` never matches a NULL.
+            # a block row) is not done. A NULL turn or attacker marks nothing.
             blocked = {
                 (blk.turn_number, blk.attacker_instance_id)
                 for blk in game.tracker.blocks
@@ -1010,10 +973,9 @@ def _arena_rows(
                     )
                 )
 
-            # Zone contents keep Arena's raw seat too, for the same reason
-            # card_events does: a truncated session without a resolved
-            # self seat still gets meaningful per-turn board state, even
-            # though the turns row it would otherwise sit beside is absent.
+            # Zone contents keep the raw seat too, as card_events does: a
+            # match without a resolved self seat still gets its board state,
+            # though no turns row sits beside it (below).
             for turn in game.tracker.turns.values():
                 for zc in turn.cards:
                     rows["turn_zones"].append(
@@ -1048,9 +1010,8 @@ def _arena_rows(
                     )
                 )
 
-    # Only for Arena decks that were actually played: until the MTGO decks
-    # are written, `decks` holds played Arena decks alone, and this table
-    # points at it.
+    # Only for Arena decks that were actually played: this table points at
+    # `decks` before the MTGO decks join it (see project()).
     for deck_id, guids in projector.deck_guids.items():
         if deck_id not in seen_decks:
             continue

@@ -131,6 +131,35 @@ starts. Until `onboarded` is true in `shell.json` the window opens at
 `/welcome`; its steps read `doctor --json`, "Which do you play?"
 writes `plays`, and finishing them writes the flag.
 
+**The Linux tarball.** `electron-builder.yml` builds two Linux targets,
+the AppImage and a `tar.gz` of the same app (x64), named
+`Sensei-Top-<version>.tar.gz`. The tarball writes no update info, so
+`latest-linux.yml` keeps naming the AppImage alone. A tarball copy never
+updates itself: the updater runs on Linux only under `$APPIMAGE`, so the
+status says "This copy does not update itself.", and a new version is a new
+download. It does not offer "Start when you log in" either, since
+`autostart.ts` writes its entry only under `$APPIMAGE`: onboarding does not
+ask, and Settings does not show the toggle. The release job attaches the
+tarball and does not send it to VirusTotal.
+
+**The Store build.** `electron-builder.yml` builds an `appx` beside the
+installer, `Sensei-Top-<version>.appx`, under the identity and publisher
+Partner Center reserved; the Store signs it, and the release job attaches it
+without scanning it. It is submitted by hand from the release's assets. It
+never updates itself: `process.windowsStore` is true there and the updater
+reports the Store as the source, so the status says so. It starts with Windows
+only through Windows' own Startup list. MSIX redirects the package's `HKCU`
+writes into a private hive, so the login item Electron writes would do nothing
+at sign-in and its read-back would report "on" regardless. The package
+declares a startup task from `build/appx-extensions.xml`, off until the user
+turns it on in Settings → Apps → Startup; the shell never writes the login item
+there, onboarding does not ask, and Settings shows a note pointing to Windows'
+list. Windows starts the app with no arguments, so not `--hidden`, and it opens
+its window as a launch from Start does. This was checked on Windows 10 22H2 on
+2026-10-21, with the package registered from its unpacked layout in Developer
+Mode: the task was switched on, the user signed out and back in, and the
+window opened.
+
 **Card data starts on its own** (`settings.ts`'s
 `startFirstDataIfMissing`). Once per launch, after the server first
 reports `ready`, so `serve` has migrated the database before `cards`
@@ -209,9 +238,13 @@ to a bug report"; the desktop shell drives both.
 
 - **`sensei-top doctor [--json] [--file PATH]`** (`doctor.py`). Reports the
   Arena log's path and source (`flag`, `environment`, `config`, `autodetect`
-  or `none`), Detailed Logs, the MTGO directories and whether a handle is
-  set, the card counts, the schema version beside the code's, the config
-  path and the keyring backend. It never creates, migrates or writes the
+  or `none`); under `autodetect`, `arena_log.found` lists every
+  `Player.log` discovery found, the one in use first, and the text form
+  adds an "Also found" line for each other one, so a support report shows
+  a second prefix without a back-and-forth (`docs/architecture.md`,
+  "Finding the clients' files"); Detailed Logs, the MTGO directories and
+  whether a handle is set, the card counts, the schema version beside the
+  code's, the config path and the keyring backend. It never creates, migrates or writes the
   database: that is opened through a `?mode=ro` URI (`connect()` sets
   `journal_mode=WAL`, which writes; a read-only open can still leave an empty
   `-wal` and a 32 KB `-shm` beside a WAL database nothing else has open,

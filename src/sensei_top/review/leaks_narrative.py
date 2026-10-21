@@ -1,20 +1,9 @@
 """The leak finder's training-plan prompt — built here, sent from
-``sensei_top.llm`` only when the user has opted in.
-
-A separate prompt from ``review/narrative.py``'s: the leak finder reads
-across every match rather than one, so what it describes is a different
-shape of data and earns its own framing.
-
-Like every other Claude-facing module in this project, this one **never
-makes the call itself** — only ``sensei_top.llm.client`` imports
-``anthropic`` (AGENTS.md non-negotiable #5). ``build_leaks_context``
-assembles the evidence and ``full_prompt`` wraps it with the framing;
-``GET /api/review/leaks/narrative`` serves ``copied_prompt`` (that text plus
-the answer contract), ``POST`` on the same path sends ``full_prompt``, with
-no contract, through ``llm.write_prose`` and stores the answer
-(``review/leaks_store.py``) when a credential is configured, and with none
-configured the dashboard offers the copyable prompt to paste into an
-assistant the user already pays for — see ``docs/llm.md``.
+``sensei_top.llm`` only when the user has opted in; this module never makes
+the call itself. A separate prompt from ``review/narrative.py``'s, because
+the leak finder reads across every match rather than one. How the prompt is
+served, sent and stored: ``docs/review.md``, "The narrative
+(`review/narrative.py`, `review/leaks_narrative.py`)".
 
 What it describes is aggregate: pattern codes, sample sizes, win rates and
 their Wilson intervals — never a specific match's turn-by-turn shape, since
@@ -75,7 +64,7 @@ def build_leaks_context(leaks: list[Leak]) -> str | None:
 @english()
 def full_prompt(context: str) -> str:
     """The complete text to hand an assistant: this module's framing, then
-    the evidence. The replacement for the call this module used to make."""
+    the evidence."""
     return _wrap_prompt(SYSTEM_PROMPT, context)
 
 

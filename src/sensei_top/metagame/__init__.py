@@ -1,12 +1,11 @@
 """The field's own numbers, from real MTGO and paper tournament results —
-never Arena, which publishes no event results at all.
+never Arena, which publishes no event results at all. See docs/metagame.md,
+"The evidence tiers".
 
-``source`` downloads and stores the corpus; ``dedup`` marks the republished
-twins the mirror sometimes ships under a second path so they stop being
-counted twice; ``tiers`` decides what each event is licensed to say;
-``classify_meta`` names each stored decklist's archetype, reusing
-``archetypes.classify`` in its ``complete=True`` mode so the personal and
-field sides of a matchup share one vocabulary; ``auto`` is one tick of the
+``source`` (fbettega's cache), ``mtgo_site`` and ``topdeck`` fetch and store
+the corpus; ``dedup`` marks the twins the mirror ships under a second path;
+``tiers`` decides what each event is licensed to say; ``classify_meta``
+names each stored decklist's archetype; ``auto`` is one tick of the
 server's corpus-refresh loop. This package imports neither ``reader`` nor
 ``projector`` and knows nothing about ``Player.log``.
 """

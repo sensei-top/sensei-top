@@ -12,14 +12,14 @@ from pathlib import Path
 
 import pytest
 
-from sensei_top import db
+from sensei_top import db, steam
 from sensei_top.cli import build_parser
 from sensei_top.db import open_database
 from sensei_top.reader import dates
 from sensei_top.reader.ingest import (
-    _STEAM_COMPATDATA_RELATIVE,
     compute_digest,
     default_log_path,
+    found_log_paths,
     ingest_file,
     ingest_with_recovery,
     previous_log_path,
@@ -238,8 +238,8 @@ def test_truncation_resets_carry_state(conn, tmp_path):
 
 
 def test_byte_exact_offset_survives_invalid_utf8(conn, tmp_path):
-    """offset used to advance by len(line.encode("utf-8", errors="replace"))
-    on an already-decoded line: U+FFFD (the replacement character) re-encodes
+    """Advancing the offset by len(line.encode("utf-8", errors="replace"))
+    on an already-decoded line would drift it: U+FFFD (the replacement character) re-encodes
     to 3 bytes, so a single invalid input byte drifts the offset and the next
     seek lands mid-line. Binary reading advances by the raw byte count
     instead, so a real entry appended right after survives intact.
@@ -343,8 +343,8 @@ def test_shared_content_dedups_when_the_two_files_disagree_on_line_numbers(conn,
 
 
 def test_an_identical_entry_repeated_within_one_file_stays_distinct(conn, tmp_path):
-    """The property the line number used to carry, now carried by the ordinal:
-    two byte-identical polls are two events, not one."""
+    """The ordinal keeps byte-identical entries apart: two byte-identical
+    polls are two events, not one."""
     log = tmp_path / "Player.log"
     log.write_text('{"poll": 1}\r\n{"poll": 1}\r\n', newline="")
     ingest_file(conn, log)
@@ -364,9 +364,9 @@ def test_watch_bounded_polls(conn, tmp_path):
     assert count(conn) == 1
 
 
-# --- day/month order under --locale auto, and the stored header (plan 3, S10) --
+# --- day/month order under --locale auto, and the stored header ------------
 
-# Both captured on 2026-10-06 (S9's Facts). A tracked fixture's own mtime is
+# Both captured on 2026-10-06. A tracked fixture's own mtime is
 # checkout time, not data, so neither is ever read under auto in place: each
 # test reads a copy whose last write it sets. The afternoon of the capture day
 # is a last write whose week holds every captured stamp's real date; neither
@@ -418,11 +418,11 @@ def _dates_warnings(caplog) -> list[str]:
 
 
 def _payload_times(payloads: list[str]) -> list[str]:
-    """Each entry's local time to the second, read from its own payload
-    (S9's Facts): a DeckUpsertDeckV3 response's LastPlayed is local time with
-    its offset, written the second its header was; a ClientToGreuimessage's
-    timestamp is .NET ticks (100 ns since 0001-01-01) in UTC, put in local
-    time by the offset of the response before it."""
+    """Each entry's local time to the second, read from its own payload: a
+    DeckUpsertDeckV3 response's LastPlayed is local time with its offset,
+    written the second its header was; a ClientToGreuimessage's timestamp is
+    .NET ticks (100 ns since 0001-01-01) in UTC, put in local time by the
+    offset of the response before it."""
     times = []
     offset = None
     for payload in payloads:
@@ -450,7 +450,7 @@ def test_auto_dates_every_language_at_its_payloads_time_in_one_read(conn, tmp_pa
         [r["payload"] for r in languages]
     )
     # The English response ({"MatchesV3": []}) carries no time of its own:
-    # its stamp is S9's "10/6/2026 2:37:04 PM", its date the session's, which
+    # its stamp is "10/6/2026 2:37:04 PM", its date the session's, which
     # the Japanese response's LastPlayed fixes.
     session_date = _payload_times([languages[0]["payload"]])[0][:10]
     assert english["label"] == "EventGetActiveMatches"
@@ -459,14 +459,14 @@ def test_auto_dates_every_language_at_its_payloads_time_in_one_read(conn, tmp_pa
 
 @pytest.mark.parametrize("locale_hint", ["auto", "mdy", "dmy"])
 def test_raw_events_header_holds_each_stamp_as_written(conn, tmp_path, locale_hint):
-    """D4: kept whatever the order, so a date misread today stays
+    """Kept whatever the order, so a date misread today stays
     re-derivable."""
     ingest_file(
         conn, _copy(HEADER_LANGUAGES, tmp_path, CAPTURE_AFTERNOON), locale_hint=locale_hint
     )
     headers = [r["header"] for r in _stored(conn)]
     assert headers[0] == "10/6/2026 2:37:04 PM"
-    # S9's capture table: the response of each language whose example it shows
+    # One response each in four of the fixture's languages, its header as written
     assert [headers[i] for i in (1, 3, 5, 7)] == [
         "2026/10/06 14:37:42",
         "2026-10-06 오후 2:38:24",
@@ -597,7 +597,7 @@ def test_a_stale_last_write_with_nothing_learned_stores_none_and_warns(conn, tmp
         [r["payload"] for r in year_first]
     )
     assert [r["logged_at"] for r in others] == [None] * 9
-    assert all(r["header"] for r in rows)   # kept, to re-derive from later (D4)
+    assert all(r["header"] for r in rows)   # kept, to re-derive from later
     assert _learned(conn) == {}
     tail = (
         "is not within the week before the file's last write (2026-12-01 15:00), and "
@@ -620,7 +620,7 @@ def test_a_stale_last_write_uses_the_order_an_earlier_read_learned(conn, tmp_pat
     earlier = _copy(HEADER_LANGUAGES, tmp_path / "earlier", CAPTURE_AFTERNOON)
     ingest_file(conn, earlier, locale_hint="auto")
     # Steps 2 and 4 teach, so the year-first shapes teach nothing; each row
-    # names the first stamp of its shape, from S9's capture table.
+    # names the first stamp of its shape in the fixture.
     assert _learned(conn) == {
         "slash-12h": ("mdy", "10/6/2026 2:37:04 PM", "header_languages.log"),
         "slash-24h": ("dmy", "06/10/2026 14:39:17", "header_languages.log"),
@@ -716,6 +716,12 @@ def test_migration_062_adds_nullable_header_columns_and_the_learned_order_table(
 
 # --- default log path discovery ---------------------------------------------
 
+_STEAM_COMPATDATA_RELATIVE = (
+    f"steamapps/compatdata/{steam.MTGA_APP_ID}/pfx/drive_c/users/steamuser/"
+    "AppData/LocalLow/Wizards Of The Coast/MTGA/Player.log"
+)
+_LOG_IN_PREFIX = "AppData/LocalLow/Wizards Of The Coast/MTGA/Player.log"
+
 
 def test_env_var_takes_priority_over_everything(monkeypatch, tmp_path):
     explicit = tmp_path / "Custom.log"
@@ -778,3 +784,125 @@ def test_the_windows_profile_is_not_searched_elsewhere(monkeypatch, tmp_path):
     monkeypatch.setenv("USERPROFILE", str(profile))
     _windows_log(profile)
     assert default_log_path() is None
+
+
+# --- Linux candidates: every Steam library and every Wine prefix -------------
+
+
+def _linux_home(monkeypatch, tmp_path) -> Path:
+    home = tmp_path / "fakehome"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.delenv("MTGA_LOG", raising=False)
+    monkeypatch.delenv("WINEPREFIX", raising=False)
+    return home
+
+
+def _prefix_log(prefix: Path, user: str, mtime: float | None = None) -> Path:
+    log_path = prefix / "drive_c/users" / user / _LOG_IN_PREFIX
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text("")
+    if mtime is not None:
+        os.utime(log_path, (mtime, mtime))
+    return log_path
+
+
+def test_proton_prefix_with_a_user_other_than_steamuser(monkeypatch, tmp_path):
+    """The Wine user is whatever folder sits under drive_c/users; a hard-coded
+    name hid every prefix whose user was something else."""
+    home = _linux_home(monkeypatch, tmp_path)
+    prefix = home / ".local/share/Steam/steamapps/compatdata" / steam.MTGA_APP_ID / "pfx"
+    log_path = _prefix_log(prefix, "someone")
+    assert default_log_path() == log_path
+
+
+def test_public_wine_user_is_skipped(monkeypatch, tmp_path):
+    """Public is Windows' shared profile, never the player's."""
+    home = _linux_home(monkeypatch, tmp_path)
+    _prefix_log(home / ".wine", "Public")
+    assert default_log_path() is None
+    assert found_log_paths() == []
+
+
+def test_a_newer_lutris_log_beats_a_stale_steam_one(monkeypatch, tmp_path):
+    """A stale prefix must not shadow the one Arena wrote to last."""
+    home = _linux_home(monkeypatch, tmp_path)
+    steam_prefix = home / ".local/share/Steam/steamapps/compatdata" / steam.MTGA_APP_ID / "pfx"
+    stale = _prefix_log(steam_prefix, "steamuser", mtime=1_000_000)
+    lutris_prefix = tmp_path / "elsewhere/arena-prefix"
+    fresh = _prefix_log(lutris_prefix, "me", mtime=2_000_000)
+    games = Path(os.environ["XDG_CONFIG_HOME"]) / "lutris/games"
+    games.mkdir(parents=True)
+    (games / "arena.yml").write_text(f"game:\n  prefix: {lutris_prefix}\n")
+    assert default_log_path() == fresh
+    assert found_log_paths() == [fresh, stale]
+
+
+def test_an_mtime_tie_keeps_candidate_order(monkeypatch, tmp_path):
+    """Steam comes before Wine prefixes when nothing separates them."""
+    home = _linux_home(monkeypatch, tmp_path)
+    steam_prefix = home / ".local/share/Steam/steamapps/compatdata" / steam.MTGA_APP_ID / "pfx"
+    first = _prefix_log(steam_prefix, "steamuser", mtime=1_500_000)
+    second = _prefix_log(home / ".wine", "me", mtime=1_500_000)
+    assert found_log_paths() == [first, second]
+
+
+def test_the_same_prefix_reached_twice_counts_once(monkeypatch, tmp_path):
+    """A symlinked root (as ~/.steam/steam is) must list its log once, under
+    the first spelling, which the watcher keys its offset by."""
+    home = _linux_home(monkeypatch, tmp_path)
+    real = home / ".local/share/Steam"
+    prefix = real / "steamapps/compatdata" / steam.MTGA_APP_ID / "pfx"
+    log_path = _prefix_log(prefix, "steamuser")
+    (home / ".steam").mkdir()
+    (home / ".steam/steam").symlink_to(real)
+    assert found_log_paths() == [home / ".steam/steam" / log_path.relative_to(real)]
+
+
+def test_mtga_log_leads_whatever_its_mtime(monkeypatch, tmp_path):
+    """An explicit $MTGA_LOG is a choice, not a candidate to out-age."""
+    home = _linux_home(monkeypatch, tmp_path)
+    prefix_log = _prefix_log(home / ".wine", "me", mtime=2_000_000)
+    explicit = tmp_path / "Custom.log"
+    explicit.write_text("")
+    os.utime(explicit, (1_000_000, 1_000_000))
+    monkeypatch.setenv("MTGA_LOG", str(explicit))
+    assert found_log_paths() == [explicit, prefix_log]
+
+
+def test_a_wine_user_without_a_log_is_skipped(monkeypatch, tmp_path):
+    """A user folder that holds no Player.log (or one that vanished) must be
+    skipped, never raise."""
+    home = _linux_home(monkeypatch, tmp_path)
+    (home / ".wine/drive_c/users/empty").mkdir(parents=True)
+    kept = _prefix_log(home / ".wine", "kept", mtime=1_000_000)
+    assert found_log_paths() == [kept]
+
+
+def test_wineprefix_naming_the_proton_prefix_counts_once(monkeypatch, tmp_path):
+    """The same prefix reached as a Steam library and as $WINEPREFIX is one
+    log, listed under the Steam spelling (the first candidate)."""
+    home = _linux_home(monkeypatch, tmp_path)
+    prefix = home / ".local/share/Steam/steamapps/compatdata" / steam.MTGA_APP_ID / "pfx"
+    log_path = _prefix_log(prefix, "steamuser")
+    monkeypatch.setenv("WINEPREFIX", str(prefix))
+    assert found_log_paths() == [log_path]
+    assert default_log_path() == log_path
+
+
+def test_the_debug_line_repeats_only_when_it_changes(monkeypatch, tmp_path, caplog):
+    """The dashboard's heartbeat resolves the log every few seconds."""
+    from sensei_top.reader import ingest
+
+    home = _linux_home(monkeypatch, tmp_path)
+    monkeypatch.setattr(ingest, "_last_debug", None)
+    _prefix_log(home / ".wine", "me")
+    with caplog.at_level(logging.DEBUG, logger=ingest.log.name):
+        default_log_path()
+        default_log_path()
+        assert len(caplog.records) == 1
+        _prefix_log(home / ".wine", "other")
+        default_log_path()
+        assert len(caplog.records) == 2
+        assert str(tmp_path) not in caplog.text

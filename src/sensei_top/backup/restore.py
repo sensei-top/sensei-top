@@ -3,8 +3,9 @@
 The caller (``cli.cmd_restore``) does the fifth -- ``open_database()`` and
 ``project()`` -- because this package imports neither ``reader`` nor
 ``projector``. Every refusal is raised before anything moves, so it leaves each
-file where it was: a missing or unusable FILE, a schema newer than this code, a
-``-wal`` beside FILE, and a live database whose checkpoint reports busy. Any
+file where it was: a missing or unusable FILE, FILE being the database itself,
+a schema newer than this code, a ``-wal`` beside FILE, and a live database
+whose checkpoint reports busy. Any
 failure after the first move -- a move, the copy -- puts the moved files back
 in reverse order; if some cannot be put back, ``PartialRestoreError`` names
 each one still aside, and the message never claims nothing changed.

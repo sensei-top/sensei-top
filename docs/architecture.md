@@ -35,7 +35,7 @@ over the entire history — every match ever recorded — by re-running one comm
 | `metagame/` | Tournament results, evidence tiers | `Player.log`, `reader/`, `projector/` |
 | `coach/` | `review/`, `guide/`, every deck's projected matches | `reader/`, `raw_events`, files |
 | `archetypes/` | Revealed cards, archetype definitions, the corpus | `reader/`, `raw_events`, files |
-| `api/app.py` | SQL over views; the feature packages' public API | How anything was produced |
+| `api/routes/`, `api/sql.py` | SQL over views; the feature packages' public API | How anything was produced |
 
 If you find yourself importing the projector from the reader, the design has
 been violated. `live.py` exists precisely so neither has to know the other.
@@ -51,11 +51,12 @@ Three exceptions, all deliberate and all documented at the site:
 
 - **`table/` reads `raw_events` directly.** It replays the current match at
   request time rather than reading `turns`, because a full `project()` rebuild
-  costs ~11.6 s against a 5-second cadence while one match's replay costs
-  0.03–0.08 s. It reuses `projector/game_state.py`'s `GameStateTracker` — the
-  *same* tracker `project()` drives — so this is one parser with two drivers,
-  never a second encoding of Arena semantics. See
-  `projector/live_state.py`'s module docstring and
+  costs several times the 5-second cadence (see "Full rebuild, always") while
+  one match's replay costs a small fraction of a second (measured in
+  `docs/current-match.md`, "The live replay (`table/live.py`,
+  `projector/live_state.py`)"). It reuses `projector/game_state.py`'s
+  `GameStateTracker` — the *same* tracker `project()` drives — so this is one
+  parser with two drivers, never a second encoding of Arena semantics. See
   [current-match.md](current-match.md).
 - **`brief/` and the narrative stores persist their output.** An authored
   narrative is not a derivation, so a rebuild cannot recompute it. See rule 6
@@ -70,9 +71,13 @@ Three exceptions, all deliberate and all documented at the site:
 
 ## Full rebuild, always
 
-`project()` deletes every derived row and recomputes from scratch. At this
-scale that is cheap — measured **0.28 s over 4,595 events**, roughly 60 µs per
-event — and it removes an entire class of incremental-state bugs.
+`project()` deletes every derived row and recomputes from scratch. That
+removes an entire class of incremental-state bugs, and it makes a fix
+retroactive: a corrected parsing rule reaches every stored match on the next
+rebuild. The cost grows with total history. Measured 2026-10-20 on a copy of
+a real database (421,879 raw events, 755 matches, 1,806 games): about
+**33 s** wall per full `project` (three runs, 32.8–33.3 s). Every other
+figure for the rebuild's cost points here.
 
 Deletion order matters and is fixed by foreign keys:
 
@@ -92,49 +97,49 @@ mode throttles rebuilds separately from reads — see below.
 second, independent ingest leg on the same `LiveIngester`, not a second
 watcher, and it has two parts. Its game logs (`_poll_mtgo`) are checked every
 2 s and stored once a game ends (see "MTGO's game logs" below). Its deck
-folder (`_poll_mtgo_decks`) is polled every 30 s (see "The MTGO deck folder"
+folder (`_poll_mtgo_decks`) is polled every 30 s (see "MTGO's deck files"
 below). Rows from either ride Arena's own rebuild gate once they exist, the
 same as any other dirty poll.
 
-`LiveIngester` runs two loops at different speeds, deliberately, and — since
-the rebuild's own write lock measured 5.7 s on a real database — on two
-separate threads rather than one:
+`LiveIngester` runs two loops at different speeds, deliberately, on two
+separate threads:
 
 - **Ingest, every ~1 s, on its own thread and its own connection.** Cheap:
   seek to the stored byte offset, read what is new. Frequent reads are what
-  keep the reader ahead of a log Arena may truncate at any moment. Splitting
-  this onto its own thread (`ingest_once`, driven by `run_forever`'s inner
-  `_ingest_loop`) is what keeps a rebuild in progress on the other thread from
-  blocking the next log line — the old single-loop design ran ingest and
-  rebuild back-to-back on one thread, so a rebuild's write lock (or even just
-  its lock-free parse phase) delayed every new line until it finished.
-  The thread split does not remove the lock itself: an ingest tick still
-  waits for the rebuild's `COMMIT` before it can append, so `project()`
-  builds every row before its `BEGIN` and holds the lock for the deletes
-  and inserts alone. It once read and decoded every stored MTGO game log
-  inside the transaction; with 365 of them, on a 2.4 GB database
-  (2026-10-19), the lock had grown to 15–18 s and the Live page stalled
-  that long once a rebuild, about every 75 s of a game. Built first, the
-  same rebuild's longest wait for a writer measured 1.8 s, with every
-  derived table byte-identical.
+  keep the reader ahead of a log Arena may truncate at any moment. On its
+  own thread (`ingest_once`, driven by `run_forever`'s inner
+  `_ingest_loop`), ingest goes on while a rebuild runs on the other, through
+  the rebuild's lock-free parse phase, which a single loop had to wait out.
+  Only the write holds a tick up: an ingest tick
+  still waits for the rebuild's `COMMIT` before it can append, so
+  `project()` builds every row before its `BEGIN` and holds the lock for
+  the deletes and inserts alone. On a 2.4 GB database with 365 stored MTGO
+  game logs (2026-10-19), the rebuild's longest wait for a writer measured
+  1.8 s. Reading and decoding those game logs inside the transaction
+  instead held the lock 15–18 s on the same database, and the Live page
+  stalled that long once a rebuild, about every 75 s of a game; both ways
+  built every derived table byte-identical. The dashboard's writes wait on
+  the same lock: after a rebuild's lock outlasted an MTGO pick's own 5 s
+  wait on 2026-10-17, the API's writes wait 60 s
+  (`api/deps.py::WRITE_BUSY_TIMEOUT_MS`) and answer 503 past that, rather
+  than a 500.
 - **Rebuild, gated to a duty cycle, `project_every` (default 5 s) as a
   floor.** New rows mark the projection dirty; a later tick does the work.
   Rebuilding on every ingest would be waste today and unaffordable after a
   year of play — but a full rebuild's own cost grows with total history, and
-  once it outlasts `project_every` (measured: ~16 s a rebuild against a 238k
-  event, 1.33 GB database), the old fixed threshold stopped doing anything:
-  every dirty poll already found `elapsed >= project_every` true, so the
-  watcher rebuilt back-to-back, pinning a core for the life of the process.
+  once it outlasts `project_every` (as it does on a real database: see
+  "Full rebuild, always"), a fixed threshold does nothing: every dirty poll
+  finds `elapsed >= project_every` true, and the watcher rebuilds
+  back-to-back, pinning a core for the life of the process.
   `project_if_due` (`live.py`) instead gates on
   `max(project_every, _last_duration * duty_factor)` — `duty_factor`
   (default 1.0, CLI `--duty-factor`) holds the watcher to roughly a
   `1/(1+duty_factor)` duty cycle (~50% at the default) measured off the
   *previous* rebuild's own wall time, so the cost stays a fixed fraction of
   real time as history grows instead of consuming a whole core continuously.
-  (The default was 4.0/~20% until the Current match tab went Arena-only —
-  see `docs/current-match.md`'s "A second source: MTGO" — trading CPU duty
-  for the tab's own latency: a measured 145 s round trip between two Arena
-  rebuilds roughly halves to ~58 s at the new default.)
+  The default of 1.0 trades CPU duty for the Live page's latency: a
+  measured 145 s round trip between two Arena rebuilds at 4.0 (~20% duty)
+  roughly halves to ~58 s at 1.0.
 
 **One exception to the rebuild gate**: `has_match_boundary`
 (`projector/matches.py`) forces an immediate rebuild on a new match room,
@@ -143,18 +148,18 @@ on the Live page, and the real gap between a room opening and the
 first mulligan offer measures ~11 s in captured play — waiting out even the
 `project_every` floor on top of the ingest tick would eat a meaningful slice
 of that, let alone a duty-cycle gate that can legitimately stay open for a
-minute or more once the database has grown. Now that ingest runs on its own
-thread, that boundary rebuild no longer delays the offer it exists to protect:
+minute or more once the database has grown. With ingest on its own thread,
+that boundary rebuild does not delay the offer it exists to protect:
 the mulligan offer itself still reaches `raw_events` within one ingest tick
 even while the rebuild the room opening triggered is still running — only the
 *projected* view of the match waits, and `table/live.py`'s own replay routes
 the opening-hand read around that wait rather than through `matches`/`turns`.
-A completed match carries the same event type and gets the same early rebuild
-as a side effect, which is a bonus rather than a case worth excluding. A
-second exception, `has_draft_boundary`, went with the draft assistant
-(2026-10-01).
+The 2026-09-24 replay that measured the offer's lag before and after is in
+[current-match.md](current-match.md), "The live replay". A completed match
+carries the same event type and gets the same early rebuild as a side
+effect, which is a bonus rather than a case worth excluding.
 
-**No Arena log yet** (plan 6, D10). `serve --watch` with no `--file`, no
+**No Arena log yet.** `serve --watch` with no `--file`, no
 `$MTGA_LOG` and nothing autodetected starts anyway: `LiveIngester.log_path`
 is `None`, one WARNING says so, and Arena's side of each ingest pass does
 nothing while MTGO's legs run as usual. The watcher asks
@@ -170,9 +175,9 @@ that does not exist still exits, and `ingest --watch` keeps its exit.
 or no log yet); the API process cannot ask the
 child, so it runs the same resolver.
 
-**MTGO's game logs are stored once a game ends** (`_poll_mtgo`; plan 3, D2).
+**MTGO's game logs are stored once a game ends** (`_poll_mtgo`).
 MTGO writes its game log several times a minute during a match, every write
-an append (103 of 103 in one measured Bo3 on the VM, plan 12 S2), and each
+an append (103 of 103 in one measured Bo3 on the VM), and each
 stored row is the whole file (see "MTGO's storage arithmetic" below). Storing
 every write would put about a hundred rows per match into `raw_events` and
 keep the rebuild running at the duty cycle's pace for the whole session, for
@@ -194,39 +199,35 @@ every 2 s and holds a changed file back until one of two things is true:
 Quiet alone cannot tell a finished game from a long think: in the measured
 match one mid-game pause lasted 36 s and the gap between games 46 s, and a
 turn has no upper bound. Quiet is measured on the watcher's own clock, from
-the check that first saw the file's current size and mtime, never from the
-mtime itself: a copied file carries the other machine's clock. The result is
-about one row per game, each marking the projection dirty for the next
-ordinary rebuild. There is no boundary rebuild: an MTGO match never becomes
-the current match, however fast it is projected (`has_mtgo_boundary`, which
-forced one, went with the Current match tab's MTGO support).
+the check that first saw the file's current size, mtime and inode, never
+from the mtime itself: a copied file carries the other machine's clock. The
+result is about one row per game, each marking the projection dirty for the
+next ordinary rebuild. There is no boundary rebuild: an MTGO match never becomes
+the current match, however fast it is projected.
 
 **A mirrored folder can fold two games into one row.** When the folder is a
 copy, as the author's is (a `robocopy` in the VM fills the share once a
 minute), a game's end and the next game's first line can reach the copy in
 the same pass. The copy then never holds a file whose last game is
 decided, so that game gets no row of its own; the next row, at the next
-game's end, holds it, and nothing is lost. Measured on one real Bo3 (plan 3,
-phase 10): two rows for three games, each landing 6–7 s after the copy
+game's end, holds it, and nothing is lost. Measured on one real Bo3: two
+rows for three games, each landing 6–7 s after the copy
 received the write. On such a setup a row lands up to about a minute after
 its game ends, the copy's own interval. Not yet run against MTGO's own
 folder, where the next game's first line is written only once that game
-starts (46 s after the previous one ended, in plan 12's measurement).
+starts (the 46 s gap between games measured above).
 
 **Two kinds of game log project no match, on purpose.** A match the user
 only watched: the configured handle writes `has started watching.` and
 plays in none of its games, so `projector/mtgo/project.py` skips the file
-with a debug line and no warning (plan 30, D6). And a game with more than
+with a debug line and no warning. And a game with more than
 one opponent, such as Commander, skipped with a warning, because a match
 row holds one opponent. On 2026-10-19 these were all 9 of the real
 history's 365 game logs that projected no match: 8 watched, 1 Commander.
 
 A file counts as read (`ingest_state`) only once it is stored, so a watcher
 stopped mid-game leaves it for the next one. Its identity token is
-`<st_ino>:<st_mtime_ns>` (the inode alone before plan 3), so the first run
-of this code over an existing database reads every stored game log once
-more and stores nothing new: `ingest-mtgo` reports "0 new, N duplicate".
-The watcher's first pass stores
+`<st_ino>:<st_mtime_ns>`. The watcher's first pass stores
 every changed file at once, decided or not: it catches up whatever was
 written while nothing watched. `sensei-top ingest-mtgo` does the same by
 hand, and a running watcher's `project_if_due` notices rows another process
@@ -241,7 +242,7 @@ the directory resolves in order — an explicit `--mtgo-dir`, then
 for an Arena-only install, not a failure.
 
 **MTGO's deck files are polled, every 30 s** (`_poll_mtgo_decks`,
-`deck_poll_every`; plan 12, D8 and D17), from two folders: `[mtgo] deck_dir`,
+`deck_poll_every`), from two folders: `[mtgo] deck_dir`,
 where the user's exported `.dek` files sit, and `[mtgo] dir` itself, where
 MTGO keeps its deck store (`grouping *.xml`) beside the game logs.
 The game logs in `dir` keep their own rule above; this poll takes only the
@@ -265,12 +266,13 @@ it by file name and skips it. The export folder resolves in order —
 normal case, not a failure. The store needs no setting of its own; it is read
 wherever `dir` is, and `--no-mtgo` skips it with the rest of the MTGO leg.
 
-The boundary check scans `raw_events` after the watermark of the last
-committed rebuild, stored as `_projected_through` on the `LiveIngester` and
-persisted to `projection_state.projected_through_id` so a process restart
-restores it instead of resetting to 0 — which would otherwise force the first
-boundary check after a restart to scan every row ever ingested rather than
-just the tail since the last rebuild.
+The boundary check looks at `raw_events` after the watermark of the last
+committed rebuild: an index search on `label` past that id, then a `LIKE`
+over the room-state payloads it finds. The watermark is stored as
+`_projected_through` on the `LiveIngester` and persisted to
+`projection_state.projected_through_id`, so a process restart restores it
+instead of resetting to 0. At 0, the high-water-mark check above would find
+every row unprojected, so every restart would rebuild once with nothing new.
 
 The watermark alone would leave a fixed projector's old rows in place: a
 watcher restarted after an upgrade restores it, finds nothing new past it,
@@ -291,7 +293,7 @@ during a session is worse than one that logs an error and keeps going.
 
 **`serve`'s other threads are not the watcher's.** The archetype refresh
 (once, at startup), the reference refresh (every five minutes), the
-corpus refresh (a tick every five minutes; plan 14) and the daily backup
+corpus refresh (a tick every five minutes) and the daily backup
 each run on a thread of their own, with a connection of their own,
 whether or not `--watch` is given, and each has a flag that turns it off:
 `--no-archetype-refresh`, `--no-reference-refresh`,
@@ -301,13 +303,16 @@ and its cadences are each source's, not the tick's
 (`docs/metagame.md`, "Fetching the corpus"). How each shares the write
 lock with the watcher is under `docs/opponent-deck.md`, "Naming the opponent's deck".
 
-**The watcher is a child process, and it dies with `serve`** (`procs.py`;
-plan 3, S5). `serve --watch` runs it as `live.WatcherProcess`, so a rebuild
-never contends with the API for one interpreter's GIL ("What a turn snapshot
-holds" below). `serve` can end three ways, and each has its own mechanism.
-An orderly shutdown (Ctrl+C, or a SIGTERM that uvicorn turns into one) stops
-the watcher from the app's lifespan, because uvicorn re-raises SIGTERM once
-its own shutdown is done, before anything after `server.run` would run. On
+**The watcher is a child process, and it dies with `serve`**
+(`procs.py`). `serve --watch` runs it as `live.WatcherProcess`, so a rebuild
+never contends with the API for one interpreter's GIL: every API route is a
+sync `def`, and with the watcher as a thread, `/api/current-match/read`
+measured ~27 ms with the thread idle against ~145–160 ms with a rebuild
+holding the GIL, about a 5x tax, even with `orjson` as the parser. `serve`
+can end three ways, and each has its own mechanism. An orderly shutdown
+(Ctrl+C, or a SIGTERM that uvicorn turns into one) stops the watcher from
+the app's lifespan, because uvicorn re-raises SIGTERM once its own shutdown
+is done, before anything after `server.run` would run. On
 Linux, a `serve` killed outright is noticed by the kernel: the child set
 `PR_SET_PDEATHSIG`, and it is started with `fork` rather than Python 3.14's
 `forkserver` default, since the signal watches the child's OS parent. On
@@ -315,16 +320,15 @@ Windows, the child sits in a Job Object that kills it when `serve`'s handle
 to the job closes, which `taskkill /F` does too. macOS gets the first only.
 A SIGTERM to the whole process group (`kill -TERM -- -<pgid>`) is the
 orderly shutdown with the watcher already dead, the same stop a watcher
-that died alone gets. Both used to hang `serve` for good: the stop signal
-was a `multiprocessing.Event`, and its `set()` waits for every sleeper to
-wake, the dead child's bridging thread among them. It is a one-way pipe
-now, which a dead reader cannot block (`live._run_watcher`). If the drain
+that died alone gets. The stop signal is a one-way pipe, which a dead
+reader cannot block (`live._run_watcher`); a `multiprocessing.Event` would
+hang `serve` for good in both, since its `set()` waits for every sleeper to
+wake, the dead child's bridging thread among them. If the drain
 of the child's log queue times out, because the child died holding the
 queue's lock mid-write, `stop()` cancels the join that would otherwise
 hang the interpreter's exit and logs a warning that the child's last
-records may be lost. A watcher that dies alone, found after plan 3's
-real-match check, is noticed now: a monitor thread beside the drain waits
-on the child's sentinel and logs one ERROR when it dies on its own (after
+records may be lost. A watcher that dies alone is noticed: a monitor
+thread beside the drain waits on the child's sentinel and logs one ERROR when it dies on its own (after
 a short grace for the exit codes a group SIGTERM or Ctrl+C give, so a
 normal shutdown logs nothing), and `/api/live` reports `watcher_stopped`;
 `serve` keeps serving and does not restart the child (the desktop shell
@@ -370,16 +374,15 @@ stores the whole file, base64-encoded, as a new `raw_events` row, and the
 projector keeps the longest payload per match. Since the watcher stores once
 per game ("Live mode's two cadences" above), a match's rows add up to the
 file's size at the end of each game: at most the number of games times the
-final file. A leg that stored every write, as this one once did, would put
-about a hundred rows into a measured Bo3, and a match's total would grow with
-the square of its length.
+final file. A leg that stored every write would put about a hundred rows
+into a measured Bo3, and a match's total would grow with the square of its
+length.
 
-Storing only the bytes past the previous row (delta rows) was deferred until
-MTGO was shown never to rewrite what it had written. It now has been, on
-MTGO's own folder rather than the copy (plan 12 S2), but plan 3 chose whole
-rows once per game instead (its D2): the payload model stays as it is, and
-the arithmetic above is linear without it. Revisit only if payload volume
-becomes a measured problem.
+Storing only the bytes past the previous row (delta rows) would be safe:
+MTGO has been shown never to rewrite what it has written, on its own folder
+rather than the copy. Whole rows once per game were chosen instead: the
+payload model stays as it is, and the arithmetic above is linear without
+it. Revisit only if payload volume becomes a measured problem.
 
 ### Adding a migration
 
@@ -458,13 +461,13 @@ temp-then-verify-then-`os.replace` sequence above, not the claim.
 **WAL interaction: documented, not mitigated.** `VACUUM INTO` holds a read
 transaction for its whole duration, so frames written at or after its
 snapshot cannot be checkpointed until it finishes, and `data/sensei-top.db-wal`
-grows while the watcher keeps writing. Estimated, not yet measured: each
-`project()` rewrites ~50–70 MB of frames with churn, and the live-mode
-rebuild gate is `max(--project-every, duty factor × last rebuild)` — with
-the default duty factor now 1.0 and a full rebuild at ~13–23 s, a backup
-window of a few minutes plausibly overlaps 4–10 rebuilds, roughly
-200–700 MB of WAL. (The first estimate here, 150–350 MB, assumed the old
-duty factor of 4.) Every run records its real duration in
+grows while the watcher keeps writing. The live-mode rebuild gate is
+`max(--project-every, duty factor × last rebuild)`, so at the default duty
+factor 1.0 a rebuild starts about every two rebuild durations (cost in
+"Full rebuild, always"). Each `project()` rewrites an estimated, not
+measured, ~50–70 MB of frames with churn, and the WAL grows by about that
+much for every rebuild that overlaps the backup window. Every run records
+its real duration in
 `backup_state.last_duration_ms` (a by-hand `sensei-top backup` also prints
 it as `Took:`); the WAL peak is recorded nowhere and needs watching
 `data/sensei-top.db-wal` during a run. It self-corrects logically but
@@ -472,22 +475,24 @@ not physically: once the read transaction ends, the next writer's automatic
 PASSIVE checkpoint copies the frames home and the WAL is reused, but the
 `-wal` *file itself* stays at its high-water mark until a TRUNCATE checkpoint
 or a process restart — a ~250 MB `data/sensei-top.db-wal` sitting there afterwards
-is normal, not a leak. Running `PRAGMA wal_checkpoint(TRUNCATE)` after a
-backup was considered and rejected: it blocks new writers and waits for
-readers, so with `busy_timeout=5000` it can stall the watcher's writer for up
-to 5 s — violating this feature's own rule that it must never stall
-ingestion, to reclaim disk space that costs nothing to leave alone. This also
-extends the reasoning below: a backup is a long *reader*, never a long
+is normal, not a leak. A backup never runs `PRAGMA wal_checkpoint(TRUNCATE)`
+afterwards: that checkpoint blocks new writers and waits for readers, so with
+`busy_timeout=5000` it can stall the watcher's writer for up to 5 s —
+violating this feature's own rule that it must never stall ingestion, to
+reclaim disk space that costs nothing to leave alone. This also extends the
+reasoning in "Storage" above: a backup is a long *reader*, never a long
 *writer*, so WAL's one-writer-many-readers guarantee means it never blocks or
 delays the watcher at all — the cost is a pinned WAL file, which is disk
 space, not latency.
 
-**Restoring is `sensei-top restore FILE`** (plan 6, D19). Stop `serve` and
+**Restoring is `sensei-top restore FILE`.** Stop `serve` and
 every watcher first: the watcher is a separate process this CLI does not own,
 holding an open connection plus its own `-wal`/`-shm`, and the command notices
 one only while it is mid-write (it refuses a busy database; an idle connection
-goes unseen). It prints each step as it runs: it opens `FILE` read-only and
-runs `PRAGMA quick_check`; it refuses a schema newer than the newest migration
+goes unseen). It prints each step as it runs: it refuses a `FILE` that is the
+database itself, or that has a non-empty `-wal` beside it (then `FILE` alone
+is not the whole database); it opens `FILE` read-only and runs
+`PRAGMA quick_check`; it refuses a schema newer than the newest migration
 this code ships (migrations only go forward); it checkpoints the live database,
 so the `.db` holds everything its `-wal` did, then moves the `.db` and whatever
 `-wal` and `-shm` remain aside as `.replaced` (`.replaced.1`, `.2` and so on
@@ -529,10 +534,11 @@ restored into the same or a newer version of this code — never an older one.
 
 ## The log file
 
-Every launch appends to `<db dir>/logs/sensei-top.log` (`logs.py`; plan 3,
-D10), so a reported problem arrives with the lines that led up to it, and a
+Every launch appends to `<db dir>/logs/sensei-top.log` (`logs.py`), so a
+reported problem arrives with the lines that led up to it, and a
 scratch `--db` keeps its lines out of the real install's file. A line is UTC
-(`2026-10-06T14:03:22.418Z`), then an 8-hex session id per launch, which
+(`2026-10-06T14:03:22.418Z`), so a file compares across machines and across
+a DST change without arithmetic, then an 8-hex session id per launch, which
 tells `serve` from a hand-run `ingest-mtgo` appending to the same file, then
 the level, the logger and the message, with the home directory written as
 `~`. The desktop shell passes its launch's id to every subcommand it
@@ -555,7 +561,7 @@ On Windows a file another process holds open cannot be renamed, so a
 rotation refused because `serve` and a hand-run command share the file is
 silent: the file keeps growing past 2 MB until one process holds it alone,
 and the next launch that finds it over the limit rotates it (checked on a
-Windows 10 VM, plan 3's phase 6).
+Windows 10 VM).
 
 Under `--verbose` the file also takes other libraries' `DEBUG` lines, the
 `anthropic` SDK's request body among them: a generate call's whole prompt
@@ -568,16 +574,46 @@ of a log, never a client's data, and where nothing is found it answers
 `None` rather than a guess (non-negotiable 4).
 
 - **Arena's log** (`arena_config.resolve_log()`, which returns the path and
-  its source, and which `live.resolve_arena_log`, `doctor` and
-  `cards.arena_card_database_path` all ask): an existing `$MTGA_LOG`, then an
+  its source, and which `live.resolve_arena_log`, `doctor`, `diagnostics`
+  and `cards.arena_card_database_path` all ask): an existing `$MTGA_LOG`, then an
   existing `[arena] log` in `config.toml`, then `reader/ingest.py::default_log_path`
   (`--file` outranks all three, applied by the caller): `MTGA_LOG`, then
-  the Steam/Proton prefix in each Steam library (`steam.py`), then on
+  the newest `Player.log` in any Wine prefix on the machine, then on
   Windows `%USERPROFILE%\AppData\LocalLow\Wizards Of The Coast\MTGA\Player.log`,
   then macOS's. The watcher reads `Player-prev.log` once at startup, before
   the live file, when it exists (`docs/arena-log.md`, "File handling"); the
-  digest makes a re-read free (0 new of 1,269 entries on the real database,
-  plan 3's phase 4a).
+  digest makes a re-read free (0 new of 1,269 entries on the real database).
+- **The Wine prefixes.** `steam.py` gives every Steam library:
+  the data directories `~/.steam/steam`, `~/.local/share/Steam`,
+  `~/.steam/root`, Flatpak's and Snap's, then Flatpak's older one, each
+  computed from `Path.home()` at call time, and every library their
+  `libraryfolders.vdf` names (the first two stay first so an existing
+  install's log keeps its spelling: `ingest_state` is keyed
+  by the path string, and a new spelling would re-read the log); each
+  library's `steamapps/compatdata/2141910/pfx` is a candidate. `wine.py` gives every
+  other prefix: `$WINEPREFIX`, each one Lutris, Heroic and Bottles name in
+  their own config files, native and Flatpak, each folder in their
+  default prefix locations, then `~/.wine`; a folder counts only when it
+  holds `drive_c/`. Which files and folders each launcher keeps, and the
+  source line behind each, are in `wine.py`'s docstrings. Under every
+  prefix the log is looked for under each Wine user but `Public`, since only
+  Proton's is always `steamuser`. Candidates are deduplicated by realpath,
+  keeping the first spelling, and the newest `Player.log` by mtime wins,
+  with a tie going to candidate order (Steam, `$WINEPREFIX`, Lutris,
+  Heroic, Bottles, `~/.wine`), so a prefix left behind can't shadow the one
+  in use.
+  `reader/ingest.py::found_log_paths()` returns every log found, an
+  existing `$MTGA_LOG` first, then these newest first, then the Windows
+  and macOS places; `default_log_path()` takes its first, and `doctor`
+  lists the rest. `/api/live` resolves the log on every heartbeat, so the
+  scan runs every 3 s while `serve` is up: a few `stat` calls per prefix,
+  and its debug line is written only when the count or the chosen source
+  changes. `wine.py` is filesystem only, as `steam.py` and
+  `arena_install.py` are: it knows where launchers keep prefixes and
+  nothing about Arena, and an unreadable or odd config file yields nothing
+  from that file. Tests never see a real prefix: `tests/conftest.py`
+  points `HOME` and `XDG_DATA_HOME` at empty folders and unsets
+  `WINEPREFIX`.
 - **Arena's install** (`arena_install.py`), for the card database. Unity
   writes the folder its managed assemblies load from as the log's first line
   (`Mono path[0] = '<install>/MTGA_Data/Managed'`), so the client itself
@@ -587,7 +623,7 @@ of a log, never a client's data, and where nothing is found it answers
   `steam.py`'s library glob, which covers Steam alone. Reading one line is
   not log semantics, so the module sits outside `reader/` and never touches
   `raw_events`.
-- **The config file** (`llm/config.py::config_path`; plan 3, D6):
+- **The config file** (`llm/config.py::config_path`):
   `~/.config/sensei-top/config.toml` on Linux and macOS,
   `%APPDATA%\sensei-top\config.toml` on Windows, and `$XDG_CONFIG_HOME` on
   every platform when it is set. On Windows, when only the old `~/.config`
@@ -600,20 +636,19 @@ of a log, never a client's data, and where nothing is found it answers
   newest folder there holding `Match_GameLog_*.dat` (by creation time), and
   `serve` and `ingest-mtgo` print it with the `config --set-mtgo-dir`
   command when nothing is configured, or when the configured folder is
-  behind it or missing (plan 3, D8). Nothing reads the suggested folder
+  behind it or missing. Nothing reads the suggested folder
   until the user sets it, and an explicit `--mtgo-dir` or `--dir` silences
   the suggestion.
 - **The MTGO handle** is asked for, because the game log never says which
-  player is the user. Research for plan 6 (plan 3's phase 6, on a Windows 10
-  VM with MTGO closed) found one local file that names the logged-in user:
+  player is the user. On a Windows 10 VM with MTGO closed, one local file
+  names the logged-in user:
   `application_settings` (no extension, about 640 bytes of XML), in the
   `Apps\2.0\Data` tree and under `%LOCALAPPDATA%\Wizards of the Coast`,
   holding the handle once as a login setting. Other files carry player names
   only incidentally: `mtgo_game_history` (binary, per-game player names),
   `Match_GameChat_*.dat` (chat speakers) and
   `PrivateChatChannel_Private_<name>.dat` (whispers, with another player's
-  name in the file name). Nothing here reads any of them; whether onboarding
-  reads the handle from `application_settings` is plan 6's call.
+  name in the file name). Nothing here reads any of them.
 
 ## Idempotency
 
@@ -629,7 +664,8 @@ Everything is safe to re-run, and this is tested rather than assumed:
   recovery. The digest function takes no source argument at all, so this cannot
   regress by accident.
 - **Payload alone is not enough.** Arena polls some endpoints with
-  byte-identical responses, and `EventEnterPairing` emits the same
+  byte-identical responses (`QuestGetQuests`, `PeriodicRewardsGetStatus`),
+  and `EventEnterPairing` emits the same
   `{"CurrentModule":"CreateMatch","Payload":"Success"}` once per match. On one
   real session, a payload-only digest dropped 40 rows across 13 payloads.
 - **The tiebreaker used to be `line_number`, and that was wrong.** A line
@@ -638,8 +674,13 @@ Everything is safe to re-run, and this is tested rather than assumed:
   carries a different amount of preamble). Measured on a real pair of logs,
   that split 3,842 shared entries into two rows apiece — invisible in every
   derived table keyed by natural key (`matches`, `games`, `turns` all
-  overwrite), and visible only in `card_events`, which appends. See
-  `reader/ingest.py`'s module docstring for the full account.
+  overwrite), and visible only in `card_events`, which appends.
+- **The occurrence count is per read, which costs one rare case.** A
+  byte-identical payload carrying the same second on both sides of an
+  incremental poll boundary is taken for a re-read and dropped; a full read
+  of the file (`Player-prev.log` on recovery) counts from zero and restores
+  it. Measured on real logs: two such pairs in 15,118 entries, both
+  same-second client-state polls, neither a game event.
 - **A poll boundary used to change what an entry digests to.** The live
   watcher calls `ingest_file` roughly once a second, and a fresh `Segmenter`
   per call lost two things at every boundary: the most recent header
@@ -659,9 +700,10 @@ Everything is safe to re-run, and this is tested rather than assumed:
   response) is held back rather than split or discarded: the committed byte
   offset never advances past that entry's first line, so the next poll
   re-reads it whole with the same timestamp and label it would have carried
-  uninterrupted — up to a size cap (`MAX_PENDING_BYTES`), past which an entry
-  that still hasn't closed is corrupt in some new way, not merely still
-  arriving, and is abandoned rather than held back forever.
+  uninterrupted — up to a size cap (`MAX_PENDING_BYTES`, 32 MiB, about 30
+  times the largest real payload measured, a 1,055,060-byte response), past
+  which an entry that still hasn't closed is corrupt in some new way, not
+  merely still arriving, and is abandoned rather than held back forever.
 - **Migration 042 stops the poll-boundary twin going forward, not
   retroactively.** A database ingested before it still holds, for some
   requests, the `logged_at = NULL` row and its fully-timestamped twin as two
@@ -697,7 +739,9 @@ Everything is safe to re-run, and this is tested rather than assumed:
   rotated from). `card_events` accumulates instead of snapshotting, so
   `GameStateTracker` dedupes it directly, keyed on the `ZoneTransfer`
   annotation's own `id` (verified unique per `(match, game)`, never reused for
-  different content — see `projector/game_state.py`).
+  different content except across an undo, which rewinds Arena's ids with the
+  rest of the game and so drops the undone transfers' ids from the dedup set
+  — see `projector/game_state.py`).
 - **Projecting twice yields identical rows**, including `turns`.
 
 ## Aggregation: views versus Python
@@ -886,7 +930,7 @@ the same id back and a pick keeps pointing at it. `v_match_deck` joins the
 pick to MTGO matches only and reads `COALESCE(pick.deck_id, matches.deck_id)`;
 `matches.deck_id` itself stays what the projector wrote, NULL for every MTGO
 match. The pick is written by two routes: `PUT /api/matches/{id}/mtgo-pick` for
-one match, and `PUT /api/mtgo/picks` for many at once (plan 19), which
+one match, and `PUT /api/mtgo/picks` for many at once, which
 checks every item by the same rules (`_pick_problem`,
 `api/routes/matches.py`) and writes all of them in one transaction or none.
 Both answer 400 for an Arena match. The pick is never read by `project()` or
@@ -914,7 +958,7 @@ matches (`classify_seen` over the user's seat, with the corpus prior) is on
 its own route, `GET /api/mtgo/picks/hints`: building the prior was most of
 the 4.2 s the first version spent per load, the page refetches the groups
 after every confirm, and without the prior 11 of 76 hints got worse.
-Nothing is picked without the user's click (plan 12, D1).
+Nothing is picked without the user's click.
 
 **Filter a deck through `v_match_deck` by match id, never by its
 `deck_id`.** A reader that wants one deck's matches, or a set of decks',
@@ -922,7 +966,7 @@ writes `m.match_id IN (SELECT match_id FROM v_match_deck WHERE deck_id …)`,
 or reads the view once and groups in Python. It never joins the view and
 then filters `md.deck_id` against a set: that column is the `COALESCE`
 above, and no index serves it the way `idx_matches_deck` served
-`matches.deck_id`. Plan 12's phases 5 and 6 measured that shape at 10 to 100
+`matches.deck_id`. That shape measured at 10 to 100
 times slower than the `IN` form, and every reader converted then uses the
 `IN` form or one grouped pass. Migration 050's header records the worst
 case, `v_deck_identity` on a synthetic database: 18.9 s with the view
@@ -995,6 +1039,11 @@ turn** — there is exactly one snapshot per turn, so no mid-turn or per-step
 board can be reconstructed from them. `card_events` is the only intra-turn
 ordering there is.
 
+Library size is counted from `ZoneType_Library` itself, not by subtracting
+draws from the decklist: Arena sends the zone's `objectInstanceIds`, so the
+count is observed rather than derived, and a Bo3 sideboard changing the deck
+between games needs no special case.
+
 `turn_zones.zone` is one of `hand`, `battlefield`, `graveyard`, `exile`.
 `007_board_detail.sql` added the last of those plus `is_tapped`, `power` and
 `toughness`, all of which Arena had always sent and the projector had always
@@ -1058,18 +1107,23 @@ That same bypass now covers more than the opening hand.
 `projector/live_state.py` replays a match's `raw_events` on request and
 reads the board state as it stands *right now*, mid-turn — not the last
 turn boundary `project()` happened to reach. The reason is a number, not a
-guess: a real database's `project()` rebuild measured **~11.6 s** wall
-time, already past the 5-second `project_every` default, so anything
-sourced from `turns` on a mature database runs roughly one rebuild's
-duration stale. Replaying one match alone, bounded by its own room-opening
-event, costs 0.03-0.08 s regardless of how much history sits behind it.
+guess: a real database's `project()` rebuild (see "Full rebuild, always")
+runs far past the 5-second `project_every` default, so anything sourced from
+`turns` on a mature database lags `raw_events` by one rebuild at best, and
+by a rebuild, a gate interval and another rebuild at worst: one to three
+rebuilds at the default `duty_factor`. Replaying one match alone, bounded by
+its own room-opening event, costs the same order of time however much history
+sits behind it (`docs/current-match.md`, "The live replay (`table/live.py`,
+`projector/live_state.py`)", has the measurement).
 That rebuild also runs in its own OS process now (`live.WatcherProcess`),
 not a thread inside the API's own process, because a rebuild sharing the
-API's GIL taxed every request during it (`live.py`'s module docstring has
+API's GIL taxed every request during it ("Live mode's two cadences" has
 the contention numbers). `docs/current-match.md` has the full design.
 
-What is still **not** available: counters, attackers and blockers, the mana
-pool, the stack, and any per-step timeline. See [arena-log.md](arena-log.md).
+What is still **not** available: counters, the mana pool, the stack, and any
+per-step timeline. See [arena-log.md](arena-log.md). Attackers and blockers
+are not in the snapshot either, but they are projected, into `combat_attacks`
+and `combat_blocks` (`projector/combat.py`, migration `014_combat.sql`).
 
 **None of this exists for MTGO.** `projector/mtgo/project.py` writes only
 `matches`, `games` and `card_events` for an MTGO match — never `turns`,
@@ -1149,7 +1203,7 @@ not resolve to a `grp_id` — a name `_resolve_grp_id` leaves `NULL`
 (above), or a `CatId` `mtgo_card` lacks — is left out of `cards_json` with a
 warning, one per card per rebuild, never given an invented id (rule 4). The
 copies left out are counted in `cards_json`'s `unresolved` key,
-`{"maindeck": n, "sideboard": n}`, on every MTGO row (plan 12, D18), so a
+`{"maindeck": n, "sideboard": n}`, on every MTGO row, so a
 reader can tell a list it cannot fully see from a short one; an Arena row has
 no such key, since nothing is left out of it. A file that does not parse as a
 deck is skipped whole with a warning that names it, since a list missing one

@@ -1,28 +1,13 @@
-"""The log file: ``<db dir>/logs/sensei-top.log`` (release plan 3, D10).
+"""The log file: ``<db dir>/logs/sensei-top.log``, beside the database given.
 
-Every launch appends to one file beside the database it was given, so a
-problem a user reports arrives with the lines that led up to it, and a scratch
-``--db`` keeps its lines out of the real install's file. ``cli.main`` calls
-``install`` once the database path is known; nothing else installs a handler.
-
-- **Levels.** The file takes WARNING and up, DEBUG with ``--verbose``; the
-  console keeps the levels it had before the file existed, ERROR, WARNING with
-  ``--verbose``. Both also take the generate call's INFO lines, from
-  ``sensei_top.llm`` (trap 8). Each handler filters on its own, and the root
-  logger's level is the lower of the two, so neither starves the other.
-- **Lines.** ``2026-10-06T14:03:22.418Z 3f9a1c2e WARNING sensei_top.live: …``:
-  UTC, so a file compares across machines and across a DST change without
-  arithmetic; then the launch's session id, which tells apart ``serve`` and a
-  hand-run ``ingest-mtgo`` appending to the same file. The id is a filter on
-  the file handler, so every record carries it, uvicorn's and every other
-  library's included. The desktop shell starts every subcommand with its own
-  launch's id in ``SENSEI_TOP_SESSION``, so ``shell.log`` and this file
-  merge by id; a value that is not 8 lowercase hex characters is ignored,
-  with a warning, and the launch makes its own.
-- **The header.** The first line each launch writes names the version, the
-  subcommand, the platform and the database, at INFO through the handler
-  directly, so it is written whatever the handler's level.
-- **Size.** Five backups of 2 MB each, rotated.
+What it holds (levels, the line format, the header, rotation) is in
+docs/architecture.md, "The log file". ``cli.main`` calls ``install`` once the
+database path is known; nothing else installs a handler. Each handler filters
+on its own level and the root logger's level is the lower of the two, so
+neither starves the other. The session id is a filter on the file handler, so
+every record carries it, uvicorn's and every other library's included. The
+header goes through the file handler directly, at INFO, so it is written
+whatever the handler's level.
 
 Traps:
 
@@ -47,9 +32,9 @@ Traps:
    was writing it, it puts the current file back, reopens it and keeps
    appending, and a later record retries.
 4. Under pytest the root logger already holds pytest's capture handlers, and
-   ``basicConfig``, which this replaced, then added no console handler.
-   ``install`` keeps that rule, so a test's ``capsys`` sees what it saw
-   before. Repeated calls (one per ``main()`` in a test) replace what the
+   ``install`` adds no console handler to a root that has handlers, as
+   ``basicConfig`` adds none, so pytest's handlers alone capture a test's
+   records. Repeated calls (one per ``main()`` in a test) replace what the
    previous call installed rather than stacking it.
 5. ``serve --watch``'s watcher child writes no file: it hands its records to
    ``serve`` through a queue (``live.WatcherProcess``), and they reach this
@@ -119,13 +104,9 @@ class _Session(logging.Filter):
 
 class _Level(logging.Filter):
     """Holds a handler to ``floor`` and above, and lets through the INFO lines
-    of ``sensei_top.llm`` and its submodules.
-
-    The cost of each generate call is the one INFO line a user is promised
-    (non-negotiable 5, "never silent"), and a handler's own level cannot
-    express "WARNING and up, plus one logger's INFO" (trap 8). The prefix
-    rather than ``sensei_top.llm.client`` covers a later module under
-    ``llm/`` without a second edit; ``sensei_top.llmx`` is not under it.
+    of ``sensei_top.llm`` and its submodules (trap 8). The prefix rather than
+    ``sensei_top.llm.client`` covers a later module under ``llm/`` without a
+    second edit; ``sensei_top.llmx`` is not under it.
     """
 
     def __init__(self, floor: int) -> None:

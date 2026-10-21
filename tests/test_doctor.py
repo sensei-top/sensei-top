@@ -1,12 +1,13 @@
-"""``sensei-top doctor`` and ``diagnostics`` (plan 6, S5).
+"""``sensei-top doctor`` and ``diagnostics``.
 
 ``client_header.log`` is the first 40 lines of a real ``Player.log``; its
 line 35 is ``DETAILED LOGS: ENABLED`` (found with ``grep -a -n`` on the file,
 the one place a line is wanted, not an entry). The ``DISABLED`` spelling has
-never been captured, so nothing here asserts it (docs/status.md).
+never been captured, so nothing here asserts it (BL-034).
 """
 
 import json
+import os
 import sqlite3
 import tomllib
 import zipfile
@@ -379,3 +380,47 @@ def test_diagnostics_into_a_missing_folder_exits_with_a_message(tmp_path):
         f"{out.parent} does not exist. "
         "Create it, or pass an --out inside a folder that does."
     )
+
+
+def _two_prefix_logs(monkeypatch, tmp_path) -> tuple[Path, Path]:
+    from sensei_top.reader.ingest import default_log_path
+
+    home = tmp_path / "fakehome"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.delenv("MTGA_LOG", raising=False)
+    monkeypatch.setattr("sensei_top.arena_config.default_log_path", default_log_path)
+    logs = []
+    for prefix, mtime in ((home / ".wine", 1_000_000), (tmp_path / "elsewhere/pfx", 2_000_000)):
+        log = prefix / "drive_c/users/me/AppData/LocalLow/Wizards Of The Coast/MTGA/Player.log"
+        log.parent.mkdir(parents=True)
+        log.write_text("x\n")
+        os.utime(log, (mtime, mtime))
+        logs.append(log)
+    lutris = Path(os.environ["XDG_CONFIG_HOME"]) / "lutris/games"
+    lutris.mkdir(parents=True)
+    (lutris / "g.yml").write_text(f"game:\n  prefix: {tmp_path / 'elsewhere/pfx'}\n")
+    return logs[0], logs[1]
+
+
+def test_doctor_lists_every_log_found_chosen_first(tmp_path, capsys, monkeypatch):
+    """A support report should show a second prefix without a back-and-forth."""
+    older, newer = _two_prefix_logs(monkeypatch, tmp_path)
+    data = _doctor(tmp_path, capsys)
+    assert data["arena_log"]["path"] == str(newer)
+    assert data["arena_log"]["found"] == [str(newer), str(older)]
+    cli_module.main(["--db", str(tmp_path / "t.db"), "doctor"])
+    out = capsys.readouterr().out.splitlines()
+    assert out[0].startswith(f"Arena log: {newer}")
+    assert out[1] == f"  Also found: {older}"
+    assert out[2].startswith("  Detailed Logs:")
+
+
+def test_doctor_has_no_found_field_for_a_configured_log(tmp_path, capsys, monkeypatch):
+    """When the user chose the log, doctor does not search."""
+    _two_prefix_logs(monkeypatch, tmp_path)
+    configured = tmp_path / "configured.log"
+    configured.write_text("x\n")
+    _write_config(f'[arena]\nlog = "{configured.as_posix()}"\n')
+    assert "found" not in _doctor(tmp_path, capsys)["arena_log"]

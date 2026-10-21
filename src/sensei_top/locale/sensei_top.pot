@@ -1528,8 +1528,8 @@ msgid "paper tournaments under 64 players"
 msgstr ""
 
 #: sensei_top/table/keep.py
-msgid "play at 1-3 mana"
-msgid_plural "plays at 1-3 mana"
+msgid "play at 1-2 mana"
+msgid_plural "plays at 1-2 mana"
 msgstr[0] ""
 msgstr[1] ""
 

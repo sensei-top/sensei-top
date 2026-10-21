@@ -1,14 +1,9 @@
 """Finding Arena's install directory from the first line of its own log.
-
-Filesystem discovery only, like ``steam.py`` beside it: this module reads one
-line of a file and resolves a path. It knows nothing about ``raw_events`` or
-any other line of the log, which is why it lives outside ``reader/``.
+See docs/architecture.md, "Finding the clients' files".
 
 Unity writes the folder its managed assemblies load from as the log's very
 first line, ``Mono path[0] = '<install>/MTGA_Data/Managed'`` (verified on a
-real Steam/Proton log, 2026-09-27). The client is the one that knows where it
-was installed, so this is one method for Wizards' installer, Steam and Epic
-alike, where the Steam library glob in ``cards.py`` covers Steam alone.
+real Steam/Proton log, 2026-09-27).
 
 Two traps:
 

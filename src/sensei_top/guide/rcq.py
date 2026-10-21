@@ -7,15 +7,16 @@ every match played with the identity, never dropped by the reset window),
 then swaps in the pasted 75 wherever a list is compared — the list diff,
 plan validation, and the oracle text the prompt carries. To that it adds
 what a tournament day needs and a ladder guide does not: the field over the
-last 14 days, every event of the last 7, how fresh each corpus source is,
-and the archetypes the player expects at the store.
+last ``RECENT_SHARE_DAYS`` days, every event of the last
+``RECENT_EVENT_DAYS``, how fresh each corpus source is, and the archetypes
+the player expects at the store. See docs/guide.md, "The RCQ guide".
 
 Expected archetypes are a nudge, never evidence: each one gets a prompt
 section and must get a plan, but none displaces a top-share section.
 
 Like ``guide/narrative.py``, this module never makes a call. The prompt
 (``rcq_prompt``) and the answer's parser (``rcq_from_json``) are shared by
-the opt-in Claude call and a hand import.
+the opt-in Claude call, a pasted answer and ``rcq --import``.
 """
 
 from __future__ import annotations
@@ -81,9 +82,9 @@ RECENT_EVENT_DAYS = 7
 TOP_PLACEMENTS = 8
 
 # A top-8 deck the corpus never classified. A sentinel in
-# ``RecentEvent.top8``, beside archetype names (which are never translated,
-# plan D3), so it stays this English text there; ``top8_name`` writes it in
-# the reader's language.
+# ``RecentEvent.top8``, beside archetype names (never translated:
+# docs/i18n.md, "What is never translated"), so it stays this English text
+# there; ``top8_name`` writes it in the reader's language.
 UNCLASSIFIED = N_("(unclassified)")
 
 # Why the pasted 75 has no archetype to compare against

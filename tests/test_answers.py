@@ -1,5 +1,5 @@
-"""The answer contract (``answers.py``, plan 24 D12/D13): what every copied
-prompt asks an assistant to send back, and the one reader of what comes back.
+"""The answer contract (``answers.py``): what every copied prompt asks an
+assistant to send back, and the one reader of what comes back.
 
 The expected wording is the approved English, written out here rather than
 read off ``answer_format``; every other expectation comes from the answer
@@ -455,7 +455,7 @@ def _guide_answer(matchups: list | None = None) -> dict:
 
 def test_a_headed_guide_import_stores_the_hash_it_was_written_for(db_path, identity, tmp_path):
     """An answer written for an older 75 is stored with that 75's hash, so the
-    card's own staleness flags it (D13)."""
+    card's own staleness flags it."""
     answer = tmp_path / "answer.txt"
     matchup = {"archetype": "Mardu Discard", "prose": "Trade early.",
                "board_in": [], "board_out": []}

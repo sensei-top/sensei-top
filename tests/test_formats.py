@@ -1,4 +1,4 @@
-"""The format list, the inclusion order (plan 13, D4), and the two mappings."""
+"""The format list, the inclusion order, and the two mappings."""
 
 import pytest
 
@@ -43,7 +43,7 @@ def test_the_main_chain_nests():
 
 
 def test_premodern_is_inside_legacy_and_pauper_inside_vintage_only():
-    """D4: Pauper stays only confirmed, never inferred, because it nests nowhere but under
+    """Pauper stays only confirmed, never inferred, because it nests nowhere but under
     Vintage."""
     assert BROADER["Premodern"] == {"Legacy", "Vintage"}
     assert BROADER["Pauper"] == {"Vintage"}
@@ -94,5 +94,5 @@ def test_arena_format(deck_format, event_id, expected):
     (None, None),
 ])
 def test_deck_format_name(stored, expected):
-    """D15: Arena's spelling maps, Draft and unknown names give none rather than a guess."""
+    """Arena's spelling maps, Draft and unknown names give none rather than a guess."""
     assert deck_format_name(stored) == expected

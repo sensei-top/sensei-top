@@ -1,11 +1,10 @@
 """SQLite connection setup and forward-only migrations.
 
-Design notes (see project brief §3):
-- WAL mode so the dashboard can read while the ingester writes.
-- Raw SQL migrations from numbered files in ``sensei_top/migrations/``; a
-  ``schema_version`` table records what has been applied. Forward-only, no
-  down-migrations — derived tables are rebuilt from ``raw_events`` instead of
-  migrated backwards.
+WAL mode, so the dashboard can read while the ingester writes. Migrations
+are numbered raw-SQL files in ``sensei_top/migrations/``, recorded in
+``schema_version``, forward-only: derived tables are rebuilt from
+``raw_events`` instead of migrated backwards. See docs/architecture.md,
+"Storage".
 """
 
 from __future__ import annotations
@@ -37,10 +36,9 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
     # (raw_events' tail, the projected tables project() rewrites) resident
     # across queries instead of re-reading them from disk every time.
     conn.execute("PRAGMA cache_size=-65536")      # 64 MB, negative = KiB
-    # mmap trades a page-cache copy for a direct-mapped read — measured
-    # before keeping: 256 MB is a starting point,
-    # not a target, on a host already under swap pressure with Arena
-    # resident.
+    # mmap trades a page-cache copy for a direct-mapped read (measured
+    # before it was kept). 256 MB is a starting point, not a target, on a
+    # host already under swap pressure with Arena resident.
     conn.execute("PRAGMA mmap_size=268435456")    # 256 MB
     return conn
 
@@ -103,8 +101,8 @@ def _split_statements(sql: str) -> list[str]:
     """Split a migration file into statements on ';' at top level.
 
     Good enough for DDL: none of our schema files embed ';' inside string
-    literals. If that ever changes, revisit — but keep executescript() out,
-    because it commits implicitly and breaks per-migration atomicity.
+    literals. If that ever changes, revisit, but keep executescript() out
+    (see ``migrate``).
     """
     # Strip line comments *first*: comments may legitimately contain ';'.
     code = "\n".join(

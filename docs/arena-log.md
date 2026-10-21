@@ -47,21 +47,37 @@ debugging; treat it as given rather than rediscovering it.
 
 ## Entry shapes
 
-Five shapes matter; everything else (`[PhysX]`, `[Manifest]`, `[TaskLogger]`,
-`[Subsystems]`, `[SocialManager]`) is engine noise.
+Seven shapes matter; everything else (`[PhysX]`, `[Manifest]`, `[TaskLogger]`,
+`[Subsystems]`, `[SocialManager]`, and any other `[UnityCrossThreadLogger]`
+line that is none of these) is engine noise. Shapes 1–6 are in real
+captures; 7 is not.
 
 1. **Single-line request** — `[UnityCrossThreadLogger]==> Method {json}`
-2. **Response** — a bare `<== Method(uuid)` line with **no prefix**, payload
-   starting on the *next* line, possibly spanning many
+2. **Response** — a bare `<== Method(uuid)` line with **no prefix**, usually
+   right after a header line, payload starting on the *next* line, possibly
+   spanning many
 3. **Prefixed event with header**, payload on following lines
 4. **Bare JSON** with no header at all — match service events such as
-   `matchGameRoomStateChangedEvent` often appear this way
+   `matchGameRoomStateChangedEvent` and `greToClientEvent` often appear this
+   way
 5. **Response with a non-JSON body** — observed for real on `DeckDeleteDeck`,
    which replies with the bare word `Success` instead of JSON. The segmenter
    emits that first line verbatim as the response's payload instead of
    feeding it to the JSON accumulator, which would otherwise never see a
    `{`/`}` pair balance and swallow every following line — requests included —
-   until one happened to balance by accident.
+   until one happened to balance by accident. The split is structural, not
+   semantic: the reader learns nothing about what `Success` means, and the
+   projector's "unparseable payload" warning on that row is correct.
+6. **Labeled inline event** — `[UnityCrossThreadLogger]Draft.Notify {json}`:
+   the label and the payload on one line, with no `==>` arrow and no header
+   (`Draft.Notify` and `Client.SceneChange` in
+   `tests/fixtures/human_draft_session.log`). The label is stored as the
+   entry's label, structurally, as for any other shape. It must start with a
+   letter, so a header's digit-led stamp can never be read as one.
+7. **Summarized message** — a `[Message summarized because …]` line and the
+   lines after it that open with colons, in place of a message Arena dropped
+   for its size.
+   Warned once per block and never stored; trap 18.
 
 Payloads must be extracted by **brace-depth counting that respects string
 literals and backslash escapes**. Payloads legitimately contain `{` and `}`
@@ -78,7 +94,7 @@ A header's date and time are written in **Arena's in-game language**, not
 the operating system's locale, and one file can switch between them: a
 language saved in the client's settings applies from the first header of the
 next launch. (Whether Windows' regional format also reaches the header while
-Arena is in English is not known; `docs/status.md`.) The `Startup Timestamp:`
+Arena is in English is not known; `BACKLOG.md`, BL-042.) The `Startup Timestamp:`
 line near the top of every log stays English and is not a header. Captured
 on 2026-10-06, every language, five shapes:
 
@@ -148,7 +164,7 @@ every second doesn't repeat it.
 
 **The stamp is kept.** `raw_events.header` (migration 062) holds each
 entry's stamp exactly as written, outside the digest, so a date read wrongly
-today can be re-derived later. Nothing re-derives it yet; `docs/status.md`
+today can be re-derived later. Nothing re-derives it yet; `BACKLOG.md`, BL-041,
 records the one case that would need it.
 
 ## The traps
@@ -309,9 +325,9 @@ turn snapshot is a single end-of-turn state, so a phase would read
 at a rotation seam.** The "recovery reads `-prev` then the live file" story
 above assumes a narrow shared boundary; a real capture (Linux/Proton) instead
 had `-prev` reappear almost wholesale inside the live file, hours of session
-included twice. Raw-event dedup narrows this (see `reader/ingest.py`'s digest
-docstring) but a duplicate raw event can still reach the projector — which is
-why `card_events` dedupes itself on the `ZoneTransfer` annotation's own `id`
+included twice. Raw-event dedup narrows this (`docs/architecture.md`,
+"Idempotency") but a duplicate raw event can still reach the projector — which
+is why `card_events` dedupes itself on the `ZoneTransfer` annotation's own `id`
 rather than trusting the reader to have caught everything first.
 
 **14. Arena logs the opening hand before the mulligan decision, contradicting
@@ -397,7 +413,7 @@ in place of the message itself. None has appeared in the user's logs (2026-10-19
 recognises the block, warns once per block with its counts, and stores
 nothing: the state it replaced is lost, and that game's replay is missing
 it. A block that is the very last thing in a file that never grows again
-does not warn (`docs/status.md`, "Correctness").
+does not warn (`BACKLOG.md`, BL-053).
 
 **19. One bad message must not cost its neighbours.** An event batches many
 messages (trap 3), the game's result often among them. The projector

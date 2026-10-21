@@ -4,20 +4,20 @@ Two kinds of picture, each with its own cache and neither answering for
 the other: the whole card (Scryfall's ``normal``, ``{grp_id}.jpg``) and
 the card's art alone (Scryfall's ``art_crop``, ``art/{grp_id}.jpg``).
 
-The third and last sanctioned outbound call (AGENTS.md rule 5), added
-deliberately: the dashboard shows card thumbnails, the log carries no art, and
+One of the free downloads (docs/llm.md, "The standard for the free
+downloads"): the dashboard shows card thumbnails, the log carries no art, and
 downloading Scryfall's full image archive up front would cost gigabytes for a
 collection of which a player ever sees a sliver. So pictures are fetched one at
 a time, the first time a card is actually shown, and cached on disk forever —
 a printing's picture does not change.
 
-Unlike the other two downloads, the request here names a card: the grp_id is
+Unlike every other download, the request here names a card: the grp_id is
 in the URL. That id comes from the user's own match history, so this is the
-one call that reveals anything derived from game data (which cards have
-appeared in your games — never when, against whom, or with what result). It
-was an explicit user decision to accept that trade for lazy loading; anyone
-uncomfortable with it can leave images off by staying offline — every failure
-degrades to the card's name.
+one download that reveals anything derived from game data (which cards have
+appeared in your games — never when, against whom, or with what result;
+docs/attribution.md says so too). The user accepted that trade for lazy
+loading; anyone uncomfortable with it can leave images off by staying
+offline — every failure degrades to the card's name.
 
 Arena-exclusive printings (full-art basics, alchemy rebalances, and similar)
 have no Scryfall ``arena_id`` at all, so the by-id lookup 404s for them even
@@ -33,8 +33,8 @@ Scryfall's own rules (https://scryfall.com/docs/api, read 2026-09-28) are
 why the art is a second download and not a crop of the first: a card
 image may not have its artist's name or its copyright line cropped,
 covered or clipped off, and art shown alone must leave the artist and the
-source identifiable in the same interface. docs/attribution.md carries
-the wording.
+source identifiable in the same interface. docs/attribution.md, "Sources"
+carries the wording.
 
 Pacing. Scryfall publishes hard limits: 10 requests a second for a lookup
 by id, 2 a second for a lookup by name, and 30 seconds of limited access
@@ -87,8 +87,8 @@ IMAGE_URL_BY_NAME = (
 HEADERS = {"User-Agent": "sensei-top/0.1", "Accept": "*/*"}
 TIMEOUT = 10.0
 
-# Scryfall's published limits (https://scryfall.com/docs/api/rate-limits):
-# 10 a second by id, 2 a second by name, 30 seconds held back after a 429.
+# Scryfall's published limits (https://scryfall.com/docs/api/rate-limits),
+# the module docstring's "Pacing".
 MIN_GAP_BY_ID = 0.1
 MIN_GAP_BY_NAME = 0.5
 PAUSE_AFTER_429 = 30.0
