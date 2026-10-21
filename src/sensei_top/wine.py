@@ -6,12 +6,13 @@ prefix) and nothing else: not what is inside one, and nothing about Arena.
 A folder counts as a prefix only if it holds ``drive_c/``. Every root is
 computed from the home directory and the XDG variables at call time, and an
 unreadable or odd config file yields nothing from that file, never an error.
+See docs/architecture.md, "Finding the clients' files".
 
 YAML is read with a regex for the one key wanted, as ``steam.py`` reads the
 vdf, so no parser dependency is needed.
 
 Where each launcher keeps its files was read from the launchers' own source on
-2026-10-19 (plan 31, S0); each function below names the file and key it reads.
+2026-10-19; each function below names the file and key it reads.
 A value that is empty or not an absolute path (after ``~``) is ignored: a
 relative path would resolve against the working directory, which is a guess.
 """
@@ -25,8 +26,8 @@ from pathlib import Path
 
 # Matches any ``prefix:`` line, not only the one under ``game:``. That is safe:
 # a stray match is only a candidate, and the ``drive_c`` check in
-# ``wine_prefixes()`` drops anything that is not a prefix; plan D2 takes every
-# prefix a launcher names, whatever the game.
+# ``wine_prefixes()`` drops anything that is not a prefix, and every prefix a
+# launcher names is a candidate, whatever the game.
 _LUTRIS_PREFIX_RE = re.compile(r"^[ \t]*prefix:[ \t]*(.+?)[ \t]*$", re.MULTILINE)
 _BOTTLES_CUSTOM_RE = re.compile(r"^custom_bottles_path:[ \t]*(.+?)[ \t]*$", re.MULTILINE)
 _BOTTLE_PLACEHOLDER_RE = re.compile(r"^Path:[ \t]*(.+?)[ \t]*$", re.MULTILINE)

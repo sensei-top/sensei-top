@@ -2,11 +2,13 @@
 
 Filesystem discovery only — nothing here knows what Arena's data *means*. Two
 things need it: the reader looking for ``Player.log``, and the card importer
-looking for Arena's own card database. Both live inside the game's install,
-and the game can be installed in any library folder the user has added (a
-second drive, an external mount), not just the one Steam itself sits in. Steam
+looking for Arena's own card database. Both live in the game's library folder
+(the log in its Proton prefix under ``steamapps/compatdata``, the database in
+its install), and that can be any library folder the user has added (a second
+drive, an external mount), not just the one Steam itself sits in. Steam
 records those in ``libraryfolders.vdf``, so that file — rather than a fixed
-path — is what this module follows.
+path — is what this module follows. See docs/architecture.md,
+"Finding the clients' files".
 """
 
 from __future__ import annotations
@@ -34,16 +36,16 @@ def steam_data_dirs() -> tuple[Path, ...]:
 
     ``~/.steam/root`` and ``~/.steam/steam`` are usually symlinks to the native
     folder; the Flatpak and Snap builds keep their own copy under the app's
-    sandbox home (the older Flatpak layout used ``data/Steam``). Sources
-    (plan 31, S0): Flatpak ``steam_wrapper.py:24,330-345``
+    sandbox home (the older Flatpak layout used ``data/Steam``). Sources (read 2026-10-19):
+    Flatpak ``steam_wrapper.py:24,330-345``
     (flathub/com.valvesoftware.Steam); the older ``data/Steam`` from Lutris's
     ``util/steam/config.py:22-28``; Snap ``snapcraft.yaml:551``
     (canonical/steam-snap), where ``HOME`` is ``$SNAP_USER_COMMON``.
 
-    The order keeps the two spellings that were searched before this list grew
-    first. The deduplication keeps the first spelling, and the watcher keys
-    ``ingest_state`` by the log's path string: a new spelling of an existing
-    install's log would re-read it from offset 0.
+    ``~/.steam/steam`` and ``~/.local/share/Steam`` stay first: the
+    deduplication keeps the first spelling, and the watcher keys
+    ``ingest_state`` by the log's path string, so a new spelling of an
+    existing install's log would re-read it from offset 0.
     """
     home = Path.home()
     flatpak = home / ".var/app/com.valvesoftware.Steam"

@@ -1,12 +1,11 @@
 """The ``[arena]`` table: where Arena's log is, when the user chose it, and
-which day/month order its header dates use (plan 6, D11).
+which day/month order its header dates use. See docs/architecture.md,
+"Finding the clients' files".
 
-Each answer is a fallback, not a rule. ``--file`` and ``$MTGA_LOG`` outrank
-``[arena] log``, and autodetection comes after it (``resolve_log`` below
-applies that order); ``--locale`` outranks ``[arena] date_order``, and
-``auto`` comes after it (``cli.py`` applies that one). This module only reads
-the table, written by ``sensei-top config --set-arena-log`` and
-``--set-date-order``.
+Each answer is a fallback, not a rule. ``resolve_log`` applies the log's
+order; ``--locale`` outranks ``[arena] date_order``, and ``auto`` comes after
+it (``cli.py`` applies that one). This module only reads the table, written
+by ``sensei-top config --set-arena-log`` and ``--set-date-order``.
 
 Fail-soft like ``mtgo/config.py``: no file, no table and no key all read as
 ``None``, silently, since an unset value is the normal state. A file that
@@ -96,12 +95,12 @@ def resolve_log(
     ``"environment"``, ``"config"``, ``"autodetect"`` or ``"none"``.
 
     The one place that order lives (``live.resolve_arena_log`` wraps it, and
-    ``doctor`` and ``cards.arena_card_database_path`` ask it too). First match
-    that exists wins: ``$MTGA_LOG``, then ``[arena] log`` (D11), then the
-    autodetected locations. A value that names a missing file is passed over
-    silently, as ``$MTGA_LOG``'s always was: the watcher asks again every
-    minute while it has no log. ``--file`` outranks all three, but that is
-    the caller's to apply. ``autodetect`` is a parameter so ``live`` can hand
+    ``doctor``, ``diagnostics`` and ``cards.arena_card_database_path`` ask it
+    too). First match that exists wins: ``$MTGA_LOG``, then ``[arena] log``,
+    then the autodetected locations. A value that names a missing file is
+    passed over silently: the watcher asks again every minute while it has
+    no log. ``--file`` outranks all three, but that is the caller's to
+    apply. ``autodetect`` is a parameter so ``live`` can hand
     in its own binding of ``default_log_path``, which its tests replace.
     Lives here, not in ``reader/``, because the config file is not the
     reader's business; ``reader.ingest`` does not import this module, so

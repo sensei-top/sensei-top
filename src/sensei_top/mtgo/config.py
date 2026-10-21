@@ -7,16 +7,16 @@ there is no way to learn "which player is us" from the log itself. Nor does
 this module search for a directory the way ``steam.py`` finds Arena's:
 where MTGO's ``Match_GameLog_*.dat`` files end up depends on how and where
 MTGO itself is run, so this module never guesses one — the user must say
-so, for all three questions, and there is no default.
+so, for all three questions, and there is no default. (``mtgo/discover.py``
+only builds a suggestion, which nothing reads until the user sets it.)
 
 Resolution order, first match wins:
 
 Handle —
 
 1. ``MTGO_HANDLE`` in the environment.
-2. ``[mtgo] handle`` in ``llm.config.config_path()`` (the same
-   ``~/.config/sensei-top/config.toml`` the Claude credential lives in —
-   one config file, one XDG path, several tables).
+2. ``[mtgo] handle`` in ``llm.config.config_path()`` (the one config file
+   every table lives in).
 
 Directory —
 
@@ -82,9 +82,8 @@ def resolve_log_dir() -> tuple[Path, str] | None:
     """Where MTGO writes ``Match_GameLog_*.dat``, and which source supplied
     it — ``"$MTGO_LOG_DIR"`` or ``"config.toml [mtgo] dir"``, for callers
     that print provenance alongside the path (``cli.py``'s ``mtgo-status``
-    and ``config``). ``None`` means "not configured", silently: unlike a
-    missing handle, there is nothing to warn about, since plenty of installs
-    are Arena-only and this is their steady state, not a misconfiguration.
+    and ``config``, and ``doctor``). ``None`` means "not configured",
+    silently, unlike a missing handle (module docstring).
     """
     env_dir = os.environ.get("MTGO_LOG_DIR")
     if env_dir:

@@ -1,4 +1,5 @@
-"""``sensei-top doctor``: what the app can find, read-only (plan 6, D15).
+"""``sensei-top doctor``: what the app can find, read-only. See
+docs/desktop.md, "Support commands".
 
 One function builds the report, ``report()``; ``cmd_doctor`` prints it and
 ``diagnostics.py`` zips it. Nothing here writes, migrates or downloads, so it
@@ -17,9 +18,9 @@ is safe beside a running ``serve``:
   answer is ``unknown`` for any log that carries neither line.
 
 The keys of the dict ``report()`` returns are a contract: the desktop shell
-reads ``doctor --json`` (``docs/desktop.md``, "Support commands").
-``mtgo.discovered`` is the folder ``mtgo/discover.py`` finds (Windows only,
-``None`` elsewhere): a suggestion for onboarding, never a configured value.
+reads ``doctor --json``. ``mtgo.discovered`` is the folder
+``mtgo/discover.py`` finds (Windows only, ``None`` elsewhere): a suggestion
+for onboarding, never a configured value.
 """
 
 from __future__ import annotations

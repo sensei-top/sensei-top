@@ -469,22 +469,24 @@ not physically: once the read transaction ends, the next writer's automatic
 PASSIVE checkpoint copies the frames home and the WAL is reused, but the
 `-wal` *file itself* stays at its high-water mark until a TRUNCATE checkpoint
 or a process restart — a ~250 MB `data/sensei-top.db-wal` sitting there afterwards
-is normal, not a leak. Running `PRAGMA wal_checkpoint(TRUNCATE)` after a
-backup was considered and rejected: it blocks new writers and waits for
-readers, so with `busy_timeout=5000` it can stall the watcher's writer for up
-to 5 s — violating this feature's own rule that it must never stall
-ingestion, to reclaim disk space that costs nothing to leave alone. This also
-extends the reasoning below: a backup is a long *reader*, never a long
+is normal, not a leak. A backup never runs `PRAGMA wal_checkpoint(TRUNCATE)`
+afterwards: that checkpoint blocks new writers and waits for readers, so with
+`busy_timeout=5000` it can stall the watcher's writer for up to 5 s —
+violating this feature's own rule that it must never stall ingestion, to
+reclaim disk space that costs nothing to leave alone. This also extends the
+reasoning in "Storage" above: a backup is a long *reader*, never a long
 *writer*, so WAL's one-writer-many-readers guarantee means it never blocks or
 delays the watcher at all — the cost is a pinned WAL file, which is disk
 space, not latency.
 
-**Restoring is `sensei-top restore FILE`** (plan 6, D19). Stop `serve` and
+**Restoring is `sensei-top restore FILE`.** Stop `serve` and
 every watcher first: the watcher is a separate process this CLI does not own,
 holding an open connection plus its own `-wal`/`-shm`, and the command notices
 one only while it is mid-write (it refuses a busy database; an idle connection
-goes unseen). It prints each step as it runs: it opens `FILE` read-only and
-runs `PRAGMA quick_check`; it refuses a schema newer than the newest migration
+goes unseen). It prints each step as it runs: it refuses a `FILE` that is the
+database itself, or that has a non-empty `-wal` beside it (then `FILE` alone
+is not the whole database); it opens `FILE` read-only and runs
+`PRAGMA quick_check`; it refuses a schema newer than the newest migration
 this code ships (migrations only go forward); it checkpoints the live database,
 so the `.db` holds everything its `-wal` did, then moves the `.db` and whatever
 `-wal` and `-shm` remain aside as `.replaced` (`.replaced.1`, `.2` and so on
@@ -566,22 +568,21 @@ of a log, never a client's data, and where nothing is found it answers
 `None` rather than a guess (non-negotiable 4).
 
 - **Arena's log** (`arena_config.resolve_log()`, which returns the path and
-  its source, and which `live.resolve_arena_log`, `doctor` and
-  `cards.arena_card_database_path` all ask): an existing `$MTGA_LOG`, then an
+  its source, and which `live.resolve_arena_log`, `doctor`, `diagnostics`
+  and `cards.arena_card_database_path` all ask): an existing `$MTGA_LOG`, then an
   existing `[arena] log` in `config.toml`, then `reader/ingest.py::default_log_path`
   (`--file` outranks all three, applied by the caller): `MTGA_LOG`, then
   the newest `Player.log` in any Wine prefix on the machine, then on
   Windows `%USERPROFILE%\AppData\LocalLow\Wizards Of The Coast\MTGA\Player.log`,
   then macOS's. The watcher reads `Player-prev.log` once at startup, before
   the live file, when it exists (`docs/arena-log.md`, "File handling"); the
-  digest makes a re-read free (0 new of 1,269 entries on the real database,
-  plan 3's phase 4a).
-- **The Wine prefixes** (plan 31). `steam.py` gives every Steam library:
+  digest makes a re-read free (0 new of 1,269 entries on the real database).
+- **The Wine prefixes.** `steam.py` gives every Steam library:
   the data directories `~/.steam/steam`, `~/.local/share/Steam`,
   `~/.steam/root`, Flatpak's and Snap's, then Flatpak's older one, each
   computed from `Path.home()` at call time, and every library their
-  `libraryfolders.vdf` names (the first two keep their place from before,
-  so an existing install's log keeps its spelling: `ingest_state` is keyed
+  `libraryfolders.vdf` names (the first two stay first so an existing
+  install's log keeps its spelling: `ingest_state` is keyed
   by the path string, and a new spelling would re-read the log); each
   library's `steamapps/compatdata/2141910/pfx` is a candidate. `wine.py` gives every
   other prefix: `$WINEPREFIX`, each one Lutris, Heroic and Bottles name in
@@ -616,7 +617,7 @@ of a log, never a client's data, and where nothing is found it answers
   `steam.py`'s library glob, which covers Steam alone. Reading one line is
   not log semantics, so the module sits outside `reader/` and never touches
   `raw_events`.
-- **The config file** (`llm/config.py::config_path`; plan 3, D6):
+- **The config file** (`llm/config.py::config_path`):
   `~/.config/sensei-top/config.toml` on Linux and macOS,
   `%APPDATA%\sensei-top\config.toml` on Windows, and `$XDG_CONFIG_HOME` on
   every platform when it is set. On Windows, when only the old `~/.config`
@@ -629,20 +630,19 @@ of a log, never a client's data, and where nothing is found it answers
   newest folder there holding `Match_GameLog_*.dat` (by creation time), and
   `serve` and `ingest-mtgo` print it with the `config --set-mtgo-dir`
   command when nothing is configured, or when the configured folder is
-  behind it or missing (plan 3, D8). Nothing reads the suggested folder
+  behind it or missing. Nothing reads the suggested folder
   until the user sets it, and an explicit `--mtgo-dir` or `--dir` silences
   the suggestion.
 - **The MTGO handle** is asked for, because the game log never says which
-  player is the user. Research for plan 6 (plan 3's phase 6, on a Windows 10
-  VM with MTGO closed) found one local file that names the logged-in user:
+  player is the user. On a Windows 10 VM with MTGO closed, one local file
+  names the logged-in user:
   `application_settings` (no extension, about 640 bytes of XML), in the
   `Apps\2.0\Data` tree and under `%LOCALAPPDATA%\Wizards of the Coast`,
   holding the handle once as a login setting. Other files carry player names
   only incidentally: `mtgo_game_history` (binary, per-game player names),
   `Match_GameChat_*.dat` (chat speakers) and
   `PrivateChatChannel_Private_<name>.dat` (whispers, with another player's
-  name in the file name). Nothing here reads any of them; whether onboarding
-  reads the handle from `application_settings` is plan 6's call.
+  name in the file name). Nothing here reads any of them.
 
 ## Idempotency
 
@@ -960,7 +960,7 @@ writes `m.match_id IN (SELECT match_id FROM v_match_deck WHERE deck_id …)`,
 or reads the view once and groups in Python. It never joins the view and
 then filters `md.deck_id` against a set: that column is the `COALESCE`
 above, and no index serves it the way `idx_matches_deck` served
-`matches.deck_id`. Plan 12's phases 5 and 6 measured that shape at 10 to 100
+`matches.deck_id`. That shape measured at 10 to 100
 times slower than the `IN` form, and every reader converted then uses the
 `IN` form or one grouped pass. Migration 050's header records the worst
 case, `v_deck_identity` on a synthetic database: 18.9 s with the view

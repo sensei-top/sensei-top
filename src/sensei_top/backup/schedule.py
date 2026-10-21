@@ -2,22 +2,18 @@
 without turning ``run_backup`` itself into something that only makes sense
 inside a long-running process.
 
-Mirrors ``live.LiveIngester``'s ``start()``/``stop(timeout)``/``is_alive()``
-surface -- the same shape ``cli.cmd_serve`` already manages for the log
-watcher -- so wiring this in is "one more thing with that surface", not a
-new pattern. It runs on a background daemon thread rather than a separate
-process the way ``live.WatcherProcess`` does: that split exists to get a
-projection rebuild off the API's own GIL, and a backup spends its time
-inside a dedicated SQLite connection and OS calls (``VACUUM INTO``,
-``os.replace``) rather than holding the GIL the way a rebuild's Python-level
-JSON parsing does, so there is no equivalent tax here to avoid.
+It has ``live.LiveIngester``'s ``start()``/``stop(timeout)``/``is_alive()``
+surface, the shape ``cli.cmd_serve`` already manages for the log watcher. It
+runs on a daemon thread rather than a separate process the way
+``live.WatcherProcess`` does: that split exists to get a projection
+rebuild's Python-level JSON parsing off the API's GIL, and a backup spends
+its time in a dedicated SQLite connection and OS calls (``VACUUM INTO``,
+``os.replace``) instead, so there is no equivalent tax here to avoid.
 
-``run_backup`` already owns the actual 24h freshness gate (see
-``backup/run.py``); this scheduler's own ``check_interval`` is deliberately
-much shorter (an hour, not a day) so that gate's boundary is caught
-promptly rather than drifting up to a whole extra ``check_interval`` late,
-and re-checking costs nothing when there is nothing to do -- ``run_backup``'s
-gate is one indexed SELECT before anything else happens.
+``run_backup`` owns the 24h freshness gate; ``check_interval`` is an hour,
+not a day, so the gate's boundary is caught promptly rather than up to a
+whole extra interval late, and a check with nothing to do costs one indexed
+SELECT.
 """
 
 from __future__ import annotations
