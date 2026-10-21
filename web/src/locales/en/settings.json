@@ -115,6 +115,7 @@
     "startWindows": "Start when Windows starts",
     "startLogin": "Start when you log in",
     "startDescription": "Matches are recorded from the moment the computer is on, before you open Arena or Magic Online.",
+    "startStore": "To start Sensei Top when Windows starts, turn it on in Windows Settings → Apps → Startup. The Microsoft Store version can start only that way.",
     "keepRunning": "Keep running when the window is closed",
     "keepRunningDescription": "Matches are still recorded with the window closed. Opening the app again brings the window back.",
     "checkForUpdates": "Check for updates",

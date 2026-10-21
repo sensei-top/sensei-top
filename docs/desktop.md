@@ -142,6 +142,24 @@ download. It does not offer "Start when you log in" either, since
 ask, and Settings does not show the toggle. The release job attaches the
 tarball and does not send it to VirusTotal.
 
+**The Store build.** `electron-builder.yml` builds an `appx` beside the
+installer, `Sensei-Top-<version>.appx`, under the identity and publisher
+Partner Center reserved; the Store signs it, and the release job attaches it
+without scanning it. It is submitted by hand from the release's assets. It
+never updates itself: `process.windowsStore` is true there and the updater
+reports the Store as the source, so the status says so. It starts with Windows
+only through Windows' own Startup list. MSIX redirects the package's `HKCU`
+writes into a private hive, so the login item Electron writes would do nothing
+at sign-in and its read-back would report "on" regardless. The package
+declares a startup task from `build/appx-extensions.xml`, off until the user
+turns it on in Settings → Apps → Startup; the shell never writes the login item
+there, onboarding does not ask, and Settings shows a note pointing to Windows'
+list. Windows starts the app with no arguments, so not `--hidden`, and it opens
+its window as a launch from Start does. This was checked on Windows 10 22H2 on
+2026-10-21, with the package registered from its unpacked layout in Developer
+Mode: the task was switched on, the user signed out and back in, and the
+window opened.
+
 **Card data starts on its own** (`settings.ts`'s
 `startFirstDataIfMissing`). Once per launch, after the server first
 reports `ready`, so `serve` has migrated the database before `cards`

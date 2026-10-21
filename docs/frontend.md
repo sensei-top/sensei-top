@@ -441,10 +441,12 @@ folder holds, which the failed backup's sentences name.
   "Restore from a backup file", which asks first.
 - **App.** The version; "Start when Windows starts" ("Start when you
   log in" elsewhere), shown only where the copy can start at login, which
-  is not the Linux tarball; on Linux, "Keep running when the window is
-  closed"; "Check for updates" with "Check now" and one sentence on where the
-  update stands, or that sentence alone where the copy cannot update
-  itself; "Restart to update" once one has downloaded; "Diagnostic mode";
+  is not the Linux tarball, and not the Microsoft Store build, which shows
+  a note pointing to Windows' Startup settings instead; on Linux, "Keep
+  running when the window is closed"; "Check for updates" with "Check now"
+  and one sentence on where the update stands, or that sentence alone
+  where the copy cannot update itself; "Restart to update" once one has
+  downloaded; "Diagnostic mode";
   "Show logs" and "Export diagnostics", with one caption that says what
   the export holds and that matches are never in it; last, the sentence
   naming the welcome steps and "Go through them again", a link to
@@ -1110,9 +1112,9 @@ says and not what a press does. `components/home/SessionHero.tsx` and
 `components/onboarding/DetailedLogsGuide.tsx` (each language's labels,
 caption and image label from its own catalogue) have one each in the same
 pattern, and so does `components/settings/AppSection.tsx`, which checks
-which rows the App section draws depending on `canAutostart`; no other
-component has a test, and a hook that reads a query or the
-address (`useFilters`, `useMatchInProgress`) has none either: what a page
+which rows the App section draws depending on `canAutostart` and
+`windowsStore`; no other component has a test, and a hook that reads a
+query or the address (`useFilters`, `useMatchInProgress`) has none either: what a page
 looks like and does is still checked in a browser. Three tests sit outside
 `src/`, in `scripts/`, and they are the dashboard tests that touch the
 filesystem: `thirdPartyNotices.test.ts`, for the build step that writes the

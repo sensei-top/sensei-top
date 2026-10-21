@@ -125,6 +125,8 @@ export type AppSettings = {
   askAutostart: boolean;
   /** Whether this copy can start with the system at all; the page hides the toggle when not. */
   canAutostart: boolean;
+  /** The Microsoft Store build (`process.windowsStore`): it starts with Windows only through Windows' own Startup settings. */
+  windowsStore: boolean;
   /** Cards with rules text, from doctor; `null` when unknown. */
   rulesText: number | null;
   firstData: FirstData;
@@ -293,22 +295,31 @@ export function toShellSettings(config: ConfigJson, doctor: DoctorArena | null, 
   };
 }
 
-/** Whether this copy can start with the system. Windows: the login item.
+/** Whether this copy can start with the system. Windows: the login item,
+ *  except the Store build, where MSIX redirects the login item's registry
+ *  write into a private hive and Windows never reads it (the package's
+ *  `StartupTask` is the route, switched in Windows' Startup settings).
  *  Linux: the AppImage (its `APPIMAGE` names the file the XDG entry starts),
  *  and a development run, which records the choice and applies nothing; a
  *  packaged copy without `APPIMAGE` (the tarball) has no stable path to
  *  start. Anything else: no. */
-export function canAutostart(options: { platform: string; packaged: boolean; appImage: string | undefined }): boolean {
-  if (options.platform === 'win32') return true;
+export function canAutostart(options: {
+  platform: string;
+  packaged: boolean;
+  appImage: string | undefined;
+  windowsStore: boolean;
+}): boolean {
+  if (options.platform === 'win32') return !options.windowsStore;
   if (options.platform === 'linux') return !options.packaged || Boolean(options.appImage);
   return false;
 }
 
-/** D25: no install wizard asked, so onboarding asks: on Linux wherever
- *  `canAutostart` is true (the AppImage and a development run, not the
- *  tarball), and on the Store build (`process.windowsStore`). */
+/** D25: onboarding asks on Linux wherever `canAutostart` is true (the
+ *  AppImage and a development run, not the tarball). Windows' installer asks
+ *  for itself, and the Store build has no switch to ask about: Windows' own
+ *  Startup settings hold it. */
 export function asksAutostart(platform: string, windowsStore: boolean, canStart: boolean): boolean {
-  return (platform === 'linux' && canStart) || windowsStore;
+  return !windowsStore && platform === 'linux' && canStart;
 }
 
 export function toAppSettings(
@@ -319,6 +330,7 @@ export function toAppSettings(
     update: UpdateStatus;
     askAutostart: boolean;
     canAutostart: boolean;
+    windowsStore: boolean;
     rulesText: number | null;
     firstData: FirstData;
   },
@@ -334,6 +346,7 @@ export function toAppSettings(
     onboarded: prefs.onboarded ?? false,
     askAutostart: info.askAutostart,
     canAutostart: info.canAutostart,
+    windowsStore: info.windowsStore,
     rulesText: info.rulesText,
     firstData: info.firstData,
     version: info.version,
@@ -565,8 +578,10 @@ export interface SettingsDeps {
   platform: string;
   /** `asksAutostart(process.platform, process.windowsStore === true, canAutostart)`. */
   askAutostart: boolean;
-  /** `canAutostart({platform, packaged, appImage})`. */
+  /** `canAutostart({platform, packaged, appImage, windowsStore})`. */
   canAutostart: boolean;
+  /** `process.windowsStore === true`. */
+  windowsStore: boolean;
   /** How many backups the folder holds. */
   countBackups(dir: string): number;
   /** The newest `<db>.backup` slot in `dir`: its modification time (ISO) and size. */
@@ -661,6 +676,7 @@ export class SettingsService {
       update: this.deps.updateStatus(),
       askAutostart: this.deps.askAutostart,
       canAutostart: this.deps.canAutostart,
+      windowsStore: this.deps.windowsStore,
       rulesText: this.doctor?.rulesText ?? null,
       firstData: this.firstDataState,
     });
@@ -737,7 +753,10 @@ export class SettingsService {
       if (!this.deps.store.update(patch)) {
         return { ok: false, error: t('settings.notSaved') };
       }
-      if (patch.autostart !== undefined) this.deps.applyAutostart?.(patch.autostart);
+      if (patch.autostart !== undefined) {
+        if (this.deps.canAutostart) this.deps.applyAutostart?.(patch.autostart);
+        else this.log.info('this copy cannot start with the system; the choice is stored only');
+      }
       if (patch.diagnostic !== undefined) this.deps.setDiagnostic?.(patch.diagnostic);
       if (patch.language !== undefined) this.deps.setLanguage?.(patch.language);
       if (patch.checkForUpdates !== undefined) this.deps.setUpdateChecks?.(patch.checkForUpdates);

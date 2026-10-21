@@ -19,6 +19,7 @@ function app(change: Partial<AppSettings> = {}): AppSettings {
     onboarded: true,
     askAutostart: false,
     canAutostart: true,
+    windowsStore: false,
     rulesText: null,
     firstData: { state: 'idle' },
     version: '1.0.0',
@@ -38,5 +39,17 @@ describe('the login toggle', () => {
     const html = draw(app({ canAutostart: false }))
     expect(html).not.toContain('Start when you log in')
     expect(html).toContain('Keep running')
+  })
+})
+
+describe('the Store note', () => {
+  it('is absent from the default settings', () => {
+    expect(draw(app())).not.toContain('The Microsoft Store version can start only that way.')
+  })
+
+  it('replaces the switch in the Store build', () => {
+    const html = draw(app({ windowsStore: true, canAutostart: false, platform: 'win32' }))
+    expect(html).toContain('The Microsoft Store version can start only that way.')
+    expect(html).not.toContain('Start when Windows starts')
   })
 })

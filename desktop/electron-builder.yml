@@ -43,11 +43,15 @@ nsis:
   displayLanguageSelector: true
 appx:
   artifactName: Sensei-Top-${version}.${ext}
-  # Placeholder identity: plan 9 fills these in from Partner Center.
-  identityName: SenseiTop.Placeholder
-  publisher: CN=00000000-0000-0000-0000-000000000000
+  identityName: SenseiTop.SenseiTop
+  publisher: CN=DD35EA1C-E105-489A-8CDD-D132796EF87B
   publisherDisplayName: Sensei Top
   applicationId: SenseiTop
+  languages: [en-US, pt-BR]
+  backgroundColor: "#0b0c14"
+  # Windows 10 1809, above the desktop StartupTask's minimum (electron-builder's default predates it); also written as MaxVersionTested when none is set.
+  minVersion: 10.0.17763.0
+  customExtensionsPath: build/appx-extensions.xml
 linux:
   icon: build/icon.png
   artifactName: Sensei-Top-${version}.${ext}

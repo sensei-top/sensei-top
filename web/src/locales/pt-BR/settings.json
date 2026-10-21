@@ -115,6 +115,7 @@
     "startWindows": "Abrir quando o Windows iniciar",
     "startLogin": "Abrir quando você entrar no computador",
     "startDescription": "As partidas são registradas desde o momento em que o computador liga, antes de você abrir o Arena ou o Magic Online.",
+    "startStore": "Para abrir o Sensei Top quando o Windows iniciar, ative-o em Configurações do Windows → Aplicativos → Inicialização. Na versão da Microsoft Store, essa é a única forma.",
     "keepRunning": "Continuar rodando com a janela fechada",
     "keepRunningDescription": "As partidas continuam sendo registradas com a janela fechada. Abrir o aplicativo de novo traz a janela de volta.",
     "checkForUpdates": "Verificar atualizações",

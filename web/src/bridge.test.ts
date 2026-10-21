@@ -26,6 +26,7 @@ function settings(version: string, model = 'm'): BridgeSettings {
       onboarded: true,
       askAutostart: false,
       canAutostart: true,
+      windowsStore: false,
       rulesText: null,
       firstData: { state: 'idle' },
       version,

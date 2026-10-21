@@ -46,7 +46,7 @@ const DOCTOR = {
   mtgo: { discovered: null },
   cards: { arena_ids: 10, rules_text: 5 },
 };
-const NO_APP_EXTRAS = { askAutostart: false, canAutostart: false, rulesText: null, firstData: { state: 'idle' } } as const;
+const NO_APP_EXTRAS = { askAutostart: false, canAutostart: false, windowsStore: false, rulesText: null, firstData: { state: 'idle' } } as const;
 
 describe('config --json to ShellSettings', () => {
   it('carries mtgo.deck_dir into sources.mtgoDeckDir, null when unset', () => {
@@ -130,6 +130,7 @@ describe('config --json to ShellSettings', () => {
       onboarded: false,
       askAutostart: false,
       canAutostart: false,
+      windowsStore: false,
       rulesText: null,
       firstData: { state: 'idle' },
       version: '1.2.3',
@@ -141,12 +142,14 @@ describe('config --json to ShellSettings', () => {
 
   it('carries askAutostart and canAutostart through as given', () => {
     const base = { version: '1', platform: 'win32', update: { state: 'idle' } as const, rulesText: null, firstData: { state: 'idle' } } as const;
-    const installer = toAppSettings({}, { ...base, askAutostart: false, canAutostart: true });
+    const installer = toAppSettings({}, { ...base, askAutostart: false, canAutostart: true, windowsStore: false });
     expect(installer.askAutostart).toBe(false);
     expect(installer.canAutostart).toBe(true);
-    const tarball = toAppSettings({}, { ...base, askAutostart: true, canAutostart: false });
+    const tarball = toAppSettings({}, { ...base, askAutostart: true, canAutostart: false, windowsStore: false });
     expect(tarball.askAutostart).toBe(true);
     expect(tarball.canAutostart).toBe(false);
+    expect(installer.windowsStore).toBe(false);
+    expect(toAppSettings({}, { ...base, askAutostart: false, canAutostart: false, windowsStore: true }).windowsStore).toBe(true);
   });
 
   it('carries a stored language through', () => {
@@ -192,20 +195,22 @@ describe('doctor --json for onboarding (S15)', () => {
     expect(settings.sources.mtgoFound).toBeNull();
   });
 
-  it('asks about autostart on Linux only where it can (the AppImage, not the tarball) and on the Store build (D25)', () => {
+  it('asks about autostart on Linux only where it can (the AppImage, not the tarball), never on the Store build (D25)', () => {
     expect(asksAutostart('linux', false, true)).toBe(true);
     expect(asksAutostart('linux', false, false)).toBe(false);
-    expect(asksAutostart('win32', true, true)).toBe(true);
+    expect(asksAutostart('win32', true, true)).toBe(false);
+    expect(asksAutostart('linux', true, true)).toBe(false);
     expect(asksAutostart('win32', false, true)).toBe(false);
     expect(asksAutostart('darwin', false, false)).toBe(false);
   });
 
-  it('can autostart on Windows, the AppImage and a development run only', () => {
-    expect(canAutostart({ platform: 'win32', packaged: true, appImage: undefined })).toBe(true);
-    expect(canAutostart({ platform: 'linux', packaged: true, appImage: '/x/Sensei-Top.AppImage' })).toBe(true);
-    expect(canAutostart({ platform: 'linux', packaged: true, appImage: undefined })).toBe(false);
-    expect(canAutostart({ platform: 'linux', packaged: false, appImage: undefined })).toBe(true);
-    expect(canAutostart({ platform: 'darwin', packaged: true, appImage: undefined })).toBe(false);
+  it('can autostart on Windows outside the Store build, the AppImage and a development run only', () => {
+    expect(canAutostart({ platform: 'win32', packaged: true, appImage: undefined, windowsStore: false })).toBe(true);
+    expect(canAutostart({ platform: 'linux', packaged: true, appImage: '/x/Sensei-Top.AppImage', windowsStore: false })).toBe(true);
+    expect(canAutostart({ platform: 'linux', packaged: true, appImage: undefined, windowsStore: false })).toBe(false);
+    expect(canAutostart({ platform: 'linux', packaged: false, appImage: undefined, windowsStore: false })).toBe(true);
+    expect(canAutostart({ platform: 'win32', packaged: true, appImage: undefined, windowsStore: true })).toBe(false);
+    expect(canAutostart({ platform: 'darwin', packaged: true, appImage: undefined, windowsStore: false })).toBe(false);
   });
 
   it('reads onboarded from shell.json, false by default', () => {
@@ -414,7 +419,7 @@ const BUSY = 'A backup started 2m ago (pid 123) is still running; nothing to do.
 
 type Cards = { lines: string[]; fail?: RunError; finish?: Promise<void> };
 
-function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?: string; slot?: { at: string; bytes: number } | null; open?: string | Error; storeFails?: boolean; cards?: Cards; doctor?: () => string; configFails?: { on: boolean }; restoreHold?: Promise<void> } = {}) {
+function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?: string; slot?: { at: string; bytes: number } | null; open?: string | Error; storeFails?: boolean; cards?: Cards; doctor?: () => string; configFails?: { on: boolean }; restoreHold?: Promise<void>; appFlags?: { canAutostart: boolean; windowsStore: boolean } } = {}) {
   const backupOutput = extra.backupOutput ?? '  Backup:    2,048 bytes, verified\n';
   const calls: Array<{ args: readonly string[]; stdin?: string }> = [];
   const events: string[] = [];
@@ -423,6 +428,7 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
   const changes: BridgeSettings[] = [];
   const warnings: Array<{ message: string; fields?: unknown }> = [];
   const infos: string[] = [];
+  const autostarts: boolean[] = [];
   let cardsActive = 0;
   const overlap = { restoreDuringCards: false };
   const updates: { status: UpdateStatus; switched: boolean[] } = { status: { state: 'idle' }, switched: [] };
@@ -483,7 +489,9 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
     version: '9.9.9',
     platform: 'linux',
     askAutostart: true,
-    canAutostart: true,
+    canAutostart: extra.appFlags?.canAutostart ?? true,
+    windowsStore: extra.appFlags?.windowsStore ?? false,
+    applyAutostart: (on) => void autostarts.push(on),
     countBackups: () => 1,
     newestBackup: () => extra.slot ?? null,
     now: () => new Date('2026-10-08T10:00:00Z'),
@@ -501,10 +509,22 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
       error: () => {},
     },
   };
-  return { service: new SettingsService(deps), languages, late, calls, events, stored, changes, warnings, infos, overlap, updates };
+  return { service: new SettingsService(deps), languages, late, calls, events, stored, changes, warnings, infos, overlap, updates, autostarts };
 }
 
 describe('the service', () => {
+  it('stores an autostart choice without applying it where the copy cannot start with the system', async () => {
+    const store = harness({}, { appFlags: { canAutostart: false, windowsStore: true } });
+    expect(await store.service.setApp({ startWithSystem: true })).toEqual({ ok: true });
+    expect(store.stored.autostart).toBe(true);
+    expect(store.autostarts).toEqual([]);
+    expect(store.infos).toContain('this copy cannot start with the system; the choice is stored only');
+    expect((await store.service.refresh())?.app.windowsStore).toBe(true);
+    const normal = harness();
+    await normal.service.setApp({ startWithSystem: true });
+    expect(normal.autostarts).toEqual([true]);
+  });
+
   it('hands a language change to the shell after the store took it, and not when the store refused', async () => {
     const ok = harness();
     expect(await ok.service.setApp({ language: 'pt-BR' })).toEqual({ ok: true });

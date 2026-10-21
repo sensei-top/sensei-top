@@ -95,6 +95,7 @@ const SAMPLE_APP: AppSettings = {
   onboarded: true,
   askAutostart: false,
   canAutostart: true,
+  windowsStore: false,
   rulesText: 31000,
   firstData: { state: 'idle' },
   version: '0.0.0-sample',

@@ -1093,8 +1093,9 @@ account was created on 2026-10-20 as Individual (registration has been free
 since Microsoft dropped the fee in September 2025), and the product identity
 is reserved as an MSIX app, which the Store signs. The listing is the last
 step before the next release cut, in progress on `feature/store-identity`,
-with nothing in the tree yet. The maintainer stays an individual, not a
-company, until income asks otherwise.
+with the appx building under the reserved identity and the release job
+attaching it, and the listing not yet submitted. The maintainer stays an
+individual, not a company, until income asks otherwise.
 
 **Needs:** Microsoft's answer on selling from an Individual developer
 account, whose eligibility text names "non-commercial purposes" and "not in
