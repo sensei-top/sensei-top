@@ -27,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - On **Live**, the strip's Game number no longer lags behind in a game 2
   or 3 hand, and while sideboarding its game and record agree with the
   plan card's result for the game just ended.
+- In Portuguese, the dashboard's lists of cards, decks and colours read
+  as Portuguese lists ("A, B e C") instead of being joined with English
+  commas.
 
 ## [1.2.0] - 2026-10-21
 

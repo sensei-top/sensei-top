@@ -111,7 +111,7 @@
     "plain": "Resultados de torneios do MTGO e de papel, não do ranqueado do Arena.",
     "lists_one": "1 lista",
     "lists_other": "{{n}} listas",
-    "variantsMore": "{{shown}} e mais {{n}}"
+    "variantsMore": "mais {{n}}"
   },
   "patterns": {
     "title": "Padrões",

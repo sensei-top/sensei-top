@@ -14,7 +14,7 @@ import { railAlternatives } from '../lib/livePanels'
 import { confidenceLabel } from '../lib/opponent'
 import { BoardPlan, BriefProvenance, PlayAroundList } from './MatchupBriefCard'
 import { CopyPromptCard } from './CopyPromptCard'
-import { formatPercent } from '../lib/format'
+import { formatList, formatPercent } from '../lib/format'
 import { rateAndRecordLine } from '../lib/sample'
 import { Card, Chip, Disclosure, EmptyState, Prose, SectionLabel } from './ui'
 
@@ -72,8 +72,8 @@ function pastCardLabel(c: PastBoardingCardOut, t: TFunction): string {
 }
 
 function formatDelta(g: PastBoardingGameOut, t: TFunction): string {
-  const out = g.board_out.map((c) => `−${c.n} ${pastCardLabel(c, t)}`).join(', ')
-  const inn = g.board_in.map((c) => `+${c.n} ${pastCardLabel(c, t)}`).join(', ')
+  const out = formatList(g.board_out.map((c) => `−${c.n} ${pastCardLabel(c, t)}`), { type: 'unit' })
+  const inn = formatList(g.board_in.map((c) => `+${c.n} ${pastCardLabel(c, t)}`), { type: 'unit' })
   return [out, inn].filter(Boolean).join(' ')
 }
 
@@ -91,9 +91,10 @@ function pastBoardingLine(entry: PastBoardingOut, t: TFunction): string {
       last = d
     }
   }
-  const results = entry.games
-    .map((g) => t('matchups.sideboard.gameResult', { n: g.game_number, result: resultWord(g.result, t) }))
-    .join(', ')
+  const results = formatList(
+    entry.games.map((g) => t('matchups.sideboard.gameResult', { n: g.game_number, result: resultWord(g.result, t) })),
+    { type: 'unit' },
+  )
   return [deltas.join('; '), results].filter(Boolean).join(' · ')
 }
 

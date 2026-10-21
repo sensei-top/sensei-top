@@ -838,17 +838,6 @@ with a Claude key, say) logs a warning on every rebuild.
 **Needs:** Loading the handle only when MTGO `raw_events` exist, or a silent
 absence like `resolve_log_dir()`'s.
 
-### BL-057 · Lists joined by hand in the dashboard
-
-type: fix · priority: P2 · status: ready · area: web i18n
-
-About 17 lists in `web/src` are joined by hand with `", "`, not through
-`lib/format.ts`'s `formatList` (`docs/i18n.md`, "Keying a string in the
-dashboard"), so they read as English in another language.
-
-**Needs:** Finding them (a `join(', ')` in `web/src`), then `formatList` at
-each, with the test the file already has.
-
 ### BL-080 · Two cutoffs for an early play
 
 type: fix · priority: P3 · status: needs-decision · area: table

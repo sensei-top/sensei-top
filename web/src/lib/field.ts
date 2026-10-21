@@ -21,6 +21,7 @@ import type {
   MetagameStatus,
 } from '../api'
 import type { TFunction } from '../i18n'
+import { formatList } from './format'
 import type { FieldRecord, Tier } from './home'
 import {
   HOME_MATCH_LIMIT,
@@ -113,7 +114,7 @@ export function formatCaption(entry: FormatEntry, t: TFunction): string {
     matches.inferred > 0 ? t('field.format.inferred', { n: formatCount(matches.inferred) }) : null,
   ].filter((part): part is string => part != null)
   const head = t('field.format.head', { count: matches.total, n: formatCount(matches.total), format })
-  return parts.length > 0 ? t('field.format.withParts', { head, parts: parts.join(', ') }) : t('field.format.headOnly', { head })
+  return parts.length > 0 ? t('field.format.withParts', { head, parts: formatList(parts, { type: 'unit' }) }) : t('field.format.headOnly', { head })
 }
 
 /* ------------------------------------------------------------ the window */

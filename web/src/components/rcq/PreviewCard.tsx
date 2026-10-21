@@ -2,7 +2,7 @@ import { Trans, useTranslation } from 'react-i18next'
 import type { RcqPreviewOut } from '../../api'
 import { archetypeName } from '../../lib/decks'
 import { freshnessSentence, type RcqInputs } from '../../lib/rcq'
-import { formatPercent, formatRecord } from '../../lib/format'
+import { formatList, formatPercent, formatRecord } from '../../lib/format'
 import { formatIsoDateShort, useNow } from '../../lib/time'
 import { Callout, Card, Disclosure, ErrorNote, Loading } from '../ui'
 
@@ -109,7 +109,7 @@ export function PreviewCard({
               ))}
               {preview.unresolved.length > 0 && (
                 <p>
-                  {t('rcq.preview.unresolved', { count: preview.unresolved.length, cards: preview.unresolved.join(', ') })}
+                  {t('rcq.preview.unresolved', { count: preview.unresolved.length, cards: formatList(preview.unresolved) })}
                 </p>
               )}
             </div>
@@ -189,7 +189,7 @@ export function PreviewCard({
                     </p>
                     {event.top8.length > 0 && (
                       <p className="text-caption text-ink2">
-                        {t('rcq.preview.top8', { decks: event.top8.map(archetypeName).join(', ') })}
+                        {t('rcq.preview.top8', { decks: formatList(event.top8.map(archetypeName), { type: 'unit' }) })}
                       </p>
                     )}
                   </li>
