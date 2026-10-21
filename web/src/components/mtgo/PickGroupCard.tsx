@@ -129,10 +129,10 @@ function MatchRow({
   )
 }
 
-/** A group of waiting MTGO matches that share their best-fitting list (plan
- *  19, D1–D3): the list, the matches and their dates, the format with its
+/** A group of waiting MTGO matches that share their best-fitting list:
+ *  the list, the matches and their dates, the format with its
  *  pre-fill, the proof, the lists that came close, and the one press that
- *  confirms them all. Nothing is written until Confirm (plan 12, D1). On a
+ *  confirms them all. Nothing is written until Confirm. On a
  *  tie no list is chosen and the user chooses one; any other list can be
  *  switched to. `hint` is the archetype read from the user's own cards,
  *  absent until its own request answers. */

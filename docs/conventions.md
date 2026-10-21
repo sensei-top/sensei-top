@@ -95,6 +95,11 @@ One fact, one place:
 5. **Say a thing once per file.** When two functions share a trap, explain
    it at the first one and point to it from the second.
 
+Two scripts enforce part of this: `scripts/check_prose.py` fails on a plan
+label or a line number, and `scripts/check_doc_refs.py` on a path or symbol
+a comment names that no longer exists. Whether a comment copies a doc or a
+measured number is the reviewer's to catch.
+
 Two more, as before:
 
 - **Never comment what the next line does**, and never leave notes addressed to

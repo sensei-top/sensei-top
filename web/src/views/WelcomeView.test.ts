@@ -13,7 +13,7 @@ import { WelcomeView, type WelcomeActions } from './WelcomeView'
 // The view is drawn to static markup with a fake shell's settings: no DOM,
 // so these pin what each step says in each state, not what a press does.
 // (Presses are the settings components' own, tested where they live.) The
-// expected words are the approved copy's (plan 23, S0).
+// expected words are the approved copy's.
 
 const ok = () => Promise.resolve({ ok: true } as const)
 

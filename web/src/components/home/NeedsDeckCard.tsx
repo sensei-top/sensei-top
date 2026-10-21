@@ -53,7 +53,7 @@ export function NeedsDeckCard({ matches }: { matches: MtgoNeedsPick[] }) {
         })}
       </ul>
       {more > 0 && <p className="mt-2 text-caption text-muted">{t('home.andMore', { n: formatCount(more) })}</p>}
-      {/* Many at once, grouped by the list each fits (plan 19); one match
+      {/* Many at once, grouped by the list each fits; one match
           is quicker on its own page. */}
       {matches.length >= 2 && (
         <p className="mt-2">

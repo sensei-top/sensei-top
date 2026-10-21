@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { pasteRequest } from './api'
 
-// The seven PUT routes, as the API declares them (plan 24, D1): each on its
+// The seven PUT routes, as the API declares them: each on its
 // generate route's address, each taking `{ answer }`, the RCQ guide's with
 // the generate route's fields beside it.
 

@@ -78,3 +78,64 @@ def test_a_name_the_tree_lacks_is_reported(refs, span, miss):
 def test_what_is_not_a_name_of_this_tree_is_not_checked(refs, span):
     module, tree = refs
     assert module.check(span, tree) == []
+
+
+def misses_in(module, tree, path, body):
+    """The (kind, name) of each stale span in one file's comments and docstrings."""
+    tree.prose[path] = body
+    try:
+        return [(k, n) for f, _, k, n in module.prose_misses(tree) if f == path]
+    finally:
+        del tree.prose[path]
+
+
+def test_a_comment_naming_a_real_symbol_passes(refs):
+    module, tree = refs
+    assert misses_in(module, tree, "src/x.py", "# see `cli.py::_require_loopback`\n") == []
+
+
+def test_a_comment_naming_a_missing_symbol_or_path_is_reported(refs):
+    module, tree = refs
+    body = '"""Docs: ``cli.py::no_such_function``, `shell/Nowhere.tsx`, `/api/no-such-route`."""\n'
+    assert misses_in(module, tree, "src/x.py", body) == [
+        ("symbol", "cli.py::no_such_function"),
+        ("path", "shell/Nowhere.tsx"),
+        ("route", "/api/no-such-route"),
+    ]
+
+
+def test_a_bare_name_in_a_comment_is_not_checked(refs):
+    module, tree = refs
+    body = "# calls `model_validate` and `NoSuchCard`\n"
+    assert misses_in(module, tree, "src/x.py", body) == []
+
+
+def test_a_string_literal_is_not_prose(refs):
+    module, tree = refs
+    assert misses_in(module, tree, "src/x.py", 'x = "`shell/Nowhere.tsx`"\n') == []
+
+
+def test_a_typescript_comment_is_read(refs):
+    module, tree = refs
+    body = "const a = '// `shell/Nope.tsx`'\n// `shell/Nowhere.tsx`\n/* `cli.py::nope_fn` */\n"
+    assert misses_in(module, tree, "web/src/x.ts", body) == [
+        ("path", "shell/Nowhere.tsx"),
+        ("symbol", "cli.py::nope_fn"),
+    ]
+
+
+def test_a_symbol_only_a_comment_of_its_own_file_names_is_missing(refs):
+    # the self-satisfaction case: the docstring's mention must not make the symbol exist
+    module, tree = refs
+    body = '"""``later.py::only_in_this_docstring``"""\n'
+    tree.text["src/later.py"] = module.code_only("src/later.py", body)
+    try:
+        assert not tree.symbol("later.py", "only_in_this_docstring")
+    finally:
+        del tree.text["src/later.py"]
+
+
+def test_what_is_not_a_reference_is_not_a_miss(refs):
+    module, tree = refs
+    body = "# the ``::1`` host, ``[::1]:8000``, ``http://[::1`` and ``…/SomeMessage``\n"
+    assert misses_in(module, tree, "src/x.py", body) == []

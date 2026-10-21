@@ -105,7 +105,7 @@ export function CopyPromptBody({
   const [open, setOpen] = useState(false)
   const promptCopy = useCopied()
   const commandCopy = useCopied()
-  // The installed app has no terminal to hand: the box alone (plan 24, D7).
+  // The installed app has no terminal to hand: the box alone.
   // Read here despite `bridge.ts`'s rule that pages pass the shell down:
   // only whether a shell exists matters, never its shape, and a prop
   // through every page that draws a prompt is a lot of plumbing for one

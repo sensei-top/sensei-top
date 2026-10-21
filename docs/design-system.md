@@ -444,7 +444,7 @@ colours.
 
 **The boundary rule:** mana colours are identity chrome: beside a deck
 or archetype name, or as a table row's label. **They never colour a
-chart mark.** `PoolReadCard`'s colour-pool bars and the share `Meter`s
+chart mark.** `ColorBars`' colour-pool bars and the share `Meter`s
 on Field and Home stay one hue, per docs/frontend.md's "one hue for
 nominal categories" and "color follows the entity" rules; a pip may
 label the row a bar belongs to, the bar itself never changes colour to

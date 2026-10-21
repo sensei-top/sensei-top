@@ -254,6 +254,17 @@ names as history or a name from another program, goes in the script's
 `ALLOW` with its reason. Neither checks what a doc *says* about a name,
 so a change of behaviour still needs its doc changed by hand.
 
+The code's own prose gets the same check. `check_doc_refs.py` also reads
+the comments and docstrings in `src/`, `tests/`, `scripts/` and `web/src`,
+and tests the paths, `path::symbol` references and routes they name
+against the code with its comments removed, so a comment can't vouch for
+itself. It doesn't test a bare name, since most of those belong to another
+library or to Arena. `scripts/check_prose.py`, run by `tests/test_prose.py`,
+fails on a plan or phase label in code prose, on a `path:line` reference to
+one of this repository's files anywhere but the fixtures and the changelog,
+and on an AGENTS.md longer than its ceiling. Whether a comment copies a doc
+or a measured number is still the reviewer's to catch.
+
 ## The metagame corpus
 
 `test_metagame.py` follows `test_archetypes.py`'s own pattern: no network at
