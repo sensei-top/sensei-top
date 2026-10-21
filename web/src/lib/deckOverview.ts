@@ -113,6 +113,7 @@ export function versionRecord(matches: Match[], t: TFunction): string {
 
 /* -------------------------------------------------- on the play and draw */
 
+/** `games` are the games won and lost: a draw counts toward neither. */
 export type PlayDrawSide = { games: number; won: number }
 export type PlayDrawTotals = { play: PlayDrawSide; draw: PlayDrawSide }
 
@@ -121,7 +122,7 @@ export function playDrawTotals(rows: PlayDrawWinrate[]): PlayDrawTotals {
   const totals: PlayDrawTotals = { play: { games: 0, won: 0 }, draw: { games: 0, won: 0 } }
   for (const row of rows) {
     const side = row.on_play ? totals.play : totals.draw
-    side.games += row.games_completed
+    side.games += row.games_won + row.games_lost
     side.won += row.games_won
   }
   return totals
@@ -139,10 +140,6 @@ function sidePercent(side: PlayDrawSide): number | null {
 /** A side as the play/draw line names it: its rate from ten games, its
  *  record under ten, "no games" with none. */
 function sideValue(side: PlayDrawSide, t: TFunction): string {
-  // Debt (`docs/design-system.md`, "Numbers"): the play-draw route counts
-  // draws in `games_completed` and has no losses field, so a draw lowers a
-  // side's rate, counts toward its ten games and toward the gap, and reads
-  // as a loss in its record.
   if (side.games >= RATE_MIN_MATCHES) return formatPercent(side.won / side.games)
   if (side.games > 0) return formatRecord(side.won, side.games - side.won)
   return t('decks.strip.sideNone')

@@ -47,7 +47,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-079
+Next ID: BL-086
 
 ## Features
 
@@ -726,22 +726,6 @@ field is outside that plan ("No server-side change").
 carries the game that just ended), read by the strip in place of the
 projected game's.
 
-### BL-045 · A drawn game as a loss in Play vs draw
-
-type: fix · priority: P1 · status: ready · area: api web
-
-`/api/metrics/play-draw` has no games-lost field, and its `games_completed`
-counts draws, so the deck strip's Play vs draw
-(`web/src/lib/deckOverview.ts`) writes a drawn game as a loss in a side's
-record, counts it toward the side's ten games and lowers its rate
-(`docs/design-system.md`, "Numbers": a draw is never a loss).
-
-**Why deferred:** Plan 26, phase 4: accepted as debt on 2026-10-18. The fix
-is on the server, on its own branch.
-
-**Needs:** A `games_lost` column in `v_play_draw_winrate` (a migration), the
-route and its model, then the strip reading it.
-
 ### BL-046 · Matchup rows keyed on the opponent alone
 
 type: fix · priority: P3 · status: ready · area: web
@@ -913,6 +897,53 @@ dashboard"), so they read as English in another language.
 **Needs:** Finding them (a `join(', ')` in `web/src`), then `formatList` at
 each, with the test the file already has.
 
+### BL-079 · A drawn game in two more play/draw rates
+
+type: fix · priority: P1 · status: ready · area: review cli
+
+The deck strip's Play vs draw counted a drawn game as a loss until
+2026-10-21; the same defect remains in the two other readers of
+`v_play_draw_winrate`: the
+match report's baseline (`review/snapshot.py` reads `games_completed` and
+`games_won`; `review/analyzers/baseline.py` divides one by the other) and
+`sensei-top report`'s play/draw table (`cli.py`, "won/played games") both
+count a drawn game in a side's games, so a draw lowers the rate. Found
+while fixing the strip.
+
+**Why deferred:** Outside that fix's scope, which was the strip alone.
+
+**Needs:** Both read `games_lost` (migration 066) and divide by won plus
+lost; the baseline's sample floor counts the same games.
+
+### BL-080 · Two cutoffs for an early play
+
+type: fix · priority: P3 · status: needs-decision · area: table
+
+The keep guide's ideal hand counts "plays at 1-2 mana", mana value 2 or
+less (`table/keep.py`, `_CHEAP_MANA_VALUE`); the opening-hand verdict counts
+cards "castable by turn 3" (`table/opening_hand.py`,
+`_EARLY_TURN_THRESHOLD`). The code says the two differ on purpose, and Live
+shows both side by side. Found by plan 35's reviewers.
+
+**Why deferred:** Which cutoff a player means by "early" is a product call.
+
+**Needs:** A decision: one cutoff for both, or a sentence on Live that
+says why they differ.
+
+### BL-081 · An MTGO deck file's time from a second stat
+
+type: fix · priority: P3 · status: ready · area: reader mtgo
+
+`reader/mtgo_decks.py::_ingest_one_deck` stats the file for its identity
+token, then `_mtime_iso(path)` stats it again for `logged_at`. A write
+landing between the two leaves `logged_at` newer than the token's mtime.
+Found by plan 35's reviewers.
+
+**Why deferred:** No visible effect: the next poll re-reads the file either
+way.
+
+**Needs:** `logged_at` from the first `stat()`'s `st_mtime`.
+
 ## Performance
 
 ### BL-058 · The coach page and its narrative route
@@ -1068,6 +1099,55 @@ type: refactor · priority: P3 · status: ready · area: archetypes coach
 
 **Needs:** Promote the shared ones to public names, or pin them with a test.
 No visible effect.
+
+### BL-082 · Doc-link titles matched by prefix
+
+type: chore · priority: P3 · status: ready · area: docs
+
+`scripts/check_doc_links.py::title_ok` accepts a cited section title when
+any heading of the target doc starts with it, so a title cut short, or one
+heading renamed to a longer one, still passes. Found by plan 35's
+reviewers.
+
+**Needs:** A whole-heading match, after checking which current citations
+rely on the prefix.
+
+### BL-083 · Readers that filter `md.deck_id` against a set
+
+type: perf · priority: P2 · status: ready · area: guide coach docs
+
+`docs/architecture.md` ("Filter a deck through `v_match_deck` by match id")
+says no reader joins the view and then filters `md.deck_id` against a set,
+the shape measured 10 to 100 times slower. Seven queries do, counted
+2026-10-21: `guide/field.py` (three), `guide/deck.py`, `guide/list_diff.py`,
+`guide/bundle.py` and `coach/evidence.py`. Found by plan 35's reviewers.
+
+**Needs:** Each converted to the `m.match_id IN (SELECT …)` form, or the
+doc naming the exception and why.
+
+### BL-084 · Test comments citing pins that don't exist
+
+type: docs · priority: P3 · status: ready · area: metagame
+
+Test comments cite labels no test or doc defines:
+`tests/test_metagame_holds.py` ("k4", "k1", "k3"),
+`tests/test_metagame_auto.py` ("Defect 1"), and `tests/test_formats.py`
+says migration 053's CHECK is pinned to the format tuple, which no test
+reads. Found by plan 35's reviewers.
+
+**Needs:** Each comment says what it means in its own words, and 053's
+CHECK gets a test or the claim goes.
+
+### BL-085 · The pre-reset denominator, written out twice
+
+type: refactor · priority: P3 · status: ready · area: guide
+
+`guide/field.py::build_field`'s `pre_total_scoped` is
+`_classified_deck_total`'s query written inline over `e.event_date <= ?`;
+its docstring names it as the one copy. Found by plan 35's reviewers.
+
+**Needs:** `pre_total_scoped` calls `_classified_deck_total`. No visible
+effect.
 
 ## Outside the code
 

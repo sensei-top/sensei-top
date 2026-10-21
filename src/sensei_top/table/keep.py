@@ -433,9 +433,17 @@ def build_keep_guide(
 
         early = 2 if cheap_count >= _EARLY_PLAYS_THRESHOLD else 1
         early_plays = early
-        threat = 1 if creature_count / nonlands >= _THREAT_CREATURE_SHARE else 0
         raw_lands = round(_OPENING_HAND_SIZE * land_count / maindeck_size)
         lands_in_hand = max(land_min, min(land_max, raw_lands))
+        # At most _HIGH_CURVE_LAND_MAX lands leaves room for both early plays;
+        # the creature slot is the one that goes when five lands fill the rest,
+        # so the hand never runs past seven.
+        threat = (
+            1
+            if creature_count / nonlands >= _THREAT_CREATURE_SHARE
+            and lands_in_hand + early < _OPENING_HAND_SIZE
+            else 0
+        )
         flex = _OPENING_HAND_SIZE - lands_in_hand - early - threat
 
         slots = [

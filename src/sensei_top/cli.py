@@ -749,7 +749,7 @@ def _read_config_tables() -> dict[str, dict[str, object]]:
     try:
         with path.open("rb") as f:
             data = tomllib.load(f)
-    except (OSError, tomllib.TOMLDecodeError):
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
         return {}
     return {name: _table(table) for name, table in data.items() if isinstance(table, dict)}
 
@@ -1601,7 +1601,7 @@ def cmd_guide(args) -> None:
         )
         conn.commit()
         print(f"Imported the guide for {identity.name or identity.key}.")
-        print(f"  {written} matchup brief(s) stored — these also drive the Current match tab.")
+        print(f"  {written} matchup brief(s) stored — these also drive the Live page.")
         if narrative.problems:
             print("  Sideboard plan problems (recorded, not repaired):")
             for problem in narrative.problems:

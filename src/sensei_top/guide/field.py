@@ -23,6 +23,7 @@ from sensei_top.guide.window import (
     structural_change,
     window_start,
 )
+from sensei_top.metagame.tiers import MATCHUP_TIERS
 from sensei_top.review.snapshot import _classify_own_deck
 
 
@@ -396,7 +397,11 @@ def build_field(
             verdict_key = verdict.key if verdict else None
 
     if verdict_key is not None:
+        # A win rate pools only the tiers with standings, as v_meta_winrate
+        # does: a Tier C league's every list is a 5-0 (docs/metagame.md,
+        # "The evidence tiers"), and the list count is the same set's.
         field_clause, field_params = field_window(fmt, since)
+        placeholders = ", ".join("?" for _ in MATCHUP_TIERS)
         row = conn.execute(
             f"""
             SELECT COUNT(*) AS decks, SUM(d.wins) AS w, SUM(d.losses) AS l
@@ -404,8 +409,9 @@ def build_field(
               JOIN meta_deck d ON d.event_id = a.event_id AND d.deck_ord = a.deck_ord
               JOIN meta_event e ON e.event_id = a.event_id
              WHERE a.archetype_key = ? AND {field_clause}
+               AND e.tier IN ({placeholders})
             """,
-            [verdict_key, *field_params],
+            [verdict_key, *field_params, *MATCHUP_TIERS],
         ).fetchone()
         if row and row["decks"]:
             w, losses = row["w"] or 0, row["l"] or 0

@@ -107,6 +107,50 @@ def test_malformed_toml_yields_none_not_an_exception(monkeypatch, tmp_path):
     assert load() is None
 
 
+def _write_latin1_config(tmp_path):
+    """A config file saved in Latin-1 rather than UTF-8 — what an editor
+    that defaults to the system code page writes for an accented value.
+    ``tomllib`` raises ``UnicodeDecodeError`` on it, not ``TOMLDecodeError``."""
+    config_dir = tmp_path / "sensei-top"
+    config_dir.mkdir()
+    path = config_dir / "config.toml"
+    path.write_bytes(
+        '[claude]\napi_key = "file-key"\n[mtgo]\nhandle = "Jos\xe9"\n'
+        '[arena]\nlog = "/tmp/Player.log"\n[backup]\nkeep = "3"\n'
+        '[topdeck]\napi_key = "td-key"\n'.encode("latin-1")
+    )
+    return path
+
+
+def test_a_non_utf8_file_is_unreadable_for_every_reader_not_an_exception(monkeypatch, tmp_path):
+    from sensei_top import arena_config, diagnostics
+    from sensei_top.backup import config as backup_config
+    from sensei_top.metagame import config as topdeck_config
+    from sensei_top.mtgo import config as mtgo_config
+
+    path = _write_latin1_config(tmp_path)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+
+    assert load() is None
+    assert llm_config_module.load_coach() is None
+    assert mtgo_config.load_handle() is None
+    assert arena_config.load_log() is None
+    assert topdeck_config.load() is None
+    assert backup_config.resolve(tmp_path / "sensei-top.db").keep_source == "default"
+    assert diagnostics.secret_free_config(path) is None
+    assert cli_module._read_config_tables() == {}
+
+
+def test_llm_status_answers_unconfigured_for_a_non_utf8_file(monkeypatch, tmp_path, make_client):
+    _write_latin1_config(tmp_path)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+
+    response = make_client(create_app(tmp_path / "unused.db")).get("/api/llm/status")
+
+    assert response.status_code == 200
+    assert response.json() == {"configured": False, "model": None}
+
+
 def test_a_file_with_no_claude_table_yields_none(monkeypatch, tmp_path):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     config_dir = tmp_path / "sensei-top"

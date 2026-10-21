@@ -192,7 +192,9 @@ number that looks current.
 
 **The field**, the Guide's reading of this (`components/guide/FieldCard.tsx`),
 draws up to three tiles above the table (the deck's own archetype's win
-rate in the field, the most played archetype, and, only once a reset was
+rate in the field, from the tiers with standings only, A, B and D, as
+`docs/metagame.md`, "The evidence tiers", licenses; the most played
+archetype; and, only once a reset was
 found, how many of the shown archetypes changed at it), then a table of
 every archetype's share, most played first. Its `Before` column is drawn
 only when a row carries a pre-reset share. A row whose personal record

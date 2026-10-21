@@ -50,7 +50,7 @@ def _table() -> dict | None:
     try:
         with path.open("rb") as f:
             data = tomllib.load(f)
-    except (OSError, tomllib.TOMLDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as exc:
         _warn_once("could not read %s: %s", path, exc)
         return None
     arena = data.get("arena")

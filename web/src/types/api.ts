@@ -4557,10 +4557,15 @@ export interface components {
             deck_name?: string | null;
             /** On Play */
             on_play: boolean;
-            /** Games Completed */
+            /**
+             * Games Completed
+             * @description won, lost and drawn
+             */
             games_completed: number;
             /** Games Won */
             games_won: number;
+            /** Games Lost */
+            games_lost: number;
             /** Winrate */
             winrate?: number | null;
         };

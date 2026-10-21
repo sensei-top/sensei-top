@@ -1796,6 +1796,17 @@ def test_an_unfinished_game_1_reads_no_game1_result(client):
     assert _listed(client, "m-open")["game1_result"] is None
 
 
+def test_play_draw_counts_a_drawn_game_as_neither_won_nor_lost(client):
+    """Three games on the play, a win, a draw and a loss, in a match
+    with no deck, so they are the only deckless row's."""
+    _seed_split_match(
+        client.app.state.database, "m-pd-draw", 3, ["win", "draw", "loss"], "9999-01-07T00:00:00"
+    )
+    rows = client.get("/api/metrics/play-draw").json()
+    row = next(r for r in rows if r["deck_id"] is None and r["on_play"])
+    assert (row["games_completed"], row["games_won"], row["games_lost"]) == (3, 1, 1)
+
+
 def test_match_detail_carries_the_same_split_as_the_list(client):
     _seed_split_match(
         client.app.state.database, "m-same", 3, ["loss", "win", "draw"], "9999-01-06T00:00:00"

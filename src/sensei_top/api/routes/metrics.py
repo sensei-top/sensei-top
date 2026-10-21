@@ -141,6 +141,7 @@ def play_draw(
         SELECT v.deck_id, d.name AS deck_name, v.on_play,
                SUM(v.games_completed) AS games_completed,
                SUM(v.games_won)       AS games_won,
+               SUM(v.games_lost)      AS games_lost,
                CAST(SUM(v.games_won) AS REAL) / NULLIF(SUM(v.games_completed), 0) AS winrate
           FROM v_play_draw_winrate v
           LEFT JOIN decks d ON d.deck_id = v.deck_id
