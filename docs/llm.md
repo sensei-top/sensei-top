@@ -119,7 +119,7 @@ and neither ever needs an account. What follows from that:
   `test_only_authored_artifact_routes_write` pins.
 
 This document describes the code as it stands. The adapter is listed in
-`docs/status.md`, "Features not built".
+`BACKLOG.md`, BL-007.
 
 The structural-fact-to-configuration-fact trade this makes is stated above,
 along with what pins it down.
@@ -432,18 +432,18 @@ copy as a service for others owes its users the source under AGPL
 section 13, which is the licence working as intended, not a case this
 project has to design for.
 
-Two paid things are planned, and what each waits on is in
-`docs/status.md`. The Microsoft Store listing is the same build as the free
-download, listed free when it goes up and priced once the blockers there
-clear. The subscription comes at around 3,000 monthly active users, gated by
-feature, never by the player's rank or event type. It is the one thing behind
-an account, made at checkout: an email code, or Google, Discord or X. The
-account lives in the hosted service; the local server keeps no login and
-stays loopback-only. Selling tokens, credits or a prepaid balance would be
-reselling the Services, which Anthropic's Commercial Terms (D.4) allow only
-with its express approval. Until the subscription is built, the two paths
-that generate prose are the user's own: the prompt round trip and a
-credential the user configures, and both stay free beside the allowance.
+Two paid things are planned, and what each waits on is in `BACKLOG.md`, BL-070
+and BL-006. The Microsoft Store listing is the same build as the free download,
+listed free when it goes up and priced once the blockers there clear. The
+subscription comes at around 3,000 monthly active users, gated by feature,
+never by the player's rank or event type. It is the one thing behind an
+account, made at checkout: an email code, or Google, Discord or X. The account
+lives in the hosted service; the local server keeps no login and stays
+loopback-only. Selling tokens, credits or a prepaid balance would be reselling
+the Services, which Anthropic's Commercial Terms (D.4) allow only with its
+express approval. Until the subscription is built, the two paths that generate
+prose are the user's own: the prompt round trip and a credential the user
+configures, and both stay free beside the allowance.
 
 The `writer` under "The fallback" above is where the allowance would
 enter the dashboard, as a third case beside nobody and a key; it is not

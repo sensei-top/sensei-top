@@ -262,8 +262,13 @@ itself. It doesn't test a bare name, since most of those belong to another
 library or to Arena. `scripts/check_prose.py`, run by `tests/test_prose.py`,
 fails on a plan or phase label in code prose, on a `path:line` reference to
 one of this repository's files anywhere but the fixtures and the changelog,
-and on an AGENTS.md longer than its ceiling. Whether a comment copies a doc
-or a measured number is still the reviewer's to catch.
+and on an AGENTS.md longer than its ceiling. A third check reads the
+backlog: `scripts/check_backlog.py`, run by `tests/test_backlog.py`, fails on
+a malformed or repeated item ID, a label line outside the vocabularies, a
+`Next ID` that is not above every ID, and on any `BL-` reference in a tracked
+text file (the changelog aside) that names no item, so closing an item that
+code still cites fails the suite. Whether a comment copies a doc or a
+measured number is still the reviewer's to catch.
 
 ## The metagame corpus
 

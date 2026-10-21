@@ -455,7 +455,7 @@ prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
   (`PUT …/rcq/narrative`, the generate body plus `answer`): the server
   rebuilds the prompt from that body and checks the answer's
   `for: rcq:{key}` line. The RCQ prompt carries no `context` hash
-  (`docs/status.md`).
+  (`BACKLOG.md`, BL-033).
   `sensei-top rcq --deck KEY --decklist FILE [--expect K1,K2] [--own K]
   --prompt` prints the prompt and makes no call; `--import FILE [--author
   NAME]` stores a written answer.

@@ -3,7 +3,7 @@
 ``client_header.log`` is the first 40 lines of a real ``Player.log``; its
 line 35 is ``DETAILED LOGS: ENABLED`` (found with ``grep -a -n`` on the file,
 the one place a line is wanted, not an entry). The ``DISABLED`` spelling has
-never been captured, so nothing here asserts it (docs/status.md).
+never been captured, so nothing here asserts it (BL-034).
 """
 
 import json

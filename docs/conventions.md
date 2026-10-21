@@ -90,8 +90,8 @@ One fact, one place:
    not `live.py:589`), and never at a plan's section ("brief §5"). Line
    numbers move with every edit, and the plans aren't in the repo.
 4. **No history at the code.** What a function used to do, which plan
-   changed it and what was tried first belong in git and `docs/status.md`.
-   A comment says what is true now.
+   changed it and what was tried first belong in git; work still to do
+   belongs in `BACKLOG.md`. A comment says what is true now.
 5. **Say a thing once per file.** When two functions share a trap, explain
    it at the first one and point to it from the second.
 
@@ -124,7 +124,7 @@ classes. The first two stay. The other four get fixed.
 | trap | a constraint the code can't show | keep it at the code |
 | contract | what a caller may rely on | keep it at the code |
 | duplicate | restates a doc section, or another paragraph in the same file | replace it with a pointer to the original. If the doc doesn't actually hold the fact, move it to the doc first |
-| history | what used to be true, or how the code got here | delete it, after checking that git or `docs/status.md` holds it |
+| history | what used to be true, or how the code got here | delete it, after checking that git holds it. If it names work still to do, move that to `BACKLOG.md` |
 | restates | says what the next lines do | delete it |
 | stale | no longer matches the code | fix it to match. If a doc says the same thing, find out which one is right before changing either |
 

@@ -94,7 +94,7 @@ A header's date and time are written in **Arena's in-game language**, not
 the operating system's locale, and one file can switch between them: a
 language saved in the client's settings applies from the first header of the
 next launch. (Whether Windows' regional format also reaches the header while
-Arena is in English is not known; `docs/status.md`.) The `Startup Timestamp:`
+Arena is in English is not known; `BACKLOG.md`, BL-042.) The `Startup Timestamp:`
 line near the top of every log stays English and is not a header. Captured
 on 2026-10-06, every language, five shapes:
 
@@ -164,7 +164,7 @@ every second doesn't repeat it.
 
 **The stamp is kept.** `raw_events.header` (migration 062) holds each
 entry's stamp exactly as written, outside the digest, so a date read wrongly
-today can be re-derived later. Nothing re-derives it yet; `docs/status.md`
+today can be re-derived later. Nothing re-derives it yet; `BACKLOG.md`, BL-041,
 records the one case that would need it.
 
 ## The traps
@@ -413,7 +413,7 @@ in place of the message itself. None has appeared in the user's logs (2026-10-19
 recognises the block, warns once per block with its counts, and stores
 nothing: the state it replaced is lost, and that game's replay is missing
 it. A block that is the very last thing in a file that never grows again
-does not warn (`docs/status.md`, "Correctness").
+does not warn (`BACKLOG.md`, BL-053).
 
 **19. One bad message must not cost its neighbours.** An event batches many
 messages (trap 3), the game's result often among them. The projector

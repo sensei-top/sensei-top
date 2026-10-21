@@ -315,7 +315,7 @@ saying it is too few for a rate; with nothing finished an em
 dash and a line that says so. The band is not drawn from
 `/api/metrics/winrate` or `/api/metrics/play-draw`, which did not answer for
 every source when the page was built; they do now, and play and draw are
-still to join the page (`docs/status.md`).
+still to join the page (`BACKLOG.md`, BL-023).
 
 **A row** (`components/MatchRow.tsx`) is one link to its match, at least
 44 px high, with no button inside it. Home's "Recent matches" draws the
@@ -789,7 +789,7 @@ a pairing, the strip's and the page's own.
 One known gap in Play vs draw: `/api/metrics/play-draw` has no games-lost
 field and its `games_completed` counts draws, so a drawn game lowers a
 side's rate and reads as a loss in its record (`docs/design-system.md`,
-"Numbers"; the debt is in `docs/status.md`).
+"Numbers"; the debt is `BACKLOG.md`, BL-045).
 
 **The Overview** (`DeckOverviewView`, `views/DeckOverviewView.tsx`) is,
 top to bottom: the version switcher; a "By rank" table (Rank · Matches ·

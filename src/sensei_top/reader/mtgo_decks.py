@@ -32,8 +32,8 @@ The pattern is ``reader/mtgo.py``'s, with the differences that matter:
   discarded (non-negotiable #2); the payload is the file's bytes in base64,
   so a later fix to the decoder replays over history without the file.
 * The folder is not walked recursively, and nothing else in it is read: no
-  ``.txt`` export (``docs/status.md``, "Features not built"), and none of the
-  game logs that share ``[mtgo] dir`` with the deck store.
+  ``.txt`` export (BACKLOG.md, BL-010), and none of the game logs that share
+  ``[mtgo] dir`` with the deck store.
 * ``logged_at`` is the file's mtime, as in ``reader/mtgo.py``.
 
 Unchanged-file skip. As in ``reader/mtgo.py``, the ``inode`` column, which

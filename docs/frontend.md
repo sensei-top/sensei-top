@@ -468,7 +468,7 @@ they are drawn only on `/design/surfaces`.
 longer reads** (the draft assistant was deleted on 2026-10-01). They were
 kept for plan 10's match-data contribution, which was refused on
 2026-10-19 (`ROADMAP.md`, "Never"), so their removal is owed
-(`docs/status.md`). The Overlay section went with the pivot, since no
+(`BACKLOG.md`, BL-062). The Overlay section went with the pivot, since no
 overlay is planned.
 
 **Inside the desktop shell** every section above is drawn but Draft
@@ -558,7 +558,7 @@ Notes the table does not carry:
 - **Ready holds the two preferences**: the update check, where the
   build has an updater, and autostart, where the shell asks. Both are
   preferences, and Ready is where the person stops reading. Ready
-  links to no tour: the tour is after 1.0.0 (`docs/status.md`), and
+  links to no tour: the tour is after 1.0.0 (`BACKLOG.md`, BL-003), and
   its label, `welcome.done.tour`, is in both catalogues, not drawn.
 
 **The Detailed Logs drawing** (`components/onboarding/DetailedLogsGuide.tsx`)

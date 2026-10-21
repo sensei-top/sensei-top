@@ -654,7 +654,7 @@ only a count played and a count won, losses are played minus won minus
 draws, never played minus won. One known gap: `/api/metrics/play-draw`
 has no losses field and counts draws in `games_completed`, so the deck
 strip's Play vs draw side record still writes a drawn game as a loss,
-listed in `docs/status.md`.
+listed in `BACKLOG.md`, BL-045.
 
 **Ten finished matches before a rate, five before a rough one.** A
 personal record has two thresholds, `RATE_MIN_MATCHES` (10) and
