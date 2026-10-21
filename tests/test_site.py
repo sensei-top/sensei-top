@@ -27,6 +27,7 @@ BEACON_SRC = "https://static.cloudflareinsights.com/beacon.min.js"
 # Answered by the Worker script in `worker/`, not by a file under `site/`.
 DOWNLOADS = ("/download/windows", "/download/linux")
 TARBALL = "/download/linux-tar"
+STORE = "https://apps.microsoft.com/detail/9NZ5GQMCG1ZN"
 
 # url path -> (file, html lang, the path of the same page in the other language)
 PAGES = {
@@ -445,12 +446,15 @@ def test_the_header_reads_the_same_on_every_page(url_path):
     ]
 
 
-def test_the_store_line_links_the_listing():
+def test_the_store_listing_is_a_button_a_step_and_a_help_line():
     for url_path in ("/", "/pt-br/"):
         raw, page = load(url_path)
         assert "STORE_URL" not in raw
         assert "Microsoft Store:" in page.visible_text
-        assert hrefs(page).count("https://apps.microsoft.com/detail/9NZ5GQMCG1ZN") == 1
+        assert hrefs(page).count(STORE) == 2, url_path
+    for url_path in ("/help/", "/pt-br/help/"):
+        _, page = load(url_path)
+        assert hrefs(page).count(STORE) == 1, url_path
 
 
 def test_the_privacy_pages_carry_the_date_they_changed():
@@ -579,7 +583,7 @@ def test_the_download_buttons_go_to_the_worker_and_it_runs_only_for_them():
     for url_path in ("/", "/pt-br/"):
         _, page = load(url_path)
         buttons = [a["href"] for a in page.find("a") if "button" in (a.get("class") or "").split()]
-        assert buttons == list(DOWNLOADS), url_path
+        assert buttons == [*DOWNLOADS, STORE], url_path
         assert not [h for h in hrefs(page) if "/releases" in h], url_path
 
 
@@ -610,6 +614,7 @@ def test_the_static_buttons_keep_windows_first_for_an_unknown_visitor(url_path):
     assert [(a["href"], a["class"]) for a in buttons] == [
         ("/download/windows", "button primary"),
         ("/download/linux", "button"),
+        (STORE, "button"),
     ], url_path
 
 
