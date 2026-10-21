@@ -445,15 +445,12 @@ def test_the_header_reads_the_same_on_every_page(url_path):
     ]
 
 
-def test_the_store_line_waits_in_a_comment_for_its_listing():
+def test_the_store_line_links_the_listing():
     for url_path in ("/", "/pt-br/"):
         raw, page = load(url_path)
-        assert "STORE_URL" not in hrefs(page)
-        assert "STORE_URL" not in page.visible_text
-        commented = [c for c in page.comments if "STORE_URL" in c]
-        assert len(commented) == 1
-        assert "Microsoft Store:" in commented[0]
-        assert raw.count("STORE_URL") == commented[0].count("STORE_URL")
+        assert "STORE_URL" not in raw
+        assert "Microsoft Store:" in page.visible_text
+        assert hrefs(page).count("https://apps.microsoft.com/detail/9NZ5GQMCG1ZN") == 1
 
 
 def test_the_privacy_pages_carry_the_date_they_changed():

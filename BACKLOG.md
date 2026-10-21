@@ -1158,7 +1158,7 @@ Such an item closes when the answer is recorded in `docs/attribution.md`.
 
 ### BL-070 · The Microsoft Store listing
 
-type: chore · priority: P1 · status: in-progress · area: release legal
+type: chore · priority: P1 · status: blocked · area: release legal
 
 The paid Microsoft Store listing (decided 2026-10-12, `ROADMAP.md`): the
 Store build is the same app as the free download, listed free at release and
@@ -1169,11 +1169,11 @@ signing").
 **Why deferred:** The first release shipped without it. The Partner Center
 account was created on 2026-10-20 as Individual (registration has been free
 since Microsoft dropped the fee in September 2025), and the product identity
-is reserved as an MSIX app, which the Store signs. The listing is the last
-step before the next release cut, in progress on `feature/store-identity`,
-with the appx building under the reserved identity and the release job
-attaching it, and the listing not yet submitted. The maintainer stays an
-individual, not a company, until income asks otherwise.
+is reserved as an MSIX app, which the Store signs. 1.2.0's appx was
+submitted on 2026-10-21 and passed certification the same day: the listing
+(Store ID 9NZ5GQMCG1ZN) is live and free, in every market. What is left is
+the price. The maintainer stays an individual, not a company, until income
+asks otherwise.
 
 **Needs:** Microsoft's answer on selling from an Individual developer
 account, whose eligibility text names "non-commercial purposes" and "not in
