@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-21
+
 ### Added
 
+- A Microsoft Store version of the Windows app. The Store keeps it up to
+  date, and Settings says so. It starts when Windows starts only if you
+  turn it on in Windows Settings → Apps → Startup, so Settings points
+  there instead of showing the switch, and first run doesn't ask.
 - Arena's log is found on its own on more Linux setups: Steam as a
   Flatpak or a Snap, Lutris, Heroic and Bottles (native or Flatpak), and
   plain Wine in `~/.wine` or `WINEPREFIX`, whatever the Wine user is
@@ -233,7 +239,8 @@ The app is the same as 0.7.1's; this release carries the website.
   keeps recording with the window closed, and start-with-Windows as an
   option. On Linux, an AppImage that updates itself in place.
 
-[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/sensei-top/sensei-top/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/sensei-top/sensei-top/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/sensei-top/sensei-top/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/sensei-top/sensei-top/compare/v0.7.2...v1.0.0

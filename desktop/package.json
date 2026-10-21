@@ -4,7 +4,7 @@
   "description": "A local Magic: The Gathering match tracker and coach.",
   "author": "The Sensei Top authors",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "license": "AGPL-3.0-only",
   "desktopName": "sensei-top.desktop",
   "main": "dist/main.js",
