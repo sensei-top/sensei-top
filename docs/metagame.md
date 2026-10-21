@@ -29,14 +29,22 @@ which the dashboard, the brief and the match report reach for them:
 | **C** — MTGO league | any event without standings | `Standings` empty — every deck's `Result` is literally `"5-0"` | **Presence only.** A league dump contains no losses anywhere in it — a win rate computed from one would be 100% by construction, not an approximation |
 | **D** — paper, under 64 players | Melee or TopDeck event | `Standings` has 1–63 rows | Meta share, win rate, matchups |
 
+The three shapes were verified against real cache files on 2026-08-18: a
+Melee swiss event (`summer-wind-championship-standard-447528`) carried 9
+full rounds, 132 matches and complete standings for 40 players; an MTGO
+challenge (`modern-challenge-64-2026-08-1712851686`) carried full standings
+but only 3 rounds, the published top-8 bracket rather than the swiss behind
+it; and an MTGO league (`standard-league-2026-08-1711015`) carried zero
+standings and zero rounds, every deck's `Result` literally `"5-0"`.
+
 The ranking is the user's call, made on 2026-09-29: a large paper event
 first, then the online events, then the small paper ones. A 64-player swiss
 is six or more rounds with a field wide enough to mean something; a
 twelve-player store championship is not a better read on the format than an
 MTGO challenge, even though its rounds are complete.
 
-The tier is no longer decided from shape alone. Size cannot tell a small
-paper swiss from a challenge, and MTGO publishes only a challenge's top 32
+Shape alone does not decide the tier. Size cannot tell a small paper
+swiss from a challenge, and MTGO publishes only a challenge's top 32
 standings, so its real field size is not in the file at all. The source is
 consulted for exactly one thing: whether an event with standings is MTGO
 (B) or paper (A or D). Melee and TopDeck are both treated as paper; Melee
@@ -64,9 +72,9 @@ depends on the order:
 - **One quoted matchup number** — the live brief's field record and the
   match report's — walks the tiers with rounds, A, then B, then D, and
   takes the first with at least five matches for the pairing
-  (`metagame/matchup.py`), naming the tier it came from. With none that
-  large it takes the highest-ranked tier that has any, so the "too few"
-  gap still says how few.
+  (`metagame/matchup.py`), naming the tier it came from and never blending
+  two. With none that large it takes the highest-ranked tier that has any,
+  so the "too few" gap still says how few.
 - **The Field page's matchup table** counts paper 64+ alone, then adds
   MTGO challenges, then smaller paper, one step at a time, defaulting to
   the first step with lists.
@@ -223,15 +231,18 @@ follow the same list.
 
 ## Duplicate tournament events
 
-The mirror sometimes publishes one tournament under two or three paths —
+The mirror sometimes publishes one tournament under two or more paths —
 different `event_id`s and blob SHAs, but byte-identical decklists and
 rounds. Nothing in `select_paths` or `store_events` catches this, since each
 path looks like a distinct file; measured on the real database (2026-09,
 371 events / 12,170 decks): 43 groups of identical events (35 pairs, 7
 triples, 1 quadruple) — 52 surplus events and 1,338 surplus decks (11% of
-the corpus). Left alone, every copy is stored and counted again, inflating
-field share, field win rate, the consensus decklists and the matchup matrix
-everywhere they are read.
+the corpus). By tier, 32 groups were Tier B (MTGO challenges), 10 Tier C
+(leagues) and 1 Tier A, tiers as they were before migration 047; by source,
+41 were MTGO and 2 MTGmelee. In all 43 the rounds (`meta_round_match`) were
+identical as well as the decks. Left alone, every copy is stored and counted
+again, inflating field share, field win rate, the consensus decklists and
+the matchup matrix everywhere they are read.
 
 `metagame/dedup.py::mark_duplicate_events` finds these groups by hashing
 `format`, `tier`, every deck (ordered by `deck_ord`) and every round match
@@ -242,8 +253,10 @@ measured difference to the grouping, a cross-source twin (the same
 tournament mirrored under both an MTGO and an MTGmelee path) is still a
 twin once the standings match, and — the one that actually matters — 10 of
 the 43 real groups were Tier C leagues **republished under a later date
-folder**, with a different `Tournament.Date` too. Including the date in the
-key would let exactly those slip through undetected.
+folder**, with a different `Tournament.Date` too (one league's file,
+`standard-league-2026-06-0810660.json`, sat under both the 2026/06/08 and
+the 2026/06/10 folders). Including the date in the key would let exactly
+those slip through undetected.
 
 Each group's survivor is `min(event_id)` — the file path sorts by source
 folder, then date: within one source the survivor is the group's earliest
@@ -264,10 +277,13 @@ unfetched and get downloaded again. Only the handful of readers that query
 coach's `MAX(event_date)` reads — filter `WHERE duplicate_of IS NULL`,
 since a republished league's date can be later than its own survivor's.
 
-`sensei-top meta` calls `mark_duplicate_events` once per invocation,
-after any refresh and before `classify_meta_decks` — including the
-`--reclassify` path, which is how an existing corpus gets cleaned with no
-network at all. `store_events` keeps this self-correcting across refreshes:
+`mark_duplicate_events` runs inside `metagame/auto.py::reclassify_corpus`,
+just before `classify_meta_decks`. `sensei-top meta` calls that once per
+invocation, after any refresh — including the `--reclassify` path, which is
+how an existing corpus gets cleaned with no network at all — and `serve`
+calls it after a corpus-refresh tick that stored events ("Fetching the
+corpus" above) and after an archetype refresh that brought new definitions.
+`store_events` keeps this self-correcting across refreshes:
 re-storing an event resets its own `duplicate_of` to `NULL` (judged afresh),
 and re-storing a survivor whose content changed clears its twins'
 `blob_sha` so the next refresh re-fetches and re-judges them against the
@@ -353,8 +369,8 @@ TopDeck.gg.", linked, with a second line linking the event on TopDeck.gg
 
 **Per-source freshness**, not a second freshness column bolted onto
 `meta_fetch`: `migrations/022_meta_source_fetch.sql` adds
-`meta_fetch_source`, one row per source (`fbettega`, `topdeck`, and `mtgo`
-since mtgo.com became a source), which `refresh_metagame` writes to in
+`meta_fetch_source`, one row per source (`fbettega`, `topdeck` and `mtgo`),
+each written by its own refresh; `refresh_metagame` writes fbettega's in
 addition to (never instead of) `meta_fetch`'s own single-row reproducibility
 record. `cache_age_seconds` takes a `source=` parameter: scoped, it reads
 one source's row; unscoped, it returns the *oldest* (most stale) age across
@@ -623,14 +639,15 @@ record already spans a whole event's rounds.
 
 ## Classifying the corpus
 
-`meta --reclassify` (or the `meta` subcommand's default path, after a
-refresh) runs `classify_meta_decks()`: a full rebuild over every stored
-`meta_deck`, exactly like `classify_matches()` for personal matches, and for
-the same reason — a corpus refresh may replace a decklist's own row, so a
-kept classification could point at a deck that no longer exists. It never
-touches the network, so it is safe to re-run immediately after
-`sensei-top archetypes` picks up a new definition, without waiting on
-another corpus fetch.
+`classify_meta_decks()` runs inside `reclassify_corpus`, wherever that is
+called ("Duplicate tournament events" above): `meta --reclassify`, the
+`meta` subcommand's default path after a refresh, and `serve`'s two
+threads. It is a full rebuild over every stored `meta_deck`, exactly like
+`classify_matches()` for personal matches, and for the same reason — a
+corpus refresh may replace a decklist's own row, so a kept classification
+could point at a deck that no longer exists. It never touches the network,
+so it is safe to re-run immediately after `sensei-top archetypes` picks up a
+new definition, without waiting on another corpus fetch.
 
 ## Formats: how well each is named (measured 2026-10-04)
 

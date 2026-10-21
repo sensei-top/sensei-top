@@ -1,19 +1,11 @@
-"""Walking the tier ranking down to one quoted matchup number.
+"""Walking the tier ranking down to one quoted matchup number, for the live
+brief's field-record line (``brief/narrative.py``) and the match report's
+(``review/snapshot.py``, read by ``review/analyzers/baseline.py``). See
+docs/metagame.md, "The evidence tiers".
 
-Two places in this project quote exactly one field win/loss record for a
-single archetype pairing — the live brief's field-record line
-(``brief/narrative.py``) and the match report's baseline finding
-(``review/analyzers/baseline.py``). Both walk the ranked tiers rather than
-reading one fixed tier: try the highest-ranked tier that carries rounds at
-all first, and only reach for a lower one when the higher tier's sample is
-too thin to trust — never blend two tiers into one number, since a blended
-win rate would hide which tier it actually came from. The ranking itself —
-what each tier is, and why it outranks the others — is ``docs/metagame.md``,
-"The evidence tiers".
-
-``MATCHUP_TIERS`` (``metagame/tiers.py``) is ``("A", "B", "D")`` — Tier C
-never populates ``meta_round_match`` (a league dump has no losses, so there
-are no rounds to record), so it is never a stop on this walk.
+The number always comes from one tier, named: two tiers are never blended,
+since a blended win rate would hide which tier it came from. Tier C has no
+rounds, so it is no stop on the walk (``tiers.py::MATCHUP_TIERS``).
 """
 
 from __future__ import annotations
@@ -23,8 +15,9 @@ from dataclasses import dataclass
 
 from sensei_top.metagame.tiers import MATCHUP_TIERS
 
-# Mirrors web/src/theme.ts's MIN_TRUSTED_FIELD_SAMPLE: the floor below which
-# the walk moves on to the next-ranked tier rather than quoting a thin one.
+# Mirrors web/src/lib/sample.ts's MIN_TRUSTED_FIELD_SAMPLE: the floor below
+# which the walk moves on to the next-ranked tier rather than quoting a thin
+# one.
 MIN_WALK_MATCHES = 5
 
 
@@ -51,18 +44,15 @@ def ranked_field_matchup(
     """Walk ``MATCHUP_TIERS`` in rank order and return the first tier whose
     round count for this pairing reaches ``min_n``. When none does, return
     the highest-ranked tier that has any rounds at all, however thin — a
-    caller comparing ``n`` against its own, larger sample floor (this
-    project's ``MIN_FIELD_SAMPLE`` is 20) still needs a tier to name in its
-    "too few" gap. ``None`` only when the corpus has no rounds for this
-    pairing in any of the three tiers.
+    caller comparing ``n`` against its own, larger sample floor
+    (``review/analyzers/baseline.py::MIN_FIELD_SAMPLE``) still needs a tier
+    to name in its "too few" gap. ``None`` only when the corpus has no rounds
+    for this pairing in any of the three tiers.
 
     ``fmt`` is required: only rounds from events of that format count, since
     the same pairing of archetype keys can be played in more than one
-    format's corpus (plan 13, D14). ``None`` (a match or deck with no
-    format) has no field record, never an all-format one.
-
-    One query, grouped by tier, rather than one query per tier — the walk
-    itself is pure Python over an already-fetched dict."""
+    format's corpus. ``None`` (a match or deck with no format) has no field
+    record, never an all-format one."""
     if fmt is None:
         return None
     placeholders = ", ".join("?" for _ in MATCHUP_TIERS)
