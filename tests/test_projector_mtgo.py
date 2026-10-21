@@ -577,6 +577,36 @@ def test_a_watched_match_with_no_start_block_reads_its_players_by_first_word():
     assert parsed.timed_out_handle == "Player2000"
 
 
+def test_an_extra_turn_is_counted_and_its_cards_carry_it():
+    """An extra turn's line ends `` - Extra Turn`` and takes the next of its
+    player's own numbers. The shapes and their order are a real game's
+    (2026-10-21), handles replaced: the extra turn is the fourth player-turn,
+    and the land played in it is on that turn, not the third."""
+    strings = [
+        GUID,
+        "Player1 joined the game.",
+        "Player2000 joined the game.",
+        "Player2000 chooses to play first.",
+        "Player2000 begins the game with seven cards in hand.",
+        "Player1 begins the game with seven cards in hand.",
+        "@PTurn 1: Player2000",
+        "@PTurn 1: Player1",
+        "@PTurn 2: Player2000",
+        "@PPlayer2000 takes an extra turn after this one.",
+        "@PTurn 3: Player2000 - Extra Turn",
+        "@PPlayer2000 draws a card.",
+        "@PPlayer2000 plays @[Commercial District@:242864,630:@].",
+        "@PTurn 2: Player1",
+    ]
+    parsed = parse_strings(strings)
+    assert parsed.warnings == []
+    (game,) = parsed.games
+    assert game.turn_count == 5
+    assert [(ce.name, ce.turn_number) for ce in game.card_events] == [
+        ("Commercial District", 4),
+    ]
+
+
 @pytest.mark.parametrize("digits", ["\u0663", "9" * 5000])
 def test_turn_line_not_ascii_digits_or_too_long_is_skipped_with_a_warning(digits):
     """``\\d`` matches non-ASCII digits: ``\u0663`` is read as 3 by ``int()``

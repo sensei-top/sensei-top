@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A Magic Online match that reveals Swords to Plowshares, Ancestral Recall
   or Fast // Furious can now be judged on that card's legality in the
   match's format. The card was matched to a copy with no legality on file.
+- A Magic Online extra turn now counts toward the game's turns, and the
+  cards played in it are on that turn instead of the one before.
 
 ## [1.2.0] - 2026-10-21
 

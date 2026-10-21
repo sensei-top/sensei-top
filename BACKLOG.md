@@ -844,21 +844,6 @@ Results come from each game's own lines, never from a score line.
 disagrees with the last score line), then `Match Tied` beside `leads the
 match`.
 
-### BL-055 · MTGO's extra turns, uncounted
-
-type: fix · priority: P2 · status: ready · area: projector mtgo
-
-MTGO's extra-turn line, `Turn <n>: <H> - <word> Turn`, does not match
-`projector/mtgo/parse.py`'s turn pattern, so that turn is not counted in
-`turn_count` and its card events carry the turn before it (3 files, 4 lines
-in the real history, 2026-10-19).
-
-**Why deferred:** Seen while transcribing plan 30's cases, outside its
-scope.
-
-**Needs:** The line transcribed from the real history as a test case (rule
-8), then the pattern widened.
-
 ### BL-056 · A warning on every rebuild without [mtgo]
 
 type: fix · priority: P2 · status: ready · area: projector mtgo
