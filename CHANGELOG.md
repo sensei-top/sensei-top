@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   match's format. The card was matched to a copy with no legality on file.
 - A Magic Online extra turn now counts toward the game's turns, and the
   cards played in it are on that turn instead of the one before.
+- On **Live**, the strip's Game number no longer lags behind in a game 2
+  or 3 hand, and while sideboarding its game and record agree with the
+  plan card's result for the game just ended.
 
 ## [1.2.0] - 2026-10-21
 

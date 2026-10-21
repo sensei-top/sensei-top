@@ -102,6 +102,48 @@ def test_game_over_sets_intermission_with_won_and_reason(conn):
     assert state.intermission.reason == "ResultReason_Concede"
 
 
+def test_the_break_carries_the_matchs_record_from_the_cumulative_results(conn):
+    """Entry 35's results[] holds one game, won by team 1, our own team: 1-0
+    from the replay itself, whatever the projected match has caught up to."""
+    state = replay_live_state(_payloads_through(conn, 35))
+    assert state.intermission.record == (1, 0)
+
+
+@pytest.mark.parametrize(
+    ("game_number", "results", "record"),
+    [
+        (2, [{"winningTeamId": 1}, {"winningTeamId": 2}], (1, 1)),
+        # ResultType_Draw carries no winning team: neither side's game.
+        (1, [{"result": "ResultType_Draw"}], (0, 0)),
+        # results[] not yet as long as the game number: unknown, not 0-0.
+        (2, [{"winningTeamId": 1}], None),
+    ],
+)
+def test_the_breaks_record_counts_a_loss_and_a_draw(game_number, results, record):
+    """Synthetic shapes beside the fixture's one win; seat 1 is team 1."""
+    gsm = {
+        "type": "GameStateType_Diff",
+        "gameStateId": 1,
+        "players": [
+            {"systemSeatNumber": 1, "teamId": 1},
+            {"systemSeatNumber": 2, "teamId": 2},
+        ],
+        # Our seat is the one whose hand resolves to real objects.
+        "zones": [
+            {"zoneId": 31, "type": "ZoneType_Hand", "ownerSeatId": 1, "objectInstanceIds": [1]}
+        ],
+        "gameObjects": [{"instanceId": 1, "grpId": 1, "zoneId": 31}],
+        "gameInfo": {
+            "gameNumber": game_number,
+            "matchState": "MatchState_GameComplete",
+            "matchWinCondition": "MatchWinCondition_Best2of3",
+            "results": [{"scope": "MatchScope_Game", **r} for r in results],
+        },
+    }
+    state = replay_live_state([_gsm_payload(gsm)])
+    assert state.intermission.record == record
+
+
 def test_game_over_keeps_finished_games_zones_during_the_break(conn):
     """The board state stays as game 1 left it until game 2's first state
     message arrives (docs/arena-log.md trap 11c) — proven, not assumed: the

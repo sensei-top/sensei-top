@@ -709,23 +709,6 @@ predate it.
 **Needs:** A decision on which grain the table should have, then the same
 grain for both, with a fixture-backed test (rule 7).
 
-### BL-044 · The Live strip's lagging Game numeral
-
-type: fix · priority: P2 · status: ready · area: table api web
-
-In a game 2 or 3 hand, the Live status strip's Game numeral lags beside a
-live play or draw, since `OpeningHandOut` has no game number and the strip
-reads the last projected game. In the sideboard break the strip's record and
-Game numeral read the projected match too, so they can trail the plan card's
-"Lost game 1".
-
-**Why deferred:** Found in plan 26's reviews of phases 3a and 3c. A server
-field is outside that plan ("No server-side change").
-
-**Needs:** A game number on `OpeningHandOut` (`IntermissionOut` already
-carries the game that just ended), read by the strip in place of the
-projected game's.
-
 ### BL-046 · Matchup rows keyed on the opponent alone
 
 type: fix · priority: P3 · status: ready · area: web

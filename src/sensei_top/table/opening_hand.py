@@ -108,6 +108,7 @@ class OpeningHandRead:
     # ``/api/current-match/read`` can reuse it instead of calling
     # build_keep_guide, which re-runs list_identities and the mulligan
     # aggregate, a second time on every 1 Hz poll.
+    game_number: int | None = None  # the offer's own, from the live replay
 
 
 def _resolve_cards(
@@ -794,4 +795,5 @@ def build_opening_hand_read(
         reasons=reasons,
         caveats=caveats,
         keep_guide=keep,
+        game_number=offer.game_number,
     )
