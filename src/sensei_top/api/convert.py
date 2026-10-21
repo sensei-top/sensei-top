@@ -182,6 +182,11 @@ def _intermission_out(read: BreakRead) -> IntermissionOut:
             if read.postboard_record is not None
             else None
         ),
+        record=(
+            PostboardRecordOut(won=read.record.won, lost=read.record.lost)
+            if read.record is not None
+            else None
+        ),
         prompt=read.prompt,
         deck_key=read.deck_key,
         fmt=read.fmt,
@@ -222,6 +227,7 @@ def _opening_hand_card_out(card: OpeningHandCard) -> OpeningHandCardOut:
 def _opening_hand_out(read: OpeningHandRead) -> OpeningHandOut:
     return OpeningHandOut(
         seat=read.seat,
+        game_number=read.game_number,
         mulligan_count=read.mulligan_count,
         on_the_play=read.on_the_play,
         cards=[_opening_hand_card_out(c) for c in read.cards],

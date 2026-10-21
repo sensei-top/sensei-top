@@ -28,9 +28,9 @@ real tournament metagame looks like next to it.
   exception is a report you ask to generate with your own key, which
   sends that match to the model you configured.
 - **Free, with no account.** The tracker is free now and later, and
-  nothing free asks you to sign up. A Microsoft Store build of the same
-  app, free at first and priced later, and, later still, an optional paid
-  tier are planned; the [roadmap](ROADMAP.md) says what each one is.
+  nothing free asks you to sign up. The [Microsoft Store](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN) build of
+  the same app is free now and priced later, and an optional paid tier is
+  planned after that; the [roadmap](ROADMAP.md) says what each one is.
 - **Read-only towards both clients.** It reads their log files and never
   writes to anything Arena or Magic Online owns.
 - **Nothing to configure for Arena.** It finds Arena's log on its own,
@@ -69,8 +69,8 @@ inglês: são texto para o modelo, não para você.
 Sensei Top runs on Windows 10 and 11 (64-bit) and on 64-bit Linux. Get the
 Windows installer or the Linux AppImage from [senseitop.com](https://senseitop.com)
 or the [releases page](https://github.com/sensei-top/sensei-top/releases);
-[INSTALL.md](INSTALL.md) has the steps for each system. A Microsoft Store
-listing of the same app, free when it goes up, is planned.
+[INSTALL.md](INSTALL.md) has the steps for each system. On Windows, the
+same app is also on the [Microsoft Store](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN), free.
 
 The one thing to change in Arena: turn on **Detailed Logs (Plugin
 Support)** under Options → Account, then restart it.

@@ -21,7 +21,7 @@ import type {
 } from '../api'
 import type { TFunction } from '../i18n'
 import { type TileText } from './matchups'
-import { formatDollars, formatPercent, formatPrice, formatRecord, WORD_JOINER } from './format'
+import { formatDollars, formatList, formatPercent, formatPrice, formatRecord, WORD_JOINER } from './format'
 import { formatOf, paramFor } from './field'
 import { gapPoints } from './guide'
 import { RATE_MIN_MATCHES } from './sample'
@@ -383,18 +383,15 @@ export function mulliganRates(mulligans: Record<string, RateModel>, t: TFunction
 }
 
 /** The labels an archetype was met or listed under, most first: "Red
- *  Aggro 43, Mono Red 4, Red Deck 2 and 4 more". The three most counted
- *  with their counts, then how many more; `null` with one label or none,
- *  since the name above already says it. */
+ *  Aggro 43, Mono Red 4, Red Deck 2, and 4 more". The three most counted
+ *  with their counts, then how many more, one list in the language read;
+ *  `null` with one label or none, since the name above already says it. */
 export function variantsWords(variants: readonly (readonly [string, number])[], t: TFunction): string | null {
   if (variants.length <= 1) return null
   const sorted = [...variants].sort((a, b) => b[1] - a[1])
-  const shown = sorted
-    .slice(0, 3)
-    .map(([label, n]) => `${label} ${formatCount(n)}`)
-    .join(', ')
+  const shown = sorted.slice(0, 3).map(([label, n]) => `${label} ${formatCount(n)}`)
   const more = sorted.length - 3
-  return more > 0 ? t('coach.field.variantsMore', { shown, n: formatCount(more) }) : shown
+  return formatList(more > 0 ? [...shown, t('coach.field.variantsMore', { n: formatCount(more) })] : shown)
 }
 
 /** How many tournament lists an archetype has: "338 lists", "1 list". */

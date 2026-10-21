@@ -11,7 +11,7 @@ history, your record in every matchup, the leak finder, the turn-by-turn
 replay, and written guides through a prompt you paste into any assistant
 or through a key of your own. Two paid things are planned, and neither
 takes any of that away. The Microsoft Store build is the same app as the
-free download, listed free when it goes up and priced later, for anyone who
+free download, [listed free](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN) since 2026-10-21 and priced later, for anyone who
 would rather support the project that way. Later, an [optional paid tier](#later) adds deeper
 features and a monthly allowance of written reports, and it is the only
 thing that asks for an account. If the tracker earns a place in your
@@ -30,9 +30,9 @@ English. Since then: games 1 and 2–3 apart in every matchup, fixes to how
 Magic Online's log is read, and Arena found on more Linux setups
 ([CHANGELOG.md](CHANGELOG.md)). What comes before the next release:
 
-1. **The Microsoft Store build** of the same app, which the Store signs.
-   It is listed free at first and priced once Microsoft confirms an
-   individual developer may sell and the other blockers clear. The direct
+1. **The Microsoft Store build** of the same app, which the Store signs,
+   [listed free](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN) since 2026-10-21. It is priced once Microsoft
+   confirms an individual developer may sell and the other blockers clear. The direct
    download stays unsigned for now: the open-source signing programme
    asks for more public use first. (BL-070, BL-072)
 

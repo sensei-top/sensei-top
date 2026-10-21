@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import type { TFunction } from '../../i18n'
 import { useSetMtgoPicks } from '../../api'
 import type { MtgoFormat, MtgoGroupList, MtgoGroupMatch, MtgoPickGroup } from '../../api'
+import { formatList } from '../../lib/format'
 import { prefillCaptionIn } from '../../lib/mtgoPick'
 import {
   chooseFormat,
@@ -43,14 +44,14 @@ function ListFacts({ list, partial }: { list: MtgoGroupList; partial: boolean })
   return (
     <>
       {names.length > 0 && (
-        <p className="text-caption text-ink2 break-words">{t('mtgo.group.played', { cards: names.join(', ') })}</p>
+        <p className="text-caption text-ink2 break-words">{t('mtgo.group.played', { cards: formatList(names) })}</p>
       )}
       {partial && missing.length > 0 && (
         <p className="text-caption text-ink2 break-words">
           {t('mtgo.group.missing', {
-            cards: missing
-              .map((card) => (card.matches > 1 ? `${card.name} (${formatCount(card.matches)})` : card.name))
-              .join(', '),
+            cards: formatList(
+              missing.map((card) => (card.matches > 1 ? `${card.name} (${formatCount(card.matches)})` : card.name)),
+            ),
           })}
         </p>
       )}
@@ -74,7 +75,7 @@ function TieChoice({ list, chosen, onChoose }: { list: MtgoGroupList; chosen: bo
         }`}
       >
         <span className={`text-body text-ink break-words ${chosen ? 'font-medium' : ''}`}>{listName(list, t)}</span>
-        {names.length > 0 && <span className="text-caption text-ink2 break-words">{names.join(', ')}</span>}
+        {names.length > 0 && <span className="text-caption text-ink2 break-words">{formatList(names, { type: 'unit' })}</span>}
       </button>
     </li>
   )
@@ -220,7 +221,7 @@ export function PickGroupCard({
                     })}
                   </span>
                   {(list.card_names ?? []).length > 0 && (
-                    <span className="block text-caption text-muted break-words">{(list.card_names ?? []).join(', ')}</span>
+                    <span className="block text-caption text-muted break-words">{formatList(list.card_names ?? [], { type: 'unit' })}</span>
                   )}
                 </span>
                 <Button size="sm" onClick={() => setState(chooseList(group, state, list.deck_id))}>

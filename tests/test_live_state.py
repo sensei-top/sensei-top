@@ -99,3 +99,53 @@ def test_a_new_game_starts_with_no_turn_of_the_last(tmp_path):
 
     assert state.turn_number is None
     assert state.active_seat is None
+
+
+def _intermission_payloads(tmp_path, through: int) -> list[str]:
+    """intermission_session.log's payloads for entries 0..``through`` (raw
+    event id = entry + 1)."""
+    conn = open_database(tmp_path / "i.db")
+    try:
+        ingest_file(conn, INTERMISSION_FIXTURE, locale_hint="mdy")
+        conn.commit()
+        return [
+            r["payload"]
+            for r in conn.execute(
+                "SELECT payload FROM raw_events WHERE id <= ? ORDER BY id", (through + 1,)
+            )
+        ]
+    finally:
+        conn.close()
+
+
+# A mulligan pending on seat 1, with one card in hand and no gameInfo: the
+# game is whichever one the replay last read.
+_PENDING_OFFER = (
+    '{"greToClientEvent": {"greToClientMessages": [{"gameStateMessage": {'
+    '"type": "GameStateType_Diff", "gameStateId": 900, '
+    '"players": [{"systemSeatNumber": 1, '
+    '"pendingMessageType": "ClientMessageType_MulliganResp"}], '
+    '"zones": [{"zoneId": 900, "type": "ZoneType_Hand", "ownerSeatId": 1, '
+    '"objectInstanceIds": [900]}], '
+    '"gameObjects": [{"instanceId": 900, "grpId": 1, "zoneId": 900}]}}]}}'
+)
+
+
+def test_an_offer_carries_the_game_its_hand_is_for(tmp_path):
+    """Entry 6 is game 1's offer (both seats pending MulliganResp; entry 2's
+    gameInfo reads gameNumber 1). Entry 41's gameInfo reads gameNumber 2, so
+    an offer after it is game 2's, though no game 2 row is projected yet."""
+    payloads = _intermission_payloads(tmp_path, 41)
+    first = live_state.replay_live_state(payloads[:7])
+    assert first.offer is not None
+    assert first.offer.game_number == 1
+
+    second = live_state.replay_live_state([*payloads, _PENDING_OFFER])
+    assert second.offer is not None
+    assert second.offer.game_number == 2
+
+
+def test_an_offer_with_no_game_named_has_no_game_number():
+    state = live_state.replay_live_state([_PENDING_OFFER])
+    assert state.offer is not None
+    assert state.offer.game_number is None

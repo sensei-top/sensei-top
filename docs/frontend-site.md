@@ -37,8 +37,8 @@ under 1 MB. The landing's six feature images are lazy, so only the hero's
 counts against the first cap. The sentences on the pages are the
 maintainer's, in both languages; the Fan Content notice is Wizards' wording,
 byte for byte the `WIZARDS_NOTICE` in `tests/test_attribution.py`, on the
-Portuguese pages too. The Microsoft Store line is an HTML comment in each
-home page, with `STORE_URL` for an address, until the listing exists.
+Portuguese pages too. Each home page's download steps end with a line
+linking the Microsoft Store listing, live since 2026-10-21.
 
 The help page is for the installed app's users: installing, the first run,
 Magic Online, troubleshooting and sending a problem report, with no

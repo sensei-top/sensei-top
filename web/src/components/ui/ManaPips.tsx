@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from '../../i18n'
+import { formatList } from '../../lib/format'
 
 /** Glyph paths from the Mana project by Andrew Gioia (github.com/andrewgioia/mana;
  *  font glyphs SIL OFL 1.1). Mana symbol imagery © Wizards of the Coast.
@@ -75,7 +76,7 @@ export function ManaPips({
   const ordered = WUBRG.filter((c) => present.has(c))
   if (ordered.length === 0) return null
 
-  const label = t('common.revealedColours', { colours: ordered.map((c) => colourName(c, t)).join(', ') })
+  const label = t('common.revealedColours', { colours: formatList(ordered.map((c) => colourName(c, t))) })
 
   return (
     <span role="img" aria-label={label} title={label} className="inline-flex items-center gap-0.5">

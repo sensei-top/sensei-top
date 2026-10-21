@@ -45,6 +45,9 @@ class MulliganOffer:
     cards: tuple[MulliganCard, ...]
     mulligan_count: int  # this seat's own count so far; 0 on the first offer
     active_player: int | None  # turnInfo.activePlayer, when stated
+    # The gameNumber the replay last read, None when no gameInfo named one:
+    # the projected game lags in a game 2 or 3 hand.
+    game_number: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +60,11 @@ class Intermission:
     game_number: int  # the game that just ended
     won: bool | None  # None when winningTeamId or our own teamId is unresolved (rule 4)
     reason: str | None  # ResultReason_* verbatim, e.g. "ResultReason_Concede"
+    # (won, lost) over the match's games so far, the one just ended included,
+    # a drawn game in neither — from the same cumulative results[] as won, so
+    # it never trails it the way the projected match can. None when any of
+    # those games is unresolved (rule 4).
+    record: tuple[int, int] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,7 +179,11 @@ def _find_self_seat(tracker: GameStateTracker) -> int | None:
 
 
 def _build_offer(
-    tracker: GameStateTracker, seat: int, mulligan_count: int, active_player: int | None
+    tracker: GameStateTracker,
+    seat: int,
+    mulligan_count: int,
+    active_player: int | None,
+    game_number: int | None,
 ) -> MulliganOffer | None:
     for zone in tracker.zones.values():
         if zone.get("type") != "ZoneType_Hand" or zone.get("ownerSeatId") != seat:
@@ -199,6 +211,7 @@ def _build_offer(
             cards=tuple(cards),
             mulligan_count=mulligan_count,
             active_player=active_player,
+            game_number=game_number,
         )
     return None
 
@@ -293,17 +306,27 @@ def _build_intermission(
 ) -> Intermission:
     entry = _game_result_entry(info, game_number)
     reason = entry.get("reason") if entry else None
+    # Never assume team id equals seat id — compare against the team id
+    # players[] actually reported for our own seat.
+    self_team = team_by_seat.get(self_seat) if self_seat is not None else None
 
     won: bool | None = None
-    if entry is not None and self_seat is not None:
-        self_team = team_by_seat.get(self_seat)
+    if entry is not None and self_team is not None:
         winning_team = entry.get("winningTeamId")
-        # Never assume team id equals seat id — compare against the team id
-        # players[] actually reported for our own seat.
-        if self_team is not None and winning_team is not None:
+        if winning_team is not None:
             won = winning_team == self_team
 
-    return Intermission(game_number=game_number, won=won, reason=reason)
+    record: tuple[int, int] | None = None
+    games = [r for r in info.get("results") or [] if r.get("scope") == "MatchScope_Game"]
+    if self_team is not None and len(games) >= game_number:
+        # No winningTeamId is a draw (projector/matches.py's _outcome).
+        winners = [g.get("winningTeamId") for g in games[:game_number]]
+        record = (
+            sum(1 for w in winners if w is not None and w == self_team),
+            sum(1 for w in winners if w is not None and w != self_team),
+        )
+
+    return Intermission(game_number=game_number, won=won, reason=reason, record=record)
 
 
 def replay_live_state(
@@ -354,6 +377,7 @@ def replay_live_state(
         return trackers[number]
 
     tracker = tracker_for(current_game)
+    named_game: int | None = None  # current_game, once a gameInfo has named one
     pending: dict[int, int] = {}
     self_seat: int | None = None
     active_player: int | None = None
@@ -402,6 +426,7 @@ def replay_live_state(
             gsm_info = gsm.get("gameInfo")
             if isinstance(gsm_info, dict) and gsm_info.get("gameNumber") is not None:
                 current_game = gsm_info["gameNumber"]
+                named_game = current_game
             tracker = tracker_for(current_game)
             tracker.apply(gsm)
             for player in gsm.get("players") or []:
@@ -461,7 +486,7 @@ def replay_live_state(
                 break
 
     offer = (
-        _build_offer(tracker, self_seat, pending[self_seat], active_player)
+        _build_offer(tracker, self_seat, pending[self_seat], active_player, named_game)
         if self_seat is not None and self_seat in pending
         else None
     )

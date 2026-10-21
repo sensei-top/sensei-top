@@ -154,11 +154,23 @@ def _lookup(conn: sqlite3.Connection, name: str) -> tuple[int | None, bool]:
     the same name. MTGO's transcript gives only the name, so nothing says
     which oracle card was played. Picking either would be a guess (rule 4);
     the caller warns and leaves it NULL.
+
+    Among same-signed rows, the lowest id that has a ``card_legality`` row
+    wins, else the lowest id. Arena keeps several rows of one card, and the
+    lowest is often a reprint row Scryfall never matched: Swords to
+    Plowshares is 59771 with no legality beside 77489 with seven, so taking
+    the lowest left a revealed Swords unjudgeable in its format.
     """
     positive, negative = conn.execute(
-        "SELECT MIN(CASE WHEN grp_id > 0 THEN grp_id END), "
-        "       MIN(CASE WHEN grp_id < 0 THEN grp_id END) "
-        "  FROM cards WHERE name = ?",
+        "WITH named AS ("
+        "  SELECT grp_id, EXISTS (SELECT 1 FROM card_legality l"
+        "                          WHERE l.grp_id = cards.grp_id) AS judged"
+        "    FROM cards WHERE name = ?) "
+        "SELECT COALESCE(MIN(CASE WHEN grp_id > 0 AND judged THEN grp_id END), "
+        "                MIN(CASE WHEN grp_id > 0 THEN grp_id END)), "
+        "       COALESCE(MIN(CASE WHEN grp_id < 0 AND judged THEN grp_id END), "
+        "                MIN(CASE WHEN grp_id < 0 THEN grp_id END)) "
+        "  FROM named",
         (name,),
     ).fetchone()
     if positive is not None and negative is not None:

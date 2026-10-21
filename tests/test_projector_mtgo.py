@@ -577,6 +577,36 @@ def test_a_watched_match_with_no_start_block_reads_its_players_by_first_word():
     assert parsed.timed_out_handle == "Player2000"
 
 
+def test_an_extra_turn_is_counted_and_its_cards_carry_it():
+    """An extra turn's line ends `` - Extra Turn`` and takes the next of its
+    player's own numbers. The shapes and their order are a real game's
+    (2026-10-21), handles replaced: the extra turn is the fourth player-turn,
+    and the land played in it is on that turn, not the third."""
+    strings = [
+        GUID,
+        "Player1 joined the game.",
+        "Player2000 joined the game.",
+        "Player2000 chooses to play first.",
+        "Player2000 begins the game with seven cards in hand.",
+        "Player1 begins the game with seven cards in hand.",
+        "@PTurn 1: Player2000",
+        "@PTurn 1: Player1",
+        "@PTurn 2: Player2000",
+        "@PPlayer2000 takes an extra turn after this one.",
+        "@PTurn 3: Player2000 - Extra Turn",
+        "@PPlayer2000 draws a card.",
+        "@PPlayer2000 plays @[Commercial District@:242864,630:@].",
+        "@PTurn 2: Player1",
+    ]
+    parsed = parse_strings(strings)
+    assert parsed.warnings == []
+    (game,) = parsed.games
+    assert game.turn_count == 5
+    assert [(ce.name, ce.turn_number) for ce in game.card_events] == [
+        ("Commercial District", 4),
+    ]
+
+
 @pytest.mark.parametrize("digits", ["\u0663", "9" * 5000])
 def test_turn_line_not_ascii_digits_or_too_long_is_skipped_with_a_warning(digits):
     """``\\d`` matches non-ASCII digits: ``\u0663`` is read as 3 by ``int()``
@@ -973,6 +1003,25 @@ def test_resolve_grp_id_front_face_is_tried_before_the_back_face(conn):
     conn.execute("INSERT INTO cards (grp_id, name) VALUES (1, 'Test Face // Other')")
     conn.execute("INSERT INTO cards (grp_id, name) VALUES (2, 'Another // Test Face')")
     assert _resolve_grp_id(conn, {}, "Test Face", _Warner()) == 1
+
+
+def test_resolve_grp_id_prefers_a_row_with_legality_over_the_lowest(conn):
+    """The real cards table carries Swords to Plowshares as 59771,
+    with no `card_legality` row, and 77489, with seven (measured
+    2026-10-21). The lowest id lost the card's legality; the judged row wins.
+    A name with no judged row still takes the lowest."""
+    conn.execute(
+        "INSERT INTO cards (grp_id, name) VALUES "
+        "(59771, 'Swords to Plowshares'), (77489, 'Swords to Plowshares'), "
+        "(83565, 'Ancestral Recall'), (104063, 'Ancestral Recall')"
+    )
+    conn.execute(
+        "INSERT INTO card_legality (grp_id, format, legality) "
+        "VALUES (77489, 'Legacy', 'legal')"
+    )
+    cache: dict[str, int | None] = {}
+    assert _resolve_grp_id(conn, cache, "Swords to Plowshares", _Warner()) == 77489
+    assert _resolve_grp_id(conn, cache, "Ancestral Recall", _Warner()) == 83565
 
 
 def test_resolve_grp_id_cache_hit_issues_no_query(conn):

@@ -35,10 +35,11 @@ type AdviceOff = 'event' | 'switch' | null
  *  up that is one line, the facts cut to fit. Under 48rem it is two: game,
  *  turn, pips and chip on the first; the opponent's name and the
  *  facts on the second, wrapping, none cut. Reads `openingHand` over
- *  `match` for the phase phrase and for play or draw whenever a decision
- *  is pending — that can be true even before `match` exists at all, since
- *  the read comes straight from a live replay (table/opening_hand.py) and
- *  does not wait on a projected match row. During the break between games
+ *  `match` for the Game numeral, the phase phrase and play or draw
+ *  whenever a decision is pending — that can be true even before `match`
+ *  exists at all, since the read comes straight from a live replay
+ *  (table/opening_hand.py) and does not wait on a projected match row.
+ *  During the break between games the Game numeral, the record,
  *  the name, the chip (the confidence, or "picked" for a manual pick) and
  *  the cards seen come from `intermission`, the break's own live read;
  *  the pips stay the match's colours. Outside the break, "pick this deck"
@@ -78,8 +79,16 @@ function MatchStatusStrip({
   // for Arena in the gap right after a game starts.
   const turnNumber = latest?.turn_number ?? game?.turn_count ?? null
   // A pending hand's own read is the live value: `game` is the last
-  // projected game, which lags in a game 2 or 3 hand.
+  // projected game, which lags in a game 2 or 3 hand. So does the break's
+  // record, beside the plan card's own result for the game just ended.
   const onPlay = openingHand ? openingHand.on_the_play : (game?.on_play ?? null)
+  const gameNumber = intermission
+    ? intermission.game_number
+    : openingHand
+      ? openingHand.game_number
+      : (game?.game_number ?? null)
+  const record =
+    intermission?.record ?? (match ? { won: match.games_won ?? 0, lost: match.games_lost ?? 0 } : null)
   const likelyAbandoned = isLikelyAbandoned(match?.started_at, now)
 
   // The turn number now has its own numeral below, so the phase phrase only
@@ -101,9 +110,7 @@ function MatchStatusStrip({
   const cardsSeen = intermission ? intermission.cards_seen : (match?.opponent_cards_seen ?? null)
 
   const parts = [
-    match
-      ? t('live.strip.record', { won: match.games_won ?? 0, lost: match.games_lost ?? 0 })
-      : null,
+    record ? t('live.strip.record', record) : null,
     onPlay == null ? null : onPlay ? t('live.onPlay') : t('live.onDraw'),
     phase,
     adviceOff === 'event'
@@ -147,7 +154,7 @@ function MatchStatusStrip({
         <div>
           <div className="text-chip font-semibold tracking-label text-muted">{t('live.strip.game')}</div>
           <div className="font-display text-stat leading-none text-ink">
-            {game ? game.game_number : '—'}
+            {gameNumber ?? '—'}
           </div>
         </div>
         <div>

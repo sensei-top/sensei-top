@@ -29,7 +29,11 @@ is a handle, read as "Handles" below says:
   what makes it authoritative rather than ``mulligans to``, which is silent
   on a keep.
 * ``Turn <n>: <H>`` -> turn number + active handle. **Not** the primary
-  game-boundary signal (see Bug B below) — a fallback only.
+  game-boundary signal (see Bug B below) — a fallback only. An extra turn
+  reads ``Turn <n>: <H> - Extra Turn``, after ``<H> takes an extra turn
+  after this one.``, with ``<n>`` the next of that player's own numbers
+  (``Turn 5: <H>``, then ``Turn 6: <H> - Extra Turn``; real history,
+  2026-10-21). It is one player-turn like any other.
 * ``<H> plays @[Name@:i1,i2:@].`` -> a card event, category ``PlayLand``
   (you *play* a land, never a spell, so the verb alone gives the category,
   Arena's own ``PlayLand``)
@@ -295,7 +299,7 @@ def _patterns(known: set[str]) -> _Patterns:
         begins=re.compile(
             rf"^{h} .*?begins the game with (?P<n>\w+) cards? in hand\.$"
         ),
-        turn=re.compile(rf"^Turn (?P<n>\d+): {h}$"),
+        turn=re.compile(rf"^Turn (?P<n>\d+): {h}(?: - Extra Turn)?$"),
         concede=re.compile(rf"^{h} has conceded from the game\.$"),
         loses_game=re.compile(rf"^{h} loses the game\.$"),
         inaction=re.compile(rf"^{h} has lost the game due to inaction\.$"),

@@ -111,7 +111,7 @@
     "plain": "Tournament results from MTGO and paper, not the Arena ladder.",
     "lists_one": "1 list",
     "lists_other": "{{n}} lists",
-    "variantsMore": "{{shown}} and {{n}} more"
+    "variantsMore": "{{n}} more"
   },
   "patterns": {
     "title": "Patterns",

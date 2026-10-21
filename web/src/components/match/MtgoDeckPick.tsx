@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useFormats, useMtgoPickCandidates, useSetMtgoPick } from '../../api'
 import type { MtgoDeckCandidate, MtgoFormat, MtgoPick } from '../../api'
 import type { TFunction } from '../../i18n'
+import { formatList } from '../../lib/format'
 import { bodyDeckId, canConfirm, formatAfterChoosing, mtgoFormatsOf, NO_LIST, prefillCaptionIn } from '../../lib/mtgoPick'
 import { Button, Card, ErrorNote, Loading, Select } from '../ui'
 
@@ -42,7 +43,7 @@ function CandidateOption({
             </span>
           )}
         </span>
-        {names.length > 0 && <span className="text-caption text-ink2 break-words">{names.join(', ')}</span>}
+        {names.length > 0 && <span className="text-caption text-ink2 break-words">{formatList(names, { type: 'unit' })}</span>}
       </button>
     </li>
   )

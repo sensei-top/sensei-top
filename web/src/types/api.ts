@@ -2741,6 +2741,8 @@ export interface components {
             past_boarding?: components["schemas"]["PastBoardingOut"][];
             /** @description This deck identity's earlier games 2 and 3 against the named or picked archetype, best-of-three matches only, the current match excluded; null when there is no archetype, no identity, or no such game. */
             postboard_record?: components["schemas"]["PostboardRecordOut"] | null;
+            /** @description This match's games so far, the one just ended included, a drawn game in neither — from the break's own live read, so it never trails `won` the way the projected match can. Null when any of those games is unresolved. */
+            record?: components["schemas"]["PostboardRecordOut"] | null;
             /**
              * Prompt
              * @description text to write an exact plan from, when none exists yet
@@ -4284,6 +4286,11 @@ export interface components {
         OpeningHandOut: {
             /** Seat */
             seat: number;
+            /**
+             * Game Number
+             * @description the game this hand is for, from the same live replay; null when no gameInfo has named one. The projected game lags in a game 2 or 3 hand
+             */
+            game_number?: number | null;
             /**
              * Mulligan Count
              * @description 0 on the first offer; already-mulliganed count

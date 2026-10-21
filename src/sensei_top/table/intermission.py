@@ -127,6 +127,8 @@ class BreakRead:
     alternatives: tuple[AlternativePlan, ...]
     past_boarding: tuple[PastBoarding, ...]
     postboard_record: PostboardRecord | None
+    # This match's games so far, the replay's own (``Intermission.record``).
+    record: PostboardRecord | None
     prompt: str | None
     deck_key: str | None
     fmt: str | None  # the match's format as resolved here; None means no live read was attempted
@@ -567,6 +569,11 @@ def build_break_read(
         alternatives=tuple(alternatives),
         past_boarding=tuple(past_boarding),
         postboard_record=postboard_record,
+        record=(
+            PostboardRecord(won=intermission.record[0], lost=intermission.record[1])
+            if intermission.record is not None
+            else None
+        ),
         prompt=prompt,
         deck_key=identity.key if identity is not None else None,
         fmt=fmt,
