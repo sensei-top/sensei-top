@@ -1,13 +1,14 @@
-"""Shared plumbing every authored-artifact table repeats on its own: a
-timestamp helper and the upsert that writes a table's provenance columns
-beside its feature-specific ones.
+"""Shared plumbing for the authored-prose tables: a timestamp helper and the
+upsert that writes a table's provenance columns beside its feature-specific
+ones.
 
-The four tables this backs (``match_narrative``, ``leaks_narrative``,
-``deck_narrative``, ``matchup_brief``) are exactly AGENTS.md non-negotiable
-#6's write allowlist (``tests/test_api.py::test_only_authored_artifact_routes_write``
-pins the exact route set that may reach them). This module does not grow
-that list — it only removes the hand-written ``INSERT ... ON CONFLICT``
-each of the four store modules used to repeat to reach it.
+``upsert_authored`` backs the four one-slot tables (``match_narrative``,
+``leaks_narrative``, ``deck_narrative``, ``matchup_brief``), four of AGENTS.md
+non-negotiable #6's write allowlist. ``coach_report`` and ``rcq_guide`` keep
+every row, so their stores ``INSERT`` and take only ``now_iso`` from here.
+This module never grows that allowlist:
+``tests/test_api.py::test_only_authored_artifact_routes_write`` pins the
+route set that may write it.
 """
 
 from __future__ import annotations
@@ -30,8 +31,9 @@ class AuthoredRecord:
     ``None`` for a hand-imported narrative — a real absence, never a
     fabricated zero (AGENTS.md non-negotiable #4).
 
-    ``deck_narrative`` is the one table that does not use this directly: a
-    guide can be hand-authored as well as Claude-written, so it stores
+    ``match_narrative`` and ``leaks_narrative`` write it as is.
+    ``deck_narrative`` names two of the columns differently: a guide can be
+    hand-authored as well as Claude-written, so it stores
     ``author``/``authored_at`` in place of ``model``/``generated_at`` — see
     ``guide/authored.py::write_narrative``, which builds its own columns
     dict instead.

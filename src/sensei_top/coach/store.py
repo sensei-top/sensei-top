@@ -1,24 +1,16 @@
-"""The coach report's own storage: every generated report, kept.
+"""The coach report's own storage: every report, generated or pasted, kept.
+See docs/coach.md, "What the coach is".
 
-``review/leaks_store.py`` and ``review/narrative_store.py`` each hold a
-single authored row that a regenerate overwrites — there is exactly one
-current leak narrative, and one current narrative per match. A coach report
-is different: a new report's "Since your last report" section compares
-against the previous report's own ``metrics_json``, so writing a new report
-must never erase the one it will be compared against. ``write_coach_report`` is
-therefore a plain ``INSERT``, never an upsert, and this module reads back a
-history rather than a single slot.
+A new report's progress is measured against the previous report's
+``metrics_json``, so ``write_coach_report`` is a plain ``INSERT``, never an
+upsert, and this module reads back a history rather than a single slot.
 
-``context_hash`` is re-exported from ``review/narrative_store.py`` rather
-than reimplemented, so every authored-artifact table in this project agrees
-on what "the evidence changed" means: a SHA-256 of the prompt context
-string itself.
+``context_hash`` is re-exported from ``review/narrative_store.py`` so
+``coach_report``, ``match_narrative`` and ``leaks_narrative`` agree on what
+"the evidence changed" means: a SHA-256 of the prompt context string.
 
-A report is written for one format (plan 13, D12), stored in
-``coach_report.format``. A row from before ``059_coach_report_format.sql``
-has NULL there and is a Standard report: every reader here reads NULL as
-``"Standard"`` (``_NULL_FORMAT``), and nothing ever writes that answer back
-into the row.
+A NULL ``coach_report.format`` reads as ``_NULL_FORMAT`` everywhere here,
+and nothing ever writes that answer back into the row.
 """
 
 from __future__ import annotations
@@ -89,8 +81,7 @@ def write_coach_report(
     generated_at: str | None = None,
 ) -> int:
     """Insert one new report for ``format`` and return its id. Never an
-    upsert — see the module docstring for why a coach report is history, not
-    a cache."""
+    upsert (module docstring)."""
     cur = conn.execute(
         "INSERT INTO coach_report "
         "(generated_at, format, model, effort, prompt, prose, sources_json, metrics_json, "
@@ -172,8 +163,7 @@ def extract_focus_section(prose: str) -> str:
     """The text under ``## Focus areas``, up to the next ``## `` heading or
     the end of the prose — the slice a progress review reads back against a
     past report. Falls back to the whole prose when the heading is absent,
-    so a report written before this convention (or one where the model
-    didn't use the heading) still yields something rather than nothing."""
+    so a report without it still yields something rather than nothing."""
     start = prose.find(_FOCUS_HEADING)
     if start == -1:
         return prose.strip()

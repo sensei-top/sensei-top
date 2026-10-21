@@ -1,146 +1,21 @@
-"""M4: live mode — keep the database current while Arena is running.
+"""Live mode: keep the database current while Arena and MTGO write their logs.
 
-This is the orchestration layer, and the only module that drives both stages of
-the pipeline. The reader still knows nothing about Arena semantics and the
-projector still knows nothing about files; ``LiveIngester`` simply runs one
-after the other, each on its own timer (see "Two cadences" below).
-
-Two cadences, deliberately different, and — since the rebuild's own write lock
-was measured taking 5.7 s on a real database — now two threads, not one:
-
-* **Ingest** runs often (default 1 s), on its own thread and its own
-  connection. It is cheap — a seek to the stored byte offset and a read of
-  whatever is new — and running it often is what keeps the reader from
-  falling behind a log that Arena may truncate at any moment. It used to
-  share a thread with projection, which meant a rebuild's write lock (or its
-  parse phase, holding no lock but still running on the same thread) blocked
-  every new log line from reaching ``raw_events`` until the rebuild
-  finished — the exact latency the Current match tab's mulligan read cannot
-  afford (see the match-boundary exception below). ``run_forever`` now runs
-  ``ingest_once`` on a dedicated thread with its own SQLite connection, so a
-  rebuild in progress on the calling thread never delays the next line from
-  landing.
-* **Projection** runs at least every ``project_every`` seconds (default 5 s) —
-  a floor, not the beat (see below). It is a *full rebuild* by design (see
-  ``projector.matches``), so its cost grows with total history rather than
-  with the new rows: an early measurement put it at ~0.28 s over 4,595
-  events (~60 μs/event); a season's worth of play (~173k raw events,
-  ~800 MB) measured ~11.6 s; the database has since grown to 238,520 events
-  (~1.33 GB), measuring **~16.2 s** a rebuild — parsing every payload with
-  ``orjson`` is ~9.7 s of that (down from ~12.5 s once ``project()`` stopped
-  calling ``orjson.loads`` once per projector per row and started parsing
-  each row exactly once; dispatch and the SQL writes account for the rest).
-  Either way, the rebuild has been longer than ``project_every`` for a while
-  now. Left alone, that means the rebuild simply runs back-to-back — it did,
-  measured: every dirty poll found ``elapsed >= project_every`` already
-  true, pinning a core continuously for the life of the process. Instead,
-  ``poll_once``'s gate paces rebuilds to a fixed *duty cycle*: ``gate =
-  max(project_every, _last_duration * duty_factor)``, where ``duty_factor``
-  (default 1.0, CLI ``--duty-factor``) means the watcher rests roughly
-  ``duty_factor`` times as long as the *previous* rebuild took before
-  starting the next one — a ~50% duty cycle at the default, so the
-  rebuild's wall-time cost stays a fixed fraction of real time as history
-  grows, rather than consuming a whole core for the rest of the session.
-  (The default was 4.0/~20% until the Current match tab went Arena-only —
-  see the "One named exception" note below — at which point the tab's own
-  latency became worth trading for: dropping to 1.0 roughly halves a
-  measured 145 s round trip between two Arena rebuilds to ~58 s, at double
-  the CPU duty.)
-  Anything read from ``turns``/``matches`` (the current-match tab included)
-  is correspondingly stale by roughly one gate interval, not one rebuild
-  duration. **This is also why ``serve --watch`` runs the watcher in a
-  separate OS process (``WatcherProcess``, below) rather than a thread**: a
-  rebuild that never stops running would otherwise contend for this
-  interpreter's GIL with every API request, indiscriminately, not just
-  requests touching stale data — measured at a ~5x tax on
-  ``/api/current-match/read`` (``WatcherProcess``'s own docstring has the
-  numbers). That growth is also what ``table/live.py`` and
-  ``table/opening_hand.py`` exist to route around for the live tab: a
-  request-time replay bounded to the *current match alone* (990-4,276
-  events on the same database) costs 0.03-0.08 s regardless of how much
-  history sits behind it. Re-running the full rebuild on every ingest would
-  still be wasted work today and unaffordable after a year of play, so new
-  rows mark the projection dirty and a later tick does the work. Naming the
-  opponents' decks happens in the same step, because a rebuild erases the
-  previous answers along with everything else derived.
-
-  **One named exception to the gate**, forcing an immediate rebuild
-  regardless of ``project_every``/``duty_factor``: a match room opening
-  (``has_match_boundary``). It is what puts a deck on the Current match tab, and
-  ``table/opening_hand.py``'s pending-mulligan read needs that deck within
-  the ~11 seconds real captures show between the room opening and the first
-  hand offer — waiting out even the ``project_every`` floor on top of that
-  would eat a meaningful slice of the 5-second median decision window, let
-  alone a duty-cycle gate that can now legitimately stay open for a minute
-  or more. That boundary rebuild no longer delays the offer it exists for:
-  since ingest runs on its own thread (above), the mulligan offer itself
-  still lands in ``raw_events`` within one ``interval`` even while the
-  rebuild the room opening triggered is still running on the other thread —
-  only the *projected* view of that offer (``matches``/``turns``, and
-  therefore ``v_current_match.deck_id``) waits on the rebuild, and
-  ``table/live.py``'s own replay of ``raw_events`` (rather than the
-  projection) is what routes the opening-hand read around that wait
-  entirely. A completed match carries the same event type and gets the same
-  early rebuild, which is a bonus, not a special case worth excluding. The
-  boundary check scans ``raw_events`` after the watermark of the last
-  committed rebuild (``_projected_through``), which ``project_if_due``
-  persists to ``projection_state.projected_through_id``
-  and restores on the first poll of a fresh ``LiveIngester`` — without that,
-  a process restart would reset the watermark to 0 and force the first
-  boundary check on a long-running database to scan every row ever ingested
-  instead of just the recent tail.
-
-  **There used to be two more: ``has_draft_boundary``, deleted with draft
-  (2026-10-01), and ``has_mtgo_boundary``, deleted earlier.** The MTGO one
-  forced an immediate rebuild on a *new* MTGO match file so a new MTGO match
-  would hit the Current match tab inside its mulligan window. That window no
-  longer exists: the tab is Arena-only now (``v_current_match``,
-  ``migrations/040_arena_only_current_match.sql``), so an MTGO match can
-  never become "current" regardless of how fast it is projected.
-
-  **MTGO's game logs are stored once a game ends** (``_poll_mtgo``; plan 3,
-  D2). MTGO writes its game log several times a minute during a match, every
-  write an append (103 of 103 in one measured Bo3, plan 12 S2), and each
-  stored row is the whole file (``reader/mtgo.py``'s docstring). Storing every
-  write would put about a hundred rows per match into ``raw_events`` and keep
-  the ~16 s rebuild running at the duty cycle's pace for the whole session,
-  for a source the Live page does not show (migration 040). So the leg checks
-  the folder every ``MTGO_POLL_SECONDS`` and holds a changed file back until
-  its last game names a winner, a loser or a draw (the projector's answer,
-  ``projector/mtgo/parse.py::last_game_decided``) and it has been quiet 5 s,
-  or until it has been quiet 10 minutes, whatever its last game says: a
-  disconnect, a crash or an ending line the parser doesn't know still lands.
-  Quiet alone cannot tell a finished game from a long think (one measured
-  mid-game pause lasted 36 s, the gap between games 46 s). Quiet is measured
-  on the watcher's own clock (``mtgo_clock``), from the check that first saw
-  the file's current size, mtime and inode, never from the mtime itself: a
-  copied file carries the other machine's clock. The result is about one row
-  per game, each marking the projection dirty for the next ordinary rebuild,
-  with no boundary rebuild (above). The first check is the exception: it
-  stores every changed file at once, decided or not, catching up whatever was
-  written while nothing watched, as ``sensei-top ingest-mtgo`` does by hand;
-  ``project_if_due``'s external-rows check is how a running watcher notices
-  rows that command stores.
-
-  **MTGO's deck files are polled on a slower clock of their own**
-  (``_poll_mtgo_decks``, every ``DECK_POLL_SECONDS``), in two places: the
-  ``.dek`` exports in ``mtgo_deck_dir`` and the ``grouping *.xml`` deck store
-  in ``mtgo_dir`` itself, whose game logs keep their own rule above. A deck
-  file is stored whenever it changes, with no wait for quiet, because it
-  changes only when the user saves one: an idle poll writes nothing
-  (``ingest_state`` skips unchanged files), the rebuild is not kept running,
-  and a just-exported deck shows up without a restart.
+The only module that drives both stages of the pipeline: ``LiveIngester`` runs
+the reader on one thread and the projector on another, each on its own timer.
+The design (the two cadences, the duty-cycle gate and its one exception, MTGO's
+game logs stored once a game ends, the deck-folder poll, the watcher as a child
+process of ``serve``) is in docs/architecture.md, "Live mode's two cadences";
+what a rebuild costs is in docs/architecture.md, "Full rebuild, always".
 
 Nothing here holds a transaction open across polls: readers (the API) see the
 previous snapshot until each rebuild commits, so the dashboard never renders a
 half-rebuilt projection.
 
-MTGO is a second, independent ingest leg on the same ``LiveIngester``, not a
-second watcher (see ``_poll_mtgo`` and the ``mtgo_dir`` field below): two
-processes would both upsert the ``projection_state`` id=1 singleton,
-ping-ponging ``projected_through_id`` so a boundary could be silently missed,
-and both would run the same ~16 s rebuild against SQLite's single writer
-(``busy_timeout=5000``) for byte-identical output.
+MTGO is a second ingest leg on the same ``LiveIngester``, never a second
+watcher: two processes would both upsert the ``projection_state`` id=1
+singleton, ping-ponging ``projected_through_id`` so a boundary could be
+silently missed, and both would run the same rebuild against SQLite's single
+writer (``busy_timeout=5000``) for byte-identical output.
 """
 
 from __future__ import annotations
@@ -182,18 +57,18 @@ log = logging.getLogger(__name__)
 # already killed the child (the lifespan's stop() comes a moment later).
 _SHUTDOWN_GRACE_SECONDS = 10.0
 
-# How often the MTGO deck folder is read, in seconds (plan 12, D8). The
-# default of ``LiveIngester.deck_poll_every``, and the number ``cli.py`` tells
-# the user: one place, so the three cannot drift apart.
+# How often the MTGO deck folder is read, in seconds. The default of
+# ``LiveIngester.deck_poll_every``, and the number ``cli.py`` tells the user:
+# one place, so the three cannot drift apart.
 DECK_POLL_SECONDS = 30.0
 
-# How often the MTGO game-log folder is checked, in seconds (plan 3, D2). The
+# How often the MTGO game-log folder is checked, in seconds. The
 # default of ``LiveIngester.mtgo_poll_every``, and the number ``cli.py`` tells
 # the user, as ``DECK_POLL_SECONDS`` is for the deck folder.
 MTGO_POLL_SECONDS = 2.0
 
 # How long a changed game log stays unchanged, on the watcher's own clock,
-# before it is stored (plan 3, D2): 5 s once its last game names a winner, a
+# before it is stored: 5 s once its last game names a winner, a
 # loser or a draw, so a row does not catch a write half done (MTGO's own, or
 # a copy's); 10 minutes whatever its last game says, for a game that ends
 # with none of those lines.
@@ -243,7 +118,7 @@ class LiveStats:
     errors: int = 0
 
 
-# How often a watcher with no Arena log looks for one (plan 6, D10).
+# How often a watcher with no Arena log looks for one.
 ARENA_LOG_RESOLVE_SECONDS = 60.0
 
 
@@ -251,10 +126,10 @@ def resolve_arena_log() -> Path | None:
     """Where Arena's log is right now, or ``None`` when there is none.
 
     The one place the watcher, ``serve`` and ``/api/live`` ask. First match
-    that exists wins: ``$MTGA_LOG``, then ``[arena] log`` (plan 6, D11), then
-    the autodetected locations (``default_log_path``). A value that names a
-    missing file is passed over silently, as ``$MTGA_LOG``'s always was: the
-    watcher asks again every minute while it has no log."""
+    that exists wins: ``$MTGA_LOG``, then ``[arena] log``, then the
+    autodetected locations (``default_log_path``). A value that names a
+    missing file is passed over silently: the watcher asks again every
+    ``ARENA_LOG_RESOLVE_SECONDS`` while it has no log."""
     return arena_config.resolve_log(default_log_path)[0]
 
 
@@ -263,12 +138,12 @@ class LiveIngester:
     """Polls the log, ingesting always and re-projecting on a slower beat.
 
     ``run_forever`` drives ``ingest_once`` and ``project_if_due`` on two
-    separate threads (see the module docstring's "Two cadences" section);
-    ``poll_once`` still composes both on a single connection for callers —
-    mainly tests — that want one deterministic step."""
+    separate threads (docs/architecture.md, "Live mode's two cadences");
+    ``poll_once`` composes both on a single connection for callers, mainly
+    tests, that want one deterministic step."""
 
     db_path: Path
-    # None means "no Arena log yet" (D10): Arena's side waits, and looks again
+    # None means "no Arena log yet": Arena's side waits, and looks again
     # every ``log_resolve_every`` seconds until ``log_resolver`` finds one.
     log_path: Path | None
     locale_hint: str | None = None
@@ -294,14 +169,12 @@ class LiveIngester:
     deck_poll_every: float = DECK_POLL_SECONDS
     project_every: float = 5.0
     project_enabled: bool = True
-    # project_every is a floor, not the beat: once a rebuild outlasts it the
-    # watcher would otherwise run back-to-back forever (it did, measured at
-    # 16.2 s a rebuild against a 5 s project_every on a 238k-event database —
-    # every dirty poll found elapsed >= project_every already true). The gate
-    # in project_if_due instead holds the watcher to roughly a 1/(1+duty_factor)
-    # duty cycle: sleep duty_factor times as long as the *last* rebuild took, so
-    # its cost stays a fixed fraction of wall time as history grows, rather
-    # than consuming a whole core continuously. 1.0 is a ~50% duty cycle.
+    # project_every is a floor, not the beat: a rebuild outlasts it on a real
+    # database, and a fixed threshold would then rebuild back-to-back forever.
+    # project_if_due's gate is max(project_every, _last_duration *
+    # duty_factor): rest duty_factor times as long as the *last* rebuild took,
+    # roughly a 1/(1+duty_factor) duty cycle (~50% at 1.0), so the rebuild's
+    # cost stays a fixed fraction of wall time as history grows.
     duty_factor: float = 1.0
 
     stats: LiveStats = field(default_factory=LiveStats)
@@ -311,16 +184,16 @@ class LiveIngester:
     _dirty: bool = field(default=False, repr=False)
     _last_projection: float = field(default=0.0, repr=False)
     # How long the last rebuild (project() + classify_matches()) actually
-    # took, in seconds — what the adaptive gate above paces off of. 0.0 until
-    # the first rebuild completes, which is why the gate falls back to the
-    # project_every floor until then.
+    # took, in seconds: what the duty_factor gate paces off. 0.0 until the
+    # first rebuild completes, so the gate is the project_every floor until
+    # then.
     _last_duration: float = field(default=0.0, repr=False)
     # The raw_events id projected through as of the last rebuild — the
     # watermark has_match_boundary checks against to decide whether a new
     # match room has opened since. Restored from projection_state on the
-    # first poll_once call (see _watermark_loaded below) rather than always
-    # starting at 0, so a restart doesn't force the first boundary check to
-    # LIKE-scan every row ever ingested.
+    # first project_if_due call (_watermark_loaded) rather than starting at
+    # 0: at 0 project_if_due's high-water-mark check would find every row
+    # unprojected, so every restart would rebuild once with nothing new.
     _projected_through: int = field(default=0, repr=False)
     _watermark_loaded: bool = field(default=False, repr=False)
     # mtgo_clock() at the last game-log check, set before the attempt; None
@@ -349,16 +222,15 @@ class LiveIngester:
     # lock, since nothing else is running at the same time in that case.
     _stats_lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
     # Guards read-modify-write access to _dirty from run_forever's two
-    # threads. _dirty itself stays a plain bool (not a threading.Event) so
-    # tests can keep reading and setting it directly, the way they already
-    # do — there is only ever one thread touching it in a test, so the lock
-    # is never contended there.
+    # threads. _dirty stays a plain bool (not a threading.Event) so tests can
+    # read and set it directly; a test has one thread, so the lock is never
+    # contended there.
     _dirty_lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def _poll_mtgo(self, conn: sqlite3.Connection) -> int:
-        """Store MTGO's game logs as their games end (module docstring; plan
-        3, D2), checking ``mtgo_dir`` at most once per ``mtgo_poll_every``
-        seconds of ``mtgo_clock``. Returns the rows inserted. A no-op when
+        """Store MTGO's game logs as their games end (docs/architecture.md,
+        "Live mode's two cadences"), checking ``mtgo_dir`` at most once per
+        ``mtgo_poll_every`` seconds of ``mtgo_clock``. Returns the rows inserted. A no-op when
         ``mtgo_dir`` is ``None`` (no MTGO share on this machine, the normal
         case).
 
@@ -486,7 +358,7 @@ class LiveIngester:
 
     def _poll_mtgo_decks(self, conn: sqlite3.Connection) -> int:
         """Ingest MTGO's deck files at most once per ``deck_poll_every``
-        seconds (``DECK_POLL_SECONDS`` by default; plan 12, D8 and D17): the
+        seconds (``DECK_POLL_SECONDS`` by default): the
         ``.dek`` files in ``mtgo_deck_dir`` and the ``grouping *.xml`` files in
         ``mtgo_dir``. A no-op when neither is set.
 
@@ -548,11 +420,9 @@ class LiveIngester:
         each on its own clock. Marks the projection dirty when anything landed.
         Returns the number of rows inserted.
 
-        Split out of the old combined ``poll_once`` so ``run_forever`` can
-        run this on its own thread and its own connection (module docstring,
-        "Two cadences") — a rebuild's write lock must never hold up the next
-        log line from reaching ``raw_events``. ``poll_once`` still calls this
-        directly for callers that want one synchronous step.
+        ``run_forever`` runs this on its own thread and its own connection,
+        so a rebuild's write lock never holds up the next log line from
+        reaching ``raw_events``; ``poll_once`` calls it directly.
         """
         with self._stats_lock:
             self.stats.polls += 1
@@ -560,7 +430,7 @@ class LiveIngester:
         arena_log = self._find_arena_log()
         inserted = 0
         if arena_log is None:
-            pass  # no Arena log yet (D10); MTGO below still runs
+            pass  # no Arena log yet; MTGO below still runs
         elif not self._recovered:
             # First pass only: Arena wipes Player.log on launch, so the previous
             # session survives only in Player-prev.log, and only until the next one.
@@ -590,20 +460,17 @@ class LiveIngester:
         """Rebuild the projection if the gate says it's due. Returns True
         only when a rebuild actually ran.
 
-        Split out of the old combined ``poll_once`` (see ``ingest_once``)
-        so ``run_forever`` can loop this on the calling thread while a
-        separate thread keeps ingesting. It no longer assumes the caller
-        just ran ``ingest_once`` on this same connection — the external-rows
-        check below is what lets it notice rows the ingest thread (or a
-        hand-run ``sensei-top ingest-mtgo``/``ingest``) landed elsewhere.
+        ``run_forever`` loops this on the calling thread while another thread
+        ingests, so it never assumes the caller just ran ``ingest_once`` on
+        this connection: the high-water-mark check below notices rows the
+        ingest thread, or a hand-run ``sensei-top ingest-mtgo``/``ingest``,
+        landed on another one.
         """
         if not self._watermark_loaded:
-            # Restore the watermark a previous run persisted, rather than
-            # starting every restart back at 0: has_match_boundary below
-            # LIKE-scans every raw_events row *after* this id, and 0 means
-            # "all of them" on a database that may hold hundreds of
-            # thousands. sqlite3.OperationalError covers a database missing
-            # either column (pre-034 or pre-065) on this first poll.
+            # Restore the watermark a previous run persisted rather than
+            # starting at 0 (why: the _projected_through comment).
+            # sqlite3.OperationalError covers a database missing either
+            # column (pre-034 or pre-065) on this first poll.
             try:
                 row = conn.execute(
                     "SELECT projected_through_id, projector_version"
@@ -625,19 +492,14 @@ class LiveIngester:
             already_dirty = self._dirty
 
         if not already_dirty:
-            # Nothing landed through the ingest side on its own dirty flag
-            # yet, but a hand-run `sensei-top ingest-mtgo` (or a separate
-            # `ingest`) writes straight to raw_events from another
-            # connection — this is how a running watcher notices those rows
-            # rather than needing its own `project` step. Compare the
-            # table's own high-water mark against what this watcher has
-            # already projected through: if it moved, someone else's rows
-            # are waiting. This still goes through the normal duty-cycle
-            # gate below, same as any other dirty poll — it is not a new
-            # boundary exception. One indexed MAX(id) lookup, so it's O(1);
-            # by this point _projected_through has already been restored
-            # from projection_state (the block above), so the comparison is
-            # correct even on this process's very first poll.
+            # The high-water-mark check. Rows another connection wrote (the
+            # ingest thread, a hand-run `sensei-top ingest-mtgo` or `ingest`)
+            # raise the table's high-water mark past what this watcher
+            # projected through. They take the duty-cycle gate below like any
+            # other dirty poll; this is not a boundary exception. MAX(id) is
+            # one indexed lookup, and _projected_through is already restored
+            # (the block above), so the comparison holds on a fresh process's
+            # first poll too.
             row = conn.execute("SELECT MAX(id) FROM raw_events").fetchone()
             if row[0] is not None and row[0] > self._projected_through:
                 with self._dirty_lock:
@@ -647,40 +509,27 @@ class LiveIngester:
         if not self.project_enabled or not already_dirty:
             return False
 
-        # A match room opening is worth a rebuild on sight rather than on the
-        # next scheduled tick: it is what puts a deck on the Current match
-        # tab, and the mulligan decision that read informs arrives roughly
-        # eleven seconds later (measured on real captures) — comfortably
-        # inside a poll tick, but not inside a multi-second wait for
-        # project_every. has_match_boundary is cheap (one indexed lookup),
-        # so it costs nothing to check on every dirty poll.
+        # A match room opening rebuilds on sight, past the gate: it is what
+        # puts a deck on the Live page, and the mulligan decision that read
+        # informs arrives within seconds (docs/architecture.md, "Live mode's
+        # two cadences"). has_match_boundary is an index search on label past
+        # the watermark, then a LIKE over the room-state payloads it finds:
+        # cheap on every dirty poll.
         boundary = has_match_boundary(conn, after_event_id=self._projected_through)
-        # project_every is a floor, not the beat: once a rebuild outlasts it
-        # the watcher would otherwise run back-to-back forever (it did,
-        # measured at 16.2 s a rebuild against a 5 s project_every on a
-        # 238k-event database — every dirty poll already found elapsed >=
-        # project_every true). Sleeping duty_factor times the *last*
-        # rebuild's own duration instead holds the watcher to roughly a
-        # 1/(1+duty_factor) duty cycle, so its cost stays a fixed fraction of
-        # wall time as history grows rather than consuming a whole core
-        # continuously. Before the first rebuild, _last_duration is 0.0 and
-        # this falls back to the project_every floor, same as before.
+        # The duty-cycle gate (duty_factor's comment above).
         gate = max(self.project_every, self._last_duration * self.duty_factor)
         elapsed = time.monotonic() - self._last_projection
         if not force_project and not boundary and elapsed < gate:
             return False   # stays dirty; a later tick rebuilds
 
         # Clear dirty *before* the rebuild starts, never after: run_forever
-        # runs this concurrently with the ingest thread, so a row that lands
-        # on that thread's own connection mid-rebuild must not be lost. If
-        # this were cleared after project()/classify_matches() returned (as
-        # the old single-threaded poll_once did), it would unconditionally
-        # stomp on a True the ingest thread set while the rebuild was still
-        # running, and that row would sit unprojected until some *later*,
-        # unrelated dirty event happened to arrive. Clearing first means the
-        # worst case is the opposite and harmless: a row that lands between
-        # this clear and the MAX(id) snapshot just below causes at most one
-        # extra rebuild next tick, never a missed one.
+        # runs this concurrently with the ingest thread, and clearing after
+        # project()/classify_matches() returned would stomp on a True that
+        # thread set mid-rebuild, leaving its row unprojected until some
+        # later, unrelated dirty event. Clearing first makes the worst case
+        # harmless: a row that lands between this clear and the MAX(id)
+        # snapshot just below costs at most one extra rebuild, never a
+        # missed one.
         with self._dirty_lock:
             self._dirty = False
         row = conn.execute("SELECT MAX(id) FROM raw_events").fetchone()
@@ -725,10 +574,8 @@ class LiveIngester:
         anything changed — a rebuild ran, or (if not) at least one row was
         inserted.
 
-        ``ingest_once`` + ``project_if_due`` composed onto a single
-        connection and a single call, for callers — mainly tests — that want
-        one deterministic step rather than the two independent threads
-        ``run_forever`` drives them on (module docstring, "Two cadences").
+        For callers, mainly tests, that want one deterministic step rather
+        than the two threads ``run_forever`` drives.
         """
         inserted = self.ingest_once(conn)
         rebuilt = self.project_if_due(conn, force_project=force_project)
@@ -759,11 +606,11 @@ class LiveIngester:
                         # file that appeared since.
                         connection = connect(self.db_path)
                         # The rebuild's own write lock (BEGIN...COMMIT inside
-                        # project()) was measured at 5.7 s on a real database
-                        # — past connect()'s 5 s default busy_timeout. This
-                        # connection only gets a longer one, so an ingest
-                        # tick waits out a rebuild's commit instead of
-                        # raising SQLITE_BUSY while it's mid-transaction.
+                        # project()) has measured past connect()'s 5 s default
+                        # busy_timeout (docs/architecture.md, "Live mode's two
+                        # cadences"). This connection alone gets a longer one,
+                        # so an ingest tick waits out a rebuild's commit
+                        # instead of raising SQLITE_BUSY mid-transaction.
                         connection.execute("PRAGMA busy_timeout = 30000")
                     self.ingest_once(connection)
                 except Exception as exc:  # a bad poll — or a failed open — must never end the watch
@@ -779,12 +626,11 @@ class LiveIngester:
     def run_forever(self, conn: sqlite3.Connection | None = None) -> None:
         """Poll until stopped. Used directly by ``ingest --watch``.
 
-        Runs two loops concurrently rather than the old single one: a
-        dedicated ingest thread (``_ingest_loop``, its own connection) and
-        this calling thread looping ``project_if_due`` on ``conn`` (or a
-        connection it opens itself). This is what keeps a rebuild's write
-        lock from blocking the next log line — see the module docstring's
-        "Two cadences" section. Both stop on the same ``_stop`` event.
+        Runs two loops concurrently: a dedicated ingest thread
+        (``_ingest_loop``, its own connection) and this calling thread
+        looping ``project_if_due`` on ``conn`` (or a connection it opens
+        itself), so a rebuild's write lock never blocks the next log line.
+        Both stop on the same ``_stop`` event.
         """
         owned = conn is None
         # SQLite connections belong to the thread that made them, so the loop
@@ -867,12 +713,10 @@ def _run_watcher(
     forever and ``serve`` never exited. Writing one message into a pipe
     waits on nobody.
 
-    Keyword-only: this was 7 positional args passed straight through
-    ``Process(args=...)`` even before ``mtgo_dir`` joined them — the shape
-    that breaks silently on a reorder rather than raising.
-    ``WatcherProcess.start()`` passes ``kwargs=`` instead of ``args=`` for
-    the same reason. Every argument stays picklable (``Path``, primitives,
-    the pipe's ``Connection`` and the ``Queue``).
+    Keyword-only, and ``WatcherProcess.start()`` passes ``kwargs=`` rather
+    than ``args=``: a positional list this long breaks silently on a
+    reorder rather than raising. Every argument stays picklable (``Path``,
+    primitives, the pipe's ``Connection`` and the ``Queue``).
 
     It first sends every record it logs to ``log_queue``, for ``serve`` to
     write: this process writes no file (``logs.py``, trap 5). Then it ties
@@ -956,32 +800,21 @@ class _Drain(logging.handlers.QueueListener):
 class WatcherProcess:
     """Runs a ``LiveIngester`` in a separate OS process instead of a thread.
 
-    ``project()`` is a total rebuild that measured ~11.6 s wall time on a
-    real database (module docstring above) — past ``project_every``, so the
-    rebuild runs back-to-back and the watcher thread never actually sleeps.
-    Every API route is a sync ``def``, so it shares the interpreter's GIL
-    with whatever thread is mid-rebuild: measured ~27 ms for
-    ``/api/current-match/read`` with the watcher thread idle, against
-    ~145-160 ms with a rebuild contending for the GIL — still a ~5x tax
-    even with the parser now ``orjson`` rather than the slower stdlib
-    ``json`` (the rebuild finishes faster, but it is still slower than
-    ``project_every`` and still holds the GIL while it runs). That tax
-    disappears once the rebuild runs in its own process with its own GIL
-    (and, on a multi-core machine, its own core).
+    Every API route is a sync ``def``, so a watcher thread would share the
+    interpreter's GIL with every request while a rebuild runs, and a rebuild
+    runs much of the time (the duty-cycle gate): the measured tax is in
+    docs/architecture.md, "Live mode's two cadences". In its own process the
+    rebuild has its own GIL and, on a multi-core machine, its own core.
 
-    Used only by ``serve --watch`` (``cli.cmd_serve``). ``ingest --watch``
-    still drives ``LiveIngester.run_forever()`` directly in the foreground,
-    and ``tests/test_live.py`` still drives ``LiveIngester.poll_once()``
-    in-process — neither needed to change for this. The API can no longer
-    read ``LiveIngester.stats`` from across the process boundary; the one
-    field it needs (``last_projection_at``) crosses via the
-    ``projection_state`` table instead (see ``poll_once`` above and
-    ``migrations/026_projection_state.sql``), and ``is_alive()`` answers
-    "is it running" without needing shared memory at all.
+    Used only by ``serve --watch`` (``cli.cmd_serve``); ``ingest --watch``
+    drives ``LiveIngester.run_forever()`` in the foreground. The API cannot
+    read ``LiveIngester.stats`` across the process boundary: the one field it
+    needs (``last_projection_at``) crosses via the ``projection_state`` table
+    (``LiveIngester.project_if_due`` and
+    ``migrations/026_projection_state.sql``), and ``is_alive()`` answers "is
+    it running" without shared memory.
 
-    The child dies with ``serve``, however ``serve`` ends (``procs.py``): the
-    app's shutdown calls ``stop()``, and the kernel kills the child when
-    ``serve`` is killed outright (Linux and Windows).
+    The child dies with ``serve``, however ``serve`` ends (``procs.py``).
 
     The child's log records cross to this process through a queue, and a
     drain thread here hands them to the root logger's handlers, each at its

@@ -23,8 +23,18 @@ its fenced blocks) and tests each name it can classify:
   `placeAt(pathname)`) are tested part by part.
 
 "The code" is every tracked text file but the Markdown, the lockfiles and
-the fixtures. A name that is missing on purpose (a doc saying what was
-removed, a name in another program) goes in `ALLOW`, with its reason.
+the fixtures, with the comments and docstrings of Python and the `//` and
+`/* */` comments of TypeScript and JavaScript blanked: a comment that names
+a symbol does not make the symbol exist. String literals stay code (SQL,
+JSON keys, route strings). A name that is missing on purpose (a doc saying
+what was removed, a name in another program) goes in `ALLOW`, with its reason.
+
+The same spans in the comments and docstrings of `src/`, `tests/`, `scripts/`
+and `web/src` are read too, but only paths, `path::symbol` and routes are
+checked there, not bare names: those are mostly another library's
+(`model_validate`) or Arena's (`GameOver`), and a name that exists but is the
+wrong one cannot be told from the right one. Both single and RST double
+backticks open a span.
 
     uv run python scripts/check_doc_refs.py [PATH ...]
 
@@ -34,10 +44,13 @@ any miss. Stdlib only.
 
 from __future__ import annotations
 
+import ast
 import fnmatch
+import io
 import re
 import subprocess
 import sys
+import tokenize
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -66,7 +79,7 @@ SOURCE = ("py", "ts", "tsx", "mjs", "js", "sql", "css", "html", "spec")
 EXTENSIONS = (
     "py", "ts", "tsx", "mjs", "js", "json", "sql", "md", "toml", "css", "html", "yml",
     "yaml", "spec", "txt", "pot", "po", "log", "db", "sh", "ps1", "cfg", "ini", "svg",
-    "png", "webp", "ico",
+    "png", "webp", "ico", "xml", "jsonl", "dek",
 )  # fmt: skip
 # Flags of other programs a doc quotes: git, pnpm, uv, pytest, the browser.
 EXTERNAL = {
@@ -96,9 +109,23 @@ ALLOW: dict[str, str] = {
     "SubmitDeckReq": ARENA,
     "CardPool": ARENA,
     "CourseDeckSummary": ARENA,
+    "QuestGetQuests": ARENA,
+    "PeriodicRewardsGetStatus": ARENA,
     "TimerStateMessage": ARENA,
     "QueuedGameStateMessage": ARENA,
+    "EventEnterPairing": ARENA,
+    "ZoneTransfer": "an Arena annotation type, carried in the log as AnnotationType_ZoneTransfer",
+    "SubmitDeckConfirmation": ARENA,
+    "GameComplete": ARENA,
+    "MatchComplete": ARENA,
+    "MatchCompleted": ARENA,
+    "IntermissionReq": ARENA,
+    "ConnectResp": ARENA,
+    "SingleElimination": ARENA,
+    "CardsRealm": "a source that was never evaluated, named for why it is absent",
+    "CacheItem": "the shape of another program's cache, which TopDeck's response is rewritten into",
     "application_settings": "a file MTGO writes on Windows",
+    "mtgo_game_history": "a file MTGO writes on Windows",
     "LICENSES.chromium.html": "a file electron-builder writes into the build",
     "BxMidrange": "an archetype key in the downloaded corpus",
     "GenericTron": "an archetype key in the downloaded corpus",
@@ -108,11 +135,21 @@ ALLOW: dict[str, str] = {
     "SetConsoleCtrlHandler": "a Windows API",
     "open_osfhandle": "a Windows C runtime call",
     "ClaudeBot": "a crawler's user agent, in robots.txt terms",
+    "docs/AUTHORS": "a made-up path, the example of a file that gets no exemption",
+    "path::symbol": "the form of a reference, not a name",
     "snake_case": "the naming style, not a name",
     "NNN_short_name.sql": "the pattern a migration's file name follows",
 }
 
 CODE_SPAN = re.compile(r"(?<!`)`([^`\n]+)`(?!`)")
+PROSE_SPAN = re.compile(r"``([^`\n]+)``|(?<!`)`([^`\n]+)`(?!`)")
+PROSE_DIRS = ("src/", "tests/", "scripts/", "web/src/")
+PROSE_KINDS = {"path", "symbol", "route"}
+GENERATED = {"web/src/types/api.ts"}
+# Files whose prose quotes names on purpose: this script's own examples.
+PROSE_EXEMPT = {"scripts/check_doc_refs.py"}
+# A span a path, symbol or route can start with: not `[::1]`, `::`, `http://...`.
+PROSE_START = re.compile(r"[A-Za-z_./~*<{…-]")
 METHOD = re.compile(r"^(?:GET|POST|PUT|PATCH|DELETE) +")
 IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 FLAG = re.compile(r"(?<![\w-])--[a-z][a-z0-9-]*")
@@ -145,6 +182,99 @@ def glob_of(text: str) -> str:
     return re.sub(r"\*+", "*", text)
 
 
+def blank(text: str, spans: list[tuple[int, int]]) -> str:
+    """The text with each [start, end) offset range spaced out, newlines kept."""
+    out = list(text)
+    for a, b in spans:
+        for i in range(a, b):
+            if out[i] != "\n":
+                out[i] = " "
+    return "".join(out)
+
+
+def py_prose(body: str) -> list[tuple[int, int, int]] | None:
+    """The (line, start, end) of each comment and docstring, or None if it won't parse."""
+    try:
+        module = ast.parse(body)
+        tokens = list(tokenize.generate_tokens(io.StringIO(body).readline))
+    except (SyntaxError, tokenize.TokenError, IndentationError):
+        return None
+    starts = [0]
+    for line in body.split("\n"):
+        starts.append(starts[-1] + len(line) + 1)
+    docs_at = set()
+    for node in ast.walk(module):
+        if isinstance(node, ast.Module | ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+            first = node.body[0] if node.body else None
+            value = getattr(first, "value", None)
+            is_str = isinstance(value, ast.Constant) and isinstance(value.value, str)
+            if isinstance(first, ast.Expr) and is_str:
+                docs_at.add((first.lineno, first.col_offset))
+    found = []
+    for tok in tokens:
+        is_doc = tok.type == tokenize.STRING and tok.start in docs_at
+        if tok.type == tokenize.COMMENT or is_doc:
+            a = starts[tok.start[0] - 1] + tok.start[1]
+            b = starts[tok.end[0] - 1] + tok.end[1]
+            found.append((tok.start[0], a, b))
+    return found
+
+
+def js_prose(body: str) -> list[tuple[int, int, int]]:
+    """The (line, start, end) of each `//` and `/* */` comment, strings skipped."""
+    found = []
+    i, line, n = 0, 1, len(body)
+    while i < n:
+        c = body[i]
+        if c == "\n":
+            line += 1
+        elif c in "'\"`":
+            j = i + 1
+            while j < n and body[j] != c and not (c != "`" and body[j] == "\n"):
+                if body[j] == "\\":
+                    j += 1
+                line += body[j : j + 1] == "\n"
+                j += 1
+            i = j
+        elif body.startswith("//", i):
+            j = body.find("\n", i)
+            j = n if j < 0 else j
+            found.append((line, i, j))
+            i = j - 1
+        elif body.startswith("/*", i):
+            j = body.find("*/", i + 2)
+            j = n if j < 0 else j + 2
+            found.append((line, i, j))
+            line += body.count("\n", i, j)
+            i = j - 1
+        i += 1
+    return found
+
+
+def prose_of(path: str, body: str) -> list[tuple[int, int, int]]:
+    """Where a file's comments and docstrings are; empty for a kind it cannot read."""
+    if path.endswith(".py"):
+        return py_prose(body) or []
+    if path.endswith((".ts", ".tsx", ".js", ".mjs")):
+        return js_prose(body)
+    return []
+
+
+def code_only(path: str, body: str) -> str:
+    """The file's text with its comments and docstrings blanked."""
+    if path.endswith(".py"):
+        found = py_prose(body)
+        return body if found is None else blank(body, [(a, b) for _, a, b in found])
+    return blank(body, [(a, b) for _, a, b in prose_of(path, body)])
+
+
+def prose_lines(path: str, body: str) -> Iterator[tuple[int, str]]:
+    """(line number, text) for each line of a file's comments and docstrings."""
+    for line, a, b in prose_of(path, body):
+        for k, text in enumerate(body[a:b].split("\n")):
+            yield line + k, text
+
+
 class Tree:
     def __init__(self) -> None:
         self.files = tracked()
@@ -153,7 +283,8 @@ class Tree:
         }
         self.paths = set(self.files) | folders
         self.folder_names = {p.rsplit("/", 1)[-1] for p in folders}
-        self.text: dict[str, str] = {}
+        self.text: dict[str, str] = {}  # code only: comments and docstrings blanked
+        self.prose: dict[str, str] = {}  # the same files, whole
         idents: set[str] = set()
         flags: set[str] = set()
         for f in self.files:
@@ -163,8 +294,10 @@ class Tree:
                 body = (ROOT / f).read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
                 continue
-            self.text[f] = body
-            idents.update(IDENT.findall(body))
+            self.prose[f] = body
+            code = code_only(f, body)
+            self.text[f] = code
+            idents.update(IDENT.findall(code))
             flags.update(FLAG.findall(body))
         # The client's own names (message types, fields) are in its logs.
         for f in self.files:
@@ -255,9 +388,30 @@ def command(line: str, tree: Tree) -> list[tuple[str, str]]:
     return out
 
 
+def prose_misses(tree: Tree) -> Iterator[tuple[str, int, str, str]]:
+    """(path, line, kind, name) for each stale path, symbol or route in code prose."""
+    for f, body in tree.prose.items():
+        if not f.startswith(PROSE_DIRS) or f in GENERATED or f in PROSE_EXEMPT:
+            continue
+        for line, text in prose_lines(f, body):
+            for a, b in PROSE_SPAN.findall(text):
+                span = (a or b).strip()
+                if not PROSE_START.match(span) or span.startswith("http") or "://" in span:
+                    continue
+                for kind, name in check(span, tree):
+                    if kind == "route" and not name.startswith("/api/"):
+                        continue  # an elided `…/x` is a message or a file there, not a route
+                    if kind in PROSE_KINDS and name not in ALLOW:
+                        yield f, line, kind, name
+
+
 def main() -> int:
     tree = Tree()
     misses = 0
+    if not sys.argv[1:]:
+        for f, line, kind, name in prose_misses(tree):
+            print(f"{f}:{line}: {kind} {name} - missing")
+            misses += 1
     for doc in docs(sys.argv[1:] or None):
         shown = doc.relative_to(ROOT) if doc.is_relative_to(ROOT) else doc
         fenced = False

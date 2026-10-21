@@ -1,8 +1,6 @@
-"""This game against a wider sample — Reid Duke's own review method: "have
-you lost enough games in this same way to reveal a fatal flaw?" A single
-game cannot answer that; a personal record in the same matchup and the
-field's own numbers for it can at least say whether this result was
-ordinary or a real outlier.
+"""This game against a wider sample: a personal record in the same matchup
+and the field's own numbers for it. See docs/review.md, "`baseline.py` —
+this game against a wider sample".
 
 Both comparisons are match-level, not per-game: ``personal_matchup`` and
 ``field_matchup`` are win/loss records over a matchup, computed once in
@@ -39,10 +37,9 @@ _CONCEDE_REASONS = {"ResultReason_Concede"}
 
 def _outcome_findings(snap: MatchSnapshot) -> tuple[list[Finding], list[Gap]]:
     """How each game ended, and how its length compares to this deck's own
-    average — neutral outcome facts, not mana/land content (the user's own
-    call). Reuses ``deck_game_length``/``play_draw``, aggregates this deck
-    already carries in every snapshot regardless of which analyzers read
-    them.
+    average — neutral outcome facts, never mana/land content (that is the
+    leak finder's). Reads ``deck_game_length``/``play_draw``, which every
+    snapshot carries.
     """
     findings: list[Finding] = []
     gaps: list[Gap] = []

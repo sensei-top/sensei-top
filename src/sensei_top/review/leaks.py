@@ -1,30 +1,12 @@
 """Cross-match pattern rollup — the leak finder.
 
-Reid Duke's own review method: "have you lost enough games in this same way
-to reveal a fatal flaw?" A single match's report cannot answer that. This
-scans every completed match's own report (the same ``build_match_report``
-the per-match panel calls) and ranks which finding codes actually correlate
-with losing, each with a real sample size and a Wilson score interval behind
-it — the same sample-gating discipline ``PLAY_DRAW_MIN_GAMES`` already
-applies elsewhere in this package, extended to "never show a rate without
-its uncertainty," not just its count.
-
-Mana flood and screw live here and only here (the user's own call): a
-single flooded game is not a story, but a flood *rate* across many games
-with one deck is a real deckbuilding signal — Duke's own question, "was it
-a fluke, or did your post-sideboard configuration lack late-game staying
-power?", which is only answerable across games.
-
-Rolling up on ``Finding.code`` alone used to let two kinds of finding into
-the ranking that were never real patterns: one that fires whenever an
-analyzer *had data* to work with (an archetype resolved, a corpus covered
-the pairing) rather than when the player did something recurring, and one
-whose own definition already names the outcome being measured (a finding
-that only exists in a game already lost, so any win-rate "gap" behind it is
-circular). ``Finding.pattern`` (``findings.py``) is each analyzer's own
-opt-in: ``None`` unless the code names something worth ranking, and when
-set it is a fixed label rather than a per-match title — so the rollup never
-headlines a 38-match pattern with one arbitrary match's own number again.
+Reruns every completed match's own report (the same ``build_match_report``
+the per-match panel calls) and ranks which finding codes move the win rate,
+each gated on ``MIN_SAMPLE`` on both sides and shown with a Wilson score
+interval, never a bare rate. Mana flood and screw live here and only here,
+as rates across many games. Only a finding whose analyzer set
+``Finding.pattern`` enters the ranking (``find_leaks``). See
+``docs/review.md``, "The leak finder (`review/leaks.py`)".
 """
 
 from __future__ import annotations
@@ -57,9 +39,9 @@ def report_cache_key(match_id: str, window: str | None) -> ReportCacheKey:
     route: the route hands the cache in before the prompt builder enters
     ``english()``.
 
-    English keeps the two-part ``(match_id, window)`` key the cache has
-    always had, so a cache an English-only caller (the CLI, a test) builds
-    reads exactly as before; any other language adds itself as a third part.
+    English keeps the two-part ``(match_id, window)`` key, so an English-only
+    caller (a test) can build one by hand; any other language adds itself as
+    a third part.
     """
     language = current_language()
     return (match_id, window) if language == ENGLISH else (match_id, window, language)
@@ -139,7 +121,7 @@ _MATCHES_WITH_DECK = (
     "FROM matches m JOIN v_match_deck md ON md.match_id = m.match_id)"
 )
 
-# The same rows with each match's read-time format (``v_match_format``, D6),
+# The same rows with each match's read-time format (``v_match_format``),
 # which picks the consensus window ``find_leaks`` builds that match's report
 # under. Wrapped once more for the same reason: ``v_match_format`` repeats
 # ``match_id`` too.
@@ -157,20 +139,14 @@ def _scope_clause(
     match_ids: tuple[str, ...] | None = None,
 ) -> tuple[str, list]:
     """The WHERE fragment (beyond ``result IN (...)``) and its params shared
-    by every match-population query below — ``deck_ids=None``/``since=None``
-    reproduce this module's original unscoped behaviour exactly.
+    by every match-population query below; ``None`` leaves that filter off.
 
-    ``source`` defaults to ``'arena'`` for the same reason ``api.sql._filtered``
-    does: every existing caller predates MTGO and every one of its findings
-    was tuned against Arena matches alone. ``'all'`` drops the filter.
+    ``source`` defaults to ``'arena'``: every finding was tuned against Arena
+    matches alone. ``'all'`` drops the filter.
 
-    ``match_ids``, when given, scopes to that exact set of matches — a
-    caller (``coach/evidence.py``) that already knows its own population or
-    one leak's own ``with`` side, rather than a deck/date filter this
-    module derives itself. ``None`` (the default) leaves every existing
-    caller's behaviour unchanged; an explicit empty tuple scopes to no match
-    at all, for a caller whose own candidate set is genuinely empty rather
-    than "unscoped"."""
+    ``match_ids`` scopes to that exact set of matches. An explicit empty
+    tuple scopes to no match at all, for a caller whose own candidate set is
+    genuinely empty rather than "unscoped"."""
     clauses: list[str] = []
     params: list = []
     if deck_ids:
@@ -193,24 +169,21 @@ def _scope_clause(
 
 def _mana_flags(conn, match_id: str) -> tuple[bool | None, bool | None]:
     """One match's own ``(screwed, flooded)`` flags — the per-match body
-    ``_mana_leaks`` rolls up into a population-wide rate, extracted so a
-    caller wanting the same rule for one already-known match (``coach/
-    evidence.py``'s ``progress_since``, comparing a leak's rate before and
-    after some date) never re-derives it. Neither flag is a ``Finding.code``
-    — no analyzer emits these — so this is the one place the rule lives at
-    all; ``_mana_leaks`` below calls this once per match in its own
-    population instead of repeating the logic inline.
+    ``_mana_leaks`` rolls up into a population-wide rate, and the one place
+    the rule lives: no analyzer emits either as a ``Finding.code``, and
+    ``coach/evidence.py`` calls this for a leak's rate before and after a
+    date rather than re-deriving it.
 
     Either flag is ``None`` — unknown, never ``False`` — when its own match
     has no evidence to answer it from (rule 4: unknown is ``NULL``, not a
     guess). ``screwed`` is ``None`` only when the match has **no self-turn
     rows at all** (every MTGO match, since ``projector/mtgo/project.py``
-    never writes ``turns``); a match that does have rows keeps today's
-    meaning — a short game that never reaches the check's own turn index
-    stays ``False``, not unknown. ``flooded`` is ``None`` whenever its own
-    narrower evidence is missing: no deck row, an unnamed/empty decklist, an
-    MTGO deck with unresolved maindeck copies (plan 12, D18), or no usable
-    first/last ``turns`` rows to compute a lands-seen ratio from.
+    never writes ``turns``); a short game with rows that never reaches the
+    check's own turn index stays ``False``, not unknown. ``flooded`` is
+    ``None`` whenever its own narrower evidence is missing: no deck row, an
+    unnamed/empty decklist, an MTGO deck with maindeck copies it could not
+    resolve to a card (a partial list), or no usable first/last ``turns``
+    rows to compute a lands-seen ratio from.
     """
     self_turn_rows = conn.execute(
         """
@@ -242,8 +215,6 @@ def _mana_flags(conn, match_id: str) -> tuple[bool | None, bool | None]:
         "LEFT JOIN v_deck_land_count v ON v.deck_id = d.deck_id WHERE m.match_id = ?",
         (match_id,),
     ).fetchone()
-    # A maindeck with an unnamed card, or with copies an MTGO deck could not
-    # resolve to a card at all (plan 12, D18), is a partial list: no land ratio.
     if (
         deck_row is not None
         and not deck_row["unnamed_count"]
@@ -283,19 +254,16 @@ def _mana_leaks(
     source: str = "arena",
     match_ids: tuple[str, ...] | None = None,
 ) -> list[Leak]:
-    """Screw/flood, computed directly from ``turns``/``decks`` — no analyzer
-    emits these as findings any more (the user's own call), so this reads
-    the same tables ``review/snapshot.py`` does, once, across every match.
+    """Screw/flood rates, from ``_mana_flags`` once per match in the
+    population.
 
-    MTGO writes no ``turns`` rows at all (``projector/mtgo/project.py``'s
-    scope), so ``_mana_flags`` reads every MTGO match's ``screwed`` as
-    unknown (``None``) rather than clean — an MTGO match is *excluded* from
-    this leak's population, not counted as evidence against it. Screw and
-    flood keep their own separate known populations (a match can be missing
-    evidence for one and not the other, e.g. a decklist with unnamed cards
-    still has ``turns`` rows), each gated on ``MIN_SAMPLE`` independently —
-    a comparison rate is only ever computed over matches that actually
-    answered the question, per rule 4.
+    A match whose flag is unknown (``None``: every MTGO match's ``screwed``)
+    is *excluded* from that flag's population, never counted as clean. Screw
+    and flood keep their own separate known populations (a match can be
+    missing evidence for one and not the other, e.g. a decklist with unnamed
+    cards still has ``turns`` rows), each gated on ``MIN_SAMPLE``
+    independently — a comparison rate is only ever computed over matches
+    that actually answered the question, per rule 4.
     """
     scope_sql, scope_params = _scope_clause(deck_ids, since, source, match_ids=match_ids)
     rows = conn.execute(
@@ -357,15 +325,13 @@ def find_leaks(
     source: str = "arena",
 ) -> list[Leak]:
     """Every recurring finding code, ranked by how much it actually moves
-    your win rate — largest gap first. Costs one ``build_match_report`` per
-    completed match, the same computation the per-match panel already pays
-    for one match at a time; cheap enough to redo wholesale, matching this
-    project's own precedent for a full rebuild (``classify_matches``).
+    your win rate — largest gap first, ties by code. Costs one
+    ``build_match_report`` per completed match, the same computation the
+    per-match panel pays for one match at a time; cheap enough to redo
+    wholesale, like ``classify_matches``.
 
     ``deck_ids``/``since`` scope the population to one deck's matches (or a
-    date window) — added for ``guide/``, which needs both a deck-scoped leak
-    rollup and the unscoped one side by side. Defaults reproduce the
-    original unscoped behaviour, so every existing caller is unaffected.
+    date window); ``None`` leaves it unscoped.
 
     ``consensus_window`` and ``consensus_since`` are unrelated to ``since``
     above — ``since`` scopes *which matches* this call ranks; these choose
@@ -375,36 +341,28 @@ def find_leaks(
     never both:
 
     - ``consensus_window`` measures each match against its own format's
-      window (plan 13, S8c): it maps a format to that format's window, and
-      is asked once per format the population holds, under the match's
+      window: it maps a format to that format's window, and is asked once
+      per format the population holds, under the match's
       ``v_match_format.format``. A match with no format is never asked
       about and gets no window: its report has no consensus to window
       (``build_consensus`` answers ``None`` for it), and it must not borrow
       another format's. ``review/`` cannot resolve a window itself
       (``guide.window`` would be a package cycle), so the caller supplies
-      the resolver: ``api/sql.py::_cached_consensus_window`` from a route,
-      ``guide/window.py``'s ``format_resets``/``window_start`` from
-      ``guide/bundle.py``.
+      the resolver: ``api/routes/review.py::_leaks_consensus_window`` from
+      the Leaks routes, ``guide/window.py::consensus_window_resolver`` from
+      ``guide/bundle.py`` and ``coach/evidence.py``.
     - ``consensus_since`` is one window for every match, whatever its
-      format — what every caller passed before formats. No caller passes
-      it now: ``coach/evidence.py`` passes ``consensus_window``, the same
-      per-format resolver its own reports are built under, so its
-      ``report_cache`` keys line up.
+      format. No caller passes it.
 
     Neither (the default) builds every report with no window, which is only
     correct when the caller knows no corpus it reads can cross a reset.
 
     ``match_ids`` scopes to an exact set of matches instead of deriving one
-    from ``deck_ids``/``since`` — ``coach/evidence.py``'s own population, or
-    one kept deck's subset of it, where the caller already knows exactly
-    which matches count and a deck/date filter would either re-derive that
-    set or fail to express it (a coach population excludes Limited matches
-    outright and admits only the MTGO matches that pass its own
-    revealed-cards format check — see ``docs/coach.md``'s "Scope" — neither
-    of which ``deck_ids``/``since`` alone can express). Composable with the
-    other three scope arguments (every non-``None`` one becomes an
-    additional ``AND`` clause); ``None`` (the default) leaves every existing
-    caller unaffected.
+    from ``deck_ids``/``since``: ``coach/evidence.py``'s own population, or
+    one kept deck's subset of it, which no deck/date filter can express
+    (``docs/coach.md``, "Scope"). Composable with the other three scope
+    arguments (every non-``None`` one becomes an additional ``AND`` clause);
+    an empty tuple scopes to no match (``_scope_clause``).
 
     ``consensus_cache``/``colors_cache``/``view_cache``, when given, are
     threaded through to every ``build_match_report`` call so a repeated
@@ -414,28 +372,24 @@ def find_leaks(
     across a scoped and an unscoped call in the same request
     (``guide/bundle.py`` does exactly this) to share the cache between them.
     A caller with none to share may omit them; fresh ones are created for
-    the duration of this call regardless (``view_cache`` the same as the
-    other two), since even one call to this function commonly repeats a
-    handful of popular archetypes across its matches.
+    the duration of this call regardless, since even one call commonly
+    repeats a handful of popular archetypes across its matches.
 
     ``report_cache``, unlike the other three, is *not* created when omitted
-    — one call already builds every report exactly once, so there is
-    nothing to save internally. When given, a whole ``MatchReport`` already
-    present under its ``(match_id, window)`` key is reused instead of
-    rebuilt, and every report this call builds is stored back into it —
-    ``window`` being the one that match's report was built under, whichever
-    of the two arguments above chose it, and the key carrying the current
-    language too (``report_cache_key``). A ``MatchReport`` depends only on
+    — one call already builds every report exactly once. When given, a
+    ``MatchReport`` already present under its ``report_cache_key`` (the
+    match, the window that match's report was built under, and the current
+    language) is reused instead of rebuilt, and every report this call
+    builds is stored back into it. A ``MatchReport`` depends only on
     ``match_id``, that window and the database (the match's format is read
     from the database, so it is the match's own whatever the window), never
     on this function's own scoping (``deck_ids``/``since``/``source``), so
     the same dict stays valid across a scoped and an unscoped call, across a
     per-format and a single-window caller, or across a caller that already
     built some of these reports itself (``coach/evidence.py`` builds its
-    population's own reports before calling this). A report built under one
-    window is never handed to a caller asking under another, because the
-    window is in the key — nor one written in another language, because
-    so is the language.
+    population's own reports, under the same resolver, before calling this).
+    A report built under one window, or in another language, is never handed
+    to a caller asking under another, because both are in the key.
     """
     if consensus_window is not None and consensus_since is not None:
         raise ValueError("pass consensus_window or consensus_since, not both")
@@ -489,7 +443,7 @@ def find_leaks(
         # pairing) is not a recurring pattern in what was played, and a code
         # conditioned on the very outcome being measured (a hand-size finding that
         # only exists in losses) would leak its own definition into the win-rate
-        # gap. See docs/review.md's "The leak finder".
+        # gap. See docs/review.md, "The leak finder (`review/leaks.py`)".
         seen_this_match: dict[str, tuple[str, str]] = {}
         for f in report.findings:
             if f.pattern is None:
@@ -504,8 +458,7 @@ def find_leaks(
         wins_with = sum(1 for mid in with_ids if match_results[mid] == "win")
         category = occurrences[0][1]
         # `pattern` is each code's own static label (never a per-match number),
-        # so every occurrence carries the same one — unlike the old `f.title`,
-        # which was whichever match happened to be scanned first.
+        # so every occurrence carries the same one.
         pattern = occurrences[0][2]
         leak = _leak_from_counts(
             code, category, pattern, with_ids, wins_with, total_n, total_wins

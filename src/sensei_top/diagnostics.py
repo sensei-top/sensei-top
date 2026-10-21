@@ -1,4 +1,5 @@
-"""``sensei-top diagnostics``: the zip a bug report carries (plan 6, D16).
+"""``sensei-top diagnostics``: the zip a bug report carries. See
+docs/desktop.md, "Support commands".
 
 What goes in, and what never does:
 

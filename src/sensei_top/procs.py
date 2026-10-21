@@ -1,22 +1,18 @@
 """Child processes die with the process that started them.
 
-``serve --watch`` runs the watcher in a child process (``live.WatcherProcess``)
-so a rebuild never contends with the API for this interpreter's GIL. One rule
-holds for that child on every platform: it dies with ``serve``, however
-``serve`` ends. ``serve`` can end three ways, and each needs its own
-mechanism:
+``serve --watch``'s watcher child (``live.WatcherProcess``) dies with
+``serve`` on every platform, however ``serve`` ends (docs/architecture.md,
+"Live mode's two cadences"). Each of the three ways needs its own mechanism:
 
 1. **An orderly shutdown**: Ctrl+C, or a SIGTERM that uvicorn turns into one.
    The app's lifespan stops the watcher (``api/app.py``). ``cmd_serve``'s
    ``finally`` cannot: uvicorn 0.52's ``capture_signals`` re-raises SIGTERM
    once its shutdown is done, and the default action ends the process before
-   anything after ``server.run`` runs. That orphaned the watcher on every
-   ``kill``. A SIGTERM to the whole process group (``kill -TERM -- -<pgid>``)
-   ends the child too, at the same moment, so the lifespan's stop finds it
-   already dead, as it does a child that died alone. That stop used to hang
-   ``serve`` forever: the stop signal was a ``multiprocessing.Event``, whose
-   ``set()`` waits for a sleeper the dead child can no longer wake. It is a
-   pipe now, which a dead reader cannot block (``live._run_watcher``).
+   anything after ``server.run`` runs. A SIGTERM to the whole process group
+   (``kill -TERM -- -<pgid>``) ends the child too, at the same moment, so the
+   lifespan's stop finds it already dead, as it does a child that died alone;
+   the stop signal is a pipe, which a dead reader cannot block
+   (``live._run_watcher``).
 2. **Killed outright on Linux**: SIGKILL, the OOM killer, a crash. Nothing in
    ``serve`` runs, so the child asks the kernel itself: ``die_with_parent``
    sets ``PR_SET_PDEATHSIG``.

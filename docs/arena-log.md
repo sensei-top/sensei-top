@@ -47,21 +47,37 @@ debugging; treat it as given rather than rediscovering it.
 
 ## Entry shapes
 
-Five shapes matter; everything else (`[PhysX]`, `[Manifest]`, `[TaskLogger]`,
-`[Subsystems]`, `[SocialManager]`) is engine noise.
+Seven shapes matter; everything else (`[PhysX]`, `[Manifest]`, `[TaskLogger]`,
+`[Subsystems]`, `[SocialManager]`, and any other `[UnityCrossThreadLogger]`
+line that is none of these) is engine noise. Shapes 1–6 are in real
+captures; 7 is not.
 
 1. **Single-line request** — `[UnityCrossThreadLogger]==> Method {json}`
-2. **Response** — a bare `<== Method(uuid)` line with **no prefix**, payload
-   starting on the *next* line, possibly spanning many
+2. **Response** — a bare `<== Method(uuid)` line with **no prefix**, usually
+   right after a header line, payload starting on the *next* line, possibly
+   spanning many
 3. **Prefixed event with header**, payload on following lines
 4. **Bare JSON** with no header at all — match service events such as
-   `matchGameRoomStateChangedEvent` often appear this way
+   `matchGameRoomStateChangedEvent` and `greToClientEvent` often appear this
+   way
 5. **Response with a non-JSON body** — observed for real on `DeckDeleteDeck`,
    which replies with the bare word `Success` instead of JSON. The segmenter
    emits that first line verbatim as the response's payload instead of
    feeding it to the JSON accumulator, which would otherwise never see a
    `{`/`}` pair balance and swallow every following line — requests included —
-   until one happened to balance by accident.
+   until one happened to balance by accident. The split is structural, not
+   semantic: the reader learns nothing about what `Success` means, and the
+   projector's "unparseable payload" warning on that row is correct.
+6. **Labeled inline event** — `[UnityCrossThreadLogger]Draft.Notify {json}`:
+   the label and the payload on one line, with no `==>` arrow and no header
+   (`Draft.Notify` and `Client.SceneChange` in
+   `tests/fixtures/human_draft_session.log`). The label is stored as the
+   entry's label, structurally, as for any other shape. It must start with a
+   letter, so a header's digit-led stamp can never be read as one.
+7. **Summarized message** — a `[Message summarized because …]` line and the
+   lines after it that open with colons, in place of a message Arena dropped
+   for its size.
+   Warned once per block and never stored; trap 18.
 
 Payloads must be extracted by **brace-depth counting that respects string
 literals and backslash escapes**. Payloads legitimately contain `{` and `}`
@@ -309,9 +325,9 @@ turn snapshot is a single end-of-turn state, so a phase would read
 at a rotation seam.** The "recovery reads `-prev` then the live file" story
 above assumes a narrow shared boundary; a real capture (Linux/Proton) instead
 had `-prev` reappear almost wholesale inside the live file, hours of session
-included twice. Raw-event dedup narrows this (see `reader/ingest.py`'s digest
-docstring) but a duplicate raw event can still reach the projector — which is
-why `card_events` dedupes itself on the `ZoneTransfer` annotation's own `id`
+included twice. Raw-event dedup narrows this (`docs/architecture.md`,
+"Idempotency") but a duplicate raw event can still reach the projector — which
+is why `card_events` dedupes itself on the `ZoneTransfer` annotation's own `id`
 rather than trusting the reader to have caught everything first.
 
 **14. Arena logs the opening hand before the mulligan decision, contradicting

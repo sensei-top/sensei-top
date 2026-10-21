@@ -3,7 +3,7 @@ middleware (``api/app.py``), the ``.pot`` extractor
 (``scripts/i18n_extract.py``), and the one rule the whole layer exists to
 keep: **every prompt is English**, whatever language the request asked for.
 
-Expectations come from the spec, not from running the code: plan D2's
+Expectations come from the spec, not from running the code: the
 language rule (``pt-BR``/``pt*`` is Portuguese, anything else English),
 gettext's own contract (a missing entry is the msgid; fuzzy entries are not
 translations), and Portuguese's plural rule (``nplurals=2; plural=(n > 1)``,
@@ -110,8 +110,8 @@ def catalogues(tmp_path):
 
 @pytest.fixture
 def no_catalogues(catalogues):
-    """No catalogue for any language: phase 2a's done-when condition, and
-    the state a missing or broken ``.po`` falls back to."""
+    """No catalogue for any language: the state a missing or broken ``.po``
+    falls back to."""
     i18n.load_catalogues(catalogues)
     return catalogues
 
@@ -313,7 +313,7 @@ NUMBERS = [
     999.995, 1000.0, -1000.0, 1234567.891, 1e16, 1e-7, 3, -7, 0.45, 1.5, 2.5,
 ]
 INTEGERS = [0, 7, -7, 999, 1000, -1000, 1234, 1234567, -1234567, 10**12]
-# The PT-BR joining words, as phase 4's catalogue will give them.
+# The PT-BR joining words, as the pt_BR catalogue gives them.
 PT_BR_JOINS = [
     polib.POEntry(msgid="{first} and {second}", msgstr="{first} e {second}"),
     polib.POEntry(msgid="{head}, {item}", msgstr="{head}, {item}"),
@@ -742,7 +742,7 @@ def _get_paths(client, key: str) -> list[str]:
 
 
 def test_every_get_route_answers_byte_identically_without_a_catalogue(no_catalogues, client):
-    """Phase 2a's done-when: with no PT-BR catalogue, asking for PT-BR
+    """With no PT-BR catalogue, asking for PT-BR
     changes nothing — not a byte, not a status."""
     key = client.get("/api/guide/decks").json()[0]["key"]
     paths = _get_paths(client, key)
@@ -1011,7 +1011,7 @@ def test_a_page_in_portuguese_never_hands_its_reports_to_a_prompt(
 
 
 def test_the_markdown_exports_are_english(marker_catalogue, client, monkeypatch):
-    """Plan D7: the guide and RCQ exports are prompt input, so they render in
+    """The guide and RCQ exports are prompt input, so they render in
     English under any request language. The RCQ export needs a stored
     guide; a stand-in is enough, since ``render_rcq`` is the recorder."""
     seen: list[str] = []
@@ -1059,9 +1059,9 @@ def test_the_guide_and_rcq_prompts_build_their_evidence_in_english(
 def test_the_rcq_preview_writes_its_page_in_portuguese_and_its_prompt_in_english(
     marker_catalogue, client,
 ):
-    """``rcq_preview`` hands one evidence object to its page and its prompt
-    (plan S4): built in English for the prompt, with the page's sentences
-    written from its data in the request's language. The paste carries a
+    """``rcq_preview`` hands one evidence object to its page and its prompt:
+    built in English for the prompt, with the page's sentences written from
+    its data in the request's language. The paste carries a
     line that is not a card and a four-card maindeck, so ``parse_decklist``
     owes two warnings (its own rules: an unreadable line is left out, a
     maindeck under 60 is flagged), and ``own`` names a key no corpus deck
@@ -1202,15 +1202,15 @@ def test_the_list_diffs_duplicate_warnings_are_written_in_the_request_language(
 
 
 def test_top8_names_translate_only_the_unclassified_sentinel(marker_catalogue):
-    """``RecentEvent.top8`` holds archetype names, never translated (plan
-    D3), beside the ``UNCLASSIFIED`` sentinel, which is."""
+    """``RecentEvent.top8`` holds archetype names, never translated, beside
+    the ``UNCLASSIFIED`` sentinel, which is."""
     assert guide_rcq.top8_name(guide_rcq.UNCLASSIFIED) == "(unclassified)"
     with i18n.use_language("pt-BR"):
         assert guide_rcq.top8_name(guide_rcq.UNCLASSIFIED) == MARKER + "(unclassified)"
         assert guide_rcq.top8_name("Mardu Discard") == "Mardu Discard"
 
 
-# --- the coach evidence and the routes' details (phase 2d2) -------------------
+# --- the coach evidence and the routes' details ----------------------------
 
 
 @pytest.fixture

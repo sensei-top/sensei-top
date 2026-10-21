@@ -138,7 +138,7 @@ def test_generate_stores_every_row_and_serves_the_latest(monkeypatch, client, ke
     assert first.status_code == 200
     out = first.json()
     assert calls == ["rcq"]
-    # The generate path keeps its own prompt (plan 24, D12): structured
+    # The generate path keeps its own prompt: structured
     # outputs carry the schema, and the copied prompt's answer contract is
     # the preview's alone.
     assert "Answer as a single JSON object matching this schema" in prompts[0]

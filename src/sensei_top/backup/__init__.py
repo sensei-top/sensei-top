@@ -2,12 +2,11 @@
 
 ``config`` resolves where a backup goes and how many to keep; ``run`` is the
 routine itself — freshness gate, claim, copy, verify, rotate, record, all
-never raising past ``run_backup``'s own boundary; ``schedule`` is the
-background thread that gives ``serve`` one of these a day without turning
-``run_backup`` into something that only makes sense inside a long-running
-process. This package imports neither ``reader`` nor ``projector`` and knows
-nothing about ``Player.log`` or MTGO's game logs — it only ever reads
-``backup_state`` and copies the database file underneath everything else.
+never raising past ``run_backup``'s own boundary; ``schedule`` is ``serve``'s
+daily thread; ``restore`` puts a backup back. This package imports neither
+``reader`` nor ``projector`` and knows nothing about ``Player.log`` or MTGO's
+game logs: it writes only ``backup_state`` and copies the database file
+underneath everything else. See docs/architecture.md, "Backups".
 """
 
 from sensei_top.backup.config import (

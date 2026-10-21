@@ -1,11 +1,9 @@
 """Small SQL helpers shared across routers: the "SELECT into plain dicts"
 primitive every metric endpoint builds on, the deck filter every metric
-endpoint appends, the request-scoped caches the current-match reads lean
-on, and the one conversion (turn zones) that is itself a database read, not
+endpoint appends, the caches kept on ``app.state`` across requests, and
+the one conversion (turn zones) that is itself a database read, not
 a pure dataclass-to-model translation — which is what keeps it out of
-``convert.py``. The sideboard-diff helper (``_named_diff``) moved to
-``table/boarding.py`` as ``named_diff`` — ``table/`` needed it too, and
-``table/`` must never import from ``api/``.
+``convert.py``.
 """
 
 from __future__ import annotations
@@ -60,15 +58,13 @@ def _filtered(
     sql: str, deck_id: str | None, extra: str = "", source: str = "arena"
 ) -> tuple[str, tuple[Any, ...]]:
     """Append optional deck and source filters. Views are already aggregated
-    per deck (and now per source — migration 035), so filtering is a WHERE on
-    the outer select. A caller whose rows two sources can share (the null
+    per deck and per source (migration 035), so filtering is a WHERE on the
+    outer select. A caller whose rows two sources can share (the null
     ``deck_id`` of every deckless match) adds its own ``GROUP BY`` after it,
     so ``'all'`` answers one row per group rather than one per source.
 
-    ``source`` defaults to ``'arena'`` so every existing caller that never
-    passes it keeps returning exactly what it always has; ``'all'`` means no
-    source filter at all, and is the only other value besides a literal
-    source name ('arena'/'mtgo') that ``deps.SourceFilter`` documents.
+    ``source`` is a literal source name (``'arena'`` by default, or
+    ``'mtgo'``), or ``'all'`` for no source filter (``deps.SourceFilter``).
     """
     clauses, params = [], []
     if deck_id:
@@ -97,16 +93,13 @@ def _corpus_token(conn: sqlite3.Connection) -> tuple[str, str, int, str]:
 
     ``meta_event.duplicate_of`` (migration 043) does not need its own
     component here. ``mark_duplicate_events`` (the dedup pass that sets it)
-    has exactly one caller in this codebase — ``cli.py``'s ``cmd_meta``, on
-    both its branches — and every one of those calls is immediately followed,
-    in the same invocation, by a full ``classify_meta_decks`` reclassification
-    that deletes and reinserts every row of ``meta_deck_archetype`` with a
-    fresh, shared ``classified_at``. So a dedup pass always moves
-    ``MAX(meta_deck_archetype.classified_at)`` too, whether or not it changed
-    ``COUNT(*)`` (it does when a duplicate's ``meta_deck_archetype`` rows are
-    deleted, but wouldn't for a dedup that only marked an event whose
-    children were already gone) — there is no dedup that runs without also
-    restamping this token. The corpus's two live readers gated by this token
+    has one caller, ``metagame/auto.py::reclassify_corpus``, which follows
+    it at once with a full ``classify_meta_decks`` that deletes and
+    reinserts every row of ``meta_deck_archetype`` with a fresh, shared
+    ``classified_at``. So a dedup pass always moves
+    ``MAX(meta_deck_archetype.classified_at)`` too, even one that changed no
+    ``COUNT(*)`` (a dedup that only marked an event whose children were
+    already gone). The corpus's two live readers gated by this token
     (``review/consensus.py::build_consensus``, ``archetypes/corpus.py::
     build_prior``) both ``JOIN`` through ``meta_deck_archetype`` anyway, so a
     duplicate's deletion is invisible to them regardless of ``duplicate_of``
@@ -130,11 +123,10 @@ def _corpus_token(conn: sqlite3.Connection) -> tuple[str, str, int, str]:
 
 def _cached_mana_source_grp_ids(request: Request, conn: sqlite3.Connection) -> frozenset[int]:
     """``table.live._mana_source_grp_ids``, cached on ``app.state`` and keyed
-    on ``cards``' own row count — the same pattern as ``_cached_consensus``
-    below, for the same reason: reference data that only changes on a
-    ``cards`` refresh, but was re-scanned in full on every 1 Hz
-    ``/api/current-match/read`` poll (5.4 ms paid every beat of every
-    match for a value that essentially never changes mid-session)."""
+    on ``cards``' own row count: reference data that only changes on a
+    ``cards`` refresh, and a full scan otherwise paid on every
+    ``/api/current-match/read`` poll (its cost: docs/current-match.md,
+    "Wiring: one route")."""
     cache: dict[int, frozenset[int]] = request.app.state.mana_source_cache
     token = conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
     if token not in cache:
@@ -144,7 +136,7 @@ def _cached_mana_source_grp_ids(request: Request, conn: sqlite3.Connection) -> f
 
 
 def default_format(conn: sqlite3.Connection) -> str:
-    """The format a page shows when its address names none (D13): the format
+    """The format a page shows when its address names none: the format
     of the user's most recent match that has one in ``v_match_format`` (the
     log's, else the MTGO pick, else the inference), and Standard when no
     match has one. ``/api/formats`` reports it, and every route whose
@@ -167,7 +159,7 @@ def default_format(conn: sqlite3.Connection) -> str:
 
 
 def match_format(conn: sqlite3.Connection, match_id: str) -> str | None:
-    """One match's read-time format (``v_match_format``, D6), or ``None``
+    """One match's read-time format (``v_match_format``), or ``None``
     when nothing names one. ``None`` is passed on as it is: a match with no
     format gets no corpus prior and no consensus window, never Standard's."""
     row = conn.execute(
@@ -180,23 +172,20 @@ def _consensus_window(conn: sqlite3.Connection, fmt: str | None) -> str | None:
     """The format-reset window to pass as ``build_consensus``'s own
     ``since``, computed the same way ``coach/evidence.py::build_coach_evidence``
     does: the latest reset of ``fmt``, as its ``window_start``, or ``None``
-    when no reset has been detected (either because there genuinely isn't one
-    yet, or because no legality data exists to detect one from — either way,
-    ``None`` is the only honest answer in the absence of a reset to window
-    against). ``fmt`` of ``None`` (a match no source names a format for)
-    is ``None`` too: no format, no reset to window against.
+    when no reset has been detected (there isn't one yet, or no legality
+    data exists to detect one from) or ``fmt`` is ``None`` (a match no
+    source names a format for).
 
     Callers needing an opponent consensus (``_cached_consensus`` below,
     ``api/routes/matches.py``) must call this and pass the result through
     rather than defaulting ``consensus_since`` to ``None`` themselves —
     ``review/snapshot.py::build_snapshot``'s docstring explains why ``None``
-    is not a neutral default. This duplicates ``coach/evidence.py``'s own
-    ``format_resets``/``window_start`` call rather than sharing it, since
-    ``review/`` cannot import ``guide.window`` (a package cycle — see
-    ``review/snapshot.py``'s docstring) and this API layer has no access to
-    ``coach/evidence.py``'s own already-computed value; ``guide/window.py``'s
-    ``format_resets`` is itself the single source of truth both call sites
-    query independently.
+    is not a neutral default. This repeats ``coach/evidence.py``'s own
+    ``format_resets``/``window_start`` call rather than sharing it: ``review/``
+    cannot import ``guide.window`` (a package cycle, ``review/snapshot.py``'s
+    docstring), and this layer has no access to the value
+    ``coach/evidence.py`` computes. Both query ``guide/window.py``'s
+    ``format_resets``, the one source of truth.
     """
     if fmt is None:
         return None
@@ -229,10 +218,9 @@ def _cached_consensus_window(
 ) -> str | None:
     """``_consensus_window`` memoized on ``app.state`` per ``(token, fmt)``,
     ``token`` being the corpus's own ``_corpus_token``. ``format_resets`` is
-    a full ``meta_deck JOIN meta_event`` scan — about 0.35s on a 10,000-deck
-    corpus — and ``_cached_consensus`` runs on the current-match tab's
-    3-second heartbeat, so computing it per call would reintroduce exactly
-    the scan that cache exists to avoid.
+    a full ``meta_deck JOIN meta_event`` scan, and ``_cached_consensus`` runs
+    on every ``/api/current-match/read`` poll, so computing it per call would
+    reintroduce exactly the scan that cache exists to avoid.
 
     Keyed on the corpus token, like the consensus beside it: a ``sensei-top
     meta`` refresh invalidates it for free. A legality-only refresh (``cards
@@ -257,24 +245,22 @@ def _cached_consensus(
     fmt: str | None,
 ) -> ArchetypeConsensus | None:
     """``build_consensus`` for the current match's opponent archetype,
-    cached on ``app.state`` and keyed on the metagame corpus's own
-    ``_corpus_token`` — a ``sensei-top meta`` refresh invalidates the cache
-    for free, and nothing else needs to. Without this, the current-match
-    tab's 3-second heartbeat would re-scan ``meta_deck`` on every beat a game
-    is running (``current_match_brief`` avoids the same cost by only
-    building a prompt on demand; this route runs on every heartbeat
-    instead).
+    cached on ``app.state`` under ``(archetype_key, fmt, corpus token,
+    window)``, the token being ``_corpus_token``: a ``sensei-top meta``
+    refresh invalidates the cache for free. It holds one entry, and any miss
+    clears it, a new opponent archetype included. Without this, every
+    ``/api/current-match/read`` poll would re-scan ``meta_deck`` while a game
+    runs.
 
-    The cache key also carries ``_consensus_window(conn, fmt)`` now (via
+    The window is ``_consensus_window(conn, fmt)`` (via
     ``_cached_consensus_window``, itself cached on the same token), so a
     consensus built before a format reset is detected is never handed back
-    once one is, without paying a ``format_resets`` scan on every heartbeat
-    — only on a token miss.
+    once one is, without paying a ``format_resets`` scan on every poll —
+    only on a token miss.
 
     ``fmt`` is required: it narrows the consensus to that format's corpus
-    decks and is part of the cache key, and it is the format whose reset
-    windows the consensus. ``None`` (a match with no format) has no consensus
-    and no window.
+    decks, and it is the format whose reset windows the consensus. ``None``
+    (a match with no format) has no consensus and no window.
     """
     if not opponent_key or not opponent_key.startswith("archetype:"):
         return None
@@ -288,7 +274,7 @@ def _cached_consensus(
     cached = cache.get(cache_key, _MISSING)
     if cached is not _MISSING:
         return cached  # type: ignore[return-value]
-    cache.clear()  # the token, format or window changed; nothing older stays valid anyway
+    cache.clear()  # the archetype, token, format or window changed; nothing older stays valid
     consensus = build_consensus(conn, archetype_key, fmt=fmt, board="main", since=window)
     cache[cache_key] = consensus
     return consensus
@@ -298,25 +284,21 @@ def _cached_match_opponent(
     request: Request, conn: sqlite3.Connection, match_id: str
 ) -> dict[str, Any] | None:
     """``v_match_opponent``'s row for one match, cached on ``app.state`` and
-    keyed on ``card_events``'s row count — the same pattern as
-    ``_cached_consensus`` above, for the same reason: measured 27ms per
-    request even filtered to a single ``match_id``, because the view's
-    ``v_opponent_cards`` CTE can't push that filter down (it materializes
-    every match's opponent-card history to answer a question about one).
-    That cost was invisible next to the request-time replay until the
-    replay itself got fast — see the "live tab" performance pass this
-    accompanies. Keyed on ``projection_state.projections`` rather than
-    ``COUNT(*) FROM card_events`` (the original token): that count is itself
-    an unindexed scan of a table that grows every game, measured costing
-    more per call (65-82 ms, paid on every hit, not just a miss) than the
-    27 ms it was protecting, and is a single-row read regardless of table
-    size. Known narrow gap: ``projections`` is incremented by ``live.py``'s
-    watcher after each rebuild it drives (``poll_once``), not by
-    ``project()`` itself — a bare ``sensei-top project`` run against a
+    keyed on ``(match_id, projection_state.projections)``: the view's
+    ``v_opponent_cards`` CTE can't push a ``match_id`` filter down (it
+    materializes every match's opponent-card history to answer a question
+    about one), and ``projections`` is a single-row read that moves exactly
+    when a rebuild commits, where ``COUNT(*) FROM card_events`` is an
+    unindexed scan of a table that grows every game. Both costs:
+    docs/current-match.md, "Wiring: one route".
+
+    Known narrow gap: ``projections`` is incremented by ``live.py``'s
+    watcher after each rebuild it drives (``LiveIngester.project_if_due``),
+    not by ``project()`` itself — a bare ``sensei-top project`` run against a
     database served by a *non*-``--watch`` ``serve`` process would not move
     this token. That combination is already a degenerate one for a *live*
     current-match read (nothing is ingesting in real time either), so it is
-    accepted here rather than paying back the cost this change removes."""
+    accepted rather than paying for a count on every request."""
     cache: dict[tuple[str, int], dict[str, Any] | None] = request.app.state.opponent_cache
     try:
         token = conn.execute(
@@ -324,8 +306,10 @@ def _cached_match_opponent(
         ).fetchone()
         token = token[0] if token else 0
     except sqlite3.OperationalError:
-        # Pre-026 database, or one no watcher has ever touched: fall back to
-        # the always-available (if pricier) signal rather than crash.
+        # A pre-026 database has no projection_state table (the API never
+        # migrates): fall back to the always-available, if pricier, signal
+        # rather than crash. One no watcher has touched has the table and no
+        # row, and reads 0 above.
         token = conn.execute("SELECT COUNT(*) FROM card_events").fetchone()[0]
     cache_key = (match_id, token)
     if cache_key not in cache:
@@ -352,35 +336,27 @@ def _cached_break_read(
 ) -> BreakRead | None:
     """``table.intermission.build_break_read`` for the current match's Bo3
     break, cached on ``app.state`` and keyed on everything that can change
-    its answer: which break this is (``match_id`` + the game number the
-    break follows), the opponent names revealed so far (``frozenset`` — a
-    zone reveal since the last poll invalidates the cache the same way a new
-    ``card_events`` row does), the last full projection
-    (``projection_state.projections`` — the same token
-    ``_cached_match_opponent`` above uses), and the reference data below (a
-    fresh ``sensei-top meta`` run can change which stored brief classifies
-    as the closest alternative). A 1 Hz poll
-    during a break should cost one replay — already paid for by the caller
-    to get ``live_state`` in the first place — plus a dictionary lookup, not
-    a second full opponent classification on every beat.
+    its answer, so a 1 Hz poll during a break costs one replay (already paid
+    for by the caller to get ``live_state``) plus a dictionary lookup, not a
+    second full opponent classification on every beat. What the key holds
+    and why: docs/current-match.md, "Wiring: one route".
+
+    ``opponent_deck_override`` and ``matchup_brief`` are in the key because
+    a manual pick, or a brief imported from the prompt this card offers, is
+    exactly what the user does *during* the break and must show at once —
+    and neither moves a projection token. The reference token below is in
+    it too: a fresh ``sensei-top meta`` run can change which stored brief
+    classifies as the closest alternative.
 
     ``build_break_read``'s own slower loads live in a second dict this
-    function keeps across polls and hands in as ``caches``: the classifier's
-    ``definitions``/``colors_by_name``/``prior`` and, per match, the brief
-    prompt, past boarding and the post-board record (``table/intermission.py``
-    says why those three hold still for a whole match). That dict is keyed
-    on the reference data alone — the corpus fetch, its classification stamp,
-    the stored archetype definitions and the card database — so a
-    reprojection during the break (the watcher rebuilds on every
-    intermission event) re-runs
-    only the cheap classification above, measured ~0.1s against ~2s cold,
+    function keeps across polls and hands in as ``caches``
+    (``table/intermission.py`` says why its per-match entries hold still for
+    a whole match). That dict is keyed on the reference data alone (the
+    corpus token and the ``archetypes`` and ``cards`` row counts), so a
+    reprojection during the break re-runs only the cheap classification,
     while a ``meta``/``archetypes``/``cards`` refresh still takes effect
-    without a restart.
-
-    ``opponent_deck_override`` and ``matchup_brief`` are in the key too: a
-    manual pick, or a brief imported from the prompt this card offers, is
-    exactly what the user does *during* the break and must show at once —
-    and neither moves a projection token.
+    without a restart. The costs: docs/current-match.md, "The break read
+    (`table/intermission.py`)".
 
     Returns ``None`` immediately, before touching any cache, when there is
     no live state or the match is not on a break right now — the common
@@ -410,9 +386,7 @@ def _cached_break_read(
         ).fetchone()
         projections_token: Any = projections_row[0] if projections_row else 0
     except sqlite3.OperationalError:
-        # Pre-026 database, or one no watcher has ever touched: fall back to
-        # the always-available (if pricier) signal rather than crash, same
-        # as _cached_match_opponent above.
+        # A pre-026 database: the same fallback as _cached_match_opponent.
         projections_token = conn.execute("SELECT COUNT(*) FROM card_events").fetchone()[0]
     override = conn.execute(
         "SELECT label, archetype_key FROM opponent_deck_override WHERE match_id = ?",
@@ -496,9 +470,8 @@ def _report_inputs_token(conn: sqlite3.Connection) -> tuple[Any, ...]:
     """Fingerprints every database input a completed match's ``MatchReport``
     (``review/match_report.py::build_match_report``, via every analyzer in
     ``review/analyzers/`` and ``archetypes/classify.py``'s ``rank_candidates``)
-    can read, cheap enough to check on every request: measured ~12 ms against
-    the ~28 ms a single ``build_match_report`` call costs and the 8 s
-    ``find_leaks`` paid rebuilding 270 of them from scratch on a real corpus.
+    can read, cheap enough to check on every request where rebuilding every
+    completed match's report (``find_leaks``) is not.
 
     Two things a completed match's report also touches are deliberately left
     out of this token:
@@ -517,12 +490,11 @@ def _report_inputs_token(conn: sqlite3.Connection) -> tuple[Any, ...]:
 
     ``opponent_archetype`` is digested on every column *except*
     ``classified_at``: ``classify_matches`` re-stamps that column on every
-    rebuild, including ones that changed no verdict, and the watcher
-    rebuilds every few seconds while Arena is open — keying on it would
-    empty this cache that often for no reason. ``matches``/``games``/
-    ``decks``/``opponent_deck_override``/``mtgo_match_pick``/
-    ``match_format_inference`` are digested on
-    every column, since any of them can change what a report says (a
+    rebuild, including ones that changed no verdict, so keying on it would
+    empty this cache as often as ``projections`` above would.
+    ``matches``/``games``/``decks``/``opponent_deck_override``/
+    ``mtgo_match_pick``/``match_format_inference`` are digested on every
+    column, since any of them can change what a report says (a
     corrected result, an edited deck list, a manual deck override, an MTGO
     match's picked deck, which ``v_match_deck`` reads in place of
     ``matches.deck_id``) without necessarily changing row counts.
@@ -530,11 +502,10 @@ def _report_inputs_token(conn: sqlite3.Connection) -> tuple[Any, ...]:
     ``turns``/``card_events``/``turn_zones``/``life_events``/
     ``damage_events``/``combat_attacks``/``combat_blocks`` use
     ``MAX(rowid)`` rather than ``COUNT(*)`` — each an O(log n) index lookup,
-    where ``COUNT(*)`` measured 65-82 ms on ``card_events`` alone
-    (``_cached_match_opponent``'s own docstring). Because ``project()``
-    always deletes and reinserts (non-negotiable #3), an unchanged rebuild
-    reproduces the same rowids, so this is not a weaker signal than a count
-    would be — just a cheaper one.
+    where ``COUNT(*)`` is a full scan (``_cached_match_opponent``). Because
+    ``project()`` always deletes and reinserts (non-negotiable #3), an
+    unchanged rebuild reproduces the same rowids, so this is not a weaker
+    signal than a count would be — just a cheaper one.
 
     The corpus, cards and archetype-definition fields mirror what
     ``review/consensus.py`` and ``archetypes/classify.py`` actually read:
@@ -627,22 +598,22 @@ def _shared_report_cache(
     request: Request, conn: sqlite3.Connection
 ) -> ReportCache:
     """The cross-request ``MatchReport`` cache that every ``find_leaks`` call
-    (``api/routes/review.py``), ``build_deck_guide``
-    (``guide/bundle.py``, via ``api/routes/guide.py``) and
-    ``build_coach_evidence`` (``coach/evidence.py``, via
-    ``api/routes/coach.py``) share, keyed by ``_report_inputs_token``. A
-    ``MatchReport`` depends only on the database and ``consensus_since``
+    (``api/routes/review.py``), ``build_deck_guide`` (``guide/bundle.py``,
+    via ``api/routes/guide.py``; via ``guide/rcq.py::build_rcq`` from
+    ``api/routes/rcq.py``; and directly from
+    ``api/routes/rcq.py::rcq_markdown``) and ``build_coach_evidence``
+    (``coach/evidence.py``, via ``api/routes/coach.py``) share, keyed by
+    ``_report_inputs_token``. A ``MatchReport`` depends only on the database
+    and ``consensus_since``
     (``review/leaks.py::find_leaks``'s own docstring) — and on the language
     its findings were written in, which is why its key
     (``review/leaks.py::report_cache_key``, read inside ``find_leaks`` and
     ``coach/evidence.py``, never here) carries the language: a page loaded
     in Portuguese and a prompt, always English, share this dict without
-    sharing a report. So it is safe to reuse
-    across requests and across these three callers as long as the token has
-    not moved — this turns "every Leaks/Guide/Coach page load rebuilds the
-    same ~270 reports from scratch" (measured 8 s on a real corpus) into
-    "the first request after something actually changed pays for it, and
-    every request after that until the next change is a dict lookup".
+    sharing a report. So it is safe to reuse across requests and across
+    these callers as long as the token has not moved: the first request
+    after something actually changed pays for every report, and every
+    request after that until the next change is a dict lookup.
 
     Only completed matches ever enter the inner dict: every current consumer
     already filters to them before calling ``build_match_report``
@@ -650,8 +621,8 @@ def _shared_report_cache(
     population is completed matches too), so an in-progress match's report —
     which *can* change from one poll to the next — never gets the chance to
     be cached stale. ``api/routes/matches.py``'s single-match report route
-    deliberately does not use this cache: one report there costs ~28 ms and
-    may be exactly the in-progress match this cache must never see.
+    deliberately does not use this cache: one report is cheap, and it may be
+    exactly the in-progress match this cache must never see.
 
     Held as ``(token, dict)`` on ``app.state.report_cache`` rather than a
     bare dict keyed by token, and *replaced* rather than cleared on a miss:

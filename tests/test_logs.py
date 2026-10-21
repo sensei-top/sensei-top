@@ -1,10 +1,10 @@
-"""The log file beside the database (``logs.py``, release plan 3, D10).
+"""The log file beside the database (``logs.py``).
 
-Every expectation here comes from D10 and the line format the plan fixes:
-UTC times, an 8-hex-char session id per launch, WARNING and up (DEBUG with
-``--verbose``), the home directory written as ``~``. The console and the file
-also take ``sensei_top.llm``'s INFO lines; the two tests of that take their
-expectations from plan fix-llm-console-line, S1 and D2. The watcher child's
+Every expectation here comes from the line format docs/architecture.md,
+"The log file", fixes: UTC times, an 8-hex-char session id per launch,
+WARNING and up (DEBUG with ``--verbose``), the home directory written as
+``~``. The console and the file also take ``sensei_top.llm``'s INFO lines,
+the cost of each generate call; two tests pin that. The watcher child's
 records reaching ``serve``'s file are tested against a real ``serve`` in
 ``test_live.py``, where its child runs.
 
@@ -154,7 +154,7 @@ def test_a_session_of_another_shape_is_ignored_with_a_warning(tmp_path, monkeypa
 def test_no_credential_reaches_the_file(tmp_path, flag, store, memory_keyring):
     """``--set-key KEY`` carries the key on argv, and ``--verbose`` opens the
     file to every level: the key must reach its store — the keyring when there
-    is one (conftest's), the config file when there is none (plan 6, D3) — and
+    is one (conftest's), the config file when there is none — and
     nothing else. Then ``config`` reads it back, as a user checking it would."""
     key = "sk-dummy-0123456789abcdef-not-a-real-key"
     if store == "file":

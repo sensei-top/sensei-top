@@ -1,13 +1,8 @@
-"""The corpus-refresh loop's one tick (plan 14, S6): which formats every
-refresh follows, which sources are due, and the reclassification a store
-leaves owing. The thread that calls it every few minutes lives in ``cli.py``;
-this module holds no thread and no clock of its own.
-
-A tick runs fbettega's cache, then mtgo.com, then TopDeck (D7), each through
-its own ``refresh_*`` function and therefore through its own freshness rule
-and, for mtgo.com and TopDeck, its hold's gate. The cadences are those
-functions' ``MAX_AGE_SECONDS``: 24 h, 3 h and 24 h. TopDeck with no key
-answers ``not_configured`` and makes no request.
+"""The corpus-refresh loop's one tick: which formats every refresh follows,
+which sources are due, and the reclassification a store leaves owing. The
+thread that calls it every few minutes lives in ``cli.py``; this module holds
+no thread and no clock of its own. See docs/metagame.md, "Fetching the
+corpus".
 
 Traps this module exists to avoid:
 
@@ -15,25 +10,25 @@ Traps this module exists to avoid:
    ``by_hand=False`` and no ``force``: a paused source stays paused until
    ``sensei-top meta`` is run by hand, and a stored not-before is the
    fetcher's to honour, never the loop's to second-guess.
-2. **Every attempted run that did not complete waits an hour** (S6): a
-   429, a refusal or mtgo.com's 503, events stored before it included; no
+2. **Every attempted run that did not complete waits an hour**: a 429, a
+   refusal or mtgo.com's 503, events stored before it included; no
    connection, a timeout, another 5xx; fbettega's GitHub unreachable; a
    refresh that raised. A run completed when it was stamped. ``fresh``,
    ``held`` and ``not_configured`` were no attempt and set no wait. The hour
-   is the loop's own courtesy and appears in no line (Fable, Q13.1 in
-   ``followup3.md``): D18 fixes only the stored not-before, TopDeck's own
-   time, which is what the lines and the Field page show.
+   is the loop's own courtesy and appears in none of ``fetch_lines``'s
+   lines: those and the Field page show only the stored not-before (for
+   TopDeck, TopDeck's own time).
 3. **A later stored not-before wins without the loop reading it.** The wait
    only stops the loop from calling a source; once it is over, the call goes
    through the gate, which holds the source for as long as its stored
    not-before is ahead (a 429 that asked for longer than the hour, say, or
    one a hand run of ``meta`` stored meanwhile).
-4. **Nothing changes because mtgo.com refused** (Q12, ``followup3.md``): the
-   cache keeps its 24 h cadence and its scope, MTGO paths included, while
-   mtgo.com is paused. No source's outcome triggers or widens another's run.
-5. **fbettega's freshness is its own** (defect 1). Unscoped,
-   ``cache_age_seconds`` is the oldest of every source, so a stale or paused
-   TopDeck made fbettega spend its GitHub calls on every tick.
+4. **Nothing changes because mtgo.com refused**: the cache keeps its own
+   cadence and its scope, MTGO paths included, while mtgo.com is paused. No
+   source's outcome triggers or widens another's run.
+5. **fbettega's freshness is its own.** ``refresh_metagame`` reads
+   fbettega's own stamp, never the unscoped ``cache_age_seconds`` (see its
+   docstring).
 6. **One source's exception is not another's.** A refresh that raises is
    logged and waits its hour; the sources after it still run this tick.
 7. **A store leaves a reclassification owing until one succeeds.** Stored
@@ -42,8 +37,8 @@ Traps this module exists to avoid:
    even if nothing new was stored.
 
 Clocks: ``now`` drives mtgo.com's and TopDeck's runs and the loop's waits.
-fbettega's freshness is judged on the wall clock, as ``refresh_metagame``
-always has.
+fbettega's freshness is judged on the wall clock: ``refresh_metagame`` takes
+no ``now``.
 """
 
 from __future__ import annotations
@@ -68,8 +63,8 @@ log = logging.getLogger(__name__)
 # holds.MTGO and holds.TOPDECK.
 FBETTEGA = "fbettega"
 
-# S6, D12: after an attempted run that did not complete, the loop leaves that
-# source alone this long (trap 2).
+# After an attempted run that did not complete, the loop leaves that source
+# alone this long (trap 2).
 BACKOFF = timedelta(hours=1)
 
 # reclassify_corpus's two steps, one caller at a time in this process: see
@@ -79,9 +74,9 @@ _RECLASSIFY_LOCK = threading.Lock()
 
 @dataclass
 class RefreshState:
-    """What the loop remembers between ticks, in memory only (D12). The
-    caller keeps one for as long as it loops; a new one remembers nothing,
-    as after a restart.
+    """What the loop remembers between ticks, in memory only. The caller
+    keeps one for as long as it loops; a new one remembers nothing, as after
+    a restart.
 
     ``backoff_until`` holds, per source, the time before which the loop does
     not call it again. ``reclassify_pending`` is set by a store and cleared by
@@ -93,9 +88,9 @@ class RefreshState:
 
 
 def followed_formats(conn: sqlite3.Connection, extra: Sequence[str] = ()) -> tuple[str, ...]:
-    """The formats a refresh fetches (D2, D8): ``FETCH_FORMATS``, every
-    format the stored corpus holds that is one of ``FORMATS``, and ``extra``,
-    in ``FORMATS`` order. Names match ``FORMATS`` in any case.
+    """The formats a refresh fetches: ``FETCH_FORMATS``, every format the
+    stored corpus holds that is one of ``FORMATS``, and ``extra``, in
+    ``FORMATS`` order. Names match ``FORMATS`` in any case.
 
     A stored format outside ``FORMATS`` is not followed. A name in ``extra``
     outside it raises ``ValueError``: ``meta --format`` refuses one before it

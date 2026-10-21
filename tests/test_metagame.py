@@ -1104,7 +1104,7 @@ def test_asked_formats_are_read_in_formats_spelling_ignoring_case():
     assert event is not None and event.format == "Modern"
 
 
-# --- read stamps and the empty-copy guard (plan 14, S2) -----------------------------
+# --- read stamps and the empty-copy guard -----------------------------------------
 
 
 def _stamped_event(event_id="e1", *, source_name="MTGO", sha="sha1", lists=True) -> ParsedEvent:

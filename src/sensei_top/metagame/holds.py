@@ -1,6 +1,7 @@
 """The hold a corpus fetcher keeps on a source that answered with something
-other than its pages (plan 14, S3): one ``meta_fetch_hold`` row per source,
-``mtgo`` or ``topdeck``, written by ``apply_outcome`` and read by ``gate``.
+other than its pages: one ``meta_fetch_hold`` row per source, ``mtgo`` or
+``topdeck``, written by ``apply_outcome`` and read by ``gate``. See
+docs/metagame.md, "A third source: mtgo.com".
 
 A hold is ``waiting`` (a 429 or a 503 asked the fetcher to come back later,
 and ``not_before`` says when) or ``paused`` (a refusal, a second 429 in a row,
@@ -14,18 +15,18 @@ Traps this module exists to avoid:
 2. **A time the server named is never breached.** mtgo.com's not-befores are
    rounded up to the minute (``ceil_min``) because the lines print minutes;
    TopDeck's is its own time, rounded up to the second and never raised to a
-   floor (D18). Rounding down would let a run start before the server's time.
+   floor. Rounding down would let a run start before the server's time.
 3. **Only first-request 503s count towards the pause.** A challenge page meant
    for browsers answers the very first request, run after run; an index that
    opens and a later page that does not is an outage behind a working front,
-   and restarts the count (k1).
+   and restarts the count.
 4. **A generic answer changes nothing.** A timeout, another status or no
    connection leaves the row exactly as it was, including ``last_status``:
    it says nothing about the site's pace, so it neither ends a wait nor
-   breaks a streak of 429s (Q13.5).
-5. **A refusal pauses from the moment it arrives** (k4), and a pause keeps
-   the date it began through every later answer (Q13.3); only its cause, and
-   a 429's or 503's not-before, move (k3).
+   breaks a streak of 429s.
+5. **A refusal pauses from the moment it arrives**, and a pause keeps the
+   date it began through every later answer; only its cause, and a 429's or
+   503's not-before, move.
 
 Times are aware UTC datetimes here and ``%Y-%m-%dT%H:%M:%SZ`` in SQLite, so a
 ``Hold`` that ``apply_outcome`` returns equals the one ``read_hold`` reads
@@ -54,14 +55,14 @@ SOURCES = (MTGO, TOPDECK)
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 # mtgo.com: a first 429 waits at least three hours, a 503 at least one; the
-# hour also keeps first-request 503s at least an hour apart (k2).
+# hour also keeps first-request 503s at least an hour apart.
 _MTGO_RATE_WAIT = timedelta(hours=3)
 _MTGO_UNAVAILABLE_WAIT = timedelta(hours=1)
 # A 429 with no Retry-After, once the source is paused or a second time in a
 # row; and TopDeck's 429 when it names no time of its own.
 _DEFAULT_RATE_WAIT = timedelta(hours=1)
-# The day rule (Q13.4, k2): three or more first-request 503s, 24 h after the
-# first of them, pause mtgo.com.
+# The day rule: three or more first-request 503s, 24 h after the first of
+# them, pause mtgo.com.
 _DAY_OF_503S_ANSWERS = 3
 _DAY_OF_503S_SPAN = timedelta(hours=24)
 
@@ -171,7 +172,7 @@ def _ahead(hold: Hold, now: datetime) -> bool:
 
 
 def gate(hold: Hold | None, *, now: datetime, by_hand: bool) -> Gate:
-    """Whether a fetch may be attempted (plan 14, S3, "The gate").
+    """Whether a fetch may be attempted.
 
     No hold, or a wait whose not-before has passed: the freshness rule
     decides, for the loop and a hand run alike. A wait still ahead, or a pause
@@ -215,9 +216,9 @@ def _write(conn: sqlite3.Connection, hold: Hold) -> None:
 
 
 def _refused(source: str, before: Hold | None, answer: Answer, now: datetime) -> Hold:
-    # From none or a wait, the pause begins now (k4); from a pause, the cause
-    # is replaced and the date kept (Q13.3). Either way no not-before: a
-    # refusal names no time.
+    # From none or a wait, the pause begins now; from a pause, the cause is
+    # replaced and the date kept. Either way no not-before: a refusal names
+    # no time.
     since = before.since if before is not None and before.status == HoldStatus.PAUSED else now
     assert answer.http_status is not None
     return Hold(
@@ -234,7 +235,7 @@ def _mtgo_rate(before: Hold | None, answer: Answer, now: datetime) -> Hold:
         )
         not_before = ceil_min(ra if ra is not None else now + _DEFAULT_RATE_WAIT)
     elif before is not None and before.http_status == RATE_STATUS:
-        # The second 429 in a row, wherever in the run it came (Q13.5).
+        # The second 429 in a row, wherever in the run it came.
         status, cause, answers, since = HoldStatus.PAUSED, RATE_STATUS, 0, now
         not_before = ceil_min(ra if ra is not None else now + _DEFAULT_RATE_WAIT)
     else:
@@ -255,7 +256,7 @@ def _mtgo_unavailable(
     counted = answer.first_request and not page_read
     if before is not None and before.status == HoldStatus.PAUSED:
         # The pause keeps its cause and date; a 503 sets the not-before only
-        # when it names one (k3).
+        # when it names one.
         return Hold(
             source=MTGO, status=before.status, http_status=before.http_status,
             answers=before.answers, since=before.since, last_status=UNAVAILABLE_STATUS,
@@ -264,7 +265,7 @@ def _mtgo_unavailable(
     floor = now + _MTGO_UNAVAILABLE_WAIT
     not_before = ceil_min(max(ra, floor) if ra is not None else floor)
     if before is None or before.http_status != UNAVAILABLE_STATUS:
-        # None, or a wait on a 429: a 503 starts a different wait (Q13.5).
+        # None, or a wait on a 429: a 503 starts a different wait.
         return Hold(
             source=MTGO, status=HoldStatus.WAITING, http_status=UNAVAILABLE_STATUS,
             answers=1 if counted else 0, since=now, last_status=UNAVAILABLE_STATUS,
@@ -272,7 +273,7 @@ def _mtgo_unavailable(
         )
     answers, since = before.answers, before.since
     if page_read:
-        answers = 0  # k1: a page read before the 503 restarts the count
+        answers = 0  # a page read before the 503 restarts the count (trap 3)
     elif counted:
         if answers == 0:
             since = now
@@ -292,7 +293,7 @@ def _mtgo_unavailable(
 
 def _topdeck_not_before(answer: Answer, now: datetime) -> datetime:
     # retryAfterSeconds, else the header, else an hour: TopDeck's own time,
-    # to the second, with no floor (D18). The body's seconds count from the
+    # to the second, with no floor (trap 2). The body's seconds count from the
     # response, not from whenever this runs.
     if answer.retry_after_s is not None:
         try:
@@ -330,8 +331,9 @@ def apply_outcome(
     completed: bool,
     now: datetime,
 ) -> Hold | None:
-    """Write the hold a run leaves behind, and return it (plan 14, S3,
-    "mtgo's transitions" and "TopDeck's transitions").
+    """Write the hold a run leaves behind, and return it: the transitions in
+    docs/metagame.md, "A third source: mtgo.com", and for TopDeck, "A second
+    source: TopDeck.gg".
 
     ``before`` is the hold the run started under (``read_hold``), ``answer``
     what ended it, ``page_read`` whether any page opened before the answer

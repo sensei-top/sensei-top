@@ -55,10 +55,11 @@ class Brief:
     corpus_commit: str | None
     list_hash: str
     source: str  # "live" | "guide"
-    # NULL for a hand-imported brief, or one written via `store_guide_matchups`
-    # -- the guide's one Claude call is priced once, on `deck_narrative`, and
-    # splitting it across the matchups it also filled would be a fabricated
-    # number rather than a measured one (AGENTS.md non-negotiable #4).
+    # NULL for an imported or pasted brief, and for one written via
+    # `store_guide_matchups` -- the guide's one Claude call is priced once, on
+    # `deck_narrative`, and splitting it across the matchups it also filled
+    # would be a fabricated number rather than a measured one (AGENTS.md
+    # non-negotiable #4).
     input_tokens: int | None = None
     output_tokens: int | None = None
     cost_usd: float | None = None
@@ -185,12 +186,10 @@ def write_brief(conn: sqlite3.Connection, brief: Brief) -> None:
 def is_stale(
     conn: sqlite3.Connection, brief: Brief, *, current_list_hash: str | None = None
 ) -> bool:
-    """Whether a stored brief no longer describes the situation it was
-    written for — either the 75 changed under it (so its board plan may name
-    cards the deck no longer holds) or the corpus moved (so the field it
-    reasoned about has shifted). Reported, never acted on: rewriting is the
-    reader's call, since writing is something they do, not something this
-    tool does.
+    """Whether ``brief`` was written for another 75 than
+    ``current_list_hash`` (compared only when given) or another corpus
+    snapshot than the one the database holds now (``corpus_commit``).
+    Reported, never acted on (the module docstring).
     """
     if current_list_hash is not None and brief.list_hash != current_list_hash:
         return True

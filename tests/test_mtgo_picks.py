@@ -1,4 +1,4 @@
-"""The pure grouping rule for waiting MTGO matches (plan 19, D2).
+"""The pure grouping rule for waiting MTGO matches.
 
 Hand-built inputs, one branch each. The rule knows no SQL and no files, so
 nothing here needs a fixture: the numbers are chosen to land on or beside a

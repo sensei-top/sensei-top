@@ -1800,10 +1800,10 @@ msgid "paper tournaments under 64 players"
 msgstr "torneios de papel com menos de 64 jogadores"
 
 #: sensei_top/table/keep.py
-msgid "play at 1-3 mana"
-msgid_plural "plays at 1-3 mana"
-msgstr[0] "jogada de 1 a 3 de mana"
-msgstr[1] "jogadas de 1 a 3 de mana"
+msgid "play at 1-2 mana"
+msgid_plural "plays at 1-2 mana"
+msgstr[0] "jogada de 1 a 2 de mana"
+msgstr[1] "jogadas de 1 a 2 de mana"
 
 #: sensei_top/review/analyzers/baseline.py
 msgid "players"

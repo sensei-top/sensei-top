@@ -490,8 +490,10 @@ timer," and it exists
 because the opening-hand read's decision window has a measured 5-second
 median in real play that the ~3s heartbeat alone would eat too much of. It
 used to gate on a match actually being in progress (a `matchInProgress`
-flag); that gate is gone, since the request it drives now costs 0.03-0.08s
-regardless (see `docs/frontend.md`, "Data fetching" and `docs/current-match.md`).
+flag); that gate is gone, since the request it drives replays only the
+current match (see `docs/frontend.md`, "Data fetching", and
+`docs/current-match.md`, "The live replay (`table/live.py`,
+`projector/live_state.py`)", for its cost).
 
 An AI-suggested line of play (`AskClaudeCard`) used to live in this tab too,
 asking *what should I do on this board right now* — a question the

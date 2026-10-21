@@ -1,4 +1,5 @@
-"""Picking the deck for many MTGO matches at once (plan 19).
+"""Picking the deck for many MTGO matches at once — docs/architecture.md,
+"Who owns which table".
 
 ``GET /api/mtgo/picks/candidates`` ranks every waiting MTGO match against the
 user's lists and groups them at request time (``mtgo/picks.py`` decides who
@@ -171,8 +172,8 @@ def mtgo_picks_candidates(conn: Conn) -> dict[str, Any]:
 def mtgo_picks_hints(conn: Conn) -> dict[str, Any]:
     """The archetype the engine reads from the user's own played cards, for
     partial groups (by group key) and unsure matches (by match id) only.
-    Slower than the groups (the corpus prior), so the page fetches it once
-    and joins it to groups it refetches; never stored."""
+    Slower than the groups (the corpus prior), so the page asks for it in
+    its own request once the groups have drawn; never stored."""
     conn.execute("BEGIN")
     try:
         return _hints(conn)

@@ -187,9 +187,7 @@ def rcq_preview(
 ) -> RcqPreviewOut:
     """The pasted 75 read back against the field, and the prompt that would
     be sent. Read-only; makes no call. 404 is an unknown deck."""
-    # One build serves both: the evidence is built in English, because the
-    # prompt quotes it, and _preview writes the page's own sentences in the
-    # request's language from the data behind them.
+    # One English build serves the prompt and the page (see _preview).
     with english():
         evidence = build_rcq(
             conn, key, decklist, list(expected or []), own,
@@ -222,8 +220,8 @@ def generate_rcq(
     except llm_client.LLMError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     try:
-        # English: the plan problems it finds are stored with the guide
-        # (plan S4, D-c), like every other stored prose.
+        # English: the plan problems it finds are stored with the guide,
+        # like every other stored prose.
         with english():
             narrative = rcq_from_json(completion.text, evidence)
     except NarrativeError as exc:
@@ -317,7 +315,7 @@ def rcq_markdown(key: str, request: Request, conn: Conn) -> RcqMarkdownOut:
             status_code=404,
             detail=_("No RCQ guide stored for {key}.").format(key=repr(key)),
         )
-    # English: the export is prompt input (plan D7), like the deck guide's.
+    # English: the export is prompt input, like the deck guide's.
     with english():
         deck_guide = build_deck_guide(
             conn, key, report_cache=_shared_report_cache(request, conn),

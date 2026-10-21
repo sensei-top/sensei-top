@@ -1,12 +1,10 @@
 """The match report's coaching prose, stored and read back.
 
 ``review/__init__.py``'s rule that findings are never persisted is about
-*derived* data — analyzer output that a later ``cards``/``decks`` fill-in
-could make wrong for matches computed before it. This table holds the
-opposite kind of thing: prose someone (or something, now that AGENTS.md
-non-negotiable #5 permits an opt-in Claude call) wrote once, from a prompt
-that is stored right beside it so a reader can always check the two against
-each other.
+*derived* data — analyzer output that a later change could make wrong for
+matches computed before it. This table holds the opposite kind of thing:
+prose written once (generated or pasted), from a prompt that is stored right
+beside it so a reader can always check the two against each other.
 
 ``context_hash`` plays the role ``matchup_brief.list_hash`` plays for a
 brief: a SHA-256 of the prompt context string itself, so any change to the
@@ -65,7 +63,7 @@ def write_match_narrative(
     cost_usd: float | None = None,
 ) -> None:
     """One row per match: re-generating replaces it, the same "write again
-    to revise" story ``deck_narrative`` and ``matchup_brief`` already use."""
+    to revise" story ``deck_narrative`` and ``matchup_brief`` use."""
     record = AuthoredRecord(
         prompt=prompt, model=model, generated_at=now_iso(),
         input_tokens=input_tokens, output_tokens=output_tokens, cost_usd=cost_usd,

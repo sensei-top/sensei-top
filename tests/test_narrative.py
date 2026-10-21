@@ -2,22 +2,16 @@
 already-computed MatchReport plus its MatchSnapshot, and the framing
 ``full_prompt`` wraps it with.
 
-This module used to be test_advisor.py, testing a live-board serializer.
-That serializer is gone along with the feature it fed; what survives here —
-unchanged in spirit — is the context-building coverage. The module itself no
-longer makes the call (that moved to ``sensei_top.llm`` — see
+The module makes no call itself (``sensei_top.llm`` does — see
 ``tests/test_llm.py`` for the credential-gating and fake-completion coverage
 around the actual call), so there is nothing here to fake an SDK response
-for any more.
+for.
 
-``test_narrative_context_never_carries_raw_board_state`` (checking for a
-literal zone dump like "your hand:") is retired along with the premise it
-tested: AGENTS.md rule 5 was rewritten to drop the enumerated-calls model,
-and this module now deliberately sends the game's shape on purpose. What
-replaces it is ``test_narrative_prompt_carries_no_local_paths`` — the one
-thing that would still be wrong to leak regardless of how much of the game
-itself is now sent, and load-bearing now that a configured credential means
-this text really can leave the machine.
+The context deliberately sends the game's shape.
+``test_narrative_prompt_carries_no_local_paths`` pins the one thing that
+would still be wrong to leak regardless of how much of the game itself is
+sent, and is load-bearing because a configured credential means this text
+really can leave the machine.
 """
 
 from __future__ import annotations
@@ -91,10 +85,9 @@ def test_narrative_context_lists_findings_with_their_anchor_and_caveats():
 
 
 def test_narrative_context_states_the_gaps_as_gaps_not_as_silence():
-    """Rule 4's 'not tracked' discipline, carried over from the retired
-    advisor's board context: what could not be evaluated must be named, not
-    silently omitted, so the model never assumes a gap means nothing
-    happened."""
+    """Rule 4's 'not tracked' discipline: what could not be evaluated must
+    be named, not silently omitted, so the model never assumes a gap means
+    nothing happened."""
     gap = Gap(analyzer="clock", reason="No damage was observed to either player.", game_number=1)
     context = narrative.build_narrative_context(_report(gaps=[gap]), _snap())
     assert "Not evaluated" in context

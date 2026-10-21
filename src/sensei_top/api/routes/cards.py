@@ -1,6 +1,7 @@
 """A card's pictures, cached on disk and fetched from Scryfall on first
 miss — the two routes in this layer that also write to disk outside
-SQLite (AGENTS.md non-negotiable #6).
+SQLite (AGENTS.md non-negotiable #6). See docs/architecture.md, "Who owns
+which table".
 """
 
 from __future__ import annotations
@@ -27,11 +28,9 @@ def _card_name(conn: sqlite3.Connection, grp_id: int) -> str | None:
 
 def _other_face(conn: sqlite3.Connection, grp_id: int) -> tuple[int, str] | None:
     """Another card of the same ``oracle_id`` under another name: the other
-    face of a card Scryfall knows only whole. A prepare card's spell
-    (Enroot, of "Carnivorous Cultivator // Enroot") has no Scryfall
-    ``arena_id`` and no exact match by its own name, but the creature's
-    name finds the card, and the card is one picture. NULL ``oracle_id``
-    (``cards --scryfall`` not run) matches nothing."""
+    face of a card Scryfall knows only whole, such as a prepare card's
+    spell. NULL ``oracle_id`` (``cards --scryfall`` not run) matches
+    nothing."""
     row = conn.execute(
         "SELECT other.grp_id, other.name FROM cards AS own"
         " JOIN cards AS other ON other.oracle_id = own.oracle_id AND other.name <> own.name"
@@ -71,12 +70,10 @@ def _picture(path: Path) -> FileResponse:
 @router.get("/api/cards/{grp_id}/image", tags=["cards"])
 def card_image(grp_id: int, request: Request, conn: Conn) -> FileResponse:
     """A card's picture, from the on-disk cache, fetched from Scryfall on
-    first miss (AGENTS.md rule 5's third sanctioned download). The reads
-    this route does — the card's own name, so Arena-exclusive printings
-    with no Scryfall arena_id can still be found by name (see
-    card_images.py), and its other face's (``_other_face``) — stay inside
-    query_only; the cache itself is plain files beside the database, so
-    that pragma is still the whole story for what can write to SQLite.
+    first miss (one of AGENTS.md rule 5's free downloads). Its database
+    reads, the card's own name (``card_images.py``'s by-name fallback) and
+    its other face's (``_other_face``), stay inside query_only; the cache is
+    plain files beside the database.
     404 covers "Scryfall has no image for this id under any name we
     tried" and "offline right now" alike; the dashboard falls back to
     the card's name either way. Sync def on purpose: FastAPI runs it in a

@@ -1,21 +1,14 @@
-"""The matchup and the role it demands — Flores' *Who's the Beatdown?* and
-Duke's *Role Assignment* made computable: "Misassignment of Role = Game
-Loss." Three signals, applied to each side's cards: more creatures usually
-means beatdown; more removal usually means control; more card draw and
-counterspells almost always means control.
+"""The matchup and the role it demands. See docs/review.md, "`frame.py` —
+the matchup, and the role it demands".
 
-Our own side reads from ``snap.own_cards`` — the *exact* decklist, weighted
-by real copy counts. The opponent's side reads from ``snap.opp_consensus``'s
-staples, weighted by how many of the field's own decklists for that
-archetype run each card — the best available substitute for a decklist we
-never get to see, and now a real creature-rate term rather than a fixed
-zero: ``ConsensusCard.type_line`` (added alongside this fix) lets the
-opponent's side use the same ``effects.is_creature`` check the own side
-already did, since without it "more creatures ⇒ beatdown" could only ever vote
-beatdown. Either side missing (an unclassified deck; a corpus too thin for
-a consensus), or a consensus that resolves but carries no signal at all
-(every rate at zero — a corpus of colorless artifacts, or a tagging gap),
-is a gap, not a guess at the role.
+Our own side reads ``snap.own_cards`` — the *exact* decklist, weighted by
+real copy counts. The opponent's side reads ``snap.opp_consensus``'s
+staples, weighted by how many of the field's decklists for that archetype
+run each card, and counts creatures through ``ConsensusCard.type_line``
+with the same ``effects.is_creature`` check. Either side missing (an
+unclassified deck; a corpus too thin for a consensus), or a consensus that
+resolves but carries no signal at all (every rate at zero — a corpus of
+colorless artifacts, or a tagging gap), is a gap, not a guess at the role.
 """
 
 from __future__ import annotations
@@ -39,8 +32,7 @@ from sensei_top.review.snapshot import MatchSnapshot, OwnCard
 ANALYZER = "frame"
 
 # Below this many cards contributing to a profile, the three shares are too
-# noisy to read a role from — the same sample-gating discipline the rest of
-# this package already applies (PLAY_DRAW_MIN_GAMES's precedent).
+# noisy to read a role from.
 MIN_PROFILE_CARDS = 6.0
 
 
@@ -98,13 +90,10 @@ _MULLIGAN_CAVEAT = N_(
 
 def _opening_findings(snap: MatchSnapshot) -> tuple[list[Finding], list[Gap]]:
     """Neutral context about how each game started: mulligans and the play/
-    draw assignment. No mana/land content (the user's own call — see
-    docs/review.md); no verdict on a mulligan, ever — this report is a
-    post-game read over projected data, and the pre-decision hand offer
-    that table/opening_hand.py reads live is never persisted anywhere the
-    projection can see (nor should it be — a review is for what happened,
-    not a re-litigation of a decision already made with the information
-    available at the time).
+    draw assignment. No mana/land content, and no verdict on a mulligan,
+    ever: the pre-decision hand offer table/opening_hand.py reads live is
+    never persisted anywhere the projection can see. Pinned by
+    ``test_the_report_never_judges_a_mulligan``.
     """
     findings: list[Finding] = []
     gaps: list[Gap] = []

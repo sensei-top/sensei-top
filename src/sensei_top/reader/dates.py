@@ -1,43 +1,18 @@
 """The ``auto`` day/month order: each header's date settled on its own.
 
-Arena writes a header in its *in-game* language, not the OS locale, and one
-file can switch shape mid-session (``reader/segmenter.py``'s module
-docstring). So no single order fits a file, let alone a machine: ``06/10/2026``
-is the 6th of October in a Spanish header and would be the 10th of June in an
-English one, and both can sit in the same ``Player.log``. ``--locale mdy`` and
-``dmy`` stay as overrides (``fixed_resolver``); ``auto``, the CLI's default,
-decides each header with the first of these that answers:
+See docs/arena-log.md, "Timestamps": the rule, its six numbered steps (the
+``# step N`` comments in ``auto_resolver``) and what ``header_date_order``
+holds. ``--locale mdy``/``dmy`` stay as overrides (``fixed_resolver``).
 
-1. A year-first shape (Japanese, Korean): read as written.
-2. Only one order gives a real date (a field above 12): that one.
-3. Both orders give the same date (equal fields): that one.
-4. The reading inside the file's window: from its last write minus 7 days to
-   its last write plus 1 day, both naive local time like the header. A
-   header's two readings are at least 27 days apart (2/3 against 3/2), so at
-   most one fits. For the live watcher the last write is seconds old, so this
-   decides every header of a session up to a week long.
-5. The order this database learned for the shape.
-6. None, with a warning: never a guess (rule 4). A ``HeaderStamp`` always has
-   a real date in at least one order, so a stamp reaching this step reads as
-   a date either way, which is what the warning says.
+Two contracts the doc doesn't spell out at this level:
 
-Steps 2 and 4 teach: each is evidence about the shape's order, where 1 and 3
-say nothing about it and 5 is the learned order itself. The order lives in
-``header_date_order``, one row per shape key, written only when it changes.
-The resolver runs inside ``ingest_file``'s transaction, so what it learns
-commits or rolls back with the read's rows and ``ingest_state``. What a read
-learns applies to its own later headers; there is no second pass, so an
-earlier None in the same read stays None. It is reader state like
-``ingest_state``: ``project()`` never reads or deletes it.
+- A ``HeaderStamp`` always has a real date in at least one order, so a stamp
+  reaching step 6 reads as a date either way, which is what its warning says.
+- The resolver runs inside ``ingest_file``'s transaction, so what it learns
+  commits or rolls back with the read's rows and ``ingest_state``.
 
-A header that settles its shape against the learned order is a contradiction:
-it warns, and the new order is learned, because the latest evidence wins.
-Rows already stored never change.
-
-Known edge: an entry stored None by step 6 gets a dated twin if the same bytes
-are read again once the order is known (``ingest --file`` reads from the
-start), because the digest includes ``logged_at``. ``raw_events.header``
-keeps the stamp as written so a later fix can re-derive it; nothing here does.
+An entry stored with no time can get a dated twin on a later read
+(docs/status.md, "Correctness: latent or unmeasured").
 """
 
 from __future__ import annotations

@@ -32,7 +32,8 @@ T = datetime(2026, 10, 5, 14, 0, tzinfo=UTC)
 STAMP = "2026-10-05T14:00:00Z"
 H = timedelta(hours=1)
 # A run completed earlier the same day: the gap is closed, so a run at T reads
-# no month page (S4, "The gap"), and the stamp is too old to be fresh.
+# no month page (docs/metagame.md, "A third source: mtgo.com"), and the stamp
+# is too old to be fresh.
 EARLIER = T - 10 * H
 EARLIER_STAMP = "2026-10-05T04:00:00Z"
 # A run completed on 2026-09-28: at T the gap starts that day, so the one
@@ -266,7 +267,7 @@ def _reset_on(conn, fmt: str, day: str, *, source: str = "MTGmelee") -> None:
         )
 
 
-# --- R3 (D10): the stored leagues read again ----------------------------------
+# --- the stored leagues read again -------------------------------------------
 
 
 def test_todays_league_is_read_again_on_every_run_and_nothing_else_stored(conn):
@@ -509,7 +510,7 @@ def test_refresh_fetches_only_the_asked_formats_pages(conn):
     assert [r["format"] for r in conn.execute("SELECT format FROM meta_event")] == ["Pauper"]
 
 
-# --- The answers (plan 14, S4): the index and an event page ---------------
+# --- The answers: the index and an event page ------------------------------
 
 
 @pytest.mark.parametrize(
@@ -567,7 +568,7 @@ def test_a_gone_or_failing_index_is_a_generic_answer(conn, code):
         (403, HoldStatus.PAUSED, None),
         (451, HoldStatus.PAUSED, None),
         (429, HoldStatus.WAITING, T + 3 * H),
-        # The index opened first, so this 503 does not count (k1).
+        # The index opened first, so this 503 does not count.
         (503, HoldStatus.WAITING, T + H),
         (500, None, None),  # generic: no hold
     ],
@@ -604,7 +605,7 @@ def test_an_answer_at_an_event_page_ends_the_run_and_keeps_what_it_parsed(
 @pytest.mark.parametrize(("at_index", "answers"), [(True, 3), (False, 0)])
 def test_a_503_counts_only_before_any_page_opened(conn, at_index, answers):
     """Two first-request 503s already counted: a third at the index makes
-    three; one after the index opened restarts the count (k1)."""
+    three; one after the index opened restarts the count."""
     _hold(conn, "waiting", 503, answers=2, since=T - 2 * H, not_before=T - H)
     _stamp_at(conn, EARLIER)
     pages: dict[str, str | BaseException] = {INDEX: _http_error(INDEX, 503)}
@@ -709,7 +710,7 @@ def test_requests_are_a_second_apart(conn):
     assert len(calls) == 3 and sleeps == [1.0, 1.0]
 
 
-# --- The month pages (plan 14, S4): their answers, and the gap fill -------
+# --- The month pages: their answers, and the gap fill ----------------------
 
 
 @pytest.mark.parametrize(
@@ -719,7 +720,7 @@ def test_requests_are_a_second_apart(conn):
         (403, HoldStatus.PAUSED, None),
         (451, HoldStatus.PAUSED, None),
         (429, HoldStatus.WAITING, T + 3 * H),
-        # The index opened first, so this 503 does not count (k1).
+        # The index opened first, so this 503 does not count.
         (503, HoldStatus.WAITING, T + H),
         (500, None, None),  # generic: no hold
     ],
@@ -778,7 +779,7 @@ def test_a_month_page_timing_out_twice_ends_the_run(conn):
     ids=["404", "410", "redirect", "no-link", "undecodable"],
 )
 def test_a_month_page_gone_redirected_unlinked_or_undecodable_is_skipped(conn, caplog, page):
-    """Such a month page is skipped with a warning (D19 for the redirect),
+    """Such a month page is skipped with a warning (a redirect counts as gone),
     and the run reads the index's league and completes. A month page is not
     an event, so it does not count as a skipped one."""
     _stamp_at(conn, LAST_MONTH)
@@ -992,7 +993,7 @@ def test_a_404_on_a_stored_event_records_it_gone(conn):
 
 
 def test_a_redirect_off_an_event_page_is_gone_and_never_unparsable(conn):
-    """D19. Two unparsable pages, the redirect, then a good page: were the
+    """A redirect counts as gone. Two unparsable pages, the redirect, then a good page: were the
     redirect the third unparsable page in a row, the run would end before
     the good one."""
     _stamp_at(conn, EARLIER)
@@ -1000,8 +1001,8 @@ def test_a_redirect_off_an_event_page_is_gone_and_never_unparsable(conn):
     fetch, _ = _fake_site({INDEX: _index_for(TODAYS_LEAGUE), _url(TODAYS_LEAGUE): league})
     _run(conn, fetch, at=T - 6 * H)
 
-    # Dated today, like the league R3 reads again, so they come before it:
-    # a day's pages keep their order, the index's before R3's.
+    # Dated today, like the stored league read again, so they come before it:
+    # a day's pages keep their order, the index's before the re-read league.
     u1 = "standard-challenge-32-2026-10-0512855501"
     u2 = "standard-challenge-32-2026-10-0512855502"
     redirect = mtgo_site.RedirectedError(_url(TODAYS_LEAGUE), INDEX, b"<html>the index</html>")

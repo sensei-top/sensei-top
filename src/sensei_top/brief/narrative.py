@@ -7,41 +7,39 @@ from two decklists and the field — never a game.
 guide (``docs/llm.md``) — this feature has no generate button at all.**
 ``build_brief_context`` assembles the evidence and ``full_prompt`` wraps it
 with the framing; ``sensei-top brief --deck KEY --archetype KEY --prompt``
-prints it, a Claude Code session on an already-paid-for subscription (or any
-assistant) writes the answer, and ``--import FILE`` reads it back into
-``matchup_brief`` where the Current match tab picks it up. A generated or
-imported deck guide (``POST /api/guide/{key}/narrative`` or ``guide
---import``) fills the same table for every matchup it covers, so most
-briefs arrive that way without any per-matchup work at all — which is
-exactly why a standalone generate button here would mostly duplicate a
-call the guide already made.
+prints it (a pairing's page and the Live page offer the same text), any
+assistant writes the answer, and ``--import FILE`` or the brief card's
+``PUT`` reads it back into ``matchup_brief``, where the Live page picks it
+up. A generated, pasted or imported deck guide fills the same table for
+every matchup it covers (``brief/from_guide.py``). See docs/brief.md,
+"Prompt out, answer in — this feature has no generate button".
 
-**The property that makes this cheap to produce and safe to store is that a
-brief is a function of ``(deck, archetype)``, never of a game.** No board
-state, no turn, no life total, no hand, no match id ever appears in the
-prompt this module builds — ``tests/test_brief_context.py`` pins that. It is
-why one authored brief is reusable across every future match against that
-archetype rather than being written per game, and why the earlier live
-advisor's objection (see ``review/narrative.py``) does not apply: that asked
-what to do on a board it could not see; this asks what a decklist does to
-another decklist.
+**A brief is a function of ``(deck, archetype)``, never of a game.** No
+board state, no turn, no life total, no hand, no match id ever appears in
+the prompt this module builds — ``tests/test_brief_context.py`` pins that.
+It is why one authored brief is reusable across every future match against
+that archetype, and why the objection that retired the mid-match advisor
+does not apply (docs/brief.md, "Why this question is worth writing down
+once").
 
-**What is sent** (``build_brief_context``): the player's current 75 with
-oracle text, the opponent archetype's label and windowed field share, its
-consensus staples (at most ``BRIEF_MAX_STAPLES``) with oracle text, the
-player's own record against that archetype with this deck, and one ranked
-field record for the pairing when the corpus has one
+**What is sent** (``build_brief_context``): the deck's name, one sentence
+on what window the field numbers span (``_window_note``), the player's
+current 75 with oracle text, the opponent archetype's label and windowed
+field share, its consensus staples (at most ``BRIEF_MAX_STAPLES``) with
+oracle text, the player's own record against that archetype with this deck,
+and one ranked field record for the pairing when the corpus has one
 (``metagame.matchup.ranked_field_matchup``, walking Tier A, then B, then D
 and naming whichever it lands on). A closing "not given to you"
 block names everything about an in-progress game that is deliberately
 absent, so whoever writes the brief is never left to assume silence means
-something happened.
+something happened. ``full_prompt`` adds the framing and the answer
+contract (``answers.py``); ``full_multi_prompt`` sends the same per-matchup
+sections for several archetypes at once.
 
-**What comes back**: the JSON object ``_BRIEF_TOOL``'s schema describes —
-still the contract, now for an import rather than a forced tool call.
-``brief_from_json`` parses it; ``brief/worker.py``'s import path validates
-the plan against the real 75 via ``guide.plans.validate_plans`` before it is
-ever stored.
+**What comes back**: the JSON object ``_BRIEF_TOOL``'s schema describes.
+``brief_from_json`` parses it; ``brief/importer.py`` validates the plan
+against the real 75 via ``guide.plans.validate_plans`` before it is ever
+stored.
 """
 
 
@@ -139,7 +137,7 @@ _BRIEF_TOOL = {
 @dataclass(frozen=True, slots=True)
 class BriefFacts:
     """The structured numbers behind the prose — stored alongside a
-    generated brief so the frontend can show a share and a personal record
+    brief so the frontend can show a share and a personal record
     without parsing them back out of text, and computed here from the same
     two queries the prompt's own sentences are built from, so the two can
     never disagree."""
@@ -154,19 +152,16 @@ class BriefFacts:
 def _archetype_share(
     conn: sqlite3.Connection, archetype_key: str, fmt: str, *, since: str | None
 ) -> float | None:
-    """Share is always computed within the current format-reset window
-    (``since``, when one is detected) — never the whole corpus. Pooling
-    across an undetected reset is exactly the failure ``guide/window.py``
-    exists to prevent (``docs/metagame.md``'s "format-reset boundary"); a
-    live brief is not exempt from that discipline just because it skips the
-    guide's other, more expensive machinery.
+    """``archetype_key``'s share of ``fmt``'s classified field, always
+    within the current format-reset window (``since``, from
+    ``_current_window_start``) — never the whole corpus.
 
-    The denominator is ``guide/field.py``'s own ``_classified_deck_total``
-    — the single source for the truncated-denominator guard both modules
-    used to warn about separately. Only the denominator is shared: this
-    function's own count below is scoped to one ``archetype_key`` with no
-    top-N truncation, unlike ``_shares_for_window``'s name-keyed, capped
-    list, so there is no shared count query to converge on.
+    The denominator is ``guide/field.py``'s own ``_classified_deck_total``,
+    the single source for its truncated-denominator guard. Only the
+    denominator is shared: this function's own count below is scoped to one
+    ``archetype_key`` with no top-N truncation, unlike
+    ``_shares_for_window``'s name-keyed, capped list, so there is no shared
+    count query to converge on.
     """
     where, params = field_window(fmt, since)
 
@@ -188,8 +183,10 @@ def _current_window_start(conn: sqlite3.Connection, fmt: str) -> str | None:
     guide's more expensive ``structural_change`` (which archetype changed
     shape at the reset), but it must never skip the window itself: an
     un-windowed consensus or share is exactly the mistake the hand-written
-    guide made once (``docs/guide.md``'s "Why this exists"). ``None`` does
-    not mean "no reset happened" — see ``_window_note``."""
+    guide made once (``docs/guide.md``'s "Why this exists"), and the failure
+    ``guide/window.py`` exists to prevent. ``None`` does not mean "no reset
+    happened" — see ``_window_note``. See docs/brief.md, "Never pooled
+    across an undetected reset either"."""
     resets = format_resets(conn, fmt)
     if not resets:
         return None
@@ -476,9 +473,7 @@ def full_multi_prompt(
     prompt uses, and ``brief/importer.py`` stores each answer through the
     single-brief path — so a brief written from this prompt is stored with
     exactly the context and facts a one-at-a-time import would have given
-    it.
-
-    ``None`` too when the deck's format is unknown."""
+    it. ``None`` too when the deck's format is unknown."""
     if fmt is None:
         fmt = identity_format(conn, identity)
     if fmt is None:
@@ -598,8 +593,9 @@ def full_prompt(
 
 
 def brief_from_json(raw: str | dict) -> dict:
-    """Parse an authored brief into the same dict shape the removed API call
-    used to return. Raises ``NarrativeError`` on anything malformed."""
+    """Parse an authored brief into ``{prose, play_around, board_in,
+    board_out}``, the last three as tuples of ``PlayAround`` and
+    ``BoardCard``. Raises ``NarrativeError`` on anything malformed."""
     raw = _parse_json_object(raw)
     try:
         return {

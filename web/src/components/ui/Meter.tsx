@@ -12,7 +12,7 @@ const METER_FILL = {
  *  half its height (4 px at the default) — absorbing the ad-hoc
  *  `h-1.5 rounded-full` tracks that used to be hand-rolled in `OpponentRead`
  *  (the fit bar), `KeepGuideCard` (land-odds bars), `LibraryCard` (odds
- *  tiles), `OpponentDeckLabel` (the picker's fit bar) and `PoolReadCard`
+ *  tiles), `OpponentDeckLabel` (the picker's fit bar) and `ColorBars`
  *  (colour bars). `TwoSidedMeter` and `IntervalBar` below are a different
  *  shape (two fills, or a band-plus-tick) but share this same track
  *  language rather than inventing their own. */

@@ -1,8 +1,7 @@
 """Sideboard diffing: resolving a grpId-count delta between two decklists
 into named cards. Shared by the post-match ``/api/matches/{id}/sideboarding``
-route and the live break read (``table/intermission.py``) — moved here
-(out of ``api/sql.py``) because the break read needs it and ``table/`` must
-never import from ``api/``.
+route and the live break read (``table/intermission.py``); it lives in
+``table/`` because ``table/`` must never import from ``api/``.
 """
 
 from __future__ import annotations

@@ -1,5 +1,6 @@
 """The ``/api/metrics/*`` winrate/curve endpoints — each a thin ``SELECT``
-over one metric view (``docs/architecture.md``'s "views versus Python").
+over one metric view. See docs/architecture.md, "Aggregation: views versus
+Python".
 """
 
 from __future__ import annotations
@@ -29,12 +30,11 @@ def winrate(
     event_id: Annotated[str | None, Query(description="restrict to one event")] = None,
     source: SourceFilter = "arena",
 ) -> list[dict[str, Any]]:
-    """Metric 1: winrate by deck, match- and game-level.
+    """Winrate by deck, match- and game-level.
 
     One row per deck (an Arena deck, or an MTGO deck the user picked for a
     match), not per maindeck content hash: a single card swap mints a new
-    deck_id, so grouping on the hash splits one deck into a row per version
-    (nine, for this project's own most-played deck).
+    deck_id, so grouping on the hash splits one deck into a row per version.
     Both filters apply before the rollup, so deck_id still means one
     content hash — matching the deck selector, which emits exactly that.
 
@@ -129,7 +129,7 @@ def winrate_by_rank(conn: Conn, source: SourceFilter = "arena") -> list[dict[str
 def play_draw(
     conn: Conn, deck_id: DeckFilter = None, source: SourceFilter = "arena"
 ) -> list[dict[str, Any]]:
-    """Metric 2: winrate on the play vs on the draw, per game.
+    """Winrate on the play vs on the draw, per game.
 
     Matches with no deck, an MTGO match with no picked deck among them, share
     the rows whose ``deck_id`` is null. The view groups per source, and those
@@ -156,7 +156,7 @@ def play_draw(
 def game_length(
     conn: Conn, deck_id: DeckFilter = None, source: SourceFilter = "arena"
 ) -> list[dict[str, Any]]:
-    """Metric 3a: game length in player-turns, with winrate per bucket.
+    """Game length in player-turns, with winrate per bucket.
     Deckless matches are added together across sources, as in play-draw."""
     sql, params = _filtered(
         """
@@ -178,7 +178,7 @@ def game_length(
 def turn_curves(
     conn: Conn, deck_id: DeckFilter = None, source: SourceFilter = "arena"
 ) -> list[dict[str, Any]]:
-    """Metric 3b: per-deck life/hand/board averages by player-turn."""
+    """Per-deck life/hand/board averages by player-turn."""
     sql, params = _filtered(
         """
         SELECT v.deck_id, d.name AS deck_name, v.turn_number, v.samples,
@@ -203,8 +203,8 @@ def matchups(
     the entire reason this is worth grouping. Deckless matches are added
     together across sources, as in play-draw; the view names a key once per
     format across every source, so its label is the same on both rows. One
-    row per format too (D14): matches with no resolved format share one row
-    per key and deck.
+    row per format too: matches with no resolved format share one row per
+    key and deck.
     """
     sql, params = _filtered(
         """

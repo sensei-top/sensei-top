@@ -29,14 +29,22 @@ which the dashboard, the brief and the match report reach for them:
 | **C** — MTGO league | any event without standings | `Standings` empty — every deck's `Result` is literally `"5-0"` | **Presence only.** A league dump contains no losses anywhere in it — a win rate computed from one would be 100% by construction, not an approximation |
 | **D** — paper, under 64 players | Melee or TopDeck event | `Standings` has 1–63 rows | Meta share, win rate, matchups |
 
+The three shapes were verified against real cache files on 2026-08-18: a
+Melee swiss event (`summer-wind-championship-standard-447528`) carried 9
+full rounds, 132 matches and complete standings for 40 players; an MTGO
+challenge (`modern-challenge-64-2026-08-1712851686`) carried full standings
+but only 3 rounds, the published top-8 bracket rather than the swiss behind
+it; and an MTGO league (`standard-league-2026-08-1711015`) carried zero
+standings and zero rounds, every deck's `Result` literally `"5-0"`.
+
 The ranking is the user's call, made on 2026-09-29: a large paper event
 first, then the online events, then the small paper ones. A 64-player swiss
 is six or more rounds with a field wide enough to mean something; a
 twelve-player store championship is not a better read on the format than an
 MTGO challenge, even though its rounds are complete.
 
-The tier is no longer decided from shape alone. Size cannot tell a small
-paper swiss from a challenge, and MTGO publishes only a challenge's top 32
+Shape alone does not decide the tier. Size cannot tell a small paper
+swiss from a challenge, and MTGO publishes only a challenge's top 32
 standings, so its real field size is not in the file at all. The source is
 consulted for exactly one thing: whether an event with standings is MTGO
 (B) or paper (A or D). Melee and TopDeck are both treated as paper; Melee
@@ -53,19 +61,20 @@ a tier may *say*. This is enforced **structurally**, in the views
 `WHERE tier IN ('A', 'B', 'D')` means there is no SQL path from a Tier C
 event to a win-rate number, ever.
 
-Every event with standings used to be A or B and is now A, B or D, so any
-reader that pools the tiers with standings — the win-rate card, consensus,
-the guide and the coach — gives the same totals as before. Only a reader
-that picks one tier changes:
+A reader that pools tiers gives the same totals whatever their order: the
+win-rate card pools the three tiers with standings (A, B and D), and
+consensus and the guide's and coach's field shares pool all four
+(`review/consensus.py`, `guide/field.py`). Only a reader that picks one tier
+depends on the order:
 
 - **The share of the field** (Field and Home) shows the first tier with
   lists in the window, A, then B, then C, then D.
 - **One quoted matchup number** — the live brief's field record and the
   match report's — walks the tiers with rounds, A, then B, then D, and
   takes the first with at least five matches for the pairing
-  (`metagame/matchup.py`), naming the tier it came from. With none that
-  large it takes the highest-ranked tier that has any, so the "too few"
-  gap still says how few.
+  (`metagame/matchup.py`), naming the tier it came from and never blending
+  two. With none that large it takes the highest-ranked tier that has any,
+  so the "too few" gap still says how few.
 - **The Field page's matchup table** counts paper 64+ alone, then adds
   MTGO challenges, then smaller paper, one step at a time, defaulting to
   the first step with lists.
@@ -181,7 +190,7 @@ narrow, recent-window refresh must not erase events an earlier,
 wider-windowed refresh already stored. Each event replaces only its own
 rows, keyed on `event_id` (the file's own path, already globally unique).
 
-**The refresh runs on its own while `serve` runs** (plan 14, D7 and D13),
+**The refresh runs on its own while `serve` runs**,
 with or without `--watch`, unless `--no-corpus-refresh` is given. A thread
 of its own, "corpus-refresh" (`cli.py::_start_corpus_refresh`), ticks every
 five minutes, the first time at startup, and each tick calls
@@ -194,7 +203,7 @@ configured. The loop never forces a run and never shortens a hold ("A third
 source: mtgo.com" below): a paused source stays paused until `sensei-top
 meta` is run by hand. A run that was attempted and did not complete — a
 refusal, a 429, a 503, a timeout, no connection, GitHub unreachable, an
-exception — leaves that source alone for an hour (D12). The hour is kept in
+exception — leaves that source alone for an hour. The hour is kept in
 memory, so a restart forgets it, while a stored not-before outlives the
 restart. One source's failure never stops the others in the same tick. A
 tick that stored events then runs `reclassify_corpus` (dedup, then
@@ -204,7 +213,7 @@ a hold. Every other run that was attempted is logged as a warning
 (`cli.py::_log_corpus_result`), which the log file beside the database
 always takes, and the console only under `sensei-top --verbose serve`.
 
-**Which formats a refresh fetches** (plan 13, D10; plan 14, D2 and D8):
+**Which formats a refresh fetches**:
 `metagame/auto.py::followed_formats`. Standard and Modern always
 (`metagame/source.py::FETCH_FORMATS`), plus every format of
 `formats.FORMATS` the stored corpus already holds an event in, so a
@@ -222,15 +231,18 @@ follow the same list.
 
 ## Duplicate tournament events
 
-The mirror sometimes publishes one tournament under two or three paths —
+The mirror sometimes publishes one tournament under two or more paths —
 different `event_id`s and blob SHAs, but byte-identical decklists and
 rounds. Nothing in `select_paths` or `store_events` catches this, since each
 path looks like a distinct file; measured on the real database (2026-09,
 371 events / 12,170 decks): 43 groups of identical events (35 pairs, 7
 triples, 1 quadruple) — 52 surplus events and 1,338 surplus decks (11% of
-the corpus). Left alone, every copy is stored and counted again, inflating
-field share, field win rate, the consensus decklists and the matchup matrix
-everywhere they are read.
+the corpus). By tier, 32 groups were Tier B (MTGO challenges), 10 Tier C
+(leagues) and 1 Tier A, tiers as they were before migration 047; by source,
+41 were MTGO and 2 MTGmelee. In all 43 the rounds (`meta_round_match`) were
+identical as well as the decks. Left alone, every copy is stored and counted
+again, inflating field share, field win rate, the consensus decklists and
+the matchup matrix everywhere they are read.
 
 `metagame/dedup.py::mark_duplicate_events` finds these groups by hashing
 `format`, `tier`, every deck (ordered by `deck_ord`) and every round match
@@ -241,8 +253,10 @@ measured difference to the grouping, a cross-source twin (the same
 tournament mirrored under both an MTGO and an MTGmelee path) is still a
 twin once the standings match, and — the one that actually matters — 10 of
 the 43 real groups were Tier C leagues **republished under a later date
-folder**, with a different `Tournament.Date` too. Including the date in the
-key would let exactly those slip through undetected.
+folder**, with a different `Tournament.Date` too (one league's file,
+`standard-league-2026-06-0810660.json`, sat under both the 2026/06/08 and
+the 2026/06/10 folders). Including the date in the key would let exactly
+those slip through undetected.
 
 Each group's survivor is `min(event_id)` — the file path sorts by source
 folder, then date: within one source the survivor is the group's earliest
@@ -263,10 +277,13 @@ unfetched and get downloaded again. Only the handful of readers that query
 coach's `MAX(event_date)` reads — filter `WHERE duplicate_of IS NULL`,
 since a republished league's date can be later than its own survivor's.
 
-`sensei-top meta` calls `mark_duplicate_events` once per invocation,
-after any refresh and before `classify_meta_decks` — including the
-`--reclassify` path, which is how an existing corpus gets cleaned with no
-network at all. `store_events` keeps this self-correcting across refreshes:
+`mark_duplicate_events` runs inside `metagame/auto.py::reclassify_corpus`,
+just before `classify_meta_decks`. `sensei-top meta` calls that once per
+invocation, after any refresh — including the `--reclassify` path, which is
+how an existing corpus gets cleaned with no network at all — and `serve`
+calls it after a corpus-refresh tick that stored events ("Fetching the
+corpus" above) and after an archetype refresh that brought new definitions.
+`store_events` keeps this self-correcting across refreshes:
 re-storing an event resets its own `duplicate_of` to `NULL` (judged afresh),
 and re-storing a survivor whose content changed clears its twins'
 `blob_sha` so the next refresh re-fetches and re-judges them against the
@@ -313,8 +330,9 @@ shape `parse_event` already parses `ParsedEvent.source` out of) and a
 completed tournament has no git blob of its own to compare against.
 
 **The privacy guarantee (see above) is inherited, not reimplemented.** A
-TopDeck standings row and round table carry a real player name and account
-id. Both are used purely as an in-memory join key — mapped into the same
+TopDeck standings row and round table carry a real player name, and a round
+table an account id too. Only the name is read, purely as an in-memory join
+key — mapped into the same
 `CacheItem["Decks"][i]["Player"]` field `parse_event` already resolves to a
 `deck_ord` and discards — so nothing in `topdeck.py` has to re-earn the
 "no third-party identifier reaches SQLite" guarantee; it falls out of reusing
@@ -323,8 +341,8 @@ way `test_parse_event_never_retains_a_player_name` does for the fbettega side.
 
 **Credential, deliberately not the metered kind.** TopDeck's key is free and
 rate-limited (~100 requests/minute), not billed — it exists for attribution
-and abuse prevention, not cost. AGENTS.md non-negotiable #5 was narrowed to
-say so explicitly: `llm/config.py` remains the only place a *metered*
+and abuse prevention, not cost. AGENTS.md non-negotiable #5 says so
+explicitly: `llm/config.py` is the only place a *metered*
 credential is resolved, and TopDeck's key is resolved by its own sibling,
 `metagame/config.py` (`TOPDECK_API_KEY` env var, else the system keyring
 (service `sensei-top`), else a `[topdeck]` table in the same
@@ -351,10 +369,10 @@ TopDeck.gg.", linked, with a second line linking the event on TopDeck.gg
 
 **Per-source freshness**, not a second freshness column bolted onto
 `meta_fetch`: `migrations/022_meta_source_fetch.sql` adds
-`meta_fetch_source`, one row per source (`fbettega`, `topdeck`, and `mtgo`
-since mtgo.com became a source), which `refresh_metagame` now writes to in
+`meta_fetch_source`, one row per source (`fbettega`, `topdeck` and `mtgo`),
+each written by its own refresh; `refresh_metagame` writes fbettega's in
 addition to (never instead of) `meta_fetch`'s own single-row reproducibility
-record. `cache_age_seconds` gained a `source=` parameter: scoped, it reads
+record. `cache_age_seconds` takes a `source=` parameter: scoped, it reads
 one source's row; unscoped, it returns the *oldest* (most stale) age across
 every source that has ever been fetched, so the Field page's one freshness
 sentence can never hide a source that hasn't refreshed in weeks behind one
@@ -369,10 +387,10 @@ additional corpus source alongside the published cache — the two have
 nothing to do with each other beyond both eventually touching the word
 "Topdeck".
 
-**The base URL.** `API_BASE` is `https://topdeck.gg/api/v2`. The module
-first pointed at `api.topdeck.gg`, which never resolved, so no TopDeck event
-was ever stored before this was fixed; `tests/test_metagame_topdeck.py`
-pins the URL, the POST method and the `Authorization` header.
+**The base URL.** `API_BASE` is `https://topdeck.gg/api/v2`.
+`api.topdeck.gg` does not resolve, and a base there stores no TopDeck event
+at all; `tests/test_metagame_topdeck.py` pins the URL, the POST method and
+the `Authorization` header.
 
 **Only constructed events.** TopDeck's own format field is not trusted: it
 labelled Commander, draft and prerelease events Standard. `_NOT_CONSTRUCTED_RE`
@@ -390,7 +408,7 @@ mtgo.com's run passes, with TopDeck's own transitions. A 401, 403 or 451
 is a refusal: the run ends, keeping what it parsed, and the source pauses
 until `sensei-top meta` is run by hand. A 429 ends the run and waits for
 TopDeck's own time, `retryAfterSeconds` in the body, else `Retry-After`,
-else an hour, to the second and with no floor (D18); a second 429 in a
+else an hour, to the second and with no floor; a second 429 in a
 row pauses the source. Any other status, a timeout or no connection is
 "no answer" for that one format, and the run goes on to the next: the
 refresh reports which formats got no answer and the `sensei-top meta
@@ -435,10 +453,10 @@ unchanged, so tiering, dedup and the privacy guarantee are inherited.
 - **What a run reads.** The index on every run, then event pages, newest
   first and at most 40, from three lists: the index's slugs not stored
   yet; the slugs of month pages a gap needs; and the stored leagues read
-  again (D10), today's (UTC) on every run and yesterday's once after
+  again, today's (UTC) on every run and yesterday's once after
   12:00 UTC, because a league's page gains lists through its day. A
   challenge's page is read once.
-- **The gap fill** (D3). A month's archive page (`/decklists/YYYY/MM`) is
+- **The gap fill**. A month's archive page (`/decklists/YYYY/MM`) is
   read only when the last completed run is in an earlier calendar month
   than today, or there is none. A format's start is that run's day, or,
   with none, the day of the format's newest stored MTGO event; it is
@@ -563,8 +581,8 @@ switch, and its emptying pattern is the one measured above.
 
 A page that is gone is treated like one that came back empty, with a
 different stamp. When a month or event page answers 404 or 410, or redirects
-away from the address requested (plan 14, D19: the site answers a removed
-event page with a redirect to the index), the mtgo.com fetch skips the page,
+away from the address requested (the site answers a removed event page
+with a redirect to the index), the mtgo.com fetch skips the page,
 and a stored event is stamped `empty_read_kind = 'gone'` with its decks
 untouched. A page that redirects away from its address is treated exactly as
 a 404 at that page: whatever the redirect leads to is never parsed as the
@@ -621,14 +639,15 @@ record already spans a whole event's rounds.
 
 ## Classifying the corpus
 
-`meta --reclassify` (or the `meta` subcommand's default path, after a
-refresh) runs `classify_meta_decks()`: a full rebuild over every stored
-`meta_deck`, exactly like `classify_matches()` for personal matches, and for
-the same reason — a corpus refresh may replace a decklist's own row, so a
-kept classification could point at a deck that no longer exists. It never
-touches the network, so it is safe to re-run immediately after
-`sensei-top archetypes` picks up a new definition, without waiting on
-another corpus fetch.
+`classify_meta_decks()` runs inside `reclassify_corpus`, wherever that is
+called ("Duplicate tournament events" above): `meta --reclassify`, the
+`meta` subcommand's default path after a refresh, and `serve`'s two
+threads. It is a full rebuild over every stored `meta_deck`, exactly like
+`classify_matches()` for personal matches, and for the same reason — a
+corpus refresh may replace a decklist's own row, so a kept classification
+could point at a deck that no longer exists. It never touches the network,
+so it is safe to re-run immediately after `sensei-top archetypes` picks up a
+new definition, without waiting on another corpus fetch.
 
 ## Formats: how well each is named (measured 2026-10-04)
 
@@ -733,7 +752,7 @@ against — and every route below calls it rather than re-running
 
 - `GET /api/metagame/status`, `/presence`, `/winrate`, and `/matchups` each
   read one format: the `format` query param, else `api/sql.py
-  ::default_format` (D13: the most recent match's format, else Standard).
+  ::default_format` (the most recent match's format, else Standard).
   `/presence`, `/winrate`, and `/matchups` each take an
   optional `since` query param that wins over the existing `days` cutoff when
   both are given (`api/routes/metagame.py::_since_cutoff`); `matchups` also

@@ -13,18 +13,18 @@ from pydantic import BaseModel, Field
 
 from sensei_top.api.models.common import BoardCardOut, LeakOut, PlanProblemOut
 
-# See guide/bundle.py for the assembly this section translates; every field
-# here mirrors a guide/ dataclass one-to-one so this module stays the only
-# place that decides the wire shape.
+# See guide/bundle.py for the assembly this section translates. Each model
+# mirrors a guide/ or brief/ dataclass, minus what the dashboard never reads,
+# so this module stays the only place that decides the wire shape.
 
 
 class DeckIdentityOut(BaseModel):
     """One deck, stitched across list edits via ``deck_guids`` — see
     ``guide/deck.py``. ``key`` is what every other guide route takes.
-    ``deck_ids`` is every content-hash version this identity groups — the
-    dashboard's global deck filter selects a bare ``deck_id``, so the
-    frontend needs this list to find which guide identity a filter
-    selection belongs to."""
+    ``deck_ids`` is every content-hash version this identity groups — a
+    match's deck and a version's address name a bare ``deck_id``, so the
+    frontend needs this list to find which guide identity one belongs to.
+    """
 
     key: str
     arena_deck_id: str | None
@@ -60,11 +60,11 @@ class ProvenanceOut(BaseModel):
 
 
 class PlayEvidenceOut(BaseModel):
-    """Four views of the deck's own play — see ``guide/play.py``. Each
-    field is a nested JSON object keyed by turn, card name, or result
-    ('win'/'loss'), not a fixed schema; the frontend renders these
-    directly rather than the API imposing a shape on data whose keys are
-    inherently dynamic."""
+    """Views of the deck's own play — see ``guide/play.py``. Each field is
+    a nested JSON object keyed by turn, card name, result ('win'/'loss') or
+    mulligan bucket ('kept_seven'/'mulliganed'), not a fixed schema; the
+    frontend renders these directly rather than the API imposing a shape
+    on data whose keys are inherently dynamic."""
 
     board_curve: dict[str, Any]
     zone_curve: dict[str, Any]
@@ -176,22 +176,26 @@ class GuideNarrativeOut(BaseModel):
 
 class GuideNarrativeResponse(BaseModel):
     """Mirrors ``NarrativeResponse`` closely, with the structured guide
-    attached when ``status == 'ok'``. Always a 200, same reasoning."""
+    attached when ``status == 'ok'``. A 200 for any known deck; an unknown
+    deck key is a 404."""
 
     status: str = Field(description="ok | prompt | no_report")
     guide: GuideNarrativeOut | None = Field(
-        None, description="the stored narrative, once generated or imported for this deck"
+        None, description="the stored narrative, once generated, pasted or imported for this deck"
     )
     prompt: str | None = Field(
         None,
         description="the full text to write the narrative from — pass it to POST on this "
         "same path to generate it with Claude, or into an assistant you already pay for and "
-        "`sensei-top guide --deck KEY --import FILE` the answer back",
+        "PUT the answer back on this same path, or import it with "
+        "`sensei-top guide --deck KEY --import FILE`",
     )
     authored_at: str | None = Field(None, description="when the stored narrative was written")
     author: str | None = Field(None, description="who or what wrote it — a model id, or free text")
     cost_usd: float | None = Field(
-        None, description="measured cost of the call that wrote it; null for a hand-written one"
+        None,
+        description="measured cost of the call that wrote it; null for a pasted or imported "
+        "answer, and for a model with no price on file",
     )
     stale: bool = Field(False, description="the 75 has changed since this was written")
     error: str | None = Field(None, description="set when something could not be built")
@@ -235,8 +239,9 @@ class CoverageOut(BaseModel):
 class BriefPromptOut(BaseModel):
     """The single-brief prompt for one archetype, fetched on demand — the
     same text ``sensei-top brief --deck KEY --archetype KEY --prompt``
-    prints. Always a 200: no field consensus is an ordinary outcome for a
-    corpus that hasn't classified that archetype yet, not a server error."""
+    prints. A 200 for any known deck; an unknown deck key is a 404. No
+    field consensus is an ordinary outcome for a corpus that hasn't
+    classified that archetype yet, not a server error."""
 
     status: str = Field(description="ok | no_consensus | format_unknown")
     archetype_key: str
@@ -246,8 +251,9 @@ class BriefPromptOut(BaseModel):
 class CoveragePromptOut(BaseModel):
     """The multi-brief prompt for every ``missing``/``stale`` coverage row —
     the same text ``sensei-top brief --deck KEY --missing --prompt``
-    prints. Always a 200: nothing missing, or no field consensus for any
-    missing/stale archetype, are both ordinary outcomes."""
+    prints. A 200 for any known deck; an unknown deck key is a 404.
+    Nothing missing, or no field consensus for any missing/stale
+    archetype, are both ordinary outcomes."""
 
     status: str = Field(description="ok | nothing_missing | no_consensus | format_unknown")
     prompt: str | None = Field(None, description="the text to write these briefs from")

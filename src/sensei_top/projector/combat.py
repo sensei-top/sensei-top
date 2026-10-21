@@ -10,29 +10,21 @@ than one target, and the schema does not provide for it.
 
 Arena reports an attack or block as a field directly on the acting creature's
 own game object (``attackState``/``attackInfo``, ``blockState``/``blockInfo``),
-not as a standalone event — and a diff can (and does) repeat the same
-assertion across several consecutive messages for one real attack (verified:
-a single real attack's ``Declared``/``Attacking`` pair shows up across 2-3
-separate ``GameStateMessage`` entries). So this module is driven from the
-*raw incoming diff* — the object's own fields exactly as they arrived in one
-``GameStateMessage``, before ``game_state.py`` merges them into accumulated
-state — never from that merged state read back later: nothing in the
+not as a standalone event, and repeats the same assertion across 2-3
+consecutive ``GameStateMessage`` entries for one real attack. Nothing in the
 verified capture ever resets ``attackState`` once set (no third value was
 ever observed alongside ``AttackState_Declared``/``AttackState_Attacking``),
 so treating "the object currently reads Attacking" as "attacking this turn"
 would misattribute every later turn the field simply was not re-mentioned in.
-The caller (``GameStateTracker.apply``) is responsible for deduping on
-``(turn_number, instance_id)`` so the repeated assertion does not multiply
-rows — see its own docstring.
+So this module is driven from the *raw incoming diff* — the object's own
+fields exactly as they arrived in one ``GameStateMessage``, before
+``game_state.py`` merges them — and ``GameStateTracker._record_attack`` and
+``_record_blocks`` dedupe the repeats, keyed on turn and instance.
 
-``AnnotationType_DamageDealt`` and ``AnnotationType_ModifiedLife`` are
-ordinary annotations, each carrying Arena's own annotation id — deduped the
-same way ``AnnotationType_ZoneTransfer`` already is, but **never against a
-shared set**: a real capture showed the same id reused across genuinely
-different annotation types within one game (a ``ZoneTransfer`` and an
-unrelated ``PhaseOrStepModified`` sharing an id, confirmed in a real match).
-Id uniqueness only holds *within* one type within one game — each type gets
-its own dedup set in ``game_state.py``.
+``AnnotationType_DamageDealt`` and ``AnnotationType_ModifiedLife`` are deduped
+on Arena's annotation id like ``AnnotationType_ZoneTransfer``, but each type in
+its own set, never a shared one: ids collide across types within one game (see
+``GameStateTracker.__init__``).
 """
 
 from __future__ import annotations
@@ -96,7 +88,9 @@ class DamageEvent:
     ``systemSeatId`` directly in that case, named by ``target_seat`` with
     ``target_instance_id`` left ``None``; a creature target sets
     ``target_instance_id``/``target_grp_id`` and leaves ``target_seat`` `None`
-    — its controller lives on ``turn_zones`` already. ``damage_type`` is
+    — its controller lives on ``turn_zones`` already, and filling both would
+    give two disagreeing answers to "whose is this" (``v_damage_events``'
+    ``target_is_self`` assumes exactly one). ``damage_type`` is
     Arena's own raw code (values 1, 2 and 3 all observed; no confirmed public
     mapping to "combat" vs. "other" — see migrations/014_combat.sql), stored
     verbatim rather than labelled.
@@ -213,10 +207,7 @@ def parse_damage(
         source_seat=(source_obj or {}).get("controllerSeatId"),
         target_instance_id=target_id if target_obj is not None else None,
         target_grp_id=(target_obj or {}).get("grpId") or None,
-        # Mutually exclusive with target_instance_id: a creature target's
-        # controller lives on turn_zones already, and populating both here
-        # would leave two disagreeing ways to ask "whose is this" (see
-        # v_damage_events' target_is_self, which assumes exactly this).
+        # Mutually exclusive with target_instance_id: see DamageEvent.
         target_seat=target_id if target_obj is None else None,
         amount=amount,
         damage_type=_detail_int(annotation, "type"),

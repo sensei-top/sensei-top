@@ -1,15 +1,8 @@
-"""How much of the field this deck's cached briefs actually cover.
-
-Two evidence sources, unioned into one row set: every archetype this deck
-identity has actually faced (personal history, never windowed — the exact
-posture ``guide/field.py``'s own ``personal_rates`` already takes), and the
-field's top-6 archetype keys by windowed deck count, over the same
-denominator ``guide/field.py``'s ``build_field`` uses. A row exists for the
-union, and every row carries its own windowed share.
-
-This is a read, not a computation the guide itself performs: nothing here is
-stored, and nothing here writes a brief. It only says which of the briefs
-that already exist (or don't) are worth writing next.
+"""How much of the field this deck's cached briefs actually cover: a read
+that stores nothing and writes no brief, only says which briefs are worth
+writing next. ``build_coverage``'s docstring holds the row and status
+contract. See docs/brief.md,
+"`brief/coverage.py` — which of the field this deck's briefs actually cover".
 """
 
 from __future__ import annotations
@@ -61,10 +54,10 @@ def _field_counts(
     in this window's classified field, plus the window's true classified
     total. A thin adapter over ``guide/field.py``'s ``field_by_key`` — the
     one definition of "the field grouped by key" this and
-    ``coach/evidence.py``'s ``_build_field`` both used to duplicate (see
-    ``field_by_key``'s own docstring for the "two keys can share one name"
-    rationale). The label is each key's most common name in the window,
-    ``field_by_key``'s own first variant."""
+    ``coach/evidence.py``'s ``_build_field`` share (see ``field_by_key``'s
+    own docstring for the "two keys can share one name" rationale). The
+    label is each key's most common name in the window, ``field_by_key``'s
+    own first variant."""
     by_key, total = field_by_key(conn, fmt, since)
     return {
         key: (variants[0][0], sum(n for _, n in variants))
@@ -79,9 +72,12 @@ def build_coverage(
     cached ``matchup_brief`` rows actually cover them.
 
     Rows are the union of every archetype this deck has actually faced
-    (``_faced_counts``, unwindowed) and the field's own top
-    ``TOP_FIELD_ARCHETYPES`` archetype keys by windowed deck count
-    (``_field_counts``). Every row carries its windowed field share,
+    (``_faced_counts``, unwindowed, as ``guide/field.py``'s personal rates
+    are) and the field's own top ``TOP_FIELD_ARCHETYPES`` archetype keys by
+    windowed deck count in the deck's format (``_field_counts``, over the
+    denominator ``guide/field.py``'s ``build_field`` uses). A deck with no
+    format has no field: ``fmt`` is ``None`` and there are no rows. Every
+    row carries its windowed field share,
     whichever source put it there: ``0.0`` when the window has classified
     decks but none of this archetype (measured, not missing), ``None`` only
     when the window has no classified decks at all.

@@ -1,8 +1,8 @@
 """The API's own translation layer: one function per domain dataclass,
 turning it into the ``*Out`` pydantic model ``api/models/`` declares for
 it. Kept in one file rather than split by tag, unlike ``models/`` itself —
-several converters (``_leak_out``, ``_play_out``) are shared by more than
-one router, and ``_deck_guide_out`` alone composes six of the others, so
+some converters (``_leak_out``, ``_matchup_brief_out``) serve more than one
+router, and ``_deck_guide_out`` composes several of the others, so
 splitting this by tag would mean import cycles between the split pieces
 rather than one flat, easy-to-scan translation layer.
 """

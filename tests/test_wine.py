@@ -1,7 +1,7 @@
 """Wine prefix discovery: where Linux launchers keep their prefixes.
 
-Each test builds a fake home laid out as the launcher's own source puts it
-(plan 31, S0). ``conftest.py`` already points ``HOME`` and the XDG variables
+Each test builds a fake home laid out as the launcher's own source puts it.
+``conftest.py`` already points ``HOME`` and the XDG variables
 at empty temp folders (``home``, ``xdg-config``, ``xdg-data`` under
 ``tmp_path``); these tests build under those.
 """

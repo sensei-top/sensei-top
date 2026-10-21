@@ -4,7 +4,7 @@
  * the read line, the ordinal and standing, the kind by tier, and the group
  * headings. The page in `views/FieldEventView.tsx` only draws what these
  * return. The lines are keys under `field.event.*` in
- * `locales/en/field.json`, and their English is plan 14's catalog (§3), word
+ * `locales/en/field.json`, and their English is the approved copy, word
  * for word.
  */
 import type { MetaCard, MetaEventDeck, MetaEventDetail } from '../api'

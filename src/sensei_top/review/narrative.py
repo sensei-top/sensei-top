@@ -1,28 +1,18 @@
 """The match report's coaching prompt — built here, sent from
-``sensei_top.llm`` only when the user has opted in.
+``sensei_top.llm`` only when the user has opted in. How the prompt is
+served, sent and stored: ``docs/review.md``, "The narrative
+(`review/narrative.py`, `review/leaks_narrative.py`)".
 
-This module used to be ``advisor.py`` and asked Claude for a line of play
-*during* a match. That was retired first (the projector only has an
-end-of-turn snapshot mid-match — no combat, no stack, no opponent hand — so
-the advice rested on a board the player could not verify, offered when they
-could least afford to be wrong). It was then repointed at the finished
-report, where the whole game is on disk and there is no clock.
+**This module never makes the call itself.** The only module that imports
+``anthropic`` is ``sensei_top.llm.client`` (AGENTS.md non-negotiable #5);
+this one stays a pure function of already-projected data, assembling an
+honest, complete, inspectable prompt:
 
-**This module never makes the call itself.** AGENTS.md non-negotiable #5
-permits an opt-in, user-configured Claude call, but the only module in this
-project that imports ``anthropic`` is ``sensei_top.llm.client`` — this one
-stays a pure function of already-projected data, assembling an honest,
-complete, inspectable prompt:
-
-* **``build_narrative_context`` returns the evidence**, and ``full_prompt``
-  wraps it with the framing that used to be sent as a ``system`` parameter.
-  ``GET /api/matches/{id}/report/narrative`` serves ``copied_prompt`` (the
-  same text plus the answer contract); ``POST`` on the same path sends
-  ``full_prompt`` itself, with no contract, through ``llm.write_prose`` and
-  stores the answer (``review/narrative_store.py``) when a credential is
-  configured — see ``docs/llm.md``. With none configured, the dashboard
-  offers the copyable prompt as something to paste into an assistant the
-  user already pays for.
+* **What it carries:** the position track turn by turn, both sides' play
+  sequence, and the report's own findings and gaps together, so the
+  coaching can point at a specific turn and argue with a specific decision.
+  Never the raw zone-by-zone board state (no hands, no graveyards, no exile
+  contents).
 * **Unknowns are stated, never guessed (rule 4).** The context lists the
   report's own gaps as a named "not evaluated" section, and ends with what
   this reader never sees for any match at all (the stack, counters,
@@ -31,15 +21,6 @@ complete, inspectable prompt:
 * **No third-party identifiers, ever.** ``MatchSnapshot`` never carries the
   opponent's Arena handle or user id in the first place, so there is nothing
   here to accidentally include — see ``snapshot.py``.
-
-What the prompt carries is deliberately generous: the position track turn by
-turn, both sides' play sequence, and the report's own findings and gaps
-together, so the coaching can point at a specific turn and argue with a
-specific decision. An earlier version sent only findings and gaps —
-already-summarized judgments with the game itself withheld — and produced
-generic coaching, because a coach shown conclusions and not the game can
-only restate them. It is still never the raw zone-by-zone board state the
-old advisor sent (no hands, no graveyards, no exile contents).
 
 ``FieldContext`` is the one addition beyond the game itself: one public
 aggregate statistic about the opponent's own archetype, from real tournament
@@ -57,9 +38,9 @@ from sensei_top.review.findings import Finding, MatchReport
 from sensei_top.review.snapshot import MatchSnapshot
 
 DEFAULT_MODEL = "claude-opus-5-5"
-# A full structured review, not a footnote: raised from the old 250-word
-# summary because the game itself is now in the prompt, and effort/tokens
-# have to match the depth the user asked this feature to reach.
+# A full structured review, not a footnote: the game itself is in the
+# prompt, and effort/tokens have to match the depth the user asked this
+# feature to reach.
 DEFAULT_EFFORT = "high"
 DEFAULT_MAX_TOKENS = 8000
 
@@ -84,7 +65,7 @@ class NarrativeError(Exception):
     """A narrative could not be built or parsed — malformed input, never a
     network failure (that's ``llm.LLMError``, raised by
     ``sensei_top.llm.client`` and mapped to a 502 by the generate routes).
-    Every caller of this one already fails soft on it."""
+    Every caller of this one fails soft on it."""
 
 
 SYSTEM_PROMPT_HEADING = "System prompt (paste this above the evidence):"
@@ -100,22 +81,17 @@ UNTRACKED = (
 
 
 def _wrap_prompt(system_prompt: str, context: str) -> str:
-    """The framing-then-evidence shape every prose-flavoured ``full_prompt``
-    in this project uses. Shared with ``review/leaks_narrative.py`` — the
-    same "system prompt, then a divider, then the evidence" idiom, just a
-    different ``SYSTEM_PROMPT``."""
+    """The framing-then-evidence shape: the system prompt, a divider, then
+    the evidence. Shared with ``review/leaks_narrative.py`` and
+    ``coach/narrative.py``, each with its own system prompt."""
     return f"{system_prompt}\n\n---\n\n{context}"
 
 
 @english()
 def full_prompt(context: str) -> str:
-    """The complete text to hand an assistant: the framing that used to be
-    sent as a ``system`` parameter, then the evidence itself.
-
-    ``build_narrative_context`` returns the evidence alone; this wraps it
-    into the text the generate path (``POST``) sends. The copyable prompt
-    is ``copied_prompt``: this text plus the answer contract. See AGENTS.md
-    non-negotiable #5 and ``docs/review.md``.
+    """The complete text to hand an assistant: the framing, then the
+    evidence ``build_narrative_context`` returns. The generate path
+    (``POST``) sends this; the copyable prompt is ``copied_prompt``.
     """
     return _wrap_prompt(SYSTEM_PROMPT, context)
 
@@ -143,10 +119,9 @@ def _anchor(f: Finding) -> str:
 
 
 def _finding_line(f: Finding) -> str:
-    """One finding, rendered without its caveats — the one line
-    ``coach/evidence.py``'s worked examples reuse verbatim (its own
-    ``ExampleGame.finding_lines``), extracted from ``build_narrative_context``
-    below so the two never drift out of formatting sync. Caveats stay this
+    """One finding, rendered without its caveats — shared with
+    ``coach/evidence.py``'s worked examples (``ExampleGame.finding_lines``)
+    so the two never drift out of formatting sync. Caveats stay this
     function's caller's job: the narrative prompt renders them as their own
     indented line right after, but an example game's compact finding list
     has no room for them."""
@@ -166,9 +141,8 @@ class FieldContext:
     archetype_label: str
     matches: int
     winrate: float
-    # The format-reset window this was counted from (docs/metagame.md's "The
-    # format-reset boundary"), or None when it wasn't windowed. Last and
-    # defaulted so existing keyword construction keeps working.
+    # The format-reset window this was counted from (docs/metagame.md, "The
+    # format-reset boundary"), or None when it wasn't windowed.
     since: str | None = None
 
 

@@ -1,7 +1,7 @@
 """The player-level coach: a cross-deck report and training plan over every
-Arena/MTGO match — see ``docs/coach.md`` for the full design.
+Arena and MTGO Constructed match. See docs/coach.md, "What the coach is".
 
-``store.py`` is the report's own history (one row per generation, never
+``store.py`` is the report's own history (one row per report, never
 upserted). ``canon.py`` is the curated reading list a report's prompt may
 cite by id, plus the domain allowlist its web search is restricted to.
 """

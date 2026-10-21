@@ -17,18 +17,11 @@ after a rename, a rotation, a card we never happened to see — degrades to
 offers to let the user correct. It does not degrade to a confident wrong
 answer.
 
-Two more things follow from that same gap, both found from a real match
-rather than reasoned out in the abstract. First, *how much* of a definition is
-proved matters as much as whether anything is: a one-condition definition
-proved outright and a ten-condition one nine-tenths proved both look like "one
-requirement short of certain" if you only count met conditions — and a real
-opponent was named by a single seen card (Stock Up, one of two the Harmonizer
-definition needs) for twenty-odd turns before their actual signature card
-(Doomsday Excruciator, the whole of a one-condition definition) ever showed
-up. Second, an archetype's own colours are free evidence nothing here used to
-check: that wrong guess was green, and the opponent had shown ten cards of
-straight Dimir, none of them green. ``_fit_score`` and ``colour_factor`` below
-fold both signals into a single number instead of a raw condition count.
+*How much* of a definition is proved matters as much as whether anything
+is, and an archetype's own colours are free evidence: ``_fit_score`` and
+``colour_factor`` below fold both into one number instead of a raw count of
+met conditions. See docs/opponent-deck.md, "Ranking by fit, not by raw
+condition count".
 """
 
 from __future__ import annotations
@@ -48,16 +41,18 @@ from sensei_top.i18n import _, decimal, ngettext
 
 if TYPE_CHECKING:
     # Type-checking only: archetypes.corpus imports classify.normalize at
-    # module scope, so importing this back at runtime would cycle. PEP 563
-    # (see the `from __future__ import annotations` above) means annotations
-    # are never evaluated at def time, so this guard is enough.
+    # module scope, so importing this back at runtime would cycle; the
+    # functions below that need corpus at runtime import it at function scope.
+    # PEP 563 (see the `from __future__ import annotations` above) means
+    # annotations are never evaluated at def time, so this guard is enough.
     from sensei_top.archetypes.corpus import CorpusPrior
 
 log = logging.getLogger(__name__)
 
-# Old databases still hold Unity markup in card names, from before the importer
-# learned to prefer the plain localization. Stripping it here costs nothing and
-# means a stale `cards` table degrades matching rather than breaking it.
+# An older database's card names can still hold Unity markup (its `cards` rows
+# predate the importer's preference for the plain localization). Stripping it
+# here costs nothing and means a stale `cards` table degrades matching rather
+# than breaking it.
 _MARKUP = re.compile(r"<[^>]*>")
 _SPLIT_FORMS = (" // ", " && ")
 
@@ -133,8 +128,8 @@ def _seen_forms(names: Iterable[str]) -> frozenset[str]:
 
 
 # Scope names, not booleans: a complete decklist can check the sideboard for
-# real (below), which a single 'sideboard_only' flag could not express once a
-# third state ('either') needed telling apart from 'main' too.
+# real (``_pool``), so 'either' has to be told apart from both 'main' and
+# 'side', which a single 'sideboard_only' flag cannot express.
 _POSITIVE_SCOPES = {"inmainboard": "main", "insideboard": "side", "inmainorsideboard": "either"}
 _NEGATIVE_SCOPES = {
     "": "main", "mainboard": "main", "sideboard": "side", "mainorsideboard": "either",
@@ -287,9 +282,9 @@ FORMAT_REASONS: tuple[str, ...] = (
 
 # Names MTGO's transcript brackets like a card that are not a card in anyone's
 # deck: game markers a card puts into play. Each one is observed, as an
-# unresolved card event name in a real MTGO history (plan 13, S5d), never
-# guessed: "The Initiative" (the designation an initiative card gives a
-# player) and "Undercity" (the dungeon taking the initiative ventures into).
+# unresolved card event name in a real MTGO history, never guessed: "The
+# Initiative" (the designation an initiative card gives a player) and
+# "Undercity" (the dungeon taking the initiative ventures into).
 # Like a token, neither says anything about the match's format.
 _MTGO_NON_CARDS = ("The Initiative", "Undercity")
 
@@ -298,10 +293,11 @@ _MTGO_NON_CARDS = ("The Initiative", "Undercity")
 class FormatInference:
     """What an MTGO match's revealed cards say about its format.
 
-    ``fit`` is every format none of the cards is ``not_legal`` in (D3), empty
-    when the cards cannot all be read (``unresolved_cards``,
-    ``unknown_legality``) or when nothing fits. ``format`` is the single
-    narrowest of them (D4), set only when ``reason`` is ``"fit"``.
+    ``fit`` is every format none of the cards is ``not_legal`` in (a ban
+    does not rule a format out), empty when the cards cannot all be read
+    (``unresolved_cards``, ``unknown_legality``) or when nothing fits.
+    ``format`` is the single narrowest of them (``narrowest_format``), set
+    only when ``reason`` is ``"fit"``.
     """
     fit: frozenset[str]
     format: str | None
@@ -310,7 +306,7 @@ class FormatInference:
 
 def narrowest_format(fit: Iterable[str]) -> str | None:
     """The unique minimal format in ``fit`` under ``formats.BROADER``, or
-    None when there are none or more than one (D4).
+    None when there are none or more than one.
 
     Never a tiebreak: Standard and Pauper both minimal is None, not the
     bigger pool, which is why Pauper is only ever confirmed by a pick.
@@ -325,7 +321,7 @@ def infer_formats(conn: sqlite3.Connection) -> dict[str, FormatInference]:
 
     Arena matches are not here: Arena's log names the format
     (``matches.format``). Nothing here reads ``mtgo_match_pick``; the pick
-    outranks this at read time, in ``v_match_format`` (D6).
+    outranks this at read time, in ``v_match_format``.
 
     Token rows are skipped before any check: ``cards.py``'s name backfill
     leaves a token's legality missing on purpose (a token shares its name
@@ -349,7 +345,8 @@ def infer_formats(conn: sqlite3.Connection) -> dict[str, FormatInference]:
       3. ``no_fit``: every format has a card ``not_legal`` in it. Each
          format is judged on its own rows: a card ``not_legal`` in Standard
          rules out Standard however legal it is elsewhere. ``banned`` and
-         ``restricted`` still fit (D3: Scryfall's ban list is today's).
+         ``restricted`` still fit: Scryfall's ban list is today's, not the
+         one in force on the match's date.
       4. ``too_few_cards``: fewer than ``MIN_REVEALED`` distinct non-token
          names. The fit is kept, since it is exact; only the inference
          waits for more evidence.
@@ -459,8 +456,9 @@ def _card_colors(
     iteration order follows the per-process hash seed, and a card's forms
     can disagree — Arena lists an adventure's own half as a card of its own,
     so ``grove's bounty`` carries green while ``elusive otter // grove's
-    bounty`` is blue only. Taking whichever form the set yielded first made
-    a deck's colours, and so its archetype, change from one run to the next.
+    bounty`` is blue only. Taking whichever form the set yields first would
+    make a deck's colours, and so its archetype, change from one run to the
+    next.
     The whole name is always the longest form.
     """
     for form in sorted(normalize(name), key=lambda form: (-len(form), form)):
@@ -532,8 +530,9 @@ _FALLBACK_FIT_RAMP = 4  # matched common cards beyond this add nothing more
 
 # A verdict is named only when it clears an absolute floor and beats the best
 # *differently labelled* rival by a real margin. Both were fitted against a
-# validation pass over real matches (see docs/opponent-deck.md) — tune them if
-# real data disagrees, don't treat them as derived.
+# validation pass over real matches — tune them if real data disagrees, don't
+# treat them as derived. See docs/opponent-deck.md, "Ranking by fit, not by raw
+# condition count".
 MIN_ARCHETYPE_FIT = 0.20
 MIN_FALLBACK_FIT = 0.25
 MIN_MARGIN = 1.5
@@ -562,14 +561,14 @@ _CORPUS_HIGH_ODDS, _CORPUS_HIGH_CARDS = 200.0, 8
 def _fit_score(met: int, unknown: int, colour: float) -> float:
     """How well a definition fits what we've seen, in ``[0, 1]``.
 
-    ``proof`` is the fraction of the definition's *observable* requirements
-    (met + unknown; sideboard-only ones enter neither count) that came back
-    met — a one-condition definition proved outright scores the same proof as
-    a ten-condition one nine-tenths proved, which is the point: a raw count of
-    met conditions can't tell 1-of-1 from 1-of-2 apart (see the module
-    docstring). ``support`` keeps one lone hit from ever outweighing two
-    independent ones. ``colour`` folds in whether the definition's own
-    colours agree with what has been shown.
+    ``proof`` is the fraction of the definition's requirements (met +
+    unknown; a sideboard requirement counts as unknown, see ``evaluate``)
+    that came back met — a one-condition definition proved outright scores
+    proof 1.0, a two-condition one with one condition met scores 0.5, which
+    is the point: a raw count of met conditions (one each) can't tell 1-of-1
+    from 1-of-2 apart (see the module docstring). ``support`` keeps one lone
+    hit from ever outweighing two independent ones. ``colour`` folds in
+    whether the definition's own colours agree with what has been shown.
     """
     if met + unknown == 0:
         return 0.0
@@ -781,7 +780,7 @@ def confidence_of(verdict: Verdict, cards_seen: int) -> str:
     saturates fast on proof count (see its docstring), so what actually
     distinguishes a decisive read from a lucky one is how far ahead it is of
     the next real alternative. A fallback never reads 'high' even though
-    ``_FALLBACK_FIT_CAP`` (0.5) can exceed ``_HIGH_FIT`` (0.45) on its own —
+    ``_FALLBACK_FIT_CAP`` can exceed ``_HIGH_FIT`` on its own —
     the explicit method check here is what holds that line, because "well
     matched to a broad family" should never read as confidently as "proved a
     specific deck".
@@ -830,11 +829,9 @@ def _corpus_label(
     ``archetype_key`` — the ordinary case, since most corpus archetypes are
     the very definitions ``choose()`` also uses — reuse ``_archetype_label``/
     ``_base_label`` so a corpus-named deck reads exactly like a rule-named
-    one, variant refinement included. This is the gap-filling case the
-    corpus source exists for: a brand-new set's archetypes have real corpus
-    decks before anyone has written a rule definition for them at all, so
-    there is nothing to look up and the corpus's own stored name, with a
-    colour prefix, is the whole answer.
+    one, variant refinement included. When no definition of that kind is
+    loaded under that key for this format, there is nothing to look up, and
+    the corpus's own stored name, with a colour prefix, is the whole answer.
     """
     pool = definitions_for_format.get(kind, [])
     for definition in pool:
@@ -998,9 +995,11 @@ def rank_candidates(
     opponent_cards: Mapping[str, tuple[str, int]] | None = None,
     seen_names: Iterable[str] | None = None,
 ) -> list[Candidate]:
-    """Every named deck for this match's format, best-fit first, for the user
-    to pick from when the classifier's own automatic guess is not good enough
-    — or simply wrong.
+    """Every named deck for this match's format, for the user to pick from
+    when the classifier's own automatic guess is not good enough — or simply
+    wrong. Evidenced archetypes come first, then evidenced fallbacks, each
+    group best-fit first; with a ``prior`` the two groups are re-sorted
+    together by fit. Every candidate with no evidence follows, by label.
 
     Unlike ``choose()``, which commits to one verdict (or none), this returns
     everything — including an archetype the cards actively contradict, or one
@@ -1011,22 +1010,22 @@ def rank_candidates(
     one (a card seen that the definition explicitly excludes).
 
     A candidate matching this match's ``opponent_deck_override`` — if any —
-    is flagged ``picked``, so the dashboard and the advisor's hint context can
-    both follow the same identification the player already made.
+    is flagged ``picked``, so the picker can mark the pick the player
+    already made.
 
-    ``colors_by_name`` lets a caller rebuilding this for many matches in one
-    request (``review/leaks.py``'s ``find_leaks``) pass an already-computed
-    table rather than pay ``_card_colors_by_name``'s full-table scan again —
-    it depends only on ``cards``, not on the match, so it is safe to reuse
-    for the lifetime of one request. Omitted, this computes its own, exactly
-    as before.
+    ``colors_by_name`` lets a caller that already holds the table
+    (``review/snapshot.py::build_snapshot``'s ``colors_cache``,
+    ``table/intermission.py``) pass it rather than pay
+    ``_card_colors_by_name``'s full-table scan again — it depends only on
+    ``cards``, not on the match, so it is safe to reuse for the lifetime of
+    one request. Omitted, this computes its own.
 
     ``prior`` — an ``archetypes.corpus.CorpusPrior``, when the caller has one
     cached — folds the corpus evidence source into the *existing* rule-engine
     candidates' ``fit`` (never invents a candidate for a corpus archetype
     lacking any rule ``Definition``: this is a picker over defined decks, and
     the corpus source's own job is done in ``classify_matches`` instead).
-    Omitted, behaviour is unchanged from before this source existed.
+    Omitted, the ranking is the rule engine's alone.
 
     ``opponent_cards`` is the same idea as ``colors_by_name`` but for
     ``v_opponent_cards`` — a caller rebuilding this for many matches
@@ -1035,16 +1034,15 @@ def rank_candidates(
     expensive view's per-match_id query again. A match present in the
     mapping uses its values exactly as given (including a NULL or ``''``
     ``colors``); a match absent from it reads ``("", 0)``, exactly as a
-    missing row does today. Omitted, this queries the view itself, exactly
-    as before.
+    missing row does. Omitted, this queries the view itself.
 
     ``seen_names`` replaces the ``card_events`` lookup (``_match_seen_forms``)
     with an already-gathered set of raw card names, the same contract as
-    ``opponent_cards`` above — a caller with its own name set in hand (a live
-    read, S4's break read, which unions ``card_events`` with the live
-    replay's own revealed zones) skips the query entirely rather than
-    forcing a name set built at request time back through ``card_events``.
-    Omitted, this queries ``card_events`` itself, exactly as before.
+    ``opponent_cards`` above — a caller with its own name set in hand (the
+    break read, ``table/intermission.py``, which unions ``card_events`` with
+    the live replay's own revealed zones) skips the query entirely rather
+    than forcing a name set built at request time back through
+    ``card_events``. Omitted, this queries ``card_events`` itself.
     """
     match = conn.execute(
         """
@@ -1060,7 +1058,7 @@ def rank_candidates(
     if match is None:
         return []
 
-    # The match's read-time format (log, pick, then inference — D6), so an
+    # The match's read-time format (log, pick, then inference), so an
     # MTGO match, which carries neither an event id nor an Arena deck, still
     # gets its format's definitions. arena_format is the fallback for a
     # database migrated by 055 whose matches.format is still unprojected.
@@ -1135,9 +1133,8 @@ def rank_candidates(
     # table/intermission.py's both pass v_match_format.format to build_prior.
     # review/snapshot.py passes none.
     if prior is not None and candidates:
-        # Function-scoped import: see classify_matches's own docstring for
-        # the cycle this avoids (archetypes.corpus imports classify.normalize
-        # at module scope).
+        # Function-scoped import: see the TYPE_CHECKING import at the top of
+        # this module for the cycle this avoids.
         from sensei_top.archetypes.corpus import matched_cards, read_corpus
 
         ranked_corpus = read_corpus(prior, seen)
@@ -1232,20 +1229,20 @@ _CONFIDENCE_RANK = {"high": 3, "medium": 2, "low": 1}
 @dataclass(frozen=True, slots=True)
 class SeenVerdict:
     """The one classifier decision ``classify_matches`` writes per match,
-    pulled out of its loop so a *live* read — ``table/intermission.py``'s
-    break read (S4), naming an in-progress opponent from a name set built at
-    request time — can call the identical rule-engine/corpus/tie-break logic
-    without touching ``opponent_archetype`` or waiting for ``project()``.
+    pulled out of its loop so a read from a name set built at request time —
+    ``table/intermission.py``'s break read, naming an in-progress opponent,
+    or ``api/routes/mtgo_picks.py``'s hint from a match's user-side cards —
+    can call the identical rule-engine/corpus/tie-break logic without
+    touching ``opponent_archetype`` or waiting for ``project()``.
 
     ``met``/``unknown`` are the exact ints ``classify_matches`` stores in
     ``opponent_archetype.conditions_met``/``conditions_unknown``: a rule
     verdict's own condition counts, or — a corpus verdict has no conditions —
-    the corpus cards matched and zero, mirroring the pre-refactor rows
-    exactly. ``evidence`` is already the JSON string the ``evidence_json``
-    column stores rather than a raw structure, since the shape differs by
-    method (a plain list of matched cards for a rule verdict, a
-    ``{matched_cards, odds}`` dict for a corpus one) and there is nothing
-    shared worth factoring out of it.
+    the corpus cards matched and zero. ``evidence`` is already the JSON
+    string the ``evidence_json`` column stores rather than a raw structure,
+    since the shape differs by method (a plain list of matched cards for a
+    rule verdict, a ``{matched_cards, odds}`` dict for a corpus one) and
+    there is nothing shared worth factoring out of it.
     """
     key: str
     label: str
@@ -1299,10 +1296,8 @@ def classify_seen(
     corpus_pick: tuple[str, str, str, str, list[str], float] | None = None
     corpus_rank = 0
     if prior is not None:
-        # Function-scoped import: archetypes.corpus imports classify.normalize
-        # at module scope, so importing it back from here at module scope
-        # would be a direct cycle within the same package (corpus.py's own
-        # docstring).
+        # Function-scoped import: see the TYPE_CHECKING import at the top of
+        # this module for the cycle this avoids.
         from sensei_top.archetypes.corpus import matched_cards, read_corpus
 
         ranked = read_corpus(prior, seen)
@@ -1354,17 +1349,17 @@ def live_opponent_colors(conn: sqlite3.Connection, names: Iterable[str]) -> tupl
 
     This re-runs the view's arithmetic in Python instead of querying it,
     because the view keys off ``card_events``/``match_id`` and this name set
-    can include cards the projector has not caught up to yet — S4's break
-    before game 3 pools games 1 and 2 even when projection has only reached
-    game 1, which ``v_opponent_cards`` for this ``match_id`` alone cannot
-    reflect. One deliberate difference: the view counts one per
-    ``(name, rarity, colors)`` among the printings actually seen, while a
-    bare name set has no printing to pick, so this counts distinct names —
-    the same number except for a name seen in two printings that differ in
-    rarity or colours. A name absent from ``cards`` entirely (never downloaded, or a
-    spelling mismatch) is silently excluded from both the count and the
-    colours, the same as an absent row in ``_card_colors_by_name`` — rule 4,
-    never a guess.
+    can include cards the projector has not caught up to yet — the break
+    read before game 3 (``table/intermission.py``) pools games 1 and 2 even
+    when projection has only reached game 1, which ``v_opponent_cards`` for
+    this ``match_id`` alone cannot reflect. One deliberate difference: the
+    view counts one per ``(name, rarity, colors)`` among the printings
+    actually seen, while a bare name set has no printing to pick, so this
+    counts distinct names — the same number except for a name seen in two
+    printings that differ in rarity or colours. A name absent from ``cards``
+    entirely (never downloaded, or a spelling mismatch) is silently excluded
+    from both the count and the colours, the same as an absent row in
+    ``_card_colors_by_name`` — rule 4, never a guess.
     """
     unique = {name for name in names if name}
     if not unique:
@@ -1397,9 +1392,8 @@ def _priors(conn: sqlite3.Connection, formats: Iterable[str]) -> dict[str, Corpu
     labels; one with nothing to say is ``None`` and is named by the rule
     engine alone.
     """
-    # Function-scoped import: archetypes.corpus imports classify.normalize at
-    # module scope, so importing it back from here at module scope would be
-    # a direct cycle within the same package (see corpus.py's own docstring).
+    # Function-scoped import: see the TYPE_CHECKING import at the top of this
+    # module for the cycle this avoids.
     from sensei_top.archetypes.corpus import build_prior
 
     return {fmt: build_prior(conn, fmt) for fmt in set(formats)}
@@ -1407,11 +1401,10 @@ def _priors(conn: sqlite3.Connection, formats: Iterable[str]) -> dict[str, Corpu
 
 def classify_matches(conn: sqlite3.Connection) -> dict[str, int]:
     """Name every match's opponent deck, under every format it could be.
-    Recomputed in full, like the projector.
-
-    Cheap enough to redo wholesale: the work is proportional to the cards each
-    opponent revealed, not to the number of definitions, because an archetype
-    that shares no card with what we saw can never be selected.
+    Recomputed in full, like the projector: every archetype definition of a
+    format is evaluated against every match named under it, so the work
+    grows with matches times definitions, not with what changed since the
+    last run.
 
     An Arena match is named under ``matches.format``, which its log gave. An
     MTGO match is named under every format in its fit (``infer_formats``)
@@ -1423,17 +1416,19 @@ def classify_matches(conn: sqlite3.Connection) -> dict[str, int]:
     run rewrites ``match_format_fit`` and ``match_format_inference``.
 
     Two evidence sources are combined here, never one replacing the other:
-    ``choose()``'s rule engine (exact, but silent on an archetype nobody has
-    written a definition for yet) and ``archetypes.corpus``'s naive-Bayes
-    read over the field's own classified decklists (fuzzier, but able to name
-    a deck the rule engine has never heard of, and to keep strengthening past
-    where the rule engine's fit already saturated). Whichever reports the
+    ``choose()``'s rule engine (exact, but silent when no definition names
+    the cards this match revealed) and ``archetypes.corpus``'s naive-Bayes
+    read over the field's own classified decklists (fuzzier, but needing no
+    definition that names the revealed cards, and still strengthening past
+    where the rule engine's fit already saturated). The corpus can only name
+    labels the definitions gave its decks
+    (``metagame/classify_meta.py::classify_meta_decks``). Whichever reports the
     higher confidence wins; the rule engine wins an exact tie, since it is
     the more legible answer of the two when both agree. The corpus enters
     only for a format with a prior (``_priors``), and only when one could be
     built (``build_prior`` returns ``None`` on a corpus with nothing to say)
-    — a machine that has never fetched or classified the corpus behaves
-    exactly as before this feature existed.
+    — a machine that has never fetched or classified the corpus names every
+    match by the rule engine alone.
 
     The counts are per match, under the format the match reads without a
     pick (Arena's log, MTGO's inference): ``classified``, ``unclassified``

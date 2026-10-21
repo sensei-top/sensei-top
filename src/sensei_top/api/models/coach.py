@@ -4,13 +4,12 @@
 These drive the OpenAPI schema, which openapi-typescript turns into the
 frontend's types — so field names here are the frontend's contract.
 
-Every model here mirrors a ``coach/evidence.py`` or ``coach/store.py``
-dataclass field for field (``api/routes/coach.py``'s ``_evidence_out``/
-``_report_out`` do the conversion explicitly, never via ``model_validate``
-on a dataclass instance). Two evidence fields are deliberately left off
-``CoachEvidenceModel``: ``examples`` and ``decklists`` are prompt-only —
-the Coach tab never renders either, so there is nothing here for the
-frontend to receive.
+The evidence and report models mirror ``coach/evidence.py`` and
+``coach/store.py`` dataclasses (``api/routes/coach.py``'s
+``from_evidence``/``_report_out`` do the conversion explicitly, never via
+``model_validate`` on a dataclass instance). The evidence fields only the
+prompt uses are left off ``CoachEvidenceModel``: the Coach page never
+renders them, so there is nothing here for the frontend to receive.
 """
 
 from __future__ import annotations
@@ -83,13 +82,13 @@ class FieldLineOut(BaseModel):
 
 
 class CoachEvidenceModel(BaseModel):
-    """Mirrors ``coach.evidence.CoachEvidence``, minus three fields: ``source``
-    (always ``"all"`` in v1 — there is no source query parameter, see
+    """Mirrors ``coach.evidence.CoachEvidence``, minus ``source`` (always
+    ``"all"`` — there is no source query parameter, see
     ``api/routes/coach.py``), ``format_population`` (the ``gaps`` lines
-    already say how many matches each exclusion reason removed), and
-    ``examples``/``decklists`` (prompt-only, per the module docstring
-    above). ``fmt`` is carried once, as ``CoachResponse.format``, and
-    ``format_counts`` is prompt-only too."""
+    already say how many matches each exclusion reason removed), and the
+    prompt-only ``by_source``, ``examples``, ``decklists`` and
+    ``format_counts``. ``fmt`` is carried once, as
+    ``CoachResponse.format``."""
 
     as_of: str | None
     population: int
@@ -178,7 +177,7 @@ class CoachResponse(BaseModel):
 
 class CoachSource(BaseModel):
     """One citation a stored report actually used — either a reading-list
-    entry (``coach.canon.CANON``) or a web page ``llm.write_report``'s
+    entry (``coach.canon.CANON``) or a web page ``llm.client.write_report``'s
     search tool visited."""
 
     kind: str = Field(description="reading | web")
@@ -195,12 +194,11 @@ class CoachNarrativeResponse(BaseModel):
     three-state shape as ``NarrativeResponse``, extended with the coach's
     own measured web-search cost and its resolved source list.
 
-    ``status`` is ``'ok'`` once a report has been generated, ``'prompt'``
-    when there is evidence but nothing stored yet, ``'no_report'`` when
-    there isn't even enough evidence for a prompt. The GET routes are
-    always a 200; only the POST route's missing-credential and
-    insufficient-data cases are errors (503/404 — see
-    ``api/routes/coach.py``).
+    ``status`` is ``'ok'`` once a report has been generated or pasted,
+    ``'prompt'`` when there is evidence but nothing stored yet,
+    ``'no_report'`` when there isn't even enough evidence for a prompt. The
+    latest-report GET is always a 200; the by-id GET, the POST and the PUT
+    have their own error codes (see ``api/routes/coach.py``).
     """
 
     status: str = Field(description="ok | prompt | no_report")
@@ -210,18 +208,21 @@ class CoachNarrativeResponse(BaseModel):
         "own on the by-id route"
     )
     id: int | None = Field(None, description="this stored report's id, once one exists")
-    narrative: str | None = Field(None, description="the stored prose, once generated")
+    narrative: str | None = Field(None, description="the stored prose, once generated or pasted")
     prompt: str | None = Field(
         None,
-        description="the full text to write the report from — pass it to POST on this same "
-        "path to generate it with Claude (see docs/llm.md), or into an assistant you already "
-        "pay for — coach reports have no import path, so that answer stays there",
+        description="the full text to write the report from — pass it to POST "
+        "/api/coach/narrative to generate it with Claude (see docs/llm.md), or into an "
+        "assistant you already pay for and PUT the answer to /api/coach/narrative. The by-id "
+        "route serves that report's own stored prompt",
     )
     model: str | None = Field(None, description="what wrote the stored report")
     effort: str | None = Field(None, description="the reasoning effort the call used")
     generated_at: str | None = Field(None, description="when the stored report was written")
     cost_usd: float | None = Field(
-        None, description="measured cost of the call that wrote it, including web search"
+        None,
+        description="measured cost of the call that wrote it, including web search; null for "
+        "a pasted one, and for a model with no price on file",
     )
     input_tokens: int | None = Field(
         None,

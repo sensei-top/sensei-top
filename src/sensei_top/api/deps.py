@@ -1,12 +1,12 @@
 """FastAPI dependencies every router shares: one connection per request
-(read-only, or the one writable exception rule 6 allows), and the deck
-filter every metric endpoint accepts.
+(read-only, or the one writable exception rule 6 allows), and the deck and
+source filters every metric endpoint accepts.
 
 Both connection dependencies stay at module scope, reading the database
 path off ``request.app.state`` rather than being closed over inside
 ``create_app``: with ``from __future__ import annotations`` a
-locally-defined alias is an unresolvable forward reference to pydantic —
-this was a real failure, not hypothetical.
+locally-defined alias is an unresolvable forward reference to pydantic
+(docs/conventions.md, "API").
 """
 
 from __future__ import annotations
@@ -26,20 +26,15 @@ __all__ = [
 ]
 
 # How long a write waits for the watcher's rebuild to release the database.
-# project()'s write transaction covers the Arena writes and the whole MTGO
-# projection; measured at 5.7 s when live.py's ingest connection was given
-# its 30 s, it outlasted the 5 s every other connection waits on 2026-10-17
-# and a saved pick failed mid-rebuild with "database is locked". A minute
-# leaves room for the database to keep growing; a wait that still runs out
-# is answered 503 by ``api/app.py::database_busy``.
+# The rebuild's write lock has outlasted the 5 s every read connection here
+# waits, and grows with the database (docs/architecture.md, "Live mode's two
+# cadences", has the measurements). A minute leaves room for that growth; a
+# wait that still runs out is answered 503 by ``api/app.py::database_busy``.
 WRITE_BUSY_TIMEOUT_MS = 60_000
 
 
 def get_conn(request: Request) -> Iterator[sqlite3.Connection]:
-    """One connection per request, read-only. Kept at module scope (reading the
-    path off ``app.state``) rather than closed over in ``create_app``: with
-    ``from __future__ import annotations`` a locally-defined alias is an
-    unresolvable forward reference to pydantic."""
+    """One connection per request, read-only."""
     database: Path = request.app.state.database
     if not database.exists():
         # Connecting would create an empty file — refuse instead, and say what
@@ -68,16 +63,8 @@ def get_conn(request: Request) -> Iterator[sqlite3.Connection]:
 
 
 def get_writable_conn(request: Request) -> Iterator[sqlite3.Connection]:
-    """The one writable connection in this layer.
-
-    Rule 6 in AGENTS.md allows one exception to the read-only API, and this
-    is it: the routes that write its allowlist of authored artifacts (the
-    user's own picks for their own matches, and the narratives written for
-    them), which have no other source and have to survive the full rebuild
-    that erases every derived row. Kept beside ``get_conn`` rather than
-    inside ``create_app`` for the same reason — under ``from __future__ import
-    annotations`` a locally-defined alias is an unresolvable forward reference
-    to pydantic.
+    """The one writable connection in this layer, for the routes that write
+    AGENTS.md rule 6's allowlist of authored artifacts.
 
     Pragmas match ``db.py``'s ``connect()`` deliberately: ``isolation_level=
     None`` so a write block is an explicit ``BEGIN``/``COMMIT``/``ROLLBACK``
@@ -110,10 +97,9 @@ def get_writable_conn(request: Request) -> Iterator[sqlite3.Connection]:
 Conn = Annotated[sqlite3.Connection, Depends(get_conn)]
 WritableConn = Annotated[sqlite3.Connection, Depends(get_writable_conn)]
 DeckFilter = Annotated[str | None, Query(description="restrict to one deck_id")]
-# Defaults to 'arena': every dashboard number before this feature existed was
-# an Arena number, and every existing test/screenshot assumes that. 'all'
-# means no filter at all (both sources together); 'mtgo' is the only other
-# value _filtered() (api/sql.py) recognises.
+# Defaults to 'arena', which existing tests and screenshots assume. 'all'
+# means no filter at all (both sources together); any other value is matched
+# as a literal source name by api/sql.py::_filtered.
 SourceFilter = Annotated[
     str, Query(description="'arena' (default), 'mtgo', or 'all'")
 ]

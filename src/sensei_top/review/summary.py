@@ -1,14 +1,10 @@
-"""The match report's own digest: a headline, a per-game read, and the
-report's gaps collapsed to their real root causes — built entirely from an
-already-computed ``MatchReport``, never a second read of the database (see
-``review/__init__.py``'s own rule that nothing here touches ``sqlite3``).
+"""The match report's own digest, built entirely from an already-computed
+``MatchReport``, never a second read of the database. See docs/review.md,
+"The match summary (`review/summary.py`)".
 
-This module *selects and phrases* what the analyzers already found; it
-measures nothing new. Every number in ``headline``, ``subhead`` and a
-``Beat``'s own text traces to a source ``Finding``'s own ``Evidence`` or its
-game/turn anchor, or to a plain count of ``MatchReport.games``/``.findings``
-— the same discipline ``findings.py``'s own docstring states for a single
-finding, extended here to a summary built from many.
+Every number in ``headline``, ``subhead`` and a ``Beat``'s own text traces
+to a source ``Finding``'s own ``Evidence`` or its game/turn anchor, or to a
+plain count of ``MatchReport.games``/``.findings``.
 """
 
 from __future__ import annotations
@@ -28,7 +24,7 @@ _MAX_BEATS_PER_GAME = 3
 
 # Which per-game finding codes are worth surfacing as a compact "beat", and
 # the short left-column label each one gets — deliberately a small, curated
-# set (docs/review.md, "The match summary": up to three beats a game).
+# set (docs/review.md, "The match summary (`review/summary.py`)").
 _GAME_BEAT_LABELS: dict[str, str] = {
     "race_ahead": N_("Race"),
     "race_behind": N_("Race"),
@@ -58,8 +54,7 @@ _RESULT_REASON_WORDS: dict[str, str] = {
 
 # A stable slug (Gap.cause) shared by gaps whose real root cause is the same
 # absence, even when the analyzers reporting them differ — the heading each
-# group renders under. A gap without a recognized cause renders alone,
-# exactly as it did before this module existed.
+# group renders under. A gap without a recognized cause renders alone.
 _CAUSE_HEADINGS: dict[str, str] = {
     "opponent_unclassified": N_("The opponent's deck was never identified as a known "
                                 "archetype"),
@@ -235,10 +230,8 @@ def _headline(report: MatchReport) -> str:
 
 
 def _race_mismatch_subhead(report: MatchReport) -> str | None:
-    """You led the race in every game and still lost some — the single
-    clearest "the numbers don't match the story" pattern in real reports
-    (docs/review.md's own diagnosis). Every number here is a count of
-    ``report.games``/``.findings``, not a value invented for the sentence."""
+    """You led the race in every game and still lost some. Every number
+    here is a count of ``report.games``/``.findings``."""
     total = len(report.games)
     if total == 0:
         return None

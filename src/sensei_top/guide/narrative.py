@@ -1,28 +1,18 @@
-"""The deck guide's prompt, and the shape of the answer that comes back —
-whether that answer arrives via an opt-in Claude call or a hand import.
+"""The deck guide's prompt, and the shape of the answer that comes back.
+See docs/guide.md, "`narrative.py` — the prompt, and the shape of the
+answer".
 
 This module itself never makes a call: only ``sensei_top.llm.client``
-imports ``anthropic`` (AGENTS.md non-negotiable #5). Two round trips share
-this module's context, prompt, schema and parser, converging on the same
-storage:
-
-1. ``build_guide_context`` assembles the evidence, and ``full_prompt`` wraps
-   it with the framing that used to be sent as a ``system`` parameter.
-   ``sensei-top guide --deck KEY --prompt`` prints it; the Deck guide tab's
-   "Write the guide" card sends the same text.
-2. With a Claude credential configured (``docs/llm.md``), ``POST
-   /api/guide/{key}/narrative`` sends this prompt via ``llm.write_json``
-   against ``_GUIDE_TOOL``'s own schema (through ``llm.strict_schema``) and
-   parses the structured answer with ``guide_narrative_from_json`` below.
-   With none configured, a human — or a Claude Code session on a
-   subscription that is already paid for — writes the prose from the same
-   prompt, and ``sensei-top guide --deck KEY --import FILE`` reads it back
-   through the exact same parser, once ``answers.read_answer`` has checked
-   the header the copied prompt asks for and unwrapped the body.
-3. Either way the result lands the same two places: the deck-level half in
-   ``deck_narrative``, and every matchup plan in ``matchup_brief``, so one
-   write lights up both the Deck guide tab and the live matchup brief on the
-   Current match tab (``docs/brief.md``).
+imports ``anthropic`` (AGENTS.md non-negotiable #5). Every round trip
+shares this module's context, prompt, schema and parser:
+``POST /api/guide/{key}/narrative`` sends ``full_prompt`` via
+``llm.write_json`` against ``_GUIDE_TOOL``'s schema; a pasted answer
+(``PUT`` on the same path) and ``sensei-top guide --deck KEY --import
+FILE`` pass ``answers.read_answer`` first, which checks the header the
+copied prompt asks for (the CLI also takes a headerless answer, with a
+warning) and unwraps the body. All three parse through
+``guide_narrative_from_json`` and store the deck-level half in
+``deck_narrative`` and every matchup plan in ``matchup_brief``.
 
 **What the prompt carries** (``build_guide_context``): the whole evidence
 bundle rendered as the same Markdown tables the exported document uses
@@ -30,19 +20,16 @@ bundle rendered as the same Markdown tables the exported document uses
 prose to describe the numbers), the player's current 75 with oracle text,
 the top archetypes by field share — plus the ones this deck has actually
 faced most — with their consensus staples and oracle text, the detected
-reset and what it voided, and the bundle's own stated gaps. It is a large
-prompt, and deliberately so: every figure in it is already visible
-elsewhere in the guide, so nothing in it is a surprise to the person
-pasting — or the model reading — it.
+reset and what it voided, and the bundle's own stated gaps. Every figure
+in it is already visible elsewhere in the guide, so nothing in it is a
+surprise to the person pasting — or the model reading — it.
 
-**What comes back** is a structured shape, not free prose — ``GuideNarrative``.
-``_GUIDE_TOOL`` is still here and is still the contract: it was a tool schema
-for forced tool use, and it now documents exactly the JSON both the generate
-route's structured-output request and a hand import must supply. Requesting
-a shape rather than a document is what lets ``guide/plans.py`` validate
-every sideboard plan against the real 75 before it is ever shown, and what
-lets the frontend render each section with the same components as the
-deterministic evidence around it.
+**What comes back** is a structured shape, not free prose —
+``GuideNarrative``. ``_GUIDE_TOOL``'s schema is the contract for the JSON
+both the generate route's structured-output request and a pasted or
+imported answer must supply. Requesting a shape rather than a document is
+what lets ``guide/plans.py`` validate every sideboard plan against the
+real 75 before it is ever shown.
 """
 
 
@@ -78,7 +65,7 @@ TOP_ARCHETYPES_FOR_ORACLE_TEXT = 6
 # The field's top archetypes by share are the ones a tournament faces; the
 # ones this deck actually meets on the ladder are often different. Up to
 # MOST_FACED_ARCHETYPES more, each faced at least MIN_TIMES_FACED times in
-# the guide's window, so every guide also writes the briefs the live tab
+# the guide's window, so every guide also writes the briefs the Live page
 # most often needs (brief/from_guide.py stores one per matchup plan).
 MOST_FACED_ARCHETYPES = 5
 MIN_TIMES_FACED = 3
@@ -416,7 +403,7 @@ def _wrap_json_prompt(
     assistant reads it just before answering; ``written_for`` is the
     staleness hash the answer copies back. Without it (the generate path,
     whose structured-output request already fixes the shape): framing, the
-    schema, then the evidence, as before the contract."""
+    schema, then the evidence."""
     if answer_for is not None:
         return (
             f"{system_prompt}\n\n---\n\n{context}\n\n---\n\n"
@@ -432,7 +419,8 @@ def _wrap_json_prompt(
 def _parse_json_object(raw: str | dict) -> dict:
     """The str -> json -> dict ladder every JSON-schema-flavoured narrative
     parser in this project starts with, raising ``NarrativeError`` rather
-    than a raw ``json`` exception. Shared with ``brief/narrative.py``."""
+    than a raw ``json`` exception. Shared with ``brief/narrative.py`` and
+    ``guide/rcq.py``."""
     if isinstance(raw, str):
         try:
             raw = json.loads(raw)
@@ -469,10 +457,9 @@ def guide_narrative_from_json(raw: str | dict, guide: DeckGuide) -> GuideNarrati
     """Parse an authored narrative and validate its sideboard plans against
     the real 75 before handing it back.
 
-    Accepts the JSON object ``_GUIDE_TOOL``'s schema describes — the same
-    shape the removed API call used to receive. Raises ``NarrativeError`` on
-    anything malformed, so the CLI can say what was wrong rather than storing
-    a half-parsed guide. A plan the author got wrong is *caught and
+    Accepts the JSON object ``_GUIDE_TOOL``'s schema describes. Raises
+    ``NarrativeError`` on anything malformed, so the caller can say what was
+    wrong rather than storing a half-parsed guide. A plan the author got wrong is *caught and
     surfaced*, never silently repaired: see ``guide/plans.py``.
     """
     raw = _parse_json_object(raw)

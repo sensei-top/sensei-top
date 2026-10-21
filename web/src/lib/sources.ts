@@ -2,7 +2,7 @@
  * The hold lines the Field page's sources section says, as pure functions of
  * the API's `MetaSourceHold`: why a source's fetch is paused or waiting, and
  * when it may run again. The page only draws what `holdLine` returns. The
- * lines are plan 14's catalog (§2), word for word; the CLI's versions of the
+ * lines are the approved copy, word for word; the CLI's versions of the
  * same rules are `metagame/fetch_lines.py` and `metagame/holds.py`.
  */
 import type { MetaSourceHold } from '../api'

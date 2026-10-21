@@ -1,18 +1,18 @@
 """The break read: what to do during a Bo3 intermission, between the game
 that just ended and the next one's first state message
-(``projector/live_state.py``'s ``Intermission``) — a sibling to
-``table/hand_read.py`` and ``table/keep.py`` for the one window in a match
-where nothing is happening on the board at all.
+(``projector/live_state.py``'s ``Intermission``). See docs/current-match.md,
+"The break read (`table/intermission.py`)".
 
 ``build_break_read`` names the opponent from whatever has been revealed so
-far (a manual pick first, then the same rule-engine/corpus read
-``classify_matches`` uses per match, extracted as ``classify_seen`` so this
-can run on a name set gathered at request time rather than waiting on
-``project()``), finds the stored matchup brief for that archetype — or the
-closest thing to one already written for this deck — and surfaces what was
-actually boarded the last time this deck faced it. Nothing here writes
-anything: a brief is authored by ``sensei-top brief --import`` or the
-guide's own narrative, never by this module (AGENTS.md non-negotiable #5).
+far, without waiting on ``project()``, finds the stored matchup brief for
+that archetype (or the closest one already written for this deck), and
+surfaces what was actually boarded the last time this deck faced it.
+Nothing here writes anything: it runs inside a GET on a ``query_only``
+connection (AGENTS.md non-negotiable #6). A brief is authored by
+``sensei-top brief --import``, the sideboard-plan card's paste box (the PUT
+``api/routes/guide.py::paste_brief``) or the guide's own narrative, never
+by this module, which builds the brief prompt without ever sending it to a
+model (non-negotiable #5).
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ MAX_PAST_BOARDING = 3
 
 @dataclass(frozen=True, slots=True)
 class OpponentRead:
-    """Who the opponent is, per ``build_break_read``'s step 2 precedence."""
+    """Who the opponent is, per ``_resolve_opponent``'s precedence."""
 
     label: str
     archetype_key: str | None
@@ -92,7 +92,7 @@ class PastBoardingGame:
 class PastBoarding:
     """One prior completed match of this deck identity against this
     archetype, and what was actually boarded in it — shown as "what you
-    boarded last time", never as advice (step 5b)."""
+    boarded last time", never as advice (``_past_boarding``)."""
 
     match_id: str
     played_at: str | None
@@ -111,7 +111,8 @@ class PostboardRecord:
 class BreakRead:
     """Everything the Bo3 break card needs, built once per poll and cached
     by the API layer (``api/sql.py``) since the board never moves during a
-    break — see this module's docstring and S4's "Time budget" measurement."""
+    break — docs/current-match.md, "The break read (`table/intermission.py`)",
+    has what a cold and a cached build cost."""
 
     game_number: int  # the game that just ended
     next_game: int
@@ -132,14 +133,14 @@ class BreakRead:
 
 
 def opponent_seen_names(conn: sqlite3.Connection, match_id: str, live: LiveState) -> list[str]:
-    """Step 1: the opponent's revealed card names, pooling ``card_events``
+    """The opponent's revealed card names, pooling ``card_events``
     (whatever ``project()`` has already caught up to) with the live replay's
     own revealed zones (``live.zone_cards`` — non-hand, ``grp_id`` not null)
     so a break before game 3 covers both games even when projection has
     only reached game 1. Public (not ``_``-prefixed): the API layer's cache
-    wrapper needs this same name set for its own cache key (S4 step 7) and
-    must not pay for the query twice, so it calls this directly and hands
-    the result back to ``build_break_read`` via its own ``names`` parameter.
+    wrapper needs this same name set for its own cache key and must not pay
+    for the query twice, so it calls this directly and hands the result
+    back to ``build_break_read`` via its own ``names`` parameter.
 
     Deliberately not run through ``_seen_forms``: ``classify_seen`` and
     ``rank_candidates`` both normalize their own ``names``/``seen_names``
@@ -181,7 +182,7 @@ def _load_caches(
     conn: sqlite3.Connection, caches: dict, fmt: str | None
 ) -> tuple[dict[str, dict[str, list]], dict[str, frozenset[str]], CorpusPrior | None]:
     """Lazily fills ``caches`` — a plain dict the API layer owns and reuses
-    across polls (S4 step 7) — with the same definitions/colours/corpus-prior
+    across polls — with the same definitions/colours/corpus-prior
     loads ``classify_matches`` pays once per full reclassification, so a 1 Hz
     break poll during a match doesn't repeat a full-table scan on every beat.
 
@@ -212,7 +213,7 @@ def _resolve_opponent(
     colors_by_name: dict[str, frozenset[str]],
     prior: CorpusPrior | None,
 ) -> OpponentRead | None:
-    """Step 2's precedence: a manual pick first — the user's own correction
+    """The precedence: a manual pick first — the user's own correction
     of their own match, which always wins — then the same rule-engine/corpus
     read ``classify_matches`` uses per match (``classify_seen``), run here on
     the name set gathered at request time instead of waiting on
@@ -256,7 +257,7 @@ def _closest_alternatives(
     colors_by_name: dict[str, frozenset[str]],
     prior: CorpusPrior | None,
 ) -> list[AlternativePlan]:
-    """Step 5: up to ``MAX_ALTERNATIVES`` already-written plans for a
+    """Up to ``MAX_ALTERNATIVES`` already-written plans for a
     *different* archetype than the one actually named, best fit first.
     ``rank_candidates`` only guarantees a globally fit-sorted return when its
     own corpus folding runs (its docstring) — otherwise archetypes and
@@ -292,7 +293,7 @@ def _flag_card(entry: dict, current_75: set[int]) -> PastBoardingCard:
 def _past_boarding(
     conn: sqlite3.Connection, identity: DeckIdentity, archetype_key: str, current_match_id: str
 ) -> list[PastBoarding]:
-    """Step 5b: what this deck identity actually boarded, the last few times
+    """What this deck identity actually boarded, the last few times
     it faced this archetype — recorded fact ("what you boarded last time"),
     never advice. Each boarded game diffs against that *past* match's own
     game-1 maindeck (``decks.cards_json``, since ``game_decks`` never carries
@@ -417,11 +418,12 @@ def build_break_read(
     caches: dict,
     names: list[str] | None = None,
 ) -> BreakRead | None:
-    """Everything the Bo3 break card needs — this module's docstring and
-    S4's seven numbered steps — or ``None`` when the match is not on a break
-    right now, the one input every later step depends on.
+    """Everything the Bo3 break card needs (the precedence is in
+    docs/current-match.md, "The break read (`table/intermission.py`)"), or
+    ``None`` when the match is not on a break right now, the one input
+    every later step depends on.
 
-    ``caches`` is a plain dict the caller owns across polls (S4 step 7): a
+    ``caches`` is a plain dict the caller owns across polls: a
     request-scoped or ``app.state``-scoped cache. ``names`` lets a caller
     that already paid for ``opponent_seen_names`` (the API layer's own cache
     key) hand the result back in rather than this function querying it a
@@ -505,17 +507,17 @@ def build_break_read(
 
     prompt: str | None = None
     if identity is not None and chosen_key is not None and exact_brief is None:
-        # Step 6: the prompt to write the plan the opponent actually named
-        # doesn't have yet. This is the same call
-        # ``api/routes/current_match.py``'s ``_brief_response`` makes for
-        # the live tab's own currently-known opponent — duplicated here
-        # (rather than imported) because ``table/`` must never import from
-        # ``api/``. Memoized per match in ``caches``: ``full_prompt``'s
-        # ``format_resets`` scan and personal-rate read measured ~1s on the
-        # real database, and nothing it reads moves while this match is
-        # still being played — only past, completed matches and the corpus
-        # feed it, and a corpus refresh resets ``caches`` wholesale (the API
-        # layer's own ``_cached_break_read``).
+        # The prompt to write the plan the opponent actually named doesn't
+        # have yet: the same call ``api/routes/current_match.py``'s
+        # ``_brief_response`` makes for the Live page's currently-known
+        # opponent, duplicated here (rather than imported) because
+        # ``table/`` must never import from ``api/``. Memoized per match in
+        # ``caches``: ``full_prompt`` is most of a cold build's cost
+        # (docs/current-match.md, "The break read (`table/intermission.py`)"),
+        # and nothing it reads moves while this match is still being played
+        # — only past, completed matches and the corpus feed it, and a
+        # corpus refresh resets ``caches`` wholesale (the API layer's own
+        # ``_cached_break_read``).
         label = opponent.label if opponent is not None else None
         prompts = caches.setdefault("prompts", {})
         prompt_key = (match_id, identity.key, list_hash(identity.current_cards), chosen_key, label)
@@ -526,7 +528,7 @@ def build_break_read(
 
     past_boarding: list[PastBoarding] = []
     if identity is not None:
-        # Step 5b: applies to the named archetype, or the top alternative
+        # Past boarding reads the named archetype, or the top alternative
         # when none was named.
         boarding_key = chosen_key or (alternatives[0].archetype_key if alternatives else None)
         if boarding_key is not None:

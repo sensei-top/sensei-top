@@ -202,7 +202,8 @@ export const useLLMStatus = () =>
   useQuery({ queryKey: ['llm-status'], queryFn: () => get<LLMStatus>('/api/llm/status') })
 
 /** The heartbeat. Polls on its own timer; everything else refetches only when
- *  this reports a new `revision`, so an idle dashboard does no real work. */
+ *  this reports a new `projection_revision` (`shell/Shell.tsx`), so an idle
+ *  dashboard does no real work. */
 export const useLive = () =>
   useQuery({
     ...query<LiveStatus>('live', '/api/live'),
@@ -292,8 +293,9 @@ export const useSideboarding = (matchId: string) =>
   })
 
 /** The match being played right now, or null between games. Deliberately not
- *  on its own timer: the heartbeat counts card events, so a play mid-turn
- *  moves the revision and invalidates this like every other query. */
+ *  on its own timer: the heartbeat's `projection_revision` counts card events,
+ *  so a play mid-turn, once projected, moves it and invalidates this like
+ *  every other query. */
 export const useCurrentMatch = () =>
   useQuery(query<CurrentMatch | null>('current-match', '/api/current-match'))
 
@@ -307,21 +309,19 @@ export const useCurrentMatchBrief = () =>
   useQuery(query<MatchupBriefResponse>('current-match-brief', '/api/current-match/brief'))
 
 /** The opening-hand read, keep guide, opponent-hand read and our own
- *  remaining library for the match in progress — free and local, and now a
- *  fast, request-time replay of the current match rather than a stale
- *  projected `turns` row (`table/live.py`).
+ *  remaining library for the match in progress — free and local, a fast,
+ *  request-time replay of the current match rather than a stale projected
+ *  `turns` row (`table/live.py`).
  *
  *  One scoped exception to "only /api/live is on a timer"
- *  (docs/frontend.md): this route rides its own unconditional 1s timer
- *  rather than gating on a projected match existing. It used to gate on
- *  `Boolean(current.data)` — but that data comes from `project()`, whose
- *  full-rebuild floor measured at 7.55s on a real database
- *  (`projector/live_state.py`), so the fast poll was off for several
- *  seconds at exactly the two moments it exists to cover: the opening
- *  mulligan offer (a measured 5-second median decision window) and the
- *  first turns of a new match. Unconditional is affordable now that the
- *  route it drives replays only the current match (0.04-0.2s) instead of
- *  reading data a full rebuild produced — this hook is only ever mounted
+ *  (docs/frontend.md, "Data fetching"): this route rides its own
+ *  unconditional 1s timer rather than gating on a projected match existing.
+ *  Gating on `Boolean(current.data)` would wait on `project()`'s full
+ *  rebuild, so the fast poll would be off for seconds at exactly the two
+ *  moments it exists to cover: the opening mulligan offer and the first
+ *  turns of a new match. Unconditional is affordable because the route it
+ *  drives replays only the current match instead of reading data a full
+ *  rebuild produced — this hook is only ever mounted
  *  while `CurrentMatchView` is, so an idle dashboard on another tab does
  *  none of this work regardless.
  */
@@ -355,7 +355,7 @@ export const useMtgoPickCandidates = (matchId: string, enabled: boolean) =>
 export const useMtgoNeedsPick = () =>
   useQuery({ queryKey: ['mtgo-needs-pick'], queryFn: () => get<MtgoNeedsPick[]>('/api/mtgo/needs-pick') })
 
-/** Every waiting MTGO match, grouped by the list it fits (plan 19). */
+/** Every waiting MTGO match, grouped by the list it fits. */
 export const getMtgoPickGroups = () => get<MtgoPickGroups>('/api/mtgo/picks/candidates')
 
 /** The archetype read from the user's own cards, for partial groups and
@@ -599,11 +599,12 @@ export const useGuideCoveragePrompt = (key: string | undefined, enabled: boolean
 
 /** How stale the archetype cache and the tournament corpus are, and how
  *  often the classifier actually names an opponent's own deck. Read per
- *  format and not on the heartbeat — this is a diagnostic, not a metric that
- *  moves as the user plays; `enabled` holds it until the caller knows the
- *  format (Field waits for `/api/formats`). Also the source of
- *  `format_reset_start`, which `FieldView`/`useFieldRecords` use to decide
- *  whether a "Since the last reset" window is even offered. */
+ *  format, with no timer of its own: like every other query, it refetches
+ *  when the heartbeat reports a new `projection_revision`. `enabled` holds
+ *  it until the caller knows the format (Field waits for `/api/formats`).
+ *  Also the source of `format_reset_start`, which `FieldView`/
+ *  `useFieldRecords` use to decide whether a "Since the last reset" window
+ *  is even offered. */
 export const useMetagameStatus = (format?: string, enabled = true) =>
   useQuery({
     queryKey: ['metagame-status', format ?? null],
@@ -613,7 +614,7 @@ export const useMetagameStatus = (format?: string, enabled = true) =>
 
 /** Every format with how many of the user's matches and how many tournament
  *  events it holds, in the API's order, and the one a page shows when its
- *  address names none (D13). */
+ *  address names none. */
 export const useFormats = () =>
   useQuery({ queryKey: ['formats'], queryFn: () => get<FormatsOut>('/api/formats') })
 

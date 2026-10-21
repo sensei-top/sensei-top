@@ -60,7 +60,7 @@ def test_land_odds_sum_to_one_and_match_hypergeometric_by_hand(conn):
 
     assert sum(slot.count for slot in guide.ideal_hand) == 7
 
-    # early_plays is the same number ideal_hand's "play(s) at 1-3 mana" slot
+    # early_plays is the same number ideal_hand's "play(s) at 1-2 mana" slot
     # carries as a formatted label — exposed as a bare int too, since
     # table/opening_hand.py's verdict needs to compare against it directly.
     early_slot = next(s for s in guide.ideal_hand if "mana" in s.label)
@@ -222,7 +222,7 @@ def test_boarded_maindeck_wins_over_the_projected_row(conn):
     assert plain is not None and plain.land_count == 17
 
 
-# --- key_plays / mulligan_cost (Layer 2: the deck's own play evidence) -----
+# --- key_plays / mulligan_cost (the deck's own play evidence) --------------
 #
 # These reuse guide/play.py's key_card_timing and mulligan_record rather
 # than reimplementing them, so the fixture helpers below mirror

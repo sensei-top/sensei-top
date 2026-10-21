@@ -1,30 +1,17 @@
-"""Where the backup destination and retention count come from — the only
-question this module answers, mirroring ``mtgo/config.py``'s shape for the
-same reason: a small, independent owner of one ``config.toml`` table.
+"""Where the backup destination and retention count come from: a small,
+independent owner of the ``[backup]`` table in ``llm.config.config_path()``,
+shaped like ``mtgo/config.py``. Each field's precedence is ``resolve``'s; see
+docs/architecture.md, "Backups".
 
-Resolution order, first match wins, evaluated independently per field:
+``SENSEI_TOP_BACKUP_KEEP`` deliberately does not exist: every other env
+override in this project points at a *thing* to find (``MTGA_LOG``,
+``MTGO_LOG_DIR``, ``MTGO_HANDLE``, the two API keys) rather than a tuning
+number, and ``keep`` has no per-machine story the way a log path does.
 
-Destination directory
-    1. ``--dir`` on the command line.
-    2. ``SENSEI_TOP_BACKUP_DIR`` in the environment.
-    3. ``[backup]``'s ``dir`` in ``llm.config.config_path()`` (the same
-       ``~/.config/sensei-top/config.toml`` every other table lives in).
-    4. ``default_dir(db_path)`` — a ``backups`` folder beside the database.
-
-Retention count (``keep``)
-    1. ``--keep`` on the command line.
-    2. ``[backup]``'s ``keep`` in the same config file.
-    3. ``DEFAULT_KEEP``.
-
-    ``SENSEI_TOP_BACKUP_KEEP`` deliberately does not exist: every other env
-    override in this project points at a *thing* to find (``MTGA_LOG``,
-    ``MTGO_LOG_DIR``, ``MTGO_HANDLE``, the two API keys) rather than a tuning
-    number, and ``keep`` has no per-machine story the way a log path does.
-
-Never raises. A missing file, a missing table, or a malformed value all
-resolve the same way every other config reader here does: log a warning and
-fall back, never an exception a backup run would have to catch. An invalid
-``keep`` *in the file* (zero, negative, not a number) clamps to
+Never raises, so a backup run never has to catch anything. A missing file or
+a missing ``[backup]`` table reads as unset, silently; unparseable TOML warns
+and reads as unset; a ``dir`` that is not a non-empty string is ignored. An
+invalid ``keep`` *in the file* (zero, negative, not a number) clamps to
 ``DEFAULT_KEEP`` with a warning, because a typo in ``config.toml`` must never
 silently turn backups off. An invalid ``--keep`` on the command line is a
 different case argparse rejects before this module ever sees it
@@ -70,7 +57,8 @@ def default_dir(db_path: Path) -> Path:
 def resolve(
     db_path: Path, *, dir_override: str | None = None, keep_override: int | None = None
 ) -> BackupConfig:
-    """Precedence: flag > $SENSEI_TOP_BACKUP_DIR > [backup] > default. Never raises."""
+    """Precedence, per field: flag > $SENSEI_TOP_BACKUP_DIR (directory only) >
+    [backup] > default. Never raises."""
     table = _load_table()
 
     if dir_override:

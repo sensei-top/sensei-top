@@ -86,8 +86,10 @@ def test_live_status_reports_counts_without_a_watcher(client):
 
 
 def test_live_revision_changes_when_data_changes(tmp_path, make_client):
-    """The dashboard refetches on a new revision, so it must move when the
-    projection does — and stay put when nothing happened."""
+    """``revision`` is the per-ingest-tick heartbeat (the dashboard
+    refetches on ``projection_revision`` instead, pinned by the next test),
+    so it must move on new raw events and on a rebuild — and stay put when
+    nothing happened."""
     db_path = tmp_path / "rev.db"
     conn = open_database(db_path)
     with make_client(create_app(db_path)) as c:
@@ -246,7 +248,7 @@ def test_decks_lists_the_fixture_deck(client):
     assert decks[0]["name"] == "Spellelementals"
 
 
-# --- metric 1: winrate ------------------------------------------------------
+# --- winrate ----------------------------------------------------------------
 
 
 def test_winrate_matches_projected_record(client):
@@ -324,7 +326,7 @@ def test_winrate_by_rank_groups_matches_with_no_snapshot_together(client):
     assert row["winrate"] == pytest.approx(0.5)
 
 
-# --- metric 2: play/draw ----------------------------------------------------
+# --- play/draw --------------------------------------------------------------
 
 
 def test_play_draw_splits_by_on_play(client):
@@ -340,7 +342,7 @@ def test_play_draw_on_play_is_boolean_not_integer(client):
     assert all(isinstance(r["on_play"], bool) for r in client.get("/api/metrics/play-draw").json())
 
 
-# --- metric 3: game length + turn curves ------------------------------------
+# --- game length + turn curves ----------------------------------------------
 
 
 def test_game_length_buckets(client):
@@ -464,9 +466,8 @@ def test_match_detail_final_life_totals(client):
 
 
 def test_match_detail_turns_carry_graveyard_and_open_mana(client):
-    """The turn query used to select 11 of turns' 15 columns, silently
-    dropping graveyard and open-mana even though CurrentTurn already declares
-    them and /api/current-match already selects them (app.py:657-659).
+    """The match detail's turns carry graveyard and open-mana, the columns
+    CurrentTurn declares and /api/current-match also selects.
 
     Ground truth from test_projector.py's
     test_turns_carry_graveyard_and_open_mana_counts: MATCH_LOSS game 2 turn 3
@@ -1165,7 +1166,7 @@ def _intermission_client(
 
 def test_current_match_read_has_no_intermission_mid_game(tmp_path, make_client):
     """entry 34: the last GRE event before game 1 ends, no gameInfo at all —
-    S4/S5's field must stay null during ordinary play."""
+    the intermission field must stay null during ordinary play."""
     with _intermission_client(tmp_path, 34, make_client) as client:
         body = client.get("/api/current-match/read").json()
     assert body["intermission"] is None
@@ -1625,7 +1626,7 @@ def test_review_leaks_routes_pass_a_per_format_consensus_window(client, monkeypa
     """Both `find_leaks` call sites — the GET list route and the narrative
     route's own `build_context` — must hand over a `consensus_window`
     resolver, so each match's report is windowed by its own format's reset
-    (plan 13, S8c) and the field record inside
+    and the field record inside
     `review/analyzers/baseline.py` never pools rounds from across one
     (`docs/metagame.md`'s format-reset boundary). The window lookup is
     replaced with one that names the format it was asked for, so this pins
@@ -1660,9 +1661,11 @@ def test_review_leaks_routes_pass_a_per_format_consensus_window(client, monkeypa
 def counting_build_match_report(monkeypatch):
     """Replaces ``leaks_mod.build_match_report`` with a wrapper that still
     does the real work but records every ``match_id`` it was actually asked
-    to build for -- the ``tests/test_leaks.py:514`` pattern, one level up at
-    the HTTP layer, so a request that reuses ``_shared_report_cache`` shows
-    up here as zero calls rather than zero-cost-but-still-called."""
+    to build for -- the pattern of
+    ``tests/test_leaks.py::test_report_cache_reuses_a_built_report_instead_of_rebuilding_it``,
+    one level up at the HTTP layer, so a request that reuses
+    ``_shared_report_cache`` shows up here as zero calls rather than
+    zero-cost-but-still-called."""
     calls: list[str] = []
     real_build_match_report = leaks_mod.build_match_report
 
@@ -1957,13 +1960,10 @@ def test_narrative_prompt_carries_the_evidence_and_the_framing(client):
 
 
 def test_narrative_prompt_carries_no_local_paths(client, monkeypatch):
-    """AGENTS.md rule 5 was rewritten to drop the enumerated-calls model in
-    favor of a standard (opt-in, inspectable, fail-soft, no more than the
-    feature needs) — this prompt now deliberately carries the game's own
-    shape (review/narrative.py's module docstring), so the old "no board
-    state at all" check no longer matches the design. What would still be
-    wrong to leak regardless is a filesystem path, which would reveal the
-    machine and buy the coaching nothing."""
+    """This prompt deliberately carries the game's own shape
+    (review/narrative.py's module docstring). What would still be wrong to
+    leak is a filesystem path, which would reveal the machine and buy the
+    coaching nothing."""
     body = client.get(
         f"/api/matches/{MATCH_WIN}/report/narrative", params={"preview": "1"}
     ).json()
@@ -2005,7 +2005,7 @@ def test_narrative_prompt_includes_field_context_for_a_classified_opponent(
 ):
     """MATCH_WIN resolves to the 'Test' archetype in named_client — with
     metagame data stored for that same archetype_key, the prompt must carry
-    the field figure. The vocabulary is shared on purpose (Phase 1/3): the
+    the field figure. The vocabulary is shared on purpose: the
     same archetype_key names both a personal match and a corpus decklist."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
     _store_field_row(named_client.app.state.database, "Standard")
@@ -2269,7 +2269,7 @@ def test_metagame_status_with_no_data(tmp_path, make_client):
         body = c.get("/api/metagame/status").json()
     assert body["archetype_cache_age_hours"] is None
     assert body["archetype_files"] == 0
-    assert body["format"] == "Standard"  # no match names a format: D13's fallback
+    assert body["format"] == "Standard"  # no match names a format: the fallback
     assert body["opponent_sources"]["total"] == 0
 
 
@@ -2829,7 +2829,7 @@ def two_format_meta_client(tmp_path, make_client):
 
 
 def test_metagame_presence_defaults_to_standard_with_no_matches(two_format_meta_client):
-    """D13: no match names a format, so the default is Standard, and the
+    """No match names a format, so the default is Standard, and the
     Modern event's archetypes stay out."""
     rows = two_format_meta_client.get("/api/metagame/presence").json()
     assert {r["archetype_key"] for r in rows} == {"UWMomo", "Aristocrats"}
@@ -2844,7 +2844,7 @@ def test_metagame_presence_for_modern_is_modern_only(two_format_meta_client):
 
 
 def test_metagame_winrate_defaults_to_standard_with_no_matches(two_format_meta_client):
-    """D13 again: the Tier C league never counts toward winrate, so the
+    """The same default: the Tier C league never counts toward winrate, so the
     Standard swiss's two archetypes are the whole answer, and Modern's are
     left out."""
     rows = two_format_meta_client.get("/api/metagame/winrate").json()
@@ -2922,7 +2922,7 @@ def test_formats_counts_the_fixture_matches_as_standard_by_their_log(client):
 
 
 def test_the_default_format_follows_the_most_recent_match(mtgo_pick_db, make_client):
-    """D13. MTGO_PICK_A is given an inferred Modern and moved to start after
+    """MTGO_PICK_A is given an inferred Modern and moved to start after
     every other match; MTGO_PICK_B has no format at all and is not counted."""
     conn = open_database(mtgo_pick_db)
     conn.execute(
@@ -3139,8 +3139,9 @@ def test_picking_a_candidate_wins_over_the_inferred_one(named_client):
 
 
 def test_picking_a_candidate_flags_it_picked_in_the_candidate_list(named_client):
-    """The advisor's hint context and the 'play around' card both need to
-    know which candidate the player chose, not just that some pick was made —
+    """The picker's "picked" mark (`OpponentDeckLabel.tsx`) and
+    `api/routes/matches.py::_one_per_label` both need to know which
+    candidate the player chose, not just that some pick was made —
     `rank_candidates` flags the matching candidate itself rather than making
     each caller re-look-up `opponent_deck_override`."""
     match_id = _match_id_by_source(named_client, "colors")
@@ -3480,7 +3481,8 @@ def test_a_store_decks_format_prefills_the_candidate(mtgo_store_db, make_client)
 
 def test_a_store_decks_format_wins_over_the_last_confirmed_one(mtgo_store_db, make_client):
     """The user confirms the store deck as Modern on one match; the next
-    match is still offered the store's Standard (D16 ahead of D10)."""
+    match is still offered the store's Standard: the deck store comes ahead of
+    the last pick."""
     with make_client(create_app(mtgo_store_db)) as client:
         deck = _pick_decks(client)["Fixture Deck"]
         response = client.put(
@@ -3499,7 +3501,8 @@ def test_a_store_decks_format_wins_over_the_last_confirmed_one(mtgo_store_db, ma
 def test_the_inferred_format_prefills_every_deck_the_first_two_steps_miss(
     mtgo_store_db, make_client
 ):
-    """D7's third step. ``classify_matches`` writes match_format_inference and
+    """The pre-fill's third step, the match's inferred format.
+    ``classify_matches`` writes match_format_inference and
     ``project()`` does not, so the row is written by hand: Pioneer, for match
     A only. The store deck keeps its own Standard; Sample, confirmed as Legacy
     on match B, keeps that; the other two exports name nothing and take the
@@ -3777,7 +3780,7 @@ def test_only_authored_artifact_routes_write():
         ("/api/guide/{key}/narrative", "POST"),
         ("/api/guide/{key}/rcq/narrative", "POST"),
         ("/api/coach/narrative", "POST"),
-        # Pasted answers (plan 24, D1): no model call, only the same tables.
+        # Pasted answers: no model call, only the same tables.
         ("/api/guide/{key}/narrative", "PUT"),
         ("/api/guide/{key}/rcq/narrative", "PUT"),
         ("/api/guide/{key}/briefs/{archetype_key}", "PUT"),
@@ -3868,7 +3871,7 @@ def test_guide_coverage_prompt_404_for_unknown_deck(client):
 
 
 def test_a_guide_for_a_deck_with_no_format_is_200_with_a_null_field_format(client, guide_key):
-    """Plan 13, D15: Draft names no constructed format and no match carries one,
+    """Draft names no constructed format and no match carries one,
     so the guide still answers, with no field and the format_unknown note."""
     conn = sqlite3.connect(client.app.state.database)
     conn.execute("UPDATE decks SET format = 'Draft'")
@@ -3885,7 +3888,7 @@ def test_a_guide_for_a_deck_with_no_format_is_200_with_a_null_field_format(clien
 
 
 def test_guide_coverage_for_a_deck_with_no_format_is_200_with_a_null_format(client, guide_key):
-    """Plan 13, D15: with no resolvable format there is no field to list, so
+    """With no resolvable format there is no field to list, so
     coverage answers with ``fmt`` null and no rows."""
     conn = sqlite3.connect(client.app.state.database)
     conn.execute("UPDATE decks SET format = 'Draft'")
@@ -4081,7 +4084,7 @@ def test_live_does_not_call_an_idle_watcher_dead(tmp_path, make_client):
         assert c.get("/api/live").json()["watcher_stopped"] is False
 
 
-# --- the MTGO bulk pick: PUT /api/mtgo/picks, GET .../candidates (plan 19) -------------
+# --- the MTGO bulk pick: PUT /api/mtgo/picks, GET .../candidates -----------
 
 
 def test_bulk_put_writes_every_item_and_a_bad_one_writes_none(mtgo_pick_client):

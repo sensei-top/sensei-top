@@ -238,8 +238,8 @@ def test_truncation_resets_carry_state(conn, tmp_path):
 
 
 def test_byte_exact_offset_survives_invalid_utf8(conn, tmp_path):
-    """offset used to advance by len(line.encode("utf-8", errors="replace"))
-    on an already-decoded line: U+FFFD (the replacement character) re-encodes
+    """Advancing the offset by len(line.encode("utf-8", errors="replace"))
+    on an already-decoded line would drift it: U+FFFD (the replacement character) re-encodes
     to 3 bytes, so a single invalid input byte drifts the offset and the next
     seek lands mid-line. Binary reading advances by the raw byte count
     instead, so a real entry appended right after survives intact.
@@ -343,8 +343,8 @@ def test_shared_content_dedups_when_the_two_files_disagree_on_line_numbers(conn,
 
 
 def test_an_identical_entry_repeated_within_one_file_stays_distinct(conn, tmp_path):
-    """The property the line number used to carry, now carried by the ordinal:
-    two byte-identical polls are two events, not one."""
+    """The ordinal keeps byte-identical entries apart: two byte-identical
+    polls are two events, not one."""
     log = tmp_path / "Player.log"
     log.write_text('{"poll": 1}\r\n{"poll": 1}\r\n', newline="")
     ingest_file(conn, log)
@@ -364,9 +364,9 @@ def test_watch_bounded_polls(conn, tmp_path):
     assert count(conn) == 1
 
 
-# --- day/month order under --locale auto, and the stored header (plan 3, S10) --
+# --- day/month order under --locale auto, and the stored header ------------
 
-# Both captured on 2026-10-06 (S9's Facts). A tracked fixture's own mtime is
+# Both captured on 2026-10-06. A tracked fixture's own mtime is
 # checkout time, not data, so neither is ever read under auto in place: each
 # test reads a copy whose last write it sets. The afternoon of the capture day
 # is a last write whose week holds every captured stamp's real date; neither
@@ -418,11 +418,11 @@ def _dates_warnings(caplog) -> list[str]:
 
 
 def _payload_times(payloads: list[str]) -> list[str]:
-    """Each entry's local time to the second, read from its own payload
-    (S9's Facts): a DeckUpsertDeckV3 response's LastPlayed is local time with
-    its offset, written the second its header was; a ClientToGreuimessage's
-    timestamp is .NET ticks (100 ns since 0001-01-01) in UTC, put in local
-    time by the offset of the response before it."""
+    """Each entry's local time to the second, read from its own payload: a
+    DeckUpsertDeckV3 response's LastPlayed is local time with its offset,
+    written the second its header was; a ClientToGreuimessage's timestamp is
+    .NET ticks (100 ns since 0001-01-01) in UTC, put in local time by the
+    offset of the response before it."""
     times = []
     offset = None
     for payload in payloads:
@@ -450,7 +450,7 @@ def test_auto_dates_every_language_at_its_payloads_time_in_one_read(conn, tmp_pa
         [r["payload"] for r in languages]
     )
     # The English response ({"MatchesV3": []}) carries no time of its own:
-    # its stamp is S9's "10/6/2026 2:37:04 PM", its date the session's, which
+    # its stamp is "10/6/2026 2:37:04 PM", its date the session's, which
     # the Japanese response's LastPlayed fixes.
     session_date = _payload_times([languages[0]["payload"]])[0][:10]
     assert english["label"] == "EventGetActiveMatches"
@@ -459,14 +459,14 @@ def test_auto_dates_every_language_at_its_payloads_time_in_one_read(conn, tmp_pa
 
 @pytest.mark.parametrize("locale_hint", ["auto", "mdy", "dmy"])
 def test_raw_events_header_holds_each_stamp_as_written(conn, tmp_path, locale_hint):
-    """D4: kept whatever the order, so a date misread today stays
+    """Kept whatever the order, so a date misread today stays
     re-derivable."""
     ingest_file(
         conn, _copy(HEADER_LANGUAGES, tmp_path, CAPTURE_AFTERNOON), locale_hint=locale_hint
     )
     headers = [r["header"] for r in _stored(conn)]
     assert headers[0] == "10/6/2026 2:37:04 PM"
-    # S9's capture table: the response of each language whose example it shows
+    # One response each in four of the fixture's languages, its header as written
     assert [headers[i] for i in (1, 3, 5, 7)] == [
         "2026/10/06 14:37:42",
         "2026-10-06 오후 2:38:24",
@@ -597,7 +597,7 @@ def test_a_stale_last_write_with_nothing_learned_stores_none_and_warns(conn, tmp
         [r["payload"] for r in year_first]
     )
     assert [r["logged_at"] for r in others] == [None] * 9
-    assert all(r["header"] for r in rows)   # kept, to re-derive from later (D4)
+    assert all(r["header"] for r in rows)   # kept, to re-derive from later
     assert _learned(conn) == {}
     tail = (
         "is not within the week before the file's last write (2026-12-01 15:00), and "
@@ -620,7 +620,7 @@ def test_a_stale_last_write_uses_the_order_an_earlier_read_learned(conn, tmp_pat
     earlier = _copy(HEADER_LANGUAGES, tmp_path / "earlier", CAPTURE_AFTERNOON)
     ingest_file(conn, earlier, locale_hint="auto")
     # Steps 2 and 4 teach, so the year-first shapes teach nothing; each row
-    # names the first stamp of its shape, from S9's capture table.
+    # names the first stamp of its shape in the fixture.
     assert _learned(conn) == {
         "slash-12h": ("mdy", "10/6/2026 2:37:04 PM", "header_languages.log"),
         "slash-24h": ("dmy", "06/10/2026 14:39:17", "header_languages.log"),

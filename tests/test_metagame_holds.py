@@ -1,10 +1,11 @@
-"""The fetch holds (plan 14, S3): every transition of ``apply_outcome`` for
-mtgo.com and TopDeck, every row of the gate, ``Retry-After``'s two forms,
-``ceil_min`` and ``visible``.
+"""The fetch holds: every transition of ``apply_outcome`` for mtgo.com and
+TopDeck, every row of the gate, ``Retry-After``'s two forms, ``ceil_min`` and
+``visible``.
 
-No network. Every expected value is worked out by hand from S3's rules; the
-times are written out in full, as SQLite stores them, so each assertion can be
-checked against the rule it names without running anything. Holds are seeded
+No network. Every expected value is worked out by hand from the hold rules
+docs/metagame.md gives for each source; the times are written out in full,
+as SQLite stores them, so each assertion can be checked against the rule it
+names without running anything. Holds are seeded
 with SQL, not with ``apply_outcome``, so a transition is tested from a state
 the rules describe rather than one the code produced.
 """
@@ -476,7 +477,7 @@ def test_a_generic_answer_leaves_the_row_unchanged(conn, source, seed):
 @pytest.mark.parametrize(
     ("ra_s", "ra", "not_before"),
     [
-        # retryAfterSeconds, to the second, with no floor (D18)
+        # retryAfterSeconds, to the second, with no floor
         (42, None, "2026-10-05T12:01:12Z"),
         (5, None, "2026-10-05T12:00:35Z"),
         # a fraction of a second is rounded up, never down

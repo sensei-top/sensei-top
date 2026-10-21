@@ -1,4 +1,4 @@
-"""replay_live_state keeps one GameStateTracker per game (plan 29, S2b).
+"""replay_live_state keeps one GameStateTracker per game.
 
 Arena restarts annotation ids every game, so a tracker shared by a whole
 match drops a later game's ZoneTransfer whose id an earlier game already

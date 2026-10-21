@@ -33,12 +33,12 @@ router = APIRouter()
 
 def _leaks_consensus_window(conn: sqlite3.Connection) -> Callable[[str], str | None]:
     """The resolver ``find_leaks`` takes as its ``consensus_window``: each
-    match is measured against its own format's reset window (plan 13, S8c).
-    Uncached, like the match report and the guide, so a reset a ``cards
-    --scryfall`` run reveals reaches Leaks on the next request;
-    ``find_leaks`` asks once per format its population holds. The report
-    cache stays shared with the guide and the coach, since it is keyed on
-    the window each report was built under."""
+    match is measured against its own format's reset window. Uncached, like
+    the match report and the guide, so a reset a ``cards --scryfall`` run
+    reveals reaches Leaks on the next request; ``find_leaks`` asks once per
+    format its population holds. The report cache stays shared with the
+    guide, the RCQ guide and the coach, since it is keyed on the window each
+    report was built under."""
 
     def window(fmt: str) -> str | None:
         return _consensus_window(conn, fmt)
@@ -55,13 +55,12 @@ def review_leaks(
     ``review/leaks.py``'s module docstring for the sample-gating and
     the Wilson interval every rate here carries. Computed fresh on
     every request, same reasoning as the per-match report: it depends
-    on ``cards``/``decks``, neither owned by the projector — but the
+    on ``cards``, which the projector does not own — but the
     ``MatchReport`` each leak is built from is shared across requests
     (``api/sql.py::_shared_report_cache``), not rebuilt from scratch here.
 
-    ``deck_id`` scopes the population to one deck's own matches — added
-    for the deck guide, which needs this endpoint's exact computation at
-    a different scope rather than a second implementation of it.
+    ``deck_id`` scopes the population to one deck's own matches, the same
+    computation the deck guide runs for one deck.
     """
     deck_ids = (deck_id,) if deck_id else None
     leaks = find_leaks(

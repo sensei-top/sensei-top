@@ -170,7 +170,7 @@ def _cards_json(
     main: dict[int, int], side: dict[int, int], unresolved: tuple[int, int] = (0, 0)
 ) -> dict:
     """The whole ``cards_json`` of an MTGO deck: both boards, and the copies
-    per board that resolve to no ``grp_id`` (plan 12, D18)."""
+    per board that resolve to no ``grp_id``."""
     return {
         "maindeck": _copies(main),
         "sideboard": _copies(side),

@@ -1,4 +1,4 @@
-"""Archetype definitions from MTGOFormatData — the project's second download.
+"""Archetype definitions from MTGOFormatData.
 
 Arena tells us nothing about the opponent's deck, so naming it means matching
 the cards they revealed against a list of what decks exist. That list has to
@@ -33,9 +33,9 @@ from typing import Any
 
 log = logging.getLogger(__name__)
 
-# The whole repository in one request. The alternative is ~70 requests for
-# Standard alone, each with its own TLS handshake, plus a rate-limited API call
-# just to list the directory. The archive is ~350 KB.
+# The whole repository in one request. The alternative is one request per
+# definition file, each with its own TLS handshake, plus a rate-limited API
+# call just to list the directory.
 ARCHIVE_URL = "https://codeload.github.com/Badaro/MTGOFormatData/tar.gz/refs/heads/main"
 
 # Badaro's own sibling repositories (MTGODecklistCache, MTGOArchetypeParser)
@@ -57,7 +57,7 @@ FORMATS: tuple[str, ...] = ("Standard", "Pioneer", "Modern", "Legacy", "Vintage"
 
 MAX_AGE_SECONDS = 24 * 3600
 
-# Five files upstream carry a trailing comma, which is not legal JSON. A regex
+# Some files upstream carry a trailing comma, which is not legal JSON. A regex
 # is cheaper than a JSON5 dependency for one deviation.
 _TRAILING_COMMA = re.compile(r",(\s*[}\]])")
 

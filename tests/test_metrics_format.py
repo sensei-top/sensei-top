@@ -1,5 +1,5 @@
-"""/api/metrics/matchups groups by (format, opponent_key) (D14,
-migrations/058_matchup_format.sql).
+"""/api/metrics/matchups groups by (format, opponent_key)
+(migrations/058_matchup_format.sql).
 
 The schema is built directly, as test_match_formats.py does. Every opponent is
 named by a manual override, so they share the key 'manual:Rakdos Midrange'

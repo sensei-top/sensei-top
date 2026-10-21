@@ -1,14 +1,14 @@
-"""M2: per-game board-state accumulation, feeding turn-by-turn snapshots.
+"""Per-game board-state accumulation, feeding turn-by-turn snapshots.
 
-``GameStateMessage`` entries are full snapshots or partial diffs, and their
-``type`` tells them apart (``GameStateType_Full`` or ``GameStateType_Diff``).
-A diff's fields must be merged in as they arrive and its deletions purged
-explicitly via ``diffDeletedInstanceIds``. This
-module owns that merge and the turn-snapshot rule. ``matches.py`` decides
-*when* a fresh tracker is needed (one per game, via ``GameState.tracker``'s
-default factory) and *when* to finalize the trailing turn (``GameOver``).
+This module owns the merge of ``GameStateMessage`` entries and the
+turn-snapshot rule. A ``GameStateType_Full`` replaces what came before; a
+``GameStateType_Diff`` is merged field by field and its deletions purged via
+``diffDeletedInstanceIds`` (docs/arena-log.md, "The traps", 6). ``matches.py``
+decides *when* a fresh tracker is needed (one per game, via
+``GameState.tracker``'s default factory) and *when* to finalize the trailing
+turn (``GameOver``).
 
-Field paths verified against the same fixture session as M1:
+Field paths verified against the same fixture session as ``matches.py``'s:
 
 * ``gameStateMessage.gameObjects[]`` — ``instanceId`` keyed, merged field by
   field (a diff entry may carry only the fields that changed).
@@ -28,57 +28,37 @@ Field paths verified against the same fixture session as M1:
   **only** signal that a permanent untapped. ``details[]`` carries
   ``{"key": "tapped", "valueInt32": [1 | 0]}`` and ``affectedIds`` names the
   permanents. See ``_apply_tapped`` for why the game object alone is not enough.
-* ``…annotations[].id`` — Arena's own identifier for the annotation instance,
-  assigned by the game engine. Verified against 976 real ZoneTransfer
-  annotations across two overlapping session logs: never missing, and never
-  reused for different content *within one game* except across an undo,
-  which rewinds it with the rest of the game (see the undo paragraph below).
-  It also resets to a low number at the start of each new game, so it is
-  only unique per ``(match, game)``, never across a whole session. That
-  makes it the record's own identity rather than its position in whatever
-  raw event happened to carry it, and is what ``card_events`` dedupes on —
-  see ``_record_transfer``.
+* ``…annotations[].id`` — Arena's own identifier for the annotation instance.
+  Verified against 976 real ZoneTransfer annotations across two overlapping
+  session logs: never missing, and never reused for different content
+  *within one game* except across an undo, which rewinds it with the rest of
+  the game (below). It restarts low at each new game, so it is only unique
+  per ``(match, game)``: the record's own identity, and what ``card_events``
+  dedupes on (``_record_transfer``).
 * ``…diffDeletedInstanceIds[]`` — purge from objects and every zone list.
 * ``…players[]`` — sibling of ``gameInfo``/``turnInfo``; ``systemSeatNumber``
   + ``lifeTotal``.
 * ``…turnInfo.turnNumber`` / ``activePlayer`` — turn boundary and active seat.
-
-``turnInfo.turnNumber`` counts **player-turns, not rounds**: a game where each
-player took 12 turns reports ``turnNumber: 24``, and the per-seat
-``players[].turnNumber`` in that same message reads 12. So a ``turns`` row is
-one player's turn, and a game's turn count is roughly twice its round count.
+  ``turnNumber`` counts player-turns, not rounds (trap 5), so a ``turns`` row
+  is one player's turn.
 
 A turn's snapshot is the accumulated state **at the end of that turn**: it is
 finalized when ``turnNumber`` next advances, or at ``GameOver`` for the final
 turn played. Re-finalizing the same turn number overwrites (last write wins),
 so replaying the same events twice is deterministic.
 
-``card_events`` is append-only in ``seq`` order, which makes it the one piece
-of state here that is *not* naturally idempotent under replay: two passes over
-the same ``AnnotationType_ZoneTransfer`` would otherwise append it twice. So
-``_record_transfer`` dedupes on the annotation's own ``id`` before appending —
-not a defensive measure against malformed input, but a real necessity: a raw
-event can legitimately reach the projector more than once (``ingest.py``
-dedupes what it reads, but a source file can itself carry the same message
-twice, e.g. a near-total overlap between ``Player.log`` and the
-``Player-prev.log`` it rotated from), and every other piece of derived state
-here already tolerates that by overwriting. ``card_events`` needed the same
-guarantee, just enforced differently because it accumulates instead of
-snapshotting.
+``card_events`` appends in ``seq`` order, so unlike the rest of the state here
+it is not idempotent under replay, and a raw event can legitimately reach the
+projector twice (trap 13). ``_record_transfer`` dedupes on the annotation's own
+``id``: see docs/architecture.md, "Idempotency".
 
-An undo rolls ``card_events`` back. When the player cancels an action, Arena
-sends a ``GameStateType_Full`` state whose ``update`` is
-``GameStateUpdate_Undo`` and whose ``prevGameStateId`` names the state the
-game returns to. The transfers recorded after that state never happened, so
-they are dropped, and ``seq`` stays contiguous. The rollback goes by **apply
-order**, never by comparing ids: in the real history, 16 of 923 games carry
-``gameStateId`` values that are not monotonic in the order they arrive. An
-undo naming a state this tracker never applied in the current game drops
-nothing and adds a line to ``warnings``: there is no length to return to, and
-guessing one would invent history (rule 4). The remembered states are kept
-per game (``gameInfo.gameNumber``): ``live_state.py`` keeps one tracker per
-game, so this reset only guards a caller that feeds one tracker more than one
-game, where a game-2 undo must never return to a game-1 state.
+An undo rolls ``card_events`` back to the state it names, by apply order,
+never by id order, and ``seq`` stays contiguous; an undo naming a state this
+tracker never applied in the current game drops nothing and adds a line to
+``warnings`` (trap 16). The remembered states are kept per game
+(``gameInfo.gameNumber``): ``live_state.py`` keeps one tracker per game, so
+this reset only guards a caller that feeds one tracker more than one game,
+where a game-2 undo must never return to a game-1 state.
 
 The rollback also forgets the dropped transfers' annotation ids. Arena rewinds
 its own counters with the game: in ``tests/fixtures/undo_session.log`` the
@@ -90,44 +70,10 @@ transfers use new ids (all 90 in the real history), so forgetting before they
 apply is safe. ``_drawn_on``, the damage and life dedup sets and the combat
 rows are left alone.
 
-Exile is a **shared** zone: verified against the real log, ``ZoneType_Exile``
-carries no ``ownerSeatId`` (unlike hand, graveyard and library, which all do),
-so the seat comes from each exiled object's own ``ownerSeatId``. That makes it
-the one owned-looking zone that follows the battlefield's rule instead of the
-hand's: an entry whose object we never received is dropped rather than emitted
-as a hidden card. The trade-off is deliberate — with no zone owner and no
-object there is nothing to attribute the card to, so emitting it would mean
-inventing a seat.
-
-Library size is counted from ``ZoneType_Library`` itself, not by subtracting
-draws from the decklist: Arena sends the zone's ``objectInstanceIds``, so the
-count is observed rather than derived, and a Bo3 sideboard changing the deck
-between games needs no special case.
-
-Arena keeps emitting state for a game *after* its ``GameOver`` — and an
-abandoned game never gets a ``GameOver`` at all. Either way the last turn can
-be left unrecorded, so ``flush_trailing()`` is called once at the end of the
-replay to fill that gap. It deliberately does not overwrite a turn already
-snapshotted at ``GameOver``, so post-game cleanup messages can never rewrite
-the state a game actually ended on.
-
-Combat and damage: ``gameObjects[].attackState``/``attackInfo`` and
-``blockState``/``blockInfo``, and annotations ``AnnotationType_DamageDealt``
-and ``AnnotationType_ModifiedLife``. All four are handled the same way the
-rest of this module handles a diff — merged/observed as they arrive — but the
-attack/block pair specifically must be read from the *raw incoming diff*,
-never from ``self.objects``' merged state, because nothing was found in a
-real capture that ever resets ``attackState``/``blockState`` once set. See
-``projector/combat.py`` for the full reasoning and the parsing itself; this
-module only decides where in the existing merge passes to call it.
-
-Each annotation type gets its **own** dedup set (``_seen_transfer_ids``,
-``_seen_damage_ids``, ``_seen_life_ids``), not one shared set: a real capture
-showed Arena reusing the same annotation ``id`` across genuinely different
-types within one game (confirmed: a ``ZoneTransfer`` and an unrelated
-``PhaseOrStepModified`` sharing an id in the same match). A shared set would
-silently drop a real event whenever its id happened to collide with an
-unrelated, earlier annotation of a different type.
+Combat and damage are parsed in ``projector/combat.py``; this module only
+decides where in the merge passes to call it. Attack and block are read from
+the *raw incoming diff*, never from ``self.objects``' merged state — see
+combat.py's module docstring.
 """
 
 from __future__ import annotations
@@ -163,9 +109,10 @@ class TurnRow:
     # (cards.produced_mana on file) — mana rocks, dorks, Treasures. A sibling
     # count to open_mana, not a replacement: open_mana's meaning (untapped
     # lands) never changes, since turns.opp_open_mana already has consumers
-    # (the post-game report) that must not be silently rewritten. Only
-    # populated when the tracker was built with mana_source_grp_ids; empty
-    # otherwise, same as any other honestly-unknown count (rule 4).
+    # (the post-game report) that must not be silently rewritten. Set only by
+    # snapshot_now, and only non-empty when the tracker was built with
+    # mana_source_grp_ids; a finalized turn (_finalize, what project()
+    # writes) always leaves it empty, and `turns` has no column for it.
     other_mana_sources: dict[int, int] = field(default_factory=dict)
     cards: list[ZoneCard] = field(default_factory=list)
 
@@ -258,11 +205,9 @@ class GameStateTracker:
 
     def __init__(self, *, mana_source_grp_ids: frozenset[int] = frozenset()) -> None:
         # Non-land grpIds known to produce mana (cards.produced_mana on
-        # file) — mana rocks, dorks, Treasures. Empty by default so every
-        # existing caller (project()'s per-game tracker included) behaves
-        # byte-identically; only a caller that explicitly wants the wider
-        # count (table/live.py, for the live opponent-hand read) supplies
-        # it. See TurnRow.other_mana_sources.
+        # file) — mana rocks, dorks, Treasures. Empty by default, as
+        # project()'s per-game trackers leave it; table/live.py supplies it
+        # for the live opponent-hand read. See TurnRow.other_mana_sources.
         self._mana_source_grp_ids = mana_source_grp_ids
         self.objects: dict[int, dict[str, Any]] = {}
         self.zones: dict[int, dict[str, Any]] = {}
@@ -483,8 +428,10 @@ class GameStateTracker:
     def flush_trailing(self) -> None:
         """Snapshot the current turn only if nothing recorded it yet.
 
-        The safety net for turns that outlive their GameOver (or never get
-        one). Non-overwriting on purpose — see the module docstring.
+        The safety net for turns that outlive their GameOver, or never get
+        one (docs/arena-log.md, "The traps", 9). Non-overwriting on purpose:
+        a turn already snapshotted at GameOver stays, so post-game cleanup
+        messages can never rewrite the state a game actually ended on.
         """
         if self._current_turn is not None and self._current_turn not in self.turns:
             self._finalize(self._current_turn)
@@ -604,15 +551,13 @@ class GameStateTracker:
     def _apply_tapped(self, annotation: dict[str, Any]) -> None:
         """Write a tap/untap back onto the game object, which is otherwise stale.
 
-        Arena only ever *sets* ``isTapped``. Counted over the full real log:
-        149 game objects carry ``isTapped: true`` and **not one** carries
-        ``isTapped: false``, while ``AnnotationType_TappedUntappedPermanent``
-        appears 166 times, 87 with ``tapped: 1`` and 79 with ``tapped: 0``. So a
-        permanent that taps for mana and untaps next upkeep keeps a stale
-        ``isTapped: true`` on the merged object forever — field-level diff
-        merging (see ``apply``) has nothing to overwrite it with. The annotation
-        is the only untap signal there is, and folding it back into the object
-        keeps that object the single source of truth for ``_zone_cards``.
+        Arena only ever *sets* ``isTapped``, never sends the false
+        (docs/arena-log.md, "The traps", 12b). So a permanent that taps for
+        mana and untaps next upkeep keeps a stale ``isTapped: true`` on the
+        merged object forever — field-level diff merging (see ``apply``) has
+        nothing to overwrite it with. The annotation is the only untap signal
+        there is, and folding it back into the object keeps that object the
+        single source of truth for ``_zone_cards``.
 
         Deliberately **not** deduped on annotation id, unlike
         ``_record_transfer``: this is an idempotent write to a keyed field
@@ -716,10 +661,11 @@ class GameStateTracker:
         dropping it would make the row count disagree with ``self_hand``.
 
         Exile is the exception on both counts: it is a shared zone with no
-        ``ownerSeatId`` (see the module docstring), so it keys on each object's
-        *owner* — who the card belongs to, not who exiled it — and an entry with
-        no object is dropped, because nothing would name its seat. It also has
-        no matching count on ``TurnRow``, so nothing can disagree with it.
+        ``ownerSeatId`` (docs/arena-log.md, "The traps", 12c), so it keys on
+        each object's *owner* — who the card belongs to, not who exiled it —
+        and an entry with no object is dropped, because nothing would name its
+        seat. It also has no matching count on ``TurnRow``, so nothing can
+        disagree with it.
         """
         cards: list[ZoneCard] = []
         next_idx: dict[tuple[str, int], int] = {}

@@ -1,104 +1,31 @@
 """Raw event ingestion: log file -> ``raw_events``.
 
-Stage 1 of the two-stage pipeline (brief §4). This module knows about files,
-offsets and hashing. It knows nothing about Arena semantics — every payload is
-stored verbatim so a future parser fix can be replayed over history.
+Stage 1 of the two-stage pipeline (AGENTS.md non-negotiable #1). This module
+knows about files, offsets and hashing, and nothing about Arena semantics:
+every payload is stored verbatim so a future parser fix can be replayed over
+history. Rotation, truncation and the held-back entry are in
+docs/arena-log.md, "File handling".
 
-Digest strategy (deviation from brief §5, justified)
-----------------------------------------------------
-The brief specifies ``digest = sha256(payload)``. Measured against a real
-session log, that silently drops 18 of 2,933 entries: client-state responses
-(``QuestGetQuests``, ``PeriodicRewardsGetStatus``) that are byte-identical when
-polled repeatedly, and — more importantly — ``EventEnterPairing``'s
-``{"CurrentModule":"CreateMatch","Payload":"Success"}``, which occurs once per
-match and would collapse to a single row across a whole session.
+Digest strategy
+---------------
+The digest is over ``(logged_at, occurrence, payload)``, where *occurrence*
+counts how many times this exact ``(logged_at, payload)`` pair has already
+been seen **in this read**; why payload alone is not enough, and why
+``source_file`` is left out, is in docs/architecture.md, "Idempotency".
+Content alone decides identity: never key it on a position such as the line
+number, which is file-relative and differs between ``Player.log`` and the
+``Player-prev.log`` cut from it.
 
-So the digest needs a tiebreaker that separates genuine repeats without
-breaking idempotent replay. ``source_file`` is deliberately *excluded*: when
-Arena rotates ``Player.log`` to ``Player-prev.log``, the same content reappears
-under a new name, and including the filename would duplicate every event of the
-previous session.
-
-The tiebreaker was originally ``line_number``, and that was wrong. A line
-number is *file-relative*, and the two files do not agree on it: rotation is a
-snapshot, so ``Player-prev.log`` carries a different amount of preamble than
-the ``Player.log`` it was cut from, and every shared line lands at a different
-offset in each. Measured on a real pair of logs, that split 3,842 shared
-entries into two rows apiece — defeating, in the one case it was written to
-protect, the cross-file dedup the excluded ``source_file`` was meant to give.
-The damage was invisible in every derived table keyed by natural key
-(``matches``, ``games``, ``turns`` all overwrite) and showed up only in
-``card_events``, which appends.
-
-So the digest is over ``(logged_at, occurrence, payload)``, where *occurrence*
-counts how many times this exact ``(logged_at, payload)`` pair has already been
-seen **in this read**. Content alone decides identity, so the same line read
-from either file digests the same and dedup works across rotation; a genuine
-repeat inside one file still gets its own ordinal and stays distinct.
-
-The tradeoff, stated plainly: the counter is per-read, so a byte-identical
-payload carrying the *same second* on both sides of an incremental poll
-boundary would be taken for a re-read and dropped. Every full read — a first
-sight, a rotation, a truncation, ``--from-start`` — counts from zero and is
-exact, which is where cross-file dedup actually matters. The residual risk is
-confined to same-second identical client-state polls: two such pairs exist in
-15,118 real entries, and neither is a game event. The counter also
-self-heals: a same-second identical pair that one incremental read collapsed
-is restored the next time the file is read whole, as ``Player-prev.log`` on
-recovery, because that full read counts from zero again.
+The tradeoff: the counter is per-read, so a byte-identical payload carrying
+the *same second* on both sides of an incremental poll boundary is taken for
+a re-read and dropped. Every full read (a first sight, a rotation, a
+truncation, ``--from-start``) counts from zero and is exact, which is where
+cross-file dedup matters, and it restores a pair an incremental read
+collapsed the next time the file is read whole, as ``Player-prev.log`` on
+recovery. How often this bites is measured in the same doc section.
 
 Changing this formula changes every digest, so a database ingested under the
-old one must have ``raw_events`` rebuilt from the logs rather than topped up —
-otherwise the next ingest re-inserts every entry under its new digest.
-
-Carry state and the held-back pending entry
---------------------------------------------
-A fresh ``Segmenter`` per call used to lose two things at every poll
-boundary: the most recent header timestamp (``_last_ts``, which a following
-request has no timestamp of its own and inherits) and the header's context
-label (``_last_context``, consumed by the next bare ``{`` line). A request
-landing as the first entry of a poll got ``logged_at = NULL``; the same
-request seen later by a whole-file read (``Player-prev.log`` recovery) got
-its real timestamp and therefore a different digest — inserted twice.
-``ingest_state`` now carries both (``carry_ts``/``carry_context``, migration
-042), and the header's stamp as written beside them (``carry_header``,
-migration 062, which ``raw_events.header`` stores per entry, outside the
-digest): a resumed read restores all three into the new ``Segmenter``
-(``restore_carry``) before feeding its first line, while a *fresh* read
-(``from_start``, an inode change, or a truncation) starts from an empty carry
-instead, since the old file's timestamps no longer apply to whatever replaced
-it.
-
-Separately, a poll that stops mid-entry (most often a multi-line response) is
-held back rather than split or discarded: the committed byte offset never
-advances past the first line of a still-open entry, and the carry state
-committed alongside it is the snapshot taken *just before* that line was fed
-— the one that still holds the header context a bare ``{`` line would
-otherwise already have consumed. The next read re-reads the entry whole, from
-its first line (the ``<==`` line for a response), with the same timestamp and
-label it would have carried if the file had never been polled mid-entry. An
-entry that runs past ``MAX_PENDING_BYTES`` without ever closing is corrupt in
-some new way, not merely "still arriving": holding it back forever would make
-every subsequent poll re-read an ever-growing tail, so ``ingest_file`` gives
-up on it instead — logs a warning and advances past it, the way a truncated
-read has always discarded a pending payload.
-
-Truncation
-----------
-Arena wipes ``Player.log`` on launch. The reader treats "file is smaller than
-last time" or "inode changed" as a reset: offset returns to 0 and the file is
-re-read from the top, and the carry state resets to empty the same way —
-never the old file's timestamp or context. Dedupe absorbs any overlap.
-
-Day/month order
----------------
-``locale_hint`` ``"mdy"``/``"dmy"`` is the segmenter's own fixed order.
-``"auto"`` (``AUTO``, the CLI's default) is this module's to turn into a
-resolver, never the segmenter's: a ``Segmenter`` takes a hint it does not
-know as no order at all, silently. ``reader/dates.py`` settles each header on
-its own, from its fields, this file's mtime (the ``stat`` taken before the
-read) and the orders the database has learned, which it writes inside the
-read's transaction.
+old one must have ``raw_events`` rebuilt from the logs rather than topped up.
 """
 
 from __future__ import annotations
@@ -121,11 +48,9 @@ from sensei_top.reader.segmenter import LogEntry, Segmenter
 log = logging.getLogger(__name__)
 
 # A pending entry that never closes would otherwise make every future poll
-# re-read an ever-growing tail (see "Carry state and the held-back pending
-# entry" above). The largest real payload measured on a real database is
-# 1,055,060 bytes, itself a response — this cap is roughly 30x that, so it
-# only ever fires on an entry that is corrupt in some new way, not one that's
-# merely still arriving.
+# re-read an ever-growing tail. Far above the largest real payload
+# (docs/architecture.md, "Idempotency"), so it only ever fires on an entry
+# that is corrupt in some new way, not one that's merely still arriving.
 MAX_PENDING_BYTES = 32 * 1024 * 1024
 
 # Read the file in fixed-size chunks rather than all at once: a first read of
@@ -135,11 +60,14 @@ _CHUNK_BYTES = 1024 * 1024
 
 
 def compute_digest(entry: LogEntry, occurrence: int = 0) -> str:
-    """Stable content digest for an entry. See module docstring.
+    """Stable content digest for an entry (module docstring, "Digest strategy").
 
-    ``occurrence`` separates genuine repeats of an identical payload carrying
-    an identical timestamp. It is a count, not a position, so the same content
-    digests the same whichever file it is read from.
+    ``logged_at`` separates an identical payload that recurs at different
+    times, such as ``EventEnterPairing``'s reply, the same in every match
+    but under each match's own header time. ``occurrence`` separates one
+    repeated within the same second (a client-state poll). It is a count,
+    not a position, so the same content digests the same whichever file it
+    is read from.
     """
     material = f"{entry.logged_at or ''}\x00{occurrence}\x00{entry.payload}"
     return hashlib.sha256(material.encode("utf-8")).hexdigest()
@@ -204,10 +132,10 @@ def _write_state(
 ):
     """Persist resume state for ``path``.
 
-    The carry values are keyword-only, defaulting to ``None``, so
-    ``reader/mtgo.py``'s existing positional call (which has no carry state
-    to give) keeps writing NULL for all three, correctly, without having to
-    know these columns exist.
+    The carry values are keyword-only, defaulting to ``None``, so the
+    positional calls in ``reader/mtgo.py`` and ``reader/mtgo_decks.py``
+    (which have no carry state to give) write NULL for all three without
+    having to know these columns exist.
     """
     conn.execute(
         """
@@ -281,15 +209,14 @@ def _iter_raw_lines(fh) -> Iterator[bytes]:
     at ``\\n``, at ``\\r\\n``, or at a ``\\r`` not followed by ``\\n``; a ``\\r``
     that is the last byte available at EOF counts as a terminator too. A
     trailing run of bytes with no terminator is a partial line — the writer is
-    mid-write — and is never yielded; the caller's offset simply doesn't
-    advance past it, so the next read starts from the same place once more
-    bytes exist.
+    mid-write — and is never yielded; the caller's offset doesn't advance
+    past it, so the next read starts from the same place once more bytes
+    exist.
 
-    Reads in ``_CHUNK_BYTES`` chunks rather than loading the whole file (a
-    first read of a real ``Player.log`` can be 100+ MB). A ``\\r`` landing on
-    a chunk boundary is ambiguous — the next byte, not yet read, decides
-    whether it is a lone terminator or half of ``\\r\\n`` — so it is held in
-    the buffer until either the next chunk resolves it or EOF does.
+    Reads in ``_CHUNK_BYTES`` chunks. A ``\\r`` landing on a chunk boundary
+    is ambiguous — the next byte, not yet read, decides whether it is a lone
+    terminator or half of ``\\r\\n`` — so it is held in the buffer until
+    either the next chunk resolves it or EOF does.
     """
     buf = b""
     while True:
@@ -330,8 +257,11 @@ def _segmenter(
     conn: sqlite3.Connection, locale_hint: str | None, *, source_file: str, mtime: float
 ) -> Segmenter:
     """A ``Segmenter`` for one read: ``AUTO`` becomes ``reader/dates.py``'s
-    resolver, any other hint goes to the segmenter as is (module docstring,
-    "Day/month order").
+    resolver, any other hint goes to the segmenter as is. ``AUTO`` is this
+    module's to turn into a resolver, never the segmenter's: a ``Segmenter``
+    takes a hint it does not know as no order at all, silently. The
+    resolver dates by this file's mtime, from the ``stat`` taken before the
+    read.
 
     Called before the read's ``BEGIN``, so the resolver's one read of the
     learned orders is not inside the transaction: a deferred transaction that
@@ -356,13 +286,14 @@ def ingest_file(
 ) -> IngestStats:
     """Ingest new content from ``path`` into ``raw_events``.
 
-    Resumes from the stored byte offset and carry state (see module
-    docstring) unless ``from_start`` is set or a truncation/rotation is
-    detected, in which case both reset to empty. A poll that ends mid-entry
-    holds that entry back rather than splitting or discarding it: the
-    committed offset never advances past its first line, so the next call
-    re-reads it whole, with the timestamp/context it would have carried if
-    the file had never been polled mid-entry.
+    Resumes from the stored byte offset and carry state unless
+    ``from_start`` is set or a truncation/rotation is detected, in which case
+    both reset to empty. A poll that ends mid-entry holds that entry back
+    rather than splitting or discarding it: the committed offset never
+    advances past its first line, so the next call re-reads it whole, with
+    the timestamp/context it would have carried if the file had never been
+    polled mid-entry. An entry still open past ``MAX_PENDING_BYTES`` is
+    dropped with a warning instead.
 
     ``locale_hint`` is ``"mdy"`` or ``"dmy"`` for one fixed order, ``"auto"``
     to settle each header on its own (``reader/dates.py``), or None for no
@@ -385,14 +316,11 @@ def ingest_file(
     elif st.st_size < last_size or st.st_size < offset:
         offset, stats.truncation_detected, fresh = 0, True, True   # Arena wiped it on launch
     elif str(st.st_ino) == known_inode and st.st_size == last_size:
-        # Same file, same size, already caught up: every second's poll during
-        # a quiet match (or between matches) hit this exact state and still
-        # opened a write transaction — a BEGIN, an empty read, a COMMIT to
-        # the WAL — for zero new bytes. Nothing changed, so nothing to write:
-        # ingest_state already holds this offset/inode/size. Checked against
+        # Same inode, same size, already caught up: return before BEGIN, so a
+        # quiet second's poll writes nothing to the WAL. Checked against
         # last_size, not offset: a held-back pending entry leaves offset <
-        # size on purpose (see below), and comparing against offset would
-        # re-read that same unfinished entry every second regardless.
+        # size on purpose, and comparing against offset would re-read that
+        # same unfinished entry every second.
         return stats
 
     if fresh:
@@ -410,8 +338,7 @@ def ingest_file(
     start_offset = offset
     # The offset/carry actually safe to persist: advances only when the
     # segmenter is not mid-entry, so it never lands past an entry's first
-    # line (see "Carry state and the held-back pending entry" above). While
-    # nothing is pending, carry_state() can't change until the next
+    # line. While nothing is pending, carry_state() can't change until the next
     # feed_line, so this pair also *is* the checkpoint a held-back entry
     # needs: the line that opens it starts exactly where the previous entry
     # left off, with the same carry it left behind.
@@ -443,10 +370,6 @@ def ingest_file(
                         pending_started_at is not None
                         and offset - pending_started_at > MAX_PENDING_BYTES
                     ):
-                        # Corrupt in some new way, not merely "still arriving":
-                        # give up on it rather than holding it back forever,
-                        # which would make every future poll re-read an
-                        # ever-growing tail.
                         log.warning(
                             "%s: entry starting at offset %d exceeded %d "
                             "pending bytes without closing; dropping it and "
@@ -612,7 +535,8 @@ def default_log_path() -> Path | None:
     entries = _found()
     if not entries:
         return None
-    # /api/live's heartbeat asks every 3 s: say it only when it changes.
+    # /api/live's heartbeat (web/src/api.ts::HEARTBEAT_MS) asks every few
+    # seconds: say it only when it changes.
     global _last_debug
     summary = (len(entries), entries[0][1])
     if summary != _last_debug:

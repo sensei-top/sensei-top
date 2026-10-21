@@ -50,14 +50,14 @@ router = APIRouter()
 def _brief_response(
     conn: Conn, request: Request, match_id: str, deck_id: str
 ) -> MatchupBriefResponse:
-    """The body of ``GET /api/current-match/brief``, extracted so the route
-    below stays a thin dispatch. Not shared with ``current_match_read``'s own
-    ``intermission`` field: that field is built from a name set that pools
-    the live replay's own revealed zones with ``card_events`` (S4's
-    ``table/intermission.py``), which can know more about the opponent mid-
-    break than this route's ``_cached_match_opponent`` (a projection-only
-    read) does — sharing this function there would silently cap the break
-    read's opponent knowledge at whatever ``project()`` last saw.
+    """The body of ``GET /api/current-match/brief``. Not shared with
+    ``current_match_read``'s own ``intermission`` field: that field is built
+    from a name set that pools the live replay's own revealed zones with
+    ``card_events`` (``table/intermission.py``), which can know more about
+    the opponent mid-break than this route's ``_cached_match_opponent`` (a
+    projection-only read) does — sharing this function there would silently
+    cap the break read's opponent knowledge at whatever ``project()`` last
+    saw.
     """
     identity = next((i for i in list_identities(conn) if deck_id in i.deck_ids), None)
     if identity is None:
@@ -200,10 +200,12 @@ def current_match_brief(request: Request, conn: Conn) -> MatchupBriefResponse:
     ``docs/brief.md``.
 
     Deliberately has no generate route of its own, unlike the match
-    report and the deck guide (``docs/llm.md``): a brief is written by
-    ``sensei-top brief --import``, or — far more often — filled as a
-    side effect of generating or importing a full deck guide
-    (``POST /api/guide/{key}/narrative``, ``brief/from_guide.py``).
+    report and the deck guide (``docs/llm.md``): a brief is pasted into its
+    card (``PUT /api/guide/{key}/briefs/{archetype_key}``) or the coverage
+    card (``PUT /api/guide/{key}/coverage``), written by ``sensei-top brief
+    --import``, or — far more often — filled as a side effect of
+    generating, pasting or importing a full deck guide
+    (``POST``/``PUT /api/guide/{key}/narrative``, ``brief/from_guide.py``).
     """
     match_row = conn.execute("SELECT match_id, deck_id FROM v_current_match").fetchone()
     if match_row is None or match_row["deck_id"] is None:
@@ -219,9 +221,9 @@ def current_match_read(request: Request, conn: Conn) -> CurrentMatchRead:
     ``sensei_top.table``).
 
     One route for all of it: they share the same current match, and the
-    tab refetches on every heartbeat, so several round trips per beat
-    for one screen would be waste. It also means one live replay of
-    ``raw_events`` (``table/live.py``), not three: ``live_state`` below
+    page polls it every second (``useCurrentMatchRead``), so several round
+    trips per poll for one screen would be waste. It also means one live
+    replay of ``raw_events`` (``table/live.py``), not three: ``live_state`` below
     is built once and its ``offer``/board-state pieces are handed to
     ``build_opening_hand_read``/``build_hand_read`` instead of letting
     each replay independently — the difference between one pass over
@@ -229,10 +231,10 @@ def current_match_read(request: Request, conn: Conn) -> CurrentMatchRead:
 
     ``opening_hand`` is built from that same replay and returned even
     when ``v_current_match`` finds nothing: it does not wait on
-    ``project()`` at all, because the mulligan decision it informs has a
-    measured 5-second median in real play and a full rebuild cannot
-    land in that window (``projector/live_state.py``'s module docstring
-    has the numbers). `deck_id` enriches it with this deck's land band and
+    ``project()`` at all, because the mulligan decision it informs is
+    over before a full rebuild could land (``docs/current-match.md``,
+    "The opening-hand read (`table/opening_hand.py`)"). `deck_id` enriches
+    it with this deck's land band and
     mulligan record — and comes from ``live_state.deck_id`` itself (the
     replay's own ``connectResp.deckMessage``) rather than ``v_current_match``
     whenever the replay resolved one, so the very first mulligan of a match
@@ -254,26 +256,19 @@ def current_match_read(request: Request, conn: Conn) -> CurrentMatchRead:
     match_row = conn.execute(
         "SELECT match_id, deck_id, source, event_id FROM v_current_match"
     ).fetchone()
-    # Defaulting to 'arena' with no match row preserves today's behaviour:
-    # the opening-hand read below deliberately runs before any projected
-    # match exists, and nothing about that changes for the no-match case.
-    # (v_current_match is Arena-only, so a match row's own source is always
-    # 'arena' too — this default only covers the no-match-yet case.)
+    # 'arena' with no match row too: the opening-hand read below runs before
+    # any projected match exists, and the view is Arena-only anyway.
     source = match_row["source"] if match_row is not None else "arena"
 
     live_state = build_live_state(
         conn, mana_source_grp_ids=_cached_mana_source_grp_ids(request, conn)
     )
 
-    # The deck comes from the live replay when it has one.
-    # connectResp.deckMessage resolves inside the same raw_events window
-    # everything else in live_state comes from, so it can carry a deck_id
-    # before project() has ever written a matches row for this match — the
-    # exact gap that left the very first mulligan of a match without a land
-    # band. Only falls back to v_current_match's own projected deck_id when
-    # the replay found no connectResp at all (older data, or a lookback gap
-    # wider than table/live.py's own margin) — never the reverse, so a
-    # stale decks.deck_id can't override a fresher one the replay resolved.
+    # The replay's deck first (see the docstring). v_current_match's
+    # projected deck_id only when the replay found no connectResp at all
+    # (older data, or a lookback gap wider than table/live.py's own margin) —
+    # never the reverse, so a stale decks.deck_id can't override a fresher
+    # one the replay resolved.
     live_deck_id = live_state.deck_id if live_state is not None else None
     deck_id = (
         live_deck_id
@@ -309,11 +304,9 @@ def current_match_read(request: Request, conn: Conn) -> CurrentMatchRead:
     match_id = match_row["match_id"]
 
     # build_opening_hand_read above already built this KeepGuide from the
-    # same deck_id (and maindeck) when it had one to build from (opening_hand
-    # not None and deck_id not None) — reuse it rather than re-running
-    # list_identities (~40 queries) and the mulligan aggregate a second time
-    # on every 1 Hz poll. Only fall back to a fresh build when opening_hand
-    # didn't build one at all (no mulligan offer pending, or no deck_id yet).
+    # same deck_id and maindeck whenever it returned a read and deck_id is
+    # known — reuse it rather than re-running list_identities and the
+    # mulligan aggregate on every poll.
     if opening_hand is not None and deck_id is not None:
         keep = opening_hand.keep_guide
     else:
@@ -369,9 +362,8 @@ def current_match_read(request: Request, conn: Conn) -> CurrentMatchRead:
         else None
     )
 
-    # S5: only built when live_state.intermission is set — costs nothing
-    # during a game, since _cached_break_read returns None immediately for
-    # any other live_state (see api/sql.py's own docstring).
+    # Costs nothing during a game: api/sql.py::_cached_break_read returns
+    # None at once unless live_state.intermission is set.
     break_read = _cached_break_read(request, conn, match_id, deck_id, live_state)
     intermission_out = _intermission_out(break_read) if break_read is not None else None
 

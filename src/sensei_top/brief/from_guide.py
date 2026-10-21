@@ -1,12 +1,11 @@
-"""Backfill the brief cache from a generated deck guide, for free.
-
-``guide/narrative.py``'s one Claude call already writes a ``MatchupPlan``
-per top field archetype — the same content shape a brief stores, just
-produced by a call that costs far more and is never expected to fire on its
-own. Running the full guide already paid for that reasoning once; this
-module reuses it rather than asking Claude the same question twice, and it
-reuses the guide's own ``FieldEvidence`` for the structured share/personal-
-record numbers too, rather than re-querying them.
+"""Backfill the brief cache from a deck guide's narrative, for free: each
+``MatchupPlan`` a generated, pasted or imported guide carries becomes a
+brief (``source='guide'``) unless ``store_guide_matchups`` skips it, with
+the guide's own ``FieldEvidence`` for the share and personal-record numbers
+rather than re-querying them. Callers:
+``guide --deck KEY --import FILE`` and ``POST``/``PUT
+/api/guide/{key}/narrative``. See docs/brief.md,
+"Backfill: a generated guide is a free source of briefs".
 """
 
 from __future__ import annotations
@@ -40,8 +39,8 @@ def store_guide_matchups(
     ``list_hash`` is the hash of the 75 the guide was written for, when an
     imported answer says so (``answers.read_answer``'s ``context``): each
     brief is stored with it, so a guide answered for an older list leaves
-    briefs that read as stale, like the guide itself. ``None`` is today's
-    75. The skip above always compares with today's.
+    briefs that read as stale, like the guide itself. ``None`` is the
+    current 75. The skip above always compares with the current one.
     """
     identity = guide.provenance.deck
     key_by_name = archetype_key_by_name(conn)

@@ -1,15 +1,17 @@
 """Tests for api/routes/coach.py and api/models/coach.py: the coach's own
-free ``GET /api/coach`` and its three ``.../narrative`` routes.
+free ``GET /api/coach`` and its ``.../narrative`` routes.
 
-Mirrors tests/test_llm.py's credential-gating and stored-report coverage
-for the other three narrative routes, adapted for what makes this one
-different (a plain history INSERT rather than a single overwritten slot, a
-credential resolved through ``load_coach()`` rather than ``load()``, and a
-``write_report`` call that can carry both web citations and reading-list
-ids). No network call is ever made here: ``llm.config.load_coach`` and
-``llm.client.write_report`` are monkeypatched throughout, the same objects
-``api/routes/coach.py`` imports under, so a patch made through those module
-references is visible to the route.
+Mirrors the credential-gating and stored-report coverage of the other four
+``POST .../narrative`` routes (match report, leak finder, deck guide, RCQ
+guide: tests/test_llm.py, and tests/test_api_rcq.py for the RCQ guide's
+stored guide), adapted for what makes this one different (a plain history
+INSERT rather than a single overwritten slot, a credential resolved through
+``load_coach()`` rather than ``load()``, and a ``write_report`` call that
+can carry both web citations and reading-list ids). No network call is ever
+made here: ``llm.config.load_coach`` and ``llm.client.write_report`` are
+monkeypatched throughout, the same objects ``api/routes/coach.py`` imports
+under, so a patch made through those module references is visible to the
+route.
 
 The "sufficient data" fixture builds a synthetic ten-match database
 directly against the projected schema — the same precedent
@@ -370,7 +372,7 @@ def test_stored_report_prose_is_cleaned_and_web_sources_are_appended(tmp_path, m
     assert not any(s["url"] == "https://example.com/article" for s in body["sources"])
 
 
-# --- the format parameter (plan 13, D12/D13) -------------------------------
+# --- the format parameter --------------------------------------------------
 
 
 def _fake_completion(prompt, *, cfg, label, allowed_domains, max_searches=8):
@@ -381,7 +383,7 @@ def _fake_completion(prompt, *, cfg, label, allowed_domains, max_searches=8):
 
 
 def test_every_route_names_the_default_format_when_none_is_asked_for(client, empty_client):
-    """All ten matches are Standard, so D13's default is Standard; an empty
+    """All ten matches are Standard, so the default is Standard; an empty
     database has no match at all, and the default falls back to Standard."""
     assert client.get("/api/coach").json()["format"] == "Standard"
     assert client.get("/api/coach/narrative").json()["format"] == "Standard"
@@ -391,7 +393,7 @@ def test_every_route_names_the_default_format_when_none_is_asked_for(client, emp
 
 def _recent_modern_db(tmp_path):
     """Ten Standard matches in 2026-01..09, then one Modern match on
-    2026-09-20: the most recent match is Modern, so Modern is D13's default."""
+    2026-09-20: the most recent match is Modern, so Modern is the default."""
     db_path = tmp_path / "recent-modern.db"
     conn = open_database(db_path)
     for i in range(10):

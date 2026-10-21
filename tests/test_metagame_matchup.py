@@ -123,7 +123,7 @@ def test_tier_c_rows_are_never_read(conn):
 
 
 def test_each_format_sees_only_its_own_rounds(conn):
-    """Plan 13, D14: the same pair of archetype keys can have rounds in two
+    """The same pair of archetype keys can have rounds in two
     formats' corpora. Five Standard wins and six Modern losses, all Tier A:
     each format's record is its own five or six, never the eleven blended."""
     for _ in range(5):

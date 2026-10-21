@@ -1,21 +1,12 @@
-"""Tournament results from ``fbettega/MTG_decklistcache`` — the project's
-third and fourth downloads (outbound calls five and six in AGENTS.md rule 5:
-one to the GitHub API for a tree listing, one per selected file to
-``raw.githubusercontent.com``).
+"""Tournament results from ``fbettega/MTG_decklistcache``, windowed by date
+and incremental by content: two GitHub API calls (the branch's commit, then
+the whole file tree at it) and one GET per selected file from
+``raw.githubusercontent.com``, skipped when the file's blob SHA is already
+stored. See docs/metagame.md, "Fetching the corpus".
 
-Unlike ``archetypes/source.py``'s one-shot tarball, this cache is ~157 MB —
-years of tournament history across sources this project never reads
-(``Topdeck`` and ``Manatrader`` are both dead in this cache, stopped at 2025
-and 2024 respectively). Fetching all of it on every refresh would be waste on
-a scale the archetype download never approaches, so this module is windowed
-by date and incremental by content: one GitHub API call lists the whole
-repository's file tree at a pinned commit, a date-and-source filter picks out
-what is worth reading, and each file's own blob SHA decides whether it needs
-fetching again at all.
-
-Like ``archetypes/source.py``, every call here is a bare GET — no query
-string, no body — and nothing about a match, a deck or the user reaches
-either URL: the paths this module builds name dates and tournament sources,
+Every call here is a GET with no body, and the one query string is the tree
+listing's ``recursive=1``. Nothing about a match, a deck or the user reaches
+either host: the paths this module builds name dates and tournament sources,
 never anything from ``Player.log``.
 
 Failure is never fatal. A refresh that cannot reach GitHub keeps whatever it
@@ -60,15 +51,14 @@ HEADERS = {"User-Agent": "sensei-top/0.1", "Accept": "application/vnd.github+jso
 TIMEOUT = 30.0
 
 # Topdeck and Manatrader are dead in this cache (stopped at 2025 and 2024).
-# CardsRealm was never evaluated by the source document. Adding a live source
-# here is the whole change.
+# CardsRealm was never evaluated. Adding a live source here is the whole
+# change.
 SOURCES: tuple[str, ...] = ("MTGO", "MTGmelee")
 
-# The formats every refresh fetches, stored or not (plan 13, D10). The server's
-# loop and ``meta`` follow these, every format the stored corpus already
-# holds, and any ``--format X`` the user names (plan 14, D2, D8):
-# ``metagame/auto.py::followed_formats``. Nothing reads the user's own
-# matches to widen it.
+# The formats every refresh fetches, stored or not. The server's loop and
+# ``meta`` follow these, every format the stored corpus already holds, and
+# any ``--format X`` the user names: ``metagame/auto.py::followed_formats``.
+# Nothing reads the user's own matches to widen it.
 FETCH_FORMATS: tuple[str, ...] = ("Standard", "Modern")
 
 DEFAULT_WINDOW_DAYS = 90
@@ -158,10 +148,9 @@ def answer_kind(http_status: int | None) -> AnswerKind:
 
 
 def answer_reason(exc: BaseException) -> str:
-    """An ``Answer.reason``, rendered by the line catalog's rule (plan 14,
-    ``lines.md`` §0, "Reasons"): an HTTP status as the code and the server's
-    reason phrase, ``HTTP 503 Service Unavailable``; a timeout as ``timed
-    out``; anything else as ``str(exc)``.
+    """An ``Answer.reason``, as ``metagame/fetch_lines.py`` prints it: an HTTP
+    status as the code and the server's reason phrase, ``HTTP 503 Service
+    Unavailable``; a timeout as ``timed out``; anything else as ``str(exc)``.
 
     A server that sends a status line with no phrase gets the standard one
     for its code, and a code with no standard phrase renders bare
@@ -186,8 +175,8 @@ def answer_reason(exc: BaseException) -> str:
 
 @dataclass(frozen=True, slots=True)
 class Answer:
-    """What a server said that ended a run (plan 14, S3). A run that
-    completed has no Answer.
+    """What a server said that ended a run. A run that completed has no
+    Answer.
 
     ``place`` is where the run was when it was answered: for mtgo.com
     ``index``, ``month:YYYY-MM`` or ``event:<slug>``; for TopDeck the format.
@@ -259,8 +248,7 @@ def fetch_text(url: str, *, timeout: float = TIMEOUT) -> str:
 def resolve_commit_sha(branch: str = "main") -> str:
     """The repository's current commit, pinned once per refresh so every file
     fetched under it comes from the same snapshot — and stored, so a report
-    can name exactly which snapshot it reasoned from (the doc's whole
-    reproducibility requirement)."""
+    can name exactly which snapshot it reasoned from."""
     data = fetch_json(f"{API_BASE}/commits/{branch}")
     return data["sha"]
 
@@ -367,10 +355,12 @@ def _standings_records(
 ) -> dict[int, tuple[int, int, int]]:
     """``deck_ord -> (wins, losses, draws)`` from ``Standings[]``.
 
-    Every real file with standings inspected (2026-08-18) carries a bare
-    placement string in ``Decks[].Result`` — ``"1st Place"``, ``"2nd
-    Place"`` — never a score; only Tier C (leagues, which never publish
-    ``Standings`` at all) uses the ``"N-M"`` form ``_parse_record`` reads.
+    Every real MTGO and MTGmelee file with standings inspected (2026-08-18)
+    carries a bare placement string in ``Decks[].Result`` — ``"1st Place"``,
+    ``"2nd Place"`` — never a score; only Tier C (leagues, which never
+    publish ``Standings`` at all) uses the ``"N-M"`` form ``_parse_record``
+    reads. ``parse_event`` falls back to that form for a deck this leaves
+    out. See docs/metagame.md, "A trap: `Decks[].Result` is not a score".
     ``Standings[].Wins``/``Losses``/``Draws`` are already the structured
     integers, so this is a lookup, not a parse — a malformed row is simply
     absent from the result rather than guessed at (rule 4).
@@ -392,10 +382,10 @@ def _standings_records(
 def _card_entries(raw: Any) -> list[dict[str, Any]]:
     """Normalise a Mainboard/Sideboard list to ``[{"count": int, "name": str}]``.
 
-    Casing varies by source (the doc's own finding) — the classic MTGO schema
-    ships ``CardName``/``Count``; others ship lowercase. Any entry missing
-    both a recognised name key or a valid count is dropped rather than
-    guessed at (rule 4): a malformed entry is not a zero-count card.
+    Casing varies by source — the classic MTGO schema ships
+    ``CardName``/``Count``; others ship lowercase. An entry missing a
+    recognised name key or a valid count is dropped rather than guessed at
+    (rule 4): a malformed entry is not a zero-count card.
     """
     entries: list[dict[str, Any]] = []
     for item in raw or []:
@@ -417,10 +407,9 @@ def _formats_list(tournament: dict[str, Any]) -> list[str]:
     """``Tournament.Formats`` is a bare string in every real file inspected
     (both MTGO and MTGmelee, verified 2026-08-18: ``"Formats": "Standard"``,
     never a list) — but a list is what the source repository this cache
-    forked from ships in other contexts, so both are accepted rather than
-    assuming one and silently mis-happens: iterating a bare string
-    character-by-character was a real bug caught by running this against
-    the live cache, not by the unit tests."""
+    forked from ships in other contexts, so both are accepted. Iterating a
+    bare string as if it were the list would split the format into
+    characters, and match nothing."""
     raw = tournament.get("Formats")
     if isinstance(raw, str):
         return [raw]
@@ -489,11 +478,8 @@ def parse_event(
     for i, raw_deck in enumerate(raw_decks):
         if not isinstance(raw_deck, dict):
             continue
-        # Decks[].Result is a bare placement string ("1st Place") for every
-        # tier except C (verified 2026-08-18 against real MTGO and MTGmelee
-        # files) — the real per-deck record lives in Standings[] wherever one
-        # exists. Falling back to Result only when Standings has nothing for
-        # this deck keeps Tier C's real "N-M" record working unchanged.
+        # Standings[] first, Result only as the fallback: Result is a
+        # placement everywhere but Tier C (``_standings_records``).
         wins, losses, draws = standings_records.get(
             i, _parse_record(raw_deck.get("Result"))
         )
@@ -606,9 +592,10 @@ def store_events(
     is not counted. Callers add ``len(events) - stored`` to ``skipped``.
 
     Does not call ``mark_duplicate_events`` (``metagame/dedup.py``) itself —
-    ``cmd_meta`` calls it once, after every refresh in this batch has landed,
-    so a twin fetched earlier in the same refresh is judged against its
-    final content rather than a stale mid-batch state.
+    ``metagame/auto.py::reclassify_corpus`` runs it once, after every refresh
+    in the batch has landed (``cmd_meta``, or a ``serve`` corpus-refresh tick
+    that stored events), so a twin fetched earlier in the same refresh is
+    judged against its final content rather than a stale mid-batch state.
     """
     events = list(events)
     if not events:
@@ -766,10 +753,9 @@ def refresh_metagame(
     """Update the tournament corpus if it is stale. Never raises.
 
     Stale means fbettega's own stamp, ``cache_age_seconds(conn,
-    source="fbettega")``, is older than ``max_age_seconds`` or absent.
-    Unscoped, that function is the oldest of every source, and a stale or
-    paused TopDeck sent this refresh to GitHub on every attempt (plan 14,
-    defect 1).
+    source="fbettega")``, is older than ``max_age_seconds`` or absent. Never
+    the unscoped age: that is the oldest of every source, so a stale or
+    paused TopDeck would send this refresh to GitHub on every attempt.
 
     Same fail-soft contract as ``archetypes.refresh_archetypes``: an offline
     machine keeps whatever it fetched last time, and a first run with no
