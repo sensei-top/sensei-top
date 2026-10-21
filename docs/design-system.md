@@ -652,8 +652,9 @@ behind a subtraction. A share of a corpus is not a record and stays
 neither, and neither is a match still in progress. Where a caller has
 only a count played and a count won, losses are played minus won minus
 draws, never played minus won. `/api/metrics/play-draw`'s
-`games_completed` counts draws, so the deck strip's Play vs draw reads
-`games_won` and `games_lost` instead.
+`games_completed` counts draws, so the deck strip's Play vs draw, the
+match report's play/draw record and `sensei-top report` read `games_won`
+and `games_lost` instead.
 
 **Ten finished matches before a rate, five before a rough one.** A
 personal record has two thresholds, `RATE_MIN_MATCHES` (10) and

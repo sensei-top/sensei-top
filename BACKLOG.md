@@ -47,7 +47,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-086
+Next ID: BL-087
 
 ## Features
 
@@ -897,24 +897,6 @@ dashboard"), so they read as English in another language.
 **Needs:** Finding them (a `join(', ')` in `web/src`), then `formatList` at
 each, with the test the file already has.
 
-### BL-079 · A drawn game in two more play/draw rates
-
-type: fix · priority: P1 · status: ready · area: review cli
-
-The deck strip's Play vs draw counted a drawn game as a loss until
-2026-10-21; the same defect remains in the two other readers of
-`v_play_draw_winrate`: the
-match report's baseline (`review/snapshot.py` reads `games_completed` and
-`games_won`; `review/analyzers/baseline.py` divides one by the other) and
-`sensei-top report`'s play/draw table (`cli.py`, "won/played games") both
-count a drawn game in a side's games, so a draw lowers the rate. Found
-while fixing the strip.
-
-**Why deferred:** Outside that fix's scope, which was the strip alone.
-
-**Needs:** Both read `games_lost` (migration 066) and divide by won plus
-lost; the baseline's sample floor counts the same games.
-
 ### BL-080 · Two cutoffs for an early play
 
 type: fix · priority: P3 · status: needs-decision · area: table
@@ -943,6 +925,22 @@ Found by plan 35's reviewers.
 way.
 
 **Needs:** `logged_at` from the first `stat()`'s `st_mtime`.
+
+### BL-086 · A drawn game in the report's game-length rates
+
+type: fix · priority: P3 · status: ready · area: cli
+
+`sensei-top report`'s game-length table prints a win rate per turn count,
+won over `v_deck_game_length.games`. That count has no result filter, so a
+drawn game and an unfinished one both sit in it and lower the rate. The
+average length is right to count both; only the rate is wrong. Found while
+fixing the play/draw rates.
+
+**Why deferred:** Outside that fix's scope, and the view has no
+`games_lost` column, so it needs a migration of its own.
+
+**Needs:** `games_lost` on `v_deck_game_length`, and the rate read as won
+over won plus lost.
 
 ## Performance
 

@@ -21,7 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - A drawn game no longer counts as a loss in a deck's **Play vs draw**,
-  nor toward the ten games a side needs before it shows a rate.
+  nor toward the ten games a side needs before it shows a rate. The match
+  report's play/draw record and `sensei-top report` count it the same way.
 - A config file saved in an encoding other than UTF-8 no longer stops the
   app from answering. It is read as unreadable, with a warning in the
   log, as a file with a typo in it already was.

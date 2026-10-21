@@ -190,7 +190,8 @@ class MatchSnapshot:
     self_plays: tuple[CardPlay, ...]
     # (turn_count, games, games_won) for this deck, from v_deck_game_length
     deck_game_length: tuple[tuple[int, int, int], ...]
-    # (on_play, games_completed, games_won) for this deck, from v_play_draw_winrate
+    # (on_play, games_won, games_lost) for this deck, from v_play_draw_winrate;
+    # a drawn game is in neither, so a side's record is won plus lost
     play_draw: tuple[tuple[bool, int, int], ...]
     candidates: tuple[Candidate, ...]
     own_cards: tuple[OwnCard, ...]
@@ -637,9 +638,9 @@ def build_snapshot(
 
     play_draw = (
         tuple(
-            (bool(row["on_play"]), row["games_completed"], row["games_won"])
+            (bool(row["on_play"]), row["games_won"], row["games_lost"])
             for row in conn.execute(
-                "SELECT on_play, games_completed, games_won FROM v_play_draw_winrate "
+                "SELECT on_play, games_won, games_lost FROM v_play_draw_winrate "
                 "WHERE deck_id = ?",
                 (deck_id,),
             )

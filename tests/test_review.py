@@ -237,7 +237,7 @@ def test_no_finding_cites_a_number_it_cannot_show(db):
         opponent_plays=(CardPlay(1, 5, 555, "Consider", "Resolve"),),
         opponent_revealed_names=frozenset({"Consider"}),
         deck_game_length=((10, 10, 4), (36, 2, 1)),
-        play_draw=((True, 12, 6), (False, 11, 5)),
+        play_draw=((True, 6, 6), (False, 5, 6)),
         damage_events=(
             DamageRow(1, 2, 6, 1, 10, 1, True, None, False),
             DamageRow(1, 4, 3, 1, 20, 2, False, None, True),
@@ -465,12 +465,12 @@ def test_sample_gated_findings_are_suppressed_below_the_threshold():
     """A play/draw split under a real sample is noise, not a trend — it must
     read as a gap naming the sample size, never as a suppressed-but-silent
     zero. Same discipline governs the personal and field matchup records."""
-    too_few = _snapshot(games=(_game(1),), play_draw=((True, 4, 2), (False, 3, 1)))
+    too_few = _snapshot(games=(_game(1),), play_draw=((True, 2, 2), (False, 1, 2)))
     result = analyze_baseline(too_few)
     assert not [f for f in result.findings if f.code == "play_draw_split"]
     assert any("too few" in g.reason for g in result.gaps)
 
-    enough = _snapshot(games=(_game(1),), play_draw=((True, 12, 6), (False, 11, 5)))
+    enough = _snapshot(games=(_game(1),), play_draw=((True, 6, 6), (False, 5, 6)))
     result_enough = analyze_baseline(enough)
     assert any(f.code == "play_draw_split" for f in result_enough.findings)
 
@@ -632,6 +632,27 @@ def test_personal_matchup_matches_the_hand_derived_aggregate_with_and_without_a_
     snap_cached = build_snapshot(conn, "target", view_cache=view_cache)
     assert snap_cached is not None
     assert snap_cached.personal_matchup == expected
+
+
+def test_the_snapshots_play_draw_counts_a_drawn_game_as_neither_won_nor_lost(conn):
+    """Three games on the play with deckA, a win, a draw and a loss: the
+    side's record is one won and one lost, the draw in neither."""
+    conn.execute(
+        "INSERT INTO decks (deck_id, name, format, cards_json, first_seen, last_seen) "
+        "VALUES ('deckA', 'A', 'Standard', '{}', 't', 't')"
+    )
+    _insert_pm_match(conn, "target", "draw", 1, 1)
+    for number, result in enumerate(("win", "draw", "loss"), start=1):
+        conn.execute(
+            "INSERT INTO games (match_id, game_number, on_play, result, result_reason, "
+            "turn_count, self_mulligans, opp_mulligans) VALUES ('target', ?, 1, ?, NULL, 6, 0, 0)",
+            (number, result),
+        )
+    conn.commit()
+
+    snap = build_snapshot(conn, "target")
+    assert snap is not None
+    assert snap.play_draw == ((True, 1, 1),)
 
 
 # --- consensus_since: the opponent consensus must not cross a format reset ---
