@@ -46,7 +46,6 @@ def kinds(hits) -> list[str]:
     return [h[2] for h in hits]
 
 
-@pytest.mark.xfail(reason="BACKLOG.md references land in phases 4-5", strict=False)
 def test_the_tree_has_a_valid_register_and_no_dangling_reference():
     out = subprocess.run(
         [sys.executable, str(SCRIPT)], cwd=REPO_ROOT, capture_output=True, text=True, timeout=60

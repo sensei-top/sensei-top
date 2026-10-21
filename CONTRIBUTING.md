@@ -20,6 +20,11 @@ A new feature is welcome too, but open an issue before writing it. Several
 things that look like gaps are decisions ([docs/status.md](docs/status.md),
 "Limited on purpose"), and it is cheaper to find that out first.
 
+What is already known to be wrong or missing is in [BACKLOG.md](BACKLOG.md),
+one item each. An item labelled `status: ready` needs no decision or data
+first, which makes it the easiest place to start; say which one in the issue
+or the pull request.
+
 ## Before you write code
 
 Read [AGENTS.md](AGENTS.md). It is the rulebook for anyone changing this
