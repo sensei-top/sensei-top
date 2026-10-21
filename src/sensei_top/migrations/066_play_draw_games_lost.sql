@@ -2,7 +2,7 @@
 --
 -- games_completed counts a drawn game, and the view had no losses column, so
 -- a reader could only take a side's losses as completed minus won: a draw
--- read as a loss (BL-045). games_lost counts result = 'loss' alone, the
+-- read as a loss. games_lost counts result = 'loss' alone, the
 -- same way games_won counts 'win'. Recreated from 050_views_follow_mtgo_pick.sql
 -- with that one column added; no other view reads this one.
 DROP VIEW v_play_draw_winrate;

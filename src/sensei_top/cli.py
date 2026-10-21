@@ -1420,14 +1420,15 @@ def cmd_report(args) -> None:
         rows = conn.execute(
             """
             SELECT COALESCE(d.name, substr(v.deck_id, 1, 8), '(no deck)') AS deck,
-                   v.on_play, v.games_completed, v.games_won
+                   v.on_play, v.games_won, v.games_lost
               FROM v_play_draw_winrate v
               LEFT JOIN decks d ON d.deck_id = v.deck_id
              ORDER BY deck, v.on_play DESC
             """
         ).fetchall()
         for r in rows:
-            played = r["games_completed"] or 0
+            # won and lost only: a drawn game is neither (docs/design-system.md, "Numbers")
+            played = (r["games_won"] or 0) + (r["games_lost"] or 0)
             rate = f"{100 * r['games_won'] / played:5.1f}%" if played else "    —"
             label = "on the play" if r["on_play"] else "on the draw"
             print(f"{r['deck'][:22]:<22} {label:<12} {r['games_won']}/{played} games {rate}")
