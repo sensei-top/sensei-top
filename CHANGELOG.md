@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-21
+
+### Changed
+
+- The Windows app is on the
+  [Microsoft Store](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN), free.
+  The Store version is signed, so Windows doesn't warn before installing
+  it, and the Store keeps it up to date. The site and the install guide
+  now offer it beside the installer, which is still unsigned. Nothing in
+  the app itself changed.
+
 ## [1.2.0] - 2026-10-21
 
 ### Added
@@ -239,7 +250,8 @@ The app is the same as 0.7.1's; this release carries the website.
   keeps recording with the window closed, and start-with-Windows as an
   option. On Linux, an AppImage that updates itself in place.
 
-[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/sensei-top/sensei-top/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/sensei-top/sensei-top/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/sensei-top/sensei-top/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/sensei-top/sensei-top/compare/v1.0.0...v1.0.1
