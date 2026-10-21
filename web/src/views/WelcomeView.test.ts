@@ -53,6 +53,7 @@ function app(change: Partial<AppSettings> = {}): AppSettings {
     onboarded: false,
     askAutostart: false,
     canAutostart: true,
+    windowsStore: false,
     rulesText: null,
     firstData: { state: 'idle' },
     version: '1.0.0',

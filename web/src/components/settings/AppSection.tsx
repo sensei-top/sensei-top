@@ -56,6 +56,7 @@ export function AppSection({
     <Card title={t('settings.sections.app')} subtitle={t('settings.app.subtitle')} className="max-w-3xl">
       <div className="space-y-5">
         <p className="text-body text-ink2">{t('settings.app.version', { version: app.version })}</p>
+        {app.windowsStore && <p className="text-body text-ink2">{t('settings.app.startStore')}</p>}
         {app.canAutostart && (
           <SavingSwitch
             label={app.platform === 'win32' ? t('settings.app.startWindows') : t('settings.app.startLogin')}

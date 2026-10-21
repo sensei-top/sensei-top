@@ -86,10 +86,22 @@ with `--verbose`.
 | `src/updater.ts` | Updates: a check 30 s after launch and every 24 h while the switch is on, and "Restart to update" |
 | `src/i18n.ts` | The shell's own catalogue, `src/locales/<language>.json`: the tray, the app menu, the loading page and every sentence a dialog or the page shows, in `shell.json`'s language |
 | `scripts/notices.ts` | The third-party notices for the shell's npm packages, written to `dist/notices/` before packaging; fails when a package names no licence |
+| `build/appx-extensions.xml` | The Store package's startup task (Windows' Startup list, off), spliced into the appx manifest by electron-builder |
 | `server/` | The PyInstaller build of the server (`uv run python scripts/build_server.py`) |
 
 Everything but `main.ts` and `preload.ts` takes Electron's classes as
 arguments, so the tests run under plain Node. `preload.ts` has no test.
+
+## The Store build
+
+`win.target` is `[nsis, appx]`, so `pnpm dist:win` also writes
+`release/Sensei-Top-<version>.appx`. Its `appx:` block in
+`electron-builder.yml` carries the identity reserved in Partner Center
+(`identityName` and `publisher`, which the Store checks against the
+reservation; neither is a secret) and the two languages. The package declares
+one startup task, off, from `build/appx-extensions.xml`. The release job
+attaches the appx, and it is submitted to Partner Center by hand from the
+release's assets; the Store signs it, so nothing here holds a certificate.
 
 ## Checks
 

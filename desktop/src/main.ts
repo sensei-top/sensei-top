@@ -55,7 +55,13 @@ if (typeof electron.app !== 'object' || electron.app === null) {
 
 const { app, BrowserWindow, Menu, Tray, dialog, ipcMain, nativeImage, screen, shell } = electron;
 const packaged = app.isPackaged;
-const canStartWithSystem = canAutostart({ platform: process.platform, packaged, appImage: process.env.APPIMAGE });
+const onWindowsStore = process.windowsStore === true;
+const canStartWithSystem = canAutostart({
+  platform: process.platform,
+  packaged,
+  appImage: process.env.APPIMAGE,
+  windowsStore: onWindowsStore,
+});
 
 const { dir: dataDir, overridden } = resolveDataDir({
   platform: process.platform,
@@ -266,8 +272,9 @@ function run(): void {
     dataDir,
     version: app.getVersion(),
     platform: process.platform,
-    askAutostart: asksAutostart(process.platform, process.windowsStore === true, canStartWithSystem),
+    askAutostart: asksAutostart(process.platform, onWindowsStore, canStartWithSystem),
     canAutostart: canStartWithSystem,
+    windowsStore: onWindowsStore,
     newestBackup: (dir) => {
       try {
         const stat = fs.statSync(path.join(dir, `${DB_NAME}.backup`));

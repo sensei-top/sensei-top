@@ -26,6 +26,9 @@ Arena. Without it, Arena's log is missing most of what the app reads.
 3. On the last page, choose whether Sensei Top should start when Windows
    starts. You can change this later in Settings.
 
+A Microsoft Store listing is coming: the same app, free. Until it is live,
+this installer is the way in.
+
 **"Windows protected your PC."** The installer is not code-signed yet, so
 Microsoft Defender SmartScreen may stop it the first time. Click **More
 info**, then **Run anyway**.
