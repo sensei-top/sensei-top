@@ -154,8 +154,11 @@ at sign-in and its read-back would report "on" regardless. The package
 declares a startup task from `build/appx-extensions.xml`, off until the user
 turns it on in Settings → Apps → Startup; the shell never writes the login item
 there, onboarding does not ask, and Settings shows a note pointing to Windows'
-list. Windows starts the app without `--hidden`; what the window does then is
-unverified.
+list. Windows starts the app with no arguments, so not `--hidden`, and it opens
+its window as a launch from Start does. This was checked on Windows 10 22H2 on
+2026-10-21, with the package registered from its unpacked layout in Developer
+Mode: the task was switched on, the user signed out and back in, and the
+window opened.
 
 **Card data starts on its own** (`settings.ts`'s
 `startFirstDataIfMissing`). Once per launch, after the server first
