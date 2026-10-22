@@ -193,20 +193,6 @@ outline). One adapter per protocol under `llm/`, `llm/config.py` widened,
 section, and the route additions to rule 5's list and
 `test_only_authored_artifact_routes_write`.
 
-### BL-008 · A download for the deck guide's Markdown
-
-type: feat · priority: P2 · status: ready · area: guide web
-
-The deck guide's Export card copies `guide/markdown.py`'s document but has
-no download, while the RCQ guide downloads its `.md`
-(`components/rcq/RcqResult.tsx`). A PDF and a phone or print layout were
-dropped on 2026-10-19: the Markdown is enough.
-
-**Why deferred:** Asked 2026-10-16 as guides as files; the RCQ half shipped
-first.
-
-**Needs:** A download button beside the copy, as the RCQ guide's.
-
 ### BL-009 · A macOS build
 
 type: feat · priority: P3 · status: ready · area: desktop release

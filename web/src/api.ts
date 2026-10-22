@@ -503,7 +503,8 @@ export const useGuideNarrative = (key: string | undefined) =>
 
 /** The evidence-only guide document, for copy or save. No narrative call —
  *  fetched fresh each time the export panel is opened rather than cached
- *  under the heartbeat, since it is only ever read right before a copy. */
+ *  under the heartbeat, since it is only ever read right before a copy or
+ *  a download. */
 export const useGuideMarkdown = (key: string | undefined, enabled: boolean) =>
   useQuery({
     queryKey: ['guide-markdown', key],

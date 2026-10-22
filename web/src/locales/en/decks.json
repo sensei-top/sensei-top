@@ -251,7 +251,8 @@
       "show": "Show the Markdown",
       "hide": "Hide the Markdown",
       "copy": "Copy the Markdown",
-      "copied": "Copied"
+      "copied": "Copied",
+      "download": "Download .md"
     },
     "play": {
       "title": "Your play",

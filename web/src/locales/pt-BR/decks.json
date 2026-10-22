@@ -251,7 +251,8 @@
       "show": "Mostrar o Markdown",
       "hide": "Ocultar o Markdown",
       "copy": "Copiar o Markdown",
-      "copied": "Copiado"
+      "copied": "Copiado",
+      "download": "Baixar .md"
     },
     "play": {
       "title": "Seu jogo",

@@ -1004,7 +1004,7 @@ an accent `GenerateCard` titled "Write the guide" or "Rewrite the
 guide", its `staleNote` "The list has changed since.", beside "Export
 the evidence", a card that fetches `GET /api/guide/{key}/markdown` only
 once opened and shows it in a scrolling `TextBlock` with its own copy
-button.
+button and a "Download .md" that saves the same text as a file.
 
 **The way between sections.** `SectionNav.tsx` draws two navs, one
 shown at a time: from 64rem a sticky column at the page's right; under
