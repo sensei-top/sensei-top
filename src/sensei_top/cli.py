@@ -971,7 +971,7 @@ def _key_value(raw: str) -> str:
 
 def _store_key(which: str, key: str) -> None:
     """The system keyring when it takes the key, and then the file's copy is
-    removed; else the file (mode 600), saying why."""
+    removed; else the file (chmod 600), saying why."""
     from sensei_top import secrets
     from sensei_top.llm.config import config_path
 
@@ -990,7 +990,7 @@ def _store_key(which: str, key: str) -> None:
             if secrets.backend_name() is None
             else "the system keyring did not take it (the log says why)"
         )
-        print(f"{name} key written to {config_path()} (mode 600): {reason}.")
+        print(f"{name} key written to {config_path()}{_mode_600()}: {reason}.")
         if _key_source(which) == "keyring":
             print(f"  An older {name} key in the system keyring still wins over the file.")
     if os.environ.get(env):
@@ -1098,13 +1098,19 @@ def _config_json(db_path: Path) -> dict[str, object]:
     }
 
 
+def _mode_600() -> str:
+    """The " (mode 600)" note after the config file's path. On Windows
+    ``chmod`` sets just the read-only flag, so the note is left out."""
+    return "" if sys.platform == "win32" else " (mode 600)"
+
+
 def _written(what: str, value: str) -> None:
     from sensei_top.llm.config import config_path
 
     if value == "":
         print(f"{what} cleared in {config_path()}.")
     else:
-        print(f"{what} written to {config_path()} (mode 600).")
+        print(f"{what} written to {config_path()}{_mode_600()}.")
 
 
 def cmd_config(args) -> None:
@@ -1216,7 +1222,7 @@ def cmd_config(args) -> None:
 
     if args.set_backup_dir is not None or args.set_backup_keep is not None:
         _write_backup_config(directory=args.set_backup_dir, keep=args.set_backup_keep)
-        print(f"Backup settings written to {llm_config.config_path()} (mode 600).")
+        print(f"Backup settings written to {llm_config.config_path()}{_mode_600()}.")
 
     if any(value is not None for value in llm_fields) or coach_web_search is not None:
         _write_llm_config(
@@ -1227,7 +1233,7 @@ def cmd_config(args) -> None:
             coach_effort=args.set_coach_effort,
             coach_web_search=coach_web_search,
         )
-        print(f"Config written to {llm_config.config_path()} (mode 600).")
+        print(f"Config written to {llm_config.config_path()}{_mode_600()}.")
 
     if writes and not args.show:
         return

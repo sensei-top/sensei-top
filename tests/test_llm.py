@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -1294,6 +1295,25 @@ def test_config_set_mtgo_dir_flag_writes_the_resolved_path(monkeypatch, tmp_path
     directory, source = resolve_log_dir()
     assert directory == share.resolve()
     assert source == "config.toml [mtgo] dir"
+
+
+def test_config_set_mtgo_dir_flag_omits_mode_600_on_windows(monkeypatch, tmp_path, capsys):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("MTGO_HANDLE", raising=False)
+    monkeypatch.delenv("MTGO_LOG_DIR", raising=False)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setattr(sys, "platform", "win32")
+
+    share = tmp_path / "mtgo-share"
+    share.mkdir()
+
+    parser = cli_module.build_parser()
+    args = parser.parse_args(["config", "--set-mtgo-dir", str(share)])
+    args.func(args)
+
+    out = capsys.readouterr().out
+    assert f"MTGO log directory written to {llm_config_module.config_path()}." in out
+    assert "(mode 600)" not in out
 
 
 def test_config_set_mtgo_dir_flag_on_a_directory_that_does_not_exist_yet(
