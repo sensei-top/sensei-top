@@ -1077,17 +1077,6 @@ reads. Found by plan 35's reviewers.
 **Needs:** Each comment says what it means in its own words, and 053's
 CHECK gets a test or the claim goes.
 
-### BL-085 · The pre-reset denominator, written out twice
-
-type: refactor · priority: P3 · status: ready · area: guide
-
-`guide/field.py::build_field`'s `pre_total_scoped` is
-`_classified_deck_total`'s query written inline over `e.event_date <= ?`;
-its docstring names it as the one copy. Found by plan 35's reviewers.
-
-**Needs:** `pre_total_scoped` calls `_classified_deck_total`. No visible
-effect.
-
 ## Outside the code
 
 Steps that are the user's or a third party's, not the code's. None of the
