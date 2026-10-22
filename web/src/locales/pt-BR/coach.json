@@ -133,7 +133,8 @@
     "early": "Cedo, turnos 1 a 3",
     "mid": "Meio, turnos 4 a 6",
     "late": "Tarde, turno 7 em diante",
-    "noneDecisive": "Nenhum deles decisivo",
-    "decisive": "{{n}} deles decisivos"
+    "noneDecisive": "Nenhum deles grave",
+    "decisive_one": "{{n}} deles grave",
+    "decisive_other": "{{n}} deles graves"
   }
 }

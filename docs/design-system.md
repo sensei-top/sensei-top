@@ -733,7 +733,9 @@ reads every other one without looking.
   (`components/ui/Tooltip.tsx`), never a sentence in a `title`, which a
   keyboard cannot open. The word becomes a focusable
   trigger, marked by a dotted underline in `muted` and the help cursor:
-  dotted, so it never reads as a link's solid one. The tip is one plain
+  dotted, so it never reads as a link's solid one. A muted lucide `Info`
+  icon after it (`aria-hidden`, caption size) is the visible cue that it
+  explains itself. The tip is one plain
   sentence in the chart tooltip's look (`surface-3`, `edge-strong`,
   `rounded-control`, the lift), under the word. It opens on hover and on
   keyboard focus, stays open while the pointer moves onto it, closes on

@@ -700,7 +700,7 @@ the pointer on one of them is marked on all three.
 **What stood out** holds the findings that weigh more than a note,
 heaviest first, then by game and turn. A finding's weight is a `Chip`
 through `severityChip` (`components/ui/severity.ts`), the mapping the
-coach draws its own with: `decisive` takes the `accent` variant, `flag`
+coach draws its own with: `decisive` (shown as "Major", so the word never reads as a result) takes the `accent` variant, `flag`
 takes `warn`, `notice` takes `neutral` and `note` a muted `neutral`. The
 label is always the word; colour is reinforcement only. A finding's body
 is its detail, then every caveat, then its evidence behind a
@@ -1397,7 +1397,7 @@ The cards, in order, are in `components/coach/`:
    a `Disclosure` under the list.
 6. **Where lost games turned** (`TurningCard`): three tiles, early,
    mid and late, each the lost games that first slipped then and how
-   many of them were decisive.
+   many of them were major.
 7. **The field** (`FieldRatesCard`): Archetype · Record · Rate · Share,
    your record against each archetype before its share of the
    tournament lists, and no range. A share over fewer than

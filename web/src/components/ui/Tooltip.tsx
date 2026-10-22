@@ -1,3 +1,4 @@
+import { Info } from 'lucide-react'
 import { type ReactNode, useEffect, useId, useState } from 'react'
 
 /** A short sentence about `children`, shown while the pointer is over them
@@ -5,7 +6,8 @@ import { type ReactNode, useEffect, useId, useState } from 'react'
  *  or focus. `children` become a focusable trigger described by the tip
  *  (`aria-describedby`), so pass text, never a control: a button or a link
  *  inside would be a second stop for the keyboard. The tip stays in the
- *  document while closed, so the description is read either way. */
+ *  document while closed, so the description is read either way. The trigger draws a muted `Info` icon after
+ *  `children`, so a caller passes no icon of its own. */
 export function Tooltip({ tip, children }: { tip: string; children: ReactNode }) {
   const tipId = useId()
   const [hovered, setHovered] = useState(false)
@@ -46,6 +48,7 @@ export function Tooltip({ tip, children }: { tip: string; children: ReactNode })
         className="cursor-help underline decoration-muted decoration-dotted underline-offset-4"
       >
         {children}
+        <Info aria-hidden className="ml-1 inline size-(--text-caption) align-middle text-muted" />
       </span>
       {/* The gap above the tip is padding, not margin, so the pointer
           crossing it is still inside the wrapper. */}
