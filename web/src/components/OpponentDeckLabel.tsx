@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { Pencil } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useOpponentDeckCandidates, useSetOpponentDeck } from '../api'
@@ -236,6 +237,7 @@ export function OpponentDeckLabel({ match }: { match: OpponentDeckFields }) {
       <ManaPips colors={match.opponent_colors} />
       <span>{label}</span>
       <Button ref={buttonRef} size="sm" onClick={() => setOpen(true)}>
+        <Pencil size={16} strokeWidth={2} aria-hidden />
         {t('live.picker.correct')}
       </Button>
       {save.error && <span className="text-caption text-loss">{save.error.message}</span>}
