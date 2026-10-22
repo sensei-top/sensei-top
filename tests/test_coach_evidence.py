@@ -1262,7 +1262,10 @@ def test_role_assignment_finding_carries_a_role_evidence_value():
 
 
 def _turning_report(
-    match_id: str, result: str, games: list[tuple[int, str]], turning: dict[int, tuple[int, str]]
+    match_id: str,
+    result: str,
+    games: list[tuple[int, str]],
+    turning: dict[int, tuple[int | None, str]],
 ) -> MatchReport:
     """``games`` is a list of (game_number, game_result); ``turning`` maps a
     game_number that should carry its own ``turning_point`` finding to
@@ -1341,6 +1344,13 @@ def test_turning_points_bucket_every_lost_game_by_stage_and_severity(conn, monke
         "loss_no_finding", "loss", [(1, "loss")], {}
     )
 
+    # A lost game whose turning_point finding has no own-turn number: its
+    # own gap, in no bucket and not in the "no finding" count.
+    _insert_match(conn, "loss_unnumbered", "loss")
+    reports["loss_unnumbered"] = _turning_report(
+        "loss_unnumbered", "loss", [(1, "loss")], {1: (None, "decisive")}
+    )
+
     # Filler, only to clear MIN_SAMPLE.
     _insert_match(conn, "filler", "win")
     reports["filler"] = _turning_report("filler", "win", [(1, "win")], {})
@@ -1352,6 +1362,8 @@ def test_turning_points_bucket_every_lost_game_by_stage_and_severity(conn, monke
 
     evidence = build_coach_evidence(conn, fmt="Standard")
     assert evidence is not None
+    assert any(g.startswith("1 lost game(s) have a turning_point finding on a turn with no "
+                            "own-turn number") for g in evidence.gaps)
     assert len(evidence.turning_points) == 6
     by_cell = {(b.stage, b.severity): b.games for b in evidence.turning_points}
     # early/notice gets 2: early_not's own game, plus won_with_a_lost_game's
