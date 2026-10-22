@@ -80,7 +80,6 @@ describe('config --json to ShellSettings', () => {
         models: [{ value: 'claude-opus-5-5', label: 'Opus 5.5' }],
       },
       backup: { dir: '/data/backups', keep: 3, last: null, inFolder: 2 },
-      sharing: null,
     });
   });
 

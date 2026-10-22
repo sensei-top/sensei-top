@@ -3,30 +3,17 @@
  * report's card, drawn with a sample shell whose every path, name and model is
  * invented and whose saves are kept in memory alone. The "Sample" select
  * picks what the page is drawn with, the two samples with no shell among
- * them, and starts that sample's state again. Under Settings, what the
- * invented draft sends, as the sample's sharing says; then the two lines
- * sharing draws on a draft's page; then a report's card as each writer
- * draws it, over an invented prompt and report; last, the drawing of where
- * Arena keeps Detailed Logs, at the Arena step's size and the Home banner's.
+ * them, and starts that sample's state again. Under Settings, a report's
+ * card as each writer draws it, over an invented prompt and report; last,
+ * the drawing of where Arena keeps Detailed Logs, at the Arena step's size
+ * and the Home banner's.
  */
 import { useEffect, useState } from 'react'
 import type { AppSettings, Saved, Shell } from '../bridge'
 import { GenerateCard } from '../components/GenerateCard'
 import { DetailedLogsGuide } from '../components/onboarding/DetailedLogsGuide'
-import { DraftReceipt } from '../components/sharing/DraftReceipt'
-import { PayloadView } from '../components/sharing/PayloadView'
-import { SharingNote } from '../components/sharing/SharingNote'
 import { PageHeader, SectionLabel, Select, TextLink } from '../components/ui'
-import {
-  SAMPLE_OPTIONS,
-  SAMPLE_PAYLOAD,
-  SAMPLE_SENT_AT,
-  sampleSharedDraft,
-  sampleUnshare,
-  sampleWriting,
-  useSampleShell,
-  type SampleId,
-} from '../lib/sampleShell'
+import { SAMPLE_OPTIONS, sampleWriting, useSampleShell, type SampleId } from '../lib/sampleShell'
 import type { Writer } from '../lib/writer'
 import { SettingsView } from './SettingsView'
 
@@ -51,39 +38,20 @@ export default function SurfacesView() {
         onChange={(value) => setSample(value as SampleId)}
       />
       <SampleSettings key={sample} sample={sample} />
-      <DraftPageSamples key={`draft-${sample}`} sample={sample} />
       <WritingSamples />
       <DetailedLogsSamples />
     </main>
   )
 }
 
-/** The section's anchor that Draft data's link scrolls to. */
-const PAYLOAD_ID = 'what-a-draft-sends'
-
-/** Settings as the sample draws them, then what the invented draft sends,
- *  with sharing on or off as the sample's shell has it, and off with no
- *  shell. Keyed by the sample, so its shell's state starts again when the
- *  sample changes. */
+/** Settings as the sample draws them, with no shell for the two samples
+ *  that have none. Keyed by the sample, so its shell's state starts again
+ *  when the sample changes. */
 function SampleSettings({ sample }: { sample: SampleId }) {
   const sampleShell = useSampleShell(sample)
   const app = useSampleApp(sample)
   const shell: Shell | null = sampleShell && { ...sampleShell, app }
-  return (
-    <>
-      <SettingsView shell={shell} writing={sampleWriting(sample)} payloadHref={() => `#${PAYLOAD_ID}`} />
-      <section aria-labelledby={PAYLOAD_ID} className="space-y-4">
-        <h2 id={PAYLOAD_ID} className="font-display text-heading text-ink">
-          What a draft sends
-        </h2>
-        <PayloadView
-          payload={SAMPLE_PAYLOAD}
-          on={shell?.settings.sharing?.on ?? false}
-          shared={sampleSharedDraft(sample)}
-        />
-      </section>
-    </>
-  )
+  return <SettingsView shell={shell} writing={sampleWriting(sample)} />
 }
 
 const SAMPLE_APP: AppSettings = {
@@ -137,37 +105,6 @@ function useSampleApp(sample: SampleId): NonNullable<Shell['app']> {
     firstData: () => answer({ ok: true }),
     finishOnboarding: () => answer({ ok: true }),
   }
-}
-
-/** The indicator and the receipt in each of its states, as a draft's page
- *  draws them under its header. "Shared" undoes after a moment, and in
- *  "A save fails" the undo is refused. Keyed by the sample, so an undo
- *  starts again when the sample changes. */
-function DraftPageSamples({ sample }: { sample: SampleId }) {
-  const samples = [
-    { label: 'The indicator', line: <SharingNote on /> },
-    { label: 'Waiting', line: <DraftReceipt shared={{ state: 'waiting', at: null }} /> },
-    {
-      label: 'Shared',
-      line: <DraftReceipt shared={{ state: 'shared', at: SAMPLE_SENT_AT }} unshare={() => sampleUnshare(sample)} />,
-    },
-    { label: 'Removed', line: <DraftReceipt shared={{ state: 'removed', at: SAMPLE_SENT_AT }} /> },
-  ]
-  return (
-    <section aria-labelledby="draft-page-title" className="space-y-4">
-      <h2 id="draft-page-title" className="font-display text-heading text-ink">
-        On a draft's page
-      </h2>
-      <div className="grid gap-6 lg:grid-cols-2">
-        {samples.map(({ label, line }) => (
-          <div key={label} className="space-y-2">
-            <SectionLabel>{label}</SectionLabel>
-            {line}
-          </div>
-        ))}
-      </div>
-    </section>
-  )
 }
 
 /** The Detailed Logs drawing in both its sizes: the Arena step's, and the
