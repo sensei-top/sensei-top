@@ -4464,30 +4464,12 @@ def test_mtgo_bulk_two_lists_holding_every_played_card_tie_with_nothing_proposed
         assert sorted(m["scores"].values()) == [MTGO_PICK_SELF_CARDS] * 2
 
 
-def test_mtgo_bulk_colour_helper_equals_live_opponent_colors(mtgo_pick_db):
-    """The hints route reads colours from one table for every played name; it
-    must give what ``live_opponent_colors`` gives for the same names: lands
-    and tokens uncounted, a colourless or unreadable row counted without
-    colour, an unknown name neither counted nor coloured."""
-    from sensei_top.api.routes.mtgo_picks import _colors_by_played_name, _colors_of
-    from sensei_top.archetypes.classify import live_opponent_colors
+def test_mtgo_picks_reads_the_one_colour_rule():
+    """The hints route and ``live_opponent_colors`` share one colour rule
+    (``archetypes.classify``'s ``played_colors_by_name``/``played_colors_of``),
+    so the route must hold those very functions, not copies."""
+    from sensei_top.api.routes import mtgo_picks
+    from sensei_top.archetypes import classify
 
-    conn = open_database(mtgo_pick_db)
-    try:
-        for name, colors in [
-            ("Voice of Victory", '["W"]'), ("Burst Lightning", '["R"]'),
-            ("Smaug the Magnificent", '["R", "U"]'), ("Inspiring Vantage", "not json"),
-        ]:
-            conn.execute("UPDATE cards SET colors = ? WHERE name = ?", (colors, name))
-        conn.execute(
-            "INSERT INTO cards (grp_id, name, type_line, colors) "
-            "VALUES (900001, 'Zzz Token', 'Token Creature — Soldier', '[\"G\"]')"
-        )
-        known = [r[0] for r in conn.execute("SELECT DISTINCT name FROM cards")]
-        names = [*known, "Not A Card", ""]
-        table = _colors_by_played_name(conn, set(names))
-        for subset in (names, known[:3], ["Voice of Victory"], ["Not A Card"], []):
-            assert _colors_of(table, subset) == live_opponent_colors(conn, subset)
-        assert _colors_of(table, names)[0] != ""
-    finally:
-        conn.close()
+    assert mtgo_picks.played_colors_by_name is classify.played_colors_by_name
+    assert mtgo_picks.played_colors_of is classify.played_colors_of

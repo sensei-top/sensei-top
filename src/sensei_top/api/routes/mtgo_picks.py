@@ -37,10 +37,11 @@ from sensei_top.api.routes.matches import (
 )
 from sensei_top.archetypes import build_prior
 from sensei_top.archetypes.classify import (
-    COLOR_ORDER,
     card_colors_by_name,
     classify_seen,
     load_definitions,
+    played_colors_by_name,
+    played_colors_of,
 )
 from sensei_top.i18n import _
 from sensei_top.mtgo.picks import Group, PickList, PickMatch, Unsure, group_matches
@@ -48,52 +49,6 @@ from sensei_top.mtgo.picks import Group, PickList, PickMatch, Unsure, group_matc
 router = APIRouter()
 
 _MISSING_CARDS = 8
-
-
-def _colors_by_played_name(
-    conn: sqlite3.Connection, names: set[str]
-) -> dict[str, tuple[bool, frozenset[str]]]:
-    """``name -> (counted, colours)`` for each name the ``cards`` table knows,
-    by the very rule ``live_opponent_colors`` applies to a name set: a row
-    whose supertype text (before the type line's em dash) holds "Land" or
-    "Token" is not counted and gives no colour; any other row counts its
-    name and contributes its colour identity, unreadable JSON as none.
-    One query for every name at once instead of one per match.
-    """
-    table: dict[str, tuple[bool, frozenset[str]]] = {}
-    ordered = sorted(names)
-    for start in range(0, len(ordered), 500):
-        chunk = ordered[start:start + 500]
-        rows = conn.execute(
-            f"SELECT DISTINCT name, colors, type_line FROM cards WHERE name IN "
-            f"({','.join('?' * len(chunk))})",
-            chunk,
-        )
-        for row in rows:
-            supertype = (row["type_line"] or "").split("—", 1)[0]
-            if "Land" in supertype or "Token" in supertype:
-                continue
-            try:
-                identity = frozenset(json.loads(row["colors"]) or ())
-            except (json.JSONDecodeError, TypeError):
-                identity = frozenset()
-            _, seen = table.get(row["name"], (True, frozenset()))
-            table[row["name"]] = (True, seen | identity)
-    return table
-
-
-def _colors_of(
-    table: dict[str, tuple[bool, frozenset[str]]], names: list[str]
-) -> tuple[str, int]:
-    """``(colors, cards_seen)`` for ``names``, equal to ``live_opponent_colors``."""
-    unique = {n for n in names if n}
-    seen: set[str] = set()
-    counted = 0
-    for n in unique:
-        if n in table:
-            counted += 1
-            seen |= table[n][1]
-    return "".join(c for c in COLOR_ORDER if c in seen), counted
 
 
 class _Hints:
@@ -112,10 +67,10 @@ class _Hints:
         if not self._caches:
             self._caches["definitions"] = load_definitions(self._conn)
             self._caches["colors"] = card_colors_by_name(self._conn)
-            self._caches["played"] = _colors_by_played_name(self._conn, self._all_names)
+            self._caches["played"] = played_colors_by_name(self._conn, self._all_names)
         if fmt not in self._priors:
             self._priors[fmt] = build_prior(self._conn, fmt)
-        colors, cards_seen = _colors_of(self._caches["played"], names)
+        colors, cards_seen = played_colors_of(self._caches["played"], names)
         verdict = classify_seen(
             names, colors, cards_seen, fmt=fmt, definitions=self._caches["definitions"],
             colors_by_name=self._caches["colors"], prior=self._priors[fmt],
