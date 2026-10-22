@@ -620,23 +620,6 @@ works, since the URI is built from `Path.absolute()`, not `resolve()`.
 **Needs:** Building a URI SQLite accepts from a UNC path, or refusing one
 with a message.
 
-### BL-039 · "mode 600" on Windows
-
-type: fix · priority: P3 · status: ready · area: cli
-
-`config` says it wrote the file "mode 600" (`cli.py`'s `_written`,
-`path.chmod(0o600)`), but on Windows `chmod` only sets or clears the
-read-only flag. Since plan 6 a key goes to the system keyring when one
-exists (Windows Credential Manager on Windows), so the file holds a
-credential only when no keyring exists, which on Windows is not expected;
-the message is still printed for any file write.
-
-**Why deferred:** Found in plan 3 (S4); the keyring made it rare rather than
-gone.
-
-**Needs:** A Windows wording for the message, or leaving it out where
-`chmod` does nothing.
-
 ### BL-040 · Segmenter shape 5 and a following header
 
 type: fix · priority: P3 · status: needs-data · area: reader

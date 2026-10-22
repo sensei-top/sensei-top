@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - On the MTGO picks page, a match no group takes because no saved list is
   in its format now names that format: "No saved list in Modern." rather
   than "No saved list fits."
+- On Windows, `sensei-top config` no longer says it wrote the config file
+  "(mode 600)": there `chmod` sets only the read-only flag.
 
 ## [1.2.1] - 2026-10-21
 
