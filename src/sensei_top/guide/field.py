@@ -69,17 +69,16 @@ class FieldEvidence:
 def _classified_deck_total(conn: sqlite3.Connection, where: str, params: list) -> int:
     """The TRUE total classified-deck count for a windowed query — the
     denominator every windowed share divides by, which must never be the
-    truncated top_n sum. Its three callers, ``_shares_for_window``,
-    ``field_by_key`` and ``brief/narrative.py::_archetype_share``, share it
-    rather than repeating it, since each guards against the exact same
-    truncated-denominator bug. The one copy is ``build_field``'s
-    ``pre_total_scoped``: the same count written out inline over
-    ``e.event_date <= ?``, the denominator ``share_before_reset`` divides
-    by. The callers' *count* queries stay separate — ``_shares_for_window``
+    truncated top_n sum. Its four callers, ``_shares_for_window``,
+    ``field_by_key``, ``build_field`` (the pre-reset denominator
+    ``share_before_reset`` divides by) and
+    ``brief/narrative.py::_archetype_share``, share it rather than repeating
+    it, since each guards against the exact same truncated-denominator bug.
+    The callers' *count* queries stay separate — ``_shares_for_window``
     groups by archetype name up to ``top_n`` for display, ``field_by_key``
-    by key and name with no cap, ``_archetype_share`` filters to a single
-    archetype_key — so there is nothing left to share once the denominator
-    is factored out.
+    by key and name with no cap, ``build_field`` by name before the reset,
+    ``_archetype_share`` filters to a single archetype_key — so there is
+    nothing left to share once the denominator is factored out.
     """
     return conn.execute(
         f"""
@@ -329,22 +328,17 @@ def build_field(
         # decks through the reset date itself count as "before" — same
         # inclusive boundary guide.window.structural_change uses, since the
         # reset date is the LAST day the old list was actually played.
+        pre_where, pre_params = "e.format = ? AND e.event_date <= ?", [fmt, reset.date]
         pre_rows = conn.execute(
-            """
+            f"""
             SELECT a.archetype_name AS name, COUNT(*) AS n
               FROM meta_deck_archetype a JOIN meta_event e ON e.event_id = a.event_id
-             WHERE e.format = ? AND e.event_date <= ?
+             WHERE {pre_where}
              GROUP BY 1
             """,
-            (fmt, reset.date),
+            pre_params,
         ).fetchall()
-        pre_total_scoped = conn.execute(
-            """
-            SELECT COUNT(*) FROM meta_deck_archetype a JOIN meta_event e ON e.event_id = a.event_id
-             WHERE e.format = ? AND e.event_date <= ? AND a.archetype_name IS NOT NULL
-            """,
-            (fmt, reset.date),
-        ).fetchone()[0]
+        pre_total_scoped = _classified_deck_total(conn, pre_where, pre_params)
         if pre_total_scoped:
             pre_shares = {
                 row["name"]: row["n"] / pre_total_scoped for row in pre_rows if row["name"]
