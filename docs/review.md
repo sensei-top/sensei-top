@@ -232,7 +232,7 @@ gives that a shape a player actually replays a match in:
   `subhead` is `None` far more often than not. The race sentence doesn't
   stop at the mismatch: after it comes one sentence per lost game, in game
   order, naming that game's top beat by the same severity order the game's
-  own beats use ("Game 2, Turned: turn 7 · a decisive swing."), or "no
+  own beats use ("Game 2, Turned: your turn 4 · a decisive swing."), or "no
   single cause stood out" when the game has none. Leading the race and
   losing says only that something else decided the game; the beat is the
   report's best candidate for what. Two kinds of beat are never a cause:
@@ -252,6 +252,11 @@ gives that a shape a player actually replays a match in:
   its source `Finding`'s own `Evidence` or anchor — the same rule
   `findings.py` states for a single finding, extended here to a summary
   built from many (`test_summary.py`'s own traceability audit).
+
+  The Turned beat counts "your turn N" with the finding's
+  `self_turn_index`, the turn's rank among your own turns, never Arena's
+  shared `turn_number`, which counts both players' turns. With no own-turn
+  index the beat reads the magnitude alone.
 
   Each beat also carries its finding's `turn_number` (`None` when the
   finding has none, as `never_behind` doesn't), so the dashboard can open

@@ -1872,8 +1872,8 @@ msgstr "este oponente"
 
 #: sensei_top/review/summary.py
 #, python-brace-format
-msgid "turn {turn} · {magnitude}"
-msgstr "turno {turn} · {magnitude}"
+msgid "your turn {turn} · {magnitude}"
+msgstr "seu turno {turn} · {magnitude}"
 
 #: sensei_top/review/summary.py
 msgid "you conceded"

@@ -68,11 +68,13 @@ def _race_finding(game_number: int, code: str, self_dealt: int, opp_dealt: int, 
     return Finding(**base)
 
 
-def _turning_point(game_number: int, turn_number: int, drop: float, **overrides):
+def _turning_point(game_number: int, turn_number: int, drop: float,
+                   self_turn_index: int | None = None, **overrides):
     base = dict(
         code="turning_point", analyzer="trajectory", category=Category.TRAJECTORY,
         severity=Severity.DECISIVE if drop >= 0.30 else Severity.NOTICE,
         confidence=Confidence.PARTIAL, game_number=game_number, turn_number=turn_number,
+        self_turn_index=(turn_number + 1) // 2 if self_turn_index is None else self_turn_index,
         title="irrelevant", detail="irrelevant",
         evidence=(Evidence("drop", "Size of the swing", drop),),
     )
@@ -188,7 +190,7 @@ def test_race_mismatch_subhead_takes_the_most_severe_non_race_beat():
     subhead = build_summary(report).subhead
     assert subhead is not None
     assert subhead.startswith("You led the damage race in all 1 games and still lost 1 game. "
-                              "Game 1, Turned: turn 7 \u00b7 ")
+                              "Game 1, Turned: your turn 4 \u00b7 ")
     assert subhead.endswith(".")
 
 
@@ -225,7 +227,7 @@ def test_subhead_falls_back_to_a_lone_decisive_findings_own_title():
     own already-audited title is promoted verbatim — nothing new is
     invented for the sentence."""
     games = (_game(1, result="loss"),)
-    decisive = _turning_point(1, 21, 0.49, title="The game turned on your turn 21")
+    decisive = _turning_point(1, 21, 0.49, title="The game turned on your turn 11")
     other = Finding(
         code="mulligan_taken", analyzer="frame", category=Category.FRAME,
         severity=Severity.NOTE, confidence=Confidence.OBSERVED, game_number=1,
@@ -233,7 +235,7 @@ def test_subhead_falls_back_to_a_lone_decisive_findings_own_title():
     )
     report = MatchReport(match_id="m", deck_id=None, result="loss", games=games,
                           findings=(decisive, other), opponent_label="Opp")
-    assert build_summary(report).subhead == "The game turned on your turn 21"
+    assert build_summary(report).subhead == "The game turned on your turn 11"
 
 
 # --- per-game beats -------------------------------------------------------------
@@ -371,6 +373,41 @@ def test_a_match_level_role_finding_is_labelled_role_without_the_game_beats_defi
     (beat,) = build_summary(report).matchup
     assert beat.label == "Role"
     assert beat.definition is None
+
+
+# (game, Arena's shared turn) -> which of our own turns that is. We are seat 2
+# (``systemSeatIds``); at shared turn 3 of games 1 and 2 ``turnInfo.activePlayer``
+# is 2 and ``players[seat 2].turnNumber`` is 2 (fixture entries 9 and 14).
+_OUR_TURN = {(1, 3): 2, (2, 3): 2}
+
+
+def test_turned_beat_counts_your_turns_not_the_shared_turn(db):
+    """The Turned beat says "your turn N", not Arena's shared turn number.
+    The expectations are read from the fixture's own turnInfo and player
+    turn counters (entries 9 and 14). MATCH_WIN is left out: its game 2's
+    fixture cut turns 4-23, so Arena's own counter reads 12 where our turn
+    index reads 2."""
+    report = build_match_report(db, MATCH_LOSS)
+    checked = 0
+    for line in build_summary(report).games:
+        for beat in line.beats:
+            if beat.code != "turning_point":
+                continue
+            n = _OUR_TURN[(beat.game_number, beat.turn_number)]
+            assert beat.text.startswith(f"your turn {n} \u00b7 ")
+            assert n != beat.turn_number
+            checked += 1
+    assert checked
+
+
+def test_turned_beat_without_an_own_turn_index_is_the_magnitude_alone():
+    games = (_game(1, result="loss"),)
+    finding = dataclasses.replace(_turning_point(1, 7, 0.10), self_turn_index=None)
+    report = MatchReport(match_id="m", deck_id=None, result="loss", games=games,
+                          findings=(finding,), opponent_label="Opp")
+    (beat,) = build_summary(report).games[0].beats
+    assert beat.magnitude
+    assert beat.text == beat.magnitude
 
 
 def test_fixture_beats_carry_their_findings_turn_and_their_labels_definition(db):

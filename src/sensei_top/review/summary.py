@@ -212,8 +212,9 @@ def _game_beat(f: Finding) -> Beat:
         drop = _evidence(f, "drop")
         if isinstance(drop, int | float):
             magnitude = swing_words(drop)
-            text = (_("turn {turn} · {magnitude}").format(turn=f.turn_number, magnitude=magnitude)
-                    if f.turn_number else magnitude)
+            text = (_("your turn {turn} · {magnitude}").format(
+                        turn=f.self_turn_index, magnitude=magnitude)
+                    if f.self_turn_index else magnitude)
     elif f.code == "cards_stranded_in_a_loss":
         stranded = _evidence(f, "stranded_cards")
         if stranded is not None:

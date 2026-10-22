@@ -1589,11 +1589,6 @@ msgid "this opponent"
 msgstr ""
 
 #: sensei_top/review/summary.py
-#, python-brace-format
-msgid "turn {turn} · {magnitude}"
-msgstr ""
-
-#: sensei_top/review/summary.py
 msgid "you conceded"
 msgstr ""
 
@@ -1611,6 +1606,11 @@ msgstr ""
 
 #: sensei_top/review/summary.py
 msgid "your opponent ran out of time"
+msgstr ""
+
+#: sensei_top/review/summary.py
+#, python-brace-format
+msgid "your turn {turn} · {magnitude}"
 msgstr ""
 
 #: sensei_top/guide/window.py
