@@ -3,12 +3,12 @@
 The caller (``cli.cmd_restore``) does the fifth -- ``open_database()`` and
 ``project()`` -- because this package imports neither ``reader`` nor
 ``projector``. Every refusal is raised before anything moves, so it leaves each
-file where it was: a missing or unusable FILE, FILE being the database itself,
-a schema newer than this code, a ``-wal`` beside FILE, and a live database
-whose checkpoint reports busy. Any
-failure after the first move -- a move, the copy -- puts the moved files back
-in reverse order; if some cannot be put back, ``PartialRestoreError`` names
-each one still aside, and the message never claims nothing changed.
+file where it was: a missing or unusable FILE, FILE on a network share, FILE
+being the database itself, a schema newer than this code, a ``-wal`` beside
+FILE, and a live database whose checkpoint reports busy. Any failure after the
+first move -- a move, the copy -- puts the moved files back in reverse order; if
+some cannot be put back, ``PartialRestoreError`` names each one still aside,
+and the message never claims nothing changed.
 """
 
 from __future__ import annotations
@@ -50,11 +50,14 @@ class PartialRestoreError(RestoreError):
 def check_backup(file: Path, db_path: Path, say: Callable[[str], None]) -> int:
     """Steps 1 and 2: open ``file`` read-only, vet it, return its schema version.
 
-    Raises ``RestoreError`` for a missing file, the database itself, a
-    non-empty ``-wal`` beside ``file`` (it alone is not the whole database), a
-    file that is not a usable database, and a schema newer than this code
-    ships. The connection is closed before this returns.
+    Raises ``RestoreError`` for a file on a network share
+    (``db.is_unc_path``), a missing file, the database itself, a non-empty
+    ``-wal`` beside ``file`` (it alone is not the whole database), a file that
+    is not a usable database, and a schema newer than this code ships. The
+    connection is closed before this returns.
     """
+    if db.is_unc_path(file):
+        raise RestoreError(f"{db.unc_refusal(file)} Nothing was changed.")
     if not file.exists():
         raise RestoreError(f"{file} does not exist.")
     if db_path.exists() and os.path.samefile(file, db_path):

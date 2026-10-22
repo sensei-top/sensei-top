@@ -62,7 +62,7 @@ from typing import TYPE_CHECKING
 from sensei_top import logs
 from sensei_top.archetypes.source import ARCHIVE_URL
 from sensei_top.arena_config import DATE_ORDER_CHOICES
-from sensei_top.db import connect, open_database
+from sensei_top.db import connect, is_unc_path, open_database, unc_refusal
 from sensei_top.live import ARENA_LOG_RESOLVE_SECONDS, DECK_POLL_SECONDS, MTGO_POLL_SECONDS
 from sensei_top.mtgo.config import load_handle as mtgo_load_handle
 from sensei_top.mtgo.config import resolve_deck_dir, resolve_log_dir
@@ -653,6 +653,8 @@ def cmd_backup(args) -> None:
     from sensei_top.backup import claim_age_seconds, read_state, resolve, run_backup
 
     db_path = Path(args.db)
+    if args.dir and is_unc_path(args.dir):
+        sys.exit(unc_refusal(args.dir))
     if not db_path.exists():
         sys.exit(f"No database at {db_path}. Run 'sensei-top ingest' then 'project' first.")
 
@@ -1172,6 +1174,8 @@ def cmd_config(args) -> None:
 
     if args.set_key == "-" and args.set_topdeck_key == "-":
         sys.exit("Only one key can be read from stdin at a time.")
+    if args.set_backup_dir and is_unc_path(args.set_backup_dir):
+        sys.exit(unc_refusal(args.set_backup_dir))
 
     if args.move_keys_to_keyring:
         _move_keys_to_keyring()
@@ -2897,6 +2901,9 @@ def main(argv: list[str] | None = None) -> None:
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors=stream.errors)
     args = build_parser().parse_args(argv)
+    # Before logs.install, which writes beside --db, and every open_database().
+    if is_unc_path(args.db):
+        sys.exit(unc_refusal(args.db))
     logs.install(Path(args.db), args.command, verbose=args.verbose)
     args.func(args)
 

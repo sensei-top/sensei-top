@@ -29,6 +29,7 @@
   "ipc.refused": "This page cannot change the app's settings.",
   "settings.dateOrder": "The date order must be auto, mdy or dmy.",
   "settings.backupKeep": "The number of backups kept must be 1 or more.",
+  "settings.backupUnc": "A network folder (\\\\server\\share) can't hold the backups. Map the share to a drive letter and choose that.",
   "settings.notAKey": "That is not a key.",
   "settings.cannotSave": "That cannot be saved.",
   "settings.notSaved": "The setting could not be saved.",

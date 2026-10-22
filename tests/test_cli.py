@@ -874,6 +874,48 @@ def test_config_json_round_trips_every_setter(tmp_path, monkeypatch, capsys, mem
     assert memory_keyring == {}
 
 
+# --- a network share for the database or the backups (Windows only) ---------
+
+
+def _as_if_windows(monkeypatch) -> None:
+    """``cli.is_unc_path`` as it answers on Windows."""
+    import functools
+
+    from sensei_top import db
+
+    monkeypatch.setattr(
+        cli_module, "is_unc_path", functools.partial(db.is_unc_path, platform="win32")
+    )
+
+
+def test_a_db_on_a_network_share_is_refused_before_it_is_opened(tmp_path, monkeypatch):
+    from sensei_top.db import unc_refusal
+
+    _as_if_windows(monkeypatch)
+    monkeypatch.setattr(cli_module, "open_database", _refuse_to_start("open_database"))
+    monkeypatch.setattr(cli_module.logs, "install", _refuse_to_start("logs.install"))
+    share = r"\\server\share\sensei-top.db"
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli_module.main(["--db", share, "project"])
+    assert str(exc_info.value) == unc_refusal(share)
+    assert "drive letter" in str(exc_info.value)
+
+
+def test_set_backup_dir_on_a_network_share_writes_nothing(tmp_path, monkeypatch):
+    from sensei_top.db import unc_refusal
+
+    _as_if_windows(monkeypatch)
+    _config(tmp_path, "--set-backup-keep", "2")
+    before = _config_file()
+    share = "//server/share/backups"
+
+    with pytest.raises(SystemExit) as exc_info:
+        _config(tmp_path, "--set-backup-dir", share, "--set-backup-keep", "5")
+    assert str(exc_info.value) == unc_refusal(share)
+    assert _config_file() == before
+
+
 def test_no_key_value_reaches_the_output_or_the_log(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(sys, "stdin", io.StringIO(CLAUDE_KEY + "\n"))
     cli_module.main(["--db", str(tmp_path / "t.db"), "--verbose", "config", "--set-key", "-"])

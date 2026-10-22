@@ -15,7 +15,7 @@ import {
   parseProgress,
   planAppChange,
   filePairLines,
-  planChange,
+  planChange as planChangeOn,
   restoreLeftovers,
   restoreLeftoversMessage,
   SettingsService,
@@ -28,6 +28,9 @@ import {
 } from './settings';
 import type { ShellJson } from './store';
 import type { UpdateStatus } from './updater';
+
+// Only a backup folder depends on the platform; every other change plans the same.
+const planChange = (change: Parameters<typeof planChangeOn>[0]) => planChangeOn(change, 'linux');
 
 // The shape `sensei-top config --json` prints (cli.py::_config_json); the
 // values are made up.
@@ -245,6 +248,15 @@ describe('a change to CLI arguments', () => {
     expect(() => planChange({ backup: { keep: 0 } })).toThrow();
     expect(() => planChange({ backup: { keep: 1.5 } })).toThrow();
     expect(() => planChange({ sources: { dateOrder: 'ymd' as 'auto' } })).toThrow();
+  });
+
+  it('refuses a network folder for the backups on Windows only', () => {
+    for (const dir of ['\\\\server\\share\\backups', '//server/share/backups', '\\\\?\\UNC\\server\\share\\backups']) {
+      expect(() => planChangeOn({ backup: { dir } }, 'win32')).toThrow(/network folder/);
+      expect(planChangeOn({ backup: { dir } }, 'linux').args).toEqual(['config', '--set-backup-dir', dir]);
+    }
+    expect(planChangeOn({ backup: { dir: 'Z:\\backups' } }, 'win32').args).toEqual(['config', '--set-backup-dir', 'Z:\\backups']);
+    expect(planChangeOn({ backup: { dir: '\\\\?\\C:\\backups' } }, 'win32').args).not.toBeNull();
   });
 
   it('puts a key on stdin and never in the arguments', () => {

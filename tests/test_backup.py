@@ -157,6 +157,37 @@ def test_a_bad_keep_in_the_config_file_clamps_to_the_default(monkeypatch, tmp_pa
     assert cfg.keep_source == "default"
 
 
+# --- db.is_unc_path: a network share, read as Windows reads it ---------------
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        r"\\server\share\sensei-top.db",
+        "//server/share/sensei-top.db",
+        r"\\?\UNC\server\share\sensei-top.db",
+    ],
+)
+def test_a_network_share_is_refused_on_windows_only(path):
+    assert db.is_unc_path(path, platform="win32")
+    assert not db.is_unc_path(path, platform="linux")
+
+
+@pytest.mark.parametrize(
+    "path", [r"Z:\backups", "Z:/backups", r"\\?\C:\backups", r"data\sensei-top.db", "backups"]
+)
+def test_a_drive_letter_or_relative_path_is_not_refused(path):
+    assert not db.is_unc_path(path, platform="win32")
+
+
+def _as_if_windows(monkeypatch) -> None:
+    """``db.is_unc_path`` as it answers on Windows, for every caller that
+    looks it up on the module (``backup/run.py``, ``backup/restore.py``)."""
+    import functools
+
+    monkeypatch.setattr(db, "is_unc_path", functools.partial(db.is_unc_path, platform="win32"))
+
+
 def test_slot_path_shapes(tmp_path):
     cfg = BackupConfig(directory=tmp_path, keep=3, dir_source="default", keep_source="default")
     db_path = Path("data/sensei-top.db")
@@ -407,6 +438,31 @@ def test_insufficient_free_space_fails_before_any_write(tmp_path, monkeypatch):
     assert result.status == "failed"
     assert "free" in result.error.lower()
     assert not backup_config.slot_path(cfg, db_path, 0).exists()
+    conn.close()
+
+
+def test_a_network_share_from_the_environment_fails_the_run_before_any_write(
+    tmp_path, monkeypatch
+):
+    _isolate(monkeypatch, tmp_path)
+    _as_if_windows(monkeypatch)
+    monkeypatch.setenv(BACKUP_DIR_ENV, "//server/share/backups")
+    db_path, conn = _make_db(tmp_path)
+    made: list[Path] = []
+    monkeypatch.setattr(backup_run.Path, "mkdir", lambda self, *a, **k: made.append(self))
+    # Windows' resolve() keeps a share's leading \\server\share; POSIX realpath
+    # folds the leading // into /, so here resolve() leaves the path as given.
+    monkeypatch.setattr(backup_config.Path, "resolve", lambda self, strict=False: self)
+
+    cfg = backup_config.resolve(db_path)  # never raises, a share included
+    result = backup_run.run_backup(conn, db_path, cfg=cfg)
+
+    assert cfg.dir_source == f"${BACKUP_DIR_ENV}"
+    assert result.status == "failed"
+    assert result.error == db.unc_refusal(cfg.directory)
+    assert "drive letter" in result.error
+    assert made == []
+    assert backup_run.read_state(conn)["last_error"] == result.error
     conn.close()
 
 
@@ -1281,6 +1337,25 @@ def test_other_refusals_change_nothing(tmp_path, monkeypatch):
         assert fragment in text
         assert _listing(live.parent) == before_listing
         assert live.read_bytes() == before_bytes
+
+
+def test_a_backup_on_a_network_share_is_refused_and_nothing_moves(tmp_path, monkeypatch):
+    _isolate(monkeypatch, tmp_path)
+    _as_if_windows(monkeypatch)
+    live = tmp_path / "live" / "sensei-top.db"
+    live.parent.mkdir()
+    db.open_database(live).close()
+    before_listing = _listing(live.parent)
+    before_bytes = live.read_bytes()
+    share = Path("//server/share/sensei-top.db.backup")
+
+    code, text = _run_restore(tmp_path, share, live)
+
+    assert code == 1
+    assert db.unc_refusal(share) in text
+    assert text.rstrip().endswith("Nothing was changed.")
+    assert _listing(live.parent) == before_listing
+    assert live.read_bytes() == before_bytes
 
 
 def test_an_existing_replaced_file_is_never_overwritten(tmp_path, monkeypatch):

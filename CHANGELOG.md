@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   than "No saved list fits."
 - On Windows, `sensei-top config` no longer says it wrote the config file
   "(mode 600)": there `chmod` sets only the read-only flag.
+- On Windows, a network folder (`\\server\share`) given for the database
+  or the backups is now refused up front with a message, rather than
+  failing partway through a backup, a restore or a check.
 
 ## [1.2.1] - 2026-10-21
 
