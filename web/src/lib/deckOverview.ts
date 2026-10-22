@@ -105,11 +105,16 @@ function matchRecord(matches: Match[]): { wins: number; losses: number } {
 }
 
 /** The second line of a version's row, over that version's matches, in the
- *  one-line form: from ten finished a rate and the record, "57% · 21–16";
+ *  one-line form: from ten finished "57% win rate · 21–16";
  *  one to nine the record alone, "3–3"; none, "no finished match yet". A
  *  draw counts toward neither. */
 export function versionRecord(matches: Match[], t: TFunction): string {
-  return rateAndRecordLine(matchRecord(matches)) ?? t('common.sample.noMatch')
+  const { wins, losses } = matchRecord(matches)
+  const finished = wins + losses
+  if (finished >= RATE_MIN_MATCHES) {
+    return t('decks.overview.versionRate', { rate: formatPercent(wins / finished), record: formatRecord(wins, losses) })
+  }
+  return rateAndRecordLine({ wins, losses }) ?? t('common.sample.noMatch')
 }
 
 /* -------------------------------------------------- on the play and draw */

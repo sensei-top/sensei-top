@@ -401,10 +401,10 @@ describe('pairingTiles', () => {
       match('c', { result: 'win', best_of: 1, games_won: 1, games_lost: 0 }),
     ])
     const tiles = pairingTiles(rows[0], none)
-    expect(tiles.map((tile) => tile.label)).toEqual(['Record', 'Games', 'Game 1', 'Games 2–3', 'In tournaments'])
+    expect(tiles.map((tile) => tile.label)).toEqual(['Record', 'Games', 'Game 1', 'Post-board', 'In tournaments'])
     // Game 1: won in b, lost in a. Games 2–3: 2–0 in a, 0–2 in b.
     expect(tiles[2]).toEqual({ label: 'Game 1', value: record(1, 1), detail: tooFewGames, muted: true })
-    expect(tiles[3]).toEqual({ label: 'Games 2–3', value: record(2, 2), detail: tooFewGames, muted: true })
+    expect(tiles[3]).toEqual({ label: 'Post-board', value: record(2, 2), detail: tooFewGames, muted: true })
   })
 
   it('writes a split’s rate over its record from ten games won or lost', () => {
@@ -428,7 +428,7 @@ describe('pairingTiles', () => {
     // won, 4 + 0 + 4 + 2 lost, 10 of 20 is 50%.
     const tiles = pairingTiles(rows[0], none)
     expect(tiles[2]).toEqual({ label: 'Game 1', value: '60%', detail: record(6, 4) })
-    expect(tiles[3]).toEqual({ label: 'Games 2–3', value: '50%', detail: record(10, 10) })
+    expect(tiles[3]).toEqual({ label: 'Post-board', value: '50%', detail: record(10, 10) })
   })
 
   it('writes the field’s rate over its entries, and says under five are too few', () => {

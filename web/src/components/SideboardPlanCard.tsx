@@ -136,7 +136,7 @@ function pastBoardingLabel(intermission: IntermissionOut, t: TFunction): string 
   return intermission.alternatives?.[0]?.label ?? t('matchups.sideboard.thisArchetype')
 }
 
-/** "Your games 2–3 against it: 58% · 35–25": this deck's own earlier games
+/** "Your post-board games against it: 58% · 35–25": this deck's own earlier games
  *  2 and 3 against the opponent's deck (`intermission.postboard_record`),
  *  the rate and the record from ten won or lost, the record alone under
  *  ten (`rateAndRecordLine`). A fact, not advice, so it is drawn whatever

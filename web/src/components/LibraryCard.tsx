@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 import type { LibraryCardOut } from '../api'
 import { formatPercent } from '../lib/format'
 import { groupByManaValue, LANDS_HORIZONS, landsLine, nextDrawChance, UNKNOWN_MANA_VALUE } from '../lib/library'
@@ -14,11 +14,12 @@ function LandsStrip({ cards, libraryCount }: { cards: LibraryCardOut[]; libraryC
   const lands = landsLine(cards, libraryCount)
   return (
     <div className="mb-3 flex items-center gap-5 rounded-block bg-surface2 px-4 py-2">
-      <div className="mr-auto flex items-baseline gap-2">
-        <span className="font-display text-title text-ink">{t('live.library.lands')}</span>
-        <span className="text-body tabular-nums text-ink2">
-          <span className="font-semibold text-ink">{lands.left}</span>/{lands.total}
-        </span>
+      <div className="mr-auto text-body tabular-nums text-ink2">
+        <Trans
+          i18nKey="live.library.landsLeft"
+          values={{ left: lands.left, total: lands.total }}
+          components={{ strong: <span className="font-semibold text-ink" /> }}
+        />
       </div>
       {LANDS_HORIZONS.map((draws, i) => (
         <div key={draws} className="text-right">

@@ -157,7 +157,7 @@ describe('versionRecord', () => {
   it('gives the rate and the record from ten finished matches', () => {
     // 21 of 37 is 0.5676, 57 in whole percent.
     const matches = [...results('w', 'win', 21), ...results('l', 'loss', 16)]
-    expect(versionRecord(matches, t)).toBe(`57% · ${rec(21, 16)}`)
+    expect(versionRecord(matches, t)).toBe(`57% win rate · ${rec(21, 16)}`)
   })
 
   it('gives the record alone from one to nine, a draw and a match in progress counting toward neither', () => {

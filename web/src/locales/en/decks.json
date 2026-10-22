@@ -57,6 +57,7 @@
     "daysAcross": "{{from}} to {{to}}",
     "undated": "Undated",
     "newest": "Newest",
+    "versionRate": "{{rate}} win rate · {{record}}",
     "noRank": "No rank recorded",
     "captionAll_one": "{{n}}\u00a0matches, newest first",
     "captionAll_other": "{{n}}\u00a0matches, newest first",

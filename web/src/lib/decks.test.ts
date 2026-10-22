@@ -200,19 +200,19 @@ describe('deckLine', () => {
 describe('deckRecord', () => {
   it('is a rate from ten finished matches, with the record under it', () => {
     // 35 / 60 = 0.583…, 58%; the losses are 60 - 35.
-    expect(deckRecord({ finished: 60, wins: 35 }, t)).toEqual({ figure: '58%', line: '35\u2060–\u206025', thin: false })
-    expect(deckRecord({ finished: 10, wins: 5 }, t)).toEqual({ figure: '50%', line: '5\u2060–\u20605', thin: false })
+    expect(deckRecord({ finished: 60, wins: 35 }, t)).toEqual({ figure: '58%', line: 'win rate · 35\u2060–\u206025', thin: false })
+    expect(deckRecord({ finished: 10, wins: 5 }, t)).toEqual({ figure: '50%', line: 'win rate · 5\u2060–\u20605', thin: false })
   })
 
   it('is the rate, muted, from five to nine', () => {
     expect(deckRecord({ finished: 9, wins: 6 }, t)).toEqual({
       figure: '67%',
-      line: '6\u2060–\u20603 · rough, under 10\u00a0matches',
+      line: 'rough win rate · 6\u2060–\u20603, under 10\u00a0matches',
       thin: true,
     })
     expect(deckRecord({ finished: 5, wins: 2 }, t)).toEqual({
       figure: '40%',
-      line: '2\u2060–\u20603 · rough, under 10\u00a0matches',
+      line: 'rough win rate · 2\u2060–\u20603, under 10\u00a0matches',
       thin: true,
     })
   })

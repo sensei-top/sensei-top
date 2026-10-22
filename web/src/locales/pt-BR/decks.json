@@ -57,6 +57,7 @@
     "daysAcross": "{{from}} a {{to}}",
     "undated": "Sem data",
     "newest": "Mais recente",
+    "versionRate": "{{rate}} de vitórias · {{record}}",
     "noRank": "Nenhuma classificação registrada",
     "captionAll_one": "{{n}} partida, mais recentes primeiro",
     "captionAll_other": "{{n}} partidas, mais recentes primeiro",

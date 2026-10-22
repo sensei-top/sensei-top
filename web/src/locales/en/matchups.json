@@ -14,7 +14,7 @@
       "record": "Record",
       "rate": "Rate",
       "game1": "Game 1",
-      "postboard": "Games 2–3"
+      "postboard": "Post-board"
     }
   },
   "tiles": {
@@ -22,8 +22,8 @@
     "noneNamed": "none named",
     "allNamed": "all named",
     "namedAndNot": "{{named}}\u00a0named, {{notNamed}}\u00a0not",
-    "noneYet": "no archetype met {{min}}\u00a0times yet",
-    "oneSoFar": "one archetype met {{min}}\u00a0times so far",
+    "noneYet": "no archetype has {{min}}\u00a0or more matches yet",
+    "oneSoFar": "only one archetype has {{min}}\u00a0or more matches",
     "best": "Best matchup",
     "worst": "Worst matchup",
     "rankedRate": "{{record}} against {{against}}"
@@ -51,7 +51,7 @@
     "games": "Games",
     "yoursFirst": "yours first",
     "game1": "Game 1",
-    "postboard": "Games 2–3",
+    "postboard": "Post-board",
     "inTournaments": "In tournaments",
     "onlyNamed": "only a named archetype has results",
     "noResults": "no tournament results for it",
@@ -185,7 +185,7 @@
   "sideboard": {
     "thisOpponent": "this opponent",
     "thisArchetype": "this archetype",
-    "postboardRecord": "Your games 2–3 against it: {{record}}",
+    "postboardRecord": "Your post-board games against it: {{record}}",
     "headline": {
       "noResult": "Sideboard plan",
       "won": "Won game {{game}}",

@@ -58,6 +58,8 @@
     "tooFewGames": "poucos para uma taxa, menos de {{min}}\u00a0jogos",
     "roughMatches": "{{record}} · aproximada, menos de {{min}}\u00a0partidas",
     "roughGames": "{{record}} · aproximada, menos de {{min}}\u00a0jogos",
+    "rateLine": "taxa de vitórias · {{record}}",
+    "roughRateLine": "taxa de vitórias aproximada · {{record}}, menos de {{min}}\u00a0partidas",
     "tooFewCellMatches": "poucas",
     "tooFewCellGames": "poucos",
     "noMatch": "nenhuma partida terminada ainda",

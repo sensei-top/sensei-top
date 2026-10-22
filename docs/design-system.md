@@ -659,9 +659,11 @@ and `games_lost` instead.
 **Ten finished matches before a rate, five before a rough one.** A
 personal record has two thresholds, `RATE_MIN_MATCHES` (10) and
 `ROUGH_RATE_MIN` (5), over matches, or over games for a games figure.
-From ten up, a tile's figure is the rate and its line is the record.
+From ten up, a tile's figure is the rate and its line is the record
+(a deck's tile on Decks and Home says "win rate · 35–25").
 From five to nine, the figure is the rate drawn muted, and its line is
-the record and "rough": a reader sees which way a matchup leans without
+the record and "rough" ("rough win rate · 6–3, under 10 matches" on a
+deck's tile): a reader sees which way a matchup leans without
 reading it as a measurement. Under five, the figure is the record, drawn
 muted, and its line says it is too few for a rate. A table's Rate cell
 is the rate from ten, the rate muted from five to nine, and "too few",
@@ -673,7 +675,8 @@ nothing at all, never "too few". `rateOrRecord` (a tile) and `rateCell`
 choice, so no component branches on the count. The rough rate needs a
 muted figure, so it is only where one can be drawn: where only one line
 is free (a version's row, a field row's caption, the keep-cost sentence)
-the line is "58% · 35–25" from ten up and the record alone under it, a
+the line is "58% · 35–25" from ten up and the record alone under it (a
+version's row on a deck's page says "58% win rate · 35–25"), a
 sentence (the session line, the play/draw line) keeps ten alone, and so
 does a ranking (Matchups' best and worst). A chart keeps its hollow dot
 for a point under ten, since a chart cannot draw a record. The Coach

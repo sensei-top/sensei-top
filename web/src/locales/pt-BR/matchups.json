@@ -14,7 +14,7 @@
       "record": "Histórico",
       "rate": "Taxa",
       "game1": "Jogo 1",
-      "postboard": "Jogos 2 e 3"
+      "postboard": "Pós-side"
     }
   },
   "tiles": {
@@ -22,8 +22,8 @@
     "noneNamed": "nenhum nomeado",
     "allNamed": "todos nomeados",
     "namedAndNot": "{{named}} nomeados, {{notNamed}} não",
-    "noneYet": "nenhum arquétipo enfrentado {{min}} vezes ainda",
-    "oneSoFar": "um arquétipo enfrentado {{min}} vezes até agora",
+    "noneYet": "nenhum arquétipo tem {{min}}\u00a0ou mais partidas ainda",
+    "oneSoFar": "só um arquétipo tem {{min}}\u00a0ou mais partidas",
     "best": "Melhor matchup",
     "worst": "Pior matchup",
     "rankedRate": "{{record}} contra {{against}}"
@@ -51,7 +51,7 @@
     "games": "Jogos",
     "yoursFirst": "os seus primeiro",
     "game1": "Jogo 1",
-    "postboard": "Jogos 2 e 3",
+    "postboard": "Pós-side",
     "inTournaments": "Em torneios",
     "onlyNamed": "só um arquétipo nomeado tem resultados",
     "noResults": "nenhum resultado de torneio para ele",
@@ -185,7 +185,7 @@
   "sideboard": {
     "thisOpponent": "este oponente",
     "thisArchetype": "este arquétipo",
-    "postboardRecord": "Seus jogos 2 e 3 contra ele: {{record}}",
+    "postboardRecord": "Seus jogos pós-side contra ele: {{record}}",
     "headline": {
       "noResult": "Plano de sideboard",
       "won": "Venceu o jogo {{game}}",

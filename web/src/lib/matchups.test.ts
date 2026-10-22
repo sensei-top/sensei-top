@@ -357,21 +357,21 @@ describe('matchupTiles', () => {
 
   it('names neither best nor worst when no archetype was met ten times', () => {
     const [, best, worst] = matchupTiles([row('a', 9, 9), row('b', 6, 0), row('c', 1, 1)])
-    expect(best).toEqual({ label: 'Best matchup', value: '—', detail: `no archetype met 10${NBSP}times yet` })
-    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `no archetype met 10${NBSP}times yet` })
+    expect(best).toEqual({ label: 'Best matchup', value: '—', detail: `no archetype has 10${NBSP}or more matches yet` })
+    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `no archetype has 10${NBSP}or more matches yet` })
   })
 
   it('with one archetype met ten times, it is the best and the worst says so', () => {
     const [, best, worst] = matchupTiles([row('Solo', 10, 4), row('b', 9, 0)])
     expect(best).toEqual({ label: 'Best matchup', value: '40%', detail: `4${WJ}–${WJ}6 against Solo` })
-    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `one archetype met 10${NBSP}times so far` })
+    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `only one archetype has 10${NBSP}or more matches` })
   })
 
   it('leaves out an archetype met nine times and ranks one met ten', () => {
     // 8 of 10 is 80%; 3 of 9 is left out however low.
     const [, best, worst] = matchupTiles([row('High', 10, 8), row('Low', 9, 3), row('Few', 4, 1)])
     expect(best).toEqual({ label: 'Best matchup', value: '80%', detail: `8${WJ}–${WJ}2 against High` })
-    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `one archetype met 10${NBSP}times so far` })
+    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `only one archetype has 10${NBSP}or more matches` })
   })
 
   it('ranks by wins over wins plus losses, a draw in neither', () => {

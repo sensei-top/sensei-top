@@ -7,9 +7,10 @@
  */
 import type { Deck, DeckIdentityOut, Match } from '../api'
 import type { TFunction } from '../i18n'
+import { formatRecord } from './format'
 import { isFinished, startOf } from './home'
 import type { RateOrRecord } from './sample'
-import { rateOrRecord } from './sample'
+import { RATE_MIN_MATCHES, ROUGH_RATE_MIN, rateOrRecord } from './sample'
 import { ago, formatCount, parseTimestamp } from './time'
 
 /** A key as an address spells it in one segment (a deck's, `guid:…`,
@@ -115,13 +116,23 @@ export function deckLine(identity: DeckIdentityOut, now: number, t: TFunction): 
 }
 
 /** A tile's record by the small-sample rule (`rateOrRecord`): from ten
- *  finished matches a rate with the record under it, "58%" and "35–25";
- *  five to nine the rate, `thin`, over the record and "rough"; one to four
+ *  finished matches a rate with its line under it, "58%" and
+ *  "win rate · 35–25"; five to nine the rate, `thin`, over "rough win rate ·
+ *  6–3, under 10 matches"; both lines say "win rate", which a bare
+ *  percentage on a tile does not; one to four
  *  the record as the figure, `thin`, with the "too few" line; none, no
  *  figure. `finished` counts wins and losses, draws aside, so the losses
  *  are `finished - wins`. */
 export function deckRecord({ finished, wins }: { finished: number; wins: number }, t: TFunction): RateOrRecord {
-  return rateOrRecord({ wins, losses: finished - wins }, t)
+  const result = rateOrRecord({ wins, losses: finished - wins }, t)
+  if (result.figure === null || (result.thin && finished < ROUGH_RATE_MIN)) return result
+  const record = formatRecord(wins, finished - wins)
+  return {
+    ...result,
+    line: result.thin
+      ? t('common.sample.roughRateLine', { record, min: RATE_MIN_MATCHES })
+      : t('common.sample.rateLine', { record }),
+  }
 }
 
 /** A tile's line on `/decks` under its record: the format in words, and how
