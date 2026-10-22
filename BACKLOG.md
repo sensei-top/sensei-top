@@ -1038,19 +1038,6 @@ the shape measured 10 to 100 times slower. Seven queries do, counted
 **Needs:** Each converted to the `m.match_id IN (SELECT …)` form, or the
 doc naming the exception and why.
 
-### BL-084 · Test comments citing pins that don't exist
-
-type: docs · priority: P3 · status: ready · area: metagame
-
-Test comments cite labels no test or doc defines:
-`tests/test_metagame_holds.py` ("k4", "k1", "k3"),
-`tests/test_metagame_auto.py` ("Defect 1"), and `tests/test_formats.py`
-says migration 053's CHECK is pinned to the format tuple, which no test
-reads. Found by plan 35's reviewers.
-
-**Needs:** Each comment says what it means in its own words, and 053's
-CHECK gets a test or the claim goes.
-
 ## Outside the code
 
 Steps that are the user's or a third party's, not the code's. None of the
