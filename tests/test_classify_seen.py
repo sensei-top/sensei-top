@@ -29,6 +29,7 @@ from sensei_top.archetypes.classify import (
     SeenVerdict,
     classify_seen,
     live_opponent_colors,
+    played_colors_by_name,
     rank_candidates,
     seen_forms,
 )
@@ -388,3 +389,29 @@ def test_live_opponent_colors_counts_a_reprinted_name_once(conn):
     )
     conn.commit()
     assert live_opponent_colors(conn, ["Reprinted Guy"]) == ("B", 1)
+
+
+# --- played_colors_by_name: the 500-name chunks --------------------------------
+
+
+def test_played_colors_by_name_reads_every_name_across_the_chunk_boundary(conn):
+    """1200 names is more than two chunks of 500, so the lookup has to join
+    the chunks back together: every name present with its own colour, a
+    name the table does not know and an empty name absent, and an
+    unreadable colour row counted with none. Each name's colour is a
+    function of its index, so the expectation is the construction itself."""
+    colours = "WUBRG"
+    names = [f"Bulk Card {i:04d}" for i in range(1200)]
+    for i, name in enumerate(names):
+        colors = "not json" if i == 0 else json.dumps([colours[i % 5]])
+        conn.execute(
+            "INSERT INTO cards (grp_id, name, type_line, rarity, colors) VALUES (?, ?, ?, ?, ?)",
+            (1000 + i, name, "Creature — Test", "common", colors),
+        )
+    conn.commit()
+
+    table = played_colors_by_name(conn, (name for name in [*names, "Never Downloaded", ""]))
+    assert set(table) == set(names)
+    for i, name in enumerate(names):
+        expected = frozenset() if i == 0 else frozenset(colours[i % 5])
+        assert table[name] == expected, i

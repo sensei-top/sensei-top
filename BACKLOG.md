@@ -975,18 +975,6 @@ folder, not a note.
 note established, or drop the citation. The skill's line is the maintainer's
 own destination and can stay.
 
-### BL-066 · A seat's colours, read in two places
-
-type: refactor · priority: P3 · status: ready · area: archetypes api
-
-The rule that reads a seat's colours from its played cards exists twice:
-`archetypes/classify.py`'s `live_opponent_colors` (which
-`table/intermission.py` calls), and `_colors_by_played_name`/`_colors_of` in
-`api/routes/mtgo_picks.py` (plan 19, one query per request instead of one
-per match), kept equal by a test.
-
-**Needs:** One helper both import, from `archetypes/`.
-
 ### BL-067 · The shell's settings folder, unnamed
 
 type: docs · priority: P3 · status: needs-decision · area: desktop

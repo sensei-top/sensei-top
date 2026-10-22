@@ -1339,15 +1339,62 @@ def classify_seen(
 COLOR_ORDER = "WUBRG"
 
 
+def played_colors_by_name(
+    conn: sqlite3.Connection, names: Iterable[str]
+) -> dict[str, frozenset[str]]:
+    """``name -> colours`` for each name in ``names`` the ``cards`` table
+    counts: the colour rule ``live_opponent_colors`` and the MTGO picks
+    route share. A name is counted when some printing of it is nonland,
+    nontoken — checked against the supertype text before a type line's own
+    em dash, the same substring test as ``v_opponent_cards``'s
+    ``instr(...) = 0`` guards and ``_match_seen_forms``'s Token-only one —
+    and its colours are the union across those printings, unreadable JSON as
+    no colour. A name absent from
+    ``cards`` entirely (never downloaded, or a spelling mismatch), or whose
+    every printing is a land or token, is not a key at all: rule 4, never a
+    guess. Empty names are dropped; the lookup runs in chunks of 500 names,
+    one query per chunk rather than one per match.
+    """
+    ordered = sorted({name for name in names if name})
+    table: dict[str, frozenset[str]] = {}
+    for start in range(0, len(ordered), 500):
+        chunk = ordered[start:start + 500]
+        rows = conn.execute(
+            f"SELECT DISTINCT name, colors, type_line FROM cards WHERE name IN "
+            f"({','.join('?' * len(chunk))})",
+            chunk,
+        )
+        for row in rows:
+            supertype = (row["type_line"] or "").split("—", 1)[0]
+            if "Land" in supertype or "Token" in supertype:
+                continue
+            try:
+                identity = frozenset(json.loads(row["colors"]) or ())
+            except (json.JSONDecodeError, TypeError):
+                identity = frozenset()
+            table[row["name"]] = table.get(row["name"], frozenset()) | identity
+    return table
+
+
+def played_colors_of(
+    table: Mapping[str, frozenset[str]], names: Iterable[str]
+) -> tuple[str, int]:
+    """``(colors, cards_seen)`` for ``names`` read from a table that
+    ``played_colors_by_name`` built: the distinct non-empty names it holds,
+    their colours unioned in ``COLOR_ORDER``."""
+    counted = {name for name in names if name in table}
+    seen: set[str] = set()
+    for name in counted:
+        seen |= table[name]
+    return "".join(c for c in COLOR_ORDER if c in seen), len(counted)
+
+
 def live_opponent_colors(conn: sqlite3.Connection, names: Iterable[str]) -> tuple[str, int]:
     """``(colors, cards_seen)`` for a name set gathered at request time, by
-    exactly the rule ``v_opponent_cards`` uses: nonland, nontoken cards only
-    (checked against the supertype text before a type line's own em dash,
-    the same substring test as that view's ``instr(...) = 0`` guards and
-    ``_match_seen_forms``'s Token-only one above), deduplicated by name,
-    colours unioned across whichever of them are known.
+    the colour rule ``played_colors_by_name`` states (the view's rule,
+    ``v_opponent_cards``).
 
-    This re-runs the view's arithmetic in Python instead of querying it,
+    This applies the view's arithmetic in Python instead of querying it,
     because the view keys off ``card_events``/``match_id`` and this name set
     can include cards the projector has not caught up to yet — the break
     read before game 3 (``table/intermission.py``) pools games 1 and 2 even
@@ -1356,34 +1403,11 @@ def live_opponent_colors(conn: sqlite3.Connection, names: Iterable[str]) -> tupl
     view counts one per ``(name, rarity, colors)`` among the printings
     actually seen, while a bare name set has no printing to pick, so this
     counts distinct names — the same number except for a name seen in two
-    printings that differ in rarity or colours. A name absent from ``cards``
-    entirely (never downloaded, or a spelling mismatch) is silently excluded
-    from both the count and the colours, the same as an absent row in
-    ``card_colors_by_name`` — rule 4, never a guess.
+    printings that differ in rarity or colours. A name ``cards`` does not
+    know is excluded from both the count and the colours.
     """
-    unique = {name for name in names if name}
-    if not unique:
-        return "", 0
-    placeholders = ",".join("?" for _ in unique)
-    rows = conn.execute(
-        f"SELECT DISTINCT name, colors, type_line FROM cards WHERE name IN ({placeholders})",
-        tuple(unique),
-    )
-    seen_colors: set[str] = set()
-    counted: set[str] = set()
-    for row in rows:
-        type_line = row["type_line"] or ""
-        supertype = type_line.split("—", 1)[0]
-        if "Land" in supertype or "Token" in supertype:
-            continue
-        counted.add(row["name"])
-        try:
-            identity = json.loads(row["colors"]) or ()
-        except (json.JSONDecodeError, TypeError):
-            identity = ()
-        seen_colors.update(identity)
-    colors = "".join(c for c in COLOR_ORDER if c in seen_colors)
-    return colors, len(counted)
+    listed = list(names)
+    return played_colors_of(played_colors_by_name(conn, listed), listed)
 
 
 def _priors(conn: sqlite3.Connection, formats: Iterable[str]) -> dict[str, CorpusPrior | None]:
