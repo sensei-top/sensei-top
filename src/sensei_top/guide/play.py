@@ -22,7 +22,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from statistics import median
 
-from sensei_top.guide.deck import DeckIdentity
+from sensei_top.guide.deck import DeckIdentity, deck_matches
 from sensei_top.review import effects
 
 _TYPE_BUCKETS = (
@@ -77,21 +77,6 @@ def _placeholders(items) -> str:
     return ",".join("?" for _ in items)
 
 
-def _deck_matches(deck_ids: Sequence[str]) -> str:
-    """The match_ids played with any of ``deck_ids``, as a subquery (one ``?``
-    per id, bound by the caller): the deck as the user has it, so an MTGO match
-    counts through its pick (``v_match_deck``) and not through ``matches.deck_id``,
-    which is NULL for every MTGO match.
-
-    Used as ``m.match_id IN (...)`` so every child table (``games``, ``turns``,
-    ``turn_zones``, ``card_events``) is searched by its own ``match_id`` index,
-    and ``matches`` scanned once, inside the subquery (``EXPLAIN QUERY PLAN``).
-    Filtering the view's COALESCEd ``deck_id`` in the outer query instead has no
-    index and scans a child table whole (migration 050's header measured the
-    same trap on ``v_deck_identity``)."""
-    return f"SELECT match_id FROM v_match_deck WHERE deck_id IN ({_placeholders(deck_ids)})"
-
-
 def _player_turn(turn_number: int) -> int:
     """A global turn counter alternating seats -> the player's own turn
     index (the module docstring's first trap). ``turn_number`` starts at 1
@@ -110,7 +95,7 @@ def _game_results(
             f"""
             SELECT g.match_id, g.game_number, g.result FROM games g
               JOIN matches m ON m.match_id = g.match_id
-             WHERE m.match_id IN ({_deck_matches(deck_ids)}) AND g.result IN ('win', 'loss')
+             WHERE m.match_id IN ({deck_matches(deck_ids)}) AND g.result IN ('win', 'loss')
             """,
             deck_ids,
         )
@@ -131,7 +116,7 @@ def board_curve(
                t.self_lands, t.opp_permanents, g.result
           FROM turns t JOIN matches m ON m.match_id = t.match_id
           JOIN games g ON g.match_id = t.match_id AND g.game_number = t.game_number
-         WHERE m.match_id IN ({_deck_matches(identity.deck_ids)}) AND t.active_seat = m.self_seat
+         WHERE m.match_id IN ({deck_matches(identity.deck_ids)}) AND t.active_seat = m.self_seat
          ORDER BY t.match_id, t.game_number, t.turn_number
         """,
         identity.deck_ids,
@@ -194,7 +179,7 @@ def zone_curve(
         f"""
         SELECT v.match_id, v.game_number, v.turn_number, v.zone, v.type_line
           FROM v_turn_zones v JOIN matches m ON m.match_id = v.match_id
-         WHERE m.match_id IN ({_deck_matches(identity.deck_ids)}) AND v.is_self = 1
+         WHERE m.match_id IN ({deck_matches(identity.deck_ids)}) AND v.is_self = 1
         """,
         identity.deck_ids,
     ):
@@ -290,7 +275,7 @@ def key_card_timing(
         SELECT ce.match_id, ce.game_number, ce.turn_number, cd.name
           FROM card_events ce JOIN cards cd ON cd.grp_id = ce.grp_id
           JOIN matches m ON m.match_id = ce.match_id
-         WHERE m.match_id IN ({_deck_matches(identity.deck_ids)}) AND ce.seat = m.self_seat
+         WHERE m.match_id IN ({deck_matches(identity.deck_ids)}) AND ce.seat = m.self_seat
            AND ce.category = 'Resolve' AND cd.name IN ({_placeholders(key_cards)})
          ORDER BY ce.match_id, ce.game_number, ce.turn_number
         """,
@@ -362,7 +347,7 @@ def mulligan_record(
     deliberately not."""
     if not identity.deck_ids:
         return {}
-    where = f"m.match_id IN ({_deck_matches(identity.deck_ids)})"
+    where = f"m.match_id IN ({deck_matches(identity.deck_ids)})"
     split = mulligan_split(conn, where, identity.deck_ids)
     return {
         bucket: MulliganBucket(games=games, wins=wins, losses=games - wins)
@@ -381,7 +366,7 @@ def game_length(
         f"""
         SELECT g.turn_count AS turn_count, g.result AS result
           FROM games g JOIN matches m ON m.match_id = g.match_id
-         WHERE m.match_id IN ({_deck_matches(identity.deck_ids)}) AND g.result IN ('win', 'loss')
+         WHERE m.match_id IN ({deck_matches(identity.deck_ids)}) AND g.result IN ('win', 'loss')
            AND g.turn_count IS NOT NULL
         """,
         identity.deck_ids,

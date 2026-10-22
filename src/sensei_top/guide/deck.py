@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from sensei_top.formats import deck_format_name
@@ -31,6 +32,21 @@ class DeckIdentity:
     first_played: str | None
     last_played: str | None
     current_cards: dict  # decks.cards_json of the most recently played version
+
+
+def deck_matches(deck_ids: Sequence[str]) -> str:
+    """The match_ids played with any of ``deck_ids``, as a subquery (one ``?``
+    per id, bound by the caller): the deck as the user has it, so an MTGO match
+    counts through its pick (``v_match_deck``) and not through ``matches.deck_id``,
+    which is NULL for every MTGO match.
+
+    Used as ``m.match_id IN (...)`` so every child table (``games``, ``turns``,
+    ``turn_zones``, ``card_events``) is searched by its own ``match_id`` index,
+    and ``matches`` scanned once, inside the subquery (``EXPLAIN QUERY PLAN``).
+    Filtering the view's COALESCEd ``deck_id`` in the outer query instead has no
+    index and scans a child table whole (migration 050's header measured the
+    same trap on ``v_deck_identity``)."""
+    return f"SELECT match_id FROM v_match_deck WHERE deck_id IN ({','.join('?' for _ in deck_ids)})"
 
 
 def _played_per_deck(conn: sqlite3.Connection) -> dict[str, sqlite3.Row]:
@@ -159,9 +175,8 @@ def identity_format(conn: sqlite3.Connection, identity: DeckIdentity) -> str | N
         f"""
         SELECT f.format
           FROM v_match_format f
-          JOIN v_match_deck md ON md.match_id = f.match_id
           JOIN matches m ON m.match_id = f.match_id
-         WHERE md.deck_id IN ({','.join('?' for _ in identity.deck_ids)})
+         WHERE m.match_id IN ({deck_matches(identity.deck_ids)})
            AND f.format IS NOT NULL
          GROUP BY f.format
          ORDER BY COUNT(*) DESC, MAX(m.started_at) DESC, f.format

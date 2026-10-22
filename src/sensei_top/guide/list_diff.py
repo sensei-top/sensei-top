@@ -16,7 +16,7 @@ from collections import Counter
 from dataclasses import dataclass
 
 from sensei_top.archetypes.classify import normalize
-from sensei_top.guide.deck import DeckIdentity, identity_format
+from sensei_top.guide.deck import DeckIdentity, deck_matches, identity_format
 from sensei_top.guide.window import FormatReset, deck_cards, window_start
 from sensei_top.i18n import _, join, percent
 from sensei_top.review.consensus import ArchetypeConsensus, build_consensus
@@ -257,7 +257,7 @@ def build_list_diff(
             SELECT md.deck_id FROM matches m
               JOIN v_match_deck md ON md.match_id = m.match_id
               JOIN decks d ON d.deck_id = md.deck_id
-             WHERE md.deck_id IN ({','.join('?' for _ in deck_ids)})
+             WHERE m.match_id IN ({deck_matches(deck_ids)})
              GROUP BY md.deck_id ORDER BY MAX(m.started_at) DESC LIMIT 1
             """,
             deck_ids,

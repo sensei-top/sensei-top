@@ -16,7 +16,7 @@ import sqlite3
 from collections import defaultdict
 from dataclasses import dataclass
 
-from sensei_top.guide.deck import DeckIdentity, identity_format
+from sensei_top.guide.deck import DeckIdentity, deck_matches, identity_format
 from sensei_top.guide.window import (
     ArchetypeChange,
     FormatReset,
@@ -189,8 +189,7 @@ def _personal_rate_rows(
                SUM(CASE WHEN m.result = 'win' THEN 1 ELSE 0 END) AS wins,
                SUM(CASE WHEN m.result = 'loss' THEN 1 ELSE 0 END) AS losses
           FROM matches m JOIN v_match_opponent v ON v.match_id = m.match_id
-          JOIN v_match_deck md ON md.match_id = m.match_id
-         WHERE md.deck_id IN ({','.join('?' for _ in deck_ids)})
+         WHERE m.match_id IN ({deck_matches(deck_ids)})
            AND v.archetype_name IS NOT NULL AND m.result IN ('win', 'loss')
          GROUP BY 1
         """,
@@ -246,7 +245,7 @@ def faced_archetypes(
     if not deck_ids:
         return {}
     clauses = [
-        f"md.deck_id IN ({','.join('?' for _ in deck_ids)})",
+        f"m.match_id IN ({deck_matches(deck_ids)})",
         "v.archetype_key IS NOT NULL",
         "m.result IN ('win', 'loss')",
     ]
@@ -258,7 +257,6 @@ def faced_archetypes(
         f"""
         SELECT v.archetype_key AS key, v.archetype_name AS name, COUNT(*) AS n
           FROM matches m JOIN v_match_opponent v ON v.match_id = m.match_id
-          JOIN v_match_deck md ON md.match_id = m.match_id
          WHERE {' AND '.join(clauses)}
          GROUP BY 1, 2
         """,
@@ -380,7 +378,7 @@ def build_field(
             SELECT md.deck_id FROM matches m
               JOIN v_match_deck md ON md.match_id = m.match_id
               JOIN decks d ON d.deck_id = md.deck_id
-             WHERE md.deck_id IN ({','.join('?' for _ in identity.deck_ids)})
+             WHERE m.match_id IN ({deck_matches(identity.deck_ids)})
              GROUP BY md.deck_id ORDER BY MAX(m.started_at) DESC LIMIT 1
             """,
             identity.deck_ids,

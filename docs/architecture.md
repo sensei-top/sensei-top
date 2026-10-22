@@ -968,11 +968,17 @@ writes `m.match_id IN (SELECT match_id FROM v_match_deck WHERE deck_id …)`,
 or reads the view once and groups in Python. It never joins the view and
 then filters `md.deck_id` against a set: that column is the `COALESCE`
 above, and no index serves it the way `idx_matches_deck` served
-`matches.deck_id`. That shape measured at 10 to 100
-times slower than the `IN` form, and every reader converted then uses the
-`IN` form or one grouped pass. Migration 050's header records the worst
-case, `v_deck_identity` on a synthetic database: 18.9 s with the view
-joined in as-is, 20 ms rewritten.
+`matches.deck_id`. That shape measured at 10 to 100 times slower than the
+`IN` form, and every reader converted then uses the `IN` form or one
+grouped pass; `tests/test_guide_play.py` fails if `md.deck_id IN (` comes
+back anywhere in `src/`. Migration 050's header records the worst case,
+`v_deck_identity` on a synthetic database: 18.9 s with the view joined in
+as-is, 20 ms rewritten. The cost is a child table (`games`, `turns`,
+`card_events`) read without its `match_id` index, so the one exception is
+`review/leaks.py`'s `_scope_clause`, whose wrapped view reads `matches`
+alone: every step of its plan is an index search, and on the real
+database (767 matches, 2026-10-21) it ran in 0.4 ms against 0.6 ms for
+the `IN` form, with the same rows.
 
 Card pictures are downloaded reference data too, but they live as plain
 files beside the database rather than rows: the whole card at

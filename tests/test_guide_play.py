@@ -11,9 +11,11 @@ the hand-written version this module replaces:
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
+import sensei_top
 from sensei_top.db import open_database
 from sensei_top.guide.deck import DeckIdentity
 from sensei_top.guide.play import (
@@ -358,3 +360,21 @@ def test_a_pick_on_an_arena_match_never_moves_its_deck(conn):
         games_lost=0, first_played=None, last_played=None, current_cards={},
     )
     assert game_length(conn, other) == {}
+
+
+# --- the deck filter, across src/ ------------------------------------------
+
+SRC_ROOT = Path(sensei_top.__file__).parent
+
+
+def test_no_reader_filters_the_view_deck_id_against_a_set():
+    """A reader that joins ``v_match_deck`` and filters its COALESCEd
+    ``deck_id`` against a set has no index to use; it must filter the match
+    id through ``deck_matches`` instead (docs/architecture.md, "Filter a deck
+    through v_match_deck by match id"). Read as source text, not run."""
+    offenders = sorted(
+        str(path.relative_to(SRC_ROOT))
+        for path in SRC_ROOT.rglob("*.py")
+        if "md.deck_id IN (" in path.read_text(encoding="utf-8")
+    )
+    assert offenders == []

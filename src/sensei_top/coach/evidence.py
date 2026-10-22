@@ -23,7 +23,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from sensei_top.archetypes.classify import _card_colors_by_name
-from sensei_top.guide.deck import DeckIdentity, identity_format, list_identities
+from sensei_top.guide.deck import DeckIdentity, deck_matches, identity_format, list_identities
 from sensei_top.guide.field import field_by_key
 from sensei_top.guide.play import mulligan_split
 from sensei_top.guide.window import (
@@ -404,17 +404,16 @@ def _own_archetype(
     (``identity_format``) is ``fmt``."""
     if not identity.deck_ids:
         return None
-    placeholders = ",".join("?" for _ in identity.deck_ids)
-    # Joined to v_match_deck on match_id, then filtered on its deck_id: no
-    # index serves that view's COALESCE, so joining decks to it on deck_id
-    # would scan the view once per deck (migration 050's header).
+    # The deck filter goes on m.match_id, through deck_matches, never on the
+    # view's COALESCEd deck_id: no index serves that column. The view is still
+    # joined on match_id, for the deck_id it selects (migration 050's header).
     row = conn.execute(
         f"""
         SELECT d.deck_id
           FROM matches m
           JOIN v_match_deck md ON md.match_id = m.match_id
           JOIN decks d ON d.deck_id = md.deck_id
-         WHERE md.deck_id IN ({placeholders})
+         WHERE m.match_id IN ({deck_matches(identity.deck_ids)})
          GROUP BY d.deck_id ORDER BY MAX(m.started_at) DESC LIMIT 1
         """,
         identity.deck_ids,
