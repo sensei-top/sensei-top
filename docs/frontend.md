@@ -314,8 +314,9 @@ server's half. Appearance is the density control, a `Segmented` (Comfortable,
 Compact); `docs/design-system.md`'s "Density" says what it changes and
 where the choice is kept. Live is one `Switch`, "Advice during a game",
 on by default and kept in the browser's own storage
-(`shell/liveAdvice.ts`); `docs/current-match.md`, "The event rule", says
-what it hides and why the server never sees it.
+(`shell/liveAdvice.ts`); `docs/current-match.md`,
+"The event rule (`table/queues.py`)", says what it hides and why the
+server never sees it.
 
 **In a browser, `/settings` is Language, Writing, Appearance, Live and
 About and credits.** Writing is then one card of sentences from

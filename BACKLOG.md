@@ -1039,18 +1039,6 @@ type: refactor · priority: P3 · status: ready · area: archetypes coach
 **Needs:** Promote the shared ones to public names, or pin them with a test.
 No visible effect.
 
-### BL-082 · Doc-link titles matched by prefix
-
-type: chore · priority: P3 · status: ready · area: docs
-
-`scripts/check_doc_links.py::title_ok` accepts a cited section title when
-any heading of the target doc starts with it, so a title cut short, or one
-heading renamed to a longer one, still passes. Found by plan 35's
-reviewers.
-
-**Needs:** A whole-heading match, after checking which current citations
-rely on the prefix.
-
 ### BL-083 · Readers that filter `md.deck_id` against a set
 
 type: perf · priority: P2 · status: ready · area: guide coach docs

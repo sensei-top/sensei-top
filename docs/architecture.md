@@ -155,9 +155,11 @@ even while the rebuild the room opening triggered is still running — only the
 *projected* view of the match waits, and `table/live.py`'s own replay routes
 the opening-hand read around that wait rather than through `matches`/`turns`.
 The 2026-09-24 replay that measured the offer's lag before and after is in
-[current-match.md](current-match.md), "The live replay". A completed match
-carries the same event type and gets the same early rebuild as a side
-effect, which is a bonus rather than a case worth excluding.
+[current-match.md](current-match.md),
+"The live replay (`table/live.py`, `projector/live_state.py`)". A
+completed match carries the same event type and gets the same early
+rebuild as a side effect, which is a bonus rather than a case worth
+excluding.
 
 **No Arena log yet.** `serve --watch` with no `--file`, no
 `$MTGA_LOG` and nothing autodetected starts anyway: `LiveIngester.log_path`

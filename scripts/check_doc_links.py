@@ -9,10 +9,11 @@ A reference is a file name followed within 12 characters by a quoted title
 (the quote may open on the next line, after comment markers), or a
 `file.md#anchor` link. It is a miss when the file is missing, the anchor
 matches no heading, or the title is a section reference that does not
-resolve. A title that equals or prefixes a heading of any doc is a section reference: it
-must equal or prefix a heading of the doc it names, so a title that moved to
-another doc is caught. Only a title that is a heading nowhere falls back to
-"the phrase occurs in that doc's text", because many quotes are rules or
+resolve. A title that equals or prefixes a heading of any doc is a section
+reference: it must equal a heading of the doc it names, whole, so a title
+cut short or a heading renamed to a longer one is caught, and so is a title
+that moved to another doc. Only a title that is a heading nowhere falls back
+to "the phrase occurs in that doc's text", because many quotes are rules or
 phrases rather than sections ("one hue for nominal categories").
 
     uv run python scripts/check_doc_links.py [PATH ...]
@@ -103,7 +104,7 @@ def title_ok(title: str, doc: Doc, every_heading: set[str]) -> bool:
     t = norm(title)
     text, heads, _ = doc
     if any(h.startswith(t) for h in every_heading):
-        return any(h.startswith(t) for h in heads)
+        return t in heads
     return t in text
 
 

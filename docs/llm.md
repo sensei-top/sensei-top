@@ -400,8 +400,9 @@ While it writes, the button counts the seconds: these calls are slow,
 and a guide at `effort: high` can take minutes.
 
 `Writer` has those two cases, nobody and a key (`docs/frontend.md`,
-"Writing prose"). A paid plan's writer, which only a desktop shell would
-know of, would be a third; it is not built. Nothing here would change
+"Writing prose: `GenerateCard` and `CopyPromptCard`"). A paid plan's
+writer, which only a desktop shell would know of, would be a third; it
+is not built. Nothing here would change
 with it: with no credential configured, the `POST .../narrative`
 routes still answer 503, and a plan's press would have to go through the
 desktop shell, never through this API.

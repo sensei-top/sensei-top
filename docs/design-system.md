@@ -362,10 +362,10 @@ underline:
 
 ## Form controls
 
-`Field`, `Select`, `Switch` and `Dialog` (`components/ui/`,
-`docs/frontend.md`'s "Shared primitives") are the whole of a form. Each
-is the native element under the house look, so the browser's own
-keyboard and screen-reader behaviour is kept, never rebuilt.
+`Field`, `Select`, `Switch` and `Dialog` (`docs/frontend.md`'s
+"Shared primitives (`components/ui/`)") are the whole of a form. Each is
+the native element under the house look, so the browser's own keyboard
+and screen-reader behaviour is kept, never rebuilt.
 
 - **A label is always drawn**, never a placeholder standing in for one:
   over a `Field`, in `text-caption font-medium text-ink2`; beside or over

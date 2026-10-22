@@ -471,8 +471,9 @@ under way the rail is the opponent's: their hand, then the deck read;
 the keep guide is drawn only before the first turn. Advice (the keep
 guide, the opponent-hand estimate, the brief) shows in casual and ladder
 games, never in an event's, and Settings' "Advice during a game" hides it
-everywhere (`docs/current-match.md`, "The event rule"). Under 48rem the
-page scrolls: the strip takes two lines and cuts none of its facts.
+everywhere (`docs/current-match.md`,
+"The event rule (`table/queues.py`)"). Under 48rem the page scrolls: the
+strip takes two lines and cuts none of its facts.
 
 Each fact is shown once on this page. The status strip alone carries the
 game, the turn, play or draw, the record, the opponent's deck with its

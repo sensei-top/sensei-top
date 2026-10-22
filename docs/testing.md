@@ -249,9 +249,10 @@ after a rename. `scripts/check_doc_refs.py` reads every backticked name in
 the docs and fails on one the tree no longer has, and
 `tests/test_doc_refs.py` runs it, so a rename that leaves a doc behind
 fails the suite. `scripts/check_doc_links.py` does the same for links
-between docs. A name missing on purpose, like a removed component a doc
-names as history or a name from another program, goes in the script's
-`ALLOW` with its reason. Neither checks what a doc *says* about a name,
+between docs, and `tests/test_doc_links.py` runs it: a section a doc cites
+has to be named by its whole heading. A name missing on purpose, like a
+removed component a doc names as history or a name from another program,
+goes in the script's `ALLOW` with its reason. Neither checks what a doc *says* about a name,
 so a change of behaviour still needs its doc changed by hand.
 
 The code's own prose gets the same check. `check_doc_refs.py` also reads
