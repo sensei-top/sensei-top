@@ -483,8 +483,8 @@ def test_a_refresh_that_raises_does_not_stop_the_others(conn, monkeypatch, caplo
 
 
 def test_a_stale_topdeck_no_longer_makes_fbettega_run_again(conn, monkeypatch):
-    """Defect 1: fbettega judged its freshness by the oldest of every
-    source's stamps, so a stale TopDeck sent it to GitHub on every tick."""
+    """fbettega's freshness must not depend on another source's stamp:
+    a stale TopDeck stamp must not send it to GitHub while its own stamp is fresh."""
     _fbettega_fresh(conn)
     _stamp(conn, "mtgo", T)
     _stamp(conn, "topdeck", datetime(2026, 1, 1, tzinfo=UTC))
