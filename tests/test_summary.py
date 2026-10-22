@@ -90,7 +90,22 @@ def test_headline_states_the_score_and_opponent():
         opponent_label="Boros Dragons",
     )
     summary = build_summary(report)
-    assert summary.headline == "Lost 2-1 to Boros Dragons"
+    assert summary.headline == "Lost 1\u20132 to Boros Dragons"
+
+
+def test_headline_win_and_draw_put_the_viewers_games_first():
+    won = MatchReport(
+        match_id="m", deck_id=None, result="win",
+        games=(_game(1, result="win"), _game(2, result="loss"), _game(3, result="win")),
+        opponent_label="Boros Dragons",
+    )
+    assert build_summary(won).headline == "Won 2\u20131 vs Boros Dragons"
+    drawn = MatchReport(
+        match_id="m", deck_id=None, result="draw",
+        games=(_game(1, result="win"), _game(2, result="loss")),
+        opponent_label="Boros Dragons",
+    )
+    assert build_summary(drawn).headline == "Drew 1\u20131 with Boros Dragons"
 
 
 def test_headline_names_an_unidentified_opponent_when_no_label_exists():

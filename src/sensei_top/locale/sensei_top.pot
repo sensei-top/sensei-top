@@ -185,7 +185,7 @@ msgstr ""
 
 #: sensei_top/review/summary.py
 #, python-brace-format
-msgid "Drew {wins}-{losses} with {opponent}"
+msgid "Drew {wins}–{losses} with {opponent}"
 msgstr ""
 
 #: sensei_top/review/analyzers/information.py
@@ -332,7 +332,7 @@ msgstr[1] ""
 
 #: sensei_top/review/summary.py
 #, python-brace-format
-msgid "Lost {losses}-{wins} to {opponent}"
+msgid "Lost {wins}–{losses} to {opponent}"
 msgstr ""
 
 #: sensei_top/review/analyzers/resources.py
@@ -1212,7 +1212,7 @@ msgstr ""
 
 #: sensei_top/review/summary.py
 #, python-brace-format
-msgid "Won {wins}-{losses} vs {opponent}"
+msgid "Won {wins}–{losses} vs {opponent}"
 msgstr ""
 
 #: sensei_top/review/analyzers/clock.py

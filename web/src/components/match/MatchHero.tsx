@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { MatchDetail } from '../../api'
 import type { TFunction } from '../../i18n'
 import { eventLabel, resultWord } from '../../lib/events'
+import { formatRecord } from '../../lib/format'
 import type { ArtCard } from '../../lib/matchArt'
 import { when } from '../../lib/time'
 import { OpponentDeckLabel } from '../OpponentDeckLabel'
@@ -13,7 +14,7 @@ import { Button, CardArt, SectionLabel } from '../ui'
 function resultTitle(match: MatchDetail, t: TFunction): string {
   const word = resultWord(match.result, t)
   if (!word) return t('matches.result.unknown')
-  return t('matches.hero.resultScore', { word, won: match.games_won ?? 0, lost: match.games_lost ?? 0 })
+  return t('matches.hero.resultScore', { word, score: formatRecord(match.games_won ?? 0, match.games_lost ?? 0) })
 }
 
 /** The report's lead panel: what the page is, the event and when; the

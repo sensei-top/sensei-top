@@ -10,6 +10,7 @@
 import type { ShellSettings } from '../bridge'
 import type { TFunction } from '../i18n'
 import type { DeckIdentityOut, LeakOut, Match, MetaPresence } from '../api'
+import { formatRecord } from './format'
 import { parseTimestamp } from './time'
 
 const HOUR = 3_600_000
@@ -208,16 +209,7 @@ export function recentMatches(matches: Match[], count = 8): Match[] {
 export function ownScore(match: Pick<Match, 'games_won' | 'games_lost'>): string | null {
   if (match.games_won == null || match.games_lost == null) return null
   if (match.games_won === 0 && match.games_lost === 0) return null
-  return `${match.games_won}–${match.games_lost}`
-}
-
-/** A score with the winner's games first, for a sentence: a loss 1–2 is
- *  "2–1". `null` without one. */
-export function winnerScore(match: Pick<Match, 'games_won' | 'games_lost' | 'result'>): string | null {
-  if (ownScore(match) == null) return null
-  const won = match.games_won ?? 0
-  const lost = match.games_lost ?? 0
-  return match.result === 'loss' ? `${lost}–${won}` : `${won}–${lost}`
+  return formatRecord(match.games_won, match.games_lost)
 }
 
 /* --------------------------------------------------------- three things */

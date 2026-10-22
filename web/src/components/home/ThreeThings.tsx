@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { Match } from '../../api'
 import type { TFunction } from '../../i18n'
 import type { Field, Pattern } from '../../lib/home'
-import { opponentNamed, winnerScore } from '../../lib/home'
+import { opponentNamed, ownScore } from '../../lib/home'
 import type { ArtCard } from '../../lib/matchArt'
 import { opponentLabelText } from '../../lib/opponent'
 import { patternWords } from '../../lib/patterns'
@@ -125,13 +125,13 @@ function thingWords(
   }
 }
 
-/** "Won 2–1 against {opponent}", the winner's games first; without a game
- *  count, "Won against {opponent}". */
+/** "Lost 1–2 to {opponent}", the viewer's games first; without a game
+ *  count, "Lost to {opponent}". */
 function matchTitle(match: Match, t: TFunction): string {
   const opponent = opponentNamed(match) && match.opponent_label
     ? opponentLabelText(match.opponent_label, match.opponent_colors)
     : t('home.unrecognizedDeck')
-  const score = winnerScore(match)
+  const score = ownScore(match)
   if (match.result === 'win') {
     return score ? t('home.things.wonScore', { score, opponent }) : t('home.things.won', { opponent })
   }

@@ -22,7 +22,6 @@ import {
   threeThings,
   weekStart,
   weeklyWinrate,
-  winnerScore,
 } from './home'
 
 // The zone is America/New_York (vitest.config.ts). Every timestamp below is
@@ -206,18 +205,12 @@ describe('the matches Home names', () => {
 
 describe('scores', () => {
   it('puts the viewer’s games first on a row', () => {
-    expect(ownScore({ games_won: 1, games_lost: 2 })).toBe('1–2')
-  })
-
-  it('puts the winner’s games first in a sentence', () => {
-    expect(winnerScore({ games_won: 1, games_lost: 2, result: 'loss' })).toBe('2–1')
-    expect(winnerScore({ games_won: 2, games_lost: 0, result: 'win' })).toBe('2–0')
+    expect(ownScore({ games_won: 1, games_lost: 2 })).toBe('1\u2060–\u20602')
   })
 
   it('has none without both counts, or with no game played', () => {
     expect(ownScore({ games_won: null, games_lost: 2 })).toBeNull()
     expect(ownScore({ games_won: 0, games_lost: 0 })).toBeNull()
-    expect(winnerScore({ games_won: 0, games_lost: 0, result: 'loss' })).toBeNull()
   })
 })
 

@@ -53,7 +53,7 @@
   },
   "hero": {
     "kicker": "Relatório da partida",
-    "resultScore": "{{word}} {{won}}–{{lost}}",
+    "resultScore": "{{word}} {{score}}",
     "replay": "Replay turno a turno"
   },
   "row": {

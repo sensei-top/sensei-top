@@ -244,8 +244,8 @@ msgstr ""
 
 #: sensei_top/review/summary.py
 #, python-brace-format
-msgid "Drew {wins}-{losses} with {opponent}"
-msgstr "Empatou em {wins}-{losses} com {opponent}"
+msgid "Drew {wins}–{losses} with {opponent}"
+msgstr "Empatou em {wins}–{losses} com {opponent}"
 
 #: sensei_top/review/analyzers/information.py
 msgid ""
@@ -398,8 +398,8 @@ msgstr[1] "Perdeu segurando {n} cards"
 
 #: sensei_top/review/summary.py
 #, python-brace-format
-msgid "Lost {losses}-{wins} to {opponent}"
-msgstr "Perdeu por {losses}-{wins} para {opponent}"
+msgid "Lost {wins}–{losses} to {opponent}"
+msgstr "Perdeu por {wins}–{losses} para {opponent}"
 
 #: sensei_top/review/analyzers/resources.py
 msgid "Low point (hand size vs. theirs)"
@@ -1452,8 +1452,8 @@ msgstr ""
 
 #: sensei_top/review/summary.py
 #, python-brace-format
-msgid "Won {wins}-{losses} vs {opponent}"
-msgstr "Venceu {opponent} por {wins}-{losses}"
+msgid "Won {wins}–{losses} vs {opponent}"
+msgstr "Venceu {opponent} por {wins}–{losses}"
 
 #: sensei_top/review/analyzers/clock.py
 #, python-brace-format

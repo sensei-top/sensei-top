@@ -218,13 +218,13 @@ def _headline(report: MatchReport) -> str:
     wins = sum(1 for g in report.games if g.result == "win")
     losses = sum(1 for g in report.games if g.result == "loss")
     if report.result == "win":
-        return _("Won {wins}-{losses} vs {opponent}").format(
+        return _("Won {wins}\u2013{losses} vs {opponent}").format(
             wins=wins, losses=losses, opponent=opponent)
     if report.result == "loss":
-        return _("Lost {losses}-{wins} to {opponent}").format(
-            losses=losses, wins=wins, opponent=opponent)
+        return _("Lost {wins}\u2013{losses} to {opponent}").format(
+            wins=wins, losses=losses, opponent=opponent)
     if report.result == "draw":
-        return _("Drew {wins}-{losses} with {opponent}").format(
+        return _("Drew {wins}\u2013{losses} with {opponent}").format(
             wins=wins, losses=losses, opponent=opponent)
     return _("Match vs {opponent} is not yet complete").format(opponent=opponent)
 

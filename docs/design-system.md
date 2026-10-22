@@ -646,7 +646,8 @@ so it can differ by a point from the difference the two shares show.
 with an en dash held to its numbers by word joiners so a line never
 breaks inside it. Never "won 6 of 9": that form hides the losses
 behind a subtraction. A share of a corpus is not a record and stays
-"N of M lists".
+"N of M lists". The match report's headline and Home's last-match
+title follow the same order: "Lost 1–2 to X", the viewer's games first.
 
 **A draw is never a loss.** A record counts wins and losses; a draw is
 neither, and neither is a match still in progress. Where a caller has
