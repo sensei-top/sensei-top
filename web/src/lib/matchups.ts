@@ -2,13 +2,13 @@
  * What a deck's Matchups reads, as pure functions of the API's rows. The
  * page reads the matches of the versions the address chose (every version,
  * or one), one request per version, and these count them: one row per
- * `opponent_key` over the finished matches (`isFinished`: a win, a loss or
- * a draw), whichever version played them.
+ * format and `opponent_key` over the finished matches (`isFinished`: a win,
+ * a loss or a draw), whichever version played them.
  */
 import type { Match, MetaWinrate } from '../api'
 import type { TFunction } from '../i18n'
 import { mergeNewestFirst } from './deckOverview'
-import { archetypeName } from './decks'
+import { archetypeName, formatName } from './decks'
 import { formatPercent, formatRecord } from './format'
 import { isFinished, opponentNamed, startOf } from './home'
 import { opponentLabelText } from './opponent'
@@ -24,7 +24,11 @@ export const NBSP = '\u00a0'
 export type MatchupKind = 'named' | 'unrecognized' | 'unknown'
 
 export type MatchupRow = {
+  /** The opponent's `opponent_key`, the empty one when the match has none. */
   key: string
+  /** The format the row's matches were played in, `null` for matches with
+   *  none (a group of their own). */
+  format: string | null
   kind: MatchupKind
   label: string | null
   colors: string | null
@@ -100,10 +104,44 @@ export function opponentSeen(newestFirst: Match[]): OpponentSeen {
   }
 }
 
-type Group = { key: string; lastMet: number | null; matches: Match[] }
+type Group = { key: string; format: string | null; lastMet: number | null; matches: Match[] }
 
-/** One row per `opponent_key` over the finished matches, its kind, label
- *  and colours by `opponentSeen` over them. A draw is a match and not a
+/** One group's row, its matches finished and given newest first. */
+function countRow(group: Group): MatchupRow {
+  const row: MatchupRow = {
+    key: group.key,
+    format: group.format,
+    ...opponentSeen(group.matches),
+    matches: group.matches.length,
+    won: 0,
+    lost: 0,
+    gamesWon: 0,
+    gamesLost: 0,
+    bo3Matches: 0,
+    game1Won: 0,
+    game1Lost: 0,
+    postboardWon: 0,
+    postboardLost: 0,
+  }
+  for (const match of group.matches) {
+    if (match.result === 'win') row.won += 1
+    if (match.result === 'loss') row.lost += 1
+    row.gamesWon += match.games_won ?? 0
+    row.gamesLost += match.games_lost ?? 0
+    if (match.best_of !== 3) continue
+    row.bo3Matches += 1
+    if (match.game1_result === 'win') row.game1Won += 1
+    if (match.game1_result === 'loss') row.game1Lost += 1
+    row.postboardWon += match.postboard_won ?? 0
+    row.postboardLost += match.postboard_lost ?? 0
+  }
+  return row
+}
+
+/** One row per format and `opponent_key` over the finished matches (a
+ *  missing format a group of its own, so a deck whose matches share one
+ *  format has one row per key), its kind, label and colours by
+ *  `opponentSeen` over them. A draw is a match and not a
  *  win; a match with no games recorded adds none. Game 1 and games 2–3
  *  are counted over the best-of-three matches alone (`best_of === 3`): a
  *  best-of-one game is a different queue's and in neither, and a drawn
@@ -115,40 +153,14 @@ export function matchupRows(matches: Match[]): MatchupRow[] {
   for (const match of mergeNewestFirst([matches])) {
     if (!isFinished(match)) continue
     const key = match.opponent_key ?? ''
-    const group = groups.get(key)
+    const format = match.format ?? null
+    const groupKey = JSON.stringify([format, key])
+    const group = groups.get(groupKey)
     if (group) group.matches.push(match)
-    else groups.set(key, { key, lastMet: startOf(match), matches: [match] })
+    else groups.set(groupKey, { key, format, lastMet: startOf(match), matches: [match] })
   }
   return [...groups.values()]
-    .map((group) => {
-      const row: MatchupRow = {
-        key: group.key,
-        ...opponentSeen(group.matches),
-        matches: group.matches.length,
-        won: 0,
-        lost: 0,
-        gamesWon: 0,
-        gamesLost: 0,
-        bo3Matches: 0,
-        game1Won: 0,
-        game1Lost: 0,
-        postboardWon: 0,
-        postboardLost: 0,
-      }
-      for (const match of group.matches) {
-        if (match.result === 'win') row.won += 1
-        if (match.result === 'loss') row.lost += 1
-        row.gamesWon += match.games_won ?? 0
-        row.gamesLost += match.games_lost ?? 0
-        if (match.best_of !== 3) continue
-        row.bo3Matches += 1
-        if (match.game1_result === 'win') row.game1Won += 1
-        if (match.game1_result === 'loss') row.game1Lost += 1
-        row.postboardWon += match.postboard_won ?? 0
-        row.postboardLost += match.postboard_lost ?? 0
-      }
-      return { row, lastMet: group.lastMet }
-    })
+    .map((group) => ({ row: countRow(group), lastMet: group.lastMet }))
     .sort((a, b) => {
       if (a.row.matches !== b.row.matches) return b.row.matches - a.row.matches
       if (a.lastMet !== b.lastMet) {
@@ -161,6 +173,33 @@ export function matchupRows(matches: Match[]): MatchupRow[] {
       return x < y ? -1 : x > y ? 1 : 0
     })
     .map((group) => group.row)
+}
+
+/** One row over the finished of `matches`, whatever their formats, counted
+ *  as `matchupRows` counts a row: for a pairing read over every format,
+ *  whose matches share one key. The key is the newest finished match's;
+ *  the format is theirs when they share one, `null` otherwise. `null` with
+ *  none finished. */
+export function matchupRowOver(matches: Match[]): MatchupRow | null {
+  const finished = mergeNewestFirst([matches]).filter(isFinished)
+  const newest = finished[0]
+  if (!newest) return null
+  const formats = new Set(finished.map((match) => match.format ?? null))
+  const format = formats.size === 1 ? (newest.format ?? null) : null
+  return countRow({ key: newest.opponent_key ?? '', format, lastMet: startOf(newest), matches: finished })
+}
+
+/** Whether the rows are of more than one format (a missing one among
+ *  them), when each row names its own (`rowFormatName`); rows of one
+ *  format name none. */
+export function rowsSpanFormats(rows: MatchupRow[]): boolean {
+  return new Set(rows.map((row) => row.format)).size > 1
+}
+
+/** A row's format as a row names it (`formatName`), "Format unknown" for
+ *  none. */
+export function rowFormatName(row: Pick<MatchupRow, 'format'>, t: TFunction): string {
+  return formatName(row.format, t) ?? t('matchups.view.formatUnknown')
 }
 
 /** An archetype as drawn: `name` on its own line, `showed` under it for a
@@ -212,22 +251,27 @@ function pick(rows: MatchupRow[], better: (a: MatchupRow, b: MatchupRow) => bool
 }
 
 /** The three tiles over the rows `matchupRows` gave: how many archetypes
- *  were met and how many of them named; the best and the worst among the
- *  archetypes met ten times or more (`RATE_MIN_MATCHES`, wins plus
- *  losses), by wins over wins plus losses. Among equal rates each takes
- *  the row of more matches, and among rows equal in both the first in the
- *  rows' order; the worst is never the row the best took. With one such
- *  row it is the best, and the worst says so. */
+ *  were met and how many of them named, each key once however many
+ *  formats it was met in; the best and the worst among the rows met ten
+ *  times or more (`RATE_MIN_MATCHES`, wins plus losses), by wins over wins
+ *  plus losses. Among equal rates each takes the row of more matches, and
+ *  among rows equal in both the first in the rows' order; the worst is
+ *  never the row the best took. With one such row it is the best, and the
+ *  worst says so. */
 export function matchupTiles(rows: MatchupRow[], t: TFunction): [TileText, TileText, TileText] {
-  const named = rows.filter((row) => row.kind === 'named').length
-  const notNamed = rows.length - named
+  // Each row takes its kind from its own newest match, so a key's rows can
+  // disagree; the key counts as named when any of them is.
+  const namedByKey = new Map<string, boolean>()
+  for (const row of rows) namedByKey.set(row.key, namedByKey.get(row.key) === true || row.kind === 'named')
+  const named = [...namedByKey.values()].filter(Boolean).length
+  const notNamed = namedByKey.size - named
   const metDetail =
     named === 0
       ? t('matchups.tiles.noneNamed')
       : notNamed === 0
         ? t('matchups.tiles.allNamed')
         : t('matchups.tiles.namedAndNot', { named: formatCount(named), notNamed: formatCount(notNamed) })
-  const met: TileText = { label: t('matchups.tiles.archetypesMet'), value: formatCount(rows.length), detail: metDetail }
+  const met: TileText = { label: t('matchups.tiles.archetypesMet'), value: formatCount(namedByKey.size), detail: metDetail }
 
   const eligible = rows.filter((row) => row.won + row.lost >= RATE_MIN_MATCHES)
   const noneYet = t('matchups.tiles.noneYet', { min: RATE_MIN_MATCHES })

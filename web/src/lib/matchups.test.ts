@@ -8,7 +8,10 @@ import {
   fieldRecordsByKey,
   matchupName as nameOf,
   matchupRows,
+  matchupRowOver,
   NBSP,
+  rowFormatName,
+  rowsSpanFormats,
   matchupTiles as tilesOf,
   type MatchupRow,
 } from './matchups'
@@ -49,6 +52,7 @@ const on = (day: number) => `2026-09-${String(day).padStart(2, '0')}T12:00:00`
 function row(key: string, matches: number, won: number, rest: Partial<MatchupRow> = {}): MatchupRow {
   return {
     key,
+    format: null,
     kind: 'named',
     label: key,
     colors: null,
@@ -81,6 +85,8 @@ describe('matchupRows', () => {
     expect(rows).toEqual([
       {
         key: 'archetype:dimir_midrange',
+        // No match carries a format.
+        format: null,
         kind: 'named',
         label: 'DimirMidrange',
         colors: 'UB',
@@ -226,6 +232,73 @@ describe('matchupRows', () => {
     ])
     expect(rows.map((r) => r.key)).toEqual(['k-new', 'k-old', 'k-few', 'k-b', 'k-c', 'k-undated'])
   })
+
+  it('makes one row per format against one opponent, a missing format a row of its own', () => {
+    const rows = matchupRows([
+      match('a', { format: 'Modern', result: 'win', started_at: on(4) }),
+      match('b', { format: 'Pioneer', result: 'loss', started_at: on(3) }),
+      match('c', { format: 'Modern', result: 'win', started_at: on(2) }),
+      match('d', { format: null, result: 'loss', started_at: on(1) }),
+    ])
+    // Modern: a and c, both won. Pioneer: b, lost. No format: d, lost; met
+    // before b, so after it.
+    expect(rows.map((r) => [r.key, r.format, r.matches, r.won, r.lost])).toEqual([
+      ['archetype:dimir_midrange', 'Modern', 2, 2, 0],
+      ['archetype:dimir_midrange', 'Pioneer', 1, 0, 1],
+      ['archetype:dimir_midrange', null, 1, 0, 1],
+    ])
+  })
+
+  it('makes the same rows for matches of one format as it does by key alone', () => {
+    const rows = matchupRows([
+      match('a', { format: 'Modern', opponent_key: 'k-x', opponent_label: 'X', result: 'win', started_at: on(3) }),
+      match('b', { format: 'Modern', opponent_key: 'k-y', opponent_label: 'Y', result: 'loss', started_at: on(2) }),
+      match('c', { format: 'Modern', opponent_key: 'k-x', opponent_label: 'X', result: 'loss', started_at: on(1) }),
+    ])
+    expect(rows.map((r) => [r.key, r.format, r.matches, r.won, r.lost])).toEqual([
+      ['k-x', 'Modern', 2, 1, 1],
+      ['k-y', 'Modern', 1, 0, 1],
+    ])
+  })
+})
+
+describe('matchupRowOver', () => {
+  it('counts one row over every format’s finished matches', () => {
+    const row = matchupRowOver([
+      match('a', { format: 'Modern', result: 'win', started_at: on(3), games_won: 2, games_lost: 0 }),
+      match('b', { format: 'Pioneer', result: 'loss', started_at: on(2), games_won: 1, games_lost: 2 }),
+      match('c', { format: 'Modern', result: null, started_at: on(4) }),
+    ])
+    // a and b; c is unfinished. Two formats, so no one format.
+    expect(row && [row.key, row.format, row.matches, row.won, row.lost, row.gamesWon, row.gamesLost]).toEqual([
+      'archetype:dimir_midrange',
+      null,
+      2,
+      1,
+      1,
+      3,
+      2,
+    ])
+  })
+
+  it('carries the format the matches share, and is null with none finished', () => {
+    expect(matchupRowOver([match('a', { format: 'Modern' }), match('b', { format: 'Modern' })])?.format).toBe(
+      'Modern',
+    )
+    expect(matchupRowOver([match('a', { result: null })])).toBeNull()
+  })
+})
+
+describe('rowsSpanFormats and rowFormatName', () => {
+  it('names a format only when the rows span more than one, a missing one counted', () => {
+    expect(rowsSpanFormats([row('k', 1, 1, { format: 'Modern' }), row('j', 1, 1, { format: 'Modern' })])).toBe(false)
+    expect(rowsSpanFormats([row('k', 1, 1, { format: 'Modern' }), row('k', 1, 1, { format: null })])).toBe(true)
+  })
+
+  it('names a format as the decks do, and a missing one as unknown', () => {
+    expect(rowFormatName({ format: 'TraditionalStandard' }, t)).toBe('Standard, best of three')
+    expect(rowFormatName({ format: null }, t)).toBe('Format unknown')
+  })
 })
 
 describe('matchupName', () => {
@@ -269,6 +342,17 @@ describe('matchupTiles', () => {
       value: '1',
       detail: 'none named',
     })
+  })
+
+  it('counts an archetype met in two formats once, named when either row is', () => {
+    // a in Modern and Pioneer, named in Pioneer alone; b in Modern alone,
+    // unknown: two archetypes, one named.
+    const rows = [
+      row('a', 1, 1, { format: 'Modern', kind: 'unknown' }),
+      row('a', 1, 0, { format: 'Pioneer' }),
+      row('b', 1, 0, { format: 'Modern', kind: 'unknown' }),
+    ]
+    expect(matchupTiles(rows)[0]).toEqual({ label: 'Archetypes met', value: '2', detail: `1${NBSP}named, 1${NBSP}not` })
   })
 
   it('names neither best nor worst when no archetype was met ten times', () => {

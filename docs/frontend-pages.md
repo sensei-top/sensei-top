@@ -808,8 +808,12 @@ version chosen with no match against it says so, with a link back to
 reading every version.
 
 **Matchups** (`MatchupsView`, `views/MatchupsView.tsx`) is one row per
-archetype the chosen versions have met, most met first: pips and name (a
-link to the pairing), and a line under it with the games, own first, and,
+archetype and format the chosen versions have met (`matchupRows`, a match
+with no format in a group of its own), most met first: a deck whose matches
+share one format has one row per archetype, and only a deck with matches in
+more than one names each row's format under its name ("Format unknown" for
+none). A row is pips and name (a link to the pairing, carrying the row's
+format when known), and a line under it with the games, own first, and,
 once the field's numbers are in, how the archetype wins in tournaments over
 however many entries, marked too few to trust under five
 (`MIN_TRUSTED_FIELD_SAMPLE`). The columns are Archetype · Matches · Record ·
@@ -826,8 +830,9 @@ best-of-three match shows; a drawn game counts in neither number. A row is never
 being small. The field is the deck's own format's
 (`useFieldRecords(format)`, the format coverage names, "Field, and the
 field-winrate join" below); a deck with no format has no field line. Three
-tiles sit above the table: archetypes met (and how many were named), and the
-best and worst among those met ten finished times or more
+tiles sit above the table: archetypes met, each once whatever formats it was
+met in (and how many were named, an archetype named when any of its rows
+is), and the best and worst among the rows met ten finished times or more
 (`RATE_MIN_MATCHES`) by wins over wins plus losses, the threshold at which
 the table's own "Rate" column stops being muted, since a ranking of rough
 rates would rank noise; with none that often the tile says so, and
@@ -835,31 +840,33 @@ with one it is the best and the worst says there is only one so far. There
 is no chart: a row already shows the pips, the name, the games and the
 field's own rate beside them.
 
-**A pairing** (`PairingView`, `/decks/:id/matchups/:opponent`) is one
-deck against one opponent's deck, `:opponent` a Matchups row's own
-`opponent_key` (`pairingAddress`: its colon bare, a `/` written `%2F`
-for a double-faced opponent name). Its heading draws the opponent the
-way a Matchups row does when a match is in hand; with none, an
-`archetype:` key is named from the deck's own coverage (shared with the
-brief below, one query) or spaced from the key itself, a `manual:` key
-as typed, a `colors:` key "Unrecognized deck", anything else "Unknown
-deck". Three tiles, five when the pairing has a best-of-three match:
-Record (by the small-sample rule over the row's wins and losses, so it
-agrees with the Matchups row, a draw counting toward neither), Games (own
-first, "17–4"), Game 1 and Games 2–3 (the same split as the Matchups row's
-two columns, by the small-sample rule over games), and In tournaments (the
-field's rate for the archetype in the deck's format, over the same window
-`useFieldRecords` gives Matchups). Below the tiles is the matchup brief
-against this opponent (`components/PairingBrief.tsx`, `docs/brief.md`)
-in one of five states (`briefState`, `lib/pairing.ts`): not named (the
-key is not an archetype), written, with a warning and "Write it again"
-when the deck's coverage says the list or the field moved since; and,
-with no brief stored, no tournament format known for the deck
-(coverage's `fmt` null, `matchups.brief.formatUnknown`), too few tournament
-lists to write from yet, or not written with a "Build the prompt"
-button. A prompt the route answers `format_unknown` or `no_consensus`
-says the same in the prompt's place. Last, the deck's Matches card, this
-pairing's matches alone.
+**A pairing** (`PairingView`, `/decks/:id/matchups/:opponent`) is one deck
+against one opponent's deck, `:opponent` a Matchups row's own
+`opponent_key` (`pairingAddress`: its colon bare, a `/` written `%2F` for
+a double-faced opponent name), and `?format=` the row's format when known:
+with it the page reads that format's matches against the opponent, a
+format no match has none; without it, every format's (`pairingMatches`).
+Its heading draws the opponent the way a Matchups row does when a match is
+in hand; with none, an `archetype:` key is named from the deck's own
+coverage (shared with the brief below, one query) or spaced from the key
+itself, a `manual:` key as typed, a `colors:` key "Unrecognized deck",
+anything else "Unknown deck". Three tiles, five when the pairing has a
+best-of-three match: Record (by the small-sample rule over the row's wins
+and losses, so it agrees with the Matchups row, a draw counting toward
+neither), Games (own first, "17–4"), Game 1 and Games 2–3 (the same split
+as the Matchups row's two columns, by the small-sample rule over games),
+and In tournaments (the field's rate for the archetype in the deck's
+format, over the same window `useFieldRecords` gives Matchups). Below the
+tiles is the matchup brief against this opponent
+(`components/PairingBrief.tsx`, `docs/brief.md`) in one of five states
+(`briefState`, `lib/pairing.ts`): not named (the key is not an archetype),
+written, with a warning and "Write it again" when the deck's coverage says
+the list or the field moved since; and, with no brief stored, no
+tournament format known for the deck (coverage's `fmt` null,
+`matchups.brief.formatUnknown`), too few tournament lists to write from
+yet, or not written with a "Build the prompt" button. A prompt the route
+answers `format_unknown` or `no_consensus` says the same in the prompt's
+place. Last, the deck's Matches card, this pairing's matches alone.
 
 **`MatchRow withDeck={false}`** is what both the Overview's and a
 pairing's Matches card draw (`DeckMatchesCard`, shared by both): the
@@ -1209,10 +1216,10 @@ Control and Sultai Control. The field's rows are one per key and label,
 so the two kinds of page join them two ways. Field and Home count a
 record against a row over the matches whose opponent carries both the
 row's key and its label. Matchups and a pairing group the viewer's
-matches by key alone, so their field rate is pooled over every label of
-the key: `fieldRecordsByKey` (`lib/matchups.ts`) adds up the key's wins,
-losses, draws and lists, and the rate is wins over the three, with no
-rate when the key has no finished match.
+matches by key, never by label, so their field rate is pooled over every
+label of the key: `fieldRecordsByKey` (`lib/matchups.ts`) adds up the
+key's wins, losses, draws and lists, and the rate is wins over the
+three, with no rate when the key has no finished match.
 
 Neither Matchups nor a pairing has a window control of its own:
 `useFieldRecords(format)` reads that format's `useMetagameStatus()` and
