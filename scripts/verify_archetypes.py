@@ -24,10 +24,10 @@ from collections import Counter
 from pathlib import Path
 
 from sensei_top.archetypes.classify import (
-    _load_definitions,
-    _rank_archetypes,
-    _seen_forms,
     choose,
+    load_definitions,
+    rank_archetypes,
+    seen_forms,
 )
 from sensei_top.db import connect
 from sensei_top.formats import arena_format
@@ -87,7 +87,7 @@ def main() -> None:
 
     conn = connect(Path(args.db))
     conn.row_factory = sqlite3.Row
-    definitions = _load_definitions(conn)
+    definitions = load_definitions(conn)
     if not definitions:
         raise SystemExit("No archetype definitions stored. Run 'sensei-top archetypes' first.")
 
@@ -117,7 +117,7 @@ def main() -> None:
         full_names = _card_names(conn, maindeck)
         truth = choose(
             definitions[fmt]["archetype"], definitions[fmt]["fallback"],
-            _seen_forms(full_names), _colors_of(conn, full_names),
+            seen_forms(full_names), _colors_of(conn, full_names),
         )
         truth_label = truth.name if truth else "(unclassified)"
         print(f"  {deck['name']} — full {len(maindeck)} cards -> {truth_label}")
@@ -132,7 +132,7 @@ def main() -> None:
                 continue
             partial = choose(
                 definitions[fmt]["archetype"], definitions[fmt]["fallback"],
-                _seen_forms(revealed), _colors_of(conn, revealed),
+                seen_forms(revealed), _colors_of(conn, revealed),
             )
             label = partial.name if partial else "(unclassified)"
             same = label == truth_label
@@ -168,8 +168,8 @@ def main() -> None:
         fmt = arena_format(match["deck_format"], match["event_id"])
         if fmt is None or fmt not in definitions:
             continue
-        ranked = _rank_archetypes(
-            definitions[fmt]["archetype"], _seen_forms(their_cards.get(match["match_id"], []))
+        ranked = rank_archetypes(
+            definitions[fmt]["archetype"], seen_forms(their_cards.get(match["match_id"], []))
         )
         if len(ranked) < 2:
             continue

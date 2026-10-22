@@ -15,7 +15,7 @@ import pytest
 import sensei_top.review.leaks as leaks_mod
 from sensei_top.db import open_database
 from sensei_top.review.findings import Category, Confidence, Finding, MatchReport, Severity
-from sensei_top.review.leaks import MIN_SAMPLE, _mana_flags, _wilson, find_leaks
+from sensei_top.review.leaks import MIN_SAMPLE, find_leaks, mana_flags, wilson
 
 
 @pytest.fixture
@@ -26,13 +26,13 @@ def conn(tmp_path):
 
 
 def test_wilson_matches_a_known_reference_value():
-    lo, hi = _wilson(7, 10)
+    lo, hi = wilson(7, 10)
     assert lo == pytest.approx(0.3968, abs=0.001)
     assert hi == pytest.approx(0.8922, abs=0.001)
 
 
 def test_wilson_of_zero_games_is_zero_not_a_crash():
-    assert _wilson(0, 0) == (0.0, 0.0)
+    assert wilson(0, 0) == (0.0, 0.0)
 
 
 def _insert_match(conn, match_id, result, self_seat=1, opponent_seat=2, deck_id=None,
@@ -195,7 +195,7 @@ def test_mana_flags_is_unknown_not_false_with_no_turns_rows_at_all(conn):
     all, ``flooded`` because there is no deck row here either."""
     _insert_match(conn, "no_turns", "loss")
     conn.commit()
-    assert _mana_flags(conn, "no_turns") == (None, None)
+    assert mana_flags(conn, "no_turns") == (None, None)
 
 
 def test_mana_flags_flooded_is_none_with_no_deck_row_even_when_screwed_is_known(conn):
@@ -212,7 +212,7 @@ def test_mana_flags_flooded_is_none_with_no_deck_row_even_when_screwed_is_known(
             ("no_deck", turn_number),
         )
     conn.commit()
-    screwed, flooded = _mana_flags(conn, "no_deck")
+    screwed, flooded = mana_flags(conn, "no_deck")
     assert screwed is False
     assert flooded is None
 
@@ -237,7 +237,7 @@ def test_mana_flags_flooded_is_none_with_an_unnamed_decklist(conn):
             ("m1", turn_number),
         )
     conn.commit()
-    screwed, flooded = _mana_flags(conn, "m1")
+    screwed, flooded = mana_flags(conn, "m1")
     assert screwed is False
     assert flooded is None
 
@@ -284,8 +284,8 @@ def test_mana_flags_flooded_is_none_with_unresolved_maindeck_copies(conn):
         conn, "short",
         '{"maindeck": [7001, 7002], "unresolved": {"maindeck": 2, "sideboard": 0}}',
     )
-    assert _mana_flags(conn, "whole-m") == (False, True)
-    assert _mana_flags(conn, "short-m") == (False, None)
+    assert mana_flags(conn, "whole-m") == (False, True)
+    assert mana_flags(conn, "short-m") == (False, None)
 
 
 def test_mana_leaks_excludes_no_turns_matches_from_the_known_population(conn):

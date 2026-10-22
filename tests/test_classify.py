@@ -14,20 +14,20 @@ import pytest
 from sensei_top.archetypes import classify
 from sensei_top.archetypes.classify import (
     Definition,
-    _elimination_reason,
-    _rank_archetypes,
-    _seen_forms,
-    _signature_card_names,
     choose,
     classify_matches,
     color_label,
     colour_factor,
     confidence_of,
+    elimination_reason,
     evaluate,
     normalize,
     opponent_source_breakdown,
+    rank_archetypes,
     rank_candidates,
     required_colors,
+    seen_forms,
+    signature_card_names,
 )
 from sensei_top.archetypes.corpus import MIN_CORPUS_DECKS, build_prior
 from sensei_top.db import _split_statements, connect, discover_migrations, migrate, open_database
@@ -35,7 +35,7 @@ from sensei_top.formats import FORMATS, arena_format
 
 
 def seen(*names: str):
-    return _seen_forms(names)
+    return seen_forms(names)
 
 
 def condition(type_: str, *cards: str) -> dict:
@@ -54,7 +54,7 @@ def fallback(key: str, name: str, *cards: str) -> Definition:
 
 def colors_by_name(**by_name: str) -> dict[str, frozenset[str]]:
     """A ``colors_by_name`` map for synthetic cards, keyed the same way
-    ``classify._card_colors_by_name`` keys a real one: every accepted form of
+    ``classify.card_colors_by_name`` keys a real one: every accepted form of
     the name, from ``normalize()``."""
     table: dict[str, frozenset[str]] = {}
     for name, identity in by_name.items():
@@ -100,7 +100,7 @@ def test_a_card_whose_faces_disagree_takes_the_whole_names_colours(monkeypatch):
         classify, "normalize",
         lambda name: ["grove's bounty", "elusive otter", "elusive otter // grove's bounty"],
     )
-    assert classify._card_colors("Elusive Otter // Grove's Bounty", table) == frozenset("U")
+    assert classify.card_colors_of("Elusive Otter // Grove's Bounty", table) == frozenset("U")
 
 
 # --- condition semantics ----------------------------------------------------
@@ -346,7 +346,7 @@ def test_a_tie_still_ranks_reproducibly_by_file_stem():
     behind it still needs to order tied candidates the same way every time."""
     first = archetype("Alpha", "Alpha", condition("InMainboard", "Shared"))
     second = archetype("Beta", "Beta", condition("InMainboard", "Shared"))
-    ranked = _rank_archetypes([second, first], seen("Shared"), {}, "", 10)
+    ranked = rank_archetypes([second, first], seen("Shared"), {}, "", 10)
     assert [d.key for d, *_ in ranked] == ["Alpha", "Beta"]
 
 
@@ -455,7 +455,7 @@ def test_a_variant_refines_the_name_only_when_fully_proved():
 def test_signature_card_names_include_common_cards_after_conditions():
     definition = archetype("Momo", "Momo", condition("InMainboard", "A", "B"))
     definition.common_cards = ["B", "C"]
-    assert _signature_card_names(definition) == ["A", "B", "C"]
+    assert signature_card_names(definition) == ["A", "B", "C"]
 
 
 def test_signature_card_names_exclude_negative_and_sideboard_only_conditions():
@@ -468,13 +468,13 @@ def test_signature_card_names_exclude_negative_and_sideboard_only_conditions():
         condition("DoesNotContain", "Excluded"),
         condition("InSideboard", "Hidden"),
     )
-    assert _signature_card_names(definition) == ["A"]
+    assert signature_card_names(definition) == ["A"]
 
 
 def test_signature_card_names_drop_duplicates_but_keep_first_order():
     definition = archetype("Momo", "Momo", condition("InMainboard", "A", "B", "A"))
     definition.common_cards = ["A"]
-    assert _signature_card_names(definition) == ["A", "B"]
+    assert signature_card_names(definition) == ["A", "B"]
 
 
 # --- elimination reasons -----------------------------------------------------
@@ -485,14 +485,14 @@ _KAITO = "Kaito, Bane of Nightmares"
 
 def test_elimination_reason_names_the_seen_card_that_ruled_it_out():
     definition = archetype("Control", "Control", condition("DoesNotContain", _KAITO))
-    assert _elimination_reason(definition, seen(_KAITO)) == _KAITO
+    assert elimination_reason(definition, seen(_KAITO)) == _KAITO
 
 
 def test_elimination_reason_is_none_when_nothing_was_seen_or_nothing_is_negative():
     definition = archetype("Control", "Control", condition("DoesNotContain", _KAITO))
-    assert _elimination_reason(definition, seen("Something Else")) is None
+    assert elimination_reason(definition, seen("Something Else")) is None
     positive = archetype("A", "A", condition("InMainboard", "X"))
-    assert _elimination_reason(positive, seen("X")) is None
+    assert elimination_reason(positive, seen("X")) is None
 
 
 # --- colours and formats ----------------------------------------------------

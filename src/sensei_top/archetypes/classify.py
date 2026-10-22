@@ -118,7 +118,7 @@ def normalize(name: str) -> frozenset[str]:
     return frozenset(forms)
 
 
-def _seen_forms(names: Iterable[str]) -> frozenset[str]:
+def seen_forms(names: Iterable[str]) -> frozenset[str]:
     seen: set[str] = set()
     for name in names:
         seen |= normalize(name)
@@ -428,7 +428,7 @@ _COLOUR_BELIEF_CAP = 0.9
 _COLOUR_FLOOR = 0.1
 
 
-def _card_colors_by_name(conn: sqlite3.Connection) -> dict[str, frozenset[str]]:
+def card_colors_by_name(conn: sqlite3.Connection) -> dict[str, frozenset[str]]:
     """Every locally known card's colour identity, keyed by every form its
     name may appear in — the same normalisation ``normalize()`` gives card
     names, so a definition's or Arena's own spelling always finds it. A card
@@ -447,7 +447,7 @@ def _card_colors_by_name(conn: sqlite3.Connection) -> dict[str, frozenset[str]]:
     return table
 
 
-def _card_colors(
+def card_colors_of(
     name: str, colors_by_name: Mapping[str, frozenset[str]]
 ) -> frozenset[str] | None:
     """The first known form's colours, the whole name before either face.
@@ -488,7 +488,7 @@ def required_colors(
         cards = [c for c in (condition.get("Cards") or []) if isinstance(c, str)]
         known = [
             colours for name in cards
-            if (colours := _card_colors(name, colors_by_name)) is not None
+            if (colours := card_colors_of(name, colors_by_name)) is not None
         ]
         if not known:
             continue
@@ -577,7 +577,7 @@ def _fit_score(met: int, unknown: int, colour: float) -> float:
     return proof * support * colour
 
 
-def _rank_archetypes(
+def rank_archetypes(
     definitions: Iterable[Definition],
     seen: frozenset[str],
     colors_by_name: Mapping[str, frozenset[str]],
@@ -741,7 +741,7 @@ def choose(
     made from a dozen revealed cards; there is no such guess to suppress here,
     so they are skipped and the top-ranked survivor is the answer.
     """
-    ranked = _rank_archetypes(
+    ranked = rank_archetypes(
         archetypes, seen, colors_by_name, colors, cards_seen,
         complete=complete, sideboard_seen=sideboard_seen,
     )
@@ -797,7 +797,7 @@ def confidence_of(verdict: Verdict, cards_seen: int) -> str:
     return "low"
 
 
-def _corpus_confidence(odds: float, cards_matched: int) -> str | None:
+def corpus_confidence_of(odds: float, cards_matched: int) -> str | None:
     """How much to trust a corpus-sourced verdict — the same ladder shape as
     ``confidence_of``, but gated on the corpus score's own two numbers:
     ``odds`` (how many times more likely the leader is than the runner-up)
@@ -848,7 +848,7 @@ _CORPUS_BONUS = {"high": 0.30, "medium": 0.15, "low": 0.05}
 _ODDS_TEXT_CAP = 1000.0
 
 
-def _odds_text(odds: float) -> str:
+def odds_text(odds: float) -> str:
     """How a candidate's corpus reason states its odds against the next best
     archetype. The odds are ``exp()`` of a log-odds gap, which runs to
     sixteen digits and more on a well-evidenced read; past the top confidence
@@ -864,14 +864,14 @@ def _odds_text(odds: float) -> str:
 
 def _corpus_bonus(odds: float, cards_matched: int) -> float:
     """How much of a fit boost a ``rank_candidates`` candidate earns from the
-    corpus evidence source, reusing ``_corpus_confidence``'s own tiers rather
+    corpus evidence source, reusing ``corpus_confidence_of``'s own tiers rather
     than inventing a second threshold ladder: nothing below the naming floor,
     rising with the same odds/cards gates that would let the corpus source
     name a match outright on its own. Capped well under 1.0 — corpus evidence
     nudges a rule candidate's ranking, it never manufactures fit the rule
     engine itself found no support for.
     """
-    confidence = _corpus_confidence(odds, cards_matched)
+    confidence = corpus_confidence_of(odds, cards_matched)
     return _CORPUS_BONUS.get(confidence, 0.0)
 
 
@@ -896,7 +896,7 @@ class Candidate:
     picked: bool = False    # this match's current opponent_deck_override, if any
 
 
-def _signature_card_names(definition: Definition) -> list[str]:
+def signature_card_names(definition: Definition) -> list[str]:
     """Cards worth showing as "this archetype's signature cards" — every
     positive, observable requirement, plus the fallback's common cards.
 
@@ -926,7 +926,7 @@ def _signature_card_names(definition: Definition) -> list[str]:
 def _signature_cards(definition: Definition, seen: frozenset[str]) -> tuple[SignatureCard, ...]:
     return tuple(
         SignatureCard(name, bool(normalize(name) & seen))
-        for name in _signature_card_names(definition)
+        for name in signature_card_names(definition)
     )
 
 
@@ -953,7 +953,7 @@ def _reasons(
     return reasons
 
 
-def _elimination_reason(definition: Definition, seen: frozenset[str]) -> str | None:
+def elimination_reason(definition: Definition, seen: frozenset[str]) -> str | None:
     """The seen card that ruled a definition out, for a 'none'-confidence
     candidate the picker still offers. The player watched the match and may
     know better than the heuristic, but "ruled out by X" is worth showing
@@ -983,7 +983,7 @@ def _match_seen_forms(conn: sqlite3.Connection, match_id: str) -> frozenset[str]
         """,
         (match_id,),
     )
-    return _seen_forms(row["name"] for row in rows)
+    return seen_forms(row["name"] for row in rows)
 
 
 def rank_candidates(
@@ -1016,7 +1016,7 @@ def rank_candidates(
     ``colors_by_name`` lets a caller that already holds the table
     (``review/snapshot.py::build_snapshot``'s ``colors_cache``,
     ``table/intermission.py``) pass it rather than pay
-    ``_card_colors_by_name``'s full-table scan again — it depends only on
+    ``card_colors_by_name``'s full-table scan again — it depends only on
     ``cards``, not on the match, so it is safe to reuse for the lifetime of
     one request. Omitted, this computes its own.
 
@@ -1063,11 +1063,11 @@ def rank_candidates(
     # gets its format's definitions. arena_format is the fallback for a
     # database migrated by 055 whose matches.format is still unprojected.
     fmt = match["match_format"] or arena_format(match["deck_format"], match["event_id"])
-    definitions = _load_definitions(conn)
+    definitions = load_definitions(conn)
     if fmt is None or fmt not in definitions:
         return []
 
-    seen = _seen_forms(seen_names) if seen_names is not None else _match_seen_forms(conn, match_id)
+    seen = seen_forms(seen_names) if seen_names is not None else _match_seen_forms(conn, match_id)
     if not seen:
         return []
 
@@ -1080,7 +1080,7 @@ def rank_candidates(
         colors = summary["colors"] if summary else ""
         cards_seen = summary["cards_seen"] if summary else 0
     if colors_by_name is None:
-        colors_by_name = _card_colors_by_name(conn)
+        colors_by_name = card_colors_by_name(conn)
 
     archetypes = definitions[fmt]["archetype"]
     fallbacks = definitions[fmt]["fallback"]
@@ -1094,7 +1094,7 @@ def rank_candidates(
     candidates: list[Candidate] = []
     ranked_keys: set[str] = set()
 
-    ranked_archetypes = _rank_archetypes(archetypes, seen, colors_by_name, colors, cards_seen)
+    ranked_archetypes = rank_archetypes(archetypes, seen, colors_by_name, colors, cards_seen)
     for (definition, met, unknown, evidence, fit), margin in zip(
         ranked_archetypes, _margins(ranked_archetypes, archetype_label), strict=True
     ):
@@ -1162,7 +1162,7 @@ def rank_candidates(
                 "corpus: {n} of its own cards seen ({odds})",
                 "corpus: {n} of its own cards seen ({odds})",
                 len(cards_matched),
-            ).format(n=len(cards_matched), odds=_odds_text(odds))
+            ).format(n=len(cards_matched), odds=odds_text(odds))
             folded.append(
                 replace(candidate, fit=min(1.0, candidate.fit + bonus),
                         reasons=(*candidate.reasons, reason))
@@ -1178,7 +1178,7 @@ def rank_candidates(
                 d.key,
                 archetype_label(d) if d.kind == "archetype" else fallback_label(d),
                 d.kind, "none", (), (), 0.0,
-                tuple(reason for reason in (_elimination_reason(d, seen),) if reason is not None),
+                tuple(reason for reason in (elimination_reason(d, seen),) if reason is not None),
             )
             for d in (*archetypes, *fallbacks)
             if d.key not in ranked_keys
@@ -1199,7 +1199,7 @@ def rank_candidates(
 
 
 
-def _load_definitions(conn: sqlite3.Connection) -> dict[str, dict[str, list[Definition]]]:
+def load_definitions(conn: sqlite3.Connection) -> dict[str, dict[str, list[Definition]]]:
     loaded: dict[str, dict[str, list[Definition]]] = {}
     for row in conn.execute(
         "SELECT format, kind, source, name, include_color, definition FROM archetypes"
@@ -1281,7 +1281,7 @@ def classify_seen(
     format has none): it is applied as given, so the caller keys it by
     format, as ``classify_matches`` does.
     """
-    seen = _seen_forms(names)
+    seen = seen_forms(names)
     if not seen:
         return None
 
@@ -1306,7 +1306,7 @@ def classify_seen(
             second_score = ranked[1][1] if len(ranked) > 1 else None
             odds = math.inf if second_score is None else math.exp(top_score - second_score)
             cards_matched = matched_cards(prior, top_key, seen)
-            corpus_confidence = _corpus_confidence(odds, len(cards_matched))
+            corpus_confidence = corpus_confidence_of(odds, len(cards_matched))
             if corpus_confidence is not None:
                 corpus_pick = (top_key, corpus_confidence, prior.labels[top_key],
                                 prior.kinds[top_key], cards_matched, odds)
@@ -1336,7 +1336,7 @@ def classify_seen(
     )
 
 
-_COLOR_ORDER = "WUBRG"
+COLOR_ORDER = "WUBRG"
 
 
 def live_opponent_colors(conn: sqlite3.Connection, names: Iterable[str]) -> tuple[str, int]:
@@ -1359,7 +1359,7 @@ def live_opponent_colors(conn: sqlite3.Connection, names: Iterable[str]) -> tupl
     printings that differ in rarity or colours. A name absent from ``cards``
     entirely (never downloaded, or a spelling mismatch) is silently excluded
     from both the count and the colours, the same as an absent row in
-    ``_card_colors_by_name`` — rule 4, never a guess.
+    ``card_colors_by_name`` — rule 4, never a guess.
     """
     unique = {name for name in names if name}
     if not unique:
@@ -1382,7 +1382,7 @@ def live_opponent_colors(conn: sqlite3.Connection, names: Iterable[str]) -> tupl
         except (json.JSONDecodeError, TypeError):
             identity = ()
         seen_colors.update(identity)
-    colors = "".join(c for c in _COLOR_ORDER if c in seen_colors)
+    colors = "".join(c for c in COLOR_ORDER if c in seen_colors)
     return colors, len(counted)
 
 
@@ -1436,8 +1436,8 @@ def classify_matches(conn: sqlite3.Connection) -> dict[str, int]:
     to the number of matches. ``rows`` is every ``opponent_archetype`` row
     written, other fitting formats included.
     """
-    definitions = _load_definitions(conn)
-    colors_by_name = _card_colors_by_name(conn)
+    definitions = load_definitions(conn)
+    colors_by_name = card_colors_by_name(conn)
     inferences = infer_formats(conn)
     counts = {"classified": 0, "high": 0, "medium": 0, "low": 0,
               "unclassified": 0, "skipped_format": 0, "corpus": 0, "rows": 0}

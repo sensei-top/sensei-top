@@ -1015,12 +1015,15 @@ newer tag, then adding it to the tuple.
 
 ### BL-069 · Imports of private names
 
-type: refactor · priority: P3 · status: ready · area: archetypes coach
+type: refactor · priority: P3 · status: ready · area: brief api guide
 
-37 imports reach into another package's leading-underscore names (counted
-2026-10-16, the gettext alias `_` aside): 17 from `archetypes/classify.py`,
-8 into `coach/evidence.py`, one each into `cli.py` from `reader/` and into
-`projector/` from `formats.py`.
+11 imports in `src/` reach into another package's leading-underscore names
+(counted 2026-10-21, the gettext alias `_` aside; 37 before the names from
+`archetypes/classify.py` and into `coach/evidence.py` were made public):
+4 into `brief/narrative.py` from `guide/`, 3 into `api/routes/` from
+`guide/` and `review/`, and one each into `cli.py` from `reader/`, into
+`projector/` from `formats.py`, into `coach/narrative.py` from `review/`
+and into `guide/rcq.py` from `metagame/`. `tests/` and `scripts/` add 31.
 
 **Needs:** Promote the shared ones to public names, or pin them with a test.
 No visible effect.

@@ -18,11 +18,11 @@ from sensei_top.archetypes import rank_candidates
 from sensei_top.archetypes.classify import (
     Candidate,
     Verdict,
-    _card_colors,
-    _card_colors_by_name,
-    _load_definitions,
-    _seen_forms,
+    card_colors_by_name,
+    card_colors_of,
     choose,
+    load_definitions,
+    seen_forms,
 )
 from sensei_top.formats import arena_format
 from sensei_top.metagame.matchup import ranked_field_matchup
@@ -224,7 +224,7 @@ class MatchSnapshot:
         )
 
 
-def _classify_own_deck(
+def classify_own_deck(
     conn: sqlite3.Connection,
     deck_id: str | None,
     event_id: str | None,
@@ -239,7 +239,7 @@ def _classify_own_deck(
     stored (``review/__init__.py``'s own rule): a deck classified once could
     point at a definition set later refreshed by ``sensei-top archetypes``.
 
-    ``colors_by_name``, when given, replaces the ``_card_colors_by_name``
+    ``colors_by_name``, when given, replaces the ``card_colors_by_name``
     scan (see ``build_snapshot``'s ``colors_cache``).
 
     The format is ``fmt`` when the caller knows it, already one of
@@ -309,19 +309,19 @@ def _classify_own_deck(
 
     if fmt is None and use_deck_format:
         fmt = arena_format(deck_row["format"], event_id)
-    definitions = _load_definitions(conn)
+    definitions = load_definitions(conn)
     if fmt is None or fmt not in definitions:
         return None, tuple(own_cards)
 
     names = [c.name for c in own_cards if c.name is not None for _ in range(c.count)]
     if not names:
         return None, tuple(own_cards)
-    seen = _seen_forms(names)
+    seen = seen_forms(names)
     if colors_by_name is None:
-        colors_by_name = _card_colors_by_name(conn)
+        colors_by_name = card_colors_by_name(conn)
     present: set[str] = set()
     for name in names:
-        if (card_colors := _card_colors(name, colors_by_name)) is not None:
+        if (card_colors := card_colors_of(name, colors_by_name)) is not None:
             present |= card_colors
     colors = "".join(letter for letter in "WUBRG" if letter in present)
 
@@ -366,8 +366,8 @@ def build_snapshot(
     from the wrong corpus or the wrong side of a reset.
 
     ``colors_cache`` is the same idea for ``archetypes.classify.
-    _card_colors_by_name`` — a full-table scan of ``cards`` that both
-    ``rank_candidates`` and ``_classify_own_deck`` need, and whose result
+    card_colors_by_name`` — a full-table scan of ``cards`` that both
+    ``rank_candidates`` and ``classify_own_deck`` need, and whose result
     depends only on ``cards``, not on the match. It is computed at most once
     and stored in the dict under ``"colors_by_name"``, so a caller shares
     one scan across every match in its request.
@@ -400,7 +400,7 @@ def build_snapshot(
     if colors_cache is not None:
         colors_by_name = colors_cache.get("colors_by_name")
         if colors_by_name is None:
-            colors_by_name = _card_colors_by_name(conn)
+            colors_by_name = card_colors_by_name(conn)
             colors_cache["colors_by_name"] = colors_by_name
 
     opponents_by_match: dict[str, tuple[str | None, str | None]] | None = None
@@ -655,7 +655,7 @@ def build_snapshot(
         )
     )
 
-    own_archetype, own_cards = _classify_own_deck(
+    own_archetype, own_cards = classify_own_deck(
         conn,
         deck_id,
         match["event_id"],

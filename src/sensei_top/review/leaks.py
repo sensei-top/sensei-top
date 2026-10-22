@@ -76,7 +76,7 @@ class Leak:
     match_ids_with: tuple[str, ...]
 
 
-def _wilson(wins: int, n: int, z: float = 1.96) -> tuple[float, float]:
+def wilson(wins: int, n: int, z: float = 1.96) -> tuple[float, float]:
     """95% Wilson score interval — stable at small n, unlike a normal
     approximation, which is why it is the standard choice for a win rate
     computed from a few dozen matches rather than a few thousand."""
@@ -102,16 +102,16 @@ def _leak_from_counts(
     rate_without = wins_without / n_without
     return Leak(
         code=code, category=category, sample_title=sample_title,
-        n_with=n_with, win_rate_with=rate_with, ci_with=_wilson(with_wins, n_with),
+        n_with=n_with, win_rate_with=rate_with, ci_with=wilson(with_wins, n_with),
         n_without=n_without, win_rate_without=rate_without,
-        ci_without=_wilson(wins_without, n_without),
+        ci_without=wilson(wins_without, n_without),
         gap=abs(rate_with - rate_without),
         match_ids_with=tuple(with_ids),
     )
 
 
 # ``matches`` with its deck as the user has it (``v_match_deck``: the pick for
-# an MTGO match, else what the log named), wrapped so ``_scope_clause``'s bare
+# an MTGO match, else what the log named), wrapped so ``scope_clause``'s bare
 # column names stay unambiguous — the view repeats ``match_id`` and ``source``.
 # Joined on ``match_id``; no index serves the view's COALESCEd ``deck_id``
 # (migration 050's header), so a deck filter is a scan of ``matches``, which
@@ -131,7 +131,7 @@ _MATCHES_WITH_FORMAT = (
 )
 
 
-def _scope_clause(
+def scope_clause(
     deck_ids: tuple[str, ...] | None,
     since: str | None,
     source: str = "arena",
@@ -167,7 +167,7 @@ def _scope_clause(
     return (" AND " + " AND ".join(clauses)) if clauses else "", params
 
 
-def _mana_flags(conn, match_id: str) -> tuple[bool | None, bool | None]:
+def mana_flags(conn, match_id: str) -> tuple[bool | None, bool | None]:
     """One match's own ``(screwed, flooded)`` flags — the per-match body
     ``_mana_leaks`` rolls up into a population-wide rate, and the one place
     the rule lives: no analyzer emits either as a ``Finding.code``, and
@@ -254,7 +254,7 @@ def _mana_leaks(
     source: str = "arena",
     match_ids: tuple[str, ...] | None = None,
 ) -> list[Leak]:
-    """Screw/flood rates, from ``_mana_flags`` once per match in the
+    """Screw/flood rates, from ``mana_flags`` once per match in the
     population.
 
     A match whose flag is unknown (``None``: every MTGO match's ``screwed``)
@@ -265,7 +265,7 @@ def _mana_leaks(
     independently — a comparison rate is only ever computed over matches
     that actually answered the question, per rule 4.
     """
-    scope_sql, scope_params = _scope_clause(deck_ids, since, source, match_ids=match_ids)
+    scope_sql, scope_params = scope_clause(deck_ids, since, source, match_ids=match_ids)
     rows = conn.execute(
         f"SELECT match_id, result FROM {_MATCHES_WITH_DECK} "
         f"WHERE result IN ('win', 'loss'){scope_sql}",
@@ -282,7 +282,7 @@ def _mana_leaks(
     flooded_ids: list[str] = []
     flooded_known_ids: list[str] = []
     for match_id in match_results:
-        screwed, flooded = _mana_flags(conn, match_id)
+        screwed, flooded = mana_flags(conn, match_id)
         if screwed is not None:
             screwed_known_ids.append(match_id)
             if screwed:
@@ -362,7 +362,7 @@ def find_leaks(
     one kept deck's subset of it, which no deck/date filter can express
     (``docs/coach.md``, "Scope"). Composable with the other three scope
     arguments (every non-``None`` one becomes an additional ``AND`` clause);
-    an empty tuple scopes to no match (``_scope_clause``).
+    an empty tuple scopes to no match (``scope_clause``).
 
     ``consensus_cache``/``colors_cache``/``view_cache``, when given, are
     threaded through to every ``build_match_report`` call so a repeated
@@ -410,7 +410,7 @@ def find_leaks(
         colors_cache = {}
     if view_cache is None:
         view_cache = {}
-    scope_sql, scope_params = _scope_clause(deck_ids, since, source, match_ids=match_ids)
+    scope_sql, scope_params = scope_clause(deck_ids, since, source, match_ids=match_ids)
     matches = conn.execute(
         f"SELECT match_id, result, match_format FROM {_MATCHES_WITH_FORMAT} "
         f"WHERE result IN ('win', 'loss'){scope_sql}",
