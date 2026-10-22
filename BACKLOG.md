@@ -47,7 +47,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-089
+Next ID: BL-093
 
 ## Features
 
@@ -405,23 +405,57 @@ it stops.
 
 **Needs:** A design for paging.
 
-### BL-088 · A UI and UX sweep of the whole app
+### BL-089 · A play/draw split per matchup
 
-type: feat · priority: P1 · status: ready · area: web desktop site
+type: feat · priority: P2 · status: ready · area: api web
 
-The dashboard reads as a set of features put side by side, not as one
-product built around what a player wants to know. That was the sentiment
-of the Reddit threads after 1.0.0. Plan 26's soft redesign (2026-10-18)
-changed the visuals and kept each page's job, so the problem is still
-there.
+A deck's Matchups table splits each archetype into Game 1 and the games
+after sideboarding, but never into on the play and on the draw; only the
+deck's overall line has that split, and Matches filters by source and
+deck alone. A player asking "how do I do against Burn on the draw after
+sideboarding" can't get an answer anywhere in the app. the UI sweep's task walk
+T3 gave up on exactly this, in both languages.
 
-**Why deferred:** Raised after the launch, 2026-10-22.
+**Why deferred:** the UI sweep was wording and layout only; this is a new
+cut of the data, with an API change. The user's call, 2026-10-22.
 
-**Needs:** A plan built on a walk through every page in the real app: a
-screenshot of each page with Playwright MCP, then an Impeccable critique of
-it. The plan then sets what each page is for, the order a player meets them
-in, and what to merge, move or drop, with `docs/design-system.md` and
-`docs/frontend-pages.md` brought along.
+**Needs:** The split per archetype, game 1 and post-board each by play and
+draw, with games whose `on_play` is unknown counted apart, never guessed
+(rule 4), and the table kept readable at 1008 px.
+
+### BL-090 · A date window on a deck's matchups
+
+type: feat · priority: P2 · status: needs-decision · area: api web
+
+A deck's matchup figures are all-time, so "my worst matchup this month"
+can't be asked. In the UI sweep's walk T2 both walkers noticed and answered from
+all-time figures.
+
+**Why deferred:** The same as BL-089, and which windows to offer (30
+days, since the last ban, since the deck last changed) is the user's
+decision. The ban one has to agree with how the metagame windows treat a
+ban.
+
+**Needs:** The windows chosen, then the window passed through the
+matchup routes and shown on the table's header.
+
+### BL-091 · A game lost to mana screw or a mulligan, named in the report
+
+type: feat · priority: P3 · status: needs-decision · area: review
+
+In the UI sweep's walk T4, game 3 was lost to a mulligan and missed land drops,
+and the match report named nothing: Stranded reads hand size on the last
+turn only, no analyzer reads `lands_played`, and a mulligan is never a
+beat. The report now says "no single cause stood out" for such a game.
+
+**Why deferred:** `docs/review.md`, "Why this exists", moved land and mana
+findings out of the per-match report on purpose: a single flooded game is
+not a story, a rate across games is, and the leak finder carries it. A
+per-game screw beat reverses that, so it is a decision first.
+
+**Needs:** The decision, then, if it goes ahead, the strategy article the
+analyzer stands on (each analyzer has one, `docs/review.md`) and a
+threshold for screw that a fixture can pin.
 
 ## Bugs
 
@@ -831,6 +865,25 @@ check. Found while adding the refusal.
 **Needs:** Checking `Path.resolve()` on a mapped drive on Windows; if it
 does return the share, a resolution that keeps the drive letter, and what
 that changes for a backup folder that is a link.
+
+### BL-092 · "Your turn N" too low when a game's turns are missing
+
+type: fix · priority: P1 · status: needs-decision · area: projector review
+
+The match report's Turned beat and the analyzers' prose say "your turn N"
+from a finding's `self_turn_index`, which `v_self_turns` gives by ranking
+the player's own turns that were recorded. A game whose log is missing
+turns gets too low a number: in the fixture's MATCH_WIN game 2 the view
+says turn 2 where Arena's `players[seat].turnNumber` says 12. Found by the
+UI sweep's review of the Turned beat.
+
+**Why deferred:** Outside the sweep, which only changed which counter the
+beat reads. Taking Arena's per-player counter instead is a projector
+change, and it is a rule-4 question: whether a gap in the turns means the
+index is unknown (`NULL`) or that Arena's counter stands in for it.
+
+**Needs:** That decision; a fixture-backed test on the game above; and the
+same check for MTGO, whose log carries no per-player counter.
 
 ## Performance
 

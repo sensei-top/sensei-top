@@ -16,7 +16,7 @@ const LABEL_CLASS: Record<SelectPlacement, { row: string; word: string }> = {
     word: 'text-caption font-medium text-ink2',
   },
   // The classes of `CONTROL_ROW` in `components/field/FieldControls.tsx`,
-  // which the control beside this one uses; the two change together.
+  // which the field's "Counted from" uses; the two change together.
   'beside-from-md': {
     row: 'flex max-w-full min-w-0 flex-col items-start gap-1 md:flex-row md:items-center md:gap-2',
     word: 'shrink-0 text-caption text-muted',

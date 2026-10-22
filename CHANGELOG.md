@@ -14,8 +14,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Matches** now shows play against draw beside matches and games won:
   the gap between your game win rates on the play and on the draw, with
   both rates under it, as a deck's page already does.
+- The **match report** explains itself: hover or focus a beat label (Race,
+  Turned, Stranded and the rest) for one sentence on what it means. When
+  you lost the race, the subhead names each lost game's biggest problem,
+  or says no single cause stood out. A concession or a timeout says who
+  ("You conceded"), and "Replay game N" opens the replay at the game's
+  first flagged turn.
+- A deck's **Matchups** view links to the **Field** for that deck's format.
+
+### Changed
+
+- **Decks** tells same-named decks apart: the one played most recently
+  wears the "Newest" chip and the others show when they were played
+  ("played Sep 3 to 14"). The version switcher marks its newest version,
+  and Home's deck tiles mark same-named decks the same way.
+- The **match report**'s top severity reads "Major" where it said
+  "Decisive", which read like the game's result, and its Turned beat
+  counts your own turns ("your turn 6"), as its findings do.
+- A label that explains itself on hover or focus now shows an info icon
+  beside it, everywhere in the dashboard.
+- A deck's **Matchups** view shows the archetypes met ten times or more,
+  and never fewer than the five most met; "Show all" opens the rest. Its
+  Game 1 and Post-board headers explain themselves.
+- **Field** keeps its controls in one row, and the most-played deck leads
+  its tiles.
+- **Home** draws a quiet placeholder where a deck has no card art, and
+  each record names the window it covers.
+- On **Live**, "Pick the deck" is a quieter button, and "Correct the deck"
+  carries a pencil like the other edit buttons.
 
 ### Fixed
+
+- Every score reads the same way, your games first with an en dash: the
+  match report's headline said "Lost 2-1" where the list said "Loss 1–2";
+  both now say 1–2.
+- A deck's page says "Post-board" where it said "Games 2–3", the Worst
+  tile counts archetypes rather than showing a bare number, and the deck
+  tiles say "win rate" beside the percentage. Live's lands strip reads
+  "19 of 24 lands left in your library", under "Next draw".
 
 - On the MTGO picks page, a match no group takes because no saved list is
   in its format now names that format: "No saved list in Modern." rather

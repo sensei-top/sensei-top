@@ -14,7 +14,7 @@ export type ArtSide = 'self' | 'opponent'
  *  neither.
  *
  *  Art is never the carrier of anything (docs/design-system.md): with no
- *  detail, or no cast card, this is empty and the box shows nothing. */
+ *  detail, or no cast card, this is empty and the box draws its placeholder. */
 export function castCards(detail: MatchDetail | undefined, side: ArtSide): ArtCard[] {
   if (!detail) return []
   const wantSelf = side === 'self'

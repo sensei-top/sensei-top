@@ -119,6 +119,12 @@ describe('versionLabel', () => {
     expect(versionLabel(row, NOW, t)).toBe(`Aug 28 to Sep 3 · 12${NBSP}matches`)
   })
 
+  it('marks the newest version when asked, and no other', () => {
+    const row = version('a', { first_seen: '2026-09-03T15:00:00', last_played: '2026-09-14T20:00:00', matches_played: 12 })
+    expect(versionLabel(row, NOW, t, true)).toBe(`Sep 3 to 14 · 12${NBSP}matches (newest)`)
+    expect(versionLabel(row, NOW, t, false)).toBe(`Sep 3 to 14 · 12${NBSP}matches`)
+  })
+
   it('says undated with no date', () => {
     expect(versionLabel(version('a', { matches_played: 2 }), NOW, t)).toBe(`Undated · 2${NBSP}matches`)
   })
@@ -157,7 +163,7 @@ describe('versionRecord', () => {
   it('gives the rate and the record from ten finished matches', () => {
     // 21 of 37 is 0.5676, 57 in whole percent.
     const matches = [...results('w', 'win', 21), ...results('l', 'loss', 16)]
-    expect(versionRecord(matches, t)).toBe(`57% · ${rec(21, 16)}`)
+    expect(versionRecord(matches, t)).toBe(`57% win rate · ${rec(21, 16)}`)
   })
 
   it('gives the record alone from one to nine, a draw and a match in progress counting toward neither', () => {

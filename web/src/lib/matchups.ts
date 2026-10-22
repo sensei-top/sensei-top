@@ -175,6 +175,17 @@ export function matchupRows(matches: Match[]): MatchupRow[] {
     .map((group) => group.row)
 }
 
+/** The fewest rows the Matchups table shows before its fold. */
+export const MATCHUPS_MIN_SHOWN = 5
+
+/** The rows to show before "Show all": those met `RATE_MIN_MATCHES` times or
+ *  more, and never fewer than the `MATCHUPS_MIN_SHOWN` most played. `rows`
+ *  come most played first (`matchupRows`), so the shown are a prefix. */
+export function foldMatchups<T extends Pick<MatchupRow, 'matches'>>(rows: T[]): T[] {
+  const barred = rows.filter((row) => row.matches >= RATE_MIN_MATCHES).length
+  return rows.slice(0, Math.max(barred, MATCHUPS_MIN_SHOWN))
+}
+
 /** One row over the finished of `matches`, whatever their formats, counted
  *  as `matchupRows` counts a row: for a pairing read over every format,
  *  whose matches share one key. The key is the newest finished match's;

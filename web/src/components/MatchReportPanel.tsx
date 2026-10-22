@@ -246,6 +246,13 @@ function Gaps({ gapGroups }: { gapGroups: { cause: string; blocked: string[] }[]
   )
 }
 
+/** A game's replay, at its first beat's turn when a beat has one. */
+function replayHref(matchHref: string, game: WeighedGame): string {
+  const turn = game.beats.find((beat) => beat.turn_number != null)?.turn_number
+  const base = `${matchHref}/replay?game=${game.game_number}`
+  return turn != null ? `${base}&turn=${turn}` : base
+}
+
 /** The games in a grid of as many columns as hold 16rem each, and, when
  *  any game has a position line, what the line is and its numbers. */
 function Games({
@@ -296,7 +303,7 @@ function Games({
             game={game}
             points={byGame.get(game.game_number) ?? NO_POINTS}
             turningPointTurn={turningPoints.get(game.game_number) ?? null}
-            replayHref={`${matchHref}/replay?game=${game.game_number}`}
+            replayHref={replayHref(matchHref, game)}
           />
         ))}
       </div>

@@ -1677,7 +1677,8 @@ def test_an_inaction_loss(conn):
     _project_strings(conn, _CASE_7B)
     assert [tuple(g) for g in _stored_games(conn)] == [(1, "loss", "ResultReason_Inaction")]
     # The report has no wording for MTGO's own reason.
-    assert _reason_text(_stored_games(conn)[0]["result_reason"]) is None
+    (stored,) = _stored_games(conn)
+    assert _reason_text(stored["result_reason"], stored["result"]) is None
     match = _stored_match(conn)
     assert (match["result"], match["games_won"], match["games_lost"]) == ("loss", 0, 1)
 
@@ -1730,14 +1731,18 @@ def test_last_game_decided_after_each_ending(lines, decided):
 
 
 def test_a_mtgo_concession_is_worded_in_the_report(conn):
-    """The fixture's two games each end `has conceded from the game.`; the
-    report words Arena's `ResultReason_Concede` (review/summary.py), so the
-    stored reason is Arena's name and the report's text for it is "conceded"."""
+    """In the fixture both games end with the opponent's `has conceded from
+    the game.` and then the user's `wins the game.`. The report words Arena's
+    `ResultReason_Concede` (review/summary.py) by the game's result, so the
+    stored reason is Arena's name and, on the user's win, the report's text
+    for it is "your opponent conceded"."""
     _insert_mtgo_row(conn, data=FIXTURE_BYTES, logged_at="2026-09-14T12:42:37")
     project_mtgo(conn, "Player1")
-    reasons = [row["result_reason"] for row in _stored_games(conn)]
-    assert reasons == ["ResultReason_Concede", "ResultReason_Concede"]
-    assert [_reason_text(r) for r in reasons] == ["conceded", "conceded"]
+    games = _stored_games(conn)
+    assert [(g["result"], g["result_reason"]) for g in games] == [
+        ("win", "ResultReason_Concede"), ("win", "ResultReason_Concede")]
+    assert [_reason_text(g["result_reason"], g["result"]) for g in games] == [
+        "your opponent conceded", "your opponent conceded"]
 
 
 # --- a reconnect is not a new game ---------------------------------------------

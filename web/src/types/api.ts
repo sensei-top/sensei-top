@@ -5089,6 +5089,16 @@ export interface components {
                 number,
                 number
             ] | null;
+            /**
+             * Turn Number
+             * @description The source finding's player-turn; None when it has none
+             */
+            turn_number?: number | null;
+            /**
+             * Definition
+             * @description One plain sentence saying what a game beat's label measures; None when the label has none, and on every matchup beat
+             */
+            definition?: string | null;
         };
         /** SummaryGameLine */
         SummaryGameLine: {

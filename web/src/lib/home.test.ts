@@ -22,8 +22,8 @@ import {
   threeThings,
   weekStart,
   weeklyWinrate,
-  winnerScore,
 } from './home'
+import { decksTiles } from './decks'
 
 // The zone is America/New_York (vitest.config.ts). Every timestamp below is
 // bare, so the log's own local clock: 04:00 UTC is midnight in New York
@@ -206,18 +206,12 @@ describe('the matches Home names', () => {
 
 describe('scores', () => {
   it('puts the viewer’s games first on a row', () => {
-    expect(ownScore({ games_won: 1, games_lost: 2 })).toBe('1–2')
-  })
-
-  it('puts the winner’s games first in a sentence', () => {
-    expect(winnerScore({ games_won: 1, games_lost: 2, result: 'loss' })).toBe('2–1')
-    expect(winnerScore({ games_won: 2, games_lost: 0, result: 'win' })).toBe('2–0')
+    expect(ownScore({ games_won: 1, games_lost: 2 })).toBe('1\u2060–\u20602')
   })
 
   it('has none without both counts, or with no game played', () => {
     expect(ownScore({ games_won: null, games_lost: 2 })).toBeNull()
     expect(ownScore({ games_won: 0, games_lost: 0 })).toBeNull()
-    expect(winnerScore({ games_won: 0, games_lost: 0, result: 'loss' })).toBeNull()
   })
 })
 
@@ -343,6 +337,7 @@ describe('weeklyWinrate', () => {
 })
 
 describe('homeDecks', () => {
+  const t = translator('en')
   const now = new Date(2026, 8, 28, 12, 0, 0).getTime()
   const identity = (key: string, deckIds: string[], rest: Partial<DeckIdentityOut>) =>
     ({ key, name: key, deck_ids: deckIds, matches: 0, match_wins: 0, match_losses: 0, last_played: null, ...rest }) as DeckIdentityOut
@@ -366,7 +361,7 @@ describe('homeDecks', () => {
     match('e-1', '2026-06-01T20:00:00', 'win', { deck_id: 'e1' }),
   ]
 
-  const decks = homeDecks(identities, matches, now)
+  const decks = homeDecks(identities, matches, now, t)
 
   it('orders by the matches of the last 30 days, then by last played, and leaves out a deck never played', () => {
     // Boros has two in the window; Izzet one, the match in progress; the
@@ -384,8 +379,31 @@ describe('homeDecks', () => {
     expect(decks[2]).toMatchObject({ artMatchId: 'e-1' })
   })
 
+  it('marks same-named decks as /decks does, over every identity, not only those shown', () => {
+    const twins = [
+      identity('guid:new', ['n1'], { name: 'Dragons', matches: 3, match_wins: 2, last_played: '2026-09-27T20:00:00' }),
+      identity('guid:old', ['o1'], {
+        name: 'Dragons',
+        matches: 1,
+        match_wins: 1,
+        first_played: '2026-09-03T20:00:00',
+        last_played: '2026-09-14T20:00:00',
+      }),
+    ]
+    const old = [match('o-1', '2026-09-14T20:00:00', 'win', { deck_id: 'o1' })]
+    // The newer twin has no match in the 30 days and is cut by count 1;
+    // the older tile is still not "Newest".
+    const cut = homeDecks(twins, old, now, t, 1)
+    expect(cut.map((deck) => deck.key)).toEqual(['guid:old'])
+    expect(cut[0].newest).toBe(false)
+    expect(cut[0].playedRange).toBe(decksTiles(twins, old, t, now)[1].playedRange)
+    expect(cut[0].playedRange).toBe('played Sep 3 to 14')
+    const both = homeDecks(twins, old, now, t)
+    expect(both.find((deck) => deck.key === 'guid:new')?.newest).toBe(true)
+  })
+
   it('holds as many as it is asked for', () => {
-    expect(homeDecks(identities, matches, now, 1).map((deck) => deck.key)).toEqual(['Boros'])
+    expect(homeDecks(identities, matches, now, t, 1).map((deck) => deck.key)).toEqual(['Boros'])
   })
 })
 

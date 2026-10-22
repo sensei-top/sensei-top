@@ -200,19 +200,19 @@ describe('deckLine', () => {
 describe('deckRecord', () => {
   it('is a rate from ten finished matches, with the record under it', () => {
     // 35 / 60 = 0.583…, 58%; the losses are 60 - 35.
-    expect(deckRecord({ finished: 60, wins: 35 }, t)).toEqual({ figure: '58%', line: '35\u2060–\u206025', thin: false })
-    expect(deckRecord({ finished: 10, wins: 5 }, t)).toEqual({ figure: '50%', line: '5\u2060–\u20605', thin: false })
+    expect(deckRecord({ finished: 60, wins: 35 }, t)).toEqual({ figure: '58%', line: 'win rate · 35\u2060–\u206025', thin: false })
+    expect(deckRecord({ finished: 10, wins: 5 }, t)).toEqual({ figure: '50%', line: 'win rate · 5\u2060–\u20605', thin: false })
   })
 
   it('is the rate, muted, from five to nine', () => {
     expect(deckRecord({ finished: 9, wins: 6 }, t)).toEqual({
       figure: '67%',
-      line: '6\u2060–\u20603 · rough, under 10\u00a0matches',
+      line: 'rough win rate · 6\u2060–\u20603, under 10\u00a0matches',
       thin: true,
     })
     expect(deckRecord({ finished: 5, wins: 2 }, t)).toEqual({
       figure: '40%',
-      line: '2\u2060–\u20603 · rough, under 10\u00a0matches',
+      line: 'rough win rate · 2\u2060–\u20603, under 10\u00a0matches',
       thin: true,
     })
   })
@@ -225,6 +225,64 @@ describe('deckRecord', () => {
 
   it('has no figure with no finished match', () => {
     expect(deckRecord({ finished: 0, wins: 0 }, t)).toEqual({ figure: null, line: 'no finished match yet', thin: false })
+  })
+})
+
+describe('decksTiles, same-named decks', () => {
+  const NOW_LOCAL = new Date(2026, 8, 29, 12, 0, 0).getTime()
+  const tiles = decksTiles(
+    [
+      identity('guid:old', ['v1'], { name: 'Azure Kites', first_played: '2026-09-03T20:00:00', last_played: '2026-09-14T20:00:00' }),
+      identity('guid:new', ['v2'], { name: 'Azure Kites', first_played: '2026-09-15T20:00:00', last_played: '2026-09-27T20:00:00' }),
+      identity('guid:alone', ['v3'], { name: 'Ember Choir', first_played: '2026-09-01T20:00:00', last_played: '2026-09-02T20:00:00' }),
+      identity('guid:blank', ['v4'], { first_played: '2026-09-04T20:00:00', last_played: '2026-09-05T20:00:00' }),
+      identity('deck:blank2', ['v5'], { first_played: '2026-09-20T20:00:00', last_played: '2026-09-21T20:00:00' }),
+    ],
+    [],
+    t,
+    NOW_LOCAL,
+  )
+
+  it('gives the newest of a shared name the chip and the others their range', () => {
+    // The API lists the later one second here on purpose: order does not decide.
+    expect(tiles[1].newest).toBe(true)
+    expect(tiles[1].playedRange).toBeNull()
+    expect(tiles[0].newest).toBe(false)
+    expect(tiles[0].playedRange).toBe('played Sep 3 to 14')
+  })
+
+  it('leaves a name no other tile has, and unnamed tiles, alone', () => {
+    for (const tile of tiles.slice(2)) {
+      expect(tile.newest).toBe(false)
+      expect(tile.playedRange).toBeNull()
+    }
+  })
+})
+
+describe('decksTiles, ties and one-day lists', () => {
+  const NOW_LOCAL = new Date(2026, 8, 29, 12, 0, 0).getTime()
+
+  it('gives the chip to the first in the API’s order when last_played is equal', () => {
+    const same = { name: 'Azure Kites', first_played: '2026-09-03T20:00:00', last_played: '2026-09-14T20:00:00' }
+    const tiles = decksTiles([identity('guid:a', ['v1'], same), identity('guid:b', ['v2'], same)], [], t, NOW_LOCAL)
+    expect(tiles.map((tile) => tile.newest)).toEqual([true, false])
+  })
+
+  it('keeps “last played” for an older same-named list played on one day', () => {
+    const tiles = decksTiles(
+      [
+        identity('guid:new', ['v1'], { name: 'Azure Kites', first_played: '2026-09-15T09:00:00', last_played: '2026-09-27T20:00:00' }),
+        identity('guid:day', ['v2'], { name: 'Azure Kites', first_played: '2026-09-14T09:00:00', last_played: '2026-09-14T22:00:00' }),
+        identity('guid:one', ['v3'], { name: 'Azure Kites', last_played: '2026-09-10T22:00:00' }),
+      ],
+      [],
+      t,
+      NOW_LOCAL,
+    )
+    expect(tiles.map((tile) => tile.newest)).toEqual([true, false, false])
+    expect(tiles[1].playedRange).toBeNull()
+    expect(tiles[2].playedRange).toBeNull()
+    expect(tiles[1].lastPlayed).toBe(new Date(2026, 8, 14, 22, 0, 0).getTime())
   })
 })
 
@@ -281,6 +339,11 @@ describe('decksTiles', () => {
 
   it('takes the art from the deck’s newest finished match, never one in progress', () => {
     expect(tiles[0].artMatchId).toBe('newest-win')
+  })
+
+  it('marks no tile newest, and gives no range, when no name is shared', () => {
+    expect(tiles.map((tile) => tile.newest)).toEqual([false, false])
+    expect(tiles.map((tile) => tile.playedRange)).toEqual([null, null])
   })
 
   it('leaves a deck with no finished match in the list without art, name or line', () => {

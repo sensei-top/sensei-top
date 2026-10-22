@@ -64,6 +64,7 @@ const NOT_TEXT: ReadonlySet<string> = new Set([
   'size',
   'fade',
   'placement',
+  'align',
   'color',
   'colorClass',
   'dataKey',

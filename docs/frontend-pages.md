@@ -115,6 +115,11 @@ named by the day its first match started. The line about the last 30
 days is drawn only when those days hold a finished match outside the
 session: with none, it would repeat the headline.
 
+The hero names its two windows. The session block (its `SectionLabel`
+"Last session · day", the headline, the deck chips and the match count)
+comes first; the 30-day line follows under its own `SectionLabel`, "Last
+30 days", behind a rule, so the two records are not read as one.
+
 **The three things** are the first three that exist of, in this order
 (`threeThings`): the last finished match; the first pattern that costs
 the viewer (`firstPattern`: the leak finder's first whose win rate with it
@@ -164,12 +169,18 @@ are each deck's own totals from `/api/guide/decks`.
 `/api/guide/decks`, five at most, those with the most matches in the
 last 30 days first and then by last played. An identity with no match is
 left out. From ten matches won or lost (`RATE_MIN_MATCHES`; a draw is
-neither) the record is a rate, "58%" over "35–25"; from five to nine
-the rate muted, "67%" over "6–3 · rough"; under five the record, "3–1",
+neither) the record is a rate, "58%" over "win rate · 35–25"; from five to nine
+the rate muted, "67%" over "rough win rate · 6–3, under 10 matches"; under five the record, "3–1",
 muted, over the "too few for a rate" line; with none
 there is no figure. A tile leads to
 the deck's own address, `deckAddress(deck.key)` (`lib/decks.ts`), never
-a version's id.
+a version's id. When two or more identities share a name, the tile
+marks them as `/decks` does, by the one helper both read
+(`sameNameMarks`, `lib/decks.ts`): the most recently played carries the
+"Newest" chip and each other shows "played Sep 3 to 14" where "last
+played" would be. The marks are computed over every identity
+`/api/guide/decks` returns, before the five are chosen, so a tile reads
+the same on both pages even when its twin is not on Home.
 
 **The field** (`homeField`) is the default format's, the one
 `/api/formats` names (`docs/frontend.md`, "Filters are in the address"), and both of its
@@ -210,6 +221,8 @@ deck tile (the viewer's, from that deck's newest finished match).
 **Art comes from a finished match only**, because `useMatchArt` reads a
 match's detail once and never again (`docs/frontend.md`, "Data fetching"): a match
 still in progress would keep the cards it had when the page opened.
+A box with no card to show draws `CardArt`'s placeholder wash
+(`docs/design-system.md`, "Card art"), not an empty box.
 Seven matches at most: the newest, the field's (asked for only when the
 field is among the three things) and one for each of five decks.
 
@@ -365,7 +378,9 @@ game, or one the match does not have, is the first game. No turn, or one
 the game does not have, is the game's last turn. `turn=0` is the opening
 hand, when the game has one. Choosing a game or a turn replaces the
 history entry, so Back leads to the report, and choosing a game drops
-the turn. A reload keeps both.
+the turn. A reload keeps both. The report's "Replay game N" is the one
+link into the replay that carries a turn, its game's first beat's (see "The match
+report" below).
 
 **The charts do not move when the turn changes.** recharts starts a
 chart's draw-in over whenever the chart renders again, so `GameCharts`
@@ -485,7 +500,7 @@ Each fact is shown once on this page. The status strip alone carries the
 game, the turn, play or draw, the record, the opponent's deck with its
 confidence, the cards seen and the pick button; `OpponentRead` holds the
 cards behind an unnamed deck and the candidates, `LibraryCard` is the
-decklist, and between games the plan card's title is the result and its
+decklist (its lands strip reads "19 of 24 lands left in your library", then the chance of a land on the "Next draw" and "Within 2 draws" and "Within 3 draws"), and between games the plan card's title is the result and its
 reason, with the opponent and the next game left to the strip, and its
 first line this deck's own games 2 and 3 against that deck. The old
 "Match details" disclosure that repeated the strip is gone.
@@ -664,10 +679,17 @@ game's title and its result as a chip (a game with no result carries a
 muted chip that says so); the game's position line, memoized; the facts
 as a `dl` (seat, mulligans, length, how it ended), a fact that is not
 known not drawn; the game's beats, three at most; and a link to that
-game on the replay. A beat is its label, its meter when it has one
+game on the replay. The link opens the game at the turn of its first
+beat that has one (`?game=3&turn=7`), so "Replay game 3" lands on what
+the card flagged; with no beat carrying a turn it opens the game bare.
+The hero's button always opens the replay bare. A beat is its label, its meter when it has one
 (`TwoSidedMeter`, `components/ui/Meter.tsx`, in the colours every chart
 uses for the viewer and the opponent), its sentence, and its weight as a
-chip when it is more than a note. A game with no position line draws no
+chip when it is more than a note. A label whose beat carries a
+`definition` wears a `Tooltip` with it: one sentence the server writes
+beside each label (Race, Turned, Stranded, Role, Risk; `docs/review.md`),
+so the word that names the beat is explained where it is read, on hover
+and on keyboard focus. A label with no definition is drawn bare. A game with no position line draws no
 chart and no box for one. Under the grid, one sentence says what the
 line is, and a `Disclosure` holds its numbers as one table.
 
@@ -684,7 +706,7 @@ the pointer on one of them is marked on all three.
 **What stood out** holds the findings that weigh more than a note,
 heaviest first, then by game and turn. A finding's weight is a `Chip`
 through `severityChip` (`components/ui/severity.ts`), the mapping the
-coach draws its own with: `decisive` takes the `accent` variant, `flag`
+coach draws its own with: `decisive` (shown as "Major", so the word never reads as a result) takes the `accent` variant, `flag`
 takes `warn`, `notice` takes `neutral` and `note` a muted `neutral`. The
 label is always the word; colour is reinforcement only. A finding's body
 is its detail, then every caveat, then its evidence behind a
@@ -730,14 +752,19 @@ button (`docs/review.md`).
 order the route answers them, last played first. `decksTiles`
 (`lib/decks.ts`) builds each tile: the deck's own name, its record by
 the small-sample rule (`deckRecord`: from ten finished matches a rate over
-the record, "58%" over "35–25"; from five to nine the rate, "67%", muted,
-over the record and "rough"; under five the record, "3–1", muted, with
+the record, "58%" over "win rate · 35–25"; from five to nine the rate, "67%", muted,
+over "rough win rate" and the record; under five the record, "3–1", muted, with
 the line saying it is too few for a rate), the format in words with how
 many versions when there is more than one (`tileDetail`), when it was
 last played, and its art: a card the viewer cast in the deck's newest
 finished match of the same 500-match list Home reads, one card per
 page. A deck with no finished match in that list keeps the empty art
-box; nothing more is asked for it. The grid is Home's own: two to a
+box; nothing more is asked for it. When two or more tiles share a name
+(a rebuilt deck is a second Arena deck, so a second tile), the one played
+most recently carries the "Newest" chip (`newest`) and each other shows
+"played Sep 3 to 14" (`playedRange`, `versionDays`) where "last played"
+would be, keeping "last played" when the list was played on one day only.
+Nothing is folded together. The grid is Home's own: two to a
 row under 48rem, three from there, five from 64rem. With no deck at
 all, "No decks yet".
 
@@ -800,9 +827,11 @@ neither its record nor its ten games (`docs/design-system.md`, "Numbers").
 top to bottom: the version switcher; a "By rank" table (Rank · Matches ·
 Record · Rate), shown once the matches in hand were played at two ranks or
 more; a "Versions" card, one row per version, each a link that chooses it
-alone, its second line "58% · 35–25" from ten finished matches and the
+alone, its second line "58% win rate · 35–25" from ten finished matches and the
 record alone under it, shown only when every version is being read and the
-deck has more than one; and last, the deck's Matches card. The summary
+deck has more than one (the switcher's first version is the newest by
+`last_played`, the same row the card marks "Newest", and reads "Sep 3 to
+14 · 12 matches (newest)", `versionLabel`); and last, the deck's Matches card. The summary
 band and the three play-draw tiles it used to hold are the strip's now. A
 version chosen with no match against it says so, with a link back to
 reading every version.
@@ -817,26 +846,35 @@ format when known), and a line under it with the games, own first, and,
 once the field's numbers are in, how the archetype wins in tournaments over
 however many entries, marked too few to trust under five
 (`MIN_TRUSTED_FIELD_SAMPLE`). The columns are Archetype · Matches · Record ·
-Rate · Game 1 · Games 2–3, in the order `docs/design-system.md`, "Numbers",
+Rate · Game 1 · Post-board, in the order `docs/design-system.md`, "Numbers",
 gives; the Rate cell (`RateCell`) is the rate from ten finished matches,
 the rate muted from five to nine, a muted "too few" under five, and an em
-dash only with no match won or lost. Game 1 and Games 2–3 count games,
+dash only with no match won or lost. Game 1 and Post-board (games 2 and 3) count games,
 and only a best-of-three match's (`best_of = 3`): a best-of-one game is a
 different queue's, with its own hand smoothing, and is in neither. Each
 cell is the rate alone, as the Rate cell is, over games: the percent from
 ten games won or lost, muted from five to nine, a muted "too few" under
 five, and an em dash with none, which is also what a row with no
-best-of-three match shows; a drawn game counts in neither number. A row is never left out for
-being small. The field is the deck's own format's
+best-of-three match shows; a drawn game counts in neither number. The table folds by the bar
+(`foldMatchups`): the rows of `RATE_MIN_MATCHES` (10) matches or more show, never
+fewer than the five most played, and the rest sit behind "Show all N"
+(`ShowAll`, Field's control); a small row is held back, never dropped, and
+with nothing held back there is no control. The Game 1 and Post-board
+headers wear a `Tooltip` saying which games they count. The field is the deck's own format's
 (`useFieldRecords(format)`, the format coverage names, "Field, and the
-field-winrate join" below); a deck with no format has no field line. Three
+field-winrate join" below); a deck with no format has no field line. The
+table's card carries, at the right of its title, a link to that field,
+"Open the Standard field" (`/field?format=<fmt>`): a bare `/field` opens
+the format of the most recent match, which need not be this deck's, so a
+player reading a Standard deck's matchups landed on Modern. The link waits
+for the format and is not drawn for a deck with none. Three
 tiles sit above the table: archetypes met, each once whatever formats it was
 met in (and how many were named, an archetype named when any of its rows
 is), and the best and worst among the rows met ten finished times or more
 (`RATE_MIN_MATCHES`) by wins over wins plus losses, the threshold at which
 the table's own "Rate" column stops being muted, since a ranking of rough
 rates would rank noise; with none that often the tile says so, and
-with one it is the best and the worst says there is only one so far. There
+with one it is the best and the worst says "only one archetype has 10 or more matches", so the 10 reads as the minimum, not a count. There
 is no chart: a row already shows the pips, the name, the games and the
 field's own rate beside them.
 
@@ -853,7 +891,7 @@ itself, a `manual:` key as typed, a `colors:` key "Unrecognized deck",
 anything else "Unknown deck". Three tiles, five when the pairing has a
 best-of-three match: Record (by the small-sample rule over the row's wins
 and losses, so it agrees with the Matchups row, a draw counting toward
-neither), Games (own first, "17–4"), Game 1 and Games 2–3 (the same split
+neither), Games (own first, "17–4"), Game 1 and Post-board (the same split
 as the Matchups row's two columns, by the small-sample rule over games),
 and In tournaments (the field's rate for the archetype in the deck's
 format, over the same window `useFieldRecords` gives Matchups). Below the
@@ -1056,31 +1094,52 @@ format and the viewer's own record against it. Its cards are in
 `components/field/`. Nothing is drawn but a `Loading` until
 `/api/formats` answers. Top to bottom:
 
-1. **The format** (`Select`, "Format"), with a caption under it, drawn
-   whenever some format holds the viewer's matches or tournament events
-   (`anyFormatData`). Its options are those formats, in the API's order,
-   and always the selected one (`formatChoices`). The caption is the
-   viewer's own matches in the format and where each one's format was
-   read from (`formatCaption`), a part at 0 left out: "12 of your
-   matches are Modern: 4 from Arena's log, 5 you confirmed, 3 inferred
-   from the cards revealed.", or "None of your matches are Pauper." It
-   stays above the empty state, the loading and the error below, so a
-   format with nothing in it can be left.
-2. **The controls** (`FieldControls`): the window, a native `<select>`,
-   and the tier the share is counted in, a `Segmented` of the four ranked
-   tiers — paper tournaments of 64+ players (A), MTGO challenges (B),
-   MTGO leagues (C) and paper tournaments under 64 players (D).
-3. **Three tiles** (`FieldTiles`): the lists read in the tier and
-   window, the most played deck with its share, and the viewer's record
-   against the two most played, over every deck of theirs in the
-   selected format (`topTwoTile`, `lib/field.ts`). The third tile has
+1. **The controls** (`FieldControls`), three native `<select>`s in one
+   row, each label beside its control, and the format's caption under the
+   row. Six controls stood between the page's title and its first number
+   when the tier was a `Segmented` of four (the 2026-10-22 critique,
+   `.impeccable/critique/`); as a select it is one, and the three fit one
+   row at 1008 px in both languages, where the four segments beside two
+   selects did not. The row wraps only on a narrower window.
+   - **The format** ("Format"), drawn whenever some format holds the
+     viewer's matches or tournament events (`anyFormatData`). Its options
+     are those formats, in the API's order, and always the selected one
+     (`formatChoices`). The caption is the viewer's own matches in the
+     format and where each one's format was read from (`formatCaption`), a
+     part at 0 left out: "12 of your matches are Modern: 4 from Arena's
+     log, 5 you confirmed, 3 inferred from the cards revealed.", or "None
+     of your matches are Pauper."
+   - **The window** ("Window").
+   - **The tier** the share is counted in ("Tournaments"), the four ranked
+     tiers: paper tournaments of 64+ players (A), MTGO challenges (B),
+     MTGO leagues (C) and paper tournaments under 64 players (D).
+
+   The window and the tier wait for the format's status and are left out
+   over the empty state, so over the loading, the error and the empty
+   state the row holds the format alone, with its caption, and a format
+   with nothing in it can be left.
+   It is the same element in every state, so a change of format keeps the
+   select, and the focus on it, while the new format's status loads.
+2. **Two tiles** (`FieldTiles`). The most played deck leads, over two of
+   the three columns: its name, and under it its share and the lists it
+   is counted from, "21% of 214 lists from paper tournaments of 64+
+   players since Sep 3". Beside it, the viewer's record against the two
+   most played, over every deck of theirs in the selected format
+   (`topTwoTile`, `lib/field.ts`). There were three tiles of equal weight,
+   a count of lists, a deck and a record, three kinds of number with
+   nothing to say which one answers the page (the 2026-10-22 critique's
+   "mixed-kind equal-weight tiles"). The deck leads because it answers
+   what the page is for, what is being played, and it is there whenever
+   the tiles are, where the record is an em dash for a player who has
+   not met the top two. The count of lists is evidence for the share, so
+   it went into the share's line. The record's tile has
    five states: nothing played, an em dash and "not met" with the window;
    only draws, an em dash and "no finished match yet"; one to four matches
    won or lost, the record muted, with the "too few for a rate" line; five
    to nine, the rate muted, with the record and "rough"; from
    ten the rate, with the record and where it comes from ("with any of your
    decks"). Not drawn when the tier has no list in the window.
-4. **"What is being played"** (`ShareCard`): one `FieldRow` per deck, the
+3. **"What is being played"** (`ShareCard`): one `FieldRow` per deck, the
    most played first, twelve and then a button for the rest. A row is the pips
    and the name, the viewer's record against it under the name in the one-line
    form (`rowCaption`: "58% · 35–25" from ten matches, the record alone, "6–3",
@@ -1090,7 +1149,7 @@ format and the viewer's own record against it. Its cards are in
    last 500 matches when Home's rule finds the match list full and short of the
    window (`listShort`); tier C adds a third, that a league publishes only its
    undefeated lists.
-5. **"The events"** (`EventsCard`): the stored events of the share
+4. **"The events"** (`EventsCard`): the stored events of the share
    list's format, window and tier, newest first, twelve
    (`EVENTS_SHOWN`) and then a button for the rest. A row is the date,
    the event's name linking to its page (`eventHref`) and a caption
@@ -1099,14 +1158,14 @@ format and the viewer's own record against it. Its cards are in
    that won. A copy set aside by dedup and an event with no deck are not
    listed. The card waits for the tier, so its request names the tier
    the share list counts.
-6. **"How the field wins"** (`WinrateCard`): a `DataTable` of Archetype ·
+5. **"How the field wins"** (`WinrateCard`): a `DataTable` of Archetype ·
    Matches · Win rate · Lists, over tiers A, B and D together whatever the tier
    control says, since a league publishes no losses to count. A row
    needs two finished matches (`WINRATE_MIN_MATCHES`). Rows are sorted
    by matches, then rate, then name: sorted by rate alone, the top rows
    would be decks of one list on a handful of matches. Twelve, then the
    rest.
-7. **"Archetype against archetype"** (`MatchupsCard`): a `Segmented`,
+6. **"Archetype against archetype"** (`MatchupsCard`): a `Segmented`,
    "Counted from", cumulative over paper 64+ alone, paper 64+ and MTGO
    challenges, or all three ranked tiers with rounds (`?pairs=A|AB|ABD`),
    then the rounds between two named decks, the most matches first,
@@ -1117,19 +1176,19 @@ format and the viewer's own record against it. Its cards are in
    always shown. When a step
    has no round and the next step's tier has lists in the window, the
    empty card offers a button that takes it.
-8. **A paused source's line**, in a warn `Callout`, one for each source
+7. **A paused source's line**, in a warn `Callout`, one for each source
    whose fetch is paused (mtgo.com or TopDeck), in the words of
    `holdLine` (`lib/sources.ts`, pinned in `sources.test.ts`). It is
    drawn under the empty state too. A source that is only waiting says
    so inside the disclosure instead.
-9. **The TopDeck.gg credit**, a caption naming the format ("Modern
+8. **The TopDeck.gg credit**, a caption naming the format ("Modern
    tournament data from TopDeck.gg."), drawn only when the selected
    format's status counts a stored TopDeck event
    (`corpus_topdeck_events` > 0). A configured key that has fetched
    nothing for the format draws no credit, since none of its data is on
    the page. It sits on the page, outside the disclosure below, because
    TopDeck's API terms ask for a visible credit and link.
-10. **"Where these numbers come from"** (`SourcesDisclosure`), a
+9. **"Where these numbers come from"** (`SourcesDisclosure`), a
     `Disclosure`, closed: the events stored by tier and the copies set
     aside, the age of the tournament results and of the archetype rules,
     the sources' table, a waiting source's line under it, and the commands
@@ -1319,7 +1378,7 @@ so a record's losses are the rate's `n` less its wins.
 The cards, in order, are in `components/coach/`:
 
 1. **Six tiles** (`Profile`, `overallTiles`): matches, games, game 1,
-   games 2–3, on the play, on the draw. Two to a row under 48rem,
+   post-board, on the play, on the draw. Two to a row under 48rem,
    three from it. From ten, the percent is the figure and the record and
    the range are the line; under ten, the record is the figure, muted,
    over the "too few for a rate" line; with no match, a dash over "None
@@ -1348,7 +1407,7 @@ The cards, in order, are in `components/coach/`:
    a `Disclosure` under the list.
 6. **Where lost games turned** (`TurningCard`): three tiles, early,
    mid and late, each the lost games that first slipped then and how
-   many of them were decisive.
+   many of them were major.
 7. **The field** (`FieldRatesCard`): Archetype · Record · Rate · Share,
    your record against each archetype before its share of the
    tournament lists, and no range. A share over fewer than

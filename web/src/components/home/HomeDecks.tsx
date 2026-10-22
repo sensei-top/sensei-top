@@ -42,7 +42,11 @@ export function HomeDecks({
                 figure={figure}
                 muted={thin}
                 line={line}
-                lastPlayed={deck.lastPlayed != null ? t('home.decks.lastPlayed', { day: formatShortDay(deck.lastPlayed, now) }) : null}
+                chip={deck.newest ? t('decks.overview.newest') : null}
+                lastPlayed={
+                  deck.playedRange ??
+                  (deck.lastPlayed != null ? t('home.decks.lastPlayed', { day: formatShortDay(deck.lastPlayed, now) }) : null)
+                }
                 art={art.get(deck.key) ?? null}
               />
             </li>

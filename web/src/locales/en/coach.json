@@ -67,7 +67,7 @@
     "matches": "Matches",
     "games": "Games",
     "game1": "Game 1",
-    "postBoard": "Games 2–3",
+    "postBoard": "Post-board",
     "onPlay": "On the play",
     "onDraw": "On the draw"
   },
@@ -133,7 +133,8 @@
     "early": "Early, turns 1 to 3",
     "mid": "Mid, turns 4 to 6",
     "late": "Late, turn 7 on",
-    "noneDecisive": "None of them decisive",
-    "decisive": "{{n}} of them decisive"
+    "noneDecisive": "None of them major",
+    "decisive_one": "{{n}} of them major",
+    "decisive_other": "{{n}} of them major"
   }
 }

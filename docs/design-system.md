@@ -237,7 +237,7 @@ per component:
 
 | utility | value | Compact | role |
 |---|---|---|---|
-| `rounded-control` | 12px | 12px | inputs and selects (`Field`, `Select`), a row or a link that acts as a control, the chart tooltip, inline code, the picture of a `CardTile` |
+| `rounded-control` | 12px | 12px | inputs and selects (`Field`, `Select`), a row or a link that acts as a control, the chart tooltip and `Tooltip`, inline code, the picture of a `CardTile` |
 | `rounded-block` | 14px | 14px | nested blocks: `Card elevation={2}`, `Finding`, `Callout`, `TextBlock`, `Skeleton`, a step of `OnboardingSteps` |
 | `rounded-card` | 18px | 16px | cards and tiles: `Card`, `StatTile`, `DeckTile`, `EmptyState`, each of Home's three things; a `Dialog` |
 | `rounded-hero` | 22px | 18px | the one lead panel of a page: Home's last session, first run |
@@ -249,7 +249,7 @@ One recipe, `--lift`: a hairline highlight at the top edge and one soft
 shadow underneath, `inset 0 1px 0 rgb(255 255 255 / 0.04), 0 12px 32px
 -12px rgb(0 0 0 / 0.6)`. It is exposed as the `shadow-lift` utility and
 applied to every surface raised from the page: `Card`, `StatTile`,
-`DeckTile`, `ErrorNote`, the chart tooltip, a page's lead panel, each
+`DeckTile`, `ErrorNote`, the chart tooltip and `Tooltip`, a page's lead panel, each
 of Home's three things, a `Dialog`.
 
 `Card` takes an `elevation` prop. `1` (the default) is a page's own
@@ -504,10 +504,13 @@ Using `CardArt`:
   `--art-surface` itself, as Home's lead panel and its three things do.
   The last 15% of the fade is that colour alone, the band where text
   may begin.
-- **Art is never the only carrier of anything.** With no id, or a picture
-  that does not load (a new install, offline, a card Scryfall cannot map),
-  the box shows nothing, the surface behind it stands, and there is no
-  button. A page reads the same without its art.
+- **Art is never the only carrier of anything.** With no id, the box
+  draws a quiet placeholder wash, `aria-hidden`: from `--surface-2` to
+  the surface behind, running toward the fade's edge when it has one, so
+  the edge that meets the text is the surface. A picture that does not
+  load (a new install, offline, a card Scryfall cannot map) leaves the
+  box empty, the surface behind it showing. Neither has a button. A page
+  reads the same without its art.
 - Inside a card, art goes in `Card`'s `art` slot:
   `art={<CardArt … fade="down" className="h-32" />}`.
 - **A page shows a card once.** A page with several pieces of art takes
@@ -575,7 +578,7 @@ no other page pays for.
 
 Its sections: palette, type ramp, radii and elevation, buttons, links,
 chips, cards, stat tiles, deck tile, empty state, onboarding steps,
-findings, callouts, text block, disclosure, segmented control, fields,
+findings, callouts, text block, disclosure, tooltip, segmented control, fields,
 selects, switches, dialog, meters, bars, data table, line chart, bar
 chart, mana pips and costs, glyph and wordmark, card tile, card art.
 
@@ -646,7 +649,8 @@ so it can differ by a point from the difference the two shares show.
 with an en dash held to its numbers by word joiners so a line never
 breaks inside it. Never "won 6 of 9": that form hides the losses
 behind a subtraction. A share of a corpus is not a record and stays
-"N of M lists".
+"N of M lists". The match report's headline and Home's last-match
+title follow the same order: "Lost 1–2 to X", the viewer's games first.
 
 **A draw is never a loss.** A record counts wins and losses; a draw is
 neither, and neither is a match still in progress. Where a caller has
@@ -659,21 +663,26 @@ and `games_lost` instead.
 **Ten finished matches before a rate, five before a rough one.** A
 personal record has two thresholds, `RATE_MIN_MATCHES` (10) and
 `ROUGH_RATE_MIN` (5), over matches, or over games for a games figure.
-From ten up, a tile's figure is the rate and its line is the record.
+From ten up, a tile's figure is the rate and its line is the record
+(a deck's tile on Decks and Home says "win rate · 35–25").
 From five to nine, the figure is the rate drawn muted, and its line is
-the record and "rough": a reader sees which way a matchup leans without
+the record and "rough" ("rough win rate · 6–3, under 10 matches" on a
+deck's tile): a reader sees which way a matchup leans without
 reading it as a measurement. Under five, the figure is the record, drawn
 muted, and its line says it is too few for a rate. A table's Rate cell
 is the rate from ten, the rate muted from five to nine, and "too few",
 muted, under five, on one line (`whitespace-nowrap`), beside the record
-its own column already has. A row is never left out for being small,
-since a missing row reads as a matchup never played; an em dash means
-nothing at all, never "too few". `rateOrRecord` (a tile) and `rateCell`
-(a cell, drawn by `components/RateCell.tsx`) in `lib/sample.ts` make the
-choice, so no component branches on the count. The rough rate needs a
+its own column already has. A row is never dropped for being small,
+since a missing row reads as a matchup never played; a long table may fold
+its small rows behind a "Show all N" that counts every row (Matchups,
+`foldMatchups`), which holds a row back without hiding that it exists;
+an em dash means nothing at all, never "too few". `rateOrRecord` (a
+tile) and `rateCell` (a cell, drawn by `components/RateCell.tsx`) in
+`lib/sample.ts` make the choice, so no component branches on the count. The rough rate needs a
 muted figure, so it is only where one can be drawn: where only one line
 is free (a version's row, a field row's caption, the keep-cost sentence)
-the line is "58% · 35–25" from ten up and the record alone under it, a
+the line is "58% · 35–25" from ten up and the record alone under it (a
+version's row on a deck's page says "58% win rate · 35–25"), a
 sentence (the session line, the play/draw line) keeps ten alone, and so
 does a ranking (Matchups' best and worst). A chart keeps its hollow dot
 for a point under ten, since a chart cannot draw a record. The Coach
@@ -722,6 +731,23 @@ reads every other one without looking.
   density scales.
 - **A pip labels a row; it never becomes a chart mark's colour** (the
   boundary rule above).
+- **A word the page cannot explain in place wears a `Tooltip`**
+  (`components/ui/Tooltip.tsx`), never a sentence in a `title`, which a
+  keyboard cannot open. The word becomes a focusable
+  trigger, marked by a dotted underline in `muted` and the help cursor:
+  dotted, so it never reads as a link's solid one. A muted lucide `Info`
+  icon after it (`aria-hidden`, caption size) is the visible cue that it
+  explains itself. A trigger at the right of its container (a right-aligned
+  table header) takes `align="end"`, so the tip opens leftward and stays
+  inside the container. The tip is one plain
+  sentence in the chart tooltip's look (`surface-3`, `edge-strong`,
+  `rounded-control`, the lift), under the word. It opens on hover and on
+  keyboard focus, stays open while the pointer moves onto it, closes on
+  Escape until the next hover or focus, and is tied to its word by
+  `aria-describedby`, so a screen reader reads it closed or open. The
+  trigger holds text only: a control inside it would be a second stop
+  for the keyboard. The match report's beat labels are the first user
+  (`docs/frontend-pages.md`, "The match report").
 - **A whole card image is shown whole, and art follows "Card art" above.**
   A `CardArt` box always has a height, and nothing depends on the picture
   arriving.

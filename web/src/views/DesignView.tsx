@@ -16,7 +16,7 @@ import {
   Line,
   LineChart,
   ResponsiveContainer,
-  Tooltip,
+  Tooltip as ChartHover,
   XAxis,
   YAxis,
 } from 'recharts'
@@ -54,6 +54,7 @@ import {
   Switch,
   TextBlock,
   TextLink,
+  Tooltip,
   TwoSidedMeter,
   Wordmark,
   severityChip,
@@ -127,6 +128,7 @@ function Reference({ art }: { art: ArtCard[] }) {
       <Callouts />
       <TextBlocks />
       <Disclosures />
+      <Tooltips />
       <SegmentedControls />
       <Fields />
       <Selects />
@@ -504,8 +506,9 @@ const DECK_TILES = [
     line: 'won 14 of 23',
     detail: `Standard, best of three · 4${NBSP}versions`,
     lastPlayed: 'last played Sep 12',
+    chip: 'Newest',
   },
-  { name: 'Ember Choir', figure: '4 of 7', line: 'matches won', detail: 'Standard', lastPlayed: 'last played Sep 9' },
+  { name: 'Ember Choir', figure: '4 of 7', line: 'matches won', detail: 'Standard', lastPlayed: 'played Sep 3 to 9' },
   { name: null, figure: null, line: 'no finished match yet', detail: null, lastPlayed: 'last played Aug 30' },
 ]
 
@@ -525,6 +528,7 @@ function DeckTiles({ art }: { art: ArtCard[] }) {
               line={tile.line}
               detail={tile.detail}
               lastPlayed={tile.lastPlayed}
+              chip={tile.chip}
               art={art.length ? art[index % art.length] : null}
             />
           </li>
@@ -646,6 +650,34 @@ function Disclosures() {
           <Disclosure summary="Open from the start" defaultOpen>
             <p className="text-body text-ink2">Its content shows until the summary is pressed.</p>
           </Disclosure>
+        </div>
+      </Card>
+    </Section>
+  )
+}
+
+function Tooltips() {
+  return (
+    <Section id="tooltip" title="Tooltip">
+      <Card>
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Tooltip tip="Cards still in your hand on the last turn of a game you lost.">
+              <SectionLabel as="span">Stranded</SectionLabel>
+            </Tooltip>
+            <Chip size="sm" {...severityChip('flag')}>
+              Flag
+            </Chip>
+          </div>
+          <div className="flex justify-end">
+            <Tooltip align="end" tip="A trigger at the right of its container: the tip opens leftward.">
+              <SectionLabel as="span">Right-aligned</SectionLabel>
+            </Tooltip>
+          </div>
+          <p className="text-body text-ink2">
+            Hover the label, or reach it with Tab: the tip opens, and Escape closes it. A trigger at the right of
+            its container takes <code>align="end"</code>.
+          </p>
         </div>
       </Card>
     </Section>
@@ -1034,7 +1066,7 @@ function LineChartSection() {
             <CartesianGrid {...gridProps(t)} />
             <XAxis dataKey="turn" {...axisProps(t)} />
             <YAxis width={32} domain={[0, 'auto']} allowDecimals={false} {...axisProps(t)} />
-            <Tooltip
+            <ChartHover
               content={({ active, payload, label }) => (
                 <ChartTooltip active={active} payload={payload} label={label} labelPrefix="Turn " />
               )}
@@ -1086,7 +1118,7 @@ function BarChartSection() {
             <CartesianGrid {...gridProps(t)} horizontal={false} vertical />
             <XAxis type="number" domain={[0, 100]} unit="%" {...axisProps(t)} />
             <YAxis type="category" dataKey="deck" width={104} {...axisProps(t)} />
-            <Tooltip
+            <ChartHover
               cursor={{ fill: t.grid, fillOpacity: 0.3 }}
               content={({ active, payload, label }) => (
                 <ChartTooltip active={active} payload={payload} label={label} format={format} />

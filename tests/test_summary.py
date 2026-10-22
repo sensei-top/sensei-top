@@ -68,11 +68,13 @@ def _race_finding(game_number: int, code: str, self_dealt: int, opp_dealt: int, 
     return Finding(**base)
 
 
-def _turning_point(game_number: int, turn_number: int, drop: float, **overrides):
+def _turning_point(game_number: int, turn_number: int, drop: float,
+                   self_turn_index: int | None = None, **overrides):
     base = dict(
         code="turning_point", analyzer="trajectory", category=Category.TRAJECTORY,
         severity=Severity.DECISIVE if drop >= 0.30 else Severity.NOTICE,
         confidence=Confidence.PARTIAL, game_number=game_number, turn_number=turn_number,
+        self_turn_index=(turn_number + 1) // 2 if self_turn_index is None else self_turn_index,
         title="irrelevant", detail="irrelevant",
         evidence=(Evidence("drop", "Size of the swing", drop),),
     )
@@ -90,7 +92,22 @@ def test_headline_states_the_score_and_opponent():
         opponent_label="Boros Dragons",
     )
     summary = build_summary(report)
-    assert summary.headline == "Lost 2-1 to Boros Dragons"
+    assert summary.headline == "Lost 1\u20132 to Boros Dragons"
+
+
+def test_headline_win_and_draw_put_the_viewers_games_first():
+    won = MatchReport(
+        match_id="m", deck_id=None, result="win",
+        games=(_game(1, result="win"), _game(2, result="loss"), _game(3, result="win")),
+        opponent_label="Boros Dragons",
+    )
+    assert build_summary(won).headline == "Won 2\u20131 vs Boros Dragons"
+    drawn = MatchReport(
+        match_id="m", deck_id=None, result="draw",
+        games=(_game(1, result="win"), _game(2, result="loss")),
+        opponent_label="Boros Dragons",
+    )
+    assert build_summary(drawn).headline == "Drew 1\u20131 with Boros Dragons"
 
 
 def test_headline_names_an_unidentified_opponent_when_no_label_exists():
@@ -129,6 +146,74 @@ def test_race_mismatch_subhead_fires_only_when_the_race_was_led_every_game_and_s
     assert "lost 2 games" in subhead
 
 
+def _stranded(game_number: int, cards: int, **overrides):
+    base = dict(
+        code="cards_stranded_in_a_loss", analyzer="resources", category=Category.RESOURCES,
+        severity=Severity.NOTICE, confidence=Confidence.PARTIAL, game_number=game_number,
+        turn_number=9, title="irrelevant", detail="irrelevant",
+        evidence=(Evidence("stranded_cards", "Cards in hand", cards),),
+    )
+    base.update(overrides)
+    return Finding(**base)
+
+
+def test_race_mismatch_subhead_names_each_lost_games_top_non_race_beat():
+    """After the race sentence, one sentence per lost game in game order:
+    its top non-race beat's own label and text, or no single cause. The
+    won game gets no sentence."""
+    games = (_game(1, result="win"), _game(2, result="loss"), _game(3, result="loss"))
+    findings = (
+        _race_finding(1, "race_ahead", 14, 3),
+        _race_finding(3, "race_ahead", 18, 8, severity=Severity.DECISIVE),
+        _race_finding(2, "race_ahead", 19, 11, severity=Severity.DECISIVE),
+        _stranded(1, 2),
+        _stranded(2, 4),
+    )
+    report = MatchReport(match_id="m", deck_id=None, result="loss", games=games,
+                          findings=findings, opponent_label="Opp")
+    assert build_summary(report).subhead == (
+        "You led the damage race in all 3 games and still lost 2 games. "
+        "Game 2, Stranded: 4 cards left in hand. "
+        "Game 3: no single cause stood out."
+    )
+
+
+def test_race_mismatch_subhead_takes_the_most_severe_non_race_beat():
+    games = (_game(1, result="loss"),)
+    findings = (
+        _race_finding(1, "race_ahead", 19, 11),
+        _stranded(1, 4, severity=Severity.NOTE),
+        _turning_point(1, 7, 0.10, severity=Severity.FLAG),
+    )
+    report = MatchReport(match_id="m", deck_id=None, result="loss", games=games,
+                          findings=findings, opponent_label="Opp")
+    subhead = build_summary(report).subhead
+    assert subhead is not None
+    assert subhead.startswith("You led the damage race in all 1 games and still lost 1 game. "
+                              "Game 1, Turned: your turn 4 \u00b7 ")
+    assert subhead.endswith(".")
+
+
+def test_never_behind_is_not_a_lost_games_cause():
+    """never_behind says the position never swung against you, which names
+    nothing that decided the loss."""
+    games = (_game(1, result="loss"),)
+    findings = (
+        _race_finding(1, "race_ahead", 19, 11),
+        Finding(
+            code="never_behind", analyzer="trajectory", category=Category.TRAJECTORY,
+            severity=Severity.DECISIVE, confidence=Confidence.PARTIAL, game_number=1,
+            title="Never behind", detail="irrelevant",
+        ),
+    )
+    report = MatchReport(match_id="m", deck_id=None, result="loss", games=games,
+                          findings=findings, opponent_label="Opp")
+    assert build_summary(report).subhead == (
+        "You led the damage race in all 1 games and still lost 1 game. "
+        "Game 1: no single cause stood out."
+    )
+
+
 def test_race_mismatch_subhead_does_not_fire_when_the_race_was_not_led_every_game():
     games = (_game(1, result="win"), _game(2, result="loss"))
     findings = (_race_finding(1, "race_ahead", 14, 3),)  # game 2 never led the race
@@ -142,7 +227,7 @@ def test_subhead_falls_back_to_a_lone_decisive_findings_own_title():
     own already-audited title is promoted verbatim — nothing new is
     invented for the sentence."""
     games = (_game(1, result="loss"),)
-    decisive = _turning_point(1, 21, 0.49, title="The game turned on your turn 21")
+    decisive = _turning_point(1, 21, 0.49, title="The game turned on your turn 11")
     other = Finding(
         code="mulligan_taken", analyzer="frame", category=Category.FRAME,
         severity=Severity.NOTE, confidence=Confidence.OBSERVED, game_number=1,
@@ -150,7 +235,7 @@ def test_subhead_falls_back_to_a_lone_decisive_findings_own_title():
     )
     report = MatchReport(match_id="m", deck_id=None, result="loss", games=games,
                           findings=(decisive, other), opponent_label="Opp")
-    assert build_summary(report).subhead == "The game turned on your turn 21"
+    assert build_summary(report).subhead == "The game turned on your turn 11"
 
 
 # --- per-game beats -------------------------------------------------------------
@@ -203,10 +288,161 @@ def test_game_line_carries_the_bookkeeping_the_old_report_cards_duplicated():
     report = MatchReport(match_id="m", deck_id=None, result="loss", games=(game,),
                           opponent_label="Opp")
     line = build_summary(report).games[0]
-    assert line.result_reason_text == "conceded"
+    assert line.result_reason_text == "you conceded"  # a loss: the viewer conceded
     assert line.turn_count == 14
     assert line.on_play is False
     assert line.self_mulligans == 1
+
+
+# One sentence per game-beat label; two codes sharing a label share it.
+_DEFINITIONS = {
+    "Race": "Damage each player dealt to the other this game, yours first. Combat between "
+            "creatures doesn't count.",
+    "Turned": "The turn your position (life, cards and board together) fell furthest in one "
+              "step, and how big that swing was. If it never fell, this line says so.",
+    "Stranded": "Cards still in your hand on the last turn of a game you lost.",
+    "Role": "Whether you played the role the matchup gave you: as the beatdown, attacking "
+            "while ahead on board; as control, getting ahead on cards.",
+    "Risk": "Your board reached four or more permanents while a sweeper the opponent's deck "
+            "usually plays was still unseen.",
+}
+
+
+@pytest.mark.parametrize(("reason", "result", "expected"), [
+    ("ResultReason_Concede", "loss", "you conceded"),
+    ("ResultReason_Concede", "win", "your opponent conceded"),
+    ("ResultReason_Concede", None, "conceded"),
+    ("ResultReason_Concede", "draw", "conceded"),
+    ("ResultReason_Timeout", "loss", "you ran out of time"),
+    ("ResultReason_Timeout", "win", "your opponent ran out of time"),
+    ("ResultReason_Timeout", None, "ended on the clock"),
+    ("ResultReason_Timeout", "draw", "ended on the clock"),
+    (None, "loss", None),
+    ("ResultReason_Game", "loss", None),
+])
+def test_reason_text_names_who_from_the_games_result(reason, result, expected):
+    """In a 1v1 game whoever conceded or ran out of time lost; with the
+    result unknown or a draw the subjectless words stay."""
+    game = _game(1, result=result, result_reason=reason)
+    report = MatchReport(match_id="m", deck_id=None, result=None, games=(game,),
+                          opponent_label="Opp")
+    assert build_summary(report).games[0].result_reason_text == expected
+
+
+def test_codes_sharing_a_label_share_its_definition_and_matchup_beats_have_none():
+    games = (_game(1, result="loss"), _game(2, result="win"))
+    findings = (
+        _race_finding(1, "race_behind", 3, 14),
+        _race_finding(2, "race_ahead", 14, 3),
+        _turning_point(1, 5, 0.10),
+        Finding(
+            code="never_behind", analyzer="trajectory", category=Category.TRAJECTORY,
+            severity=Severity.NOTE, confidence=Confidence.PARTIAL, game_number=2,
+            title="Never behind", detail="irrelevant",
+        ),
+        Finding(
+            code="role_assignment", analyzer="frame", category=Category.FRAME,
+            severity=Severity.NOTICE, confidence=Confidence.PARTIAL, game_number=None,
+            title="This matchup casts you as the beatdown", detail="irrelevant",
+        ),
+    )
+    report = MatchReport(match_id="m", deck_id=None, result="draw", games=games,
+                          findings=findings, opponent_label="Opp")
+    summary = build_summary(report)
+    by_code = {b.code: b for g in summary.games for b in g.beats}
+    assert by_code["race_behind"].definition == by_code["race_ahead"].definition \
+        == _DEFINITIONS["Race"]
+    assert by_code["turning_point"].definition == by_code["never_behind"].definition \
+        == _DEFINITIONS["Turned"]
+    assert by_code["turning_point"].turn_number == 5
+    assert by_code["never_behind"].turn_number is None
+    assert summary.matchup[0].definition is None
+
+
+def test_a_match_level_role_finding_is_labelled_role_without_the_game_beats_definition():
+    """A match-level finding with no curated label falls back to its
+    category's name, which for ROLE is the same word as the game beat's
+    label; the game beat's sentence does not describe it, so it has none."""
+    uncurated = Finding(
+        code="some_match_level_role_read", analyzer="role_play", category=Category.ROLE,
+        severity=Severity.NOTE, confidence=Confidence.PARTIAL, game_number=None,
+        title="irrelevant", detail="irrelevant",
+    )
+    report = MatchReport(match_id="m", deck_id=None, result="win", games=(_game(1),),
+                          findings=(uncurated,), opponent_label="Opp")
+    (beat,) = build_summary(report).matchup
+    assert beat.label == "Role"
+    assert beat.definition is None
+
+
+# (game, Arena's shared turn) -> which of our own turns that is. We are seat 2
+# (``systemSeatIds``); at shared turn 3 of games 1 and 2 ``turnInfo.activePlayer``
+# is 2 and ``players[seat 2].turnNumber`` is 2 (fixture entries 9 and 14).
+_OUR_TURN = {(1, 3): 2, (2, 3): 2}
+
+
+def test_turned_beat_counts_your_turns_not_the_shared_turn(db):
+    """The Turned beat says "your turn N", not Arena's shared turn number.
+    The expectations are read from the fixture's own turnInfo and player
+    turn counters (entries 9 and 14). MATCH_WIN is left out: its game 2's
+    fixture cut turns 4-23, so Arena's own counter reads 12 where our turn
+    index reads 2."""
+    report = build_match_report(db, MATCH_LOSS)
+    checked = 0
+    for line in build_summary(report).games:
+        for beat in line.beats:
+            if beat.code != "turning_point":
+                continue
+            n = _OUR_TURN[(beat.game_number, beat.turn_number)]
+            assert beat.text.startswith(f"your turn {n} \u00b7 ")
+            assert n != beat.turn_number
+            checked += 1
+    assert checked
+
+
+def test_turned_beat_without_an_own_turn_index_is_the_magnitude_alone():
+    games = (_game(1, result="loss"),)
+    finding = dataclasses.replace(_turning_point(1, 7, 0.10), self_turn_index=None)
+    report = MatchReport(match_id="m", deck_id=None, result="loss", games=games,
+                          findings=(finding,), opponent_label="Opp")
+    (beat,) = build_summary(report).games[0].beats
+    assert beat.magnitude
+    assert beat.text == beat.magnitude
+
+
+def test_fixture_beats_carry_their_findings_turn_and_their_labels_definition(db):
+    """Each game beat's turn is its source finding's own, ``None`` where the
+    finding has none, and its definition is its label's sentence. Each game
+    line's reason names who from that game's own result."""
+    reasons = {
+        ("ResultReason_Concede", "loss"): "you conceded",
+        ("ResultReason_Concede", "win"): "your opponent conceded",
+        ("ResultReason_Timeout", "loss"): "you ran out of time",
+        ("ResultReason_Timeout", "win"): "your opponent ran out of time",
+    }
+    seen_turns: set[bool] = set()
+    seen_reasons: set[tuple[str, str]] = set()
+    for match_id in (MATCH_LOSS, MATCH_WIN):
+        report = build_match_report(db, match_id)
+        summary = build_summary(report)
+        facts = {g.game_number: g for g in report.games}
+        for line in summary.games:
+            game = facts[line.game_number]
+            key = (game.result_reason, game.result)
+            assert line.result_reason_text == reasons[key]
+            seen_reasons.add(key)
+            for beat in line.beats:
+                (source,) = [f for f in report.findings
+                             if f.code == beat.code and f.game_number == beat.game_number]
+                assert beat.turn_number == source.turn_number
+                assert beat.definition == _DEFINITIONS[beat.label]
+                seen_turns.add(beat.turn_number is None)
+    # The fixture exercises a beat with a turn and one without, and a
+    # concession on each side plus a timeout.
+    assert seen_turns == {True, False}
+    assert ("ResultReason_Concede", "loss") in seen_reasons
+    assert ("ResultReason_Concede", "win") in seen_reasons
+    assert any(reason == "ResultReason_Timeout" for reason, _ in seen_reasons)
 
 
 # --- matchup beats ---------------------------------------------------------------

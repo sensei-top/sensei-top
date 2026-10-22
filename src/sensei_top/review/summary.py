@@ -37,6 +37,27 @@ _GAME_BEAT_LABELS: dict[str, str] = {
     "over_committed_into_sweeper": N_("Risk"),
 }
 
+# One plain sentence per game-beat label, keyed by the label's msgid, not by
+# code: two codes sharing a label share its definition. A label with no entry
+# gives its beat ``definition=None``.
+_GAME_BEAT_DEFINITIONS: dict[str, str] = {
+    "Race": N_("Damage each player dealt to the other this game, yours first. Combat "
+               "between creatures doesn't count."),
+    "Turned": N_("The turn your position (life, cards and board together) fell furthest in "
+                 "one step, and how big that swing was. If it never fell, this line says so."),
+    "Stranded": N_("Cards still in your hand on the last turn of a game you lost."),
+    "Role": N_("Whether you played the role the matchup gave you: as the beatdown, attacking "
+               "while ahead on board; as control, getting ahead on cards."),
+    "Risk": N_("Your board reached four or more permanents while a sweeper the opponent's "
+               "deck usually plays was still unseen."),
+}
+
+_RACE_CODES = frozenset({"race_ahead", "race_behind", "race_even"})
+
+# Beats that never name what decided a lost game: the race (the subhead's own
+# premise) and never_behind (the position never swung against you).
+_NOT_A_CAUSE = _RACE_CODES | {"never_behind"}
+
 # Match-level (game_number is None) codes worth a curated left-column label;
 # anything else in that bucket falls back to its own category name.
 _MATCHUP_LABELS: dict[str, str] = {
@@ -47,9 +68,15 @@ _MATCHUP_LABELS: dict[str, str] = {
     "play_draw_split": N_("Play/draw"),
 }
 
-_RESULT_REASON_WORDS: dict[str, str] = {
-    "ResultReason_Concede": N_("conceded"),
-    "ResultReason_Timeout": N_("ended on the clock"),
+# Keyed by (reason, result): in a 1v1 game whoever conceded or ran out of
+# time lost. A result outside "loss"/"win" keeps the subjectless words.
+_RESULT_REASON_WORDS: dict[tuple[str, str | None], str] = {
+    ("ResultReason_Concede", "loss"): N_("you conceded"),
+    ("ResultReason_Concede", "win"): N_("your opponent conceded"),
+    ("ResultReason_Concede", None): N_("conceded"),
+    ("ResultReason_Timeout", "loss"): N_("you ran out of time"),
+    ("ResultReason_Timeout", "win"): N_("your opponent ran out of time"),
+    ("ResultReason_Timeout", None): N_("ended on the clock"),
 }
 
 # A stable slug (Gap.cause) shared by gaps whose real root cause is the same
@@ -84,6 +111,13 @@ def _game_beat_label(code: str) -> str:
     return _(_GAME_BEAT_LABELS[code])
 
 
+def _game_beat_definition(code: str) -> str | None:
+    label = _GAME_BEAT_LABELS[code]
+    if label not in _GAME_BEAT_DEFINITIONS:
+        return None
+    return _(_GAME_BEAT_DEFINITIONS[label])
+
+
 def _matchup_label(f: Finding) -> str:
     if f.code in _MATCHUP_LABELS:
         return _(_MATCHUP_LABELS[f.code])
@@ -106,6 +140,8 @@ class Beat:
     severity: Severity
     game_number: int | None
     meter: tuple[float, float] | None = None  # (self, opp) for a two-sided proportional bar
+    turn_number: int | None = None  # the source finding's own, player-turn
+    definition: str | None = None  # the label's one sentence; None when it has none
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,10 +170,13 @@ class MatchSummary:
     gap_groups: tuple[GapGroup, ...]
 
 
-def _reason_text(reason: str | None) -> str | None:
-    if not reason or reason not in _RESULT_REASON_WORDS:
+def _reason_text(reason: str | None, result: str | None) -> str | None:
+    if not reason:
         return None
-    return _(_RESULT_REASON_WORDS[reason])
+    key = (reason, result if result in ("loss", "win") else None)
+    if key not in _RESULT_REASON_WORDS:
+        return None
+    return _(_RESULT_REASON_WORDS[key])
 
 
 def _evidence(f: Finding, key: str) -> int | float | str | bool | None:
@@ -152,6 +191,7 @@ def _matchup_beat(f: Finding) -> Beat:
         magnitude=None,
         severity=f.severity,
         game_number=None,
+        turn_number=f.turn_number,
     )
 
 
@@ -161,7 +201,7 @@ def _game_beat(f: Finding) -> Beat:
     magnitude: str | None = None
     text = f.title
 
-    if f.code in ("race_ahead", "race_behind", "race_even"):
+    if f.code in _RACE_CODES:
         self_dealt = _evidence(f, "self_damage_dealt")
         opp_dealt = _evidence(f, "opp_damage_dealt")
         if isinstance(self_dealt, int | float) and isinstance(opp_dealt, int | float):
@@ -172,8 +212,9 @@ def _game_beat(f: Finding) -> Beat:
         drop = _evidence(f, "drop")
         if isinstance(drop, int | float):
             magnitude = swing_words(drop)
-            text = (_("turn {turn} · {magnitude}").format(turn=f.turn_number, magnitude=magnitude)
-                    if f.turn_number else magnitude)
+            text = (_("your turn {turn} · {magnitude}").format(
+                        turn=f.self_turn_index, magnitude=magnitude)
+                    if f.self_turn_index else magnitude)
     elif f.code == "cards_stranded_in_a_loss":
         stranded = _evidence(f, "stranded_cards")
         if stranded is not None:
@@ -193,19 +234,24 @@ def _game_beat(f: Finding) -> Beat:
     return Beat(
         code=f.code, label=label, text=text, magnitude=magnitude,
         severity=f.severity, game_number=f.game_number, meter=meter,
+        turn_number=f.turn_number, definition=_game_beat_definition(f.code),
+    )
+
+
+def _beat_candidates(findings: list[Finding]) -> list[Finding]:
+    return sorted(
+        (f for f in findings if f.code in _GAME_BEAT_LABELS),
+        key=lambda f: _SEVERITY_RANK.get(f.severity, 9),
     )
 
 
 def _game_line(game: GameFacts, findings: list[Finding]) -> GameLine:
-    candidates = sorted(
-        (f for f in findings if f.code in _GAME_BEAT_LABELS),
-        key=lambda f: _SEVERITY_RANK.get(f.severity, 9),
-    )
+    candidates = _beat_candidates(findings)
     beats = tuple(_game_beat(f) for f in candidates[:_MAX_BEATS_PER_GAME])
     return GameLine(
         game_number=game.game_number,
         result=game.result,
-        result_reason_text=_reason_text(game.result_reason),
+        result_reason_text=_reason_text(game.result_reason, game.result),
         turn_count=game.turn_count,
         on_play=game.on_play,
         self_mulligans=game.self_mulligans,
@@ -218,20 +264,31 @@ def _headline(report: MatchReport) -> str:
     wins = sum(1 for g in report.games if g.result == "win")
     losses = sum(1 for g in report.games if g.result == "loss")
     if report.result == "win":
-        return _("Won {wins}-{losses} vs {opponent}").format(
+        return _("Won {wins}\u2013{losses} vs {opponent}").format(
             wins=wins, losses=losses, opponent=opponent)
     if report.result == "loss":
-        return _("Lost {losses}-{wins} to {opponent}").format(
-            losses=losses, wins=wins, opponent=opponent)
+        return _("Lost {wins}\u2013{losses} to {opponent}").format(
+            wins=wins, losses=losses, opponent=opponent)
     if report.result == "draw":
-        return _("Drew {wins}-{losses} with {opponent}").format(
+        return _("Drew {wins}\u2013{losses} with {opponent}").format(
             wins=wins, losses=losses, opponent=opponent)
     return _("Match vs {opponent} is not yet complete").format(opponent=opponent)
 
 
-def _race_mismatch_subhead(report: MatchReport) -> str | None:
+def _lost_game_cause(game_number: int, findings: list[Finding]) -> str:
+    top = next((f for f in _beat_candidates(findings) if f.code not in _NOT_A_CAUSE), None)
+    if top is None:
+        return _("Game {n}: no single cause stood out.").format(n=game_number)
+    beat = _game_beat(top)
+    return _("Game {n}, {label}: {text}.").format(n=game_number, label=beat.label,
+                                                  text=beat.text)
+
+
+def _race_mismatch_subhead(report: MatchReport,
+                           findings_by_game: dict[int, list[Finding]]) -> str | None:
     """You led the race in every game and still lost some. Every number
-    here is a count of ``report.games``/``.findings``."""
+    here is a count of ``report.games``/``.findings``, a lost game's number,
+    or a number the beat it names already carries."""
     total = len(report.games)
     if total == 0:
         return None
@@ -240,15 +297,17 @@ def _race_mismatch_subhead(report: MatchReport) -> str | None:
     if not lost_games or len(race_ahead_games) != total or not (race_ahead_games & lost_games):
         return None
     n_lost = len(lost_games)
-    return ngettext(
+    opening = ngettext(
         "You led the damage race in all {total} games and still lost {n} game.",
         "You led the damage race in all {total} games and still lost {n} games.",
         n_lost,
     ).format(total=total, n=n_lost)
+    causes = [_lost_game_cause(n, findings_by_game.get(n, [])) for n in sorted(lost_games)]
+    return " ".join([opening, *causes])
 
 
-def _subhead(report: MatchReport) -> str | None:
-    mismatch = _race_mismatch_subhead(report)
+def _subhead(report: MatchReport, findings_by_game: dict[int, list[Finding]]) -> str | None:
+    mismatch = _race_mismatch_subhead(report, findings_by_game)
     if mismatch is not None:
         return mismatch
     # A single decisive finding reused verbatim — its own title is already
@@ -289,7 +348,7 @@ def build_summary(report: MatchReport) -> MatchSummary:
 
     return MatchSummary(
         headline=_headline(report),
-        subhead=_subhead(report),
+        subhead=_subhead(report, findings_by_game),
         matchup=tuple(_matchup_beat(f) for f in matchup_findings),
         games=tuple(
             _game_line(game, findings_by_game.get(game.game_number, []))

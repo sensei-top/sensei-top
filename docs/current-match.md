@@ -615,7 +615,7 @@ the plan card takes the full width. The plan card's title is the result and
 its reason alone ("Lost game 1 (concede)"), since the strip already says
 which game is next and against what. Under the title, one line gives this
 deck's own games 2 and 3 against the opponent's deck, from
-`intermission.postboard_record`: "Your games 2–3 against it: 58% · 35–25"
+`intermission.postboard_record`: "Your post-board games against it: 58% · 35–25"
 from ten games won or lost, the record alone under ten, and no line when
 the record is null or every earlier game 2 or 3 was a draw. In
 `CurrentMatchView.tsx`, the break phase takes precedence over every other

@@ -64,9 +64,9 @@ describe('matchesWord', () => {
 
 describe('resultWords', () => {
   it('joins the result and the score, whichever are known', () => {
-    expect(resultWords({ result: 'win', games_won: 2, games_lost: 1 }, t)).toBe('Win 2–1')
+    expect(resultWords({ result: 'win', games_won: 2, games_lost: 1 }, t)).toBe('Win 2\u2060–\u20601')
     expect(resultWords({ result: 'loss', games_won: 0, games_lost: 0 }, t)).toBe('Loss')
-    expect(resultWords({ result: null, games_won: 1, games_lost: 2 }, t)).toBe('1–2')
+    expect(resultWords({ result: null, games_won: 1, games_lost: 2 }, t)).toBe('1\u2060–\u20602')
     expect(resultWords({ result: 'draw' }, t)).toBe('Draw')
     expect(resultWords({}, t)).toBe('')
   })

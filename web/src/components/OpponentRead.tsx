@@ -63,7 +63,7 @@ export function PickDeckButton({ match }: { match: CurrentMatch }) {
 
   return (
     <>
-      <Button ref={buttonRef} size="sm" onClick={() => setOpen(true)}>
+      <Button ref={buttonRef} size="sm" variant="quiet" onClick={() => setOpen(true)}>
         {t('live.opponent.pick')}
       </Button>
       {save.error && <span className="text-caption text-s2">{save.error.message}</span>}

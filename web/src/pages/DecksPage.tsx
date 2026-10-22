@@ -31,8 +31,8 @@ export function DecksPage() {
   const minute = Math.floor(now / MINUTE) * MINUTE
 
   const tiles = useMemo(
-    () => (identities.data ? decksTiles(identities.data, matches.data ?? [], t) : []),
-    [identities.data, matches.data, t],
+    () => (identities.data ? decksTiles(identities.data, matches.data ?? [], t, minute) : []),
+    [identities.data, matches.data, t, minute],
   )
   const artIds = [...new Set(tiles.map((tile) => tile.artMatchId).filter((id): id is string => id != null))]
   const artQueries = useMatchArt(artIds)
@@ -66,7 +66,11 @@ export function DecksPage() {
               muted={thin}
               line={line}
               detail={tile.detail}
-              lastPlayed={tile.lastPlayed != null ? t('decks.tile.lastPlayed', { day: formatShortDay(tile.lastPlayed, minute) }) : null}
+              chip={tile.newest ? t('decks.overview.newest') : null}
+              lastPlayed={
+                tile.playedRange ??
+                (tile.lastPlayed != null ? t('decks.tile.lastPlayed', { day: formatShortDay(tile.lastPlayed, minute) }) : null)
+              }
               art={takeUnused(castCards(detail, 'self'), used)}
             />
           </li>
