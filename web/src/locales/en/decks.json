@@ -22,7 +22,16 @@
     "empty": {
       "title": "No decks yet",
       "message": "A deck appears here the first time you play a match with it, with its record, its matchups and its guide."
-    }
+    },
+    "formatLabel": "Format",
+    "allFormats": "All formats",
+    "sortLabel": "Sort by",
+    "sort": {
+      "lastPlayed": "Last played",
+      "winRate": "Win rate",
+      "matches": "Matches"
+    },
+    "noneInFormat": "No decks in this format."
   },
   "matches": {
     "title": "Matches",

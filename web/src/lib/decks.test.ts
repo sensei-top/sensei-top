@@ -3,16 +3,20 @@ import { translator } from '../i18n'
 import type { Deck, DeckIdentityOut, Match } from '../api'
 import {
   archetypeName,
+  chosenSort,
   deckAddress,
   deckLine,
   deckRecord,
   deckRedirect,
   decksTiles,
   fieldNameLine,
+  filterTiles,
   formatName,
   newestVersion,
   resolveDeck,
+  sortTiles,
   tileDetail,
+  tileFormats,
 } from './decks'
 
 const t = translator('en')
@@ -348,5 +352,102 @@ describe('decksTiles', () => {
 
   it('leaves a deck with no finished match in the list without art, name or line', () => {
     expect(tiles[1]).toMatchObject({ name: null, finished: 0, lastPlayed: null, detail: null, artMatchId: null })
+  })
+})
+
+describe('sorting and filtering the tiles', () => {
+  const NOW_LOCAL = new Date(2026, 8, 29, 12, 0, 0).getTime()
+  const played = (day: number) => `2026-09-${String(day).padStart(2, '0')}T20:00:00`
+  // Invented decks: wins/losses decide `finished` (ten or more is a rate).
+  const tiles = decksTiles(
+    [
+      identity('a', ['va'], { format: 'Standard', match_wins: 6, match_losses: 4, last_played: played(10) }),
+      identity('b', ['vb'], { format: 'TraditionalStandard', match_wins: 9, match_losses: 1, last_played: played(5) }),
+      identity('c', ['vc'], { format: 'Standard', match_wins: 3, match_losses: 0, last_played: played(20) }),
+      identity('d', ['vd'], { format: 'Pioneer', match_wins: 8, match_losses: 12, last_played: played(15) }),
+      identity('e', ['ve'], { format: null, match_wins: 1, match_losses: 3, last_played: played(25) }),
+      identity('f', ['vf'], { format: 'Pioneer', match_wins: 0, match_losses: 0, last_played: null }),
+    ],
+    [],
+    t,
+    NOW_LOCAL,
+  )
+  const keys = (list: { key: string }[]) => list.map((tile) => tile.key)
+
+  it('sorts by last played, undated last', () => {
+    expect(keys(sortTiles(tiles, 'lastPlayed'))).toEqual(['e', 'c', 'd', 'a', 'b', 'f'])
+  })
+
+  it('puts the tiles with a rate first by rate, then every other tile by last played', () => {
+    // Rates: b 90%, a 60%, d 40%; the rest: e (25th), c (20th), f (undated).
+    expect(keys(sortTiles(tiles, 'winRate'))).toEqual(['b', 'a', 'd', 'e', 'c', 'f'])
+  })
+
+  it('sorts by finished matches, ties by last played', () => {
+    // Finished: d 20, a 10, b 10, e 4, c 3, f 0.
+    expect(keys(sortTiles(tiles, 'matches'))).toEqual(['d', 'a', 'b', 'e', 'c', 'f'])
+  })
+
+  it('breaks a tie on Matches by last played, the earlier-played tile listed first', () => {
+    const tied = decksTiles(
+      [
+        identity('old', ['v1'], { match_wins: 3, match_losses: 2, last_played: played(3) }),
+        identity('new', ['v2'], { match_wins: 1, match_losses: 4, last_played: played(9) }),
+      ],
+      [],
+      t,
+      NOW_LOCAL,
+    )
+    expect(keys(sortTiles(tied, 'matches'))).toEqual(['new', 'old'])
+  })
+
+  it('keeps a tile of five to nine matches among the unrated, whatever its rate', () => {
+    const rough = decksTiles(
+      [
+        identity('rough', ['v1'], { match_wins: 9, match_losses: 0, last_played: played(3) }),
+        identity('rated', ['v2'], { match_wins: 5, match_losses: 5, last_played: played(2) }),
+        identity('none', ['v3'], { match_wins: 0, match_losses: 0, last_played: played(9) }),
+      ],
+      [],
+      t,
+      NOW_LOCAL,
+    )
+    expect(keys(sortTiles(rough, 'winRate'))).toEqual(['rated', 'none', 'rough'])
+  })
+
+  it('breaks a tie on rate by last played, the earlier-played tile listed first', () => {
+    const same = decksTiles(
+      [
+        identity('old', ['v1'], { match_wins: 5, match_losses: 5, last_played: played(3) }),
+        identity('new', ['v2'], { match_wins: 10, match_losses: 10, last_played: played(9) }),
+      ],
+      [],
+      t,
+      NOW_LOCAL,
+    )
+    expect(keys(sortTiles(same, 'winRate'))).toEqual(['new', 'old'])
+  })
+
+  it('does not change the list it is given', () => {
+    const before = keys(tiles)
+    sortTiles(tiles, 'matches')
+    expect(keys(tiles)).toEqual(before)
+  })
+
+  it('reads an unknown sort as last played', () => {
+    expect(chosenSort('winRate')).toBe('winRate')
+    expect(chosenSort('nonsense')).toBe('lastPlayed')
+    expect(chosenSort(null)).toBe('lastPlayed')
+  })
+
+  it('lists each format present once, none for an unknown one', () => {
+    expect(tileFormats(tiles)).toEqual(['Standard', 'TraditionalStandard', 'Pioneer'])
+  })
+
+  it('keeps the tiles of a format, all with none, and none for a stale one', () => {
+    expect(keys(filterTiles(tiles, 'Pioneer'))).toEqual(['d', 'f'])
+    expect(filterTiles(tiles, null)).toHaveLength(6)
+    expect(filterTiles(tiles, '')).toHaveLength(6)
+    expect(filterTiles(tiles, 'Modern')).toEqual([])
   })
 })

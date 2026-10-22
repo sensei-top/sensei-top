@@ -749,13 +749,14 @@ button (`docs/review.md`).
 
 `/decks` (`pages/DecksPage.tsx`) is one tile per deck, an identity of
 `GET /api/guide/decks` however many versions its list has had, in the
-order the route answers them, last played first. `decksTiles`
-(`lib/decks.ts`) builds each tile: the deck's own name, its record by
-the small-sample rule (`deckRecord`: from ten finished matches a rate over
-the record, "58%" over "win rate · 35–25"; from five to nine the rate, "67%", muted,
-over "rough win rate" and the record; under five the record, "3–1", muted, with
-the line saying it is too few for a rate), the format in words with how
-many versions when there is more than one (`tileDetail`), when it was
+order the route answers them, last played first (the default order).
+`decksTiles` (`lib/decks.ts`) builds each tile: the deck's own name, its
+record by the small-sample rule (`deckRecord`: from ten finished matches
+a rate over the record, "58%" over "win rate · 35–25"; from five to nine
+the rate, "67%", muted, over "rough win rate" and the record; under
+five the record, "3–1", muted, with the line saying it is too few for a
+rate), the format in words with how many versions when there is more
+than one (`tileDetail`), when it was
 last played, and its art: a card the viewer cast in the deck's newest
 finished match of the same 500-match list Home reads, one card per
 page. A deck with no finished match in that list keeps the empty art
@@ -767,6 +768,22 @@ would be, keeping "last played" when the list was played on one day only.
 Nothing is folded together. The grid is Home's own: two to a
 row under 48rem, three from there, five from 64rem. With no deck at
 all, "No decks yet".
+
+Two `Select`s sit above the grid, both kept in the address as
+`useFilters` keeps its own and left out at their defaults. **`?format=`**:
+"All formats", then each format present among the tiles, in
+`formatName`'s words (`tileFormats`, `filterTiles`); a format with no
+tile is never offered, but one a stale address names stays selected, as
+its own option right after "All formats" (as `DeckFilter` keeps a missing
+address value), over "No decks in this format.". **`?sort=`**: Last
+played (the default), Win rate or Matches (`sortTiles`, `chosenSort`). A
+tile is rated with at least ten finished matches (`RATE_MIN_MATCHES`).
+Win rate puts the rated tiles first, highest rate first, then every
+other tile, one with five to nine matches or none included, by last
+played; Matches is finished matches, most first; every tie goes to the
+later last played, a tile with no date last. The art is picked in the
+route's order over every tile, so a tile's art does not change with the
+sort or the filter.
 
 A tile leads to `deckAddress(key)`: `/decks/` and the identity's own
 key (`addressSegment`, its colon written bare). `/decks/:id` and the
