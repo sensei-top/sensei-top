@@ -201,7 +201,7 @@ export function tierKind(tier: Tier, t: TFunction): string {
   return kinds[tier]
 }
 
-/** A tier in the `Segmented`. */
+/** A tier in the tier's `Select`. */
 export function tierOption(tier: Tier, t: TFunction): string {
   const options: Record<Tier, string> = {
     A: t('field.tier.option.A'),

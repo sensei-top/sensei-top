@@ -852,7 +852,12 @@ five, and an em dash with none, which is also what a row with no
 best-of-three match shows; a drawn game counts in neither number. A row is never left out for
 being small. The field is the deck's own format's
 (`useFieldRecords(format)`, the format coverage names, "Field, and the
-field-winrate join" below); a deck with no format has no field line. Three
+field-winrate join" below); a deck with no format has no field line. The
+table's card carries, at the right of its title, a link to that field,
+"Open the Standard field" (`/field?format=<fmt>`): a bare `/field` opens
+the format of the most recent match, which need not be this deck's, so a
+player reading a Standard deck's matchups landed on Modern. The link waits
+for the format and is not drawn for a deck with none. Three
 tiles sit above the table: archetypes met, each once whatever formats it was
 met in (and how many were named, an archetype named when any of its rows
 is), and the best and worst among the rows met ten finished times or more
@@ -1079,31 +1084,52 @@ format and the viewer's own record against it. Its cards are in
 `components/field/`. Nothing is drawn but a `Loading` until
 `/api/formats` answers. Top to bottom:
 
-1. **The format** (`Select`, "Format"), with a caption under it, drawn
-   whenever some format holds the viewer's matches or tournament events
-   (`anyFormatData`). Its options are those formats, in the API's order,
-   and always the selected one (`formatChoices`). The caption is the
-   viewer's own matches in the format and where each one's format was
-   read from (`formatCaption`), a part at 0 left out: "12 of your
-   matches are Modern: 4 from Arena's log, 5 you confirmed, 3 inferred
-   from the cards revealed.", or "None of your matches are Pauper." It
-   stays above the empty state, the loading and the error below, so a
-   format with nothing in it can be left.
-2. **The controls** (`FieldControls`): the window, a native `<select>`,
-   and the tier the share is counted in, a `Segmented` of the four ranked
-   tiers — paper tournaments of 64+ players (A), MTGO challenges (B),
-   MTGO leagues (C) and paper tournaments under 64 players (D).
-3. **Three tiles** (`FieldTiles`): the lists read in the tier and
-   window, the most played deck with its share, and the viewer's record
-   against the two most played, over every deck of theirs in the
-   selected format (`topTwoTile`, `lib/field.ts`). The third tile has
+1. **The controls** (`FieldControls`), three native `<select>`s in one
+   row, each label beside its control, and the format's caption under the
+   row. Six controls stood between the page's title and its first number
+   when the tier was a `Segmented` of four (the 2026-10-22 critique,
+   `.impeccable/critique/`); as a select it is one, and the three fit one
+   row at 1008 px in both languages, where the four segments beside two
+   selects did not. The row wraps only on a narrower window.
+   - **The format** ("Format"), drawn whenever some format holds the
+     viewer's matches or tournament events (`anyFormatData`). Its options
+     are those formats, in the API's order, and always the selected one
+     (`formatChoices`). The caption is the viewer's own matches in the
+     format and where each one's format was read from (`formatCaption`), a
+     part at 0 left out: "12 of your matches are Modern: 4 from Arena's
+     log, 5 you confirmed, 3 inferred from the cards revealed.", or "None
+     of your matches are Pauper."
+   - **The window** ("Window").
+   - **The tier** the share is counted in ("Tournaments"), the four ranked
+     tiers: paper tournaments of 64+ players (A), MTGO challenges (B),
+     MTGO leagues (C) and paper tournaments under 64 players (D).
+
+   The window and the tier wait for the format's status and are left out
+   over the empty state, so over the loading, the error and the empty
+   state the row holds the format alone, with its caption, and a format
+   with nothing in it can be left.
+   It is the same element in every state, so a change of format keeps the
+   select, and the focus on it, while the new format's status loads.
+2. **Two tiles** (`FieldTiles`). The most played deck leads, over two of
+   the three columns: its name, and under it its share and the lists it
+   is counted from, "21% of 214 lists from paper tournaments of 64+
+   players since Sep 3". Beside it, the viewer's record against the two
+   most played, over every deck of theirs in the selected format
+   (`topTwoTile`, `lib/field.ts`). There were three tiles of equal weight,
+   a count of lists, a deck and a record, three kinds of number with
+   nothing to say which one answers the page (the 2026-10-22 critique's
+   "mixed-kind equal-weight tiles"). The deck leads because it answers
+   what the page is for, what is being played, and it is there whenever
+   the tiles are, where the record is an em dash for a player who has
+   not met the top two. The count of lists is evidence for the share, so
+   it went into the share's line. The record's tile has
    five states: nothing played, an em dash and "not met" with the window;
    only draws, an em dash and "no finished match yet"; one to four matches
    won or lost, the record muted, with the "too few for a rate" line; five
    to nine, the rate muted, with the record and "rough"; from
    ten the rate, with the record and where it comes from ("with any of your
    decks"). Not drawn when the tier has no list in the window.
-4. **"What is being played"** (`ShareCard`): one `FieldRow` per deck, the
+3. **"What is being played"** (`ShareCard`): one `FieldRow` per deck, the
    most played first, twelve and then a button for the rest. A row is the pips
    and the name, the viewer's record against it under the name in the one-line
    form (`rowCaption`: "58% · 35–25" from ten matches, the record alone, "6–3",
@@ -1113,7 +1139,7 @@ format and the viewer's own record against it. Its cards are in
    last 500 matches when Home's rule finds the match list full and short of the
    window (`listShort`); tier C adds a third, that a league publishes only its
    undefeated lists.
-5. **"The events"** (`EventsCard`): the stored events of the share
+4. **"The events"** (`EventsCard`): the stored events of the share
    list's format, window and tier, newest first, twelve
    (`EVENTS_SHOWN`) and then a button for the rest. A row is the date,
    the event's name linking to its page (`eventHref`) and a caption
@@ -1122,14 +1148,14 @@ format and the viewer's own record against it. Its cards are in
    that won. A copy set aside by dedup and an event with no deck are not
    listed. The card waits for the tier, so its request names the tier
    the share list counts.
-6. **"How the field wins"** (`WinrateCard`): a `DataTable` of Archetype ·
+5. **"How the field wins"** (`WinrateCard`): a `DataTable` of Archetype ·
    Matches · Win rate · Lists, over tiers A, B and D together whatever the tier
    control says, since a league publishes no losses to count. A row
    needs two finished matches (`WINRATE_MIN_MATCHES`). Rows are sorted
    by matches, then rate, then name: sorted by rate alone, the top rows
    would be decks of one list on a handful of matches. Twelve, then the
    rest.
-7. **"Archetype against archetype"** (`MatchupsCard`): a `Segmented`,
+6. **"Archetype against archetype"** (`MatchupsCard`): a `Segmented`,
    "Counted from", cumulative over paper 64+ alone, paper 64+ and MTGO
    challenges, or all three ranked tiers with rounds (`?pairs=A|AB|ABD`),
    then the rounds between two named decks, the most matches first,
@@ -1140,19 +1166,19 @@ format and the viewer's own record against it. Its cards are in
    always shown. When a step
    has no round and the next step's tier has lists in the window, the
    empty card offers a button that takes it.
-8. **A paused source's line**, in a warn `Callout`, one for each source
+7. **A paused source's line**, in a warn `Callout`, one for each source
    whose fetch is paused (mtgo.com or TopDeck), in the words of
    `holdLine` (`lib/sources.ts`, pinned in `sources.test.ts`). It is
    drawn under the empty state too. A source that is only waiting says
    so inside the disclosure instead.
-9. **The TopDeck.gg credit**, a caption naming the format ("Modern
+8. **The TopDeck.gg credit**, a caption naming the format ("Modern
    tournament data from TopDeck.gg."), drawn only when the selected
    format's status counts a stored TopDeck event
    (`corpus_topdeck_events` > 0). A configured key that has fetched
    nothing for the format draws no credit, since none of its data is on
    the page. It sits on the page, outside the disclosure below, because
    TopDeck's API terms ask for a visible credit and link.
-10. **"Where these numbers come from"** (`SourcesDisclosure`), a
+9. **"Where these numbers come from"** (`SourcesDisclosure`), a
     `Disclosure`, closed: the events stored by tier and the copies set
     aside, the age of the tournament results and of the archetype rules,
     the sources' table, a waiting source's line under it, and the commands

@@ -4,6 +4,7 @@
     "noVersionTitle": "Nenhuma partida com esta versão",
     "noVersionMessage": "Escolha outra versão, ou leia todas as versões juntas.",
     "everyVersion": "Todas as versões",
+    "openField": "Abrir o meta de {{format}}",
     "noFinishedTitle": "Nenhuma partida terminada ainda",
     "noFinishedMessage": "Os matchups são contados quando uma partida termina.",
     "archetypesMet": "Arquétipos enfrentados",

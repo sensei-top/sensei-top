@@ -6,6 +6,7 @@ import { RateCell } from '../components/RateCell'
 import { VersionSwitcher } from '../components/VersionSwitcher'
 import { Button, Card, DataTable, EmptyState, ErrorNote, Loading, ManaPips, StatTile, TextLink } from '../components/ui'
 import { mergeNewestFirst } from '../lib/deckOverview'
+import { formatName } from '../lib/decks'
 import {
   archetypeKeyOf,
   fieldLine,
@@ -31,7 +32,8 @@ const MINUTE = 60_000
  *  whichever version met it, its name a link to the pairing's page
  *  carrying the row's format when known and the version chosen, its
  *  record and rate, and its best-of-three games split into game 1 and
- *  games 2–3, each a `RateCell`. Finished matches only.
+ *  games 2–3, each a `RateCell`. Finished matches only. The table's card
+ *  links to the field of the deck's format, and only once that is known.
  *  Each version is read on its own and the page waits for every one; one
  *  failure is the page's error. The field's numbers never hold the page:
  *  until they come, or when they fail, the line under a name is the games
@@ -59,7 +61,13 @@ export function MatchupsView({
   // The field's win rate, in the line under a name.
   // In the deck's own format: undefined while coverage loads, null when the
   // deck has none, and neither asks for a field.
-  const fieldByKey = useFieldRecords(useGuideCoverage(deckKey).data?.fmt)
+  const fmt = useGuideCoverage(deckKey).data?.fmt
+  const fieldByKey = useFieldRecords(fmt)
+  const fieldLink = fmt ? (
+    <TextLink href={`/field?format=${encodeURIComponent(fmt)}`} className="text-caption">
+      {t('matchups.view.openField', { format: formatName(fmt, t) })}
+    </TextLink>
+  ) : null
 
   const inHand = useMemo(() => (matches.data ? mergeNewestFirst(matches.data) : []), [matches.data])
   const rows = useMemo(() => matchupRows(inHand), [inHand])
@@ -98,7 +106,11 @@ export function MatchupsView({
           ))}
         </div>
 
-        <Card title={t('matchups.view.archetypesMet')} subtitle={t('matchups.view.archetypesMetSubtitle')}>
+        <Card
+          title={t('matchups.view.archetypesMet')}
+          subtitle={t('matchups.view.archetypesMetSubtitle')}
+          action={fieldLink}
+        >
           <DataTable
             columns={[
               t('matchups.view.columns.archetype'),

@@ -4,6 +4,7 @@
     "noVersionTitle": "No match with this version",
     "noVersionMessage": "Pick another version, or read every version together.",
     "everyVersion": "Every version",
+    "openField": "Open the {{format}} field",
     "noFinishedTitle": "No finished match yet",
     "noFinishedMessage": "Matchups are counted once a match has ended.",
     "archetypesMet": "Archetypes met",
