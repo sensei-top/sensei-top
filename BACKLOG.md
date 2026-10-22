@@ -1027,13 +1027,14 @@ No visible effect.
 
 ### BL-083 · Readers that filter `md.deck_id` against a set
 
-type: perf · priority: P2 · status: ready · area: guide coach docs
+type: perf · priority: P2 · status: ready · area: review docs
 
 `docs/architecture.md` ("Filter a deck through `v_match_deck` by match id")
 says no reader joins the view and then filters `md.deck_id` against a set,
-the shape measured 10 to 100 times slower. Seven queries do, counted
-2026-10-21: `guide/field.py` (three), `guide/deck.py`, `guide/list_diff.py`,
-`guide/bundle.py` and `coach/evidence.py`. Found by plan 35's reviewers.
+the shape measured 10 to 100 times slower. The seven in `guide/` and
+`coach/` were converted 2026-10-21; `review/leaks.py` still does it, in
+`_MATCHES_WITH_DECK` filtered by `_scope_clause` and in a second join
+below them. Found by plan 35's reviewers.
 
 **Needs:** Each converted to the `m.match_id IN (SELECT …)` form, or the
 doc naming the exception and why.
