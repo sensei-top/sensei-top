@@ -770,18 +770,6 @@ halves resolve by the back-face rule since plan 13.
 
 **Needs:** A real capture naming one.
 
-### BL-052 · An unsure MTGO pick names no format
-
-type: fix · priority: P3 · status: ready · area: web api i18n
-
-On `/mtgo/picks`, an unsure match with no saved list in its format reads "No
-saved list fits." instead of naming the format.
-
-**Why deferred:** The unsure item carries no format field.
-
-**Needs:** Add the inferred format to `MtgoUnsurePick` and use "No saved
-list in {format}."
-
 ### BL-053 · A summarized block at the end of a dead file
 
 type: fix · priority: P3 · status: ready · area: reader

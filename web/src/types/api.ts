@@ -4147,6 +4147,11 @@ export interface components {
              */
             reason: "few_cards" | "low_fit" | "no_list";
             best?: components["schemas"]["MtgoBestList"] | null;
+            /**
+             * Format
+             * @description the format inferred for the match; null when none was
+             */
+            format?: string | null;
         };
         /**
          * MulliganCostOut

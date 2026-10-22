@@ -4389,6 +4389,28 @@ def test_mtgo_bulk_with_no_lists_every_match_is_unsure_for_want_of_one(
     assert {(u["reason"], u["best"]) for u in body["unsure"]} == {("no_list", None)}
 
 
+def test_mtgo_bulk_an_unsure_match_carries_its_inferred_format(
+    mtgo_pick_db, tmp_path, make_client
+):
+    """Match A is inferred Modern and B is inferred nothing; with no lists at
+    all, both are ``no_list``, each naming its own inferred format."""
+    conn = open_database(mtgo_pick_db)
+    conn.execute(
+        "INSERT INTO match_format_inference (match_id, format, reason) VALUES (?, 'Modern', 'fit')",
+        (MTGO_PICK_A,),
+    )
+    conn.commit()
+    conn.close()
+    nothing = tmp_path / "nothing"
+    nothing.mkdir()
+    _swap_decks_for(mtgo_pick_db, nothing)
+    with make_client(create_app(mtgo_pick_db)) as client:
+        body = _bulk(client)
+    assert {u["match_id"]: (u["reason"], u["format"]) for u in body["unsure"]} == {
+        MTGO_PICK_A: ("no_list", "Modern"), MTGO_PICK_B: ("no_list", None),
+    }
+
+
 def test_mtgo_bulk_an_arena_only_database_has_nothing_waiting(client):
     assert _bulk(client) == {"waiting": 0, "mtgo_matches": 0, "groups": [], "unsure": []}
 
