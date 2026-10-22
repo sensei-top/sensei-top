@@ -16,7 +16,7 @@ import {
   Line,
   LineChart,
   ResponsiveContainer,
-  Tooltip,
+  Tooltip as ChartHover,
   XAxis,
   YAxis,
 } from 'recharts'
@@ -54,6 +54,7 @@ import {
   Switch,
   TextBlock,
   TextLink,
+  Tooltip,
   TwoSidedMeter,
   Wordmark,
   severityChip,
@@ -127,6 +128,7 @@ function Reference({ art }: { art: ArtCard[] }) {
       <Callouts />
       <TextBlocks />
       <Disclosures />
+      <Tooltips />
       <SegmentedControls />
       <Fields />
       <Selects />
@@ -654,6 +656,28 @@ function Disclosures() {
   )
 }
 
+function Tooltips() {
+  return (
+    <Section id="tooltip" title="Tooltip">
+      <Card>
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Tooltip tip="Cards still in your hand on the last turn of a game you lost.">
+              <SectionLabel as="span">Stranded</SectionLabel>
+            </Tooltip>
+            <Chip size="sm" {...severityChip('flag')}>
+              Flag
+            </Chip>
+          </div>
+          <p className="text-body text-ink2">
+            Hover the label, or reach it with Tab: the tip opens, and Escape closes it.
+          </p>
+        </div>
+      </Card>
+    </Section>
+  )
+}
+
 function SegmentedControls() {
   const [md, setMd] = useState<'all' | 'bo1' | 'bo3'>('all')
   const [sm, setSm] = useState(2)
@@ -1036,7 +1060,7 @@ function LineChartSection() {
             <CartesianGrid {...gridProps(t)} />
             <XAxis dataKey="turn" {...axisProps(t)} />
             <YAxis width={32} domain={[0, 'auto']} allowDecimals={false} {...axisProps(t)} />
-            <Tooltip
+            <ChartHover
               content={({ active, payload, label }) => (
                 <ChartTooltip active={active} payload={payload} label={label} labelPrefix="Turn " />
               )}
@@ -1088,7 +1112,7 @@ function BarChartSection() {
             <CartesianGrid {...gridProps(t)} horizontal={false} vertical />
             <XAxis type="number" domain={[0, 100]} unit="%" {...axisProps(t)} />
             <YAxis type="category" dataKey="deck" width={104} {...axisProps(t)} />
-            <Tooltip
+            <ChartHover
               cursor={{ fill: t.grid, fillOpacity: 0.3 }}
               content={({ active, payload, label }) => (
                 <ChartTooltip active={active} payload={payload} label={label} format={format} />

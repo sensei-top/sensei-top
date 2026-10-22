@@ -237,7 +237,7 @@ per component:
 
 | utility | value | Compact | role |
 |---|---|---|---|
-| `rounded-control` | 12px | 12px | inputs and selects (`Field`, `Select`), a row or a link that acts as a control, the chart tooltip, inline code, the picture of a `CardTile` |
+| `rounded-control` | 12px | 12px | inputs and selects (`Field`, `Select`), a row or a link that acts as a control, the chart tooltip and `Tooltip`, inline code, the picture of a `CardTile` |
 | `rounded-block` | 14px | 14px | nested blocks: `Card elevation={2}`, `Finding`, `Callout`, `TextBlock`, `Skeleton`, a step of `OnboardingSteps` |
 | `rounded-card` | 18px | 16px | cards and tiles: `Card`, `StatTile`, `DeckTile`, `EmptyState`, each of Home's three things; a `Dialog` |
 | `rounded-hero` | 22px | 18px | the one lead panel of a page: Home's last session, first run |
@@ -249,7 +249,7 @@ One recipe, `--lift`: a hairline highlight at the top edge and one soft
 shadow underneath, `inset 0 1px 0 rgb(255 255 255 / 0.04), 0 12px 32px
 -12px rgb(0 0 0 / 0.6)`. It is exposed as the `shadow-lift` utility and
 applied to every surface raised from the page: `Card`, `StatTile`,
-`DeckTile`, `ErrorNote`, the chart tooltip, a page's lead panel, each
+`DeckTile`, `ErrorNote`, the chart tooltip and `Tooltip`, a page's lead panel, each
 of Home's three things, a `Dialog`.
 
 `Card` takes an `elevation` prop. `1` (the default) is a page's own
@@ -575,7 +575,7 @@ no other page pays for.
 
 Its sections: palette, type ramp, radii and elevation, buttons, links,
 chips, cards, stat tiles, deck tile, empty state, onboarding steps,
-findings, callouts, text block, disclosure, segmented control, fields,
+findings, callouts, text block, disclosure, tooltip, segmented control, fields,
 selects, switches, dialog, meters, bars, data table, line chart, bar
 chart, mana pips and costs, glyph and wordmark, card tile, card art.
 
@@ -726,6 +726,19 @@ reads every other one without looking.
   density scales.
 - **A pip labels a row; it never becomes a chart mark's colour** (the
   boundary rule above).
+- **A word the page cannot explain in place wears a `Tooltip`**
+  (`components/ui/Tooltip.tsx`), never a sentence in a `title`, which a
+  keyboard cannot open. The word becomes a focusable
+  trigger, marked by a dotted underline in `muted` and the help cursor:
+  dotted, so it never reads as a link's solid one. The tip is one plain
+  sentence in the chart tooltip's look (`surface-3`, `edge-strong`,
+  `rounded-control`, the lift), under the word. It opens on hover and on
+  keyboard focus, stays open while the pointer moves onto it, closes on
+  Escape until the next hover or focus, and is tied to its word by
+  `aria-describedby`, so a screen reader reads it closed or open. The
+  trigger holds text only: a control inside it would be a second stop
+  for the keyboard. The match report's beat labels are the first user
+  (`docs/frontend-pages.md`, "The match report").
 - **A whole card image is shown whole, and art follows "Card art" above.**
   A `CardArt` box always has a height, and nothing depends on the picture
   arriving.

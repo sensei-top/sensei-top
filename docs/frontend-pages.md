@@ -365,7 +365,9 @@ game, or one the match does not have, is the first game. No turn, or one
 the game does not have, is the game's last turn. `turn=0` is the opening
 hand, when the game has one. Choosing a game or a turn replaces the
 history entry, so Back leads to the report, and choosing a game drops
-the turn. A reload keeps both.
+the turn. A reload keeps both. The report's "Replay game N" is the one
+link into the replay that carries a turn, its game's first beat's (see "The match
+report" below).
 
 **The charts do not move when the turn changes.** recharts starts a
 chart's draw-in over whenever the chart renders again, so `GameCharts`
@@ -664,10 +666,17 @@ game's title and its result as a chip (a game with no result carries a
 muted chip that says so); the game's position line, memoized; the facts
 as a `dl` (seat, mulligans, length, how it ended), a fact that is not
 known not drawn; the game's beats, three at most; and a link to that
-game on the replay. A beat is its label, its meter when it has one
+game on the replay. The link opens the game at the turn of its first
+beat that has one (`?game=3&turn=7`), so "Replay game 3" lands on what
+the card flagged; with no beat carrying a turn it opens the game bare.
+The hero's button always opens the replay bare. A beat is its label, its meter when it has one
 (`TwoSidedMeter`, `components/ui/Meter.tsx`, in the colours every chart
 uses for the viewer and the opponent), its sentence, and its weight as a
-chip when it is more than a note. A game with no position line draws no
+chip when it is more than a note. A label whose beat carries a
+`definition` wears a `Tooltip` with it: one sentence the server writes
+beside each label (Race, Turned, Stranded, Role, Risk; `docs/review.md`),
+so the word that names the beat is explained where it is read, on hover
+and on keyboard focus. A label with no definition is drawn bare. A game with no position line draws no
 chart and no box for one. Under the grid, one sentence says what the
 line is, and a `Disclosure` holds its numbers as one table.
 
