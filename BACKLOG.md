@@ -47,7 +47,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-088
+Next ID: BL-089
 
 ## Features
 
@@ -404,6 +404,24 @@ No route lists the matches past the 500th or counts the matches of a filter.
 it stops.
 
 **Needs:** A design for paging.
+
+### BL-088 · A UI and UX sweep of the whole app
+
+type: feat · priority: P1 · status: ready · area: web desktop site
+
+The dashboard reads as a set of features put side by side, not as one
+product built around what a player wants to know. That was the sentiment
+of the Reddit threads after 1.0.0. Plan 26's soft redesign (2026-10-18)
+changed the visuals and kept each page's job, so the problem is still
+there.
+
+**Why deferred:** Raised after the launch, 2026-10-22.
+
+**Needs:** A plan built on a walk through every page in the real app: a
+screenshot of each page with Playwright MCP, then an Impeccable critique of
+it. The plan then sets what each page is for, the order a player meets them
+in, and what to merge, move or drop, with `docs/design-system.md` and
+`docs/frontend-pages.md` brought along.
 
 ## Bugs
 
