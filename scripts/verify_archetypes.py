@@ -24,6 +24,7 @@ from collections import Counter
 from pathlib import Path
 
 from sensei_top.archetypes.classify import (
+    card_colors_by_name,
     choose,
     load_definitions,
     rank_archetypes,
@@ -91,6 +92,7 @@ def main() -> None:
     if not definitions:
         raise SystemExit("No archetype definitions stored. Run 'sensei-top archetypes' first.")
 
+    colors_by_name = card_colors_by_name(conn)
     total = sum(len(v["archetype"]) + len(v["fallback"]) for v in definitions.values())
     print(f"Definitions: {total} across {', '.join(sorted(definitions))}\n")
 
@@ -117,7 +119,8 @@ def main() -> None:
         full_names = _card_names(conn, maindeck)
         truth = choose(
             definitions[fmt]["archetype"], definitions[fmt]["fallback"],
-            seen_forms(full_names), _colors_of(conn, full_names),
+            seen_forms(full_names), _colors_of(conn, full_names), colors_by_name,
+            len(full_names), complete=True,
         )
         truth_label = truth.name if truth else "(unclassified)"
         print(f"  {deck['name']} — full {len(maindeck)} cards -> {truth_label}")
@@ -132,7 +135,8 @@ def main() -> None:
                 continue
             partial = choose(
                 definitions[fmt]["archetype"], definitions[fmt]["fallback"],
-                seen_forms(revealed), _colors_of(conn, revealed),
+                seen_forms(revealed), _colors_of(conn, revealed), colors_by_name,
+                len(revealed),
             )
             label = partial.name if partial else "(unclassified)"
             same = label == truth_label
@@ -168,8 +172,10 @@ def main() -> None:
         fmt = arena_format(match["deck_format"], match["event_id"])
         if fmt is None or fmt not in definitions:
             continue
+        revealed = their_cards.get(match["match_id"], [])
         ranked = rank_archetypes(
-            definitions[fmt]["archetype"], seen_forms(their_cards.get(match["match_id"], []))
+            definitions[fmt]["archetype"], seen_forms(revealed), colors_by_name,
+            _colors_of(conn, revealed), len(revealed),
         )
         if len(ranked) < 2:
             continue
