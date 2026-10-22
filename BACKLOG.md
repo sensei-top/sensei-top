@@ -1025,20 +1025,6 @@ type: refactor · priority: P3 · status: ready · area: archetypes coach
 **Needs:** Promote the shared ones to public names, or pin them with a test.
 No visible effect.
 
-### BL-083 · Readers that filter `md.deck_id` against a set
-
-type: perf · priority: P2 · status: ready · area: review docs
-
-`docs/architecture.md` ("Filter a deck through `v_match_deck` by match id")
-says no reader joins the view and then filters `md.deck_id` against a set,
-the shape measured 10 to 100 times slower. The seven in `guide/` and
-`coach/` were converted 2026-10-21; `review/leaks.py` still does it, in
-`_MATCHES_WITH_DECK` filtered by `_scope_clause` and in a second join
-below them. Found by plan 35's reviewers.
-
-**Needs:** Each converted to the `m.match_id IN (SELECT …)` form, or the
-doc naming the exception and why.
-
 ### BL-084 · Test comments citing pins that don't exist
 
 type: docs · priority: P3 · status: ready · area: metagame
