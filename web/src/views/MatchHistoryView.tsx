@@ -26,9 +26,9 @@ function listCaption(inHand: number, shown: number, full: boolean, t: TFunction)
 
 /** Matches' band and list, under the source and deck filters: the newest
  *  500 matches, 50 rows at a time, each row the way into its match. The
- *  band counts every match in hand, not only the rows shown. The shown
- *  count starts again at 50 when a filter changes (the page keys this
- *  view on them). */
+ *  band counts every match in hand, not only the rows shown, and reads
+ *  play and draw over every game under the filters. The shown count starts
+ *  again at 50 when a filter changes (the page keys this view on them). */
 export function MatchHistoryView({ deckId, source }: { deckId?: string; source?: string }) {
   const { t } = useTranslation()
   const matches = useMatches(deckId, source, MATCH_LIST_LIMIT)
@@ -69,7 +69,7 @@ export function MatchHistoryView({ deckId, source }: { deckId?: string; source?:
 
   return (
     <div className="space-y-8">
-      <MatchesSummary matches={inHand} full={full} />
+      <MatchesSummary matches={inHand} full={full} deckId={deckId} source={source} />
       <Card>
         <p className="mb-3 text-caption text-muted">{listCaption(inHand.length, rows.length, full, t)}</p>
         <ul className="divide-y divide-line">

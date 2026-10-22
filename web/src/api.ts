@@ -264,6 +264,12 @@ export const useDeckPlayDraw = (deckIds: string[]) =>
     combine: all<PlayDrawWinrate[]>,
   })
 
+/** The games on the play and on the draw under Matches' own filters, one
+ *  deck or none and a source: one row per deck and side, every game under
+ *  them, never stopped at a list's maximum. */
+export const usePlayDraw = (deckId?: string, source?: string) =>
+  useQuery(query<PlayDrawWinrate[]>('play-draw', '/api/metrics/play-draw', deckId, source))
+
 /** One match's detail, read for its card art alone (Home). Keyed apart
  *  from `useMatchDetail`, with `staleTime: 'static'`: a finished match's
  *  cards do not change, so the heartbeat's invalidation never asks again. */

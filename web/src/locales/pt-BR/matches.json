@@ -64,7 +64,8 @@
   "summary": {
     "matchesWon": "Partidas",
     "gamesWon": "Jogos",
-    "counted": "Contado sobre as {{n}} partidas mais recentes."
+    "counted": "Contado sobre as {{n}} partidas mais recentes.",
+    "playDrawAll": "Play e draw contam todos os jogos, não só as partidas listadas."
   },
   "sideboarding": {
     "title": "Trocas de sideboard",

@@ -295,7 +295,7 @@ says what will appear and what causes it:
 
 ## Matches
 
-`/matches` is `MatchHistoryView`: a band of two numbers, then the list,
+`/matches` is `MatchHistoryView`: a band of three numbers, then the list,
 both under the source and deck filters.
 
 **The list asks for 500**, the route's maximum, and shows 50 rows at a
@@ -304,18 +304,24 @@ many are listed, and with 500 in hand a caption under the last row says
 the list stops there. The shown count starts again at 50 when a filter
 changes.
 
-**The band** (`components/MatchesSummary.tsx`) is matches won and games won,
-counted in the client over every match in hand, not only the rows shown, so
-the band and the list can never disagree. A finished match is a win, a loss
-or a draw, and a draw is neither won nor lost. Each tile follows "Numbers"
-in `docs/design-system.md` (`rateOrRecord`): from ten finished the rate,
-"58%", with the record under it; from five to nine the rate, muted, over the
-record and "rough"; under five the record as the number, muted, with a line
-saying it is too few for a rate; with nothing finished an em
-dash and a line that says so. The band is not drawn from
-`/api/metrics/winrate` or `/api/metrics/play-draw`, which did not answer for
-every source when the page was built; they do now, and play and draw are
-still to join the page (`BACKLOG.md`, BL-023).
+**The band** (`components/MatchesSummary.tsx`) is three tiles, one row of
+three from 48rem up and stacked under it: matches won, games won, and play
+vs draw. The first two are counted in the client over every match in hand,
+not only the rows shown, so they and the list can never disagree. A
+finished match is a win, a loss or a draw, and a draw is neither won nor
+lost. Each of the two follows "Numbers" in `docs/design-system.md`
+(`rateOrRecord`): from ten finished the rate, "58%", with the record under
+it; from five to nine the rate, muted, over the record and "rough"; under
+five the record as the number, muted, with a line saying it is too few for
+a rate; with nothing finished an em dash and a line that says so. The third
+is read from `/api/metrics/play-draw` under the same deck and source
+(`usePlayDraw`) and drawn by `playDrawTile` (`lib/deckOverview.ts`), the
+function that draws a deck strip's, so the two never disagree on the same
+games. While it loads it alone holds its label and an empty tile, as the
+deck strip's do; when it fails it alone is the error; the other two never
+wait for it. The route counts every game under the filters, past the 500th
+match, so with 500 in hand the caption under the band says both what was
+counted and that play and draw count every game.
 
 **A row** (`components/MatchRow.tsx`) is one link to its match, at least
 44 px high, with no button inside it. Home's "Recent matches" draws the
