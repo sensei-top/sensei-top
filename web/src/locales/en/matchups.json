@@ -15,7 +15,9 @@
       "record": "Record",
       "rate": "Rate",
       "game1": "Game 1",
-      "postboard": "Post-board"
+      "game1Tip": "Game 1 of each match, played before sideboarding.",
+      "postboard": "Post-board",
+      "postboardTip": "Games 2 and 3 of a best-of-three match, played after sideboarding."
     }
   },
   "tiles": {

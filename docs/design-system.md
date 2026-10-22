@@ -672,11 +672,13 @@ reading it as a measurement. Under five, the figure is the record, drawn
 muted, and its line says it is too few for a rate. A table's Rate cell
 is the rate from ten, the rate muted from five to nine, and "too few",
 muted, under five, on one line (`whitespace-nowrap`), beside the record
-its own column already has. A row is never left out for being small,
-since a missing row reads as a matchup never played; an em dash means
-nothing at all, never "too few". `rateOrRecord` (a tile) and `rateCell`
-(a cell, drawn by `components/RateCell.tsx`) in `lib/sample.ts` make the
-choice, so no component branches on the count. The rough rate needs a
+its own column already has. A row is never dropped for being small,
+since a missing row reads as a matchup never played; a long table may fold
+its small rows behind a "Show all N" that counts every row (Matchups,
+`foldMatchups`), which holds a row back without hiding that it exists;
+an em dash means nothing at all, never "too few". `rateOrRecord` (a
+tile) and `rateCell` (a cell, drawn by `components/RateCell.tsx`) in
+`lib/sample.ts` make the choice, so no component branches on the count. The rough rate needs a
 muted figure, so it is only where one can be drawn: where only one line
 is free (a version's row, a field row's caption, the keep-cost sentence)
 the line is "58% · 35–25" from ten up and the record alone under it (a
@@ -735,7 +737,9 @@ reads every other one without looking.
   trigger, marked by a dotted underline in `muted` and the help cursor:
   dotted, so it never reads as a link's solid one. A muted lucide `Info`
   icon after it (`aria-hidden`, caption size) is the visible cue that it
-  explains itself. The tip is one plain
+  explains itself. A trigger at the right of its container (a right-aligned
+  table header) takes `align="end"`, so the tip opens leftward and stays
+  inside the container. The tip is one plain
   sentence in the chart tooltip's look (`surface-3`, `edge-strong`,
   `rounded-control`, the lift), under the word. It opens on hover and on
   keyboard focus, stays open while the pointer moves onto it, closes on

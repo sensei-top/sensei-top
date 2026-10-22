@@ -849,8 +849,12 @@ different queue's, with its own hand smoothing, and is in neither. Each
 cell is the rate alone, as the Rate cell is, over games: the percent from
 ten games won or lost, muted from five to nine, a muted "too few" under
 five, and an em dash with none, which is also what a row with no
-best-of-three match shows; a drawn game counts in neither number. A row is never left out for
-being small. The field is the deck's own format's
+best-of-three match shows; a drawn game counts in neither number. The table folds by the bar
+(`foldMatchups`): the rows of `RATE_MIN_MATCHES` (10) matches or more show, never
+fewer than the five most played, and the rest sit behind "Show all N"
+(`ShowAll`, Field's control); a small row is held back, never dropped, and
+with nothing held back there is no control. The Game 1 and Post-board
+headers wear a `Tooltip` saying which games they count. The field is the deck's own format's
 (`useFieldRecords(format)`, the format coverage names, "Field, and the
 field-winrate join" below); a deck with no format has no field line. The
 table's card carries, at the right of its title, a link to that field,

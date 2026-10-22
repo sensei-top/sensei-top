@@ -8,19 +8,23 @@ export function DataTable({
   columns,
   rows,
 }: {
-  columns: string[]
+  // A node for a header that wears a Tooltip.
+  columns: ReactNode[]
   // ReactNode, not just text: a cell may carry a control of its own, such
   // as the opponent's deck with the way to correct it.
   rows: ReactNode[][]
 }) {
+  // overflow-y-hidden: a header's tip can run past the bottom of a short
+  // table, and a vertical scrollbar there would narrow the table, move the
+  // header from under the pointer and loop the tip open and shut.
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto overflow-y-hidden">
       <table className="w-full text-body tabular-nums">
         <thead>
           <tr className="border-b border-line2 text-left">
             {columns.map((column, index) => (
               <th
-                key={column}
+                key={index}
                 className={`pb-2 text-caption font-medium text-muted ${
                   index === 0 ? '' : 'pl-4 text-right'
                 }`}

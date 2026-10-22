@@ -15,7 +15,9 @@
       "record": "Histórico",
       "rate": "Taxa",
       "game1": "Jogo 1",
-      "postboard": "Pós-side"
+      "game1Tip": "Jogo 1 de cada partida, jogado antes das trocas de sideboard.",
+      "postboard": "Pós-side",
+      "postboardTip": "Jogos 2 e 3 de uma partida melhor de três, jogados depois das trocas de sideboard."
     }
   },
   "tiles": {

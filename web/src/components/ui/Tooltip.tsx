@@ -7,8 +7,18 @@ import { type ReactNode, useEffect, useId, useState } from 'react'
  *  (`aria-describedby`), so pass text, never a control: a button or a link
  *  inside would be a second stop for the keyboard. The tip stays in the
  *  document while closed, so the description is read either way. The trigger draws a muted `Info` icon after
- *  `children`, so a caller passes no icon of its own. */
-export function Tooltip({ tip, children }: { tip: string; children: ReactNode }) {
+ *  `children`, so a caller passes no icon of its own. `align` is the edge of
+ *  the trigger the tip hangs from: `'end'` for a trigger at the right of
+ *  its container, so the tip opens leftward and is not cut off. */
+export function Tooltip({
+  tip,
+  children,
+  align = 'start',
+}: {
+  tip: string
+  children: ReactNode
+  align?: 'start' | 'end'
+}) {
   const tipId = useId()
   const [hovered, setHovered] = useState(false)
   const [focused, setFocused] = useState(false)
@@ -52,8 +62,9 @@ export function Tooltip({ tip, children }: { tip: string; children: ReactNode })
       </span>
       {/* The gap above the tip is padding, not margin, so the pointer
           crossing it is still inside the wrapper. */}
-      <span id={tipId} role="tooltip" hidden={!open} className="absolute top-full left-0 z-30 pt-1.5">
-        <span className="block w-max max-w-60 rounded-control border border-edge-strong bg-surface3 px-3 py-2 text-caption text-ink shadow-lift">
+      <span id={tipId} role="tooltip" hidden={!open} className={`absolute top-full z-30 pt-1.5 ${align === 'end' ? 'right-0' : 'left-0'}`}>
+        {/* text-left font-normal: a trigger in a <th> would pass the tip the header's alignment and weight. */}
+        <span className="block w-max max-w-60 rounded-control text-left font-normal border border-edge-strong bg-surface3 px-3 py-2 text-caption text-ink shadow-lift">
           {tip}
         </span>
       </span>

@@ -6,6 +6,7 @@ import {
   fieldLine as fieldLineOf,
   type FieldRecord,
   fieldRecordsByKey,
+  foldMatchups,
   matchupName as nameOf,
   matchupRows,
   matchupRowOver,
@@ -491,5 +492,28 @@ describe('fieldLine', () => {
     expect(fieldLine(games, { winrate: 0.25, entries: 4 })).toBe(
       `Games 17${WJ}–${WJ}4 · wins 25% in tournaments, 4${NBSP}entries, too few to trust`,
     )
+  })
+})
+
+describe('foldMatchups', () => {
+  const rowsOf = (...counts: number[]) => counts.map((matches) => ({ matches }))
+
+  it('shows the rows at the bar and no others when five or more reach it', () => {
+    const rows = rowsOf(30, 20, 15, 12, 10, 9, 4, 1)
+    expect(foldMatchups(rows)).toEqual(rows.slice(0, 5))
+    const more = rowsOf(30, 20, 15, 12, 10, 10, 9, 1)
+    expect(foldMatchups(more)).toHaveLength(6)
+  })
+
+  it('never shows fewer than the five most played', () => {
+    const rows = rowsOf(12, 8, 7, 6, 5, 4, 3, 2)
+    expect(foldMatchups(rows)).toEqual(rows.slice(0, 5))
+  })
+
+  it('shows every row when nothing is held back', () => {
+    expect(foldMatchups(rowsOf(3, 2, 1))).toHaveLength(3)
+    const exact = rowsOf(11, 10, 10, 10, 10)
+    expect(foldMatchups(exact)).toEqual(exact)
+    expect(foldMatchups([])).toEqual([])
   })
 })

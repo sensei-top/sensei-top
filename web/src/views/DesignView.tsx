@@ -669,8 +669,14 @@ function Tooltips() {
               Flag
             </Chip>
           </div>
+          <div className="flex justify-end">
+            <Tooltip align="end" tip="A trigger at the right of its container: the tip opens leftward.">
+              <SectionLabel as="span">Right-aligned</SectionLabel>
+            </Tooltip>
+          </div>
           <p className="text-body text-ink2">
-            Hover the label, or reach it with Tab: the tip opens, and Escape closes it.
+            Hover the label, or reach it with Tab: the tip opens, and Escape closes it. A trigger at the right of
+            its container takes <code>align="end"</code>.
           </p>
         </div>
       </Card>
