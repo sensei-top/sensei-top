@@ -71,7 +71,7 @@ account or a bill.
 
 - A demo database (`docs/frontend-site.md`) for screenshots; the user's real
   match history is gitignored and never shown.
-- BL-088's task walks: `.claude/handoffs/ui-sweep/` (untracked).
+- The UI sweep's task walks: `.claude/handoffs/ui-sweep/` (untracked).
 - No testimonials, user counts or reviews to quote; don't invent any.
 
 ## Product Principles

@@ -37,10 +37,10 @@ guides/
 # wrangler dev's local state (docs/frontend-site.md, "The site")
 .wrangler/
 
-# the Playwright MCP's screenshots and snapshots (BL-088); it writes only inside the repo
+# the Playwright MCP's screenshots and snapshots (the UI sweep); it writes only inside the repo
 .playwright-mcp/
 
-# Impeccable's working files (BL-088); the block is its README's, verbatim
+# Impeccable's working files (the UI sweep); the block is its README's, verbatim
 # impeccable-ignore-start
 # Ephemeral output, runtime state, and per-dev overrides.
 # The **/ prefix covers .impeccable at the repo root or in a nested workspace.

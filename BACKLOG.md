@@ -413,10 +413,10 @@ A deck's Matchups table splits each archetype into Game 1 and the games
 after sideboarding, but never into on the play and on the draw; only the
 deck's overall line has that split, and Matches filters by source and
 deck alone. A player asking "how do I do against Burn on the draw after
-sideboarding" can't get an answer anywhere in the app. BL-088's task walk
+sideboarding" can't get an answer anywhere in the app. the UI sweep's task walk
 T3 gave up on exactly this, in both languages.
 
-**Why deferred:** BL-088's plan is a UI and wording sweep; this is a new
+**Why deferred:** the UI sweep was wording and layout only; this is a new
 cut of the data, with an API change. The user's call, 2026-10-22.
 
 **Needs:** The split per archetype, game 1 and post-board each by play and
@@ -428,7 +428,7 @@ draw, with games whose `on_play` is unknown counted apart, never guessed
 type: feat · priority: P2 · status: needs-decision · area: api web
 
 A deck's matchup figures are all-time, so "my worst matchup this month"
-can't be asked. In BL-088's walk T2 both walkers noticed and answered from
+can't be asked. In the UI sweep's walk T2 both walkers noticed and answered from
 all-time figures.
 
 **Why deferred:** The same as BL-089, and which windows to offer (30
@@ -443,7 +443,7 @@ matchup routes and shown on the table's header.
 
 type: feat · priority: P3 · status: needs-decision · area: review
 
-In BL-088's walk T4, game 3 was lost to a mulligan and missed land drops,
+In the UI sweep's walk T4, game 3 was lost to a mulligan and missed land drops,
 and the match report named nothing: Stranded reads hand size on the last
 turn only, no analyzer reads `lands_played`, and a mulligan is never a
 beat. The report now says "no single cause stood out" for such a game.
