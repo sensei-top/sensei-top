@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A deck's **Guide** can now save its exported Markdown as a file: "Download
   .md" sits beside the copy button, as it does on the RCQ guide.
 
+### Fixed
+
+- On the MTGO picks page, a match no group takes because no saved list is
+  in its format now names that format: "No saved list in Modern." rather
+  than "No saved list fits."
+
 ## [1.2.1] - 2026-10-21
 
 ### Changed

@@ -45,7 +45,8 @@
     "fewCards_one": "Only {{n}} card seen.",
     "fewCards_other": "Only {{n}} cards seen.",
     "bestList": "Best list: {{name}}, {{matched}} of {{seen}} cards.",
-    "noFit": "No saved list fits."
+    "noFit": "No saved list fits.",
+    "noListIn": "No saved list in {{format}}."
   },
   "hint": "Your cards read as {{hint}}.",
   "against": "against {{name}}",

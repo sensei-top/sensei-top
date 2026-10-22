@@ -339,6 +339,7 @@ def _build(conn: sqlite3.Connection) -> dict[str, Any]:
                     "cards_matched": u.best[1]}
         return {
             **match_out(u.match_id, u.cards_seen, None), "reason": u.reason, "best": best,
+            "format": info[u.match_id]["inferred"],
         }
 
     unsure = [unsure_out(u) for u in result.unsure]

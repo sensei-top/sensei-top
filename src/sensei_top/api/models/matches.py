@@ -268,6 +268,9 @@ class MtgoUnsurePick(MtgoWaitingMatch):
 
     reason: Literal["few_cards", "low_fit", "no_list"]
     best: MtgoBestList | None = None
+    format: str | None = Field(
+        None, description="the format inferred for the match; null when none was"
+    )
 
 
 class MtgoPickGroup(BaseModel):
