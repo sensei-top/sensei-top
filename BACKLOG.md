@@ -47,7 +47,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-089
+Next ID: BL-091
 
 ## Features
 
@@ -422,6 +422,40 @@ screenshot of each page with Playwright MCP, then an Impeccable critique of
 it. The plan then sets what each page is for, the order a player meets them
 in, and what to merge, move or drop, with `docs/design-system.md` and
 `docs/frontend-pages.md` brought along.
+
+### BL-089 · A play/draw split per matchup
+
+type: feat · priority: P2 · status: ready · area: api web
+
+A deck's Matchups table splits each archetype into Game 1 and the games
+after sideboarding, but never into on the play and on the draw; only the
+deck's overall line has that split, and Matches filters by source and
+deck alone. A player asking "how do I do against Burn on the draw after
+sideboarding" can't get an answer anywhere in the app. BL-088's task walk
+T3 gave up on exactly this, in both languages.
+
+**Why deferred:** BL-088's plan is a UI and wording sweep; this is a new
+cut of the data, with an API change. The user's call, 2026-10-22.
+
+**Needs:** The split per archetype, game 1 and post-board each by play and
+draw, with games whose `on_play` is unknown counted apart, never guessed
+(rule 4), and the table kept readable at 1008 px.
+
+### BL-090 · A date window on a deck's matchups
+
+type: feat · priority: P2 · status: needs-decision · area: api web
+
+A deck's matchup figures are all-time, so "my worst matchup this month"
+can't be asked. In BL-088's walk T2 both walkers noticed and answered from
+all-time figures.
+
+**Why deferred:** The same as BL-089, and which windows to offer (30
+days, since the last ban, since the deck last changed) is the user's
+decision. The ban one has to agree with how the metagame windows treat a
+ban.
+
+**Needs:** The windows chosen, then the window passed through the
+matchup routes and shown on the table's header.
 
 ## Bugs
 
