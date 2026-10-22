@@ -58,9 +58,10 @@ _SLOT_RE = re.compile(r"\.(\d+)\Z")  # exact pattern, never a glob
 
 
 class BackupError(Exception):
-    """A verification invariant failed. Always caught inside ``run_backup``
-    and turned into ``BackupResult(status="failed", ...)`` -- nothing above
-    this module should ever need to catch it directly."""
+    """A verification invariant failed, or the destination is a network share
+    (``db.is_unc_path``) a run refuses before any write. Always caught inside
+    ``run_backup`` and turned into ``BackupResult(status="failed", ...)`` --
+    nothing above this module should ever need to catch it directly."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -166,6 +167,14 @@ def run_backup(
     if not db_path.exists():
         error = f"No database at {db_path}"
         return BackupResult(status="failed", age_seconds=age, error=error)
+
+    try:
+        # resolve() never raises, so a share from $SENSEI_TOP_BACKUP_DIR or
+        # [backup] dir is refused here, before mkdir writes anything.
+        _refuse_network_share(cfg.directory)
+    except BackupError as exc:
+        _record_failure(conn, str(exc))
+        return BackupResult(status="failed", age_seconds=age, error=str(exc))
 
     try:
         cfg.directory.mkdir(parents=True, exist_ok=True)
@@ -281,6 +290,13 @@ def run_backup(
             "WHERE id = 1",
             (_now_iso(),),
         )
+
+
+def _refuse_network_share(directory: Path) -> None:
+    """Raises ``BackupError`` for a destination Windows reads as a network
+    share; the read-only verify cannot open a backup there."""
+    if db.is_unc_path(directory):
+        raise BackupError(db.unc_refusal(directory))
 
 
 def _claim(conn: sqlite3.Connection) -> tuple[bool, int | None]:

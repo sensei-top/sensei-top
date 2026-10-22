@@ -47,7 +47,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-087
+Next ID: BL-088
 
 ## Features
 
@@ -593,20 +593,6 @@ handle between polls, so the window is one read a second.
 **Needs:** A capture of the failure, then opening the log through
 `CreateFileW` with the flag (and `msvcrt.open_osfhandle`).
 
-### BL-038 · UNC paths for the database and backups
-
-type: fix · priority: P3 · status: ready · area: backup api
-
-A database or backup path given as a UNC path (`\\server\share\…`) fails
-where it is opened read-only: those opens use SQLite's URI form, and SQLite
-rejects the `file://server/…` URI a UNC path becomes. A mapped drive letter
-works, since the URI is built from `Path.absolute()`, not `resolve()`.
-
-**Why deferred:** Found in plan 3's Windows work (S2); out of its scope.
-
-**Needs:** Building a URI SQLite accepts from a UNC path, or refusing one
-with a message.
-
 ### BL-040 · Segmenter shape 5 and a following header
 
 type: fix · priority: P3 · status: needs-data · area: reader
@@ -810,6 +796,23 @@ fixing the play/draw rates.
 
 **Needs:** `games_lost` on `v_deck_game_length`, and the rate read as won
 over won plus lost.
+
+### BL-087 · A mapped drive may not hold the backups
+
+type: fix · priority: P3 · status: ready · area: backup
+
+`backup/config.py::resolve()` passes every backup folder through
+`Path.resolve()`, which on Windows may turn a mapped network drive into its
+`\\server\share` path. The backup run then refuses it as a network share
+(BL-038), though the refusal's message tells the user to map the share to a
+drive letter. Before BL-038 the same folder failed later, at the copy's
+check. Found by BL-038's run.
+
+**Why deferred:** Outside BL-038's files, and unverified on Windows.
+
+**Needs:** Checking `Path.resolve()` on a mapped drive on Windows; if it
+does return the share, a resolution that keeps the drive letter, and what
+that changes for a backup folder that is a link.
 
 ## Performance
 

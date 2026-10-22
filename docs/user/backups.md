@@ -12,7 +12,9 @@ persists across restarts:
     sensei-top config --set-backup-keep 3
 
 A folder you choose inside a git checkout is yours to keep out of the
-tree: it holds your whole match history.
+tree: it holds your whole match history. On Windows, a network folder
+(`\\server\share`) is refused for the database and the backups; map the
+share to a drive letter and use that instead.
 
 ## Restoring one
 

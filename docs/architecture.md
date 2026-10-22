@@ -419,7 +419,13 @@ scratch backup folder next to it, never anywhere near the real one. `backup`
 and `config --set-backup-dir`/`--set-backup-keep` share this resolution and
 the same `config.toml` the MTGO handle, the `[arena]` table and the
 file-held credentials live in (a key goes to the system keyring first when one
-exists).
+exists). On Windows a network share (`\\server\share`, `//server/share`,
+`\\?\UNC\…`) can hold neither the database nor the backups, since SQLite
+rejects the `file://server/…` URI the read-only opens build from it: `--db`,
+`backup --dir`, `config --set-backup-dir` and `restore`'s file refuse one, a
+run refuses one from `$SENSEI_TOP_BACKUP_DIR` or `[backup]` before writing
+anything (`db.is_unc_path`), and the message says to map the share to a drive
+letter instead.
 
 **Slot naming and rotation.** Slot 0 is `<db name>.backup`; older ones are
 `<db name>.backup.1`, `.2`, and so on up to `keep - 1`. A run shifts existing
