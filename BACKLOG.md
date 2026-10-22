@@ -47,7 +47,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-091
+Next ID: BL-092
 
 ## Features
 
@@ -405,24 +405,6 @@ it stops.
 
 **Needs:** A design for paging.
 
-### BL-088 · A UI and UX sweep of the whole app
-
-type: feat · priority: P1 · status: ready · area: web desktop site
-
-The dashboard reads as a set of features put side by side, not as one
-product built around what a player wants to know. That was the sentiment
-of the Reddit threads after 1.0.0. Plan 26's soft redesign (2026-10-18)
-changed the visuals and kept each page's job, so the problem is still
-there.
-
-**Why deferred:** Raised after the launch, 2026-10-22.
-
-**Needs:** A plan built on a walk through every page in the real app: a
-screenshot of each page with Playwright MCP, then an Impeccable critique of
-it. The plan then sets what each page is for, the order a player meets them
-in, and what to merge, move or drop, with `docs/design-system.md` and
-`docs/frontend-pages.md` brought along.
-
 ### BL-089 · A play/draw split per matchup
 
 type: feat · priority: P2 · status: ready · area: api web
@@ -456,6 +438,24 @@ ban.
 
 **Needs:** The windows chosen, then the window passed through the
 matchup routes and shown on the table's header.
+
+### BL-091 · A game lost to mana screw or a mulligan, named in the report
+
+type: feat · priority: P3 · status: needs-decision · area: review
+
+In BL-088's walk T4, game 3 was lost to a mulligan and missed land drops,
+and the match report named nothing: Stranded reads hand size on the last
+turn only, no analyzer reads `lands_played`, and a mulligan is never a
+beat. The report now says "no single cause stood out" for such a game.
+
+**Why deferred:** `docs/review.md`, "Why this exists", moved land and mana
+findings out of the per-match report on purpose: a single flooded game is
+not a story, a rate across games is, and the leak finder carries it. A
+per-game screw beat reverses that, so it is a decision first.
+
+**Needs:** The decision, then, if it goes ahead, the strategy article the
+analyzer stands on (each analyzer has one, `docs/review.md`) and a
+threshold for screw that a fixture can pin.
 
 ## Bugs
 
