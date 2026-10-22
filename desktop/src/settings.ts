@@ -44,7 +44,6 @@ export type DetailedLogs = 'enabled' | 'disabled' | 'unknown';
 export type DateOrder = 'auto' | 'mdy' | 'dmy';
 export type KeyName = 'claude' | 'topdeck';
 export type Saved = { ok: true; restart?: boolean } | { ok: false; error: string };
-export type Deleted = { ok: true; count: number } | { ok: false; error: string };
 
 export type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends readonly unknown[] ? T[K] : T[K] extends object ? DeepPartial<T[K]> : T[K];
@@ -74,8 +73,6 @@ export type ShellSettings = {
     last: { at: string; ok: boolean; bytes: number | null } | null;
     inFolder: number;
   };
-  /** Plan 10's; this shell offers none. */
-  sharing: null;
 };
 
 /** One `cards --progress` event (S17b): bytes read of the total (null when
@@ -291,7 +288,6 @@ export function toShellSettings(config: ConfigJson, doctor: DoctorArena | null, 
       last: extras.lastBackup,
       inFolder: extras.backupInFolder,
     },
-    sharing: null,
   };
 }
 

@@ -16,7 +16,6 @@ function settings(version: string, model = 'm'): BridgeSettings {
     },
     writing: { claudeKey: false, topdeckKey: false, model, models: [] },
     backup: { dir: '/b', keep: 7, last: null, inFolder: 0 },
-    sharing: null,
     app: {
       startWithSystem: false,
       keepRunningOnClose: false,
@@ -45,12 +44,6 @@ function fake(initial: BridgeSettings | null) {
     pickFile: () => Promise.resolve(null),
     backUpNow: never,
     restoreFrom: never,
-    setSharing: never,
-    payloadOf: () => Promise.resolve(null),
-    sharedState: () => Promise.resolve({ state: 'not-shared' as const, at: null }),
-    unshare: never,
-    deleteContributions: () => Promise.resolve({ ok: true as const, count: 0 }),
-    newInstallation: never,
     app: {
       set: never,
       checkForUpdates: never,

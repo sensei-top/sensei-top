@@ -5,7 +5,6 @@
     "writing": "Escrita",
     "backup": "Backup",
     "app": "Aplicativo",
-    "draftData": "Dados de draft",
     "appearance": "Aparência",
     "live": "Ao vivo",
     "credits": "Sobre e créditos"
@@ -144,46 +143,5 @@
       "failed": "A última verificação falhou. O motivo está no log.",
       "failedWhen": "A última verificação falhou {{when}}. O motivo está no log."
     }
-  },
-  "sharing": {
-    "title": "Compartilhar seus drafts",
-    "subtitle": "Os drafts compartilhados pelos jogadores viram avaliações de cards que qualquer um pode baixar, para as filas que ninguém mais mede.",
-    "share": "Compartilhar meus drafts concluídos",
-    "shareOn": "Ligado. Cada draft é enviado quando seus jogos terminam, nunca durante um jogo.",
-    "shareOff": "Desligado. Nada é enviado.",
-    "whatIsSent": "O que é enviado",
-    "whatIsNeverSent": "O que nunca é enviado",
-    "sentList": {
-      "event": "O evento, a coleção, e a hora em que o draft começou e terminou.",
-      "picks": "Cada pacote que você viu e o card que pegou dele.",
-      "deck": "O deck que você montou, e o resultado de cada jogo, quem jogou primeiro e quantos turnos levou.",
-      "opponent": "As cores do oponente, quando o aplicativo as leu.",
-      "rank": "O nível da sua classificação de Limitado, quando o log o tem.",
-      "install": "Um id aleatório desta instalação, a versão do aplicativo e o sistema operacional."
-    },
-    "noDraftYet": "Quando você concluir um draft, o que ele enviaria é mostrado aqui.",
-    "seeSent": "Ver o que seu último draft enviou",
-    "seeWouldSend": "Ver o que seu último draft enviaria",
-    "sentNone": "Nenhum draft foi enviado.",
-    "sentCount_one": "{{count}} draft foi enviado.",
-    "sentCount_other": "{{count}} drafts foram enviados.",
-    "deletedNone": "O servidor não tinha nenhum draft seu.",
-    "deletedCount_one": "O servidor excluiu {{count}} draft.",
-    "deletedCount_other": "O servidor excluiu {{count}} drafts.",
-    "notDeleted": "O servidor não respondeu. Nada foi excluído. Tente de novo.",
-    "notMade": "Nenhum id novo foi criado. Tente de novo.",
-    "installationLabel": "O id desta instalação",
-    "installationHint": "Um id aleatório, criado neste computador. É como seus drafts são distinguidos dos de outro jogador, e como são encontrados quando você os exclui.",
-    "makeNew": "Criar um novo",
-    "makeNewTitle": "Criar um novo id?",
-    "keepId": "Manter este id",
-    "makeNewConfirm": "Criar um novo id",
-    "makeNewBody": "Os drafts já enviados ficam onde estão, sob o id antigo. Com um id novo eles não podem mais ser encontrados a partir deste computador, então não podem mais ser excluídos daqui. Para excluí-los, faça isso antes de criar um id novo.",
-    "deleteAll": "Excluir tudo o que enviei",
-    "deleteTitle": "Excluir todos os drafts que você enviou?",
-    "keepThem": "Mantê-los",
-    "deleteThem": "Excluí-los",
-    "deleting": "Excluindo",
-    "deleteBody": "Todo draft enviado sob o id desta instalação é excluído do servidor. As avaliações já publicadas a partir deles não são recalculadas até a próxima noite. Seus drafts neste computador ficam como estão."
   }
 }

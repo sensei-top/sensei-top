@@ -295,7 +295,6 @@ address can name:
 | Writing | `writing` | `settings/WritingSection.tsx` | always; with no shell, its `WritingStatus` |
 | Backup | `backup` | `settings/BackupSection.tsx` | a desktop shell |
 | App | `app` | `settings/AppSection.tsx` | a desktop shell |
-| Draft data | `draft-data` | `settings/SharingSection.tsx` | a desktop shell that offers sharing |
 | Appearance | `appearance` | the page's own | always |
 | Live | `live-settings` | the page's own | always |
 | About and credits | `credits` | `CreditsView` | always |
@@ -389,10 +388,9 @@ sentence under the switch says what the last check found
 (`lib/settings.ts`'s `updateSentence`), and a downloaded update adds
 "Restart to update", which goes through `app.restartToUpdate`.
 
-Two fields of the types are there because a state had nothing to show
-without them: `Sharing` carries `lastDraft`, the newest finished draft,
-which the section links to; `backup.inFolder` counts the copies the
-folder holds, which the failed backup's sentences name.
+A field of the types is there because a state had nothing to show
+without it: `backup.inFolder` counts the copies the folder holds, which
+the failed backup's sentences name.
 
 #### How a form saves
 
@@ -452,31 +450,11 @@ folder holds, which the failed backup's sentences name.
   the export holds and that matches are never in it; last, the sentence
   naming the welcome steps and "Go through them again", a link to
   `/welcome`.
-- **Draft data.** The switch "Share
-  my finished drafts", off until the viewer presses it; what is sent and
-  what never is, as two short lists; a link to what the newest draft
-  would send; how many drafts were sent, which counts what the server
-  holds under this installation's id, so a delete sets it to 0; the id,
-  read-only, with "Make a new one"; "Delete everything I sent". Both of
-  the last ask first.
 
-`components/sharing/` holds what sharing draws outside Settings:
-`PayloadView` (what one draft sends, in words, under what is never
-sent), `SharingNote` (the line under a draft's header that sharing is
-on) and `DraftReceipt` (a finished draft's line: waiting to be sent,
-sent with "Undo", or removed). No address draws any of the three, so
-they are drawn only on `/design/surfaces`.
+The Overlay section went with the pivot, since no overlay is planned.
 
-**Draft data and `components/sharing/` describe drafts, which the app no
-longer reads** (the draft assistant was deleted on 2026-10-01). They were
-kept for plan 10's match-data contribution, which was refused on
-2026-10-19 (`ROADMAP.md`, "Never"), so their removal is owed
-(`BACKLOG.md`, BL-062). The Overlay section went with the pivot, since no
-overlay is planned.
-
-**Inside the desktop shell** every section above is drawn but Draft
-data, which waits for a shell that offers sharing. The first-run steps
-are "Welcome", below.
+**Inside the desktop shell** every section above is drawn. The first-run
+steps are "Welcome", below.
 
 ### Welcome
 
@@ -589,13 +567,11 @@ section's sample is the page's own (`useSampleApp`), laid over whichever
 shell is picked, since `lib/sampleShell.ts` has no `app`. A "Sample" select
 at the top, its label above it, picks the shell (`SAMPLE_OPTIONS`: the two
 with no shell, nothing set, everything set, a save that fails, a restart,
-each backup's failure, each sharing state), and a new pick starts that
-sample's state again. Under Settings: `PayloadView` over an invented draft,
-the two lines a draft's page would draw, and a report's card as each writer
-draws it (`GenerateCard`, below), and last the Detailed Logs drawing at both
-its sizes, the Arena step's and the Home banner's. Every name, path and day
-on the page is invented. `lib/sampleShell.ts` is imported by this page
-alone.
+and each backup's failure), and a new pick starts that sample's state
+again. Under Settings: a report's card as each writer draws it
+(`GenerateCard`, below), and last the Detailed Logs drawing at both its
+sizes, the Arena step's and the Home banner's. Every name, path and day on
+the page is invented. `lib/sampleShell.ts` is imported by this page alone.
 
 ## Shared primitives (`components/ui/`)
 

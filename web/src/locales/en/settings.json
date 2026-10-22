@@ -5,7 +5,6 @@
     "writing": "Writing",
     "backup": "Backup",
     "app": "App",
-    "draftData": "Draft data",
     "appearance": "Appearance",
     "live": "Live",
     "credits": "About and credits"
@@ -144,46 +143,5 @@
       "failed": "The last check failed. The reason is in the log.",
       "failedWhen": "The last check failed {{when}}. The reason is in the log."
     }
-  },
-  "sharing": {
-    "title": "Sharing your drafts",
-    "subtitle": "Drafts shared by players become card ratings that anyone can download, for the queues nobody else measures.",
-    "share": "Share my finished drafts",
-    "shareOn": "On. Each draft is sent once its games are over, never during a game.",
-    "shareOff": "Off. Nothing is sent.",
-    "whatIsSent": "What is sent",
-    "whatIsNeverSent": "What is never sent",
-    "sentList": {
-      "event": "The event, the set, and the hour the draft started and ended.",
-      "picks": "Every pack you saw and the card you took from it.",
-      "deck": "The deck you built, and each game's result, who played first and how many turns it took.",
-      "opponent": "The opponent's colours, when the app read them.",
-      "rank": "Your Limited rank's tier, when the log has it.",
-      "install": "A random id for this installation, the app's version and the operating system."
-    },
-    "noDraftYet": "Once you finish a draft, what it would send is shown here.",
-    "seeSent": "See what your last draft sent",
-    "seeWouldSend": "See what your last draft would send",
-    "sentNone": "No draft has been sent.",
-    "sentCount_one": "{{count}} draft has been sent.",
-    "sentCount_other": "{{count}} drafts have been sent.",
-    "deletedNone": "The server held no draft of yours.",
-    "deletedCount_one": "The server deleted {{count}} draft.",
-    "deletedCount_other": "The server deleted {{count}} drafts.",
-    "notDeleted": "The server did not answer. Nothing was deleted. Try again.",
-    "notMade": "No new id was made. Try again.",
-    "installationLabel": "This installation's id",
-    "installationHint": "A random id, made on this computer. It is how your drafts are told from another player's, and how they are found when you delete them.",
-    "makeNew": "Make a new one",
-    "makeNewTitle": "Make a new id?",
-    "keepId": "Keep this id",
-    "makeNewConfirm": "Make a new id",
-    "makeNewBody": "The drafts already sent stay where they are, under the old id. With a new id they can no longer be found from this computer, so they can no longer be deleted from here. To delete them, do it before making a new id.",
-    "deleteAll": "Delete everything I sent",
-    "deleteTitle": "Delete every draft you sent?",
-    "keepThem": "Keep them",
-    "deleteThem": "Delete them",
-    "deleting": "Deleting",
-    "deleteBody": "Every draft sent under this installation's id is deleted from the server. Ratings already published from them are not recomputed until the next night. Your drafts on this computer stay as they are."
   }
 }

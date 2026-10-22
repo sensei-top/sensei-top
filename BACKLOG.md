@@ -922,24 +922,6 @@ still an estimate, because nothing records it.
 
 ## Code health
 
-### BL-062 · The draft-sharing leftovers
-
-type: refactor · priority: P2 · status: ready · area: web desktop
-
-Settings' Draft data section (`components/settings/SharingSection.tsx`),
-`components/sharing/` and the `Sharing`, `SharedDraft`, `DraftPayload` and
-`Deleted` types in `web/src/bridge.ts` describe drafts, which the app no
-longer reads. Nothing draws them outside `/design/surfaces`.
-
-**Why deferred:** Kept when the draft assistant and the overlay's leftovers
-were removed (2026-10-01), for plan 10 to rework for match data. Plan 10 was
-refused on 2026-10-19 (`ROADMAP.md`, "Never"), so nothing will.
-
-**Needs:** Their removal, with the shell side of `deleteContributions`
-(`web/src/bridge.ts`, `views/SettingsView.tsx`, `lib/sampleShell.ts`, and in
-the desktop shell `desktop/src/preload.ts` and `desktop/src/settings.ts`,
-which set `sharing` to null) and `docs/frontend.md`'s paragraph on them.
-
 ### BL-063 · Two Windows checks not run
 
 type: chore · priority: P3 · status: ready · area: desktop backup

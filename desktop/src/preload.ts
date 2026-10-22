@@ -17,7 +17,7 @@
 // `settings.test.ts` checks they match `CHANNELS`. Types are erased.
 
 import { contextBridge, ipcRenderer } from 'electron';
-import type { AppChange, BridgeSettings, DeepPartial, Deleted, KeyName, Saved, ShellSettings } from './settings';
+import type { AppChange, BridgeSettings, DeepPartial, KeyName, Saved, ShellSettings } from './settings';
 
 const CHANNEL = {
   initial: 'sensei-top:initial',
@@ -39,11 +39,6 @@ const CHANNEL = {
   changed: 'sensei-top:changed',
 } as const;
 
-// Plan 10's draft sharing: this shell offers none, so these answer without
-// asking the main process. `sharing` is `null`, so the page never draws them.
-const NOT_AVAILABLE = 'Not available yet.';
-const unavailable = (): Promise<Saved> => Promise.resolve({ ok: false, error: NOT_AVAILABLE });
-
 // The sandboxed preload has `location`; the build has no DOM types.
 const { location } = globalThis as unknown as { location: { protocol: string } };
 
@@ -58,13 +53,6 @@ if (location.protocol === 'http:') {
     pickFile: (): Promise<string | null> => ipcRenderer.invoke(CHANNEL.pickFile),
     backUpNow: (): Promise<Saved> => ipcRenderer.invoke(CHANNEL.backUpNow),
     restoreFrom: (path: string): Promise<Saved> => ipcRenderer.invoke(CHANNEL.restoreFrom, path),
-    setSharing: (_on: boolean): Promise<Saved> => unavailable(),
-    payloadOf: (_draftId: string): Promise<null> => Promise.resolve(null),
-    sharedState: (_draftId: string): Promise<{ state: 'not-shared'; at: null }> =>
-      Promise.resolve({ state: 'not-shared', at: null }),
-    unshare: (_draftId: string): Promise<Saved> => unavailable(),
-    deleteContributions: (): Promise<Deleted> => Promise.resolve({ ok: false, error: NOT_AVAILABLE }),
-    newInstallation: (): Promise<Saved> => unavailable(),
     app: {
       set: (change: AppChange): Promise<Saved> => ipcRenderer.invoke(CHANNEL.appSet, change),
       checkForUpdates: (): Promise<Saved> => ipcRenderer.invoke(CHANNEL.appCheckForUpdates),
