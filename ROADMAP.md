@@ -64,8 +64,8 @@ In this order, unless Discussions says otherwise.
    on every rebuild for players without Magic Online first (BL-029,
    BL-032, BL-033, BL-043, BL-056); then the rest (BL-025, BL-026,
    BL-027, BL-028, BL-030, BL-031, BL-034, BL-035, BL-036, BL-037,
-   BL-038, BL-040, BL-041, BL-042, BL-046, BL-047, BL-048, BL-050,
-   BL-051, BL-053, BL-054, BL-080, BL-081, BL-086).
+   BL-040, BL-041, BL-042, BL-047, BL-048, BL-050, BL-051, BL-053,
+   BL-054, BL-080, BL-081, BL-086, BL-087).
 
 ## Later
 
