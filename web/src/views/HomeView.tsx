@@ -59,6 +59,7 @@ export function HomeView({
   /** What the shell adds to first run; absent in a browser. */
   firstRun?: FirstRunShell
 }) {
+  const { t } = useTranslation()
   const now = useNow()
   // The counts move with the minute, not with every second's re-render.
   const minute = Math.floor(now / MINUTE) * MINUTE
@@ -118,8 +119,8 @@ export function HomeView({
     [rows, presence.data, identities.data, resetStart, listFull, minute, format],
   )
   const decks = useMemo(
-    () => (rows && identities.data ? homeDecks(identities.data, rows, minute) : []),
-    [rows, identities.data, minute],
+    () => (rows && identities.data ? homeDecks(identities.data, rows, minute, t) : []),
+    [rows, identities.data, minute, t],
   )
 
   const fieldError = formats.error ?? status.error ?? presence.error ?? identities.error

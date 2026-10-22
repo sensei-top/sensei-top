@@ -10,6 +10,8 @@
 import type { ShellSettings } from '../bridge'
 import type { TFunction } from '../i18n'
 import type { DeckIdentityOut, LeakOut, Match, MetaPresence } from '../api'
+// decks.ts and deckOverview.ts import this module back, so their exports are used inside functions only, never at module level.
+import { sameNameMarks } from './decks'
 import { formatRecord } from './format'
 import { parseTimestamp } from './time'
 
@@ -338,6 +340,9 @@ export type HomeDeck = {
   finished: number
   wins: number
   lastPlayed: number | null
+  /** `sameNameMarks`: the "Newest" chip and the played range, as on `/decks`. */
+  newest: boolean
+  playedRange: string | null
   /** The identity's newest finished match in the list, for its art: a
    *  match's detail is read once, so never one still in progress. */
   artMatchId: string | null
@@ -346,8 +351,17 @@ export type HomeDeck = {
 /** One tile for a deck, not a version: five identities at most, those
  *  with the most matches in the 30 days before `now` first, then by last
  *  played; an identity with no match is left out. A tile links to the
- *  deck by its key (`lib/decks.ts`'s `deckAddress`). */
-export function homeDecks(identities: DeckIdentityOut[], matches: Match[], now: number, count = 5): HomeDeck[] {
+ *  deck by its key (`lib/decks.ts`'s `deckAddress`). The same-name marks are
+ *  computed over every identity before the cut, so a tile reads as on
+ *  `/decks`. */
+export function homeDecks(
+  identities: DeckIdentityOut[],
+  matches: Match[],
+  now: number,
+  t: TFunction,
+  count = 5,
+): HomeDeck[] {
+  const marks = sameNameMarks(identities, t, now)
   const since = now - 30 * DAY
   const listed = newestFirst(matches)
   const finished = finishedNewestFirst(matches)
@@ -363,6 +377,8 @@ export function homeDecks(identities: DeckIdentityOut[], matches: Match[], now: 
         finished: identity.match_wins + identity.match_losses,
         wins: identity.match_wins,
         lastPlayed: parseTimestamp(identity.last_played),
+        newest: marks.get(identity.key)?.newest ?? false,
+        playedRange: marks.get(identity.key)?.playedRange ?? null,
         artMatchId: finished.find((match) => match.deck_id != null && ids.has(match.deck_id))?.match_id ?? null,
       }
       return { deck, recent }

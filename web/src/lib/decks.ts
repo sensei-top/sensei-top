@@ -176,17 +176,18 @@ export type DecksTile = {
   artMatchId: string | null
 }
 
-/** One tile per identity, in the order the API answers them (the last
- *  played first). Of the tiles sharing a name, the one with the latest
- *  `last_played` (the first in the API's order on a tie) is `newest`; the
- *  others carry `playedRange`, by the viewer's own days against `now`, unless
- *  their list was played on one day or has one date. */
-export function decksTiles(
+/** What a name shared by two or more identities marks on each (see
+ *  `DecksTile`): the one with the latest `last_played` (the first in
+ *  `identities`' order on a tie) is `newest`; the others carry
+ *  `playedRange`, by the viewer's own days against `now`, unless their list
+ *  was played on one day or has one date. Computed over every identity of
+ *  `identities`, keyed by identity key, so `/decks` and Home's tiles read
+ *  the same; pass the whole list, never a subset. */
+export function sameNameMarks(
   identities: DeckIdentityOut[],
-  matches: Match[],
   t: TFunction,
-  now: number = Date.now(),
-): DecksTile[] {
+  now: number,
+): Map<string, { newest: boolean; playedRange: string | null }> {
   const newestOf = new Map<string, number>()
   const sharing = new Map<string, number>()
   identities.forEach((identity, index) => {
@@ -198,10 +199,8 @@ export function decksTiles(
     const best = newestOf.get(name)
     if (best == null || played > (parseTimestamp(identities[best].last_played) ?? 0)) newestOf.set(name, index)
   })
-  const finished = matches
-    .filter((match) => isFinished(match) && match.deck_id != null && startOf(match) != null)
-    .sort((a, b) => (startOf(b) ?? 0) - (startOf(a) ?? 0))
-  return identities.map((identity, index) => {
+  const marks = new Map<string, { newest: boolean; playedRange: string | null }>()
+  identities.forEach((identity, index) => {
     const shared = identity.name != null && (sharing.get(identity.name) ?? 0) > 1
     const newest = shared && newestOf.get(identity.name as string) === index
     const first = parseTimestamp(identity.first_played)
@@ -211,6 +210,25 @@ export function decksTiles(
       shared && !newest && !oneDay
         ? versionDays({ first_played: identity.first_played, first_seen: null, last_played: identity.last_played }, now, t)
         : null
+    marks.set(identity.key, { newest, playedRange: range == null ? null : t('decks.tile.playedRange', { range }) })
+  })
+  return marks
+}
+
+/** One tile per identity, in the order the API answers them (the last
+ *  played first); its `newest` and `playedRange` are `sameNameMarks`'. */
+export function decksTiles(
+  identities: DeckIdentityOut[],
+  matches: Match[],
+  t: TFunction,
+  now: number = Date.now(),
+): DecksTile[] {
+  const marks = sameNameMarks(identities, t, now)
+  const finished = matches
+    .filter((match) => isFinished(match) && match.deck_id != null && startOf(match) != null)
+    .sort((a, b) => (startOf(b) ?? 0) - (startOf(a) ?? 0))
+  return identities.map((identity) => {
+    const mark = marks.get(identity.key)
     const ids = new Set(identity.deck_ids)
     return {
       key: identity.key,
@@ -218,8 +236,8 @@ export function decksTiles(
       finished: identity.match_wins + identity.match_losses,
       wins: identity.match_wins,
       lastPlayed: parseTimestamp(identity.last_played),
-      newest,
-      playedRange: range == null ? null : t('decks.tile.playedRange', { range }),
+      newest: mark?.newest ?? false,
+      playedRange: mark?.playedRange ?? null,
       detail: tileDetail(identity.format, identity.deck_ids.length, t),
       artMatchId: finished.find((match) => ids.has(match.deck_id ?? ''))?.match_id ?? null,
     }

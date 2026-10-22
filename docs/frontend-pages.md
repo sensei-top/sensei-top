@@ -174,7 +174,13 @@ the rate muted, "67%" over "rough win rate · 6–3, under 10 matches"; under fi
 muted, over the "too few for a rate" line; with none
 there is no figure. A tile leads to
 the deck's own address, `deckAddress(deck.key)` (`lib/decks.ts`), never
-a version's id.
+a version's id. When two or more identities share a name, the tile
+marks them as `/decks` does, by the one helper both read
+(`sameNameMarks`, `lib/decks.ts`): the most recently played carries the
+"Newest" chip and each other shows "played Sep 3 to 14" where "last
+played" would be. The marks are computed over every identity
+`/api/guide/decks` returns, before the five are chosen, so a tile reads
+the same on both pages even when its twin is not on Home.
 
 **The field** (`homeField`) is the default format's, the one
 `/api/formats` names (`docs/frontend.md`, "Filters are in the address"), and both of its
