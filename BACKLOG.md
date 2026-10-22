@@ -394,19 +394,6 @@ response to store.
 **Needs:** Storing the recovered pages at write time, if a reader ever needs
 them without the prose.
 
-### BL-023 · Play and draw on the Matches page
-
-type: feat · priority: P3 · status: ready · area: web
-
-Play and draw are not on the Matches page.
-
-**Why deferred:** `/api/metrics/play-draw` answered 500 for MTGO when the
-page was built; it answers for every source now, deckless matches in one row
-per side.
-
-**Needs:** Put the split on the page, or count it from the list's games as
-the band does.
-
 ### BL-024 · Paging past the 500th match
 
 type: feat · priority: P3 · status: needs-decision · area: api web

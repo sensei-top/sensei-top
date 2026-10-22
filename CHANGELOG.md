@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A deck's **Guide** can now save its exported Markdown as a file: "Download
   .md" sits beside the copy button, as it does on the RCQ guide.
+- **Matches** now shows play against draw beside matches and games won:
+  the gap between your game win rates on the play and on the draw, with
+  both rates under it, as a deck's page already does.
 
 ### Fixed
 

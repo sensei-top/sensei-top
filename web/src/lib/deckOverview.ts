@@ -4,6 +4,7 @@
  * epoch). A version is a row of `/api/decks`; a deck lists its versions in
  * its identity's `deck_ids`. The pages read the matches and the games on the
  * play and on the draw one version at a time, and these add them up.
+ * Matches' band draws the strip's play/draw tile too (`playDrawTile`).
  *
  * A finished match is a win, a loss or a draw (`isFinished`). A record and
  * a rate are over wins and losses alone: a draw is never a loss.
@@ -145,31 +146,13 @@ function sideValue(side: PlayDrawSide, t: TFunction): string {
   return t('decks.strip.sideNone')
 }
 
-/** The deck strip's three tiles, over the versions a tab reads.
- *
- *  Matches: the small-sample rule over the finished matches' wins and
- *  losses, a draw counting toward neither. Games: the same over every
- *  match's games won and lost, finished match or not. Play vs draw: with
- *  ten games on each side the gap in points, the two whole percentages
- *  subtracted so the figure and the line agree; with fewer on either side
- *  "too few", muted; with no game on either, an em dash. Its line names
- *  both sides, the play first. */
-export function deckKeyNumbers(
-  matches: Match[],
-  totals: PlayDrawTotals,
-  t: TFunction,
-): [KeyTile, KeyTile, KeyTile] {
-  let gamesWon = 0
-  let gamesLost = 0
-  for (const match of matches) {
-    gamesWon += match.games_won ?? 0
-    gamesLost += match.games_lost ?? 0
-  }
-  const tile = (label: string, record: { wins: number; losses: number }, unit: 'matches' | 'games'): KeyTile => {
-    const { figure, line, thin } = rateOrRecord(record, t, unit)
-    return { label, value: figure ?? '—', detail: line, thin }
-  }
-
+/** The play/draw tile: the deck strip's third, and the third on Matches'
+ *  band, so the two never disagree over the same games. With ten games on
+ *  each side the gap in points, the two whole percentages subtracted so
+ *  the figure and the line agree; with fewer on either side "too few",
+ *  muted; with no game on either, an em dash. Its line names both sides,
+ *  the play first. */
+export function playDrawTile(totals: PlayDrawTotals, t: TFunction): KeyTile {
   const play = sidePercent(totals.play)
   const draw = sidePercent(totals.draw)
   let value: string
@@ -189,11 +172,35 @@ export function deckKeyNumbers(
     t('decks.strip.onPlay', { value: sideValue(totals.play, t) }),
     t('decks.strip.onDraw', { value: sideValue(totals.draw, t) }),
   ].join(' · ')
+  return { label: t('decks.strip.playDraw'), value, detail, thin }
+}
+
+/** The deck strip's three tiles, over the versions a tab reads.
+ *
+ *  Matches: the small-sample rule over the finished matches' wins and
+ *  losses, a draw counting toward neither. Games: the same over every
+ *  match's games won and lost, finished match or not. Play vs draw:
+ *  `playDrawTile`. */
+export function deckKeyNumbers(
+  matches: Match[],
+  totals: PlayDrawTotals,
+  t: TFunction,
+): [KeyTile, KeyTile, KeyTile] {
+  let gamesWon = 0
+  let gamesLost = 0
+  for (const match of matches) {
+    gamesWon += match.games_won ?? 0
+    gamesLost += match.games_lost ?? 0
+  }
+  const tile = (label: string, record: { wins: number; losses: number }, unit: 'matches' | 'games'): KeyTile => {
+    const { figure, line, thin } = rateOrRecord(record, t, unit)
+    return { label, value: figure ?? '—', detail: line, thin }
+  }
 
   return [
     tile(t('decks.strip.matches'), matchRecord(matches), 'matches'),
     tile(t('decks.strip.games'), { wins: gamesWon, losses: gamesLost }, 'games'),
-    { label: t('decks.strip.playDraw'), value, detail, thin },
+    playDrawTile(totals, t),
   ]
 }
 
