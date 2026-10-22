@@ -21,12 +21,12 @@ describe('SessionHero', () => {
   it('writes the 30 days with the record and the rate emphasised, from ten decided matches', () => {
     const html = hero({ played: 41, won: 25, losses: 15, outsideSession: true })
     expect(emphasised(html)).toEqual(['25\u2060–\u206015', '63%'])
-    expect(html.replace(/<[^>]*>/g, '')).toContain('Over the last 30 days you are 25\u2060–\u206015, or 63%.')
+    expect(html.replace(/<[^>]*>/g, '')).toContain('You are 25\u2060–\u206015, or 63%.')
   })
 
   it('writes the record alone under ten decided matches', () => {
     const html = hero({ played: 9, won: 6, losses: 3, outsideSession: true })
     expect(emphasised(html)).toEqual(['6\u2060–\u20603'])
-    expect(html.replace(/<[^>]*>/g, '')).toContain('Over the last 30 days you are 6\u2060–\u20603.')
+    expect(html.replace(/<[^>]*>/g, '')).toContain('You are 6\u2060–\u20603.')
   })
 })

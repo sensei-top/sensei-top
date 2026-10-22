@@ -11,6 +11,8 @@ export type ArtFade = 'none' | 'down' | 'left' | 'right'
 // box on no such surface sits on the page itself: the plane. The last 15%
 // of the fade is that colour alone, the band where text may begin.
 const FADE_TO = 'var(--art-surface, var(--plane))'
+// The wash of a box with no card: docs/design-system.md, "Card art".
+const WASH_DIRECTION = { none: '135deg', down: 'to bottom', left: 'to left', right: 'to right' }
 const FADE: Record<Exclude<ArtFade, 'none'>, string> = {
   down: `linear-gradient(to bottom, transparent 35%, ${FADE_TO} 85%)`,
   left: `linear-gradient(to left, transparent 35%, ${FADE_TO} 85%)`,
@@ -115,10 +117,10 @@ function ShowCardButton({ grpId, name }: { grpId: number; name: string | null })
  * the surface behind the box; text sits where the gradient has arrived,
  * never on the picture.
  *
- * Art is never the only carrier of anything. With no id, or a picture
- * that does not load (a new install, offline, a card Scryfall cannot
- * map), the box shows nothing, the surface behind it stands, and there
- * is no button.
+ * Art is never the only carrier of anything. A picture that does not load
+ * (a new install, offline, a card Scryfall cannot map) leaves the surface
+ * behind the box showing. With no id the box draws a quiet wash,
+ * `aria-hidden`, running toward the fade's edge. Neither has a button.
  *
  * The button in the corner shows the whole card on hover, on focus and
  * on tap. It is how a viewer finds the artist's name and the copyright
@@ -144,14 +146,14 @@ export function CardArt({
   const loaded = useLoaded(src)
   const style = {
     '--art-y': `${y}%`,
-    backgroundImage: loaded ? `url(${src})` : undefined,
+    backgroundImage: loaded ? `url(${src})` : grpId == null ? `linear-gradient(${WASH_DIRECTION[fade]}, var(--surface-2), ${FADE_TO})` : undefined,
   } as CSSProperties
 
   return (
     // The box itself takes no position of its own, so the caller's
     // `className` places it (`absolute` included); the inner layer is the
     // fade's and the button's positioned ancestor, filling the box.
-    <div className={`card-art ${className}`} style={style}>
+    <div aria-hidden={grpId == null ? true : undefined} className={`card-art ${className}`} style={style}>
       {loaded && grpId != null && (
         <div className="relative h-full w-full">
           {fade !== 'none' && (

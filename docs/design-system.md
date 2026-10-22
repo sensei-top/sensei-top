@@ -504,10 +504,13 @@ Using `CardArt`:
   `--art-surface` itself, as Home's lead panel and its three things do.
   The last 15% of the fade is that colour alone, the band where text
   may begin.
-- **Art is never the only carrier of anything.** With no id, or a picture
-  that does not load (a new install, offline, a card Scryfall cannot map),
-  the box shows nothing, the surface behind it stands, and there is no
-  button. A page reads the same without its art.
+- **Art is never the only carrier of anything.** With no id, the box
+  draws a quiet placeholder wash, `aria-hidden`: from `--surface-2` to
+  the surface behind, running toward the fade's edge when it has one, so
+  the edge that meets the text is the surface. A picture that does not
+  load (a new install, offline, a card Scryfall cannot map) leaves the
+  box empty, the surface behind it showing. Neither has a button. A page
+  reads the same without its art.
 - Inside a card, art goes in `Card`'s `art` slot:
   `art={<CardArt … fade="down" className="h-32" />}`.
 - **A page shows a card once.** A page with several pieces of art takes

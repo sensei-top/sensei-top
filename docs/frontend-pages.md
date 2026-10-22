@@ -115,6 +115,11 @@ named by the day its first match started. The line about the last 30
 days is drawn only when those days hold a finished match outside the
 session: with none, it would repeat the headline.
 
+The hero names its two windows. The session block (its `SectionLabel`
+"Last session · day", the headline, the deck chips and the match count)
+comes first; the 30-day line follows under its own `SectionLabel`, "Last
+30 days", behind a rule, so the two records are not read as one.
+
 **The three things** are the first three that exist of, in this order
 (`threeThings`): the last finished match; the first pattern that costs
 the viewer (`firstPattern`: the leak finder's first whose win rate with it
@@ -210,6 +215,8 @@ deck tile (the viewer's, from that deck's newest finished match).
 **Art comes from a finished match only**, because `useMatchArt` reads a
 match's detail once and never again (`docs/frontend.md`, "Data fetching"): a match
 still in progress would keep the cards it had when the page opened.
+A box with no card to show draws `CardArt`'s placeholder wash
+(`docs/design-system.md`, "Card art"), not an empty box.
 Seven matches at most: the newest, the field's (asked for only when the
 field is among the three things) and one for each of five decks.
 

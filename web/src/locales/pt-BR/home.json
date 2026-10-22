@@ -79,8 +79,9 @@
   },
   "session": {
     "last": "Última sessão · {{day}}",
-    "thirtyDays": "Nos últimos 30 dias seu histórico é <strong>{{record}}</strong>, ou <strong>{{rate}}</strong>.",
-    "thirtyDaysFew": "Nos últimos 30 dias seu histórico é <strong>{{record}}</strong>.",
+    "thirtyDaysLabel": "Últimos 30 dias",
+    "thirtyDays": "Seu histórico é <strong>{{record}}</strong>, ou <strong>{{rate}}</strong>.",
+    "thirtyDaysFew": "Seu histórico é <strong>{{record}}</strong>.",
     "matches_one": "{{n}} partida",
     "matches_other": "{{n}} partidas"
   },
