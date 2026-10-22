@@ -26,7 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Decks** tells same-named decks apart: the one played most recently
   wears the "Newest" chip and the others show when they were played
-  ("played Sep 3 to 14"). The version switcher marks its newest version.
+  ("played Sep 3 to 14"). The version switcher marks its newest version,
+  and Home's deck tiles mark same-named decks the same way.
+- The **match report**'s top severity reads "Major" where it said
+  "Decisive", which read like the game's result, and its Turned beat
+  counts your own turns ("your turn 6"), as its findings do.
+- A label that explains itself on hover or focus now shows an info icon
+  beside it, everywhere in the dashboard.
+- A deck's **Matchups** view shows the archetypes met ten times or more,
+  and never fewer than the five most met; "Show all" opens the rest. Its
+  Game 1 and Post-board headers explain themselves.
 - **Field** keeps its controls in one row, and the most-played deck leads
   its tiles.
 - **Home** draws a quiet placeholder where a deck has no card art, and
