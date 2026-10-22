@@ -1594,6 +1594,20 @@ def test_match_report_carries_a_summary_alongside_the_raw_findings(client):
     assert isinstance(summary["gap_groups"], list) and summary["gap_groups"]
 
 
+def test_match_report_beats_carry_their_findings_turn_and_a_definition(client):
+    """A beat's turn is its raw finding's own (same code, same game), and
+    every game-beat label has a definition."""
+    body = client.get(f"/api/matches/{MATCH_WIN}/report").json()
+    findings = body["findings"]
+    game_beats = [b for g in body["summary"]["games"] for b in g["beats"]]
+    assert game_beats
+    for beat in game_beats:
+        (source,) = [f for f in findings
+                     if f["code"] == beat["code"] and f["game_number"] == beat["game_number"]]
+        assert beat["turn_number"] == source["turn_number"]
+    assert all(b["definition"] for b in game_beats)
+
+
 def test_match_report_404s_for_an_unknown_match(client):
     assert client.get("/api/matches/nope/report").status_code == 404
 

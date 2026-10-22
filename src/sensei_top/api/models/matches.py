@@ -457,6 +457,13 @@ class SummaryBeat(BaseModel):
     meter: tuple[float, float] | None = Field(
         None, description="(self, opp) for a two-sided proportional bar, e.g. the damage race"
     )
+    turn_number: int | None = Field(
+        None, description="The source finding's player-turn; None when it has none"
+    )
+    definition: str | None = Field(
+        None, description="One plain sentence saying what a game beat's label measures; None "
+        "when the label has none, and on every matchup beat"
+    )
 
 
 class SummaryGameLine(BaseModel):

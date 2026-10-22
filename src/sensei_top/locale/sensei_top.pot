@@ -151,6 +151,10 @@ msgstr ""
 msgid "Cards in hand at the last recorded turn"
 msgstr ""
 
+#: sensei_top/review/summary.py
+msgid "Cards still in your hand on the last turn of a game you lost."
+msgstr ""
+
 #: sensei_top/api/routes/guide.py sensei_top/api/routes/rcq.py
 #, python-brace-format
 msgid "Claude's answer could not be read: {error}"
@@ -163,6 +167,12 @@ msgstr ""
 #: sensei_top/guide/decklist.py
 #, python-brace-format
 msgid "Could not read this line, so it was left out: \"{line}\""
+msgstr ""
+
+#: sensei_top/review/summary.py
+msgid ""
+"Damage each player dealt to the other this game, yours first. Combat between"
+" creatures doesn't count."
 msgstr ""
 
 #: sensei_top/review/analyzers/trajectory.py
@@ -244,6 +254,16 @@ msgstr ""
 
 #: sensei_top/review/analyzers/baseline.py
 msgid "Game ran short against this deck's own average"
+msgstr ""
+
+#: sensei_top/review/summary.py
+#, python-brace-format
+msgid "Game {n}, {label}: {text}."
+msgstr ""
+
+#: sensei_top/review/summary.py
+#, python-brace-format
+msgid "Game {n}: no single cause stood out."
 msgstr ""
 
 #: sensei_top/review/analyzers/baseline.py
@@ -969,6 +989,12 @@ msgid_plural "The sideboard has {n} cards, more than {maximum}."
 msgstr[0] ""
 msgstr[1] ""
 
+#: sensei_top/review/summary.py
+msgid ""
+"The turn your position (life, cards and board together) fell furthest in one"
+" step, and how big that swing was. If it never fell, this line says so."
+msgstr ""
+
 #: sensei_top/review/analyzers/clock.py
 #, python-brace-format
 msgid ""
@@ -1186,6 +1212,12 @@ msgid ""
 "unknown — this names a real risk taken, not a confirmed punish."
 msgstr ""
 
+#: sensei_top/review/summary.py
+msgid ""
+"Whether you played the role the matchup gave you: as the beatdown, attacking"
+" while ahead on board; as control, getting ahead on cards."
+msgstr ""
+
 #: sensei_top/review/analyzers/frame.py
 msgid ""
 "Whether you were on the play or the draw was never observed for this game."
@@ -1278,6 +1310,12 @@ msgid_plural ""
 "(London mulligan), but you'll bottom {n} cards after keeping."
 msgstr[0] ""
 msgstr[1] ""
+
+#: sensei_top/review/summary.py
+msgid ""
+"Your board reached four or more permanents while a sweeper the opponent's "
+"deck usually plays was still unseen."
+msgstr ""
 
 #: sensei_top/review/analyzers/clock.py
 msgid "Your damage per player-turn"
@@ -1555,8 +1593,24 @@ msgstr ""
 msgid "turn {turn} · {magnitude}"
 msgstr ""
 
+#: sensei_top/review/summary.py
+msgid "you conceded"
+msgstr ""
+
+#: sensei_top/review/summary.py
+msgid "you ran out of time"
+msgstr ""
+
 #: sensei_top/review/analyzers/baseline.py
 msgid "your archetype"
+msgstr ""
+
+#: sensei_top/review/summary.py
+msgid "your opponent conceded"
+msgstr ""
+
+#: sensei_top/review/summary.py
+msgid "your opponent ran out of time"
 msgstr ""
 
 #: sensei_top/guide/window.py

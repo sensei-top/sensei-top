@@ -224,12 +224,22 @@ account of what happened (mulligans, play/draw, hand size) scattered across
 the same seven sections it already sits below as stat tiles. `MatchSummary`
 gives that a shape a player actually replays a match in:
 
-* **`headline`/`subhead`** — the match's own score and opponent, plus one
-  optional sentence, only when a stated condition holds over the report's
-  own findings (leading the damage race in every game and still losing some
-  of them; a lone `DECISIVE` finding's own already-audited title, reused
-  verbatim). Nothing is written to fill an empty slot — `subhead` is `None`
-  far more often than not.
+* **`headline`/`subhead`** — the match's own score and opponent, plus an
+  optional subhead, written only when a stated condition holds over the
+  report's own findings (leading the damage race in every game and still
+  losing some of them; a lone `DECISIVE` finding's own already-audited
+  title, reused verbatim). Nothing is written to fill an empty slot —
+  `subhead` is `None` far more often than not. The race sentence doesn't
+  stop at the mismatch: after it comes one sentence per lost game, in game
+  order, naming that game's top beat by the same severity order the game's
+  own beats use ("Game 2, Turned: turn 7 · a decisive swing."), or "no
+  single cause stood out" when the game has none. Leading the race and
+  losing says only that something else decided the game; the beat is the
+  report's best candidate for what. Two kinds of beat are never a cause:
+  the race itself, the sentence's own premise, and `never_behind`, which
+  says the position never swung against you. No analyzer reads lands played
+  and a mulligan is never a beat, so a game lost to mana screw or a
+  mulligan names whichever other beat fired, or no single cause.
 * **`matchup`** — the whole-match findings (`game_number is None`: role
   assignment, still-live staples, the personal and field matchup records,
   the play/draw split), compacted to one line each.
@@ -242,6 +252,20 @@ gives that a shape a player actually replays a match in:
   its source `Finding`'s own `Evidence` or anchor — the same rule
   `findings.py` states for a single finding, extended here to a summary
   built from many (`test_summary.py`'s own traceability audit).
+
+  Each beat also carries its finding's `turn_number` (`None` when the
+  finding has none, as `never_behind` doesn't), so the dashboard can open
+  the replay on a flagged turn, and a `definition`: one plain sentence
+  saying what its label measures. The sentences live beside
+  `_GAME_BEAT_LABELS`, one per label rather than per code, so the three
+  race codes share Race's and `turning_point`/`never_behind` share
+  Turned's; a label with none, and every matchup beat, carries `None`.
+  The words for why a game ended name who, read from the game's own
+  result: a 1v1 game is lost by whoever concedes or runs out of time, so a
+  concession is "you conceded" on a loss and "your opponent conceded" on a
+  win, and the same for the clock. With the result unknown or a draw the
+  subjectless words stay ("conceded", "ended on the clock"). Nothing about
+  it is stored.
 * **`gap_groups`** — the report's own `Gap`s collapsed onto their real root
   cause. Four analyzers independently blocked by the same absence (the
   opponent's deck never resolving to a known archetype) used to render as
