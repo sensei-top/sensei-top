@@ -1,9 +1,10 @@
 import { Link } from 'react-router'
 import { CardArt } from './CardArt'
+import { Chip } from './Chip'
 import { useTranslation } from 'react-i18next'
 
 /** One of the viewer's decks as a tile: a card's art on top, then the
- *  deck's name, its record, a second line when the caller has one, and
+ *  deck's name, a chip under it when the caller passes one, its record, a second line when the caller has one, and
  *  when it was last played. The words under the art are the tile's way in
  *  (a row's way in, docs/design-system.md's "Links"); the art keeps its own
  *  button, so it sits outside the link.
@@ -22,6 +23,7 @@ export function DeckTile({
   line,
   detail,
   lastPlayed,
+  chip,
   art,
 }: {
   name: string | null
@@ -34,8 +36,12 @@ export function DeckTile({
   /** A line above the last played, "Standard, best of three · 4 versions"
    *  (`/decks`); absent on Home. */
   detail?: string | null
-  /** The whole phrase, "last played Sep 27". */
+  /** The whole phrase, "last played Sep 27", or "played Sep 3 to 14" for a
+   *  deck that shares its name with a newer one. */
   lastPlayed?: string | null
+  /** A chip under the name, "Newest", for the latest of several decks that
+   *  share it. */
+  chip?: string | null
   /** A card the viewer cast with this deck; the box stands empty without. */
   art?: { grpId: number; name: string | null } | null
 }) {
@@ -51,6 +57,11 @@ export function DeckTile({
           <span className={`font-display text-title break-words ${name ? 'text-ink' : 'text-muted'}`}>
             {name ?? t('common.unnamedDeck')}
           </span>
+          {chip && (
+            <span className="mt-1 flex">
+              <Chip size="sm">{chip}</Chip>
+            </span>
+          )}
           {figure && <span className={`mt-2 font-display text-stat ${muted ? 'text-muted' : 'text-ink'}`}>{figure}</span>}
           <span className={`text-caption text-ink2 ${figure ? '' : 'mt-2'}`}>{line}</span>
           {(detail || lastPlayed) && (

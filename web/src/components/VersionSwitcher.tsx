@@ -39,7 +39,7 @@ export function VersionSwitcher({
       size="caption"
       value={value ?? ''}
       onChange={choose}
-      options={versions.map((version) => ({ value: version.deck_id, label: versionLabel(version, now, t) }))}
+      options={versions.map((version, index) => ({ value: version.deck_id, label: versionLabel(version, now, t, index === 0) }))}
     >
       <option value="">{t('common.filters.everyVersion')}</option>
     </Select>

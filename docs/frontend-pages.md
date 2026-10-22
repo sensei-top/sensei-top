@@ -737,7 +737,12 @@ many versions when there is more than one (`tileDetail`), when it was
 last played, and its art: a card the viewer cast in the deck's newest
 finished match of the same 500-match list Home reads, one card per
 page. A deck with no finished match in that list keeps the empty art
-box; nothing more is asked for it. The grid is Home's own: two to a
+box; nothing more is asked for it. When two or more tiles share a name
+(a rebuilt deck is a second Arena deck, so a second tile), the one played
+most recently carries the "Newest" chip (`newest`) and each other shows
+"played Sep 3 to 14" (`playedRange`, `versionDays`) where "last played"
+would be, keeping "last played" when the list was played on one day only.
+Nothing is folded together. The grid is Home's own: two to a
 row under 48rem, three from there, five from 64rem. With no deck at
 all, "No decks yet".
 
@@ -802,7 +807,9 @@ Record · Rate), shown once the matches in hand were played at two ranks or
 more; a "Versions" card, one row per version, each a link that chooses it
 alone, its second line "58% win rate · 35–25" from ten finished matches and the
 record alone under it, shown only when every version is being read and the
-deck has more than one; and last, the deck's Matches card. The summary
+deck has more than one (the switcher's first version is the newest by
+`last_played`, the same row the card marks "Newest", and reads "Sep 3 to
+14 · 12 matches (newest)", `versionLabel`); and last, the deck's Matches card. The summary
 band and the three play-draw tiles it used to hold are the strip's now. A
 version chosen with no match against it says so, with a link back to
 reading every version.

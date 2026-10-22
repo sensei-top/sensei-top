@@ -83,13 +83,16 @@ export function versionDays(
 }
 
 /** A version as the switcher names it: its days ("Undated" with none),
- *  then its `matches_played`. "Sep 3 to 14 · 37 matches". */
+ *  then its `matches_played`. "Sep 3 to 14 · 37 matches". `newest`, for the
+ *  version the Versions card marks "Newest", appends "(newest)". */
 export function versionLabel(
   deck: Deck,
   now: number,
   t: TFunction,
+  newest = false,
 ): string {
-  return `${versionDays(deck, now, t) ?? t('decks.overview.undated')} · ${matchesWord(deck.matches_played, t)}`
+  const label = `${versionDays(deck, now, t) ?? t('decks.overview.undated')} · ${matchesWord(deck.matches_played, t)}`
+  return newest ? t('decks.overview.versionNewest', { label }) : label
 }
 
 /** A match's wins and losses, draws and matches in progress aside

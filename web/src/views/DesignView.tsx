@@ -504,8 +504,9 @@ const DECK_TILES = [
     line: 'won 14 of 23',
     detail: `Standard, best of three · 4${NBSP}versions`,
     lastPlayed: 'last played Sep 12',
+    chip: 'Newest',
   },
-  { name: 'Ember Choir', figure: '4 of 7', line: 'matches won', detail: 'Standard', lastPlayed: 'last played Sep 9' },
+  { name: 'Ember Choir', figure: '4 of 7', line: 'matches won', detail: 'Standard', lastPlayed: 'played Sep 3 to 9' },
   { name: null, figure: null, line: 'no finished match yet', detail: null, lastPlayed: 'last played Aug 30' },
 ]
 
@@ -525,6 +526,7 @@ function DeckTiles({ art }: { art: ArtCard[] }) {
               line={tile.line}
               detail={tile.detail}
               lastPlayed={tile.lastPlayed}
+              chip={tile.chip}
               art={art.length ? art[index % art.length] : null}
             />
           </li>

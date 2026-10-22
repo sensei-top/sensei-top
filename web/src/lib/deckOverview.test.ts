@@ -119,6 +119,12 @@ describe('versionLabel', () => {
     expect(versionLabel(row, NOW, t)).toBe(`Aug 28 to Sep 3 · 12${NBSP}matches`)
   })
 
+  it('marks the newest version when asked, and no other', () => {
+    const row = version('a', { first_seen: '2026-09-03T15:00:00', last_played: '2026-09-14T20:00:00', matches_played: 12 })
+    expect(versionLabel(row, NOW, t, true)).toBe(`Sep 3 to 14 · 12${NBSP}matches (newest)`)
+    expect(versionLabel(row, NOW, t, false)).toBe(`Sep 3 to 14 · 12${NBSP}matches`)
+  })
+
   it('says undated with no date', () => {
     expect(versionLabel(version('a', { matches_played: 2 }), NOW, t)).toBe(`Undated · 2${NBSP}matches`)
   })

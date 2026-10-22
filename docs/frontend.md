@@ -582,7 +582,8 @@ One file per primitive, all re-exported from `index.ts`, so every
   slot, `elevation`, `tone`), `StatTile` (a label, a value, one line of
   detail, and `muted`, which draws the value muted for a figure too thin
   to read as a rate), `DeckTile` (one of the viewer's decks: a card's art, then
-  the deck's name, its record and when it was last played; the words
+  the deck's name, an optional chip ("Newest") for the latest of several
+  decks that share a name, its record and when it was last played; the words
   under the art are the way into the deck's page), `Finding` (one
   finding as a nested block: its weight as a chip, where it happened, a
   title and a body), `Callout` (a nested block that says one thing
