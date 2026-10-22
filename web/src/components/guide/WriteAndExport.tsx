@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useGenerateGuideNarrative, useGuideMarkdown, useLLMStatus, usePasteGuideNarrative } from '../../api'
 import type { GuideNarrativeResponse } from '../../api'
 import { useCopied } from '../../lib/clipboard'
+import { saveMarkdown } from '../../lib/download'
 import { writerFrom } from '../../lib/writer'
 import { Button, Card, Loading, TextBlock } from '../ui'
 import { GenerateCard } from '../GenerateCard'
@@ -64,14 +65,22 @@ export function NarrativeAndExport({
               <Loading />
             ) : markdown.data ? (
               <>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="mb-2"
-                  onClick={() => markdownCopy.copy(markdown.data.markdown)}
-                >
-                  {markdownCopy.copied ? t('decks.guide.export.copied') : t('decks.guide.export.copy')}
-                </Button>
+                <div className="mb-2 flex flex-wrap gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => markdownCopy.copy(markdown.data.markdown)}
+                  >
+                    {markdownCopy.copied ? t('decks.guide.export.copied') : t('decks.guide.export.copy')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => saveMarkdown(markdown.data.markdown, 'deck-guide.md')}
+                  >
+                    {t('decks.guide.export.download')}
+                  </Button>
+                </div>
                 <TextBlock scroll>{markdown.data.markdown}</TextBlock>
               </>
             ) : (

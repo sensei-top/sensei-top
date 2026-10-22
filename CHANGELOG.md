@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A deck's **Guide** can now save its exported Markdown as a file: "Download
+  .md" sits beside the copy button, as it does on the RCQ guide.
+
 ## [1.2.1] - 2026-10-21
 
 ### Changed
