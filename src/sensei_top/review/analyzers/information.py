@@ -111,13 +111,23 @@ def analyze_information(snap: MatchSnapshot) -> AnalyzerResult:
                     turn_number=peak.turn_number, self_turn_index=peak.self_turn_index,
                     title=_("Peaked at {permanents} permanents with a sweeper "
                             "unaccounted for").format(permanents=peak.self_permanents),
-                    detail=_(
-                        "On your turn {turn} you had {permanents} permanents in play. "
-                        "{card}, one of {opponent}'s own staples, had not shown up yet — "
-                        "a hand this wide is exactly what that card is for."
-                    ).format(turn=peak.self_turn_index, permanents=peak.self_permanents,
-                             card=sweepers_live[0].name,
-                             opponent=snap.opponent_label or _("this archetype")),
+                    detail=(
+                        _(
+                            "On your turn {turn} you had {permanents} permanents in play. "
+                            "{card}, one of {opponent}'s own staples, had not shown up yet — "
+                            "a hand this wide is exactly what that card is for."
+                        ).format(turn=peak.self_turn_index, permanents=peak.self_permanents,
+                                 card=sweepers_live[0].name,
+                                 opponent=snap.opponent_label or _("this archetype"))
+                        if peak.self_turn_index is not None else
+                        _(
+                            "At your widest point you had {permanents} permanents in play. "
+                            "{card}, one of {opponent}'s own staples, had not shown up yet — "
+                            "a hand this wide is exactly what that card is for."
+                        ).format(permanents=peak.self_permanents,
+                                 card=sweepers_live[0].name,
+                                 opponent=snap.opponent_label or _("this archetype"))
+                    ),
                     evidence=(
                         Evidence("peak_permanents", _("Permanents at the widest point"),
                                  peak.self_permanents),

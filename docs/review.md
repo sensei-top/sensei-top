@@ -254,9 +254,10 @@ gives that a shape a player actually replays a match in:
   built from many (`test_summary.py`'s own traceability audit).
 
   The Turned beat counts "your turn N" with the finding's
-  `self_turn_index`, the turn's rank among your own turns, never Arena's
+  `self_turn_index`, Arena's own count of that player's turns, never the
   shared `turn_number`, which counts both players' turns. With no own-turn
-  index the beat reads the magnitude alone.
+  index the beat reads the magnitude alone, and every analyzer and the
+  narrative prompt describe that turn without a number rather than print one.
 
   Each beat also carries its finding's `turn_number` (`None` when the
   finding has none, as `never_behind` doesn't), so the dashboard can open

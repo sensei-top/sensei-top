@@ -184,6 +184,22 @@ def test_narrative_context_includes_the_turn_by_turn_position_track():
     assert "hand 6-7" in context
 
 
+def test_narrative_turn_line_without_an_own_turn_number_drops_the_parenthesis():
+    snap = _snap(
+        self_turns=(
+            SelfTurnRow(
+                game_number=1, turn_number=2, self_turn_index=None, self_life=20, opp_life=18,
+                self_hand=6, opp_hand=7, self_lands=1, opp_lands=1, self_permanents=1,
+                opp_permanents=0, self_power=1, opp_power=0, self_library=39,
+                self_graveyard=0, self_open_mana=0, prev_self_permanents=None,
+            ),
+        ),
+    )
+    line = narrative.turn_lines_of(snap, 1)[0]
+    assert line.startswith("  turn 2, life 20-18")
+    assert "your turn" not in line and "None" not in line
+
+
 def test_narrative_context_includes_both_sides_play_sequence():
     finding = Finding(
         code="conceded", analyzer="baseline", category=Category.BASELINE, severity=Severity.NOTE,
