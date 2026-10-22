@@ -118,7 +118,7 @@ def _anchor(f: Finding) -> str:
     return f" (game {f.game_number})"
 
 
-def _finding_line(f: Finding) -> str:
+def finding_line(f: Finding) -> str:
     """One finding, rendered without its caveats — shared with
     ``coach/evidence.py``'s worked examples (``ExampleGame.finding_lines``)
     so the two never drift out of formatting sync. Caveats stay this
@@ -146,7 +146,7 @@ class FieldContext:
     since: str | None = None
 
 
-def _turn_lines(snap: MatchSnapshot, game_number: int) -> list[str]:
+def turn_lines_of(snap: MatchSnapshot, game_number: int) -> list[str]:
     lines = []
     for t in snap.turns_in(game_number):
         parts = [f"turn {t.turn_number} (your turn {t.self_turn_index})"]
@@ -164,7 +164,7 @@ def _turn_lines(snap: MatchSnapshot, game_number: int) -> list[str]:
     return lines
 
 
-def _play_lines(snap: MatchSnapshot, game_number: int) -> list[str]:
+def play_lines_of(snap: MatchSnapshot, game_number: int) -> list[str]:
     plays = sorted(
         [(p.turn_number, "you", p) for p in snap.self_plays if p.game_number == game_number]
         + [(p.turn_number, "opponent", p) for p in snap.opponent_plays
@@ -208,8 +208,8 @@ def build_narrative_context(
         )
 
     for game in report.games:
-        turn_lines = _turn_lines(snap, game.game_number)
-        play_lines = _play_lines(snap, game.game_number)
+        turn_lines = turn_lines_of(snap, game.game_number)
+        play_lines = play_lines_of(snap, game.game_number)
         if not turn_lines and not play_lines:
             continue
         lines.append(f"Game {game.game_number} ({game.result or 'unknown'}), turn by turn "
@@ -222,7 +222,7 @@ def build_narrative_context(
     if report.findings:
         lines.append("Findings:")
         for f in report.findings:
-            lines.append(_finding_line(f))
+            lines.append(finding_line(f))
             for caveat in f.caveats:
                 lines.append(f"    caveat: {caveat}")
 

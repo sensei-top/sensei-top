@@ -9,7 +9,7 @@ Every analyzer in ``review/analyzers/`` that reads ``self_turns``, a
 deck-scoped view, or ``damage_events`` must therefore report a ``Gap`` for an
 MTGO match — never a finding built by silently reading that absence as zero
 self-turns, zero damage, or zero deck history (rule 4; ``review/leaks.py``'s
-``_mana_flags`` is held to the same rule in ``tests/test_leaks.py``).
+``mana_flags`` is held to the same rule in ``tests/test_leaks.py``).
 
 The one analyzer with genuine MTGO signal is ``frame.py``'s opening-hand
 findings (mulligan count, on/off the play): ``self_mulligans``/``on_play`` are

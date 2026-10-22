@@ -22,7 +22,7 @@ from collections import Counter, defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from sensei_top.archetypes.classify import _card_colors_by_name
+from sensei_top.archetypes.classify import card_colors_by_name
 from sensei_top.guide.deck import DeckIdentity, deck_matches, identity_format, list_identities
 from sensei_top.guide.field import field_by_key
 from sensei_top.guide.play import mulligan_split
@@ -38,15 +38,15 @@ from sensei_top.review.leaks import (
     MIN_SAMPLE,
     Leak,
     ReportCache,
-    _mana_flags,
-    _scope_clause,
-    _wilson,
     find_leaks,
+    mana_flags,
     report_cache_key,
+    scope_clause,
+    wilson,
 )
 from sensei_top.review.match_report import build_match_report
-from sensei_top.review.narrative import _finding_line, _play_lines, _turn_lines
-from sensei_top.review.snapshot import _classify_own_deck, build_snapshot
+from sensei_top.review.narrative import finding_line, play_lines_of, turn_lines_of
+from sensei_top.review.snapshot import build_snapshot, classify_own_deck
 
 # Arena's event-name prefix for each draft queue: "QuickDraft_SOS_20260831".
 # Read off real captures, "PickTwoDraft" off a real event id (the one
@@ -251,7 +251,7 @@ class _PopMatch:
 
 
 def _rate(wins: int, n: int) -> Rate:
-    return Rate(wins=wins, n=n, rate=(wins / n if n else None), ci=_wilson(wins, n),
+    return Rate(wins=wins, n=n, rate=(wins / n if n else None), ci=wilson(wins, n),
                 anecdotal=n < MIN_SAMPLE)
 
 
@@ -292,9 +292,9 @@ def _population(
     ``no_format``. Every format is kept, not only one: which sections a
     format reaches is ``build_coach_evidence``'s choice, not this one's.
     """
-    scope_sql, scope_params = _scope_clause(None, None, source)
+    scope_sql, scope_params = scope_clause(None, None, source)
     # The deck is v_match_deck's (the user's pick for an MTGO match, else what
-    # the log named), not matches.deck_id. Wrapped so _scope_clause's bare
+    # the log named), not matches.deck_id. Wrapped so scope_clause's bare
     # column names stay unambiguous: the views repeat match_id and source.
     rows = conn.execute(
         f"SELECT match_id, source, event_id, deck_id, match_format, inference_reason, "
@@ -420,7 +420,7 @@ def _own_archetype(
     ).fetchone()
     if row is None:
         return None
-    verdict, _ = _classify_own_deck(
+    verdict, _ = classify_own_deck(
         conn, row["deck_id"], None, colors_by_name=colors_by_name, fmt=fmt,
     )
     return verdict.name if verdict is not None else None
@@ -990,7 +990,7 @@ def _build_examples(
 
         report = reports.get(match_id)
         finding_lines = tuple(
-            _finding_line(f) for f in report.findings if f.game_number in (game_number, None)
+            finding_line(f) for f in report.findings if f.game_number in (game_number, None)
         ) if report is not None else ()
         started_at = started_at_by_id.get(match_id)
         deck_id = deck_id_by_match.get(match_id)
@@ -1003,8 +1003,8 @@ def _build_examples(
             on_play=game.on_play,
             mulligans=game.self_mulligans,
             chosen_for=chosen_for,
-            turn_lines=tuple(_turn_lines(snap, game_number)),
-            play_lines=tuple(_play_lines(snap, game_number)),
+            turn_lines=tuple(turn_lines_of(snap, game_number)),
+            play_lines=tuple(play_lines_of(snap, game_number)),
             finding_lines=finding_lines,
         ))
     return tuple(examples), skipped
@@ -1150,8 +1150,8 @@ def build_coach_evidence(
     format sections only ``fmt``'s matches since ``fmt``'s latest reset
     (docs/coach.md, "The two windows", names which is which).
 
-    ``source`` reuses ``review/leaks.py::_scope_clause``'s vocabulary:
-    ``"all"`` (the default here, unlike ``_scope_clause``'s ``"arena"``)
+    ``source`` reuses ``review/leaks.py::scope_clause``'s vocabulary:
+    ``"all"`` (the default here, unlike ``scope_clause``'s ``"arena"``)
     or ``"arena"``/``"mtgo"``. An MTGO match counts under its
     ``v_match_format.format`` (a confirmed pick, else its inference), so
     ``"mtgo"`` still returns ``None`` on a database that has never run
@@ -1319,7 +1319,7 @@ def build_coach_evidence(
     # each, not one per match.
     consensus_cache: dict = {}
     colors_cache: dict = {}
-    colors_cache["colors_by_name"] = _card_colors_by_name(conn)
+    colors_cache["colors_by_name"] = card_colors_by_name(conn)
     view_cache: dict = {}
     if report_cache is None:
         report_cache = {}
@@ -1508,7 +1508,7 @@ def progress_since(
     new_match_ids = tuple(m.match_id for m in new_rows)
     results_by_id = {m.match_id: m.result for m in new_rows}
     consensus_cache: dict = {}
-    colors_cache: dict = {"colors_by_name": _card_colors_by_name(conn)}
+    colors_cache: dict = {"colors_by_name": card_colors_by_name(conn)}
     view_cache: dict = {}
     report_cache: ReportCache = {}
     # Its own resolver, since this entry point shares none with
@@ -1523,7 +1523,7 @@ def progress_since(
     for code in old_codes:
         if code in ("mana_screwed", "mana_flooded"):
             flag_index = 0 if code == "mana_screwed" else 1
-            flags_by_id = {mid: _mana_flags(conn, mid)[flag_index] for mid in new_match_ids}
+            flags_by_id = {mid: mana_flags(conn, mid)[flag_index] for mid in new_match_ids}
             # Rule 4: a match with no turns rows (every MTGO match) is
             # unknown for this flag, not "clean": it must not swell the
             # denominator or the "not observed" reading below.

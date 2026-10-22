@@ -74,7 +74,7 @@ its bookkeeping:
    (`docs/architecture.md`).
 3. **The player's own deck can be classified.** `archetypes.classify`'s
    `complete=True` path already existed for corpus decklists
-   (`metagame.classify_meta`); `snapshot.py`'s `_classify_own_deck` runs the
+   (`metagame.classify_meta`); `snapshot.py`'s `classify_own_deck` runs the
    same engine over the player's own complete decklist
    (`decks.cards_json`) — something no analyzer did before, because nothing
    needed the player's *own* archetype key until role assignment did.
@@ -280,7 +280,7 @@ post-reset field data, or one format's field with another's.
 `consensus_since` (one window for every match) is also accepted, though no
 caller passes it; passing both raises.
 
-Both flags are read per match by `leaks.py::_mana_flags`, which answers
+Both flags are read per match by `leaks.py::mana_flags`, which answers
 `None` — not `False` — when a match has no evidence to answer from: `screwed`
 needs at least one `turns` row for the match (MTGO's projector never writes
 `turns` at all, so every MTGO match reads `None` here, never "not screwed"),
@@ -312,7 +312,7 @@ pattern label would be that mistake recurring.
 `find_leaks` also takes optional `deck_ids`/`since` (scoping the population
 to one deck's matches or a date window) and `consensus_cache`/
 `colors_cache` (shared memoization for `build_consensus` and
-`archetypes.classify._card_colors_by_name` across repeated calls in one
+`archetypes.classify.card_colors_by_name` across repeated calls in one
 request) — `guide/bundle.py` needs both a deck-scoped rollup and the
 unscoped one side by side and calls this function twice per request. Left
 out, the population is unscoped and each call memoizes on its own.

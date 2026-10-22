@@ -308,7 +308,7 @@ def _rate(wins: int, n: int) -> Rate:
     """Not a real Wilson interval — these tests only check that
     ``format_rate``'s own output appears verbatim in the rendered context,
     never recompute the confidence-interval math (that belongs to
-    ``review/leaks.py::_wilson``'s own tests)."""
+    ``review/leaks.py::wilson``'s own tests)."""
     if n == 0:
         return Rate(wins=0, n=0, rate=None, ci=(0.0, 0.0), anecdotal=False)
     rate = wins / n

@@ -316,7 +316,7 @@ def test_own_archetype_of_a_picked_mtgo_deck_reads_through_the_pick(conn, monkey
         verdict = SimpleNamespace(name="Test Archetype") if deck_id == "mtgodeck" else None
         return verdict, ()
 
-    monkeypatch.setattr(evidence_mod, "_classify_own_deck", fake_classify)
+    monkeypatch.setattr(evidence_mod, "classify_own_deck", fake_classify)
 
     evidence = build_coach_evidence(conn, fmt="Standard")
     assert evidence is not None
@@ -792,7 +792,7 @@ def test_overall_and_deck_level_rates_from_a_ten_match_population(conn):
     assert len(evidence.by_deck) == 1
     line = evidence.by_deck[0]
     assert line.label == "My Deck"
-    # cards_json is '{}' (no maindeck) -> _classify_own_deck bails out before
+    # cards_json is '{}' (no maindeck) -> classify_own_deck bails out before
     # ever reaching the archetype rules, so this deck is correctly None, not
     # a guess.
     assert line.archetype is None
@@ -1399,7 +1399,7 @@ def test_turning_points_missing_report_only_charges_an_overall_loss(conn, monkey
 def _no_turns_match(conn, match_id, result, *, deck_id=None):
     """A match with no ``turns`` rows at all (only ``games.turn_count`` set,
     the same shape an MTGO match has -- ``projector/mtgo/project.py`` never
-    writes ``turns``). ``review/leaks.py::_mana_flags`` reads ``screwed`` as
+    writes ``turns``). ``review/leaks.py::mana_flags`` reads ``screwed`` as
     unknown (``None``), never ``False``, for a match with no self-turn rows
     to answer the question from at all -- rule 4: unknown is ``NULL``, not a
     guess. This helper does *not* produce a match flagged ``True``; it is
@@ -1412,7 +1412,7 @@ def _no_turns_match(conn, match_id, result, *, deck_id=None):
 
 def _insert_self_turns(conn, match_id, *, self_lands_by_turn):
     """Real ``turns`` rows for ``match_id``'s own seat (1), one per turn
-    number in ``self_lands_by_turn`` -- the shape ``_mana_flags`` reads to
+    number in ``self_lands_by_turn`` -- the shape ``mana_flags`` reads to
     answer ``screwed`` with a real ``True``/``False`` rather than ``None``.
     Mirrors ``tests/test_leaks.py``'s own synthetic mana-screw fixture."""
     for turn_number, self_lands in self_lands_by_turn:
@@ -1795,7 +1795,7 @@ def test_progress_since_summarises_new_matches_and_a_recurring_leak_code(conn, m
 
 def test_progress_since_mana_screwed_with_no_turn_data_reports_unmeasured(conn):
     """A previously-known synthetic mana leak code is checked via
-    ``_mana_flags`` directly on the new matches, not by re-running
+    ``mana_flags`` directly on the new matches, not by re-running
     ``find_leaks`` (whose MIN_SAMPLE gate two new matches could never
     clear). When the only new match has no ``turns`` rows at all (the
     ``_no_turns_match`` fixture -- the same shape an MTGO match has),

@@ -34,8 +34,8 @@ from sensei_top.archetypes import classify_matches
 from sensei_top.archetypes.classify import (
     CORPUS_MIN_CARDS,
     CORPUS_MIN_ODDS,
-    _corpus_confidence,
-    _seen_forms,
+    corpus_confidence_of,
+    seen_forms,
 )
 from sensei_top.archetypes.corpus import (
     MIN_CORPUS_DECKS,
@@ -112,7 +112,7 @@ def test_a_card_unique_to_one_archetype_names_it_from_one_reveal(conn):
 
     prior = build_prior(conn)
     assert prior is not None
-    ranked = read_corpus(prior, _seen_forms(["Fireball"]))
+    ranked = read_corpus(prior, seen_forms(["Fireball"]))
     assert ranked[0][0] == "ArchFireball"
 
 
@@ -132,14 +132,14 @@ def test_a_ubiquitous_card_names_nothing_however_often_it_appears(conn):
 
     prior = build_prior(conn)
     assert prior is not None
-    seen = _seen_forms(["Evolving Wilds"])
+    seen = seen_forms(["Evolving Wilds"])
     ranked = read_corpus(prior, seen)
     top_key, top_score = ranked[0]
     second_score = ranked[1][1]
     odds = math.exp(top_score - second_score)
     assert odds == pytest.approx(1.0, abs=1e-9)
     matched = matched_cards(prior, top_key, seen)
-    assert _corpus_confidence(odds, len(matched)) is None
+    assert corpus_confidence_of(odds, len(matched)) is None
 
 
 def test_below_corpus_min_cards_even_at_overwhelming_odds(conn):
@@ -171,7 +171,7 @@ def test_below_corpus_min_cards_even_at_overwhelming_odds(conn):
 
     prior = build_prior(conn)
     assert prior is not None
-    seen = _seen_forms(["Card R1", "Card R2"])
+    seen = seen_forms(["Card R1", "Card R2"])
     ranked = read_corpus(prior, seen)
     top_key, top_score = ranked[0]
     assert top_key == "ArchTwin"
@@ -180,7 +180,7 @@ def test_below_corpus_min_cards_even_at_overwhelming_odds(conn):
     matched = matched_cards(prior, top_key, seen)
     assert len(matched) == 2 < CORPUS_MIN_CARDS
     assert odds > CORPUS_MIN_ODDS
-    assert _corpus_confidence(odds, len(matched)) is None
+    assert corpus_confidence_of(odds, len(matched)) is None
 
 
 def test_a_reset_banned_card_contributes_zero_and_the_gone_archetype_is_absent(conn):
@@ -209,10 +209,10 @@ def test_a_reset_banned_card_contributes_zero_and_the_gone_archetype_is_absent(c
     assert "IzzetProwess" not in prior.decks_by_key
     assert "IzzetProwess" not in prior.labels
     assert "MonoRed" in prior.decks_by_key
-    banned_canon = next(iter(_seen_forms(["Stormchaser's Talent"])))
+    banned_canon = next(iter(seen_forms(["Stormchaser's Talent"])))
     # Every form normalize() produces for the banned name is absent from the
     # global counts, not just the one this test happens to check first.
-    for form in _seen_forms(["Stormchaser's Talent"]):
+    for form in seen_forms(["Stormchaser's Talent"]):
         assert form not in prior.global_counts or prior.global_counts.get(form, 0) == 0
     assert banned_canon not in prior.global_counts
 
@@ -335,7 +335,7 @@ def _reveal(conn, match_id, names, *, start_grp_id):
     """The opponent (seat 2) reveals `names`, each a distinct nonland card —
     colors '[]' (known-colourless, not unknown) so colour_factor never
     penalizes a definition for a colour we deliberately never told it about;
-    see classify.py's own _card_colors_by_name docstring on that
+    see classify.py's own card_colors_by_name docstring on that
     unknown-vs-colourless distinction."""
     for i, name in enumerate(names):
         grp_id = start_grp_id + i
@@ -399,7 +399,7 @@ def test_a_high_rule_verdict_is_not_displaced_by_a_medium_corpus_read(conn):
     The corpus's own top (only) archetype runs all 6 of the same cards, so
     matched_cards is 6 — enough to clear CORPUS_MIN_CARDS and, with no rival
     archetype at all in this corpus, an infinite odds ratio — but 6 is still
-    short of _CORPUS_HIGH_CARDS (8), so _corpus_confidence caps this at
+    short of _CORPUS_HIGH_CARDS (8), so corpus_confidence_of caps this at
     'medium' however large the odds get. Rank 2 does not beat rank 3: the
     rule verdict must stand.
     """
@@ -455,13 +455,13 @@ def test_a_low_rule_verdict_is_displaced_by_a_medium_corpus_read(conn):
 def test_a_candidates_odds_are_a_figure_up_to_a_thousand_and_a_floor_past_it():
     """exp() of a log-odds gap of 40 is about 2.4e17, which printed whole is
     a figure of eighteen digits in the picker's reason."""
-    from sensei_top.archetypes.classify import _odds_text
+    from sensei_top.archetypes.classify import odds_text
 
-    assert _odds_text(math.inf) == "no rival"
-    assert _odds_text(237.4) == "237x the next best"
-    assert _odds_text(999.4) == "999x the next best"
-    assert _odds_text(1000.0) == "over 1,000x the next best"
-    assert _odds_text(math.exp(40)) == "over 1,000x the next best"
+    assert odds_text(math.inf) == "no rival"
+    assert odds_text(237.4) == "237x the next best"
+    assert odds_text(999.4) == "999x the next best"
+    assert odds_text(1000.0) == "over 1,000x the next best"
+    assert odds_text(math.exp(40)) == "over 1,000x the next best"
 
 
 def test_the_modern_prior_ignores_standard_labels(conn):

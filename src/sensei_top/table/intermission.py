@@ -24,10 +24,10 @@ from dataclasses import dataclass
 
 from sensei_top.archetypes.classify import (
     Candidate,
-    _card_colors_by_name,
-    _load_definitions,
+    card_colors_by_name,
     classify_seen,
     live_opponent_colors,
+    load_definitions,
     rank_candidates,
 )
 from sensei_top.archetypes.corpus import CorpusPrior, build_prior
@@ -144,7 +144,7 @@ def opponent_seen_names(conn: sqlite3.Connection, match_id: str, live: LiveState
     for the query twice, so it calls this directly and hands the result
     back to ``build_break_read`` via its own ``names`` parameter.
 
-    Deliberately not run through ``_seen_forms``: ``classify_seen`` and
+    Deliberately not run through ``seen_forms``: ``classify_seen`` and
     ``rank_candidates`` both normalize their own ``names``/``seen_names``
     input, so this only has to gather raw names once.
     """
@@ -191,9 +191,9 @@ def _load_caches(
     The corpus prior is ``fmt``'s, the match's own format, kept per format
     under ``caches["priors"]``. No format is no prior, never Standard's."""
     if "definitions" not in caches:
-        caches["definitions"] = _load_definitions(conn)
+        caches["definitions"] = load_definitions(conn)
     if "colors_by_name" not in caches:
-        caches["colors_by_name"] = _card_colors_by_name(conn)
+        caches["colors_by_name"] = card_colors_by_name(conn)
     prior = None
     if fmt is not None:
         priors = caches.setdefault("priors", {})

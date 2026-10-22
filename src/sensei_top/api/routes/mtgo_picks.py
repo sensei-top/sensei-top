@@ -37,10 +37,10 @@ from sensei_top.api.routes.matches import (
 )
 from sensei_top.archetypes import build_prior
 from sensei_top.archetypes.classify import (
-    _COLOR_ORDER,
-    _card_colors_by_name,
-    _load_definitions,
+    COLOR_ORDER,
+    card_colors_by_name,
     classify_seen,
+    load_definitions,
 )
 from sensei_top.i18n import _
 from sensei_top.mtgo.picks import Group, PickList, PickMatch, Unsure, group_matches
@@ -93,7 +93,7 @@ def _colors_of(
         if n in table:
             counted += 1
             seen |= table[n][1]
-    return "".join(c for c in _COLOR_ORDER if c in seen), counted
+    return "".join(c for c in COLOR_ORDER if c in seen), counted
 
 
 class _Hints:
@@ -110,8 +110,8 @@ class _Hints:
         if fmt is None or not names:
             return None
         if not self._caches:
-            self._caches["definitions"] = _load_definitions(self._conn)
-            self._caches["colors"] = _card_colors_by_name(self._conn)
+            self._caches["definitions"] = load_definitions(self._conn)
+            self._caches["colors"] = card_colors_by_name(self._conn)
             self._caches["played"] = _colors_by_played_name(self._conn, self._all_names)
         if fmt not in self._priors:
             self._priors[fmt] = build_prior(self._conn, fmt)

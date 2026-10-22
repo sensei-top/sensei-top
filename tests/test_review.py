@@ -812,7 +812,7 @@ def test_a_shared_consensus_cache_keeps_each_matchs_format_apart(conn):
 
 def _teach_own_archetype(conn, *, deck_id="deckA", key="test-own-archetype"):
     """One card, one archetype definition requiring it, one deck playing
-    four copies -- just enough for _classify_own_deck's complete=True path
+    four copies -- just enough for classify_own_deck's complete=True path
     to name the deck without any ambiguity to resolve."""
     conn.execute(
         "INSERT INTO cards (grp_id, name, type_line, mana_cost, oracle_text) "

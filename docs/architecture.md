@@ -783,7 +783,7 @@ What is legitimately Python, and why each one is:
 
 | Computation | Where | Why not a view |
 |---|---|---|
-| Wilson score intervals | `review/leaks.py::_wilson` | Needs `sqrt` and a z-constant; SQLite has neither without an extension |
+| Wilson score intervals | `review/leaks.py::wilson` | Needs `sqrt` and a z-constant; SQLite has neither without an extension |
 | Hypergeometric PMF | `table/keep.py::_hypergeometric_pmf` | Needs `math.comb` over a loop |
 | Draw-odds complement | `table/hand_read.py` | Sequential product over a variable-length draw |
 | Medians and curve shapes | `guide/play.py` | SQLite has no median; the windowing is per-deck |

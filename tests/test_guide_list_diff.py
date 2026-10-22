@@ -83,7 +83,7 @@ def identity_for(deck_id, maindeck, sideboard) -> DeckIdentity:
 
 
 def test_returns_none_when_deck_cannot_be_classified(conn):
-    """No archetype definitions loaded at all -> _classify_own_deck returns
+    """No archetype definitions loaded at all -> classify_own_deck returns
     None -> a real gap, not a guess."""
     _insert_card(conn, 1, "Some Card")
     _insert_deck_and_match(conn, "d1", [1, 1, 1, 1], [])

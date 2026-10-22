@@ -13,11 +13,11 @@ import sqlite3
 from datetime import UTC, datetime
 
 from sensei_top.archetypes.classify import (
-    _card_colors,
-    _card_colors_by_name,
-    _load_definitions,
-    _seen_forms,
+    card_colors_by_name,
+    card_colors_of,
     choose,
+    load_definitions,
+    seen_forms,
 )
 
 log = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ def _colors_of(mainboard_names: list[str], colors_by_name: dict[str, frozenset[s
     not have on file (rule 4)."""
     present: set[str] = set()
     for name in mainboard_names:
-        if (card_colors := _card_colors(name, colors_by_name)) is not None:
+        if (card_colors := card_colors_of(name, colors_by_name)) is not None:
             present |= card_colors
     return "".join(letter for letter in "WUBRG" if letter in present)
 
@@ -40,8 +40,8 @@ def classify_meta_decks(conn: sqlite3.Connection) -> dict[str, int]:
     so a classification kept from a previous run could point at a deck that
     no longer exists.
     """
-    definitions = _load_definitions(conn)
-    colors_by_name = _card_colors_by_name(conn)
+    definitions = load_definitions(conn)
+    colors_by_name = card_colors_by_name(conn)
     counts = {"classified": 0, "unclassified": 0, "skipped_format": 0}
     # Event format strings are free text upstream; match them to the stored
     # definitions' spelling case-insensitively. A format with no definitions
@@ -70,8 +70,8 @@ def classify_meta_decks(conn: sqlite3.Connection) -> dict[str, int]:
 
         main_names = [c["name"] for c in mainboard if isinstance(c, dict) and "name" in c]
         side_names = [c["name"] for c in sideboard if isinstance(c, dict) and "name" in c]
-        seen = _seen_forms(main_names)
-        sideboard_seen = _seen_forms(side_names)
+        seen = seen_forms(main_names)
+        sideboard_seen = seen_forms(side_names)
         colors = _colors_of(main_names, colors_by_name)
 
         verdict = choose(
