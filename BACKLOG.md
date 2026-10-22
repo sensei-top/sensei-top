@@ -803,12 +803,12 @@ type: fix · priority: P3 · status: ready · area: backup
 
 `backup/config.py::resolve()` passes every backup folder through
 `Path.resolve()`, which on Windows may turn a mapped network drive into its
-`\\server\share` path. The backup run then refuses it as a network share
-(BL-038), though the refusal's message tells the user to map the share to a
-drive letter. Before BL-038 the same folder failed later, at the copy's
-check. Found by BL-038's run.
+`\\server\share` path. The backup run then refuses it as a network share,
+though the refusal's message tells the user to map the share to a drive
+letter. Before that refusal the same folder failed later, at the copy's
+check. Found while adding the refusal.
 
-**Why deferred:** Outside BL-038's files, and unverified on Windows.
+**Why deferred:** Outside the refusal's files, and unverified on Windows.
 
 **Needs:** Checking `Path.resolve()` on a mapped drive on Windows; if it
 does return the share, a resolution that keeps the drive letter, and what
