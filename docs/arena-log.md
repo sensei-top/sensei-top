@@ -189,6 +189,15 @@ approach silently drops turn changes.
 player took 12 turns reports `turnNumber: 24`, and `players[].turnNumber` in
 that same message reads 12. Game "length" is therefore roughly twice the round
 count — label it as player-turns in any UI, or the numbers look absurd.
+`players[].turnNumber` is each seat's own count, but it is not in every
+message: most diffs omit `players`, or the key for a seat that has not yet
+taken a turn. The message that advances `turnInfo.turnNumber` carries the new
+turn's count, so it belongs to the turn it opens, not the one it closes. Read
+it once per turn (it only moves at a boundary) and store NULL when a turn never
+showed one; ranking the turns a capture happens to hold understates it.
+A `GameStage_GameOver` diff carries both seats' final `players[].turnNumber`
+without `turnInfo`. Where a capture lacks the turns before it, that count lands
+inside an earlier turn and must not replace that turn's count.
 
 **6. Full snapshots and diffs look alike, but `type` tells them apart.** A
 `GameStateMessage` with `type: GameStateType_Full` is the whole board and

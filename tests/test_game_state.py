@@ -6,9 +6,10 @@ here match what's actually in ``tests/fixtures/match_session.log`` (verified
 by direct inspection: ``annotations[].details[]`` entries carry
 ``valueInt32``, zone entries carry ``objectInstanceIds``, etc.).
 
-The undo rollback is the exception: it is tested against
+The undo rollback is the first exception: it is tested against
 ``tests/fixtures/undo_session.log``, a real game with a cancelled cast, at
-the end of this file.
+the end of this file. ``test_fixture_turns_store_arenas_own_counter`` is the
+second: it ingests and projects match_session.log and reads ``v_self_turns``.
 """
 
 import json
@@ -1040,3 +1041,63 @@ def test_an_undo_forgets_exactly_the_annotation_ids_it_drops():
     )
 
     assert [(e.seq, e.grp_id) for e in t.card_events] == [(0, 100), (1, 300), (2, 400)]
+
+
+# --- the active seat's own turn number -------------------------
+
+MATCH_FIXTURE = Path(__file__).parent / "fixtures" / "match_session.log"
+
+
+def test_own_turn_number_goes_to_the_turn_the_message_opens():
+    """A boundary message's players[] count belongs to the new turn, so a seat
+    taking two turns in a row (an extra turn) does not hand turn 4's count to
+    turn 3."""
+    t = GameStateTracker()
+    t.apply({"turnInfo": {"turnNumber": 3, "activePlayer": 1},
+             "players": [{"systemSeatNumber": 1, "turnNumber": 2}]})
+    t.apply({"turnInfo": {"turnNumber": 4, "activePlayer": 1},
+             "players": [{"systemSeatNumber": 1, "turnNumber": 3}]})
+    t.finalize_current()
+    assert t.turns[3].active_turn_number == 2
+    assert t.turns[4].active_turn_number == 3
+
+
+def test_own_turn_number_is_none_when_the_seat_never_gave_one():
+    t = GameStateTracker()
+    t.apply({"turnInfo": {"turnNumber": 1, "activePlayer": 1},
+             "players": [{"systemSeatNumber": 1, "turnNumber": 1}]})
+    t.apply({"turnInfo": {"turnNumber": 2, "activePlayer": 2},
+             "players": [{"systemSeatNumber": 1, "lifeTotal": 20}]})
+    t.apply({"turnInfo": {"turnNumber": 3, "activePlayer": 1}})  # no count for turn 3
+    t.finalize_current()
+    assert t.turns[1].active_turn_number == 1
+    assert t.turns[2].active_turn_number is None
+    assert t.turns[3].active_turn_number is None  # seat 1's turn-1 count is not carried
+
+
+def test_fixture_turns_store_arenas_own_counter(tmp_path):
+    """Read from match_session.log: match fa7a4d16, game 2 ends on turn 24 with
+    both seats at 12; seat 1's turns held are 2 and 24. Game 3's turn 3 is
+    seat 1's second turn; ``own(3, 3) == 2`` pins first-wins, since the
+    GameOver diff after the capture's gap reads 5."""
+    from sensei_top.db import open_database
+    from sensei_top.projector.matches import project
+    from sensei_top.reader.ingest import ingest_file
+
+    conn = open_database(tmp_path / "t.db")
+    ingest_file(conn, MATCH_FIXTURE, locale_hint="mdy")
+    project(conn)
+
+    def own(game: int, turn: int) -> int | None:
+        row = conn.execute(
+            "SELECT self_turn_index FROM v_self_turns "
+            "WHERE match_id LIKE 'fa7a4d16%' AND game_number = ? AND turn_number = ?",
+            (game, turn),
+        ).fetchone()
+        assert row is not None
+        return row[0]
+
+    assert own(2, 24) == 12
+    assert own(2, 2) == 1
+    assert own(3, 3) == 2
+    conn.close()
