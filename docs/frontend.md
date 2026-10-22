@@ -27,7 +27,7 @@ fetch. TanStack Query stays the only data layer.
 | `/decks` | `DecksPage` | every deck, one tile each, last played first |
 | `/decks/:id` | `DeckOverviewPage` | `DeckOverviewView`: that deck's rank table, its versions and its matches, under the deck strip every tab shows |
 | `/decks/:id/matchups` | `DeckMatchupsPage` | `MatchupsView`: one row per archetype it has met |
-| `/decks/:id/matchups/:opponent` | `DeckPairingPage` | `PairingView`: that deck against one opponent's deck |
+| `/decks/:id/matchups/:opponent` | `DeckPairingPage` | `PairingView`: that deck against one opponent's deck, `?format=` one format's matches |
 | `/decks/:id/guide` | `DeckGuidePage` | `GuideView` for that deck |
 | `/decks/:id/rcq` | `DeckRcqPage` | `RcqView`: the RCQ prep for that deck; `/decks/:id/guide/rcq`, its 1.0.x address, redirects here |
 | `/field` | `FieldPage` | `FieldView`: what is played in tournaments, and your record against it |

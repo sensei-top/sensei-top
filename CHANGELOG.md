@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   than "No saved list fits."
 - On Windows, `sensei-top config` no longer says it wrote the config file
   "(mode 600)": there `chmod` sets only the read-only flag.
+- A deck's **Matchups** page keeps formats apart: a Magic Online deck
+  with matches picked as different formats gets one row per format against
+  each opponent, each naming its format, and a row opens that format's
+  matches alone.
 
 ## [1.2.1] - 2026-10-21
 

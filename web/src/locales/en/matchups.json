@@ -1,5 +1,6 @@
 {
   "view": {
+    "formatUnknown": "Format unknown",
     "noVersionTitle": "No match with this version",
     "noVersionMessage": "Pick another version, or read every version together.",
     "everyVersion": "Every version",

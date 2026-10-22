@@ -12,6 +12,8 @@ import {
   matchupName,
   matchupRows,
   matchupTiles,
+  rowFormatName,
+  rowsSpanFormats,
 } from '../lib/matchups'
 import { formatRecord } from '../lib/format'
 import { pairingAddress, withVersion } from '../lib/pairing'
@@ -24,10 +26,12 @@ const MINUTE = 60_000
  *  every version when `version` is `null`), counted from the matches in
  *  hand, top to bottom: the version switcher when the deck has more than
  *  one; three tiles, the archetypes met and the best and worst of those met
- *  ten times or more; and every archetype met, one row each, whichever
- *  version met it, its name a link to the pairing's page carrying the
- *  version chosen, its record and rate, and its best-of-three games split
- *  into game 1 and games 2–3, each a `RateCell`. Finished matches only.
+ *  ten times or more; and every archetype met, one row each per format
+ *  (the format named under the name when the rows span more than one),
+ *  whichever version met it, its name a link to the pairing's page
+ *  carrying the row's format when known and the version chosen, its
+ *  record and rate, and its best-of-three games split into game 1 and
+ *  games 2–3, each a `RateCell`. Finished matches only.
  *  Each version is read on its own and the page waits for every one; one
  *  failure is the page's error. The field's numbers never hold the page:
  *  until they come, or when they fail, the line under a name is the games
@@ -60,6 +64,7 @@ export function MatchupsView({
   const inHand = useMemo(() => (matches.data ? mergeNewestFirst(matches.data) : []), [matches.data])
   const rows = useMemo(() => matchupRows(inHand), [inHand])
   const tiles = useMemo(() => matchupTiles(rows, t), [rows, t])
+  const namesFormat = rowsSpanFormats(rows)
 
   const switcher = deckIds.length > 1 && <VersionSwitcher versions={versions} value={version} now={minute} />
   const icon = placeById('decks').icon
@@ -112,7 +117,7 @@ export function MatchupsView({
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <ManaPips colors={row.colors} />
                     <TextLink
-                      href={withVersion(pairingAddress(deckKey, row.key), version)}
+                      href={withVersion(pairingAddress(deckKey, row.key, row.format), version)}
                       className="min-w-0 break-words text-body"
                     >
                       {/* The muted colour sits on a child: a child's own colour beats the
@@ -121,6 +126,7 @@ export function MatchupsView({
                     </TextLink>
                   </div>
                   {name.showed && <div className="text-caption break-words text-muted">{name.showed}</div>}
+                  {namesFormat && <div className="text-caption break-words text-muted">{rowFormatName(row, t)}</div>}
                   <div className="text-caption break-words text-muted">
                     {fieldLine({ won: row.gamesWon, lost: row.gamesLost }, field, t)}
                   </div>

@@ -1,5 +1,6 @@
 {
   "view": {
+    "formatUnknown": "Formato desconhecido",
     "noVersionTitle": "Nenhuma partida com esta versão",
     "noVersionMessage": "Escolha outra versão, ou leia todas as versões juntas.",
     "everyVersion": "Todas as versões",

@@ -678,22 +678,6 @@ predate it.
 **Needs:** A decision on which grain the table should have, then the same
 grain for both, with a fixture-backed test (rule 7).
 
-### BL-046 · Matchup rows keyed on the opponent alone
-
-type: fix · priority: P3 · status: ready · area: web
-
-A deck's Matchups and pairing pages (`web/src/lib/matchups.ts::matchupRows`)
-group its matches by `opponent_key` alone, not by format and key. An MTGO
-deck whose matches were picked as different formats would mix them in one
-row.
-
-**Why deferred:** Safe while a deck's matches share one format: D15 gives
-the deck one, and on 2026-10-04 no deck in the real history had matches in
-more than one.
-
-**Needs:** Rows keyed on format and key, and a format in the pairing's
-address.
-
 ### BL-047 · Day and Night's shared oracle_id
 
 type: fix · priority: P3 · status: needs-decision · area: cards

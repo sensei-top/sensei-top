@@ -1,4 +1,4 @@
-import { useOutletContext, useParams } from 'react-router'
+import { useOutletContext, useParams, useSearchParams } from 'react-router'
 import { DeckOverviewView } from '../views/DeckOverviewView'
 import { GuideView } from '../views/GuideView'
 import { MatchupsView } from '../views/MatchupsView'
@@ -26,9 +26,9 @@ export function DeckOverviewPage() {
 }
 
 /** `/decks/:id/matchups`: the chosen versions against each archetype they
- *  have met, one row per archetype whichever version met it. Keyed by the
- *  deck alone, as the Overview is, so a change of version keeps the
- *  version select and its focus. */
+ *  have met, one row per archetype and format whichever version met it.
+ *  Keyed by the deck alone, as the Overview is, so a change of version
+ *  keeps the version select and its focus. */
 export function DeckMatchupsPage() {
   const { deckKey, versionIds, version } = useOutletContext<DeckOutletContext>()
   return <MatchupsView key={deckKey} deckKey={deckKey} versionIds={versionIds} version={version} />
@@ -36,21 +36,26 @@ export function DeckMatchupsPage() {
 
 /** `/decks/:id/matchups/:opponent`: the chosen versions against one
  *  opponent's deck, `:opponent` a Matchups row's `opponent_key` as
- *  `lib/pairing.ts`'s `pairingAddress` spells it. The router hands the
- *  param back decoded, a `%2F` as `/`, so it is the key as it is. Keyed by
- *  the deck and the opponent together, so moving to another pairing starts
- *  the page afresh while a change of version keeps the version select and
- *  its focus; the view keys its own Matches card on the version. */
+ *  `lib/pairing.ts`'s `pairingAddress` spells it, and `?format=`, when
+ *  given, the one format whose matches it reads; without it, every
+ *  format's. The router hands the param back decoded, a `%2F` as `/`, so
+ *  it is the key as it is. Keyed by the deck, the opponent and the format
+ *  together, so moving to another pairing starts the page afresh while a
+ *  change of version keeps the version select and its focus; the view
+ *  keys its own Matches card on the version. */
 export function DeckPairingPage() {
   const { deckKey, versionIds, version } = useOutletContext<DeckOutletContext>()
   const { opponent = '' } = useParams()
+  const [searchParams] = useSearchParams()
+  const format = searchParams.get('format')
   return (
     <PairingView
-      key={JSON.stringify([deckKey, opponent])}
+      key={JSON.stringify([deckKey, opponent, format])}
       deckKey={deckKey}
       versionIds={versionIds}
       version={version}
       opponentKey={opponent}
+      format={format}
     />
   )
 }
