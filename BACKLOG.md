@@ -405,24 +405,6 @@ it stops.
 
 **Needs:** A design for paging.
 
-### BL-089 · A play/draw split per matchup
-
-type: feat · priority: P2 · status: ready · area: api web
-
-A deck's Matchups table splits each archetype into Game 1 and the games
-after sideboarding, but never into on the play and on the draw; only the
-deck's overall line has that split, and Matches filters by source and
-deck alone. A player asking "how do I do against Burn on the draw after
-sideboarding" can't get an answer anywhere in the app. the UI sweep's task walk
-T3 gave up on exactly this, in both languages.
-
-**Why deferred:** the UI sweep was wording and layout only; this is a new
-cut of the data, with an API change. The user's call, 2026-10-22.
-
-**Needs:** The split per archetype, game 1 and post-board each by play and
-draw, with games whose `on_play` is unknown counted apart, never guessed
-(rule 4), and the table kept readable at 1008 px.
-
 ### BL-090 · A date window on a deck's matchups
 
 type: feat · priority: P2 · status: needs-decision · area: api web
@@ -431,7 +413,8 @@ A deck's matchup figures are all-time, so "my worst matchup this month"
 can't be asked. In the UI sweep's walk T2 both walkers noticed and answered from
 all-time figures.
 
-**Why deferred:** The same as BL-089, and which windows to offer (30
+**Why deferred:** The UI sweep was wording and layout only, and this is
+a new cut of the data with an API change. Which windows to offer (30
 days, since the last ban, since the deck last changed) is the user's
 decision. The ban one has to agree with how the metagame windows treat a
 ban.

@@ -18,6 +18,14 @@
       "game1Tip": "Game 1 of each match, played before sideboarding.",
       "postboard": "Post-board",
       "postboardTip": "Games 2 and 3 of a best-of-three match, played after sideboarding."
+    },
+    "side": {
+      "label": "Who played first",
+      "all": "All",
+      "play": "On the play",
+      "draw": "On the draw",
+      "unknown_one": "{{count}} game with no play/draw on record counts under All only.",
+      "unknown_other": "{{count}} games with no play/draw on record count under All only."
     }
   },
   "tiles": {

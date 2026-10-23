@@ -49,6 +49,40 @@ export type MatchupRow = {
    *  game is neither. */
   postboardWon: number
   postboardLost: number
+  /** The same four counts for the games on the play and on the draw alone. */
+  onPlay: SideCounts
+  onDraw: SideCounts
+  /** Games the two sides do not hold, because the log never said who
+   *  played first: a decided game 1 with no `game1_on_play`, and the
+   *  post-board games beyond what the play and draw counts hold. They count
+   *  under All only. */
+  unknownSide: number
+}
+
+/** A row's game 1 and post-board counts over the games of one side. */
+export type SideCounts = {
+  game1Won: number
+  game1Lost: number
+  postboardWon: number
+  postboardLost: number
+}
+
+/** Which games a row's Game 1 and Post-board columns count. */
+export type PlaySide = 'all' | 'play' | 'draw'
+
+const emptySide = (): SideCounts => ({ game1Won: 0, game1Lost: 0, postboardWon: 0, postboardLost: 0 })
+
+/** The counts a row reads for `side`: all of its games, or the ones on the
+ *  play or on the draw. */
+export function countsForSide(row: MatchupRow, side: PlaySide): SideCounts {
+  if (side === 'play') return row.onPlay
+  if (side === 'draw') return row.onDraw
+  return row
+}
+
+/** The games the play/draw switch leaves out of both sides, over `rows`. */
+export function unknownSideGames(rows: Pick<MatchupRow, 'unknownSide'>[]): number {
+  return rows.reduce((sum, row) => sum + row.unknownSide, 0)
 }
 
 /** `opponent_key` is `'archetype:' + archetype_key` only when the classifier
@@ -106,6 +140,32 @@ export function opponentSeen(newestFirst: Match[]): OpponentSeen {
 
 type Group = { key: string; format: string | null; lastMet: number | null; matches: Match[] }
 
+/** Adds one best-of-three match's games to the row's play and draw counts.
+ *  Post-board games of neither side are the post-board totals less the two
+ *  sides' (a drawn or unfinished game is in none, so the subtraction is
+ *  exact). */
+function countSides(row: MatchupRow, match: Match): void {
+  const decided = match.game1_result === 'win' || match.game1_result === 'loss'
+  if (decided) {
+    if (match.game1_on_play == null) row.unknownSide += 1
+    else {
+      const side = match.game1_on_play ? row.onPlay : row.onDraw
+      if (match.game1_result === 'win') side.game1Won += 1
+      else side.game1Lost += 1
+    }
+  }
+  const playWon = match.postboard_play_won ?? 0
+  const playLost = match.postboard_play_lost ?? 0
+  const drawWon = match.postboard_draw_won ?? 0
+  const drawLost = match.postboard_draw_lost ?? 0
+  row.onPlay.postboardWon += playWon
+  row.onPlay.postboardLost += playLost
+  row.onDraw.postboardWon += drawWon
+  row.onDraw.postboardLost += drawLost
+  row.unknownSide +=
+    (match.postboard_won ?? 0) - playWon - drawWon + ((match.postboard_lost ?? 0) - playLost - drawLost)
+}
+
 /** One group's row, its matches finished and given newest first. */
 function countRow(group: Group): MatchupRow {
   const row: MatchupRow = {
@@ -122,6 +182,9 @@ function countRow(group: Group): MatchupRow {
     game1Lost: 0,
     postboardWon: 0,
     postboardLost: 0,
+    onPlay: emptySide(),
+    onDraw: emptySide(),
+    unknownSide: 0,
   }
   for (const match of group.matches) {
     if (match.result === 'win') row.won += 1
@@ -134,6 +197,7 @@ function countRow(group: Group): MatchupRow {
     if (match.game1_result === 'loss') row.game1Lost += 1
     row.postboardWon += match.postboard_won ?? 0
     row.postboardLost += match.postboard_lost ?? 0
+    countSides(row, match)
   }
   return row
 }

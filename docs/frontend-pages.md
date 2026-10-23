@@ -885,7 +885,16 @@ best-of-three match shows; a drawn game counts in neither number. The table fold
 fewer than the five most played, and the rest sit behind "Show all N"
 (`ShowAll`, Field's control); a small row is held back, never dropped, and
 with nothing held back there is no control. The Game 1 and Post-board
-headers wear a `Tooltip` saying which games they count. The field is the deck's own format's
+headers wear a `Tooltip` saying which games they count.
+A `Segmented` above the table, "Who played first" (All · On the play · On
+the draw), refilters Game 1 and Post-board from the match's `game1_on_play`
+and `postboard_play_*` / `postboard_draw_*` columns; Matches, Record, Rate
+and the fold do not change. A game with no recorded side is in All only:
+a game 1 won or lost whose `game1_on_play` is NULL (a drawn or
+unfinished game 1, or a best of one, is not counted), and the post-board games left over when
+the play and draw counts are taken from the totals, derived on the client
+(`countsForSide`, `unknownSideGames` in `lib/matchups.ts`), never stored.
+Their count over the rows shown prints under the switch when above zero. The field is the deck's own format's
 (`useFieldRecords(format)`, the format coverage names, "Field, and the
 field-winrate join" below); a deck with no format has no field line. The
 table's card carries, at the right of its title, a link to that field,

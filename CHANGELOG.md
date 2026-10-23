@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A deck's **Matchups** view links to the **Field** for that deck's format.
 - **Decks** can be filtered by format and sorted by last played, win rate
   or matches; every version keeps its tile.
+- A deck's **Matchups** table has a "Who played first" switch: Game 1 and
+  Post-board count only the games on the play, or on the draw. Games with
+  no play/draw on record count under All only, and the table says how many.
 
 ### Changed
 

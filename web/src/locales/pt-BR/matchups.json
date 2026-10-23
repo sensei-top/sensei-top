@@ -18,6 +18,14 @@
       "game1Tip": "Jogo 1 de cada partida, jogado antes das trocas de sideboard.",
       "postboard": "Pós-side",
       "postboardTip": "Jogos 2 e 3 de uma partida melhor de três, jogados depois das trocas de sideboard."
+    },
+    "side": {
+      "label": "Quem jogou primeiro",
+      "all": "Todos",
+      "play": "No play",
+      "draw": "No draw",
+      "unknown_one": "{{count}} jogo sem play/draw registrado conta só em Todos.",
+      "unknown_other": "{{count}} jogos sem play/draw registrado contam só em Todos."
     }
   },
   "tiles": {
