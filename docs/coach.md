@@ -22,7 +22,7 @@ nothing else in this project computes:
   every format; and per deck, per role a matchup cast the player in, per
   opponent archetype, in the report's format since its last format reset —
   each with its own sample size and 95% Wilson
-  interval, never a bare percentage (`review/leaks.py::_wilson`, reused
+  interval, never a bare percentage (`review/leaks.py::wilson`, reused
   rather than re-derived).
 - **Recurring patterns at two scopes** — `review/leaks.py::find_leaks`
   unscoped, the way the leak finder already works, plus a second run scoped
@@ -218,7 +218,9 @@ report stays readable and a caller always knows what got cut:
   `Severity` values). Always all 6 cells, even at zero, so a caller renders
   a fixed grid rather than a shape that changes report to report. A lost
   game with no turning point at all (never behind, too few recorded turns,
-  or a missing report) is a gap, not a guessed bucket.
+  or a missing report) is a gap, not a guessed bucket. So is one whose
+  turning point fell on a turn Arena gave no own-turn number, counted in a
+  gap sentence of its own.
 - **Current decklists.** The current 75 of up to 3 kept decks
   (`TOP_DECKLISTS`), ordered by format-window match count — a kept identity
   with zero matches since the reset is omitted, since its list is not
@@ -292,7 +294,7 @@ rule 4.
 `topics` mixes two vocabularies: codes, which are the `Finding.code`s an
 analyzer actually emits (`role_assignment`, `race_behind`,
 `over_committed_into_sweeper`, …) plus the leak finder's two synthetic
-codes (`mana_screwed`, `mana_flooded`, `review/leaks.py::_mana_flags`), and
+codes (`mana_screwed`, `mana_flooded`, `review/leaks.py::mana_flags`), and
 broad tags a report's evidence sections carry
 (`sideboarding`, `mulligans`, `play-draw`, `deckbuilding`, `review`,
 `variance`, `tournament-prep`, `tilt`). `coach/narrative.py::reading_list`
@@ -365,7 +367,7 @@ measured against a Standard one's focus areas.
 
 For the two mana-leak codes specifically, the denominator is narrower than
 "every new match": `progress_since` counts only the new matches whose flag
-`leaks.py::_mana_flags` could actually answer (`True` or `False`), never one
+`leaks.py::mana_flags` could actually answer (`True` or `False`), never one
 it read as `None` — an MTGO match, which carries no `turns` row at all, would
 otherwise silently inflate or deflate a recurrence rate it never had
 evidence for. When every new match is unmeasured for a flag, the line says

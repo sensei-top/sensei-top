@@ -498,7 +498,7 @@ def mtgo_needs_pick(conn: Conn) -> list[dict[str, Any]]:
     )
 
 
-# The four per-match split columns, shared by the list and the detail so a
+# The per-match split columns, shared by the list and the detail so a
 # match reads the same on both. Each is NULL unless the match is a best of
 # three; a game that has not finished (no win/loss/draw) is not counted.
 _BO3_SPLIT_COLUMNS = """m.best_of,
@@ -516,7 +516,31 @@ _BO3_SPLIT_COLUMNS = """m.best_of,
                  (SELECT COUNT(*) FROM games g
                    WHERE g.match_id = m.match_id AND g.game_number >= 2
                      AND g.result = 'loss')
-               END AS postboard_lost,"""
+               END AS postboard_lost,
+               CASE WHEN m.best_of = 3 THEN
+                 (SELECT g.on_play FROM games g
+                   WHERE g.match_id = m.match_id AND g.game_number = 1)
+               END AS game1_on_play,
+               CASE WHEN m.best_of = 3 THEN
+                 (SELECT COUNT(*) FROM games g
+                   WHERE g.match_id = m.match_id AND g.game_number >= 2
+                     AND g.on_play = 1 AND g.result = 'win')
+               END AS postboard_play_won,
+               CASE WHEN m.best_of = 3 THEN
+                 (SELECT COUNT(*) FROM games g
+                   WHERE g.match_id = m.match_id AND g.game_number >= 2
+                     AND g.on_play = 1 AND g.result = 'loss')
+               END AS postboard_play_lost,
+               CASE WHEN m.best_of = 3 THEN
+                 (SELECT COUNT(*) FROM games g
+                   WHERE g.match_id = m.match_id AND g.game_number >= 2
+                     AND g.on_play = 0 AND g.result = 'win')
+               END AS postboard_draw_won,
+               CASE WHEN m.best_of = 3 THEN
+                 (SELECT COUNT(*) FROM games g
+                   WHERE g.match_id = m.match_id AND g.game_number >= 2
+                     AND g.on_play = 0 AND g.result = 'loss')
+               END AS postboard_draw_lost,"""
 
 
 @router.get("/api/matches", response_model=list[Match], tags=["matches"])

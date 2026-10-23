@@ -98,6 +98,9 @@ class TurnRow:
 
     turn_number: int
     active_seat: int | None = None
+    # The active seat's own ``players[].turnNumber`` while this turn was
+    # current; None when Arena never gave one for that seat in this turn.
+    active_turn_number: int | None = None
     life: dict[int, int] = field(default_factory=dict)
     hand: dict[int, int] = field(default_factory=dict)
     permanents: dict[int, int] = field(default_factory=dict)
@@ -220,6 +223,10 @@ class GameStateTracker:
         self.life_events: list[combat.LifeEvent] = []
         self._current_turn: int | None = None
         self._current_active_seat: int | None = None
+        # seat -> (players[].turnNumber, the turnInfo turn current when it was
+        # read). Only a value stamped with the turn being finalized is that
+        # turn's own; see _active_turn_number.
+        self._own_turn: dict[int, tuple[int, int | None]] = {}
         # One set per annotation *type*, not one shared set: verified against
         # a real capture that Arena's annotation id is only unique within one
         # type within one game — confirmed collisions exist in real data
@@ -312,11 +319,15 @@ class GameStateTracker:
         for instance_id in gsm.get("diffDeletedInstanceIds") or []:
             self._delete(instance_id)
 
+        own_turns: list[tuple[int, int]] = []
         for player in gsm.get("players") or []:
             seat = player.get("systemSeatNumber")
             life = player.get("lifeTotal")
             if seat is not None and life is not None:
                 self.life[seat] = life
+            own = player.get("turnNumber")
+            if seat is not None and isinstance(own, int):
+                own_turns.append((seat, own))
 
         turn = gsm.get("turnInfo")
         if isinstance(turn, dict):
@@ -327,6 +338,15 @@ class GameStateTracker:
                 self._current_turn = number
                 if (active := turn.get("activePlayer")) is not None:
                     self._current_active_seat = active
+
+        # After the boundary: this message's players[] count belongs to the turn
+        # it opens, so the turn just finalized above never sees it.
+        # First value wins within a turn: Arena's count only moves at a boundary,
+        # so a later one belongs to a later turn this log skipped past.
+        for seat, own in own_turns:
+            seen = self._own_turn.get(seat)
+            if seen is None or seen[1] != self._current_turn:
+                self._own_turn[seat] = (own, self._current_turn)
 
         # Tap/untap lands *after* the turn boundary above, unlike every other
         # annotation. Untapping is reported at the new turn's untap step, and
@@ -407,6 +427,7 @@ class GameStateTracker:
         return TurnRow(
             turn_number=self._current_turn or 0,
             active_seat=self._current_active_seat,
+            active_turn_number=self._active_turn_number(self._current_turn),
             life=dict(self.life),
             hand=self._zone_counts("ZoneType_Hand"),
             permanents=self._battlefield_counts(),
@@ -590,6 +611,7 @@ class GameStateTracker:
         self.turns[turn_number] = TurnRow(
             turn_number=turn_number,
             active_seat=self._current_active_seat,
+            active_turn_number=self._active_turn_number(turn_number),
             life=dict(self.life),
             hand=self._zone_counts("ZoneType_Hand"),
             permanents=self._battlefield_counts(),
@@ -599,6 +621,15 @@ class GameStateTracker:
             open_mana=self._battlefield_counts(land_only=True, untapped_only=True),
             cards=self._zone_cards(),
         )
+
+    def _active_turn_number(self, turn_number: int | None) -> int | None:
+        """The active seat's own count, only if read while ``turn_number`` was
+        current: a stale value from that seat's previous turn is None, never
+        carried forward."""
+        seen = self._own_turn.get(self._current_active_seat)  # type: ignore[arg-type]
+        if seen is None or seen[1] != turn_number:
+            return None
+        return seen[0]
 
     def _zone_counts(self, zone_type: str) -> dict[int, int]:
         counts: dict[int, int] = {}

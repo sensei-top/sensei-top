@@ -53,7 +53,7 @@
   },
   "hero": {
     "kicker": "Match report",
-    "resultScore": "{{word}} {{won}}–{{lost}}",
+    "resultScore": "{{word}} {{score}}",
     "replay": "Replay turn by turn"
   },
   "row": {
@@ -64,7 +64,8 @@
   "summary": {
     "matchesWon": "Matches",
     "gamesWon": "Games",
-    "counted": "Counted over the {{n}} newest matches."
+    "counted": "Counted over the {{n}} newest matches.",
+    "playDrawAll": "Play and draw count every game, not only the matches listed."
   },
   "sideboarding": {
     "title": "Sideboarding",

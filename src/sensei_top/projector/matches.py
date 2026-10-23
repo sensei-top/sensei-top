@@ -817,8 +817,8 @@ _ARENA_INSERTS: dict[str, str] = {
                            self_lands, self_permanents, opp_permanents,
                            self_library, opp_library,
                            self_graveyard, opp_graveyard,
-                           self_open_mana, opp_open_mana)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                           self_open_mana, opp_open_mana, active_turn_number)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
     "deck_guids": """
         INSERT INTO deck_guids (deck_id, arena_deck_id, version, format, last_seen)
@@ -1007,6 +1007,7 @@ def _arena_rows(
                         turn.graveyard.get(state.opponent_seat),
                         turn.open_mana.get(state.self_seat),
                         turn.open_mana.get(state.opponent_seat),
+                        turn.active_turn_number,
                     )
                 )
 

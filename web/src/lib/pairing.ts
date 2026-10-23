@@ -1,9 +1,10 @@
 /**
  * What a pairing's page reads (`/decks/:id/matchups/:opponent`: one deck
- * against one opponent's deck), as pure functions of the API's rows and a
- * clock. The opponent is a Matchups row's `opponent_key`, and the page
- * counts the matches in hand against it as Matchups does, so a pairing's
- * numbers equal its row there.
+ * against one opponent's deck, `?format=` one format's matches), as pure
+ * functions of the API's rows and a clock. The opponent is a Matchups row's
+ * `opponent_key`, the format its format when known, and the page counts the
+ * matches in hand against it as Matchups does, so a pairing reached from a
+ * row of a known format has that row's numbers.
  */
 import type { CoverageOut, CoverageRowOut, Match, MatchupBriefOut } from '../api'
 import type { TFunction } from '../i18n'
@@ -23,22 +24,31 @@ import { ago, formatCount } from './time'
 
 /** A pairing's page: the deck's address, `/matchups/`, and the opponent's
  *  key spelled in one segment (`addressSegment`: encoded, the colon bare,
- *  a `/` as `%2F`). */
-export function pairingAddress(deckKey: string, opponentKey: string): string {
-  return `${deckAddress(deckKey)}/matchups/${addressSegment(opponentKey)}`
+ *  a `/` as `%2F`); with a format, `?format=` carrying it, and with none
+ *  (`null`, or not given) every format's. */
+export function pairingAddress(deckKey: string, opponentKey: string, format?: string | null): string {
+  const address = `${deckAddress(deckKey)}/matchups/${addressSegment(opponentKey)}`
+  return format ? `${address}?${new URLSearchParams({ format })}` : address
 }
 
-/** `address` carrying the version the address chose, `?version=`, as the
- *  deck's tabs carry it; `address` unchanged for every version. */
+/** `address` carrying the version the address chose, `?version=` (after
+ *  any parameter `address` already has), as the deck's tabs carry it;
+ *  `address` unchanged for every version. */
 export function withVersion(address: string, version: string | null): string {
-  return version ? `${address}?${new URLSearchParams({ version })}` : address
+  if (!version) return address
+  return `${address}${address.includes('?') ? '&' : '?'}${new URLSearchParams({ version })}`
 }
 
 /** The matches against `opponentKey` over every version's list, finished
  *  or not, newest first (a match whose start cannot be read last). A key
- *  is compared as Matchups groups it, a missing key as the empty one. */
-export function pairingMatches(opponentKey: string, lists: Match[][]): Match[] {
-  return mergeNewestFirst(lists).filter((match) => (match.opponent_key ?? '') === opponentKey)
+ *  is compared as Matchups groups it, a missing key as the empty one. With
+ *  a `format`, the address's `?format=`, only the matches played in it,
+ *  compared exactly, so a format no match has keeps none; with `null`,
+ *  every format's. */
+export function pairingMatches(opponentKey: string, lists: Match[][], format: string | null = null): Match[] {
+  return mergeNewestFirst(lists).filter(
+    (match) => (match.opponent_key ?? '') === opponentKey && (format == null || match.format === format),
+  )
 }
 
 /** The pairing's heading: `name` in the `h3`, muted for an unknown deck;
@@ -147,7 +157,7 @@ function fieldTile(opponentKey: string, fieldByKey: Map<string, FieldRecord>, t:
  *  for a rate. */
 export type PairingTileText = TileText & { muted?: boolean }
 
-/** The tile of one split of the best-of-three games, Game 1 or Games 2–3,
+/** The tile of one split of the best-of-three games, Game 1 or Post-board,
  *  drawn as Record is (`rateOrRecord`, over games), a drawn game in
  *  neither number. */
 function splitTile(label: string, wins: number, losses: number, t: TFunction): PairingTileText {
@@ -157,7 +167,7 @@ function splitTile(label: string, wins: number, losses: number, t: TFunction): P
   return tile
 }
 
-/** The tiles over the pairing's row of `matchupRows` (its finished
+/** The tiles over the pairing's row (`matchupRowOver`, over its finished
  *  matches: wins, losses and draws, a draw neither won nor lost): three,
  *  or five when the row has a best-of-three match (`bo3Matches`). Record,
  *  as Matchups rates the same row (`rateOrRecord` over `won` and `lost`):
@@ -165,7 +175,7 @@ function splitTile(label: string, wins: number, losses: number, t: TFunction): P
  *  over the record "8–3"; five to nine the rate, "71%", muted, over the
  *  record and "rough"; under five the record, "3–1", muted, over the
  *  "too few" line. Games: own first, "17–4". Then, with a best-of-three
- *  match, Game 1 and Games 2–3 (`splitTile`), the split the Matchups row's
+ *  match, Game 1 and Post-board (`splitTile`), the split the Matchups row's
  *  two columns show. Last, In tournaments: `fieldTile` over `fieldByKey`,
  *  the field's records by archetype key, empty while they load or when
  *  they fail. */

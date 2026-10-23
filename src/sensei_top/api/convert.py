@@ -274,6 +274,7 @@ def _beat_out(b: Beat) -> SummaryBeat:
     return SummaryBeat(
         code=b.code, label=b.label, text=b.text, magnitude=b.magnitude,
         severity=b.severity.value, game_number=b.game_number, meter=b.meter,
+        turn_number=b.turn_number, definition=b.definition,
     )
 
 def _game_line_out(g: GameLine) -> SummaryGameLine:

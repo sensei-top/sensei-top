@@ -9,15 +9,43 @@ are numbered raw-SQL files in ``sensei_top/migrations/``, recorded in
 
 from __future__ import annotations
 
+import os
 import re
 import sqlite3
+import sys
 from importlib.resources import files
 from importlib.resources.abc import Traversable
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 # Read through importlib.resources so an installed wheel finds the files too.
 MIGRATIONS_DIR: Traversable = files("sensei_top") / "migrations"
 _MIGRATION_RE = re.compile(r"^(\d{3})_.*\.sql$")
+
+
+def is_unc_path(path: str | os.PathLike[str], platform: str = sys.platform) -> bool:
+    """Whether Windows reads ``path`` as a network share: ``\\\\server\\share``,
+    ``//server/share`` or ``\\\\?\\UNC\\server\\share``. The read-only opens
+    build a ``file:`` URI from the path, and SQLite rejects the
+    ``file://server/...`` one a share becomes, so the database and the
+    backups refuse one (docs/architecture.md, "Backups"). Read with
+    ``PureWindowsPath`` so a test on Linux can ask for ``win32``; any other
+    platform is never refused, ``//x/y`` included, because POSIX reads that
+    as a local path."""
+    if platform != "win32":
+        return False
+    drive = PureWindowsPath(path).drive
+    if drive[:4] in ("\\\\?\\", "\\\\.\\"):
+        return drive[4:8].upper() == "UNC\\"
+    return drive.startswith("\\\\")
+
+
+def unc_refusal(path: str | os.PathLike[str]) -> str:
+    """The one message every refusal of a UNC path prints (the CLI is not
+    translated)."""
+    return (
+        f"{path} is on a network share, and a network share cannot hold the database "
+        "or the backups. Map the share to a drive letter and use that path instead."
+    )
 
 
 def connect(db_path: str | Path) -> sqlite3.Connection:

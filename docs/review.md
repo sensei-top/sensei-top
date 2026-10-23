@@ -74,7 +74,7 @@ its bookkeeping:
    (`docs/architecture.md`).
 3. **The player's own deck can be classified.** `archetypes.classify`'s
    `complete=True` path already existed for corpus decklists
-   (`metagame.classify_meta`); `snapshot.py`'s `_classify_own_deck` runs the
+   (`metagame.classify_meta`); `snapshot.py`'s `classify_own_deck` runs the
    same engine over the player's own complete decklist
    (`decks.cards_json`) — something no analyzer did before, because nothing
    needed the player's *own* archetype key until role assignment did.
@@ -224,12 +224,22 @@ account of what happened (mulligans, play/draw, hand size) scattered across
 the same seven sections it already sits below as stat tiles. `MatchSummary`
 gives that a shape a player actually replays a match in:
 
-* **`headline`/`subhead`** — the match's own score and opponent, plus one
-  optional sentence, only when a stated condition holds over the report's
-  own findings (leading the damage race in every game and still losing some
-  of them; a lone `DECISIVE` finding's own already-audited title, reused
-  verbatim). Nothing is written to fill an empty slot — `subhead` is `None`
-  far more often than not.
+* **`headline`/`subhead`** — the match's own score and opponent, plus an
+  optional subhead, written only when a stated condition holds over the
+  report's own findings (leading the damage race in every game and still
+  losing some of them; a lone `DECISIVE` finding's own already-audited
+  title, reused verbatim). Nothing is written to fill an empty slot —
+  `subhead` is `None` far more often than not. The race sentence doesn't
+  stop at the mismatch: after it comes one sentence per lost game, in game
+  order, naming that game's top beat by the same severity order the game's
+  own beats use ("Game 2, Turned: your turn 4 · a decisive swing."), or "no
+  single cause stood out" when the game has none. Leading the race and
+  losing says only that something else decided the game; the beat is the
+  report's best candidate for what. Two kinds of beat are never a cause:
+  the race itself, the sentence's own premise, and `never_behind`, which
+  says the position never swung against you. No analyzer reads lands played
+  and a mulligan is never a beat, so a game lost to mana screw or a
+  mulligan names whichever other beat fired, or no single cause.
 * **`matchup`** — the whole-match findings (`game_number is None`: role
   assignment, still-live staples, the personal and field matchup records,
   the play/draw split), compacted to one line each.
@@ -242,6 +252,26 @@ gives that a shape a player actually replays a match in:
   its source `Finding`'s own `Evidence` or anchor — the same rule
   `findings.py` states for a single finding, extended here to a summary
   built from many (`test_summary.py`'s own traceability audit).
+
+  The Turned beat counts "your turn N" with the finding's
+  `self_turn_index`, Arena's own count of that player's turns, never the
+  shared `turn_number`, which counts both players' turns. With no own-turn
+  index the beat reads the magnitude alone, and every analyzer and the
+  narrative prompt describe that turn without a number rather than print one.
+
+  Each beat also carries its finding's `turn_number` (`None` when the
+  finding has none, as `never_behind` doesn't), so the dashboard can open
+  the replay on a flagged turn, and a `definition`: one plain sentence
+  saying what its label measures. The sentences live beside
+  `_GAME_BEAT_LABELS`, one per label rather than per code, so the three
+  race codes share Race's and `turning_point`/`never_behind` share
+  Turned's; a label with none, and every matchup beat, carries `None`.
+  The words for why a game ended name who, read from the game's own
+  result: a 1v1 game is lost by whoever concedes or runs out of time, so a
+  concession is "you conceded" on a loss and "your opponent conceded" on a
+  win, and the same for the clock. With the result unknown or a draw the
+  subjectless words stay ("conceded", "ended on the clock"). Nothing about
+  it is stored.
 * **`gap_groups`** — the report's own `Gap`s collapsed onto their real root
   cause. Four analyzers independently blocked by the same absence (the
   opponent's deck never resolving to a known archetype) used to render as
@@ -280,10 +310,18 @@ post-reset field data, or one format's field with another's.
 `consensus_since` (one window for every match) is also accepted, though no
 caller passes it; passing both raises.
 
-Both flags are read per match by `leaks.py::_mana_flags`, which answers
+The screw check reads `v_self_turns`, so its "fourth turn" is Arena's own
+number for that seat (`turns.active_turn_number`), numbered within each
+game, never ranked across the match's turns. A turn with no own-turn number
+is skipped by the check. MTGO writes no `turns` rows, so it has no index to
+check.
+
+Both flags are read per match by `leaks.py::mana_flags`, which answers
 `None` — not `False` — when a match has no evidence to answer from: `screwed`
-needs at least one `turns` row for the match (MTGO's projector never writes
-`turns` at all, so every MTGO match reads `None` here, never "not screwed"),
+needs at least one self-turn row with an own-turn number (MTGO's projector
+never writes `turns` at all, so every MTGO match reads `None` here, never
+"not screwed"; so does an Arena match whose turns Arena never numbered; a
+partly numbered match answers from its numbered turns),
 and `flooded` separately needs a resolved decklist with every card named and
 a usable first/last-turn read, so a match can answer one flag and not the
 other. `_mana_leaks` keeps each flag's own known population — the matches
@@ -312,7 +350,7 @@ pattern label would be that mistake recurring.
 `find_leaks` also takes optional `deck_ids`/`since` (scoping the population
 to one deck's matches or a date window) and `consensus_cache`/
 `colors_cache` (shared memoization for `build_consensus` and
-`archetypes.classify._card_colors_by_name` across repeated calls in one
+`archetypes.classify.card_colors_by_name` across repeated calls in one
 request) — `guide/bundle.py` needs both a deck-scoped rollup and the
 unscoped one side by side and calls this function twice per request. Left
 out, the population is unscoped and each call memoizes on its own.

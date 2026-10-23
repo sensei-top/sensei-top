@@ -1,7 +1,10 @@
 """The format list, the inclusion order, and the two mappings."""
 
+import re
+
 import pytest
 
+from sensei_top.db import open_database
 from sensei_top.formats import (
     BROADER,
     FORMATS,
@@ -14,12 +17,38 @@ from sensei_top.mtgo.formats import FORMAT_CODES, MTGO_FORMATS
 
 
 def test_the_seven_formats_in_mtgos_spelling():
-    """Migration 049 and 053 CHECKs and the API's Literal are pinned to this tuple."""
+    """The seven formats in MTGO's spelling: MTGO_FORMATS is the same tuple, and every
+    FORMAT_CODES value is one of them. The API's Literals
+    (api/models/metagame.py::FormatName, api/models/matches.py::MtgoFormat) are
+    Literal[FORMATS] and Literal[MTGO_FORMATS], so they hold by construction. The
+    migration 049 and 053 CHECKs are pinned by test_the_format_checks_list_exactly_formats."""
     assert FORMATS == (
         "Standard", "Pioneer", "Modern", "Pauper", "Legacy", "Vintage", "Premodern",
     )
     assert MTGO_FORMATS == FORMATS
     assert set(FORMAT_CODES.values()) == set(FORMATS)
+
+
+@pytest.mark.parametrize("table", ["card_legality", "mtgo_match_pick"])
+def test_the_format_checks_list_exactly_formats(tmp_path, table):
+    """The CHECK on ``format`` is a copy of FORMATS that SQL cannot import: a format
+    added to FORMATS alone passes the API and then fails the INSERT. Read from the
+    migrated schema, not the migration files, since a later migration may rebuild the
+    table."""
+    conn = open_database(tmp_path / "formats.db")
+    try:
+        sql = conn.execute(
+            "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?", (table,),
+        ).fetchone()
+    finally:
+        conn.close()
+    assert sql is not None, f"table {table} is missing from the migrated schema"
+    match = re.search(
+        r"\bformat\s+[^,]*?CHECK\s*\(\s*format\s+IN\s*\(([^)]*)\)", sql[0], re.IGNORECASE,
+    )
+    assert match is not None, f"no format CHECK found in {table}"
+    listed = re.findall(r"'([^']*)'", match.group(1))
+    assert sorted(listed) == sorted(FORMATS)
 
 
 def test_scryfall_keys_are_the_lowercase_names():

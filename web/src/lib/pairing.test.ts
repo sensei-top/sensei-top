@@ -53,12 +53,27 @@ describe('pairingAddress', () => {
       '/decks/guid:1234/matchups/colors:RG%20%C2%B7%20Alpha%2C%20the%20Card%20%2F%2F%20Beta%20Face',
     )
   })
+
+  it('carries a known format as ?format=, and none for a missing one', () => {
+    expect(pairingAddress('guid:1234', 'archetype:dimir_midrange', 'Modern')).toBe(
+      '/decks/guid:1234/matchups/archetype:dimir_midrange?format=Modern',
+    )
+    expect(pairingAddress('guid:1234', 'archetype:dimir_midrange', null)).toBe(
+      '/decks/guid:1234/matchups/archetype:dimir_midrange',
+    )
+  })
 })
 
 describe('withVersion', () => {
   it('carries a chosen version, and leaves the address alone for every version', () => {
     expect(withVersion('/decks/guid:1234/matchups', 'v2')).toBe('/decks/guid:1234/matchups?version=v2')
     expect(withVersion('/decks/guid:1234/matchups', null)).toBe('/decks/guid:1234/matchups')
+  })
+
+  it('adds the version after a format the address already carries', () => {
+    expect(withVersion('/decks/guid:1234/matchups/k?format=Modern', 'v2')).toBe(
+      '/decks/guid:1234/matchups/k?format=Modern&version=v2',
+    )
   })
 })
 
@@ -76,6 +91,28 @@ describe('pairingMatches', () => {
       ],
     ])
     expect(against.map((m) => m.match_id)).toEqual(['c', 'a', 'd'])
+  })
+
+  const formats = [
+    [
+      match('a', { opponent_key: 'k', format: 'Modern', started_at: on(3) }),
+      match('b', { opponent_key: 'k', format: 'Pioneer', started_at: on(2) }),
+      match('c', { opponent_key: 'k', format: null, started_at: on(1) }),
+      match('d', { opponent_key: 'other', format: 'Modern', started_at: on(4) }),
+    ],
+  ]
+
+  it('keeps one format’s matches when the address names it', () => {
+    expect(pairingMatches('k', formats, 'Modern').map((m) => m.match_id)).toEqual(['a'])
+  })
+
+  it('keeps every format’s matches without one', () => {
+    expect(pairingMatches('k', formats).map((m) => m.match_id)).toEqual(['a', 'b', 'c'])
+    expect(pairingMatches('k', formats, null).map((m) => m.match_id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('keeps none for a format no match was played in', () => {
+    expect(pairingMatches('k', formats, 'Legacy')).toEqual([])
   })
 })
 
@@ -364,10 +401,10 @@ describe('pairingTiles', () => {
       match('c', { result: 'win', best_of: 1, games_won: 1, games_lost: 0 }),
     ])
     const tiles = pairingTiles(rows[0], none)
-    expect(tiles.map((tile) => tile.label)).toEqual(['Record', 'Games', 'Game 1', 'Games 2–3', 'In tournaments'])
+    expect(tiles.map((tile) => tile.label)).toEqual(['Record', 'Games', 'Game 1', 'Post-board', 'In tournaments'])
     // Game 1: won in b, lost in a. Games 2–3: 2–0 in a, 0–2 in b.
     expect(tiles[2]).toEqual({ label: 'Game 1', value: record(1, 1), detail: tooFewGames, muted: true })
-    expect(tiles[3]).toEqual({ label: 'Games 2–3', value: record(2, 2), detail: tooFewGames, muted: true })
+    expect(tiles[3]).toEqual({ label: 'Post-board', value: record(2, 2), detail: tooFewGames, muted: true })
   })
 
   it('writes a split’s rate over its record from ten games won or lost', () => {
@@ -391,7 +428,7 @@ describe('pairingTiles', () => {
     // won, 4 + 0 + 4 + 2 lost, 10 of 20 is 50%.
     const tiles = pairingTiles(rows[0], none)
     expect(tiles[2]).toEqual({ label: 'Game 1', value: '60%', detail: record(6, 4) })
-    expect(tiles[3]).toEqual({ label: 'Games 2–3', value: '50%', detail: record(10, 10) })
+    expect(tiles[3]).toEqual({ label: 'Post-board', value: '50%', detail: record(10, 10) })
   })
 
   it('writes the field’s rate over its entries, and says under five are too few', () => {

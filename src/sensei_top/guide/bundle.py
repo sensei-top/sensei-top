@@ -9,7 +9,7 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 
-from sensei_top.guide.deck import DeckIdentity, identity_format, resolve
+from sensei_top.guide.deck import DeckIdentity, deck_matches, identity_format, resolve
 from sensei_top.guide.field import FieldEvidence, build_field
 from sensei_top.guide.list_diff import ListDiff, build_list_diff
 from sensei_top.guide.play import (
@@ -137,8 +137,7 @@ def build_deck_guide(
         matches_before_reset = sum(
             1 for row in conn.execute(
                 f"SELECT m.started_at FROM matches m "
-                f"JOIN v_match_deck md ON md.match_id = m.match_id "
-                f"WHERE md.deck_id IN ({','.join('?' for _deck_id in identity.deck_ids)})",
+                f"WHERE m.match_id IN ({deck_matches(identity.deck_ids)})",
                 identity.deck_ids,
             )
             if (row["started_at"] or "") <= reset.date

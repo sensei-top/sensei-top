@@ -1,16 +1,16 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation } from 'react-router'
 import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } from '../api'
 import { DeckMatchesCard } from '../components/DeckMatchesCard'
 import { PairingBrief } from '../components/PairingBrief'
 import { VersionSwitcher } from '../components/VersionSwitcher'
 import { BackLink, Button, EmptyState, ErrorNote, Loading, ManaPips, StatTile } from '../components/ui'
 import { deckAddress } from '../lib/decks'
-import { archetypeKeyOf, matchupRows } from '../lib/matchups'
+import { archetypeKeyOf, matchupRowOver } from '../lib/matchups'
 import {
   coverageRowOf,
   lastMetLine,
+  pairingAddress,
   pairingHeading,
   pairingMatches,
   pairingTiles,
@@ -23,7 +23,8 @@ const MINUTE = 60_000
 
 /** One deck against one opponent's deck (`opponentKey`, a Matchups row's
  *  `opponent_key`), over the versions the address chose (`versionIds`,
- *  every version when `version` is `null`), counted from the matches in
+ *  every version when `version` is `null`) and the format it chose
+ *  (`format`, every format when `null`), counted from the matches in
  *  hand against it, top to bottom: the way back to the deck's Matchups;
  *  the opponent's deck, its pips and name as a Matchups row draws them,
  *  and when it was last met; the version switcher when the deck has more
@@ -37,24 +38,25 @@ const MINUTE = 60_000
  *  or when they fail, the last tile says there are none. With no match
  *  against it, or none finished, the tiles' place says so; with no match
  *  against an `archetype:` key, the heading waits for the deck's coverage,
- *  whose label names it. The page keys this view on the deck and the
- *  opponent, so a change of version keeps the switcher's `<select>`, and
- *  the focus on it; only the Matches card is keyed on the version, so its
- *  rows start again at ten. The brief is the deck's, not a version's, and
- *  is not keyed on it. */
+ *  whose label names it. The page keys this view on the deck, the opponent
+ *  and the format, so a change of version keeps the switcher's `<select>`,
+ *  and the focus on it; only the Matches card is keyed on the version, so
+ *  its rows start again at ten. The brief is the deck's, not a version's,
+ *  and is not keyed on it. */
 export function PairingView({
   deckKey,
   versionIds,
   version,
   opponentKey,
+  format,
 }: {
   deckKey: string
   versionIds: string[]
   version: string | null
   opponentKey: string
+  format: string | null
 }) {
   const { t } = useTranslation()
-  const { pathname } = useLocation()
   const { deckIds, versions } = useDeckVersions(deckKey, versionIds)
   const matches = useDeckMatches(versionIds)
   const now = useNow()
@@ -69,8 +71,8 @@ export function PairingView({
   const fieldByKey = useFieldRecords(coverage.data?.fmt)
 
   const against = useMemo(
-    () => (matches.data ? pairingMatches(opponentKey, matches.data) : []),
-    [opponentKey, matches.data],
+    () => (matches.data ? pairingMatches(opponentKey, matches.data, format) : []),
+    [opponentKey, matches.data, format],
   )
   const label = coverage.data ? coverageRowOf(opponentKey, coverage.data)?.label : null
   const heading = useMemo(() => pairingHeading(opponentKey, against, label, t), [opponentKey, against, label, t])
@@ -78,7 +80,7 @@ export function PairingView({
   // so its key never shows before its name.
   const headingReady =
     matches.data != null && (against.length > 0 || archetypeKeyOf(opponentKey) == null || !coverage.isPending)
-  const row = useMemo(() => matchupRows(against)[0] ?? null, [against])
+  const row = useMemo(() => matchupRowOver(against), [against])
   const tiles = useMemo(() => (row ? pairingTiles(row, fieldByKey, t) : []), [row, fieldByKey, t])
   const lastMet = lastMetLine(against, now, t)
 
@@ -97,7 +99,7 @@ export function PairingView({
         icon={icon}
         title={t('matchups.pairing.noVersionTitle')}
         message={t('matchups.view.noVersionMessage')}
-        action={<Button href={pathname}>{t('matchups.view.everyVersion')}</Button>}
+        action={<Button href={pairingAddress(deckKey, opponentKey, format)}>{t('matchups.view.everyVersion')}</Button>}
       />
     )
   } else if (against.length === 0) {

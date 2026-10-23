@@ -59,41 +59,7 @@ export type ShellSettings = {
     /** How many backups the folder holds now. */
     inFolder: number
   }
-  /** Sharing finished drafts; `null` where the app offers none, and the
-   *  page then says nothing of it. */
-  sharing: Sharing | null
 }
-
-/** Sharing finished drafts as the shell sees it. `on` is only ever turned
- *  by the viewer; `installation` is this installation's random id; `sent`
- *  counts the drafts sent under it. `lastDraft` is the newest finished
- *  draft's id, `null` before there is one. */
-export type Sharing = { on: boolean; installation: string; sent: number; lastDraft: string | null }
-
-/** One draft's place in sharing: never shared, waiting for its games to
- *  end, shared (`at` is when), or removed from the server by the viewer.
- *  `at` is `null` where it is not known or means nothing. */
-export type SharedDraft = { state: 'not-shared' | 'waiting' | 'shared' | 'removed'; at: string | null }
-
-/** What one draft sends, as the shell reads it, with cards by name where
- *  the payload holds Arena's numbers. Each `label` and `value` is text the
- *  shell wrote. A part the shell does not know is `null`, or left out of
- *  its list. */
-export type DraftPayload = {
-  /** The installation, the version, the system, the ratings' date. */
-  about: { label: string; value: string }[]
-  /** The event, the set, the hours it started and ended. */
-  draft: { label: string; value: string }[]
-  /** `from` is the pack the card was taken from, the taken card among them. */
-  picks: { pack: number; pick: number; taken: string | null; from: string[] }[]
-  deck: { main: string[]; sideboard: string[] } | null
-  games: { result: string; onThePlay: boolean | null; turns: number | null; against: string | null }[]
-  record: string | null
-}
-
-/** Deleting what was sent: how many drafts the server deleted, 0 when it
- *  held none. */
-export type Deleted = { ok: true; count: number } | { ok: false; error: string }
 
 export type KeyName = 'claude' | 'topdeck'
 
@@ -195,17 +161,6 @@ export type Shell = {
   backUpNow(): Promise<Saved>
   /** Takes effect the next time the app starts. */
   restoreFrom(path: string): Promise<Saved>
-  /** Whether finished drafts are shared; called by the viewer's press alone. */
-  setSharing(on: boolean): Promise<Saved>
-  /** What the draft sends, or would; `null` when the shell has none. */
-  payloadOf(draftId: string): Promise<DraftPayload | null>
-  sharedState(draftId: string): Promise<SharedDraft>
-  /** Removes one shared draft from the server. */
-  unshare(draftId: string): Promise<Saved>
-  /** Deletes every draft sent under this installation's id. */
-  deleteContributions(): Promise<Deleted>
-  /** A new random id; what was sent under the old one stays on the server. */
-  newInstallation(): Promise<Saved>
 }
 
 /** `window.senseiTopShell`, as the preload script exposes it. */

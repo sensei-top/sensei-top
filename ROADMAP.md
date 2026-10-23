@@ -57,6 +57,15 @@ In this order, unless Discussions says otherwise.
 4. **Win rates per card**, from your own games: with the card in your
    opening hand, drawn, and cast, with the number of games beside each
    rate. (BL-004)
+5. **The known bugs.** Everything [BACKLOG.md](BACKLOG.md) lists as a
+   bug: labels that read alike for two different archetypes, mulligan
+   numbers counted two ways, a field with no paper results after
+   2026-08-16, an RCQ answer saved against an edited list, and a warning
+   on every rebuild for players without Magic Online first (BL-029,
+   BL-032, BL-033, BL-043, BL-056); then the rest (BL-025, BL-026,
+   BL-027, BL-028, BL-030, BL-031, BL-034, BL-035, BL-036, BL-037,
+   BL-040, BL-041, BL-042, BL-047, BL-048, BL-050, BL-051, BL-053,
+   BL-054, BL-080, BL-081, BL-086, BL-087).
 
 ## Later
 

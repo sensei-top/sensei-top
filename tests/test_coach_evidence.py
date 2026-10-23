@@ -316,7 +316,7 @@ def test_own_archetype_of_a_picked_mtgo_deck_reads_through_the_pick(conn, monkey
         verdict = SimpleNamespace(name="Test Archetype") if deck_id == "mtgodeck" else None
         return verdict, ()
 
-    monkeypatch.setattr(evidence_mod, "_classify_own_deck", fake_classify)
+    monkeypatch.setattr(evidence_mod, "classify_own_deck", fake_classify)
 
     evidence = build_coach_evidence(conn, fmt="Standard")
     assert evidence is not None
@@ -792,7 +792,7 @@ def test_overall_and_deck_level_rates_from_a_ten_match_population(conn):
     assert len(evidence.by_deck) == 1
     line = evidence.by_deck[0]
     assert line.label == "My Deck"
-    # cards_json is '{}' (no maindeck) -> _classify_own_deck bails out before
+    # cards_json is '{}' (no maindeck) -> classify_own_deck bails out before
     # ever reaching the archetype rules, so this deck is correctly None, not
     # a guess.
     assert line.archetype is None
@@ -1262,7 +1262,10 @@ def test_role_assignment_finding_carries_a_role_evidence_value():
 
 
 def _turning_report(
-    match_id: str, result: str, games: list[tuple[int, str]], turning: dict[int, tuple[int, str]]
+    match_id: str,
+    result: str,
+    games: list[tuple[int, str]],
+    turning: dict[int, tuple[int | None, str]],
 ) -> MatchReport:
     """``games`` is a list of (game_number, game_result); ``turning`` maps a
     game_number that should carry its own ``turning_point`` finding to
@@ -1341,6 +1344,13 @@ def test_turning_points_bucket_every_lost_game_by_stage_and_severity(conn, monke
         "loss_no_finding", "loss", [(1, "loss")], {}
     )
 
+    # A lost game whose turning_point finding has no own-turn number: its
+    # own gap, in no bucket and not in the "no finding" count.
+    _insert_match(conn, "loss_unnumbered", "loss")
+    reports["loss_unnumbered"] = _turning_report(
+        "loss_unnumbered", "loss", [(1, "loss")], {1: (None, "decisive")}
+    )
+
     # Filler, only to clear MIN_SAMPLE.
     _insert_match(conn, "filler", "win")
     reports["filler"] = _turning_report("filler", "win", [(1, "win")], {})
@@ -1352,6 +1362,8 @@ def test_turning_points_bucket_every_lost_game_by_stage_and_severity(conn, monke
 
     evidence = build_coach_evidence(conn, fmt="Standard")
     assert evidence is not None
+    assert any(g.startswith("1 lost game(s) have a turning_point finding on a turn with no "
+                            "own-turn number") for g in evidence.gaps)
     assert len(evidence.turning_points) == 6
     by_cell = {(b.stage, b.severity): b.games for b in evidence.turning_points}
     # early/notice gets 2: early_not's own game, plus won_with_a_lost_game's
@@ -1399,7 +1411,7 @@ def test_turning_points_missing_report_only_charges_an_overall_loss(conn, monkey
 def _no_turns_match(conn, match_id, result, *, deck_id=None):
     """A match with no ``turns`` rows at all (only ``games.turn_count`` set,
     the same shape an MTGO match has -- ``projector/mtgo/project.py`` never
-    writes ``turns``). ``review/leaks.py::_mana_flags`` reads ``screwed`` as
+    writes ``turns``). ``review/leaks.py::mana_flags`` reads ``screwed`` as
     unknown (``None``), never ``False``, for a match with no self-turn rows
     to answer the question from at all -- rule 4: unknown is ``NULL``, not a
     guess. This helper does *not* produce a match flagged ``True``; it is
@@ -1412,14 +1424,15 @@ def _no_turns_match(conn, match_id, result, *, deck_id=None):
 
 def _insert_self_turns(conn, match_id, *, self_lands_by_turn):
     """Real ``turns`` rows for ``match_id``'s own seat (1), one per turn
-    number in ``self_lands_by_turn`` -- the shape ``_mana_flags`` reads to
+    number in ``self_lands_by_turn`` -- the shape ``mana_flags`` reads to
     answer ``screwed`` with a real ``True``/``False`` rather than ``None``.
     Mirrors ``tests/test_leaks.py``'s own synthetic mana-screw fixture."""
     for turn_number, self_lands in self_lands_by_turn:
         conn.execute(
             "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
             "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-            "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, ?, 0, 0)",
+            "opp_permanents, active_turn_number) "
+            "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, ?3, 0, 0, ?2)",
             (match_id, turn_number, self_lands),
         )
 
@@ -1795,7 +1808,7 @@ def test_progress_since_summarises_new_matches_and_a_recurring_leak_code(conn, m
 
 def test_progress_since_mana_screwed_with_no_turn_data_reports_unmeasured(conn):
     """A previously-known synthetic mana leak code is checked via
-    ``_mana_flags`` directly on the new matches, not by re-running
+    ``mana_flags`` directly on the new matches, not by re-running
     ``find_leaks`` (whose MIN_SAMPLE gate two new matches could never
     clear). When the only new match has no ``turns`` rows at all (the
     ``_no_turns_match`` fixture -- the same shape an MTGO match has),

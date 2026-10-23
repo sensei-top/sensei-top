@@ -39,18 +39,6 @@ export function settle(saving: Promise<Saved>, t: TFunction): Promise<Saved> {
   return saving.catch((): Saved => ({ ok: false, error: t('settings.saveFailed') }))
 }
 
-/** A press whose answer is refused, read as a failure with no sentence
- *  of the shell's own. */
-export function answerOf(pressing: Promise<Saved>): Promise<Saved> {
-  return pressing.catch((): Saved => ({ ok: false, error: '' }))
-}
-
-/** The sentence under a press that failed: the shell's own, or `plain`
- *  when it gave none. `null` for one that worked. */
-export function pressFailure(saved: Saved, plain: string): string | null {
-  return saved.ok ? null : saved.error.trim() || plain
-}
-
 /** Whether a save in this card asked for a restart, and the function that
  *  passes each save through to find out. Once set it stays until the page
  *  is left. */

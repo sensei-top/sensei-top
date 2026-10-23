@@ -1,8 +1,10 @@
 {
   "view": {
+    "formatUnknown": "Format unknown",
     "noVersionTitle": "No match with this version",
     "noVersionMessage": "Pick another version, or read every version together.",
     "everyVersion": "Every version",
+    "openField": "Open the {{format}} field",
     "noFinishedTitle": "No finished match yet",
     "noFinishedMessage": "Matchups are counted once a match has ended.",
     "archetypesMet": "Archetypes met",
@@ -13,7 +15,17 @@
       "record": "Record",
       "rate": "Rate",
       "game1": "Game 1",
-      "postboard": "Games 2–3"
+      "game1Tip": "Game 1 of each match, played before sideboarding.",
+      "postboard": "Post-board",
+      "postboardTip": "Games 2 and 3 of a best-of-three match, played after sideboarding."
+    },
+    "side": {
+      "label": "Who played first",
+      "all": "All",
+      "play": "On the play",
+      "draw": "On the draw",
+      "unknown_one": "{{count}} game with no play/draw on record counts under All only.",
+      "unknown_other": "{{count}} games with no play/draw on record count under All only."
     }
   },
   "tiles": {
@@ -21,8 +33,8 @@
     "noneNamed": "none named",
     "allNamed": "all named",
     "namedAndNot": "{{named}}\u00a0named, {{notNamed}}\u00a0not",
-    "noneYet": "no archetype met {{min}}\u00a0times yet",
-    "oneSoFar": "one archetype met {{min}}\u00a0times so far",
+    "noneYet": "no archetype has {{min}}\u00a0or more matches yet",
+    "oneSoFar": "only one archetype has {{min}}\u00a0or more matches",
     "best": "Best matchup",
     "worst": "Worst matchup",
     "rankedRate": "{{record}} against {{against}}"
@@ -50,7 +62,7 @@
     "games": "Games",
     "yoursFirst": "yours first",
     "game1": "Game 1",
-    "postboard": "Games 2–3",
+    "postboard": "Post-board",
     "inTournaments": "In tournaments",
     "onlyNamed": "only a named archetype has results",
     "noResults": "no tournament results for it",
@@ -184,7 +196,7 @@
   "sideboard": {
     "thisOpponent": "this opponent",
     "thisArchetype": "this archetype",
-    "postboardRecord": "Your games 2–3 against it: {{record}}",
+    "postboardRecord": "Your post-board games against it: {{record}}",
     "headline": {
       "noResult": "Sideboard plan",
       "won": "Won game {{game}}",

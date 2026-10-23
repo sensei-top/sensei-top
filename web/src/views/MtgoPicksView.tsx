@@ -8,6 +8,7 @@ import type { MtgoPickGroup, MtgoPickGroups, MtgoUnsurePick } from '../api'
 import { PickGroupCard } from '../components/mtgo/PickGroupCard'
 import { Button, EmptyState, ErrorNote, Loading, TextLink } from '../components/ui'
 import type { SelectOption } from '../components/ui'
+import { formatName } from '../lib/decks'
 import { mtgoFormatsOf } from '../lib/mtgoPick'
 import { matchesWord, resultWords } from '../lib/mtgoPicks'
 import { formatCount, formatDayTime, parseTimestamp } from '../lib/time'
@@ -34,9 +35,6 @@ function reasonWords(match: MtgoUnsurePick, t: TFunction): string {
   if (match.reason === 'few_cards') {
     return t('mtgo.unsure.fewCards', { count: match.cards_seen, n: formatCount(match.cards_seen) })
   }
-  // `no_list`, and a poor fit with no list matching a single card. The
-  // route does not say which format found no list, so the line cannot
-  // name it.
   if (match.reason === 'low_fit' && match.best) {
     return t('mtgo.unsure.bestList', {
       name: match.best.name?.trim() || t('common.unnamedDeck'),
@@ -44,7 +42,11 @@ function reasonWords(match: MtgoUnsurePick, t: TFunction): string {
       seen: formatCount(match.cards_seen),
     })
   }
-  return t('mtgo.unsure.noFit')
+  // `no_list` names the match's inferred format, where no saved list
+  // competes. A poor fit with no list matching a single card had lists in
+  // its format, and a match with no inferred format has none to name.
+  const format = match.reason === 'no_list' ? formatName(match.format, t) : null
+  return format ? t('mtgo.unsure.noListIn', { format }) : t('mtgo.unsure.noFit')
 }
 
 /** A match no group takes, as the way into its page, where it is picked one

@@ -16,7 +16,7 @@ import sqlite3
 from collections import defaultdict
 from dataclasses import dataclass
 
-from sensei_top.guide.deck import DeckIdentity, identity_format
+from sensei_top.guide.deck import DeckIdentity, deck_matches, identity_format
 from sensei_top.guide.window import (
     ArchetypeChange,
     FormatReset,
@@ -24,7 +24,7 @@ from sensei_top.guide.window import (
     window_start,
 )
 from sensei_top.metagame.tiers import MATCHUP_TIERS
-from sensei_top.review.snapshot import _classify_own_deck
+from sensei_top.review.snapshot import classify_own_deck
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,17 +69,16 @@ class FieldEvidence:
 def _classified_deck_total(conn: sqlite3.Connection, where: str, params: list) -> int:
     """The TRUE total classified-deck count for a windowed query — the
     denominator every windowed share divides by, which must never be the
-    truncated top_n sum. Its three callers, ``_shares_for_window``,
-    ``field_by_key`` and ``brief/narrative.py::_archetype_share``, share it
-    rather than repeating it, since each guards against the exact same
-    truncated-denominator bug. The one copy is ``build_field``'s
-    ``pre_total_scoped``: the same count written out inline over
-    ``e.event_date <= ?``, the denominator ``share_before_reset`` divides
-    by. The callers' *count* queries stay separate — ``_shares_for_window``
+    truncated top_n sum. Its four callers, ``_shares_for_window``,
+    ``field_by_key``, ``build_field`` (the pre-reset denominator
+    ``share_before_reset`` divides by) and
+    ``brief/narrative.py::_archetype_share``, share it rather than repeating
+    it, since each guards against the exact same truncated-denominator bug.
+    The callers' *count* queries stay separate — ``_shares_for_window``
     groups by archetype name up to ``top_n`` for display, ``field_by_key``
-    by key and name with no cap, ``_archetype_share`` filters to a single
-    archetype_key — so there is nothing left to share once the denominator
-    is factored out.
+    by key and name with no cap, ``build_field`` by name before the reset,
+    ``_archetype_share`` filters to a single archetype_key — so there is
+    nothing left to share once the denominator is factored out.
     """
     return conn.execute(
         f"""
@@ -190,8 +189,7 @@ def _personal_rate_rows(
                SUM(CASE WHEN m.result = 'win' THEN 1 ELSE 0 END) AS wins,
                SUM(CASE WHEN m.result = 'loss' THEN 1 ELSE 0 END) AS losses
           FROM matches m JOIN v_match_opponent v ON v.match_id = m.match_id
-          JOIN v_match_deck md ON md.match_id = m.match_id
-         WHERE md.deck_id IN ({','.join('?' for _ in deck_ids)})
+         WHERE m.match_id IN ({deck_matches(deck_ids)})
            AND v.archetype_name IS NOT NULL AND m.result IN ('win', 'loss')
          GROUP BY 1
         """,
@@ -247,7 +245,7 @@ def faced_archetypes(
     if not deck_ids:
         return {}
     clauses = [
-        f"md.deck_id IN ({','.join('?' for _ in deck_ids)})",
+        f"m.match_id IN ({deck_matches(deck_ids)})",
         "v.archetype_key IS NOT NULL",
         "m.result IN ('win', 'loss')",
     ]
@@ -259,7 +257,6 @@ def faced_archetypes(
         f"""
         SELECT v.archetype_key AS key, v.archetype_name AS name, COUNT(*) AS n
           FROM matches m JOIN v_match_opponent v ON v.match_id = m.match_id
-          JOIN v_match_deck md ON md.match_id = m.match_id
          WHERE {' AND '.join(clauses)}
          GROUP BY 1, 2
         """,
@@ -329,22 +326,17 @@ def build_field(
         # decks through the reset date itself count as "before" — same
         # inclusive boundary guide.window.structural_change uses, since the
         # reset date is the LAST day the old list was actually played.
+        pre_where, pre_params = "e.format = ? AND e.event_date <= ?", [fmt, reset.date]
         pre_rows = conn.execute(
-            """
+            f"""
             SELECT a.archetype_name AS name, COUNT(*) AS n
               FROM meta_deck_archetype a JOIN meta_event e ON e.event_id = a.event_id
-             WHERE e.format = ? AND e.event_date <= ?
+             WHERE {pre_where}
              GROUP BY 1
             """,
-            (fmt, reset.date),
+            pre_params,
         ).fetchall()
-        pre_total_scoped = conn.execute(
-            """
-            SELECT COUNT(*) FROM meta_deck_archetype a JOIN meta_event e ON e.event_id = a.event_id
-             WHERE e.format = ? AND e.event_date <= ? AND a.archetype_name IS NOT NULL
-            """,
-            (fmt, reset.date),
-        ).fetchone()[0]
+        pre_total_scoped = _classified_deck_total(conn, pre_where, pre_params)
         if pre_total_scoped:
             pre_shares = {
                 row["name"]: row["n"] / pre_total_scoped for row in pre_rows if row["name"]
@@ -386,14 +378,14 @@ def build_field(
             SELECT md.deck_id FROM matches m
               JOIN v_match_deck md ON md.match_id = m.match_id
               JOIN decks d ON d.deck_id = md.deck_id
-             WHERE md.deck_id IN ({','.join('?' for _ in identity.deck_ids)})
+             WHERE m.match_id IN ({deck_matches(identity.deck_ids)})
              GROUP BY md.deck_id ORDER BY MAX(m.started_at) DESC LIMIT 1
             """,
             identity.deck_ids,
         ):
             current_deck_id = row["deck_id"]
         if current_deck_id is not None:
-            verdict, _ = _classify_own_deck(conn, current_deck_id, None, fmt=fmt)
+            verdict, _ = classify_own_deck(conn, current_deck_id, None, fmt=fmt)
             verdict_key = verdict.key if verdict else None
 
     if verdict_key is not None:

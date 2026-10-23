@@ -10,6 +10,9 @@
 import type { ShellSettings } from '../bridge'
 import type { TFunction } from '../i18n'
 import type { DeckIdentityOut, LeakOut, Match, MetaPresence } from '../api'
+// decks.ts and deckOverview.ts import this module back, so their exports are used inside functions only, never at module level.
+import { sameNameMarks } from './decks'
+import { formatRecord } from './format'
 import { parseTimestamp } from './time'
 
 const HOUR = 3_600_000
@@ -208,16 +211,7 @@ export function recentMatches(matches: Match[], count = 8): Match[] {
 export function ownScore(match: Pick<Match, 'games_won' | 'games_lost'>): string | null {
   if (match.games_won == null || match.games_lost == null) return null
   if (match.games_won === 0 && match.games_lost === 0) return null
-  return `${match.games_won}–${match.games_lost}`
-}
-
-/** A score with the winner's games first, for a sentence: a loss 1–2 is
- *  "2–1". `null` without one. */
-export function winnerScore(match: Pick<Match, 'games_won' | 'games_lost' | 'result'>): string | null {
-  if (ownScore(match) == null) return null
-  const won = match.games_won ?? 0
-  const lost = match.games_lost ?? 0
-  return match.result === 'loss' ? `${lost}–${won}` : `${won}–${lost}`
+  return formatRecord(match.games_won, match.games_lost)
 }
 
 /* --------------------------------------------------------- three things */
@@ -233,6 +227,21 @@ export function threeThings(has: { match: boolean; pattern: boolean; field: bool
   if (has.pattern) order.push('pattern')
   if (has.field) order.push('field')
   return order
+}
+
+/** `threeThings` while some candidates are still loading: a candidate whose
+ *  request has not answered holds its place, so the slots after it do not
+ *  move when it arrives, and each slot waits only for its own request. One
+ *  that then turns out not to exist drops out. */
+export function thingSlots(
+  has: { match: boolean; pattern: boolean; field: boolean },
+  pending: { pattern: boolean; field: boolean },
+): ThingKind[] {
+  return threeThings({
+    match: has.match,
+    pattern: pending.pattern || has.pattern,
+    field: pending.field || has.field,
+  })
 }
 
 /* -------------------------------------------------------------- pattern */
@@ -346,6 +355,9 @@ export type HomeDeck = {
   finished: number
   wins: number
   lastPlayed: number | null
+  /** `sameNameMarks`: the "Newest" chip and the played range, as on `/decks`. */
+  newest: boolean
+  playedRange: string | null
   /** The identity's newest finished match in the list, for its art: a
    *  match's detail is read once, so never one still in progress. */
   artMatchId: string | null
@@ -354,8 +366,17 @@ export type HomeDeck = {
 /** One tile for a deck, not a version: five identities at most, those
  *  with the most matches in the 30 days before `now` first, then by last
  *  played; an identity with no match is left out. A tile links to the
- *  deck by its key (`lib/decks.ts`'s `deckAddress`). */
-export function homeDecks(identities: DeckIdentityOut[], matches: Match[], now: number, count = 5): HomeDeck[] {
+ *  deck by its key (`lib/decks.ts`'s `deckAddress`). The same-name marks are
+ *  computed over every identity before the cut, so a tile reads as on
+ *  `/decks`. */
+export function homeDecks(
+  identities: DeckIdentityOut[],
+  matches: Match[],
+  now: number,
+  t: TFunction,
+  count = 5,
+): HomeDeck[] {
+  const marks = sameNameMarks(identities, t, now)
   const since = now - 30 * DAY
   const listed = newestFirst(matches)
   const finished = finishedNewestFirst(matches)
@@ -371,6 +392,8 @@ export function homeDecks(identities: DeckIdentityOut[], matches: Match[], now: 
         finished: identity.match_wins + identity.match_losses,
         wins: identity.match_wins,
         lastPlayed: parseTimestamp(identity.last_played),
+        newest: marks.get(identity.key)?.newest ?? false,
+        playedRange: marks.get(identity.key)?.playedRange ?? null,
         artMatchId: finished.find((match) => match.deck_id != null && ids.has(match.deck_id))?.match_id ?? null,
       }
       return { deck, recent }

@@ -47,7 +47,7 @@ LINE_REF = re.compile(r"([\w./-]+\.(?:py|ts|tsx|md|sql|css|html)):\d+")
 PY_PROSE_DIRS = ("src/", "tests/", "scripts/")
 NOT_SCANNED = re.compile(
     r"^tests/fixtures/|^scripts/check_prose\.py$|^tests/test_prose\.py$|"  # their examples must hit
-    r"(^|/)CHANGELOG\.md$|^web/src/types/api\.ts$|^web/openapi\.json$"
+    r"(^|/)CHANGELOG\.md$|^\.impeccable/critique/|^web/src/types/api\.ts$|^web/openapi\.json$"
     r"|(^|/)(uv\.lock|pnpm-lock\.yaml|package-lock\.json)$"
 )
 

@@ -62,10 +62,10 @@
     "lists_other": "{{n}}\u00a0lists"
   },
   "tiles": {
-    "listsRead": "Lists read",
-    "listsDetail": "{{kind}} {{when}}",
     "mostPlayed": "Most played",
     "mostPlayedDetail": "{{pct}} of those lists",
+    "mostPlayedOf_one": "{{pct}} of {{n}}\u00a0list from {{kind}} {{when}}",
+    "mostPlayedOf_other": "{{pct}} of {{n}}\u00a0lists from {{kind}} {{when}}",
     "againstOne": "You against the most played",
     "againstTwo": "You against the top two",
     "wonDetail": "with any of your decks",

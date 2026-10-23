@@ -79,8 +79,9 @@
   },
   "session": {
     "last": "Última sessão · {{day}}",
-    "thirtyDays": "Nos últimos 30 dias seu histórico é <strong>{{record}}</strong>, ou <strong>{{rate}}</strong>.",
-    "thirtyDaysFew": "Nos últimos 30 dias seu histórico é <strong>{{record}}</strong>.",
+    "thirtyDaysLabel": "Últimos 30 dias",
+    "thirtyDays": "Seu histórico é <strong>{{record}}</strong>, ou <strong>{{rate}}</strong>.",
+    "thirtyDaysFew": "Seu histórico é <strong>{{record}}</strong>.",
     "matches_one": "{{n}} partida",
     "matches_other": "{{n}} partidas"
   },
@@ -89,6 +90,10 @@
       "match": "Última partida",
       "pattern": "Padrão",
       "field": "Meta"
+    },
+    "loading": {
+      "pattern": "Procurando um padrão entre suas partidas…",
+      "field": "Lendo o meta…"
     },
     "readReport": "Ler o relatório",
     "seePatterns": "Ver todos os padrões",

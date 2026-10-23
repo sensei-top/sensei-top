@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import type { TFunction } from '../../i18n'
 import { useRcqMarkdown, type RcqGuideOut, type RcqNarrativeOut } from '../../api'
 import { useCopied } from '../../lib/clipboard'
+import { saveMarkdown } from '../../lib/download'
 import { archetypeName } from '../../lib/decks'
 import { orphanProblems, ownedProblems, problemSentence } from '../../lib/guide'
 import { markdownFileName } from '../../lib/rcq'
@@ -101,14 +102,7 @@ function CarryCard({ deckKey, response }: { deckKey: string; response: RcqGuideO
   const text = markdown.data?.markdown
 
   const download = () => {
-    if (!text) return
-    const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown' }))
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = markdownFileName(response.generated_at)
-    anchor.click()
-    // Let go of the file once the browser has started saving it.
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    if (text) saveMarkdown(text, markdownFileName(response.generated_at))
   }
 
   return (

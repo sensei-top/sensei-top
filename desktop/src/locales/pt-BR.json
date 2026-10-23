@@ -29,6 +29,7 @@
   "ipc.refused": "Esta página não pode alterar as configurações do aplicativo.",
   "settings.dateOrder": "A ordem das datas precisa ser auto, mdy ou dmy.",
   "settings.backupKeep": "O número de backups mantidos precisa ser 1 ou mais.",
+  "settings.backupUnc": "Uma pasta de rede (\\\\servidor\\compartilhamento) não pode guardar os backups. Mapeie o compartilhamento para uma letra de unidade e escolha essa.",
   "settings.notAKey": "Isso não é uma chave.",
   "settings.cannotSave": "Isso não pode ser salvo.",
   "settings.notSaved": "A configuração não pôde ser salva.",

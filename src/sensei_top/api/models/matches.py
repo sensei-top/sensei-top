@@ -268,6 +268,9 @@ class MtgoUnsurePick(MtgoWaitingMatch):
 
     reason: Literal["few_cards", "low_fit", "no_list"]
     best: MtgoBestList | None = None
+    format: str | None = Field(
+        None, description="the format inferred for the match; null when none was"
+    )
 
 
 class MtgoPickGroup(BaseModel):
@@ -347,6 +350,31 @@ class Match(BaseModel):
         None,
         description="Games 2 and 3 lost, for a best-of-three match; null otherwise. A drawn "
         "game is in neither count.",
+    )
+    game1_on_play: bool | None = Field(
+        None,
+        description="Whether the player was on the play in game 1, for a best-of-three match; "
+        "null when unknown or not a best of three.",
+    )
+    postboard_play_won: int | None = Field(
+        None,
+        description="Games 2 and 3 won while on the play, for a best-of-three match; null "
+        "otherwise. A game whose side is unknown is in none of the four play/draw counts.",
+    )
+    postboard_play_lost: int | None = Field(
+        None,
+        description="Games 2 and 3 lost while on the play, for a best-of-three match; null "
+        "otherwise.",
+    )
+    postboard_draw_won: int | None = Field(
+        None,
+        description="Games 2 and 3 won while on the draw, for a best-of-three match; null "
+        "otherwise.",
+    )
+    postboard_draw_lost: int | None = Field(
+        None,
+        description="Games 2 and 3 lost while on the draw, for a best-of-three match; null "
+        "otherwise.",
     )
     rank_class: str | None = Field(
         None,
@@ -438,7 +466,7 @@ class PositionPoint(BaseModel):
 
     game_number: int
     turn_number: int
-    self_turn_index: int
+    self_turn_index: int | None
     index: float
 
 
@@ -453,6 +481,13 @@ class SummaryBeat(BaseModel):
     game_number: int | None = None
     meter: tuple[float, float] | None = Field(
         None, description="(self, opp) for a two-sided proportional bar, e.g. the damage race"
+    )
+    turn_number: int | None = Field(
+        None, description="The source finding's player-turn; None when it has none"
+    )
+    definition: str | None = Field(
+        None, description="One plain sentence saying what a game beat's label measures; None "
+        "when the label has none, and on every matchup beat"
     )
 
 

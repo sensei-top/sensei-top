@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { Match } from '../../api'
 import type { TFunction } from '../../i18n'
 import type { Field, Pattern } from '../../lib/home'
-import { opponentNamed, winnerScore } from '../../lib/home'
+import { opponentNamed, ownScore } from '../../lib/home'
 import type { ArtCard } from '../../lib/matchArt'
 import { opponentLabelText } from '../../lib/opponent'
 import { patternWords } from '../../lib/patterns'
@@ -11,15 +11,17 @@ import { formatPercent, formatRecord } from '../../lib/format'
 import { ago, formatIsoDateShort } from '../../lib/time'
 import { Button, CardArt, ErrorNote, SectionLabel, Skeleton } from '../ui'
 
-/** One of Home's three cards, or the failure of the request one needed. */
+/** One of Home's three cards, the failure of the request one needed, or a
+ *  slot whose request has not answered. */
 export type Thing =
   | { kind: 'match'; match: Match; art: ArtCard | null }
   | { kind: 'pattern'; pattern: Pattern; art: ArtCard | null }
   | { kind: 'field'; field: Field; art: ArtCard | null }
   | { kind: 'error'; key: string; error: Error }
+  | { kind: 'pending'; slot: 'pattern' | 'field' }
 
-function kickerOf(kind: Exclude<Thing['kind'], 'error'>, t: TFunction): string {
-  const kickers: Record<Exclude<Thing['kind'], 'error'>, string> = {
+function kickerOf(kind: Exclude<Thing['kind'], 'error' | 'pending'>, t: TFunction): string {
+  const kickers: Record<Exclude<Thing['kind'], 'error' | 'pending'>, string> = {
     match: t('home.things.kicker.match'),
     pattern: t('home.things.kicker.pattern'),
     field: t('home.things.kicker.field'),
@@ -37,8 +39,14 @@ export function ThreeThings({ things, now }: { things: Thing[]; now: number }) {
   return (
     <ol className="grid gap-4 md:grid-cols-3">
       {things.map((thing, index) => (
-        <li key={thing.kind === 'error' ? thing.key : thing.kind} className="min-w-0">
-          {thing.kind === 'error' ? <ErrorNote error={thing.error} /> : <ThingCard thing={thing} place={index + 1} now={now} />}
+        <li key={thing.kind === 'error' ? thing.key : thing.kind === 'pending' ? thing.slot : thing.kind} className="min-w-0">
+          {thing.kind === 'error' ? (
+            <ErrorNote error={thing.error} />
+          ) : thing.kind === 'pending' ? (
+            <PendingCard slot={thing.slot} place={index + 1} />
+          ) : (
+            <ThingCard thing={thing} place={index + 1} now={now} />
+          )}
         </li>
       ))}
     </ol>
@@ -57,7 +65,37 @@ export function ThreeThingsLoading() {
   )
 }
 
-function ThingCard({ thing, place, now }: { thing: Exclude<Thing, { kind: 'error' }>; place: number; now: number }) {
+function PendingCard({ slot, place }: { slot: 'pattern' | 'field'; place: number }) {
+  const { t } = useTranslation()
+  const loading: Record<'pattern' | 'field', string> = {
+    pattern: t('home.things.loading.pattern'),
+    field: t('home.things.loading.field'),
+  }
+  return (
+    <section
+      className="flex h-full min-h-[300px] flex-col overflow-hidden rounded-card border border-edge bg-surface shadow-lift"
+      role="status"
+      aria-label={t('common.loading')}
+    >
+      <Skeleton className="h-[104px] rounded-none md:h-[124px]" />
+      <div className="flex flex-1 flex-col gap-2 px-5 pt-4 pb-5">
+        <div className="flex items-center gap-2">
+          <span
+            aria-hidden
+            className="flex size-6 shrink-0 items-center justify-center rounded-pill bg-accent font-display text-caption font-extrabold text-on-accent"
+          >
+            {place}
+          </span>
+          <SectionLabel as="p">{kickerOf(slot, t)}</SectionLabel>
+        </div>
+        <p className="text-body text-ink2">{loading[slot]}</p>
+        <Skeleton className="h-4 w-3/4" />
+      </div>
+    </section>
+  )
+}
+
+function ThingCard({ thing, place, now }: { thing: Exclude<Thing, { kind: 'error' | 'pending' }>; place: number; now: number }) {
   const { t } = useTranslation()
   const words = thingWords(thing, now, t)
   const art = thing.art
@@ -85,7 +123,7 @@ function ThingCard({ thing, place, now }: { thing: Exclude<Thing, { kind: 'error
 }
 
 function thingWords(
-  thing: Exclude<Thing, { kind: 'error' }>,
+  thing: Exclude<Thing, { kind: 'error' | 'pending' }>,
   now: number,
   t: TFunction,
 ): { title: string; body: ReactNode; action: string; href: string } {
@@ -125,13 +163,13 @@ function thingWords(
   }
 }
 
-/** "Won 2–1 against {opponent}", the winner's games first; without a game
- *  count, "Won against {opponent}". */
+/** "Lost 1–2 to {opponent}", the viewer's games first; without a game
+ *  count, "Lost to {opponent}". */
 function matchTitle(match: Match, t: TFunction): string {
   const opponent = opponentNamed(match) && match.opponent_label
     ? opponentLabelText(match.opponent_label, match.opponent_colors)
     : t('home.unrecognizedDeck')
-  const score = winnerScore(match)
+  const score = ownScore(match)
   if (match.result === 'win') {
     return score ? t('home.things.wonScore', { score, opponent }) : t('home.things.won', { opponent })
   }

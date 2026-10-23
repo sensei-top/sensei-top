@@ -239,7 +239,7 @@ def test_mtgo_refusal_from_none_pauses_now(conn, status):
     ("cause", "answers"), [(429, 0), (503, 2)],
 )
 def test_mtgo_refusal_ends_a_wait_and_the_pause_begins_then(conn, cause, answers):
-    # k4: a wait that ends in a refusal begins the pause at the refusal.
+    # A refusal that ends a wait starts the pause at the refusal's own time.
     before = _seed(conn, "mtgo", "waiting", cause, answers=answers,
                    since="2026-10-05T09:00:00Z", not_before="2026-10-05T12:00:00Z")
     _apply(conn, "mtgo", before, _refused(401))
@@ -381,7 +381,7 @@ def test_mtgo_503_during_a_429_wait_starts_a_503_wait(conn):
         (1, "2026-10-05T10:00:00Z", True, False, 2, "2026-10-05T10:00:00Z"),
         # counting from 0 starts the date now
         (0, "2026-10-05T10:00:00Z", True, False, 1, NOW_S),
-        # k1: a page read before the 503 restarts the count; the date stays
+        # a page read before the 503 restarts the count; the date stays
         (2, "2026-10-05T10:00:00Z", False, True, 0, "2026-10-05T10:00:00Z"),
         # ...even when the 24 h have long passed
         (10, "2026-10-03T10:00:00Z", False, True, 0, "2026-10-03T10:00:00Z"),
@@ -431,7 +431,7 @@ def test_mtgo_a_day_of_first_request_503s_pauses(conn, ra, not_before):
     ],
 )
 def test_mtgo_503_while_paused_keeps_cause_and_date(conn, cause, ra, not_before):
-    # k3: the not-before comes from Retry-After when it carries one, else none.
+    # A 503 while paused takes its not-before from Retry-After, or none.
     before = _seed(conn, "mtgo", "paused", cause, answers=3 if cause == 503 else 0,
                    since="2026-10-03T08:00:00Z", not_before="2026-10-05T11:00:00Z")
     _apply(conn, "mtgo", before, _unavailable(ra=ra))
@@ -543,7 +543,7 @@ def test_topdeck_refusal_works_as_for_mtgo(conn, seed, status, since):
     "seed", [("waiting", 429, "2026-10-05T11:00:00Z"), ("paused", 403, None)]
 )
 def test_topdeck_a_completed_run_lifts_any_hold(conn, seed):
-    # k6: a run no 429 or refusal ended, with one format answered.
+    # A run no 429 or refusal ended, with one format answered, lifts any hold.
     before = _seed(conn, "topdeck", seed[0], seed[1], not_before=seed[2])
     assert _apply(conn, "topdeck", before, None, completed=True) is None
     assert _stored(conn, "topdeck") is None

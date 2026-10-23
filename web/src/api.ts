@@ -264,6 +264,12 @@ export const useDeckPlayDraw = (deckIds: string[]) =>
     combine: all<PlayDrawWinrate[]>,
   })
 
+/** The games on the play and on the draw under Matches' own filters, one
+ *  deck or none and a source: one row per deck and side, every game under
+ *  them, never stopped at a list's maximum. */
+export const usePlayDraw = (deckId?: string, source?: string) =>
+  useQuery(query<PlayDrawWinrate[]>('play-draw', '/api/metrics/play-draw', deckId, source))
+
 /** One match's detail, read for its card art alone (Home). Keyed apart
  *  from `useMatchDetail`, with `staleTime: 'static'`: a finished match's
  *  cards do not change, so the heartbeat's invalidation never asks again. */
@@ -503,7 +509,8 @@ export const useGuideNarrative = (key: string | undefined) =>
 
 /** The evidence-only guide document, for copy or save. No narrative call —
  *  fetched fresh each time the export panel is opened rather than cached
- *  under the heartbeat, since it is only ever read right before a copy. */
+ *  under the heartbeat, since it is only ever read right before a copy or
+ *  a download. */
 export const useGuideMarkdown = (key: string | undefined, enabled: boolean) =>
   useQuery({
     queryKey: ['guide-markdown', key],

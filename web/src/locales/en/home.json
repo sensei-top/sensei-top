@@ -79,8 +79,9 @@
   },
   "session": {
     "last": "Last session · {{day}}",
-    "thirtyDays": "Over the last 30 days you are <strong>{{record}}</strong>, or <strong>{{rate}}</strong>.",
-    "thirtyDaysFew": "Over the last 30 days you are <strong>{{record}}</strong>.",
+    "thirtyDaysLabel": "Last 30 days",
+    "thirtyDays": "You are <strong>{{record}}</strong>, or <strong>{{rate}}</strong>.",
+    "thirtyDaysFew": "You are <strong>{{record}}</strong>.",
     "matches_one": "{{n}} match",
     "matches_other": "{{n}} matches"
   },
@@ -89,6 +90,10 @@
       "match": "Last match",
       "pattern": "Pattern",
       "field": "Field"
+    },
+    "loading": {
+      "pattern": "Looking for a pattern in your matches…",
+      "field": "Reading the field…"
     },
     "readReport": "Read the report",
     "seePatterns": "See every pattern",

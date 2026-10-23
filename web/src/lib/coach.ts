@@ -452,7 +452,7 @@ export function turningTiles(points: TurningBucketOut[], t: TFunction): { lost: 
       label,
       value: formatCount(games),
       detail:
-        decisive === 0 ? t('coach.turning.noneDecisive') : t('coach.turning.decisive', { n: formatCount(decisive) }),
+        decisive === 0 ? t('coach.turning.noneDecisive') : t('coach.turning.decisive', { count: decisive, n: formatCount(decisive) }),
     }
   })
   return { lost, tiles }

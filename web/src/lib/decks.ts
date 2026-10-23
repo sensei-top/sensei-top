@@ -7,9 +7,11 @@
  */
 import type { Deck, DeckIdentityOut, Match } from '../api'
 import type { TFunction } from '../i18n'
+import { formatRecord } from './format'
+import { versionDays } from './deckOverview'
 import { isFinished, startOf } from './home'
 import type { RateOrRecord } from './sample'
-import { rateOrRecord } from './sample'
+import { RATE_MIN_MATCHES, ROUGH_RATE_MIN, rateOrRecord } from './sample'
 import { ago, formatCount, parseTimestamp } from './time'
 
 /** A key as an address spells it in one segment (a deck's, `guid:…`,
@@ -115,13 +117,23 @@ export function deckLine(identity: DeckIdentityOut, now: number, t: TFunction): 
 }
 
 /** A tile's record by the small-sample rule (`rateOrRecord`): from ten
- *  finished matches a rate with the record under it, "58%" and "35–25";
- *  five to nine the rate, `thin`, over the record and "rough"; one to four
+ *  finished matches a rate with its line under it, "58%" and
+ *  "win rate · 35–25"; five to nine the rate, `thin`, over "rough win rate ·
+ *  6–3, under 10 matches"; both lines say "win rate", which a bare
+ *  percentage on a tile does not; one to four
  *  the record as the figure, `thin`, with the "too few" line; none, no
  *  figure. `finished` counts wins and losses, draws aside, so the losses
  *  are `finished - wins`. */
 export function deckRecord({ finished, wins }: { finished: number; wins: number }, t: TFunction): RateOrRecord {
-  return rateOrRecord({ wins, losses: finished - wins }, t)
+  const result = rateOrRecord({ wins, losses: finished - wins }, t)
+  if (result.figure === null || (result.thin && finished < ROUGH_RATE_MIN)) return result
+  const record = formatRecord(wins, finished - wins)
+  return {
+    ...result,
+    line: result.thin
+      ? t('common.sample.roughRateLine', { record, min: RATE_MIN_MATCHES })
+      : t('common.sample.rateLine', { record }),
+  }
 }
 
 /** A tile's line on `/decks` under its record: the format in words, and how
@@ -144,6 +156,21 @@ export type DecksTile = {
   finished: number
   wins: number
   lastPlayed: number | null
+  /** The deck's format as the API names it (`formatName` puts it in words);
+   *  `null` when unknown. */
+  format: string | null
+  /** The most recently played of the tiles that share this name (two or
+   *  more tiles, the same name): the tile wears the "Newest" chip. Always
+   *  false for a name no other tile has, and for a shared name no tile of
+   *  which has a date. */
+  newest: boolean
+  /** The whole phrase, "played Sep 3 to 14", for a tile that shares its name
+   *  with a newer one: it takes the place of the "last played" phrase, so
+   *  two lists of one name tell apart by when they were played. `null`
+   *  otherwise, and when the list was played on one day only (or one date
+   *  is all there is): a range of one day reads badly in Portuguese, so the
+   *  tile keeps "last played". */
+  playedRange: string | null
   /** The line with the format and the versions (`tileDetail`). */
   detail: string | null
   /** The deck's newest finished match in `matches`, for its art: a match's
@@ -152,13 +179,59 @@ export type DecksTile = {
   artMatchId: string | null
 }
 
+/** What a name shared by two or more identities marks on each (see
+ *  `DecksTile`): the one with the latest `last_played` (the first in
+ *  `identities`' order on a tie) is `newest`; the others carry
+ *  `playedRange`, by the viewer's own days against `now`, unless their list
+ *  was played on one day or has one date. Computed over every identity of
+ *  `identities`, keyed by identity key, so `/decks` and Home's tiles read
+ *  the same; pass the whole list, never a subset. */
+export function sameNameMarks(
+  identities: DeckIdentityOut[],
+  t: TFunction,
+  now: number,
+): Map<string, { newest: boolean; playedRange: string | null }> {
+  const newestOf = new Map<string, number>()
+  const sharing = new Map<string, number>()
+  identities.forEach((identity, index) => {
+    const name = identity.name
+    if (name == null) return
+    sharing.set(name, (sharing.get(name) ?? 0) + 1)
+    const played = parseTimestamp(identity.last_played)
+    if (played == null) return
+    const best = newestOf.get(name)
+    if (best == null || played > (parseTimestamp(identities[best].last_played) ?? 0)) newestOf.set(name, index)
+  })
+  const marks = new Map<string, { newest: boolean; playedRange: string | null }>()
+  identities.forEach((identity, index) => {
+    const shared = identity.name != null && (sharing.get(identity.name) ?? 0) > 1
+    const newest = shared && newestOf.get(identity.name as string) === index
+    const first = parseTimestamp(identity.first_played)
+    const last = parseTimestamp(identity.last_played)
+    const oneDay = first == null || last == null || new Date(first).toDateString() === new Date(last).toDateString()
+    const range =
+      shared && !newest && !oneDay
+        ? versionDays({ first_played: identity.first_played, first_seen: null, last_played: identity.last_played }, now, t)
+        : null
+    marks.set(identity.key, { newest, playedRange: range == null ? null : t('decks.tile.playedRange', { range }) })
+  })
+  return marks
+}
+
 /** One tile per identity, in the order the API answers them (the last
- *  played first). */
-export function decksTiles(identities: DeckIdentityOut[], matches: Match[], t: TFunction): DecksTile[] {
+ *  played first); its `newest` and `playedRange` are `sameNameMarks`'. */
+export function decksTiles(
+  identities: DeckIdentityOut[],
+  matches: Match[],
+  t: TFunction,
+  now: number = Date.now(),
+): DecksTile[] {
+  const marks = sameNameMarks(identities, t, now)
   const finished = matches
     .filter((match) => isFinished(match) && match.deck_id != null && startOf(match) != null)
     .sort((a, b) => (startOf(b) ?? 0) - (startOf(a) ?? 0))
   return identities.map((identity) => {
+    const mark = marks.get(identity.key)
     const ids = new Set(identity.deck_ids)
     return {
       key: identity.key,
@@ -166,8 +239,58 @@ export function decksTiles(identities: DeckIdentityOut[], matches: Match[], t: T
       finished: identity.match_wins + identity.match_losses,
       wins: identity.match_wins,
       lastPlayed: parseTimestamp(identity.last_played),
+      format: identity.format ?? null,
+      newest: mark?.newest ?? false,
+      playedRange: mark?.playedRange ?? null,
       detail: tileDetail(identity.format, identity.deck_ids.length, t),
       artMatchId: finished.find((match) => ids.has(match.deck_id ?? ''))?.match_id ?? null,
     }
   })
+}
+
+export type DecksSort = 'lastPlayed' | 'winRate' | 'matches'
+
+export const DECKS_SORTS: readonly DecksSort[] = ['lastPlayed', 'winRate', 'matches']
+
+/** A sort named by an address, `lastPlayed` when absent or unrecognized. */
+export function chosenSort(raw: string | null | undefined): DecksSort {
+  return DECKS_SORTS.find((sort) => sort === raw) ?? 'lastPlayed'
+}
+
+/** Newest first; a tile with no date after every dated one; the input order
+ *  decides the rest (the sort is stable). */
+function byLastPlayed(a: DecksTile, b: DecksTile): number {
+  if (a.lastPlayed == null || b.lastPlayed == null) return (a.lastPlayed == null ? 1 : 0) - (b.lastPlayed == null ? 1 : 0)
+  return b.lastPlayed - a.lastPlayed
+}
+
+/** The tiles in the order `sort` names, as a new array. A tile is rated
+ *  with at least `RATE_MIN_MATCHES` finished matches. `winRate`: the rated
+ *  tiles, highest rate first, then every other tile (one with five to nine
+ *  finished matches or none included) by last played; `matches`: finished
+ *  matches, most first. Ties by last played. */
+export function sortTiles(tiles: DecksTile[], sort: DecksSort): DecksTile[] {
+  const rate = (tile: DecksTile) => (tile.finished >= RATE_MIN_MATCHES ? tile.wins / tile.finished : null)
+  const copy = [...tiles]
+  if (sort === 'matches') return copy.sort((a, b) => b.finished - a.finished || byLastPlayed(a, b))
+  if (sort === 'winRate') {
+    return copy.sort((a, b) => {
+      const ra = rate(a)
+      const rb = rate(b)
+      if (ra != null && rb != null) return rb - ra || byLastPlayed(a, b)
+      if (ra != null || rb != null) return ra != null ? -1 : 1
+      return byLastPlayed(a, b)
+    })
+  }
+  return copy.sort(byLastPlayed)
+}
+
+/** The formats present among `tiles`, each once, in the order first met. */
+export function tileFormats(tiles: DecksTile[]): string[] {
+  return [...new Set(tiles.map((tile) => tile.format).filter((format): format is string => !!format))]
+}
+
+/** The tiles of `format`; all of them when `format` is empty. */
+export function filterTiles(tiles: DecksTile[], format: string | null | undefined): DecksTile[] {
+  return format ? tiles.filter((tile) => tile.format === format) : tiles
 }

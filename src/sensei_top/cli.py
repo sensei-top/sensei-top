@@ -62,7 +62,7 @@ from typing import TYPE_CHECKING
 from sensei_top import logs
 from sensei_top.archetypes.source import ARCHIVE_URL
 from sensei_top.arena_config import DATE_ORDER_CHOICES
-from sensei_top.db import connect, open_database
+from sensei_top.db import connect, is_unc_path, open_database, unc_refusal
 from sensei_top.live import ARENA_LOG_RESOLVE_SECONDS, DECK_POLL_SECONDS, MTGO_POLL_SECONDS
 from sensei_top.mtgo.config import load_handle as mtgo_load_handle
 from sensei_top.mtgo.config import resolve_deck_dir, resolve_log_dir
@@ -653,6 +653,8 @@ def cmd_backup(args) -> None:
     from sensei_top.backup import claim_age_seconds, read_state, resolve, run_backup
 
     db_path = Path(args.db)
+    if args.dir and is_unc_path(args.dir):
+        sys.exit(unc_refusal(args.dir))
     if not db_path.exists():
         sys.exit(f"No database at {db_path}. Run 'sensei-top ingest' then 'project' first.")
 
@@ -971,7 +973,7 @@ def _key_value(raw: str) -> str:
 
 def _store_key(which: str, key: str) -> None:
     """The system keyring when it takes the key, and then the file's copy is
-    removed; else the file (mode 600), saying why."""
+    removed; else the file (chmod 600), saying why."""
     from sensei_top import secrets
     from sensei_top.llm.config import config_path
 
@@ -990,7 +992,7 @@ def _store_key(which: str, key: str) -> None:
             if secrets.backend_name() is None
             else "the system keyring did not take it (the log says why)"
         )
-        print(f"{name} key written to {config_path()} (mode 600): {reason}.")
+        print(f"{name} key written to {config_path()}{_mode_600()}: {reason}.")
         if _key_source(which) == "keyring":
             print(f"  An older {name} key in the system keyring still wins over the file.")
     if os.environ.get(env):
@@ -1098,13 +1100,19 @@ def _config_json(db_path: Path) -> dict[str, object]:
     }
 
 
+def _mode_600() -> str:
+    """The " (mode 600)" note after the config file's path. On Windows
+    ``chmod`` sets just the read-only flag, so the note is left out."""
+    return "" if sys.platform == "win32" else " (mode 600)"
+
+
 def _written(what: str, value: str) -> None:
     from sensei_top.llm.config import config_path
 
     if value == "":
         print(f"{what} cleared in {config_path()}.")
     else:
-        print(f"{what} written to {config_path()} (mode 600).")
+        print(f"{what} written to {config_path()}{_mode_600()}.")
 
 
 def cmd_config(args) -> None:
@@ -1166,6 +1174,8 @@ def cmd_config(args) -> None:
 
     if args.set_key == "-" and args.set_topdeck_key == "-":
         sys.exit("Only one key can be read from stdin at a time.")
+    if args.set_backup_dir and is_unc_path(args.set_backup_dir):
+        sys.exit(unc_refusal(args.set_backup_dir))
 
     if args.move_keys_to_keyring:
         _move_keys_to_keyring()
@@ -1216,7 +1226,7 @@ def cmd_config(args) -> None:
 
     if args.set_backup_dir is not None or args.set_backup_keep is not None:
         _write_backup_config(directory=args.set_backup_dir, keep=args.set_backup_keep)
-        print(f"Backup settings written to {llm_config.config_path()} (mode 600).")
+        print(f"Backup settings written to {llm_config.config_path()}{_mode_600()}.")
 
     if any(value is not None for value in llm_fields) or coach_web_search is not None:
         _write_llm_config(
@@ -1227,7 +1237,7 @@ def cmd_config(args) -> None:
             coach_effort=args.set_coach_effort,
             coach_web_search=coach_web_search,
         )
-        print(f"Config written to {llm_config.config_path()} (mode 600).")
+        print(f"Config written to {llm_config.config_path()}{_mode_600()}.")
 
     if writes and not args.show:
         return
@@ -2891,6 +2901,9 @@ def main(argv: list[str] | None = None) -> None:
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors=stream.errors)
     args = build_parser().parse_args(argv)
+    # Before logs.install, which writes beside --db, and every open_database().
+    if is_unc_path(args.db):
+        sys.exit(unc_refusal(args.db))
     logs.install(Path(args.db), args.command, verbose=args.verbose)
     args.func(args)
 

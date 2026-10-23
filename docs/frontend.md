@@ -27,7 +27,7 @@ fetch. TanStack Query stays the only data layer.
 | `/decks` | `DecksPage` | every deck, one tile each, last played first |
 | `/decks/:id` | `DeckOverviewPage` | `DeckOverviewView`: that deck's rank table, its versions and its matches, under the deck strip every tab shows |
 | `/decks/:id/matchups` | `DeckMatchupsPage` | `MatchupsView`: one row per archetype it has met |
-| `/decks/:id/matchups/:opponent` | `DeckPairingPage` | `PairingView`: that deck against one opponent's deck |
+| `/decks/:id/matchups/:opponent` | `DeckPairingPage` | `PairingView`: that deck against one opponent's deck, `?format=` one format's matches |
 | `/decks/:id/guide` | `DeckGuidePage` | `GuideView` for that deck |
 | `/decks/:id/rcq` | `DeckRcqPage` | `RcqView`: the RCQ prep for that deck; `/decks/:id/guide/rcq`, its 1.0.x address, redirects here |
 | `/field` | `FieldPage` | `FieldView`: what is played in tournaments, and your record against it |
@@ -137,6 +137,10 @@ sources). `DeckFilter` is a select with "All decks" first; it shows
 nothing while there are no decks. Home takes no filter and reads every
 source, so a player with no Arena match still opens a page with their
 own matches on it.
+
+`/decks` keeps two in the address: `?format=` (a format among its tiles) and
+`?sort=` (`lastPlayed`, `winRate` or `matches`), each left out at its default
+(`docs/frontend-pages.md`, "Decks").
 
 A deck's own pages take no filter. The address names the deck. Overview
 and Matchups ask with `source="all"`, since a deck is one deck on
@@ -295,7 +299,6 @@ address can name:
 | Writing | `writing` | `settings/WritingSection.tsx` | always; with no shell, its `WritingStatus` |
 | Backup | `backup` | `settings/BackupSection.tsx` | a desktop shell |
 | App | `app` | `settings/AppSection.tsx` | a desktop shell |
-| Draft data | `draft-data` | `settings/SharingSection.tsx` | a desktop shell that offers sharing |
 | Appearance | `appearance` | the page's own | always |
 | Live | `live-settings` | the page's own | always |
 | About and credits | `credits` | `CreditsView` | always |
@@ -314,8 +317,9 @@ server's half. Appearance is the density control, a `Segmented` (Comfortable,
 Compact); `docs/design-system.md`'s "Density" says what it changes and
 where the choice is kept. Live is one `Switch`, "Advice during a game",
 on by default and kept in the browser's own storage
-(`shell/liveAdvice.ts`); `docs/current-match.md`, "The event rule", says
-what it hides and why the server never sees it.
+(`shell/liveAdvice.ts`); `docs/current-match.md`,
+"The event rule (`table/queues.py`)", says what it hides and why the
+server never sees it.
 
 **In a browser, `/settings` is Language, Writing, Appearance, Live and
 About and credits.** Writing is then one card of sentences from
@@ -388,10 +392,9 @@ sentence under the switch says what the last check found
 (`lib/settings.ts`'s `updateSentence`), and a downloaded update adds
 "Restart to update", which goes through `app.restartToUpdate`.
 
-Two fields of the types are there because a state had nothing to show
-without them: `Sharing` carries `lastDraft`, the newest finished draft,
-which the section links to; `backup.inFolder` counts the copies the
-folder holds, which the failed backup's sentences name.
+A field of the types is there because a state had nothing to show
+without it: `backup.inFolder` counts the copies the folder holds, which
+the failed backup's sentences name.
 
 #### How a form saves
 
@@ -451,31 +454,11 @@ folder holds, which the failed backup's sentences name.
   the export holds and that matches are never in it; last, the sentence
   naming the welcome steps and "Go through them again", a link to
   `/welcome`.
-- **Draft data.** The switch "Share
-  my finished drafts", off until the viewer presses it; what is sent and
-  what never is, as two short lists; a link to what the newest draft
-  would send; how many drafts were sent, which counts what the server
-  holds under this installation's id, so a delete sets it to 0; the id,
-  read-only, with "Make a new one"; "Delete everything I sent". Both of
-  the last ask first.
 
-`components/sharing/` holds what sharing draws outside Settings:
-`PayloadView` (what one draft sends, in words, under what is never
-sent), `SharingNote` (the line under a draft's header that sharing is
-on) and `DraftReceipt` (a finished draft's line: waiting to be sent,
-sent with "Undo", or removed). No address draws any of the three, so
-they are drawn only on `/design/surfaces`.
+The Overlay section went with the pivot, since no overlay is planned.
 
-**Draft data and `components/sharing/` describe drafts, which the app no
-longer reads** (the draft assistant was deleted on 2026-10-01). They were
-kept for plan 10's match-data contribution, which was refused on
-2026-10-19 (`ROADMAP.md`, "Never"), so their removal is owed
-(`BACKLOG.md`, BL-062). The Overlay section went with the pivot, since no
-overlay is planned.
-
-**Inside the desktop shell** every section above is drawn but Draft
-data, which waits for a shell that offers sharing. The first-run steps
-are "Welcome", below.
+**Inside the desktop shell** every section above is drawn. The first-run
+steps are "Welcome", below.
 
 ### Welcome
 
@@ -588,13 +571,11 @@ section's sample is the page's own (`useSampleApp`), laid over whichever
 shell is picked, since `lib/sampleShell.ts` has no `app`. A "Sample" select
 at the top, its label above it, picks the shell (`SAMPLE_OPTIONS`: the two
 with no shell, nothing set, everything set, a save that fails, a restart,
-each backup's failure, each sharing state), and a new pick starts that
-sample's state again. Under Settings: `PayloadView` over an invented draft,
-the two lines a draft's page would draw, and a report's card as each writer
-draws it (`GenerateCard`, below), and last the Detailed Logs drawing at both
-its sizes, the Arena step's and the Home banner's. Every name, path and day
-on the page is invented. `lib/sampleShell.ts` is imported by this page
-alone.
+and each backup's failure), and a new pick starts that sample's state
+again. Under Settings: a report's card as each writer draws it
+(`GenerateCard`, below), and last the Detailed Logs drawing at both its
+sizes, the Arena step's and the Home banner's. Every name, path and day on
+the page is invented. `lib/sampleShell.ts` is imported by this page alone.
 
 ## Shared primitives (`components/ui/`)
 
@@ -605,7 +586,8 @@ One file per primitive, all re-exported from `index.ts`, so every
   slot, `elevation`, `tone`), `StatTile` (a label, a value, one line of
   detail, and `muted`, which draws the value muted for a figure too thin
   to read as a rate), `DeckTile` (one of the viewer's decks: a card's art, then
-  the deck's name, its record and when it was last played; the words
+  the deck's name, an optional chip ("Newest") for the latest of several
+  decks that share a name, its record and when it was last played; the words
   under the art are the way into the deck's page), `Finding` (one
   finding as a nested block: its weight as a chip, where it happened, a
   title and a body), `Callout` (a nested block that says one thing
@@ -667,10 +649,13 @@ One file per primitive, all re-exported from `index.ts`, so every
 - **Waiting and failing.** `Loading` (a shape-holding `Skeleton`, not
   bare "Loading…" text), `Skeleton` and `ErrorNote`.
 - **Text.** `Prose` (inline `**bold**` and `` `code` `` only, which is
-  all a narrative needs) and `TextBlock` (a wrapped `pre` in the
+  all a narrative needs), `TextBlock` (a wrapped `pre` in the
   interface face, for a prompt, a command or exported Markdown, which
   never lets a page scroll sideways; `docs/design-system.md` has its
-  tokens).
+  tokens) and `Tooltip` (one sentence about a word, open on hover and
+  on keyboard focus, closed by Escape, tied to the word by
+  `aria-describedby`; docs/design-system.md's "Rules a new component
+  follows" has the rule, and says when a word wears one).
 
 `components/CardImage.tsx` sits one level up, not inside `ui/`. The
 full token system the primitives are built on (palette, type ramp,

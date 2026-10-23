@@ -45,7 +45,8 @@
     "fewCards_one": "Só {{n}} card visto.",
     "fewCards_other": "Só {{n}} cards vistos.",
     "bestList": "Melhor lista: {{name}}, {{matched}} de {{seen}} cards.",
-    "noFit": "Nenhuma lista salva cabe."
+    "noFit": "Nenhuma lista salva cabe.",
+    "noListIn": "Nenhuma lista salva em {{format}}."
   },
   "hint": "Seus cards parecem {{hint}}.",
   "against": "contra {{name}}",

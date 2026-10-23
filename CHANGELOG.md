@@ -7,6 +7,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-10-23
+
+### Added
+
+- A deck's **Guide** can now save its exported Markdown as a file: "Download
+  .md" sits beside the copy button, as it does on the RCQ guide.
+- **Matches** now shows play against draw beside matches and games won:
+  the gap between your game win rates on the play and on the draw, with
+  both rates under it, as a deck's page already does.
+- The **match report** explains itself: hover or focus a beat label (Race,
+  Turned, Stranded and the rest) for one sentence on what it means. When
+  you lost the race, the subhead names each lost game's biggest problem,
+  or says no single cause stood out. A concession or a timeout says who
+  ("You conceded"), and "Replay game N" opens the replay at the game's
+  first flagged turn.
+- A deck's **Matchups** view links to the **Field** for that deck's format.
+- **Decks** can be filtered by format and sorted by last played, win rate
+  or matches; every version keeps its tile.
+- A deck's **Matchups** table has a "Who played first" switch: Game 1 and
+  Post-board count only the games on the play, or on the draw. Games with
+  no play/draw on record count under All only, and the table says how many.
+
+### Changed
+
+- **Decks** tells same-named decks apart: the one played most recently
+  wears the "Newest" chip and the others show when they were played
+  ("played Sep 3 to 14"). The version switcher marks its newest version,
+  and Home's deck tiles mark same-named decks the same way.
+- The **match report**'s top severity reads "Major" where it said
+  "Decisive", which read like the game's result, and its Turned beat
+  counts your own turns ("your turn 6"), as its findings do.
+- The **match report**'s heading names the opponent as its Opponent row
+  does, without the colour letters the pips beside it already show.
+- A label that explains itself on hover or focus now shows an info icon
+  beside it, everywhere in the dashboard.
+- A deck's **Matchups** view shows the archetypes met ten times or more,
+  and never fewer than the five most met; "Show all" opens the rest. Its
+  Game 1 and Post-board headers explain themselves.
+- **Field** keeps its controls in one row, and the most-played deck leads
+  its tiles.
+- **Home** draws a quiet placeholder where a deck has no card art, and
+  each record names the window it covers.
+- On **Live**, "Pick the deck" is a quieter button, and "Correct the deck"
+  carries a pencil like the other edit buttons.
+- **Home**'s three things no longer read as blank cards while they load:
+  each shows its label and what it is waiting on, and the match and the
+  field appear without waiting for the pattern.
+
+### Fixed
+
+- The **match report** says "your turn N" from Arena's own count of your
+  turns, so a game whose log missed turns no longer reads too low (it said
+  turn 2 where you were on turn 12), and a turn Arena never numbered is
+  described without one. The leak finder's mana-screw check counts turns
+  within each game, and a match with no numbered turn stays out of its
+  rate instead of counting as clean.
+- Every score reads the same way, your games first with an en dash: the
+  match report's headline said "Lost 2-1" where the list said "Loss 1–2";
+  both now say 1–2.
+- A deck's page says "Post-board" where it said "Games 2–3", the Worst
+  tile counts archetypes rather than showing a bare number, and the deck
+  tiles say "win rate" beside the percentage. Live's lands strip reads
+  "19 of 24 lands left in your library", under "Next draw".
+
+- On the MTGO picks page, a match no group takes because no saved list is
+  in its format now names that format: "No saved list in Modern." rather
+  than "No saved list fits."
+- On Windows, `sensei-top config` no longer says it wrote the config file
+  "(mode 600)": there `chmod` sets only the read-only flag.
+- A deck's **Matchups** page keeps formats apart: a Magic Online deck
+  with matches picked as different formats gets one row per format against
+  each opponent, each naming its format, and a row opens that format's
+  matches alone.
+- On Windows, a network folder (`\\server\share`) given for the database
+  or the backups is now refused up front with a message, rather than
+  failing partway through a backup, a restore or a check.
+
 ## [1.2.1] - 2026-10-21
 
 ### Changed
@@ -263,7 +340,8 @@ The app is the same as 0.7.1's; this release carries the website.
   keeps recording with the window closed, and start-with-Windows as an
   option. On Linux, an AppImage that updates itself in place.
 
-[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/sensei-top/sensei-top/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/sensei-top/sensei-top/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/sensei-top/sensei-top/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/sensei-top/sensei-top/compare/v1.0.1...v1.1.0

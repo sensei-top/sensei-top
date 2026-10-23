@@ -2,7 +2,7 @@
 
 Classifies the player's own current decklist with the same
 ``archetypes.classify`` rule engine ``review/snapshot.py`` already uses for
-one match at a time (``_classify_own_deck``, reused here rather than
+one match at a time (``classify_own_deck``, reused here rather than
 duplicated — one classification path, one place to fix a bug in it), then
 compares it against ``review.consensus.build_consensus`` for that archetype
 in the deck's format, windowed to winning post-reset lists. See
@@ -16,11 +16,11 @@ from collections import Counter
 from dataclasses import dataclass
 
 from sensei_top.archetypes.classify import normalize
-from sensei_top.guide.deck import DeckIdentity, identity_format
+from sensei_top.guide.deck import DeckIdentity, deck_matches, identity_format
 from sensei_top.guide.window import FormatReset, deck_cards, window_start
 from sensei_top.i18n import _, join, percent
 from sensei_top.review.consensus import ArchetypeConsensus, build_consensus
-from sensei_top.review.snapshot import _classify_own_deck
+from sensei_top.review.snapshot import classify_own_deck
 
 STAPLE_SHARE = 0.5
 
@@ -250,14 +250,14 @@ def build_list_diff(
         deck_ids = identity.deck_ids
         if not deck_ids:
             return None
-        # the most recently played version is what _classify_own_deck should read
+        # the most recently played version is what classify_own_deck should read
         current_deck_id = None
         for row in conn.execute(
             f"""
             SELECT md.deck_id FROM matches m
               JOIN v_match_deck md ON md.match_id = m.match_id
               JOIN decks d ON d.deck_id = md.deck_id
-             WHERE md.deck_id IN ({','.join('?' for _ in deck_ids)})
+             WHERE m.match_id IN ({deck_matches(deck_ids)})
              GROUP BY md.deck_id ORDER BY MAX(m.started_at) DESC LIMIT 1
             """,
             deck_ids,
@@ -266,7 +266,7 @@ def build_list_diff(
         if current_deck_id is None:
             return None
 
-        verdict, _own_cards = _classify_own_deck(conn, current_deck_id, None, fmt=fmt)
+        verdict, _own_cards = classify_own_deck(conn, current_deck_id, None, fmt=fmt)
         if verdict is None:
             return None
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { translator } from '../i18n'
-import { answerOf, changeToSend, changedFields, failureOf, pressFailure, updateSentence } from './settings'
+import { changeToSend, changedFields, failureOf, updateSentence } from './settings'
 
 const saved = { mtgoHandle: 'Sample Player', mtgoDir: '/games/mtgo/logs' }
 
@@ -60,32 +60,6 @@ describe('failureOf', () => {
   it('gives the plain sentence when the shell gave none', () => {
     expect(failureOf({ ok: false, error: '' }, t)).toBe('It was not saved. Try again.')
     expect(failureOf({ ok: false, error: '  ' }, t)).toBe('It was not saved. Try again.')
-  })
-})
-
-describe('pressFailure and answerOf', () => {
-  const plain = 'No new id was made. Try again.'
-
-  it('says nothing of a press that worked', () => {
-    expect(pressFailure({ ok: true }, plain)).toBeNull()
-  })
-
-  it("keeps the shell's own sentence", () => {
-    expect(pressFailure({ ok: false, error: 'The server did not answer.' }, plain)).toBe('The server did not answer.')
-  })
-
-  it('gives the plain sentence when the shell gave none', () => {
-    expect(pressFailure({ ok: false, error: ' ' }, plain)).toBe(plain)
-    expect(pressFailure({ ok: false, error: '' }, plain)).toBe(plain)
-  })
-
-  it('reads a refused answer as a failure with no sentence', async () => {
-    expect(await answerOf(Promise.reject(new Error('gone')))).toEqual({ ok: false, error: '' })
-    expect(pressFailure(await answerOf(Promise.reject(new Error('gone'))), plain)).toBe(plain)
-  })
-
-  it('passes an answer through', async () => {
-    expect(await answerOf(Promise.resolve({ ok: true }))).toEqual({ ok: true })
   })
 })
 

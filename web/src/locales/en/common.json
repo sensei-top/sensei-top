@@ -32,7 +32,7 @@
     "G": "green"
   },
   "finding": {
-    "decisive": "Decisive",
+    "decisive": "Major",
     "flag": "Flag",
     "notice": "Notice",
     "note": "Note"
@@ -58,6 +58,8 @@
     "tooFewGames": "too few for a rate, under {{min}}\u00a0games",
     "roughMatches": "{{record}} · rough, under {{min}}\u00a0matches",
     "roughGames": "{{record}} · rough, under {{min}}\u00a0games",
+    "rateLine": "win rate · {{record}}",
+    "roughRateLine": "rough win rate · {{record}}, under {{min}}\u00a0matches",
     "tooFewCellMatches": "too few",
     "tooFewCellGames": "too few",
     "noMatch": "no finished match yet",

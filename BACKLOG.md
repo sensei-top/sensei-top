@@ -47,7 +47,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-087
+Next ID: BL-093
 
 ## Features
 
@@ -192,20 +192,6 @@ outline). One adapter per protocol under `llm/`, `llm/config.py` widened,
 `REPORT_MODELS` reworked into a per-provider list, Settings' Writing
 section, and the route additions to rule 5's list and
 `test_only_authored_artifact_routes_write`.
-
-### BL-008 · A download for the deck guide's Markdown
-
-type: feat · priority: P2 · status: ready · area: guide web
-
-The deck guide's Export card copies `guide/markdown.py`'s document but has
-no download, while the RCQ guide downloads its `.md`
-(`components/rcq/RcqResult.tsx`). A PDF and a phone or print layout were
-dropped on 2026-10-19: the Markdown is enough.
-
-**Why deferred:** Asked 2026-10-16 as guides as files; the RCQ half shipped
-first.
-
-**Needs:** A download button beside the copy, as the RCQ guide's.
 
 ### BL-009 · A macOS build
 
@@ -408,19 +394,6 @@ response to store.
 **Needs:** Storing the recovered pages at write time, if a reader ever needs
 them without the prose.
 
-### BL-023 · Play and draw on the Matches page
-
-type: feat · priority: P3 · status: ready · area: web
-
-Play and draw are not on the Matches page.
-
-**Why deferred:** `/api/metrics/play-draw` answered 500 for MTGO when the
-page was built; it answers for every source now, deckless matches in one row
-per side.
-
-**Needs:** Put the split on the page, or count it from the list's games as
-the band does.
-
 ### BL-024 · Paging past the 500th match
 
 type: feat · priority: P3 · status: needs-decision · area: api web
@@ -431,6 +404,41 @@ No route lists the matches past the 500th or counts the matches of a filter.
 it stops.
 
 **Needs:** A design for paging.
+
+### BL-090 · A date window on a deck's matchups
+
+type: feat · priority: P2 · status: needs-decision · area: api web
+
+A deck's matchup figures are all-time, so "my worst matchup this month"
+can't be asked. In the UI sweep's walk T2 both walkers noticed and answered from
+all-time figures.
+
+**Why deferred:** The UI sweep was wording and layout only, and this is
+a new cut of the data with an API change. Which windows to offer (30
+days, since the last ban, since the deck last changed) is the user's
+decision. The ban one has to agree with how the metagame windows treat a
+ban.
+
+**Needs:** The windows chosen, then the window passed through the
+matchup routes and shown on the table's header.
+
+### BL-091 · A game lost to mana screw or a mulligan, named in the report
+
+type: feat · priority: P3 · status: needs-decision · area: review
+
+In the UI sweep's walk T4, game 3 was lost to a mulligan and missed land drops,
+and the match report named nothing: Stranded reads hand size on the last
+turn only, no analyzer reads `lands_played`, and a mulligan is never a
+beat. The report now says "no single cause stood out" for such a game.
+
+**Why deferred:** `docs/review.md`, "Why this exists", moved land and mana
+findings out of the per-match report on purpose: a single flooded game is
+not a story, a rate across games is, and the leak finder carries it. A
+per-game screw beat reverses that, so it is a decision first.
+
+**Needs:** The decision, then, if it goes ahead, the strategy article the
+analyzer stands on (each analyzer has one, `docs/review.md`) and a
+threshold for screw that a fixture can pin.
 
 ## Bugs
 
@@ -620,37 +628,6 @@ handle between polls, so the window is one read a second.
 **Needs:** A capture of the failure, then opening the log through
 `CreateFileW` with the flag (and `msvcrt.open_osfhandle`).
 
-### BL-038 · UNC paths for the database and backups
-
-type: fix · priority: P3 · status: ready · area: backup api
-
-A database or backup path given as a UNC path (`\\server\share\…`) fails
-where it is opened read-only: those opens use SQLite's URI form, and SQLite
-rejects the `file://server/…` URI a UNC path becomes. A mapped drive letter
-works, since the URI is built from `Path.absolute()`, not `resolve()`.
-
-**Why deferred:** Found in plan 3's Windows work (S2); out of its scope.
-
-**Needs:** Building a URI SQLite accepts from a UNC path, or refusing one
-with a message.
-
-### BL-039 · "mode 600" on Windows
-
-type: fix · priority: P3 · status: ready · area: cli
-
-`config` says it wrote the file "mode 600" (`cli.py`'s `_written`,
-`path.chmod(0o600)`), but on Windows `chmod` only sets or clears the
-read-only flag. Since plan 6 a key goes to the system keyring when one
-exists (Windows Credential Manager on Windows), so the file holds a
-credential only when no keyring exists, which on Windows is not expected;
-the message is still printed for any file write.
-
-**Why deferred:** Found in plan 3 (S4); the keyring made it rare rather than
-gone.
-
-**Needs:** A Windows wording for the message, or leaving it out where
-`chmod` does nothing.
-
 ### BL-040 · Segmenter shape 5 and a following header
 
 type: fix · priority: P3 · status: needs-data · area: reader
@@ -708,22 +685,6 @@ predate it.
 
 **Needs:** A decision on which grain the table should have, then the same
 grain for both, with a fixture-backed test (rule 7).
-
-### BL-046 · Matchup rows keyed on the opponent alone
-
-type: fix · priority: P3 · status: ready · area: web
-
-A deck's Matchups and pairing pages (`web/src/lib/matchups.ts::matchupRows`)
-group its matches by `opponent_key` alone, not by format and key. An MTGO
-deck whose matches were picked as different formats would mix them in one
-row.
-
-**Why deferred:** Safe while a deck's matches share one format: D15 gives
-the deck one, and on 2026-10-04 no deck in the real history had matches in
-more than one.
-
-**Needs:** Rows keyed on format and key, and a format in the pairing's
-address.
 
 ### BL-047 · Day and Night's shared oracle_id
 
@@ -783,18 +744,6 @@ halves resolve by the back-face rule since plan 13.
 **Why deferred:** No fixture holds one (rule 7).
 
 **Needs:** A real capture naming one.
-
-### BL-052 · An unsure MTGO pick names no format
-
-type: fix · priority: P3 · status: ready · area: web api i18n
-
-On `/mtgo/picks`, an unsure match with no saved list in its format reads "No
-saved list fits." instead of naming the format.
-
-**Why deferred:** The unsure item carries no format field.
-
-**Needs:** Add the inferred format to `MtgoUnsurePick` and use "No saved
-list in {format}."
 
 ### BL-053 · A summarized block at the end of a dead file
 
@@ -883,7 +832,22 @@ fixing the play/draw rates.
 **Needs:** `games_lost` on `v_deck_game_length`, and the rate read as won
 over won plus lost.
 
-## Performance
+### BL-087 · A mapped drive may not hold the backups
+
+type: fix · priority: P3 · status: ready · area: backup
+
+`backup/config.py::resolve()` passes every backup folder through
+`Path.resolve()`, which on Windows may turn a mapped network drive into its
+`\\server\share` path. The backup run then refuses it as a network share,
+though the refusal's message tells the user to map the share to a drive
+letter. Before that refusal the same folder failed later, at the copy's
+check. Found while adding the refusal.
+
+**Why deferred:** Outside the refusal's files, and unverified on Windows.
+
+**Needs:** Checking `Path.resolve()` on a mapped drive on Windows; if it
+does return the share, a resolution that keeps the drive letter, and what
+that changes for a backup folder that is a link.
 
 ### BL-058 · The coach page and its narrative route
 
@@ -936,24 +900,6 @@ still an estimate, because nothing records it.
 
 ## Code health
 
-### BL-062 · The draft-sharing leftovers
-
-type: refactor · priority: P2 · status: ready · area: web desktop
-
-Settings' Draft data section (`components/settings/SharingSection.tsx`),
-`components/sharing/` and the `Sharing`, `SharedDraft`, `DraftPayload` and
-`Deleted` types in `web/src/bridge.ts` describe drafts, which the app no
-longer reads. Nothing draws them outside `/design/surfaces`.
-
-**Why deferred:** Kept when the draft assistant and the overlay's leftovers
-were removed (2026-10-01), for plan 10 to rework for match data. Plan 10 was
-refused on 2026-10-19 (`ROADMAP.md`, "Never"), so nothing will.
-
-**Needs:** Their removal, with the shell side of `deleteContributions`
-(`web/src/bridge.ts`, `views/SettingsView.tsx`, `lib/sampleShell.ts`, and in
-the desktop shell `desktop/src/preload.ts` and `desktop/src/settings.ts`,
-which set `sharing` to null) and `docs/frontend.md`'s paragraph on them.
-
 ### BL-063 · Two Windows checks not run
 
 type: chore · priority: P3 · status: ready · area: desktop backup
@@ -989,18 +935,6 @@ folder, not a note.
 note established, or drop the citation. The skill's line is the maintainer's
 own destination and can stay.
 
-### BL-066 · A seat's colours, read in two places
-
-type: refactor · priority: P3 · status: ready · area: archetypes api
-
-The rule that reads a seat's colours from its played cards exists twice:
-`archetypes/classify.py`'s `live_opponent_colors` (which
-`table/intermission.py` calls), and `_colors_by_played_name`/`_colors_of` in
-`api/routes/mtgo_picks.py` (plan 19, one query per request instead of one
-per match), kept equal by a test.
-
-**Needs:** One helper both import, from `archetypes/`.
-
 ### BL-067 · The shell's settings folder, unnamed
 
 type: docs · priority: P3 · status: needs-decision · area: desktop
@@ -1029,64 +963,18 @@ newer tag, then adding it to the tuple.
 
 ### BL-069 · Imports of private names
 
-type: refactor · priority: P3 · status: ready · area: archetypes coach
+type: refactor · priority: P3 · status: ready · area: brief api guide
 
-37 imports reach into another package's leading-underscore names (counted
-2026-10-16, the gettext alias `_` aside): 17 from `archetypes/classify.py`,
-8 into `coach/evidence.py`, one each into `cli.py` from `reader/` and into
-`projector/` from `formats.py`.
+11 imports in `src/` reach into another package's leading-underscore names
+(counted 2026-10-21, the gettext alias `_` aside; 37 before the names from
+`archetypes/classify.py` and into `coach/evidence.py` were made public):
+4 into `brief/narrative.py` from `guide/`, 3 into `api/routes/` from
+`guide/` and `review/`, and one each into `cli.py` from `reader/`, into
+`projector/` from `formats.py`, into `coach/narrative.py` from `review/`
+and into `guide/rcq.py` from `metagame/`. `tests/` and `scripts/` add 31.
 
 **Needs:** Promote the shared ones to public names, or pin them with a test.
 No visible effect.
-
-### BL-082 · Doc-link titles matched by prefix
-
-type: chore · priority: P3 · status: ready · area: docs
-
-`scripts/check_doc_links.py::title_ok` accepts a cited section title when
-any heading of the target doc starts with it, so a title cut short, or one
-heading renamed to a longer one, still passes. Found by plan 35's
-reviewers.
-
-**Needs:** A whole-heading match, after checking which current citations
-rely on the prefix.
-
-### BL-083 · Readers that filter `md.deck_id` against a set
-
-type: perf · priority: P2 · status: ready · area: guide coach docs
-
-`docs/architecture.md` ("Filter a deck through `v_match_deck` by match id")
-says no reader joins the view and then filters `md.deck_id` against a set,
-the shape measured 10 to 100 times slower. Seven queries do, counted
-2026-10-21: `guide/field.py` (three), `guide/deck.py`, `guide/list_diff.py`,
-`guide/bundle.py` and `coach/evidence.py`. Found by plan 35's reviewers.
-
-**Needs:** Each converted to the `m.match_id IN (SELECT …)` form, or the
-doc naming the exception and why.
-
-### BL-084 · Test comments citing pins that don't exist
-
-type: docs · priority: P3 · status: ready · area: metagame
-
-Test comments cite labels no test or doc defines:
-`tests/test_metagame_holds.py` ("k4", "k1", "k3"),
-`tests/test_metagame_auto.py` ("Defect 1"), and `tests/test_formats.py`
-says migration 053's CHECK is pinned to the format tuple, which no test
-reads. Found by plan 35's reviewers.
-
-**Needs:** Each comment says what it means in its own words, and 053's
-CHECK gets a test or the claim goes.
-
-### BL-085 · The pre-reset denominator, written out twice
-
-type: refactor · priority: P3 · status: ready · area: guide
-
-`guide/field.py::build_field`'s `pre_total_scoped` is
-`_classified_deck_total`'s query written inline over `e.event_date <= ?`;
-its docstring names it as the one copy. Found by plan 35's reviewers.
-
-**Needs:** `pre_total_scoped` calls `_classified_deck_total`. No visible
-effect.
 
 ## Outside the code
 

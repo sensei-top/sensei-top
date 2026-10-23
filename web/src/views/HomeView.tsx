@@ -35,7 +35,7 @@ import {
   lastSession,
   lastThirtyDays,
   recentMatches,
-  threeThings,
+  thingSlots,
   weeklyWinrate,
   type ThingKind,
 } from '../lib/home'
@@ -59,6 +59,7 @@ export function HomeView({
   /** What the shell adds to first run; absent in a browser. */
   firstRun?: FirstRunShell
 }) {
+  const { t } = useTranslation()
   const now = useNow()
   // The counts move with the minute, not with every second's re-render.
   const minute = Math.floor(now / MINUTE) * MINUTE
@@ -118,21 +119,23 @@ export function HomeView({
     [rows, presence.data, identities.data, resetStart, listFull, minute, format],
   )
   const decks = useMemo(
-    () => (rows && identities.data ? homeDecks(identities.data, rows, minute) : []),
-    [rows, identities.data, minute],
+    () => (rows && identities.data ? homeDecks(identities.data, rows, minute, t) : []),
+    [rows, identities.data, minute, t],
   )
 
   const fieldError = formats.error ?? status.error ?? presence.error ?? identities.error
   const fieldPending = !fieldError && (formats.isPending || status.isPending || presence.isPending || identities.isPending)
-  const thingsPending = leaks.isPending || fieldPending
 
   // A candidate whose request failed still takes its place, as the failure.
   const kinds: ThingKind[] = counted
-    ? threeThings({
-        match: counted.last != null,
-        pattern: leaks.error != null || pattern != null,
-        field: fieldError != null || field != null,
-      })
+    ? thingSlots(
+        {
+          match: counted.last != null,
+          pattern: leaks.error != null || pattern != null,
+          field: fieldError != null || field != null,
+        },
+        { pattern: leaks.isPending, field: fieldPending },
+      )
     : []
 
   // The matches whose cards the page shows, seven at most: the newest
@@ -156,10 +159,12 @@ export function HomeView({
     if (kind === 'match' && counted?.last) {
       things.push({ kind, match: counted.last, art: takeUnused(castCards(newest, 'opponent'), used) })
     } else if (kind === 'pattern') {
-      if (leaks.error) things.push({ kind: 'error', key: 'pattern', error: leaks.error })
+      if (leaks.isPending) things.push({ kind: 'pending', slot: 'pattern' })
+      else if (leaks.error) things.push({ kind: 'error', key: 'pattern', error: leaks.error })
       else if (pattern) things.push({ kind, pattern, art: takeUnused(castCards(newest, 'self'), used) })
     } else if (kind === 'field') {
-      if (fieldError) things.push({ kind: 'error', key: 'field', error: fieldError })
+      if (fieldPending) things.push({ kind: 'pending', slot: 'field' })
+      else if (fieldError) things.push({ kind: 'error', key: 'field', error: fieldError })
       else if (field) {
         const detail = field.artMatchId ? details.get(field.artMatchId) : undefined
         things.push({ kind, field, art: takeUnused(castCards(detail, 'opponent'), used) })
@@ -205,7 +210,7 @@ export function HomeView({
         <SessionHero session={counted.session} thirty={counted.thirty} art={heroArt} now={minute} />
       )}
 
-      {thingsPending ? <ThreeThingsLoading /> : <ThreeThings things={things} now={now} />}
+      <ThreeThings things={things} now={now} />
 
       {/* Hidden while it loads and when the queue is empty; a failed
           request says so here, not by vanishing. */}

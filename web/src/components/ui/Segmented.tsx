@@ -5,7 +5,7 @@ export type SegmentedOption<T extends string | number> = { value: T; label: Reac
 const NEXT_KEYS = new Set(['ArrowRight', 'ArrowDown'])
 const PREVIOUS_KEYS = new Set(['ArrowLeft', 'ArrowUp'])
 
-/** The one segmented control: the field's tier picker, the source
+/** The one segmented control: the field's "Counted from", the source
  *  filter and a match's games all draw it. `label` is a `ReactNode` and
  *  not a string, so a caller such as the games' control ("Game 2 · Loss")
  *  passes what it drew. `T` spans string and number, so a game's number

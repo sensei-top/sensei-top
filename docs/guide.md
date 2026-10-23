@@ -136,7 +136,7 @@ resolved" silently undercounts.
 
 Classifies the player's current decklist with the same `archetypes.classify`
 engine `review/snapshot.py` already uses for one match at a time
-(`_classify_own_deck`, reused rather than duplicated) under the deck's
+(`classify_own_deck`, reused rather than duplicated) under the deck's
 format's archetype rules, then compares it against
 `review.consensus.build_consensus` for that archetype in that format —
 only decks from that format's events count, since one archetype key can
@@ -241,8 +241,8 @@ distinctly, no legality data to detect one *with* — and a never-played deck.
 **Performance note.** `build_snapshot`/`build_match_report`/`find_leaks`
 accept optional caches, and `bundle.py` shares one of each across its two
 `find_leaks` calls: `colors_cache` and `consensus_cache`, so
-`archetypes.classify._card_colors_by_name` — a full scan of `cards`, reached
-through both `rank_candidates` and `_classify_own_deck` — runs at most once
+`archetypes.classify.card_colors_by_name` — a full scan of `cards`, reached
+through both `rank_candidates` and `classify_own_deck` — runs at most once
 per request rather than twice per match report; `view_cache`, memoizing
 four of `build_snapshot`'s own statements that would otherwise rescan a
 whole view per match; and `find_leaks`'s `report_cache`, reusing a whole

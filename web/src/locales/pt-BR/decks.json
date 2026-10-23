@@ -15,13 +15,23 @@
   "tile": {
     "versions_one": "{{n}} versão",
     "versions_other": "{{n}} versões",
-    "lastPlayed": "jogado pela última vez {{day}}"
+    "lastPlayed": "jogado pela última vez {{day}}",
+    "playedRange": "jogado de {{range}}"
   },
   "list": {
     "empty": {
       "title": "Nenhum deck ainda",
       "message": "Um deck aparece aqui na primeira vez que você joga uma partida com ele, com seu histórico, seus matchups e seu guia."
-    }
+    },
+    "formatLabel": "Formato",
+    "allFormats": "Todos os formatos",
+    "sortLabel": "Ordenar por",
+    "sort": {
+      "lastPlayed": "Última partida",
+      "winRate": "Taxa de vitórias",
+      "matches": "Partidas"
+    },
+    "noneInFormat": "Nenhum deck neste formato."
   },
   "matches": {
     "title": "Partidas",
@@ -57,6 +67,8 @@
     "daysAcross": "{{from}} a {{to}}",
     "undated": "Sem data",
     "newest": "Mais recente",
+    "versionNewest": "{{label}} (mais recente)",
+    "versionRate": "{{rate}} de vitórias · {{record}}",
     "noRank": "Nenhuma classificação registrada",
     "captionAll_one": "{{n}} partida, mais recentes primeiro",
     "captionAll_other": "{{n}} partidas, mais recentes primeiro",
@@ -251,7 +263,8 @@
       "show": "Mostrar o Markdown",
       "hide": "Ocultar o Markdown",
       "copy": "Copiar o Markdown",
-      "copied": "Copiado"
+      "copied": "Copiado",
+      "download": "Baixar .md"
     },
     "play": {
       "title": "Seu jogo",

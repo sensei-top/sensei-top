@@ -155,9 +155,11 @@ even while the rebuild the room opening triggered is still running — only the
 *projected* view of the match waits, and `table/live.py`'s own replay routes
 the opening-hand read around that wait rather than through `matches`/`turns`.
 The 2026-09-24 replay that measured the offer's lag before and after is in
-[current-match.md](current-match.md), "The live replay". A completed match
-carries the same event type and gets the same early rebuild as a side
-effect, which is a bonus rather than a case worth excluding.
+[current-match.md](current-match.md),
+"The live replay (`table/live.py`, `projector/live_state.py`)". A
+completed match carries the same event type and gets the same early
+rebuild as a side effect, which is a bonus rather than a case worth
+excluding.
 
 **No Arena log yet.** `serve --watch` with no `--file`, no
 `$MTGA_LOG` and nothing autodetected starts anyway: `LiveIngester.log_path`
@@ -417,7 +419,13 @@ scratch backup folder next to it, never anywhere near the real one. `backup`
 and `config --set-backup-dir`/`--set-backup-keep` share this resolution and
 the same `config.toml` the MTGO handle, the `[arena]` table and the
 file-held credentials live in (a key goes to the system keyring first when one
-exists).
+exists). On Windows a network share (`\\server\share`, `//server/share`,
+`\\?\UNC\…`) can hold neither the database nor the backups, since SQLite
+rejects the `file://server/…` URI the read-only opens build from it: `--db`,
+`backup --dir`, `config --set-backup-dir` and `restore`'s file refuse one, a
+run refuses one from `$SENSEI_TOP_BACKUP_DIR` or `[backup]` before writing
+anything (`db.is_unc_path`), and the message says to map the share to a drive
+letter instead.
 
 **Slot naming and rotation.** Slot 0 is `<db name>.backup`; older ones are
 `<db name>.backup.1`, `.2`, and so on up to `keep - 1`. A run shifts existing
@@ -781,7 +789,7 @@ What is legitimately Python, and why each one is:
 
 | Computation | Where | Why not a view |
 |---|---|---|
-| Wilson score intervals | `review/leaks.py::_wilson` | Needs `sqrt` and a z-constant; SQLite has neither without an extension |
+| Wilson score intervals | `review/leaks.py::wilson` | Needs `sqrt` and a z-constant; SQLite has neither without an extension |
 | Hypergeometric PMF | `table/keep.py::_hypergeometric_pmf` | Needs `math.comb` over a loop |
 | Draw-odds complement | `table/hand_read.py` | Sequential product over a variable-length draw |
 | Medians and curve shapes | `guide/play.py` | SQLite has no median; the windowing is per-deck |
@@ -966,11 +974,17 @@ writes `m.match_id IN (SELECT match_id FROM v_match_deck WHERE deck_id …)`,
 or reads the view once and groups in Python. It never joins the view and
 then filters `md.deck_id` against a set: that column is the `COALESCE`
 above, and no index serves it the way `idx_matches_deck` served
-`matches.deck_id`. That shape measured at 10 to 100
-times slower than the `IN` form, and every reader converted then uses the
-`IN` form or one grouped pass. Migration 050's header records the worst
-case, `v_deck_identity` on a synthetic database: 18.9 s with the view
-joined in as-is, 20 ms rewritten.
+`matches.deck_id`. That shape measured at 10 to 100 times slower than the
+`IN` form, and every reader converted then uses the `IN` form or one
+grouped pass; `tests/test_guide_play.py` fails if `md.deck_id IN (` comes
+back anywhere in `src/`. Migration 050's header records the worst case,
+`v_deck_identity` on a synthetic database: 18.9 s with the view joined in
+as-is, 20 ms rewritten. The cost is a child table (`games`, `turns`,
+`card_events`) read without its `match_id` index, so the one exception is
+`review/leaks.py`'s `_scope_clause`, whose wrapped view reads `matches`
+alone: every step of its plan is an index search, and on the real
+database (767 matches, 2026-10-21) it ran in 0.4 ms against 0.6 ms for
+the `IN` form, with the same rows.
 
 Card pictures are downloaded reference data too, but they live as plain
 files beside the database rather than rows: the whole card at
@@ -1038,6 +1052,12 @@ behind them, one row per card per zone. Both are the state **at the end of that
 turn** — there is exactly one snapshot per turn, so no mid-turn or per-step
 board can be reconstructed from them. `card_events` is the only intra-turn
 ordering there is.
+
+`067_turn_own_number.sql` added `turns.active_turn_number`: the active seat's
+own `players[].turnNumber` as first read while that turn was current, NULL when
+the log gave none for the seat in that turn (`PROJECTOR_VERSION` 4).
+`v_self_turns.self_turn_index` is that column, never a rank of the rows
+present. MTGO writes no `turns` rows, so it has no index to get wrong.
 
 Library size is counted from `ZoneType_Library` itself, not by subtracting
 draws from the decklist: Arena sends the zone's `objectInstanceIds`, so the

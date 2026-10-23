@@ -280,7 +280,7 @@ to one verdict or none, this returns everything — a definition the revealed
 cards contradict is still worth offering, because the player watched the
 match and may know better than a dozen-card heuristic. It is ranked last, at
 confidence `'none'`, with a `reasons` entry naming the seen card that ruled it
-out when there is one (`_elimination_reason`). Every scored candidate carries
+out when there is one (`elimination_reason`). Every scored candidate carries
 its own `fit` and `reasons` (which cards matched, and any colour the
 definition needs that hasn't shown up) — what the Live page's
 shortlist and the picker's fit bar both render directly, rather than

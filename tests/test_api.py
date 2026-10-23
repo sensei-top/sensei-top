@@ -1594,6 +1594,20 @@ def test_match_report_carries_a_summary_alongside_the_raw_findings(client):
     assert isinstance(summary["gap_groups"], list) and summary["gap_groups"]
 
 
+def test_match_report_beats_carry_their_findings_turn_and_a_definition(client):
+    """A beat's turn is its raw finding's own (same code, same game), and
+    every game-beat label has a definition."""
+    body = client.get(f"/api/matches/{MATCH_WIN}/report").json()
+    findings = body["findings"]
+    game_beats = [b for g in body["summary"]["games"] for b in g["beats"]]
+    assert game_beats
+    for beat in game_beats:
+        (source,) = [f for f in findings
+                     if f["code"] == beat["code"] and f["game_number"] == beat["game_number"]]
+        assert beat["turn_number"] == source["turn_number"]
+    assert all(b["definition"] for b in game_beats)
+
+
 def test_match_report_404s_for_an_unknown_match(client):
     assert client.get("/api/matches/nope/report").status_code == 404
 
@@ -1819,6 +1833,48 @@ def test_match_detail_carries_the_same_split_as_the_list(client):
     assert (detail["game1_result"], detail["postboard_won"], detail["postboard_lost"]) == (
         "loss", 1, 0,
     )
+
+
+def test_a_match_reads_its_post_board_games_by_side(client):
+    """Fixture match fa7a4d16, self seat 1. Sides: the first play-stage state of
+    games 1, 2, 3 (entries 21, 25, 29) has active seat 2, 2, 1. Results: the
+    finalMatchResult of entry 33. Game 1 won on the draw, game 2 lost on the
+    draw, game 3 won on the play."""
+    sides = ("game1_on_play", "postboard_play_won", "postboard_play_lost",
+             "postboard_draw_won", "postboard_draw_lost")
+    expected = (False, 1, 0, 0, 1)
+    listed = _listed(client, MATCH_WIN)
+    detail = client.get(f"/api/matches/{MATCH_WIN}").json()
+    assert tuple(listed[k] for k in sides) == expected
+    assert tuple(detail[k] for k in sides) == expected
+    assert listed["game1_on_play"] is False
+    assert detail["game1_on_play"] is False
+
+
+def test_a_game_of_unknown_side_is_in_none_of_the_side_counts(client):
+    db = client.app.state.database
+    _seed_split_match(db, "m-side-unknown", 3, ["win", "win", "draw"], "9999-01-09T00:00:00")
+    conn = sqlite3.connect(db)
+    conn.execute(
+        "UPDATE games SET on_play = NULL WHERE match_id = 'm-side-unknown' "
+        "AND game_number IN (1, 2)"
+    )
+    conn.commit()
+    conn.close()
+    row = _listed(client, "m-side-unknown")
+    assert row["game1_on_play"] is None
+    assert row["postboard_won"] == 1
+    for k in ("postboard_play_won", "postboard_play_lost",
+              "postboard_draw_won", "postboard_draw_lost"):
+        assert row[k] == 0
+
+
+def test_a_best_of_one_match_reads_no_side_split(client):
+    _seed_split_match(client.app.state.database, "m-bo1-side", 1, ["win"], "9999-01-08T00:00:00")
+    row = _listed(client, "m-bo1-side")
+    for k in ("game1_on_play", "postboard_play_won", "postboard_play_lost",
+              "postboard_draw_won", "postboard_draw_lost"):
+        assert row[k] is None
 
 
 def _seed_one_card(db_path) -> None:
@@ -4389,6 +4445,28 @@ def test_mtgo_bulk_with_no_lists_every_match_is_unsure_for_want_of_one(
     assert {(u["reason"], u["best"]) for u in body["unsure"]} == {("no_list", None)}
 
 
+def test_mtgo_bulk_an_unsure_match_carries_its_inferred_format(
+    mtgo_pick_db, tmp_path, make_client
+):
+    """Match A is inferred Modern and B is inferred nothing; with no lists at
+    all, both are ``no_list``, each naming its own inferred format."""
+    conn = open_database(mtgo_pick_db)
+    conn.execute(
+        "INSERT INTO match_format_inference (match_id, format, reason) VALUES (?, 'Modern', 'fit')",
+        (MTGO_PICK_A,),
+    )
+    conn.commit()
+    conn.close()
+    nothing = tmp_path / "nothing"
+    nothing.mkdir()
+    _swap_decks_for(mtgo_pick_db, nothing)
+    with make_client(create_app(mtgo_pick_db)) as client:
+        body = _bulk(client)
+    assert {u["match_id"]: (u["reason"], u["format"]) for u in body["unsure"]} == {
+        MTGO_PICK_A: ("no_list", "Modern"), MTGO_PICK_B: ("no_list", None),
+    }
+
+
 def test_mtgo_bulk_an_arena_only_database_has_nothing_waiting(client):
     assert _bulk(client) == {"waiting": 0, "mtgo_matches": 0, "groups": [], "unsure": []}
 
@@ -4464,30 +4542,12 @@ def test_mtgo_bulk_two_lists_holding_every_played_card_tie_with_nothing_proposed
         assert sorted(m["scores"].values()) == [MTGO_PICK_SELF_CARDS] * 2
 
 
-def test_mtgo_bulk_colour_helper_equals_live_opponent_colors(mtgo_pick_db):
-    """The hints route reads colours from one table for every played name; it
-    must give what ``live_opponent_colors`` gives for the same names: lands
-    and tokens uncounted, a colourless or unreadable row counted without
-    colour, an unknown name neither counted nor coloured."""
-    from sensei_top.api.routes.mtgo_picks import _colors_by_played_name, _colors_of
-    from sensei_top.archetypes.classify import live_opponent_colors
+def test_mtgo_picks_reads_the_one_colour_rule():
+    """The hints route and ``live_opponent_colors`` share one colour rule
+    (``archetypes.classify``'s ``played_colors_by_name``/``played_colors_of``),
+    so the route must hold those very functions, not copies."""
+    from sensei_top.api.routes import mtgo_picks
+    from sensei_top.archetypes import classify
 
-    conn = open_database(mtgo_pick_db)
-    try:
-        for name, colors in [
-            ("Voice of Victory", '["W"]'), ("Burst Lightning", '["R"]'),
-            ("Smaug the Magnificent", '["R", "U"]'), ("Inspiring Vantage", "not json"),
-        ]:
-            conn.execute("UPDATE cards SET colors = ? WHERE name = ?", (colors, name))
-        conn.execute(
-            "INSERT INTO cards (grp_id, name, type_line, colors) "
-            "VALUES (900001, 'Zzz Token', 'Token Creature — Soldier', '[\"G\"]')"
-        )
-        known = [r[0] for r in conn.execute("SELECT DISTINCT name FROM cards")]
-        names = [*known, "Not A Card", ""]
-        table = _colors_by_played_name(conn, set(names))
-        for subset in (names, known[:3], ["Voice of Victory"], ["Not A Card"], []):
-            assert _colors_of(table, subset) == live_opponent_colors(conn, subset)
-        assert _colors_of(table, names)[0] != ""
-    finally:
-        conn.close()
+    assert mtgo_picks.played_colors_by_name is classify.played_colors_by_name
+    assert mtgo_picks.played_colors_of is classify.played_colors_of

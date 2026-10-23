@@ -2,14 +2,14 @@ import { useMemo } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import type { MetagameStatus } from '../api'
 import { useFormats, useLive, useMatches, useMetaMatchups, useMetaPresence, useMetaWinrate, useMetagameEvents, useMetagameStatus } from '../api'
-import { FieldControls } from '../components/field/FieldControls'
+import { FieldControls, type FormatControl } from '../components/field/FieldControls'
 import { FieldTiles } from '../components/field/FieldTiles'
 import { EventsCard } from '../components/field/EventsCard'
 import { MatchupsCard } from '../components/field/MatchupsCard'
 import { ShareCard } from '../components/field/ShareCard'
 import { SourcesDisclosure } from '../components/field/SourcesDisclosure'
 import { WinrateCard } from '../components/field/WinrateCard'
-import { Callout, EmptyState, ErrorNote, Loading, Prose, Select, TextLink } from '../components/ui'
+import { Callout, EmptyState, ErrorNote, Loading, Prose, TextLink } from '../components/ui'
 import type { FieldParam, FieldParams, Pairs, Tier } from '../lib/field'
 import {
   PAIRS,
@@ -66,9 +66,10 @@ function PausedHolds({ status, now }: { status: MetagameStatus; now: number }) {
  *  format, window and tier the address names (`lib/field.ts`), with the
  *  viewer's own record against each deck. Nothing is read before
  *  `/api/formats` answers, since a bare address means the format it names as
- *  the default. Top to bottom: the format control with its caption (kept
- *  above the empty state too, so a format with nothing in it can be left),
- *  the window and tier controls, three tiles, the
+ *  the default. Top to bottom: the format, window and tier controls
+ *  in one row with the format's caption under it (the format alone over the
+ *  loading, an error and the empty state, so a format with nothing in it
+ *  can be left), two tiles, the
  *  share list, the events card, the win-rate table, the matchups table, a
  *  warn callout for each source whose fetch is paused and, closed, where
  *  the numbers come from. The four metagame reads wait for the status, so
@@ -136,34 +137,43 @@ export function FieldView({
   // Drawn above whatever the page holds, the empty state too, so the viewer
   // can switch away from a format with nothing in it.
   const entry = formats.data.formats.find((candidate) => candidate.format === format)
-  const formatControl = anyFormatData(formats.data) ? (
-    <div className="space-y-1">
-      <Select
-        label={t('field.controls.format')}
-        placement="beside-from-md"
-        size="caption"
-        value={format}
-        onChange={(value) => setParam('format', paramFor(value, formats.data.default))}
-        options={formatChoices(formats.data, format).map((choice) => ({
+  const formatChoice: FormatControl | null = anyFormatData(formats.data)
+    ? {
+        value: format,
+        options: formatChoices(formats.data, format).map((choice) => ({
           value: choice.format,
           label: choice.format,
-        }))}
-      />
-      {entry && <p className="text-caption text-muted">{formatCaption(entry, t)}</p>}
-    </div>
-  ) : null
+        })),
+        caption: entry ? formatCaption(entry, t) : null,
+        onChange: (value) => setParam('format', paramFor(value, formats.data.default)),
+      }
+    : null
+  // One element in every state, so a change of format keeps its select (and
+  // the focus) while the new format's status loads; the window and the tier
+  // wait for the status.
+  const controls = (ready: boolean) => (
+    <FieldControls
+      format={formatChoice}
+      window={ready ? window : null}
+      reset={reset}
+      now={minute}
+      tier={ready ? tier : null}
+      onWindow={(value) => setParam('window', paramFor(value, String(defaultWindow(reset))))}
+      onTier={(value) => setParam('tier', presenceRows ? paramFor(value, defaultTier(presenceRows)) : value)}
+    />
+  )
 
   if (status.isPending)
     return (
       <div className="space-y-6">
-        {formatControl}
+        {controls(false)}
         <Loading />
       </div>
     )
   if (status.error)
     return (
       <div className="space-y-6">
-        {formatControl}
+        {controls(false)}
         <ErrorNote error={status.error} />
       </div>
     )
@@ -172,7 +182,7 @@ export function FieldView({
   if (tierCounts.a + tierCounts.b + tierCounts.c + tierCounts.d === 0) {
     return (
       <div className="space-y-6">
-        {formatControl}
+        {controls(false)}
         <EmptyState
           icon={placeById('field').icon}
           title={t('field.page.emptyTitle', { format })}
@@ -229,15 +239,7 @@ export function FieldView({
 
   return (
     <div className="space-y-6">
-      {formatControl}
-      <FieldControls
-        window={window}
-        reset={reset}
-        now={minute}
-        tier={tier}
-        onWindow={(value) => setParam('window', paramFor(value, String(defaultWindow(reset))))}
-        onTier={(value) => setParam('tier', presenceRows ? paramFor(value, defaultTier(presenceRows)) : value)}
-      />
+      {controls(true)}
       {fieldPart}
       {eventsPart}
       {winrate.error ? (

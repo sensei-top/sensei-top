@@ -405,7 +405,7 @@ describe('overallTiles', () => {
       'Matches',
       'Games',
       'Game 1',
-      'Games 2–3',
+      'Post-board',
       'On the play',
       'On the draw',
     ])
@@ -550,9 +550,9 @@ describe('turningTiles', () => {
     // 4 + 10 + 0 + 20 + 1 + 5 = 40.
     expect(lost).toBe(40)
     expect(tiles).toEqual([
-      { label: 'Early, turns 1 to 3', value: '14', detail: '4 of them decisive' },
-      { label: 'Mid, turns 4 to 6', value: '20', detail: 'None of them decisive' },
-      { label: 'Late, turn 7 on', value: '6', detail: '1 of them decisive' },
+      { label: 'Early, turns 1 to 3', value: '14', detail: '4 of them major' },
+      { label: 'Mid, turns 4 to 6', value: '20', detail: 'None of them major' },
+      { label: 'Late, turn 7 on', value: '6', detail: '1 of them major' },
     ])
   })
 })

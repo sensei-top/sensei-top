@@ -6,6 +6,7 @@ import {
   deckKeyNumbers,
   matchesCaption,
   mergeNewestFirst,
+  playDrawTile,
   playDrawTotals,
   rankRows,
   versionDays,
@@ -118,6 +119,12 @@ describe('versionLabel', () => {
     expect(versionLabel(row, NOW, t)).toBe(`Aug 28 to Sep 3 · 12${NBSP}matches`)
   })
 
+  it('marks the newest version when asked, and no other', () => {
+    const row = version('a', { first_seen: '2026-09-03T15:00:00', last_played: '2026-09-14T20:00:00', matches_played: 12 })
+    expect(versionLabel(row, NOW, t, true)).toBe(`Sep 3 to 14 · 12${NBSP}matches (newest)`)
+    expect(versionLabel(row, NOW, t, false)).toBe(`Sep 3 to 14 · 12${NBSP}matches`)
+  })
+
   it('says undated with no date', () => {
     expect(versionLabel(version('a', { matches_played: 2 }), NOW, t)).toBe(`Undated · 2${NBSP}matches`)
   })
@@ -156,7 +163,7 @@ describe('versionRecord', () => {
   it('gives the rate and the record from ten finished matches', () => {
     // 21 of 37 is 0.5676, 57 in whole percent.
     const matches = [...results('w', 'win', 21), ...results('l', 'loss', 16)]
-    expect(versionRecord(matches, t)).toBe(`57% · ${rec(21, 16)}`)
+    expect(versionRecord(matches, t)).toBe(`57% win rate · ${rec(21, 16)}`)
   })
 
   it('gives the record alone from one to nine, a draw and a match in progress counting toward neither', () => {
@@ -255,6 +262,37 @@ describe('deckKeyNumbers', () => {
     // 6 of 10 is 60; 10 of 17 is 58.8, 59.
     const [, , playDraw] = deckKeyNumbers([], { play: { games: 10, won: 6 }, draw: { games: 17, won: 10 } }, t)
     expect(playDraw.value).toBe(`+1${NBSP}point`)
+  })
+})
+
+describe('playDrawTile', () => {
+  it('gives the gap with ten games on each side', () => {
+    // 7 of 10 is 70, 4 of 10 is 40: 70 - 40 = 30.
+    expect(playDrawTile({ play: { games: 10, won: 7 }, draw: { games: 10, won: 4 } }, t)).toEqual({
+      label: 'Play vs draw',
+      value: `+30${NBSP}points`,
+      detail: '70% on the play · 40% on the draw',
+      thin: false,
+    })
+  })
+
+  it('says too few, muted, with under ten games on one side', () => {
+    // 9 of 12 is 75; the draw's 3 games, 1 won and 2 not, are its record.
+    expect(playDrawTile({ play: { games: 12, won: 9 }, draw: { games: 3, won: 1 } }, t)).toEqual({
+      label: 'Play vs draw',
+      value: 'too few',
+      detail: `75% on the play · ${rec(1, 2)} on the draw`,
+      thin: true,
+    })
+  })
+
+  it('gives an em dash with no game on either side', () => {
+    expect(playDrawTile(playDrawTotals([]), t)).toEqual({
+      label: 'Play vs draw',
+      value: '—',
+      detail: 'no games on the play · no games on the draw',
+      thin: false,
+    })
   })
 })
 

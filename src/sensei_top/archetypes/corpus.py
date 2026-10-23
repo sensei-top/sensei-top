@@ -208,7 +208,7 @@ def read_corpus(prior: CorpusPrior, seen_names: frozenset[str]) -> list[tuple[st
     this module's docstring).
 
     Ties (and the empty case) resolve deterministically by archetype key, the
-    same discipline ``_rank_archetypes`` uses, so a repeat run over unchanged
+    same discipline ``rank_archetypes`` uses, so a repeat run over unchanged
     inputs always orders identically.
 
     Summed with ``math.fsum`` rather than a running ``+=``: float addition is

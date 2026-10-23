@@ -15,13 +15,23 @@
   "tile": {
     "versions_one": "{{n}}\u00a0versions",
     "versions_other": "{{n}}\u00a0versions",
-    "lastPlayed": "last played {{day}}"
+    "lastPlayed": "last played {{day}}",
+    "playedRange": "played {{range}}"
   },
   "list": {
     "empty": {
       "title": "No decks yet",
       "message": "A deck appears here the first time you play a match with it, with its record, its matchups and its guide."
-    }
+    },
+    "formatLabel": "Format",
+    "allFormats": "All formats",
+    "sortLabel": "Sort by",
+    "sort": {
+      "lastPlayed": "Last played",
+      "winRate": "Win rate",
+      "matches": "Matches"
+    },
+    "noneInFormat": "No decks in this format."
   },
   "matches": {
     "title": "Matches",
@@ -57,6 +67,8 @@
     "daysAcross": "{{from}} to {{to}}",
     "undated": "Undated",
     "newest": "Newest",
+    "versionNewest": "{{label}} (newest)",
+    "versionRate": "{{rate}} win rate · {{record}}",
     "noRank": "No rank recorded",
     "captionAll_one": "{{n}}\u00a0matches, newest first",
     "captionAll_other": "{{n}}\u00a0matches, newest first",
@@ -251,7 +263,8 @@
       "show": "Show the Markdown",
       "hide": "Hide the Markdown",
       "copy": "Copy the Markdown",
-      "copied": "Copied"
+      "copied": "Copied",
+      "download": "Download .md"
     },
     "play": {
       "title": "Your play",

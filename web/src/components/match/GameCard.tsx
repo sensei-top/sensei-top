@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Line, LineChart, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Line, LineChart, ReferenceDot, ReferenceLine, ResponsiveContainer, Tooltip as ChartHover, XAxis, YAxis } from 'recharts'
 import type { PositionPoint, SummaryBeat, SummaryGameLine } from '../../api'
 import { resultWord } from '../../lib/events'
 import { formatNumber } from '../../lib/format'
@@ -14,6 +14,7 @@ import {
   type FindingWeight,
   SectionLabel,
   TextLink,
+  Tooltip,
   TwoSidedMeter,
   severityChip,
 } from '../ui'
@@ -82,7 +83,7 @@ const GameLine = memo(function GameLine({
           <XAxis dataKey="turn_number" {...axisProps(tokens)} interval="preserveStartEnd" minTickGap={16} />
           <YAxis width={40} domain={[-reach, reach]} ticks={[-reach, 0, reach]} tickFormatter={tick} {...axisProps(tokens)} />
           <ReferenceLine y={0} stroke={tokens.ink2} strokeWidth={1.5} />
-          <Tooltip
+          <ChartHover
             content={({ active, payload, label: turn }) => (
               <ChartTooltip
                 active={active}
@@ -131,7 +132,13 @@ function Beat({ beat }: { beat: GameBeat }) {
   return (
     <li className="space-y-1">
       <div className="flex flex-wrap items-center gap-2">
-        <SectionLabel as="span">{beat.label}</SectionLabel>
+        {beat.definition ? (
+          <Tooltip tip={beat.definition}>
+            <SectionLabel as="span">{beat.label}</SectionLabel>
+          </Tooltip>
+        ) : (
+          <SectionLabel as="span">{beat.label}</SectionLabel>
+        )}
         {weight !== 'note' && (
           <Chip size="sm" {...severityChip(weight)}>
             {weightWords[weight]}

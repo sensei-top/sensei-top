@@ -26,6 +26,8 @@ from sensei_top.reader.ingest import ingest_file
 from sensei_top.review import build_match_report
 from sensei_top.review.analyzers import ANALYZERS, analyze_baseline, analyze_information
 from sensei_top.review.analyzers.frame import analyze_frame
+from sensei_top.review.analyzers.resources import analyze_resources
+from sensei_top.review.analyzers.trajectory import analyze_trajectory
 from sensei_top.review.consensus import ArchetypeConsensus, ConsensusCard
 from sensei_top.review.findings import GameFacts
 from sensei_top.review.snapshot import (
@@ -68,11 +70,13 @@ def _game(game_number: int, **overrides) -> GameFacts:
     return GameFacts(**base)
 
 
-def _turn(game_number: int, turn_number: int, self_turn_index: int, **overrides) -> SelfTurnRow:
+def _turn(
+    game_number: int, turn_number: int, self_turn_index: int | None, **overrides
+) -> SelfTurnRow:
     base = dict(
         game_number=game_number, turn_number=turn_number, self_turn_index=self_turn_index,
-        self_life=20, opp_life=20, self_hand=7, opp_hand=7, self_lands=self_turn_index,
-        opp_lands=self_turn_index, self_permanents=self_turn_index, opp_permanents=0,
+        self_life=20, opp_life=20, self_hand=7, opp_hand=7, self_lands=self_turn_index or 0,
+        opp_lands=self_turn_index or 0, self_permanents=self_turn_index or 0, opp_permanents=0,
         self_power=None, opp_power=None,
         self_library=40 - turn_number, self_graveyard=0, self_open_mana=0,
         prev_self_permanents=None,
@@ -320,6 +324,107 @@ def test_turning_point_labels_self_turn_index_not_the_shared_turn_counter(db):
             assert f"your turn {f.self_turn_index}" in f.title
             checked += 1
     assert checked > 0, "fixture produced no turning_point finding to check"
+
+
+# --- a turn with no own-turn number (self_turn_index is None) ----------------
+
+
+def _no_index_snapshot(*turns):
+    return _snapshot(games=(_game(1, result="loss"),), self_turns=turns)
+
+
+def _reads_clean(f) -> None:
+    assert "None" not in f"{f.title} {f.detail}"
+    assert f.self_turn_index is None
+
+
+def test_turning_point_without_an_own_turn_number_has_no_turn_in_its_words():
+    snap = _no_index_snapshot(
+        _turn(1, 2, None, self_life=20, opp_life=20, self_permanents=3, opp_permanents=0),
+        _turn(1, 4, None, self_life=4, opp_life=20, self_permanents=0, opp_permanents=5),
+    )
+    found = [f for f in analyze_trajectory(snap).findings if f.code == "turning_point"]
+    assert len(found) == 1
+    f = found[0]
+    _reads_clean(f)
+    assert f.title == "The game turned against you"
+    assert "the largest single swing against you this game" in f.detail
+    assert "by your turn" not in f.detail
+
+
+_SWING_TURNS = (
+    _turn(1, 2, None, self_life=20, opp_life=20, self_permanents=3, opp_permanents=0),
+    _turn(1, 4, None, self_life=4, opp_life=20, self_permanents=0, opp_permanents=5),
+)
+_SWING_END = "— the largest single swing against you this game."
+
+
+def _turning_point(**overrides):
+    snap = _snapshot(games=(_game(1, result="loss"),), self_turns=_SWING_TURNS, **overrides)
+    found = [f for f in analyze_trajectory(snap).findings if f.code == "turning_point"]
+    assert len(found) == 1
+    _reads_clean(found[0])
+    assert found[0].title == "The game turned against you"
+    assert found[0].detail.startswith("Your position went from ")
+    return found[0]
+
+
+def test_turning_point_without_an_own_turn_number_ends_plain():
+    assert _turning_point().detail.endswith(_SWING_END)
+
+
+def test_turning_point_without_an_own_turn_number_names_the_card_on_record():
+    f = _turning_point(opponent_plays=(CardPlay(1, 3, 555, "Consider", "Resolve"),))
+    assert f.detail.endswith(f"{_SWING_END} In that window, Consider was on record.")
+
+
+def test_turning_point_without_an_own_turn_number_names_the_damage_on_record():
+    f = _turning_point(damage_events=(DamageRow(1, 3, 6, 1, 10, 1, False, None, True),))
+    assert f.detail.endswith(f"{_SWING_END} In that window, 6 damage taken was on record.")
+
+
+def test_card_advantage_with_one_end_unnumbered_drops_the_turn_words_and_rows():
+    snap = _no_index_snapshot(
+        _turn(1, 2, 1, self_hand=7, opp_hand=3),
+        _turn(1, 4, None, self_hand=1, opp_hand=6),
+    )
+    swing = next(f for f in analyze_resources(snap).findings
+                 if f.code == "card_advantage_swing")
+    _reads_clean(swing)
+    assert swing.detail == (
+        "Your hand size compared to the opponent's was as low as -5 and as high as +4."
+    )
+    assert not [e for e in swing.evidence if e.key in ("best_turn", "worst_turn")]
+
+
+def test_over_commit_without_an_own_turn_number_says_widest_point():
+    snap = _role_snapshot(
+        games=(_game(1),), self_turns=(_turn(1, 4, None, self_permanents=5),),
+    )
+    f = next(f for f in analyze_information(snap).findings
+             if f.code == "over_committed_into_sweeper")
+    _reads_clean(f)
+    assert f.detail.startswith("At your widest point you had 5 permanents in play.")
+
+
+def test_resources_without_an_own_turn_number_drop_the_turn_words_and_rows():
+    snap = _no_index_snapshot(
+        _turn(1, 2, None, self_hand=7, opp_hand=3),
+        _turn(1, 4, None, self_hand=1, opp_hand=6),
+        _turn(1, 6, None, self_hand=4, opp_hand=3),
+    )
+    result = analyze_resources(snap)
+    swing = next(f for f in result.findings if f.code == "card_advantage_swing")
+    _reads_clean(swing)
+    assert swing.detail == (
+        "Your hand size compared to the opponent's was as low as -5 and as high as +4."
+    )
+    assert not [e for e in swing.evidence if e.key in ("best_turn", "worst_turn")]
+    stranded = next(f for f in result.findings if f.code == "cards_stranded_in_a_loss")
+    _reads_clean(stranded)
+    assert "(your turn" not in stranded.detail
+    assert stranded.detail.startswith(
+        "At the last turn this reader recorded for you, your hand still held 4 cards.")
 
 
 # --- gaps when cards is empty -------------------------------------------------
@@ -812,7 +917,7 @@ def test_a_shared_consensus_cache_keeps_each_matchs_format_apart(conn):
 
 def _teach_own_archetype(conn, *, deck_id="deckA", key="test-own-archetype"):
     """One card, one archetype definition requiring it, one deck playing
-    four copies -- just enough for _classify_own_deck's complete=True path
+    four copies -- just enough for classify_own_deck's complete=True path
     to name the deck without any ambiguity to resolve."""
     conn.execute(
         "INSERT INTO cards (grp_id, name, type_line, mana_cost, oracle_text) "

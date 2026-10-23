@@ -30,11 +30,11 @@ from datetime import date, timedelta
 from sensei_top.answers import rcq_for
 from sensei_top.archetypes.classify import (
     Verdict,
-    _card_colors_by_name,
-    _load_definitions,
-    _seen_forms,
+    card_colors_by_name,
     choose,
+    load_definitions,
     normalize,
+    seen_forms,
 )
 from sensei_top.guide.bundle import DeckGuide, build_deck_guide
 from sensei_top.guide.decklist import ParsedList, ResolvedList, parse_decklist, resolve_names
@@ -316,16 +316,16 @@ def classify_pasted(
     is a whole list, so a card's absence is real evidence. Names come from
     the paste itself, as a corpus list's do, so ``resolved`` is not needed
     to classify. ``None`` when nothing leads clearly, never a guess."""
-    definitions = _load_definitions(conn)
+    definitions = load_definitions(conn)
     if fmt is None or fmt not in definitions or not parsed.main:
         return None
     main_names = list(parsed.main)
     side_names = list(parsed.side)
-    colors_by_name = _card_colors_by_name(conn)
+    colors_by_name = card_colors_by_name(conn)
     return choose(
-        definitions[fmt]["archetype"], definitions[fmt]["fallback"], _seen_forms(main_names),
+        definitions[fmt]["archetype"], definitions[fmt]["fallback"], seen_forms(main_names),
         _colors_of(main_names, colors_by_name), colors_by_name, cards_seen=len(main_names),
-        complete=True, sideboard_seen=_seen_forms(side_names),
+        complete=True, sideboard_seen=seen_forms(side_names),
     )
 
 

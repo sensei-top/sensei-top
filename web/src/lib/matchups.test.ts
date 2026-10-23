@@ -6,9 +6,15 @@ import {
   fieldLine as fieldLineOf,
   type FieldRecord,
   fieldRecordsByKey,
+  foldMatchups,
   matchupName as nameOf,
   matchupRows,
+  matchupRowOver,
+  countsForSide,
+  unknownSideGames,
   NBSP,
+  rowFormatName,
+  rowsSpanFormats,
   matchupTiles as tilesOf,
   type MatchupRow,
 } from './matchups'
@@ -49,6 +55,7 @@ const on = (day: number) => `2026-09-${String(day).padStart(2, '0')}T12:00:00`
 function row(key: string, matches: number, won: number, rest: Partial<MatchupRow> = {}): MatchupRow {
   return {
     key,
+    format: null,
     kind: 'named',
     label: key,
     colors: null,
@@ -63,6 +70,9 @@ function row(key: string, matches: number, won: number, rest: Partial<MatchupRow
     game1Lost: 0,
     postboardWon: 0,
     postboardLost: 0,
+    onPlay: { game1Won: 0, game1Lost: 0, postboardWon: 0, postboardLost: 0 },
+    onDraw: { game1Won: 0, game1Lost: 0, postboardWon: 0, postboardLost: 0 },
+    unknownSide: 0,
     ...rest,
   }
 }
@@ -81,6 +91,8 @@ describe('matchupRows', () => {
     expect(rows).toEqual([
       {
         key: 'archetype:dimir_midrange',
+        // No match carries a format.
+        format: null,
         kind: 'named',
         label: 'DimirMidrange',
         colors: 'UB',
@@ -95,6 +107,9 @@ describe('matchupRows', () => {
         game1Lost: 0,
         postboardWon: 0,
         postboardLost: 0,
+        onPlay: { game1Won: 0, game1Lost: 0, postboardWon: 0, postboardLost: 0 },
+        onDraw: { game1Won: 0, game1Lost: 0, postboardWon: 0, postboardLost: 0 },
+        unknownSide: 0,
       },
     ])
   })
@@ -226,6 +241,73 @@ describe('matchupRows', () => {
     ])
     expect(rows.map((r) => r.key)).toEqual(['k-new', 'k-old', 'k-few', 'k-b', 'k-c', 'k-undated'])
   })
+
+  it('makes one row per format against one opponent, a missing format a row of its own', () => {
+    const rows = matchupRows([
+      match('a', { format: 'Modern', result: 'win', started_at: on(4) }),
+      match('b', { format: 'Pioneer', result: 'loss', started_at: on(3) }),
+      match('c', { format: 'Modern', result: 'win', started_at: on(2) }),
+      match('d', { format: null, result: 'loss', started_at: on(1) }),
+    ])
+    // Modern: a and c, both won. Pioneer: b, lost. No format: d, lost; met
+    // before b, so after it.
+    expect(rows.map((r) => [r.key, r.format, r.matches, r.won, r.lost])).toEqual([
+      ['archetype:dimir_midrange', 'Modern', 2, 2, 0],
+      ['archetype:dimir_midrange', 'Pioneer', 1, 0, 1],
+      ['archetype:dimir_midrange', null, 1, 0, 1],
+    ])
+  })
+
+  it('makes the same rows for matches of one format as it does by key alone', () => {
+    const rows = matchupRows([
+      match('a', { format: 'Modern', opponent_key: 'k-x', opponent_label: 'X', result: 'win', started_at: on(3) }),
+      match('b', { format: 'Modern', opponent_key: 'k-y', opponent_label: 'Y', result: 'loss', started_at: on(2) }),
+      match('c', { format: 'Modern', opponent_key: 'k-x', opponent_label: 'X', result: 'loss', started_at: on(1) }),
+    ])
+    expect(rows.map((r) => [r.key, r.format, r.matches, r.won, r.lost])).toEqual([
+      ['k-x', 'Modern', 2, 1, 1],
+      ['k-y', 'Modern', 1, 0, 1],
+    ])
+  })
+})
+
+describe('matchupRowOver', () => {
+  it('counts one row over every format’s finished matches', () => {
+    const row = matchupRowOver([
+      match('a', { format: 'Modern', result: 'win', started_at: on(3), games_won: 2, games_lost: 0 }),
+      match('b', { format: 'Pioneer', result: 'loss', started_at: on(2), games_won: 1, games_lost: 2 }),
+      match('c', { format: 'Modern', result: null, started_at: on(4) }),
+    ])
+    // a and b; c is unfinished. Two formats, so no one format.
+    expect(row && [row.key, row.format, row.matches, row.won, row.lost, row.gamesWon, row.gamesLost]).toEqual([
+      'archetype:dimir_midrange',
+      null,
+      2,
+      1,
+      1,
+      3,
+      2,
+    ])
+  })
+
+  it('carries the format the matches share, and is null with none finished', () => {
+    expect(matchupRowOver([match('a', { format: 'Modern' }), match('b', { format: 'Modern' })])?.format).toBe(
+      'Modern',
+    )
+    expect(matchupRowOver([match('a', { result: null })])).toBeNull()
+  })
+})
+
+describe('rowsSpanFormats and rowFormatName', () => {
+  it('names a format only when the rows span more than one, a missing one counted', () => {
+    expect(rowsSpanFormats([row('k', 1, 1, { format: 'Modern' }), row('j', 1, 1, { format: 'Modern' })])).toBe(false)
+    expect(rowsSpanFormats([row('k', 1, 1, { format: 'Modern' }), row('k', 1, 1, { format: null })])).toBe(true)
+  })
+
+  it('names a format as the decks do, and a missing one as unknown', () => {
+    expect(rowFormatName({ format: 'TraditionalStandard' }, t)).toBe('Standard, best of three')
+    expect(rowFormatName({ format: null }, t)).toBe('Format unknown')
+  })
 })
 
 describe('matchupName', () => {
@@ -271,23 +353,34 @@ describe('matchupTiles', () => {
     })
   })
 
+  it('counts an archetype met in two formats once, named when either row is', () => {
+    // a in Modern and Pioneer, named in Pioneer alone; b in Modern alone,
+    // unknown: two archetypes, one named.
+    const rows = [
+      row('a', 1, 1, { format: 'Modern', kind: 'unknown' }),
+      row('a', 1, 0, { format: 'Pioneer' }),
+      row('b', 1, 0, { format: 'Modern', kind: 'unknown' }),
+    ]
+    expect(matchupTiles(rows)[0]).toEqual({ label: 'Archetypes met', value: '2', detail: `1${NBSP}named, 1${NBSP}not` })
+  })
+
   it('names neither best nor worst when no archetype was met ten times', () => {
     const [, best, worst] = matchupTiles([row('a', 9, 9), row('b', 6, 0), row('c', 1, 1)])
-    expect(best).toEqual({ label: 'Best matchup', value: '—', detail: `no archetype met 10${NBSP}times yet` })
-    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `no archetype met 10${NBSP}times yet` })
+    expect(best).toEqual({ label: 'Best matchup', value: '—', detail: `no archetype has 10${NBSP}or more matches yet` })
+    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `no archetype has 10${NBSP}or more matches yet` })
   })
 
   it('with one archetype met ten times, it is the best and the worst says so', () => {
     const [, best, worst] = matchupTiles([row('Solo', 10, 4), row('b', 9, 0)])
     expect(best).toEqual({ label: 'Best matchup', value: '40%', detail: `4${WJ}–${WJ}6 against Solo` })
-    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `one archetype met 10${NBSP}times so far` })
+    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `only one archetype has 10${NBSP}or more matches` })
   })
 
   it('leaves out an archetype met nine times and ranks one met ten', () => {
     // 8 of 10 is 80%; 3 of 9 is left out however low.
     const [, best, worst] = matchupTiles([row('High', 10, 8), row('Low', 9, 3), row('Few', 4, 1)])
     expect(best).toEqual({ label: 'Best matchup', value: '80%', detail: `8${WJ}–${WJ}2 against High` })
-    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `one archetype met 10${NBSP}times so far` })
+    expect(worst).toEqual({ label: 'Worst matchup', value: '—', detail: `only one archetype has 10${NBSP}or more matches` })
   })
 
   it('ranks by wins over wins plus losses, a draw in neither', () => {
@@ -407,5 +500,92 @@ describe('fieldLine', () => {
     expect(fieldLine(games, { winrate: 0.25, entries: 4 })).toBe(
       `Games 17${WJ}–${WJ}4 · wins 25% in tournaments, 4${NBSP}entries, too few to trust`,
     )
+  })
+})
+
+describe('foldMatchups', () => {
+  const rowsOf = (...counts: number[]) => counts.map((matches) => ({ matches }))
+
+  it('shows the rows at the bar and no others when five or more reach it', () => {
+    const rows = rowsOf(30, 20, 15, 12, 10, 9, 4, 1)
+    expect(foldMatchups(rows)).toEqual(rows.slice(0, 5))
+    const more = rowsOf(30, 20, 15, 12, 10, 10, 9, 1)
+    expect(foldMatchups(more)).toHaveLength(6)
+  })
+
+  it('never shows fewer than the five most played', () => {
+    const rows = rowsOf(12, 8, 7, 6, 5, 4, 3, 2)
+    expect(foldMatchups(rows)).toEqual(rows.slice(0, 5))
+  })
+
+  it('shows every row when nothing is held back', () => {
+    expect(foldMatchups(rowsOf(3, 2, 1))).toHaveLength(3)
+    const exact = rowsOf(11, 10, 10, 10, 10)
+    expect(foldMatchups(exact)).toEqual(exact)
+    expect(foldMatchups([])).toEqual([])
+  })
+})
+
+describe('the play/draw split', () => {
+  const bo3 = (id: string, rest: Partial<Match>) =>
+    match(id, { best_of: 3, result: 'win', game1_result: 'win', ...rest })
+
+  it('counts a match on the play under the play side and a match on the draw under the draw side', () => {
+    const [r] = matchupRows([
+      bo3('a', {
+        game1_on_play: true,
+        game1_result: 'win',
+        postboard_won: 1,
+        postboard_lost: 1,
+        postboard_play_won: 0,
+        postboard_play_lost: 1,
+        postboard_draw_won: 1,
+        postboard_draw_lost: 0,
+      }),
+      bo3('b', { result: 'loss', game1_on_play: false, game1_result: 'loss', postboard_won: 0, postboard_lost: 0 }),
+    ])
+    expect(countsForSide(r, 'play')).toEqual({ game1Won: 1, game1Lost: 0, postboardWon: 0, postboardLost: 1 })
+    expect(countsForSide(r, 'draw')).toEqual({ game1Won: 0, game1Lost: 1, postboardWon: 1, postboardLost: 0 })
+    expect(countsForSide(r, 'all').game1Won).toBe(1)
+    expect(r.unknownSide).toBe(0)
+  })
+
+  it('counts an unknown game 1 and the unattributed post-board games under All only', () => {
+    // Game 1 won and game 2 lost, neither with a side; game 3 won on the play.
+    const [r] = matchupRows([
+      bo3('a', {
+        game1_on_play: null,
+        postboard_won: 1,
+        postboard_lost: 1,
+        postboard_play_won: 1,
+        postboard_play_lost: 0,
+        postboard_draw_won: 0,
+        postboard_draw_lost: 0,
+      }),
+    ])
+    // Game 1: 1. Won leftover: 1 - 1 - 0 = 0. Lost leftover: 1 - 0 - 0 = 1.
+    expect(r.unknownSide).toBe(1 + 0 + 1)
+    expect(countsForSide(r, 'play')).toEqual({ game1Won: 0, game1Lost: 0, postboardWon: 1, postboardLost: 0 })
+    expect(countsForSide(r, 'draw')).toEqual({ game1Won: 0, game1Lost: 0, postboardWon: 0, postboardLost: 0 })
+    expect(unknownSideGames([r])).toBe(2)
+    expect(unknownSideGames([r, r])).toBe(4)
+  })
+
+  it('does not count an undecided game 1, or a best of one, as unknown', () => {
+    const [r] = matchupRows([
+      bo3('a', { game1_on_play: null, game1_result: null, postboard_won: 0, postboard_lost: 0 }),
+      match('b', { best_of: 1, game1_on_play: null, game1_result: 'win' }),
+      bo3('c', {
+        game1_result: 'draw',
+        game1_on_play: null,
+        postboard_won: 2,
+        postboard_lost: 0,
+        postboard_draw_won: 2,
+        postboard_draw_lost: 0,
+        postboard_play_won: 0,
+        postboard_play_lost: 0,
+      }),
+    ])
+    expect(r.unknownSide).toBe(0)
   })
 })
