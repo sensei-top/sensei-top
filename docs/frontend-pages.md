@@ -600,9 +600,10 @@ colours and a signature card (`UR · Mox Opal`, migration 030). Wherever a
 the current-match band — `lib/opponent.ts::opponentLabelText` strips the
 `UR · ` prefix, so the colours read once, as pips. It is display-only:
 `opponent_key` and the stored label keep the prefix, and nothing matches on
-the stripped text. A label with no pips beside it (the match-detail heading)
-keeps its letters, since they are the only place
-the colours appear.
+the stripped text. A label with no pips beside it keeps its letters, since
+they are the only place the colours appear. The match report's heading has
+pips beside it, in its Opponent row, so `MatchHero` passes the headline's
+opponent through the same rule (`headlineOpponentText`).
 
 ## The MTGO deck pick
 

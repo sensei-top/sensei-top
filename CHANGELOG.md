@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The **match report**'s top severity reads "Major" where it said
   "Decisive", which read like the game's result, and its Turned beat
   counts your own turns ("your turn 6"), as its findings do.
+- The **match report**'s heading names the opponent as its Opponent row
+  does, without the colour letters the pips beside it already show.
 - A label that explains itself on hover or focus now shows an info icon
   beside it, everywhere in the dashboard.
 - A deck's **Matchups** view shows the archetypes met ten times or more,
