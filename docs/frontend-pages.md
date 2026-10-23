@@ -126,6 +126,13 @@ the viewer (`firstPattern`: the leak finder's first whose win rate with it
 is below the rate without); the field. Fewer when fewer exist, never a filler. A candidate whose
 request failed still takes its place, as the failure.
 
+While they load, each slot renders as soon as its own data answers
+(`thingSlots`): a slot still waiting shows its card frame, its place and
+label, and a loading line ("Looking for a pattern in your matches…",
+"Reading the field…") over the skeleton, so it never reads as an empty
+card. A pending slot holds its place, so none moves when another arrives;
+the pattern's request never holds back the field's, nor the reverse. A slot that answers with nothing drops out, and the one after it moves up a place and takes its number: the one move the row makes, because never a filler outranks holding a place.
+
 A pattern's title and sentence are Home's own words, by the leak
 finder's code (`patternWords` in `lib/patterns.ts`).
 A code with no words there takes the title the API sends

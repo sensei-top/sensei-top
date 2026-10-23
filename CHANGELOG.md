@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ("You conceded"), and "Replay game N" opens the replay at the game's
   first flagged turn.
 - A deck's **Matchups** view links to the **Field** for that deck's format.
+- **Decks** can be filtered by format and sorted by last played, win rate
+  or matches; every version keeps its tile.
 
 ### Changed
 
@@ -42,6 +44,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   each record names the window it covers.
 - On **Live**, "Pick the deck" is a quieter button, and "Correct the deck"
   carries a pencil like the other edit buttons.
+- **Home**'s three things no longer read as blank cards while they load:
+  each shows its label and what it is waiting on, and the match and the
+  field appear without waiting for the pattern.
 
 ### Fixed
 

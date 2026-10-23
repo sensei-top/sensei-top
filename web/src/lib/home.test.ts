@@ -19,6 +19,7 @@ import {
   ownScore,
   recentMatches,
   sessionHeadline,
+  thingSlots,
   threeThings,
   weekStart,
   weeklyWinrate,
@@ -224,6 +225,34 @@ describe('threeThings', () => {
   it('shows fewer than three rather than a filler', () => {
     expect(threeThings({ match: true, pattern: false, field: false })).toEqual(['match'])
     expect(threeThings({ match: false, pattern: false, field: false })).toEqual([])
+  })
+})
+
+describe('thingSlots', () => {
+  it('keeps a pending pattern slot without holding back the field slot', () => {
+    // The pattern's request is out; the field's has answered with a field.
+    const slots = thingSlots(
+      { match: true, pattern: false, field: true },
+      { pattern: true, field: false },
+    )
+    expect(slots).toEqual(['match', 'pattern', 'field'])
+  })
+
+  it('keeps a pending field slot after a pattern that has answered', () => {
+    expect(
+      thingSlots({ match: true, pattern: true, field: false }, { pattern: false, field: true }),
+    ).toEqual(['match', 'pattern', 'field'])
+  })
+
+  it('drops a slot that answered with nothing, as threeThings does', () => {
+    const none = { pattern: false, field: false }
+    expect(thingSlots({ match: true, pattern: false, field: true }, none)).toEqual(['match', 'field'])
+  })
+
+  it('drops a pattern that answered empty while the field is still pending', () => {
+    expect(
+      thingSlots({ match: true, pattern: false, field: false }, { pattern: false, field: true }),
+    ).toEqual(['match', 'field'])
   })
 })
 

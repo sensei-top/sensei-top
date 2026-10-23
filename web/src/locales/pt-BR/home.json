@@ -91,6 +91,10 @@
       "pattern": "Padrão",
       "field": "Meta"
     },
+    "loading": {
+      "pattern": "Procurando um padrão entre suas partidas…",
+      "field": "Lendo o meta…"
+    },
     "readReport": "Ler o relatório",
     "seePatterns": "Ver todos os padrões",
     "openField": "Abrir o meta",
