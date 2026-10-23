@@ -1835,6 +1835,48 @@ def test_match_detail_carries_the_same_split_as_the_list(client):
     )
 
 
+def test_a_match_reads_its_post_board_games_by_side(client):
+    """Fixture match fa7a4d16, self seat 1. Sides: the first play-stage state of
+    games 1, 2, 3 (entries 21, 25, 29) has active seat 2, 2, 1. Results: the
+    finalMatchResult of entry 33. Game 1 won on the draw, game 2 lost on the
+    draw, game 3 won on the play."""
+    sides = ("game1_on_play", "postboard_play_won", "postboard_play_lost",
+             "postboard_draw_won", "postboard_draw_lost")
+    expected = (False, 1, 0, 0, 1)
+    listed = _listed(client, MATCH_WIN)
+    detail = client.get(f"/api/matches/{MATCH_WIN}").json()
+    assert tuple(listed[k] for k in sides) == expected
+    assert tuple(detail[k] for k in sides) == expected
+    assert listed["game1_on_play"] is False
+    assert detail["game1_on_play"] is False
+
+
+def test_a_game_of_unknown_side_is_in_none_of_the_side_counts(client):
+    db = client.app.state.database
+    _seed_split_match(db, "m-side-unknown", 3, ["win", "win", "draw"], "9999-01-09T00:00:00")
+    conn = sqlite3.connect(db)
+    conn.execute(
+        "UPDATE games SET on_play = NULL WHERE match_id = 'm-side-unknown' "
+        "AND game_number IN (1, 2)"
+    )
+    conn.commit()
+    conn.close()
+    row = _listed(client, "m-side-unknown")
+    assert row["game1_on_play"] is None
+    assert row["postboard_won"] == 1
+    for k in ("postboard_play_won", "postboard_play_lost",
+              "postboard_draw_won", "postboard_draw_lost"):
+        assert row[k] == 0
+
+
+def test_a_best_of_one_match_reads_no_side_split(client):
+    _seed_split_match(client.app.state.database, "m-bo1-side", 1, ["win"], "9999-01-08T00:00:00")
+    row = _listed(client, "m-bo1-side")
+    for k in ("game1_on_play", "postboard_play_won", "postboard_play_lost",
+              "postboard_draw_won", "postboard_draw_lost"):
+        assert row[k] is None
+
+
 def _seed_one_card(db_path) -> None:
     conn = sqlite3.connect(db_path)
     conn.execute(

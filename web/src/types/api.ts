@@ -3153,6 +3153,31 @@ export interface components {
              */
             postboard_lost?: number | null;
             /**
+             * Game1 On Play
+             * @description Whether the player was on the play in game 1, for a best-of-three match; null when unknown or not a best of three.
+             */
+            game1_on_play?: boolean | null;
+            /**
+             * Postboard Play Won
+             * @description Games 2 and 3 won while on the play, for a best-of-three match; null otherwise. A game whose side is unknown is in none of the four play/draw counts.
+             */
+            postboard_play_won?: number | null;
+            /**
+             * Postboard Play Lost
+             * @description Games 2 and 3 lost while on the play, for a best-of-three match; null otherwise.
+             */
+            postboard_play_lost?: number | null;
+            /**
+             * Postboard Draw Won
+             * @description Games 2 and 3 won while on the draw, for a best-of-three match; null otherwise.
+             */
+            postboard_draw_won?: number | null;
+            /**
+             * Postboard Draw Lost
+             * @description Games 2 and 3 lost while on the draw, for a best-of-three match; null otherwise.
+             */
+            postboard_draw_lost?: number | null;
+            /**
              * Rank Class
              * @description constructed rank at the most recent snapshot at or before started_at (rank_snapshot); null when no snapshot precedes this match, and always null for an MTGO match, which has no Arena rank; never guessed
              */
@@ -3236,6 +3261,31 @@ export interface components {
              * @description Games 2 and 3 lost, for a best-of-three match; null otherwise. A drawn game is in neither count.
              */
             postboard_lost?: number | null;
+            /**
+             * Game1 On Play
+             * @description Whether the player was on the play in game 1, for a best-of-three match; null when unknown or not a best of three.
+             */
+            game1_on_play?: boolean | null;
+            /**
+             * Postboard Play Won
+             * @description Games 2 and 3 won while on the play, for a best-of-three match; null otherwise. A game whose side is unknown is in none of the four play/draw counts.
+             */
+            postboard_play_won?: number | null;
+            /**
+             * Postboard Play Lost
+             * @description Games 2 and 3 lost while on the play, for a best-of-three match; null otherwise.
+             */
+            postboard_play_lost?: number | null;
+            /**
+             * Postboard Draw Won
+             * @description Games 2 and 3 won while on the draw, for a best-of-three match; null otherwise.
+             */
+            postboard_draw_won?: number | null;
+            /**
+             * Postboard Draw Lost
+             * @description Games 2 and 3 lost while on the draw, for a best-of-three match; null otherwise.
+             */
+            postboard_draw_lost?: number | null;
             /**
              * Rank Class
              * @description constructed rank at the most recent snapshot at or before started_at (rank_snapshot); null when no snapshot precedes this match, and always null for an MTGO match, which has no Arena rank; never guessed
