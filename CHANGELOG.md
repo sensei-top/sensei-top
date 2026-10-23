@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-10-23
+
 ### Added
 
 - A deck's **Guide** can now save its exported Markdown as a file: "Download
@@ -338,7 +340,8 @@ The app is the same as 0.7.1's; this release carries the website.
   keeps recording with the window closed, and start-with-Windows as an
   option. On Linux, an AppImage that updates itself in place.
 
-[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/sensei-top/sensei-top/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/sensei-top/sensei-top/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/sensei-top/sensei-top/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/sensei-top/sensei-top/compare/v1.0.1...v1.1.0
