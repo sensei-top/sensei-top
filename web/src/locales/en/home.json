@@ -91,6 +91,10 @@
       "pattern": "Pattern",
       "field": "Field"
     },
+    "loading": {
+      "pattern": "Looking for a pattern in your matches…",
+      "field": "Reading the field…"
+    },
     "readReport": "Read the report",
     "seePatterns": "See every pattern",
     "openField": "Open the field",

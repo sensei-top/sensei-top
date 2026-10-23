@@ -38,6 +38,7 @@ def analyze_resources(snap: MatchSnapshot) -> AnalyzerResult:
             best_index, best_diff = max(diffs, key=lambda pair: pair[1])
             worst_index, worst_diff = min(diffs, key=lambda pair: pair[1])
             if best_diff > 0 or worst_diff < 0:
+                turns_known = best_index is not None and worst_index is not None
                 findings.append(
                     Finding(
                         code="card_advantage_swing",
@@ -45,19 +46,28 @@ def analyze_resources(snap: MatchSnapshot) -> AnalyzerResult:
                         confidence=Confidence.PARTIAL, game_number=game.game_number,
                         title=_("Card advantage ranged from {low:+d} to {high:+d} this game"
                                 ).format(low=worst_diff, high=best_diff),
-                        detail=_(
-                            "Your hand size compared to the opponent's was as low as "
-                            "{low:+d} (your turn {low_turn}) and as high as "
-                            "{high:+d} (your turn {high_turn})."
-                        ).format(low=worst_diff, low_turn=worst_index,
-                                 high=best_diff, high_turn=best_index),
+                        detail=(
+                            _(
+                                "Your hand size compared to the opponent's was as low as "
+                                "{low:+d} (your turn {low_turn}) and as high as "
+                                "{high:+d} (your turn {high_turn})."
+                            ).format(low=worst_diff, low_turn=worst_index,
+                                     high=best_diff, high_turn=best_index)
+                            if turns_known else
+                            _(
+                                "Your hand size compared to the opponent's was as low as "
+                                "{low:+d} and as high as {high:+d}."
+                            ).format(low=worst_diff, high=best_diff)
+                        ),
                         evidence=(
                             Evidence("best_diff", _("High point (hand size vs. theirs)"),
                                      best_diff),
-                            Evidence("best_turn", _("Your turn at the high point"), best_index),
+                            *((Evidence("best_turn", _("Your turn at the high point"),
+                                        best_index),) if turns_known else ()),
                             Evidence("worst_diff", _("Low point (hand size vs. theirs)"),
                                      worst_diff),
-                            Evidence("worst_turn", _("Your turn at the low point"), worst_index),
+                            *((Evidence("worst_turn", _("Your turn at the low point"),
+                                        worst_index),) if turns_known else ()),
                         ),
                     )
                 )
@@ -87,19 +97,33 @@ def analyze_resources(snap: MatchSnapshot) -> AnalyzerResult:
                     turn_number=last_turn.turn_number, self_turn_index=last_turn.self_turn_index,
                     title=ngettext("Lost holding {n} cards", "Lost holding {n} cards",
                                    last_turn.self_hand).format(n=last_turn.self_hand),
-                    detail=ngettext(
-                        "At the last turn this reader recorded for you (your turn "
-                        "{turn}), your hand still held "
-                        "{n} cards. Resources that never get spent are "
-                        "not card advantage — they are cards that arrived too late, cost "
-                        "too much, or never had the mana to matter.",
-                        "At the last turn this reader recorded for you (your turn "
-                        "{turn}), your hand still held "
-                        "{n} cards. Resources that never get spent are "
-                        "not card advantage — they are cards that arrived too late, cost "
-                        "too much, or never had the mana to matter.",
-                        last_turn.self_hand,
-                    ).format(turn=last_turn.self_turn_index, n=last_turn.self_hand),
+                    detail=(
+                        ngettext(
+                            "At the last turn this reader recorded for you (your turn "
+                            "{turn}), your hand still held "
+                            "{n} cards. Resources that never get spent are "
+                            "not card advantage — they are cards that arrived too late, cost "
+                            "too much, or never had the mana to matter.",
+                            "At the last turn this reader recorded for you (your turn "
+                            "{turn}), your hand still held "
+                            "{n} cards. Resources that never get spent are "
+                            "not card advantage — they are cards that arrived too late, cost "
+                            "too much, or never had the mana to matter.",
+                            last_turn.self_hand,
+                        ).format(turn=last_turn.self_turn_index, n=last_turn.self_hand)
+                        if last_turn.self_turn_index is not None else
+                        ngettext(
+                            "At the last turn this reader recorded for you, your hand still "
+                            "held {n} cards. Resources that never get spent are "
+                            "not card advantage — they are cards that arrived too late, cost "
+                            "too much, or never had the mana to matter.",
+                            "At the last turn this reader recorded for you, your hand still "
+                            "held {n} cards. Resources that never get spent are "
+                            "not card advantage — they are cards that arrived too late, cost "
+                            "too much, or never had the mana to matter.",
+                            last_turn.self_hand,
+                        ).format(n=last_turn.self_hand)
+                    ),
                     evidence=(
                         Evidence("stranded_cards", _("Cards in hand at the last recorded turn"),
                                  last_turn.self_hand),

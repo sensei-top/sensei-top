@@ -138,6 +138,10 @@ nothing while there are no decks. Home takes no filter and reads every
 source, so a player with no Arena match still opens a page with their
 own matches on it.
 
+`/decks` keeps two in the address: `?format=` (a format among its tiles) and
+`?sort=` (`lastPlayed`, `winRate` or `matches`), each left out at its default
+(`docs/frontend-pages.md`, "Decks").
+
 A deck's own pages take no filter. The address names the deck. Overview
 and Matchups ask with `source="all"`, since a deck is one deck on
 whichever client it was played, and the guide's requests take no source

@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ("You conceded"), and "Replay game N" opens the replay at the game's
   first flagged turn.
 - A deck's **Matchups** view links to the **Field** for that deck's format.
+- **Decks** can be filtered by format and sorted by last played, win rate
+  or matches; every version keeps its tile.
+- A deck's **Matchups** table has a "Who played first" switch: Game 1 and
+  Post-board count only the games on the play, or on the draw. Games with
+  no play/draw on record count under All only, and the table says how many.
 
 ### Changed
 
@@ -31,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The **match report**'s top severity reads "Major" where it said
   "Decisive", which read like the game's result, and its Turned beat
   counts your own turns ("your turn 6"), as its findings do.
+- The **match report**'s heading names the opponent as its Opponent row
+  does, without the colour letters the pips beside it already show.
 - A label that explains itself on hover or focus now shows an info icon
   beside it, everywhere in the dashboard.
 - A deck's **Matchups** view shows the archetypes met ten times or more,
@@ -42,9 +49,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   each record names the window it covers.
 - On **Live**, "Pick the deck" is a quieter button, and "Correct the deck"
   carries a pencil like the other edit buttons.
+- **Home**'s three things no longer read as blank cards while they load:
+  each shows its label and what it is waiting on, and the match and the
+  field appear without waiting for the pattern.
 
 ### Fixed
 
+- The **match report** says "your turn N" from Arena's own count of your
+  turns, so a game whose log missed turns no longer reads too low (it said
+  turn 2 where you were on turn 12), and a turn Arena never numbered is
+  described without one. The leak finder's mana-screw check counts turns
+  within each game, and a match with no numbered turn stays out of its
+  rate instead of counting as clean.
 - Every score reads the same way, your games first with an en dash: the
   match report's headline said "Lost 2-1" where the list said "Loss 1–2";
   both now say 1–2.

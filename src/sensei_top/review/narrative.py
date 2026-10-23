@@ -149,7 +149,8 @@ class FieldContext:
 def turn_lines_of(snap: MatchSnapshot, game_number: int) -> list[str]:
     lines = []
     for t in snap.turns_in(game_number):
-        parts = [f"turn {t.turn_number} (your turn {t.self_turn_index})"]
+        parts = [f"turn {t.turn_number}" if t.self_turn_index is None
+                 else f"turn {t.turn_number} (your turn {t.self_turn_index})"]
         if t.self_life is not None and t.opp_life is not None:
             parts.append(f"life {t.self_life}-{t.opp_life}")
         if t.self_hand is not None and t.opp_hand is not None:

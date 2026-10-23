@@ -22,7 +22,16 @@
     "empty": {
       "title": "Nenhum deck ainda",
       "message": "Um deck aparece aqui na primeira vez que você joga uma partida com ele, com seu histórico, seus matchups e seu guia."
-    }
+    },
+    "formatLabel": "Formato",
+    "allFormats": "Todos os formatos",
+    "sortLabel": "Ordenar por",
+    "sort": {
+      "lastPlayed": "Última partida",
+      "winRate": "Taxa de vitórias",
+      "matches": "Partidas"
+    },
+    "noneInFormat": "Nenhum deck neste formato."
   },
   "matches": {
     "title": "Partidas",

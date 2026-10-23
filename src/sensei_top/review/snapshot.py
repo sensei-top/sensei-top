@@ -45,7 +45,7 @@ class SelfTurnRow:
 
     game_number: int
     turn_number: int
-    self_turn_index: int
+    self_turn_index: int | None
     self_life: int | None
     opp_life: int | None
     self_hand: int | None

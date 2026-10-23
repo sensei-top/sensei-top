@@ -5,16 +5,19 @@ import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } fr
 import { ShowAll } from '../components/field/ShowAll'
 import { RateCell } from '../components/RateCell'
 import { VersionSwitcher } from '../components/VersionSwitcher'
-import { Button, Card, DataTable, EmptyState, ErrorNote, Loading, ManaPips, StatTile, TextLink, Tooltip } from '../components/ui'
+import { Button, Card, DataTable, EmptyState, ErrorNote, Loading, ManaPips, Segmented, StatTile, TextLink, Tooltip } from '../components/ui'
 import { mergeNewestFirst } from '../lib/deckOverview'
 import { formatName } from '../lib/decks'
 import {
   archetypeKeyOf,
+  countsForSide,
   fieldLine,
   foldMatchups,
   matchupName,
   matchupRows,
   matchupTiles,
+  type PlaySide,
+  unknownSideGames,
   rowFormatName,
   rowsSpanFormats,
 } from '../lib/matchups'
@@ -36,6 +39,9 @@ const MINUTE = 60_000
  *  record and rate, and its best-of-three games split into game 1 and
  *  games 2–3, each a `RateCell`; the rows of ten matches or more shown,
  *  never fewer than the five most played, the rest behind `ShowAll`.
+ *  Above the table sits the "Who played first" switch (All, on the play, on
+ *  the draw), and under it, when above zero, the count of games with no
+ *  side on record; Game 1 and Post-board count only the chosen side.
  *  Finished matches only. The table's card links to the field of the deck's format, and only once that is known.
  *  Each version is read on its own and the page waits for every one; one
  *  failure is the page's error. The field's numbers never hold the page:
@@ -77,6 +83,13 @@ export function MatchupsView({
   const tiles = useMemo(() => matchupTiles(rows, t), [rows, t])
   const [showAll, setShowAll] = useState(false)
   const shown = useMemo(() => (showAll ? rows : foldMatchups(rows)), [showAll, rows])
+  const [side, setSide] = useState<PlaySide>('all')
+  const sideOptions = [
+    { value: 'all' as const, label: t('matchups.view.side.all') },
+    { value: 'play' as const, label: t('matchups.view.side.play') },
+    { value: 'draw' as const, label: t('matchups.view.side.draw') },
+  ]
+  const unknownSide = unknownSideGames(shown)
   const namesFormat = rowsSpanFormats(rows)
 
   const switcher = deckIds.length > 1 && <VersionSwitcher versions={versions} value={version} now={minute} />
@@ -116,6 +129,23 @@ export function MatchupsView({
           subtitle={t('matchups.view.archetypesMetSubtitle')}
           action={fieldLink}
         >
+          <div className="mb-4 space-y-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <span aria-hidden className="shrink-0 text-caption text-muted">
+                {t('matchups.view.side.label')}
+              </span>
+              <Segmented
+                label={t('matchups.view.side.label')}
+                size="sm"
+                value={side}
+                options={sideOptions}
+                onChange={setSide}
+              />
+            </div>
+            {unknownSide > 0 && (
+              <p className="text-caption text-muted">{t('matchups.view.side.unknown', { count: unknownSide })}</p>
+            )}
+          </div>
           <DataTable
             columns={[
               t('matchups.view.columns.archetype'),
@@ -129,6 +159,7 @@ export function MatchupsView({
             ]}
             rows={shown.map((row) => {
               const name = matchupName(row, t)
+              const counts = countsForSide(row, side)
               const archetype = archetypeKeyOf(row.key)
               const field = archetype != null ? fieldByKey.get(archetype) : undefined
               return [
@@ -153,8 +184,8 @@ export function MatchupsView({
                 formatCount(row.matches),
                 formatRecord(row.won, row.lost),
                 <RateCell key="rate" wins={row.won} losses={row.lost} />,
-                <RateCell key="game1" wins={row.game1Won} losses={row.game1Lost} games />,
-                <RateCell key="postboard" wins={row.postboardWon} losses={row.postboardLost} games />,
+                <RateCell key="game1" wins={counts.game1Won} losses={counts.game1Lost} games />,
+                <RateCell key="postboard" wins={counts.postboardWon} losses={counts.postboardLost} games />,
               ]
             })}
           />

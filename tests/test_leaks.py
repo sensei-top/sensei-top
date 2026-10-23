@@ -97,7 +97,8 @@ def test_mana_screwed_is_detected_from_low_lands_by_turn_four(conn):
             conn.execute(
                 "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
                 "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-                "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, 2, 0, 0)",
+                "opp_permanents, active_turn_number) "
+                "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, 2, 0, 0, ?2)",
                 (f"screwed{i}", turn_number),
             )
     for i in range(MIN_SAMPLE + 2):
@@ -106,7 +107,8 @@ def test_mana_screwed_is_detected_from_low_lands_by_turn_four(conn):
             conn.execute(
                 "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
                 "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-                "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, 4, 2, 0)",
+                "opp_permanents, active_turn_number) "
+                "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, 4, 2, 0, ?2)",
                 (f"fine{i}", turn_number),
             )
     conn.commit()
@@ -198,6 +200,63 @@ def test_mana_flags_is_unknown_not_false_with_no_turns_rows_at_all(conn):
     assert mana_flags(conn, "no_turns") == (None, None)
 
 
+def test_mana_flags_is_unknown_when_no_own_turn_has_a_number(conn):
+    """Own turns on 2 lands whose ``active_turn_number`` Arena never gave:
+    there is no index to check, so ``screwed`` is unknown, not clean. Proven
+    by salting the population with unnumbered losses: read as clean they
+    would drag ``win_rate_without`` below the numbered wins' 100% and
+    inflate ``n_without``."""
+    def add_turns(match_id, lands, numbered):
+        for turn_number in range(1, 5):
+            conn.execute(
+                "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
+                "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
+                "opp_permanents, active_turn_number) "
+                "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, ?3, 0, 0, ?4)",
+                (match_id, turn_number, lands, turn_number if numbered else None),
+            )
+
+    for i in range(MIN_SAMPLE + 2):
+        _insert_match(conn, f"screwed{i}", "loss" if i % 2 == 0 else "win")
+        add_turns(f"screwed{i}", 2, True)
+        _insert_match(conn, f"fine{i}", "win")
+        add_turns(f"fine{i}", 4, True)
+        _insert_match(conn, f"unnumbered{i}", "loss")
+        add_turns(f"unnumbered{i}", 2, False)
+    conn.commit()
+
+    assert mana_flags(conn, "unnumbered0")[0] is None
+    screw = next((leak for leak in find_leaks(conn) if leak.code == "mana_screwed"), None)
+    assert screw is not None
+    assert not any(mid.startswith("unnumbered") for mid in screw.match_ids_with)
+    assert screw.n_without == MIN_SAMPLE + 2
+    assert screw.win_rate_without == pytest.approx(1.0)
+
+
+def test_mana_flags_numbers_own_turns_within_each_game_not_across_the_match(conn):
+    """Self on the play: game 1's own turns 1-4 sit at shared turns 1,3,5,7
+    on 4 lands, game 2's own turns 1-3 at shared turns 1,3,5 on 2 lands.
+    The check's fourth turn is the own-turn number per game, so game 2 never
+    reaches it, whatever the shared count or a rank across both games says."""
+    _insert_match(conn, "two_games", "win")
+    conn.execute(
+        "INSERT INTO games (match_id, game_number, on_play, result, result_reason, "
+        "turn_count, self_mulligans, opp_mulligans) VALUES ('two_games', 2, 1, 'win', "
+        "NULL, 5, 0, 0)"
+    )
+    for game_number, own_turns, lands in ((1, 4, 4), (2, 3, 2)):
+        for own in range(1, own_turns + 1):
+            conn.execute(
+                "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
+                "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
+                "opp_permanents, active_turn_number) "
+                "VALUES ('two_games', ?, ?, 1, 20, 20, 7, 7, ?, 0, 0, ?)",
+                (game_number, 2 * own - 1, lands, own),
+            )
+    conn.commit()
+    assert mana_flags(conn, "two_games")[0] is False
+
+
 def test_mana_flags_flooded_is_none_with_no_deck_row_even_when_screwed_is_known(conn):
     """The two flags have independent evidence requirements: a match with
     real ``turns`` rows (so ``screwed`` reads a real ``True``/``False``) but
@@ -208,7 +267,8 @@ def test_mana_flags_flooded_is_none_with_no_deck_row_even_when_screwed_is_known(
         conn.execute(
             "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
             "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-            "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, 4, 2, 0)",
+            "opp_permanents, active_turn_number) "
+            "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, 4, 2, 0, ?2)",
             ("no_deck", turn_number),
         )
     conn.commit()
@@ -233,7 +293,8 @@ def test_mana_flags_flooded_is_none_with_an_unnamed_decklist(conn):
         conn.execute(
             "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
             "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-            "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, 4, 2, 0)",
+            "opp_permanents, active_turn_number) "
+            "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, 4, 2, 0, ?2)",
             ("m1", turn_number),
         )
     conn.commit()
@@ -263,7 +324,8 @@ def _flood_deck_and_turns(conn, deck_id, cards_json):
         conn.execute(
             "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
             "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-            "opp_permanents, self_library) VALUES (?, 1, ?, 1, 20, 20, 7, 7, ?, 2, 0, ?)",
+            "opp_permanents, self_library, active_turn_number) "
+            "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, ?3, 2, 0, ?4, ?2)",
             (f"{deck_id}-m", turn_number, lands, library),
         )
     conn.commit()
@@ -304,7 +366,8 @@ def test_mana_leaks_excludes_no_turns_matches_from_the_known_population(conn):
             conn.execute(
                 "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
                 "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-                "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, 2, 0, 0)",
+                "opp_permanents, active_turn_number) "
+                "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, 2, 0, 0, ?2)",
                 (f"screwed{i}", turn_number),
             )
     for i in range(MIN_SAMPLE + 2):
@@ -313,7 +376,8 @@ def test_mana_leaks_excludes_no_turns_matches_from_the_known_population(conn):
             conn.execute(
                 "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
                 "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-                "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, 4, 2, 0)",
+                "opp_permanents, active_turn_number) "
+                "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, 4, 2, 0, ?2)",
                 (f"fine{i}", turn_number),
             )
     # No `turns` rows at all, and all losses — a leaked `False` reading
@@ -347,7 +411,8 @@ def test_mana_leaks_gates_min_sample_per_flag_independently(conn):
             conn.execute(
                 "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
                 "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-                "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, 2, 0, 0)",
+                "opp_permanents, active_turn_number) "
+                "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, 2, 0, 0, ?2)",
                 (f"screwed{i}", turn_number),
             )
     for i in range(MIN_SAMPLE + 2):
@@ -356,7 +421,8 @@ def test_mana_leaks_gates_min_sample_per_flag_independently(conn):
             conn.execute(
                 "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
                 "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-                "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, 4, 2, 0)",
+                "opp_permanents, active_turn_number) "
+                "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, 4, 2, 0, ?2)",
                 (f"fine{i}", turn_number),
             )
     conn.commit()
@@ -387,7 +453,8 @@ def test_deck_ids_scopes_the_mana_leak_population(conn):
             conn.execute(
                 "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
                 "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-                "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, 2, 0, 0)",
+                "opp_permanents, active_turn_number) "
+                "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, 2, 0, 0, ?2)",
                 (f"screwed{i}", turn_number),
             )
     for i in range(MIN_SAMPLE + 2):
@@ -396,7 +463,8 @@ def test_deck_ids_scopes_the_mana_leak_population(conn):
             conn.execute(
                 "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
                 "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-                "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, 4, 2, 0)",
+                "opp_permanents, active_turn_number) "
+                "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, 4, 2, 0, ?2)",
                 (f"fineA{i}", turn_number),
             )
     for i in range(MIN_SAMPLE + 2):
@@ -405,7 +473,8 @@ def test_deck_ids_scopes_the_mana_leak_population(conn):
             conn.execute(
                 "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
                 "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-                "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, 4, 2, 0)",
+                "opp_permanents, active_turn_number) "
+                "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, 4, 2, 0, ?2)",
                 (f"other{i}", turn_number),
             )
     conn.commit()
@@ -431,7 +500,8 @@ def test_deck_ids_scope_follows_an_mtgo_pick(conn):
             conn.execute(
                 "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
                 "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-                "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, ?, 0, 0)",
+                "opp_permanents, active_turn_number) "
+                "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, ?3, 0, 0, ?2)",
                 (match_id, turn_number, lands),
             )
 
@@ -474,7 +544,8 @@ def test_since_scopes_out_matches_before_the_date(conn):
             conn.execute(
                 "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
                 "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-                "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, 2, 0, 0)",
+                "opp_permanents, active_turn_number) "
+                "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, 2, 0, 0, ?2)",
                 (f"old{i}", turn_number),
             )
     conn.commit()
@@ -498,7 +569,8 @@ def test_match_ids_scopes_the_mana_leak_population_to_an_exact_set(conn):
             conn.execute(
                 "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
                 "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-                "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, 2, 0, 0)",
+                "opp_permanents, active_turn_number) "
+                "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, 2, 0, 0, ?2)",
                 (f"screwed{i}", turn_number),
             )
     for i in range(MIN_SAMPLE + 2):
@@ -507,7 +579,8 @@ def test_match_ids_scopes_the_mana_leak_population_to_an_exact_set(conn):
             conn.execute(
                 "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
                 "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-                "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, 4, 2, 0)",
+                "opp_permanents, active_turn_number) "
+                "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, 4, 2, 0, ?2)",
                 (f"fine{i}", turn_number),
             )
     conn.commit()
@@ -541,7 +614,8 @@ def test_match_ids_none_leaves_every_existing_caller_unaffected(conn):
             conn.execute(
                 "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
                 "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-                "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, 2, 0, 0)",
+                "opp_permanents, active_turn_number) "
+                "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, 2, 0, 0, ?2)",
                 (f"screwed{i}", turn_number),
             )
     for i in range(MIN_SAMPLE + 2):
@@ -550,7 +624,8 @@ def test_match_ids_none_leaves_every_existing_caller_unaffected(conn):
             conn.execute(
                 "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
                 "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-                "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, 4, 2, 0)",
+                "opp_permanents, active_turn_number) "
+                "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, 4, 2, 0, ?2)",
                 (f"fine{i}", turn_number),
             )
     conn.commit()

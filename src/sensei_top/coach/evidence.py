@@ -827,11 +827,15 @@ def _build_turning_points(
     A lost game with no ``turning_point`` finding — ``never_behind`` fired
     instead, too few turns had a position index, or the match's report
     could not be built — is counted in the gap rather than guessed into a
-    bucket (rule 4). A missing report is charged once, and only for a match
-    lost overall: it cannot reveal a lost game inside a match won 2-1, so
-    the gap undercounts that one shape.
+    bucket (rule 4). A lost game whose ``turning_point`` finding has no
+    ``self_turn_index`` (Arena gave that turn no own-turn number) is also
+    unplaceable, but for a different reason: it goes to its own gap
+    sentence, never into the "no finding" one. A missing report is charged
+    once, and only for a match lost overall: it cannot reveal a lost game
+    inside a match won 2-1, so the gap undercounts that one shape.
     """
     no_turning_point = 0
+    unnumbered = 0
     counts: dict[tuple[str, str], int] = defaultdict(int)
 
     for m in population_rows:
@@ -848,8 +852,11 @@ def _build_turning_points(
                  if f.code == "turning_point" and f.game_number == game.game_number),
                 None,
             )
-            if finding is None or finding.self_turn_index is None:
+            if finding is None:
                 no_turning_point += 1
+                continue
+            if finding.self_turn_index is None:
+                unnumbered += 1
                 continue
             stage = _turning_stage(finding.self_turn_index)
             counts[(stage, str(finding.severity))] += 1
@@ -869,6 +876,16 @@ def _build_turning_points(
             "report) and are not counted in any bucket.",
             no_turning_point,
         ).format(n=no_turning_point))
+    if unnumbered:
+        gaps.append(ngettext(
+            "{n} lost game(s) have a turning_point finding on a turn with no own-turn "
+            "number, so the turning-point breakdown cannot place them in a stage, and "
+            "they are not counted in any bucket.",
+            "{n} lost game(s) have a turning_point finding on a turn with no own-turn "
+            "number, so the turning-point breakdown cannot place them in a stage, and "
+            "they are not counted in any bucket.",
+            unnumbered,
+        ).format(n=unnumbered))
     return buckets, gaps
 
 

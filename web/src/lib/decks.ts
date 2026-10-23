@@ -156,6 +156,9 @@ export type DecksTile = {
   finished: number
   wins: number
   lastPlayed: number | null
+  /** The deck's format as the API names it (`formatName` puts it in words);
+   *  `null` when unknown. */
+  format: string | null
   /** The most recently played of the tiles that share this name (two or
    *  more tiles, the same name): the tile wears the "Newest" chip. Always
    *  false for a name no other tile has, and for a shared name no tile of
@@ -236,10 +239,58 @@ export function decksTiles(
       finished: identity.match_wins + identity.match_losses,
       wins: identity.match_wins,
       lastPlayed: parseTimestamp(identity.last_played),
+      format: identity.format ?? null,
       newest: mark?.newest ?? false,
       playedRange: mark?.playedRange ?? null,
       detail: tileDetail(identity.format, identity.deck_ids.length, t),
       artMatchId: finished.find((match) => ids.has(match.deck_id ?? ''))?.match_id ?? null,
     }
   })
+}
+
+export type DecksSort = 'lastPlayed' | 'winRate' | 'matches'
+
+export const DECKS_SORTS: readonly DecksSort[] = ['lastPlayed', 'winRate', 'matches']
+
+/** A sort named by an address, `lastPlayed` when absent or unrecognized. */
+export function chosenSort(raw: string | null | undefined): DecksSort {
+  return DECKS_SORTS.find((sort) => sort === raw) ?? 'lastPlayed'
+}
+
+/** Newest first; a tile with no date after every dated one; the input order
+ *  decides the rest (the sort is stable). */
+function byLastPlayed(a: DecksTile, b: DecksTile): number {
+  if (a.lastPlayed == null || b.lastPlayed == null) return (a.lastPlayed == null ? 1 : 0) - (b.lastPlayed == null ? 1 : 0)
+  return b.lastPlayed - a.lastPlayed
+}
+
+/** The tiles in the order `sort` names, as a new array. A tile is rated
+ *  with at least `RATE_MIN_MATCHES` finished matches. `winRate`: the rated
+ *  tiles, highest rate first, then every other tile (one with five to nine
+ *  finished matches or none included) by last played; `matches`: finished
+ *  matches, most first. Ties by last played. */
+export function sortTiles(tiles: DecksTile[], sort: DecksSort): DecksTile[] {
+  const rate = (tile: DecksTile) => (tile.finished >= RATE_MIN_MATCHES ? tile.wins / tile.finished : null)
+  const copy = [...tiles]
+  if (sort === 'matches') return copy.sort((a, b) => b.finished - a.finished || byLastPlayed(a, b))
+  if (sort === 'winRate') {
+    return copy.sort((a, b) => {
+      const ra = rate(a)
+      const rb = rate(b)
+      if (ra != null && rb != null) return rb - ra || byLastPlayed(a, b)
+      if (ra != null || rb != null) return ra != null ? -1 : 1
+      return byLastPlayed(a, b)
+    })
+  }
+  return copy.sort(byLastPlayed)
+}
+
+/** The formats present among `tiles`, each once, in the order first met. */
+export function tileFormats(tiles: DecksTile[]): string[] {
+  return [...new Set(tiles.map((tile) => tile.format).filter((format): format is string => !!format))]
+}
+
+/** The tiles of `format`; all of them when `format` is empty. */
+export function filterTiles(tiles: DecksTile[], format: string | null | undefined): DecksTile[] {
+  return format ? tiles.filter((tile) => tile.format === format) : tiles
 }

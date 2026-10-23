@@ -10,6 +10,8 @@ import {
   matchupName as nameOf,
   matchupRows,
   matchupRowOver,
+  countsForSide,
+  unknownSideGames,
   NBSP,
   rowFormatName,
   rowsSpanFormats,
@@ -68,6 +70,9 @@ function row(key: string, matches: number, won: number, rest: Partial<MatchupRow
     game1Lost: 0,
     postboardWon: 0,
     postboardLost: 0,
+    onPlay: { game1Won: 0, game1Lost: 0, postboardWon: 0, postboardLost: 0 },
+    onDraw: { game1Won: 0, game1Lost: 0, postboardWon: 0, postboardLost: 0 },
+    unknownSide: 0,
     ...rest,
   }
 }
@@ -102,6 +107,9 @@ describe('matchupRows', () => {
         game1Lost: 0,
         postboardWon: 0,
         postboardLost: 0,
+        onPlay: { game1Won: 0, game1Lost: 0, postboardWon: 0, postboardLost: 0 },
+        onDraw: { game1Won: 0, game1Lost: 0, postboardWon: 0, postboardLost: 0 },
+        unknownSide: 0,
       },
     ])
   })
@@ -515,5 +523,69 @@ describe('foldMatchups', () => {
     const exact = rowsOf(11, 10, 10, 10, 10)
     expect(foldMatchups(exact)).toEqual(exact)
     expect(foldMatchups([])).toEqual([])
+  })
+})
+
+describe('the play/draw split', () => {
+  const bo3 = (id: string, rest: Partial<Match>) =>
+    match(id, { best_of: 3, result: 'win', game1_result: 'win', ...rest })
+
+  it('counts a match on the play under the play side and a match on the draw under the draw side', () => {
+    const [r] = matchupRows([
+      bo3('a', {
+        game1_on_play: true,
+        game1_result: 'win',
+        postboard_won: 1,
+        postboard_lost: 1,
+        postboard_play_won: 0,
+        postboard_play_lost: 1,
+        postboard_draw_won: 1,
+        postboard_draw_lost: 0,
+      }),
+      bo3('b', { result: 'loss', game1_on_play: false, game1_result: 'loss', postboard_won: 0, postboard_lost: 0 }),
+    ])
+    expect(countsForSide(r, 'play')).toEqual({ game1Won: 1, game1Lost: 0, postboardWon: 0, postboardLost: 1 })
+    expect(countsForSide(r, 'draw')).toEqual({ game1Won: 0, game1Lost: 1, postboardWon: 1, postboardLost: 0 })
+    expect(countsForSide(r, 'all').game1Won).toBe(1)
+    expect(r.unknownSide).toBe(0)
+  })
+
+  it('counts an unknown game 1 and the unattributed post-board games under All only', () => {
+    // Game 1 won and game 2 lost, neither with a side; game 3 won on the play.
+    const [r] = matchupRows([
+      bo3('a', {
+        game1_on_play: null,
+        postboard_won: 1,
+        postboard_lost: 1,
+        postboard_play_won: 1,
+        postboard_play_lost: 0,
+        postboard_draw_won: 0,
+        postboard_draw_lost: 0,
+      }),
+    ])
+    // Game 1: 1. Won leftover: 1 - 1 - 0 = 0. Lost leftover: 1 - 0 - 0 = 1.
+    expect(r.unknownSide).toBe(1 + 0 + 1)
+    expect(countsForSide(r, 'play')).toEqual({ game1Won: 0, game1Lost: 0, postboardWon: 1, postboardLost: 0 })
+    expect(countsForSide(r, 'draw')).toEqual({ game1Won: 0, game1Lost: 0, postboardWon: 0, postboardLost: 0 })
+    expect(unknownSideGames([r])).toBe(2)
+    expect(unknownSideGames([r, r])).toBe(4)
+  })
+
+  it('does not count an undecided game 1, or a best of one, as unknown', () => {
+    const [r] = matchupRows([
+      bo3('a', { game1_on_play: null, game1_result: null, postboard_won: 0, postboard_lost: 0 }),
+      match('b', { best_of: 1, game1_on_play: null, game1_result: 'win' }),
+      bo3('c', {
+        game1_result: 'draw',
+        game1_on_play: null,
+        postboard_won: 2,
+        postboard_lost: 0,
+        postboard_draw_won: 2,
+        postboard_draw_lost: 0,
+        postboard_play_won: 0,
+        postboard_play_lost: 0,
+      }),
+    ])
+    expect(r.unknownSide).toBe(0)
   })
 })

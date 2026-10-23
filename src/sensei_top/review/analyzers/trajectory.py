@@ -120,7 +120,24 @@ def analyze_trajectory(snap: MatchSnapshot) -> AnalyzerResult:
         )
         before = decimal(point.index_before, 2, signed=True)
         after = decimal(point.index_after, 2, signed=True)
-        if cause_kind == "card":
+        if self_turn_index is None:
+            if cause_kind == "card":
+                detail = _(
+                    "Your position went from {before} to {after} — the largest single "
+                    "swing against you this game. In that window, {card} was on record."
+                ).format(before=before, after=after, card=cause_value)
+            elif cause_kind == "damage":
+                detail = _(
+                    "Your position went from {before} to {after} — the largest single "
+                    "swing against you this game. In that window, {total} damage taken "
+                    "was on record."
+                ).format(before=before, after=after, total=cause_value)
+            else:
+                detail = _(
+                    "Your position went from {before} to {after} — the largest single "
+                    "swing against you this game."
+                ).format(before=before, after=after)
+        elif cause_kind == "card":
             detail = _(
                 "Your position went from {before} to {after} by your turn {turn} — the "
                 "largest single swing against you this game. In that window, {card} was on "
@@ -157,7 +174,10 @@ def analyze_trajectory(snap: MatchSnapshot) -> AnalyzerResult:
                 severity=Severity.DECISIVE if point.drop >= SWING_DECISIVE else Severity.NOTICE,
                 confidence=Confidence.PARTIAL, game_number=game.game_number,
                 turn_number=point.turn_number, self_turn_index=self_turn_index,
-                title=_("The game turned on your turn {turn}").format(turn=self_turn_index),
+                title=(
+                    _("The game turned against you") if self_turn_index is None
+                    else _("The game turned on your turn {turn}").format(turn=self_turn_index)
+                ),
                 detail=detail,
                 evidence=tuple(evidence),
                 caveats=(

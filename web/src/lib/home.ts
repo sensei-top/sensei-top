@@ -229,6 +229,21 @@ export function threeThings(has: { match: boolean; pattern: boolean; field: bool
   return order
 }
 
+/** `threeThings` while some candidates are still loading: a candidate whose
+ *  request has not answered holds its place, so the slots after it do not
+ *  move when it arrives, and each slot waits only for its own request. One
+ *  that then turns out not to exist drops out. */
+export function thingSlots(
+  has: { match: boolean; pattern: boolean; field: boolean },
+  pending: { pattern: boolean; field: boolean },
+): ThingKind[] {
+  return threeThings({
+    match: has.match,
+    pattern: pending.pattern || has.pattern,
+    field: pending.field || has.field,
+  })
+}
+
 /* -------------------------------------------------------------- pattern */
 
 export type Pattern = { leak: LeakOut; wonWith: number; wonWithout: number }

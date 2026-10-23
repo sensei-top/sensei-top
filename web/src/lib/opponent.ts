@@ -16,6 +16,18 @@ export function opponentLabelText(label: string, colors: string | null | undefin
   return label.startsWith(prefix) ? label.slice(prefix.length) : label
 }
 
+/** `headline` with `label` (the opponent as the headline names it) shown as
+ *  `opponentLabelText` shows it. Display-only, the same rule; a headline
+ *  without the label, or no label, comes back unchanged. */
+export function headlineOpponentText(
+  headline: string,
+  label: string | null | undefined,
+  colors: string | null | undefined,
+): string {
+  if (!label) return headline
+  return headline.replace(label, opponentLabelText(label, colors))
+}
+
 /** The classifier's confidence word as the viewer reads it. A word this
  *  table does not know (a newer server) is shown as it arrived. */
 export function confidenceLabel(confidence: string, t: TFunction): string {

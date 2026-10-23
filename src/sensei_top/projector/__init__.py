@@ -5,4 +5,4 @@
 # from the same raw_events: a parsing fix, a new derived column, a corrected
 # rule. Leave it alone for a change that derives the same rows. It is not the
 # app's version.
-PROJECTOR_VERSION = 3
+PROJECTOR_VERSION = 4

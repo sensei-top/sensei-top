@@ -1274,6 +1274,7 @@ def test_resolve_log_dir_warns_on_unreadable_toml(monkeypatch, tmp_path, caplog)
 # --- cli.py: the config subcommand's --set-mtgo-dir flag -------------------
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows has no mode 600; the test below")
 def test_config_set_mtgo_dir_flag_writes_the_resolved_path(monkeypatch, tmp_path, capsys):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("MTGO_HANDLE", raising=False)

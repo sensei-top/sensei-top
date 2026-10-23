@@ -126,6 +126,13 @@ the viewer (`firstPattern`: the leak finder's first whose win rate with it
 is below the rate without); the field. Fewer when fewer exist, never a filler. A candidate whose
 request failed still takes its place, as the failure.
 
+While they load, each slot renders as soon as its own data answers
+(`thingSlots`): a slot still waiting shows its card frame, its place and
+label, and a loading line ("Looking for a pattern in your matches…",
+"Reading the field…") over the skeleton, so it never reads as an empty
+card. A pending slot holds its place, so none moves when another arrives;
+the pattern's request never holds back the field's, nor the reverse. A slot that answers with nothing drops out, and the one after it moves up a place and takes its number: the one move the row makes, because never a filler outranks holding a place.
+
 A pattern's title and sentence are Home's own words, by the leak
 finder's code (`patternWords` in `lib/patterns.ts`).
 A code with no words there takes the title the API sends
@@ -593,9 +600,10 @@ colours and a signature card (`UR · Mox Opal`, migration 030). Wherever a
 the current-match band — `lib/opponent.ts::opponentLabelText` strips the
 `UR · ` prefix, so the colours read once, as pips. It is display-only:
 `opponent_key` and the stored label keep the prefix, and nothing matches on
-the stripped text. A label with no pips beside it (the match-detail heading)
-keeps its letters, since they are the only place
-the colours appear.
+the stripped text. A label with no pips beside it keeps its letters, since
+they are the only place the colours appear. The match report's heading has
+pips beside it, in its Opponent row, so `MatchHero` passes the headline's
+opponent through the same rule (`headlineOpponentText`).
 
 ## The MTGO deck pick
 
@@ -749,13 +757,14 @@ button (`docs/review.md`).
 
 `/decks` (`pages/DecksPage.tsx`) is one tile per deck, an identity of
 `GET /api/guide/decks` however many versions its list has had, in the
-order the route answers them, last played first. `decksTiles`
-(`lib/decks.ts`) builds each tile: the deck's own name, its record by
-the small-sample rule (`deckRecord`: from ten finished matches a rate over
-the record, "58%" over "win rate · 35–25"; from five to nine the rate, "67%", muted,
-over "rough win rate" and the record; under five the record, "3–1", muted, with
-the line saying it is too few for a rate), the format in words with how
-many versions when there is more than one (`tileDetail`), when it was
+order the route answers them, last played first (the default order).
+`decksTiles` (`lib/decks.ts`) builds each tile: the deck's own name, its
+record by the small-sample rule (`deckRecord`: from ten finished matches
+a rate over the record, "58%" over "win rate · 35–25"; from five to nine
+the rate, "67%", muted, over "rough win rate" and the record; under
+five the record, "3–1", muted, with the line saying it is too few for a
+rate), the format in words with how many versions when there is more
+than one (`tileDetail`), when it was
 last played, and its art: a card the viewer cast in the deck's newest
 finished match of the same 500-match list Home reads, one card per
 page. A deck with no finished match in that list keeps the empty art
@@ -767,6 +776,22 @@ would be, keeping "last played" when the list was played on one day only.
 Nothing is folded together. The grid is Home's own: two to a
 row under 48rem, three from there, five from 64rem. With no deck at
 all, "No decks yet".
+
+Two `Select`s sit above the grid, both kept in the address as
+`useFilters` keeps its own and left out at their defaults. **`?format=`**:
+"All formats", then each format present among the tiles, in
+`formatName`'s words (`tileFormats`, `filterTiles`); a format with no
+tile is never offered, but one a stale address names stays selected, as
+its own option right after "All formats" (as `DeckFilter` keeps a missing
+address value), over "No decks in this format.". **`?sort=`**: Last
+played (the default), Win rate or Matches (`sortTiles`, `chosenSort`). A
+tile is rated with at least ten finished matches (`RATE_MIN_MATCHES`).
+Win rate puts the rated tiles first, highest rate first, then every
+other tile, one with five to nine matches or none included, by last
+played; Matches is finished matches, most first; every tie goes to the
+later last played, a tile with no date last. The art is picked in the
+route's order over every tile, so a tile's art does not change with the
+sort or the filter.
 
 A tile leads to `deckAddress(key)`: `/decks/` and the identity's own
 key (`addressSegment`, its colon written bare). `/decks/:id` and the
@@ -860,7 +885,16 @@ best-of-three match shows; a drawn game counts in neither number. The table fold
 fewer than the five most played, and the rest sit behind "Show all N"
 (`ShowAll`, Field's control); a small row is held back, never dropped, and
 with nothing held back there is no control. The Game 1 and Post-board
-headers wear a `Tooltip` saying which games they count. The field is the deck's own format's
+headers wear a `Tooltip` saying which games they count.
+A `Segmented` above the table, "Who played first" (All · On the play · On
+the draw), refilters Game 1 and Post-board from the match's `game1_on_play`
+and `postboard_play_*` / `postboard_draw_*` columns; Matches, Record, Rate
+and the fold do not change. A game with no recorded side is in All only:
+a game 1 won or lost whose `game1_on_play` is NULL (a drawn or
+unfinished game 1, or a best of one, is not counted), and the post-board games left over when
+the play and draw counts are taken from the totals, derived on the client
+(`countsForSide`, `unknownSideGames` in `lib/matchups.ts`), never stored.
+Their count over the rows shown prints under the switch when above zero. The field is the deck's own format's
 (`useFieldRecords(format)`, the format coverage names, "Field, and the
 field-winrate join" below); a deck with no format has no field line. The
 table's card carries, at the right of its title, a link to that field,

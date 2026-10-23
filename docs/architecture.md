@@ -1053,6 +1053,12 @@ turn** — there is exactly one snapshot per turn, so no mid-turn or per-step
 board can be reconstructed from them. `card_events` is the only intra-turn
 ordering there is.
 
+`067_turn_own_number.sql` added `turns.active_turn_number`: the active seat's
+own `players[].turnNumber` as first read while that turn was current, NULL when
+the log gave none for the seat in that turn (`PROJECTOR_VERSION` 4).
+`v_self_turns.self_turn_index` is that column, never a rank of the rows
+present. MTGO writes no `turns` rows, so it has no index to get wrong.
+
 Library size is counted from `ZoneType_Library` itself, not by subtracting
 draws from the decklist: Arena sends the zone's `objectInstanceIds`, so the
 count is observed rather than derived, and a Bo3 sideboard changing the deck

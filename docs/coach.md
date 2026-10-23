@@ -218,7 +218,9 @@ report stays readable and a caller always knows what got cut:
   `Severity` values). Always all 6 cells, even at zero, so a caller renders
   a fixed grid rather than a shape that changes report to report. A lost
   game with no turning point at all (never behind, too few recorded turns,
-  or a missing report) is a gap, not a guessed bucket.
+  or a missing report) is a gap, not a guessed bucket. So is one whose
+  turning point fell on a turn Arena gave no own-turn number, counted in a
+  gap sentence of its own.
 - **Current decklists.** The current 75 of up to 3 kept decks
   (`TOP_DECKLISTS`), ordered by format-window match count — a kept identity
   with zero matches since the reset is omitted, since its list is not
