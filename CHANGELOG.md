@@ -45,6 +45,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The **match report** says "your turn N" from Arena's own count of your
+  turns, so a game whose log missed turns no longer reads too low (it said
+  turn 2 where you were on turn 12), and a turn Arena never numbered is
+  described without one. The leak finder's mana-screw check counts turns
+  within each game, and a match with no numbered turn stays out of its
+  rate instead of counting as clean.
 - Every score reads the same way, your games first with an en dash: the
   match report's headline said "Lost 2-1" where the list said "Loss 1–2";
   both now say 1–2.

@@ -2361,3 +2361,94 @@ msgstr[1] ""
 #, python-brace-format
 msgid "{ours} to {theirs}"
 msgstr "{ours} a {theirs}"
+
+#: sensei_top/review/analyzers/resources.py
+#, python-brace-format
+msgid ""
+"At the last turn this reader recorded for you, your hand still held {n} "
+"cards. Resources that never get spent are not card advantage — they are "
+"cards that arrived too late, cost too much, or never had the mana to matter."
+msgid_plural ""
+"At the last turn this reader recorded for you, your hand still held {n} "
+"cards. Resources that never get spent are not card advantage — they are "
+"cards that arrived too late, cost too much, or never had the mana to matter."
+msgstr[0] ""
+"No último turno que este leitor registrou para você, sua mão ainda tinha {n}"
+" card. Recursos que nunca são gastos não são vantagem de cards — são cards "
+"que chegaram tarde demais, custaram demais, ou nunca tiveram a mana para "
+"importar."
+msgstr[1] ""
+"No último turno que este leitor registrou para você, sua mão ainda tinha {n}"
+" cards. Recursos que nunca são gastos não são vantagem de cards — são cards "
+"que chegaram tarde demais, custaram demais, ou nunca tiveram a mana para "
+"importar."
+
+#: sensei_top/review/analyzers/information.py
+#, python-brace-format
+msgid ""
+"At your widest point you had {permanents} permanents in play. {card}, one of"
+" {opponent}'s own staples, had not shown up yet — a hand this wide is "
+"exactly what that card is for."
+msgstr ""
+"No seu ponto mais largo você tinha {permanents} permanentes em jogo. {card},"
+" um dos staples de {opponent}, ainda não havia aparecido — uma mesa tão "
+"larga é exatamente para o que esse card serve."
+
+#: sensei_top/review/analyzers/trajectory.py
+msgid "The game turned against you"
+msgstr "O jogo virou contra você"
+
+#: sensei_top/review/analyzers/resources.py
+#, python-brace-format
+msgid ""
+"Your hand size compared to the opponent's was as low as {low:+d} and as high"
+" as {high:+d}."
+msgstr ""
+"Seu tamanho de mão em relação ao do oponente chegou a {low:+d} no mínimo e a"
+" {high:+d} no máximo."
+
+#: sensei_top/review/analyzers/trajectory.py
+#, python-brace-format
+msgid ""
+"Your position went from {before} to {after} — the largest single swing "
+"against you this game."
+msgstr ""
+"Sua posição foi de {before} a {after} — a maior virada contra você neste "
+"jogo."
+
+#: sensei_top/review/analyzers/trajectory.py
+#, python-brace-format
+msgid ""
+"Your position went from {before} to {after} — the largest single swing "
+"against you this game. In that window, {card} was on record."
+msgstr ""
+"Sua posição foi de {before} a {after} — a maior virada contra você neste "
+"jogo. Nessa janela, {card} estava registrado."
+
+#: sensei_top/review/analyzers/trajectory.py
+#, python-brace-format
+msgid ""
+"Your position went from {before} to {after} — the largest single swing "
+"against you this game. In that window, {total} damage taken was on record."
+msgstr ""
+"Sua posição foi de {before} a {after} — a maior virada contra você neste "
+"jogo. Nessa janela, {total} de dano sofrido estava registrado."
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} lost game(s) have a turning_point finding on a turn with no own-turn "
+"number, so the turning-point breakdown cannot place them in a stage, and "
+"they are not counted in any bucket."
+msgid_plural ""
+"{n} lost game(s) have a turning_point finding on a turn with no own-turn "
+"number, so the turning-point breakdown cannot place them in a stage, and "
+"they are not counted in any bucket."
+msgstr[0] ""
+"{n} jogo perdido tem uma observação de turning_point num turno sem número "
+"próprio, então a divisão de pontos de virada não consegue colocá-lo numa "
+"fase, e ele não é contado em nenhuma faixa."
+msgstr[1] ""
+"{n} jogos perdidos têm uma observação de turning_point num turno sem número "
+"próprio, então a divisão de pontos de virada não consegue colocá-los numa "
+"fase, e eles não são contados em nenhuma faixa."

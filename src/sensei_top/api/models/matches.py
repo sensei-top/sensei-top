@@ -441,7 +441,7 @@ class PositionPoint(BaseModel):
 
     game_number: int
     turn_number: int
-    self_turn_index: int
+    self_turn_index: int | None
     index: float
 
 

@@ -866,27 +866,6 @@ check. Found while adding the refusal.
 does return the share, a resolution that keeps the drive letter, and what
 that changes for a backup folder that is a link.
 
-### BL-092 · "Your turn N" too low when a game's turns are missing
-
-type: fix · priority: P1 · status: needs-decision · area: projector review
-
-The match report's Turned beat and the analyzers' prose say "your turn N"
-from a finding's `self_turn_index`, which `v_self_turns` gives by ranking
-the player's own turns that were recorded. A game whose log is missing
-turns gets too low a number: in the fixture's MATCH_WIN game 2 the view
-says turn 2 where Arena's `players[seat].turnNumber` says 12. Found by the
-UI sweep's review of the Turned beat.
-
-**Why deferred:** Outside the sweep, which only changed which counter the
-beat reads. Taking Arena's per-player counter instead is a projector
-change, and it is a rule-4 question: whether a gap in the turns means the
-index is unknown (`NULL`) or that Arena's counter stands in for it.
-
-**Needs:** That decision; a fixture-backed test on the game above; and the
-same check for MTGO, whose log carries no per-player counter.
-
-## Performance
-
 ### BL-058 · The coach page and its narrative route
 
 type: perf · priority: P3 · status: ready · area: coach

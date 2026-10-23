@@ -107,6 +107,27 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
+#: sensei_top/review/analyzers/resources.py
+#, python-brace-format
+msgid ""
+"At the last turn this reader recorded for you, your hand still held {n} "
+"cards. Resources that never get spent are not card advantage — they are "
+"cards that arrived too late, cost too much, or never had the mana to matter."
+msgid_plural ""
+"At the last turn this reader recorded for you, your hand still held {n} "
+"cards. Resources that never get spent are not card advantage — they are "
+"cards that arrived too late, cost too much, or never had the mana to matter."
+msgstr[0] ""
+msgstr[1] ""
+
+#: sensei_top/review/analyzers/information.py
+#, python-brace-format
+msgid ""
+"At your widest point you had {permanents} permanents in play. {card}, one of"
+" {opponent}'s own staples, had not shown up yet — a hand this wide is "
+"exactly what that card is for."
+msgstr ""
+
 #: sensei_top/review/summary.py
 msgid "Baseline"
 msgstr ""
@@ -930,6 +951,10 @@ msgid ""
 msgstr ""
 
 #: sensei_top/review/analyzers/trajectory.py
+msgid "The game turned against you"
+msgstr ""
+
+#: sensei_top/review/analyzers/trajectory.py
 #, python-brace-format
 msgid "The game turned on your turn {turn}"
 msgstr ""
@@ -1332,6 +1357,13 @@ msgid ""
 "{low_turn}) and as high as {high:+d} (your turn {high_turn})."
 msgstr ""
 
+#: sensei_top/review/analyzers/resources.py
+#, python-brace-format
+msgid ""
+"Your hand size compared to the opponent's was as low as {low:+d} and as high"
+" as {high:+d}."
+msgstr ""
+
 #: sensei_top/review/analyzers/frame.py
 msgid "Your mulligan count was never observed for this game."
 msgstr ""
@@ -1385,6 +1417,27 @@ msgid ""
 "Your position went from {before} to {after} by your turn {turn} — the "
 "largest single swing against you this game. In that window, {total} damage "
 "taken was on record."
+msgstr ""
+
+#: sensei_top/review/analyzers/trajectory.py
+#, python-brace-format
+msgid ""
+"Your position went from {before} to {after} — the largest single swing "
+"against you this game."
+msgstr ""
+
+#: sensei_top/review/analyzers/trajectory.py
+#, python-brace-format
+msgid ""
+"Your position went from {before} to {after} — the largest single swing "
+"against you this game. In that window, {card} was on record."
+msgstr ""
+
+#: sensei_top/review/analyzers/trajectory.py
+#, python-brace-format
+msgid ""
+"Your position went from {before} to {after} — the largest single swing "
+"against you this game. In that window, {total} damage taken was on record."
 msgstr ""
 
 #: sensei_top/review/summary.py
@@ -1828,6 +1881,19 @@ msgstr[1] ""
 #, python-brace-format
 msgid "{n} land (outside this deck's {land_min}-{land_max} band)"
 msgid_plural "{n} lands (outside this deck's {land_min}-{land_max} band)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: sensei_top/coach/evidence.py
+#, python-brace-format
+msgid ""
+"{n} lost game(s) have a turning_point finding on a turn with no own-turn "
+"number, so the turning-point breakdown cannot place them in a stage, and "
+"they are not counted in any bucket."
+msgid_plural ""
+"{n} lost game(s) have a turning_point finding on a turn with no own-turn "
+"number, so the turning-point breakdown cannot place them in a stage, and "
+"they are not counted in any bucket."
 msgstr[0] ""
 msgstr[1] ""
 

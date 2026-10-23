@@ -1431,7 +1431,8 @@ def _insert_self_turns(conn, match_id, *, self_lands_by_turn):
         conn.execute(
             "INSERT INTO turns (match_id, game_number, turn_number, active_seat, "
             "self_life, opp_life, self_hand, opp_hand, self_lands, self_permanents, "
-            "opp_permanents) VALUES (?, 1, ?, 1, 20, 20, 7, 7, ?, 0, 0)",
+            "opp_permanents, active_turn_number) "
+            "VALUES (?1, 1, ?2, 1, 20, 20, 7, 7, ?3, 0, 0, ?2)",
             (match_id, turn_number, self_lands),
         )
 

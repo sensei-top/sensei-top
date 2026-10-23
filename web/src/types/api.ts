@@ -4624,7 +4624,7 @@ export interface components {
             /** Turn Number */
             turn_number: number;
             /** Self Turn Index */
-            self_turn_index: number;
+            self_turn_index: number | null;
             /** Index */
             index: number;
         };

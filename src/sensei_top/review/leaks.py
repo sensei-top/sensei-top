@@ -176,22 +176,22 @@ def mana_flags(conn, match_id: str) -> tuple[bool | None, bool | None]:
 
     Either flag is ``None`` — unknown, never ``False`` — when its own match
     has no evidence to answer it from (rule 4: unknown is ``NULL``, not a
-    guess). ``screwed`` is ``None`` only when the match has **no self-turn
-    rows at all** (every MTGO match, since ``projector/mtgo/project.py``
-    never writes ``turns``); a short game with rows that never reaches the
-    check's own turn index stays ``False``, not unknown. ``flooded`` is
-    ``None`` whenever its own narrower evidence is missing: no deck row, an
-    unnamed/empty decklist, an MTGO deck with maindeck copies it could not
-    resolve to a card (a partial list), or no usable first/last ``turns``
-    rows to compute a lands-seen ratio from.
+    guess). ``screwed`` is ``None`` when the match has no self-turn row
+    with an own-turn number (every MTGO match, since
+    ``projector/mtgo/project.py`` never writes ``turns``, and an Arena match
+    whose turns Arena never numbered); a short game, or one partly numbered,
+    that never shows the check's own turn index stays ``False``, not unknown.
+    ``flooded`` is ``None`` whenever its own narrower evidence is missing: no
+    deck row, an unnamed/empty decklist, an MTGO deck with maindeck copies it
+    could not resolve to a card (a partial list), or no usable first/last
+    ``turns`` rows to compute a lands-seen ratio from.
     """
     self_turn_rows = conn.execute(
         """
-        SELECT ROW_NUMBER() OVER (ORDER BY t.turn_number) AS self_turn_index,
-               t.self_lands
-          FROM turns t JOIN matches m USING (match_id)
-         WHERE t.match_id = ? AND t.active_seat = m.self_seat
-         ORDER BY t.turn_number
+        SELECT self_turn_index, self_lands
+          FROM v_self_turns
+         WHERE match_id = ? AND self_turn_index IS NOT NULL
+         ORDER BY game_number, turn_number
         """,
         (match_id,),
     ).fetchall()

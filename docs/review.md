@@ -310,10 +310,18 @@ post-reset field data, or one format's field with another's.
 `consensus_since` (one window for every match) is also accepted, though no
 caller passes it; passing both raises.
 
+The screw check reads `v_self_turns`, so its "fourth turn" is Arena's own
+number for that seat (`turns.active_turn_number`), numbered within each
+game, never ranked across the match's turns. A turn with no own-turn number
+is skipped by the check. MTGO writes no `turns` rows, so it has no index to
+check.
+
 Both flags are read per match by `leaks.py::mana_flags`, which answers
 `None` — not `False` — when a match has no evidence to answer from: `screwed`
-needs at least one `turns` row for the match (MTGO's projector never writes
-`turns` at all, so every MTGO match reads `None` here, never "not screwed"),
+needs at least one self-turn row with an own-turn number (MTGO's projector
+never writes `turns` at all, so every MTGO match reads `None` here, never
+"not screwed"; so does an Arena match whose turns Arena never numbered; a
+partly numbered match answers from its numbered turns),
 and `flooded` separately needs a resolved decklist with every card named and
 a usable first/last-turn read, so a match can answer one flag and not the
 other. `_mana_leaks` keeps each flag's own known population — the matches
