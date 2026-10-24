@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The README and the site now say how Sensei Top is built: most of its
+  code, tests and documentation are written by Claude, Anthropic's models,
+  from the maintainer's plans. The README's "How it's built" section says
+  what the maintainer does and how each change is reviewed and tested.
+  Nothing in the app changes.
+
 ## [1.2.2] - 2026-10-23
 
 ### Added
