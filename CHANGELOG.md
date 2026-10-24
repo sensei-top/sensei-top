@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-10-24
+
 ### Added
 
 - The README and the site now say how Sensei Top is built: most of its
@@ -348,7 +350,8 @@ The app is the same as 0.7.1's; this release carries the website.
   keeps recording with the window closed, and start-with-Windows as an
   option. On Linux, an AppImage that updates itself in place.
 
-[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.2.2...HEAD
+[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.2.3...HEAD
+[1.2.3]: https://github.com/sensei-top/sensei-top/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/sensei-top/sensei-top/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/sensei-top/sensei-top/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/sensei-top/sensei-top/compare/v1.1.0...v1.2.0
