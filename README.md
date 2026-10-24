@@ -103,6 +103,39 @@ The dashboard opens at http://127.0.0.1:8000. [Getting
 started](docs/user/getting-started.md) has the rest. Before changing code,
 read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md).
 
+## How it's built
+
+Sensei Top is developed with heavy use of generative AI. Most of its code,
+tests and documentation are written by Claude, Anthropic's models (Opus and
+Sonnet) working through Claude Code, and most commits Claude wrote carry a
+`Co-Authored-By: Claude` line. The maintainer decides what gets built and
+how it should behave, writes the plan each change follows, and reads the
+diff of every merge: closely where a mistake would cost the most, not every
+line.
+
+Each change is checked before it is merged:
+
+- **A second review.** A separate Claude reviewer checks each step of a
+  plan against the rules in [AGENTS.md](AGENTS.md) and runs the tests
+  itself.
+- **Tests against real logs.** The project's rule is that every rule that
+  reads a game log has a test against an anonymized capture of a real Arena
+  or Magic Online log, with expectations read from that capture rather than
+  copied from the code's output.
+- **The full suite on every pull request.** Linting and the Python and
+  dashboard tests run in [CI](.github/workflows/ci.yml) on each pull
+  request to `develop` and `main`.
+- **A privacy scan** runs before every commit and push, from the
+  repository's own [git hooks](scripts/git-hooks/), so no player name,
+  account ID or local path reaches it.
+- **Real games.** Nothing is released before the maintainer has run it
+  against their own Arena and Magic Online games, and release builds are
+  tried by a small group of testers on Windows and a Steam Deck.
+
+This is about how the app is made. The app itself never sends anything to
+a model unless you set a Claude key of your own and press a button that
+says it will use it.
+
 ## Contributing and support
 
 A log-format fix that arrives with the log lines that broke it is the most
