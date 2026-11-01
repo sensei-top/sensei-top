@@ -70,8 +70,9 @@ __all__ = [
 ]
 
 # Every staleness hash an answer can carry is a SHA-256 hex digest:
-# brief/store.py::list_hash (the deck guide, briefs, coverage) and
-# review/narrative_store.py's context hash (the prose cards).
+# brief/store.py::list_hash (the deck guide, briefs, coverage),
+# review/narrative_store.py's context hash (the prose cards) and
+# guide/rcq.py::rcq_context (the RCQ guide).
 CONTEXT_SHAPE = re.compile(r"[0-9a-f]{64}")
 
 # A body past this is 413: no card's answer comes near it.
@@ -106,11 +107,15 @@ _SUBJECTS = {
     "coach": N_("another format"),
 }
 
-# The one card whose prompt carries no context: an RCQ guide records one
-# pasted list and has no staleness hash. Every other card's answer must
-# bring its context back, since it is stored as the hash the answer was
-# written for and a missing one would have to be guessed (rule 4).
-_NO_CONTEXT = frozenset({"rcq"})
+# The one card whose answer may come back without a context: an RCQ guide's
+# prompt carried none until migration 069, and an answer copied from an
+# older prompt is still a guide for the list stored beside it, so it is
+# stored with the context unknown (NULL), never refused and never guessed.
+# One that does carry a context is held to its shape like every other card's.
+# Every other card's answer must bring its context back, since it is stored
+# as the hash the answer was written for and a missing one would have to be
+# guessed (rule 4).
+_OPTIONAL_CONTEXT = frozenset({"rcq"})
 
 _FENCE = re.compile(r"```[A-Za-z]*[ \t]*\r?\n(.*?)```", re.DOTALL)
 
@@ -286,8 +291,9 @@ def read_answer(raw: str | dict, expected_for: str, *, require_header: bool) -> 
     """Read one pasted or imported answer for the card ``expected_for``
     names. Raises ``AnswerError`` when it is not a JSON object, belongs to
     another card (checked before anything else), carries an edited or
-    missing ``context`` (every card but the RCQ guide has one, and it is
-    stored, never guessed), or has a header but no ``"answer"``.
+    missing ``context`` (only the RCQ guide's may be missing, from a prompt
+    older than its hash; it is stored, never guessed), or has a header but
+    no ``"answer"``.
 
     With no ``"for"`` at all the answer is refused when ``require_header``
     (the dashboard), and otherwise read whole as the body (the CLI imports,
@@ -317,8 +323,8 @@ def read_answer(raw: str | dict, expected_for: str, *, require_header: bool) -> 
         raise _wrong_card(got, expected_for)
 
     context = obj.get("context")
-    if _kind(got) in _NO_CONTEXT:
-        context = None
+    if context is None and _kind(got) in _OPTIONAL_CONTEXT:
+        pass
     elif not isinstance(context, str) or CONTEXT_SHAPE.fullmatch(context) is None:
         raise AnswerError(_(
             'The answer\'s "context" line was changed. It has to be copied back '

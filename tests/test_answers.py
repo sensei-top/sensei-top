@@ -35,8 +35,9 @@ from sensei_top.brief.narrative import _BRIEF_TOOL, _MULTI_BRIEF_TOOL
 from sensei_top.brief.store import list_hash
 from sensei_top.db import open_database
 from sensei_top.guide.deck import list_identities
+from sensei_top.guide.decklist import parse_decklist
 from sensei_top.guide.narrative import _GUIDE_TOOL
-from sensei_top.guide.rcq import _RCQ_TOOL
+from sensei_top.guide.rcq import _RCQ_TOOL, rcq_context
 from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file
 
@@ -245,12 +246,18 @@ def test_a_context_of_the_wrong_shape_is_refused(context):
     )
 
 
-def test_a_card_with_no_context_reads_none():
+def test_an_rcq_answer_keeps_its_context_and_may_come_without_one():
+    """The RCQ prompt carries a context (``rcq_context``), and the answer's is
+    stored as the list it was written for. One copied from a prompt older
+    than the hash has none: read as unknown, never refused, never guessed.
+    One that is there is held to its shape, like every other card's."""
+    raw = json.dumps(_headed("rcq:k", BODY, context=HASH))
+    assert read_answer(raw, "rcq:k", require_header=True) == Answer(body=BODY, context=HASH)
     raw = json.dumps(_headed("rcq:k", BODY, context=None))
     assert read_answer(raw, "rcq:k", require_header=True) == Answer(body=BODY, context=None)
-    # Its prompt asks for none, so one sent anyway is not stored.
-    raw = json.dumps(_headed("rcq:k", BODY, context=HASH))
-    assert read_answer(raw, "rcq:k", require_header=True).context is None
+    raw = json.dumps(_headed("rcq:k", BODY, context="not-a-hash"))
+    with pytest.raises(AnswerError):
+        read_answer(raw, "rcq:k", require_header=True)
 
 
 @pytest.mark.parametrize(
@@ -425,16 +432,35 @@ def test_the_coverage_prompt_ends_with_its_contract(client, identity):
     )
 
 
-def test_the_rcq_prompt_ends_with_its_contract_and_no_context(client, identity):
-    """An RCQ guide records one pasted list and has no staleness hash, so its
-    contract carries no ``context``."""
+def test_the_rcq_prompt_ends_with_its_contract_and_its_lists_context(client, identity):
+    """The RCQ prompt's context is the pasted list's cards and the expected
+    archetypes (``rcq_context``), so an answer says which list it is for."""
+    text = "Deck\n4 Alpha Card\n56 Mountain\n"
     body = client.get(
-        f"/api/guide/{identity.key}/rcq/preview",
-        params={"decklist": "Deck\n4 Alpha Card\n56 Mountain\n"},
+        f"/api/guide/{identity.key}/rcq/preview", params={"decklist": text},
     ).json()
+    keys = [x["key"] for x in body["expected"]]
+    context = rcq_context(parse_decklist(text), keys)
     assert body["prompt"].endswith(
-        "\n\n---\n\n" + answer_format(rcq_for(identity.key), None, _RCQ_TOOL["input_schema"])
+        "\n\n---\n\n"
+        + answer_format(rcq_for(identity.key), context, _RCQ_TOOL["input_schema"])
     )
+
+
+def test_the_rcq_context_is_the_lists_cards_not_its_spelling():
+    """Another order or other spacing is the same list; a card added, cut or
+    moved to the sideboard is another, and so are other expected archetypes."""
+    base = rcq_context(parse_decklist("Deck\n4 Alpha Card\n56 Mountain\n"), ["a"])
+    # A blank line starts the sideboard in Arena's format, so the retyped
+    # list keeps its maindeck in one block.
+    same = rcq_context(parse_decklist("Deck\n56 Mountain\n4   Alpha Card\n\n"), ["a"])
+    assert same == base
+    for other in (
+        rcq_context(parse_decklist("Deck\n3 Alpha Card\n57 Mountain\n"), ["a"]),
+        rcq_context(parse_decklist("Deck\n56 Mountain\n\nSideboard\n4 Alpha Card\n"), ["a"]),
+        rcq_context(parse_decklist("Deck\n4 Alpha Card\n56 Mountain\n"), ["b"]),
+    ):
+        assert other != base
 
 
 def test_the_schema_is_said_once_in_a_copied_prompt(client, identity):

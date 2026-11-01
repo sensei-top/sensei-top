@@ -1670,6 +1670,7 @@ def cmd_rcq(args) -> None:
             model=args.author, decklist_text=text, expected=list(evidence.expected_keys),
             own_archetype_key=args.own, prompt=prompt,
             corpus_latest_event=max(newest) if newest else None,
+            written_for=answer.context,
         )
         conn.commit()
         print(f"Imported the RCQ guide for {args.deck}.")

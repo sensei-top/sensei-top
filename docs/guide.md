@@ -456,8 +456,18 @@ prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
   Or the answer to the copied prompt is pasted into the page's box
   (`PUT …/rcq/narrative`, the generate body plus `answer`): the server
   rebuilds the prompt from that body and checks the answer's
-  `for: rcq:{key}` line. The RCQ prompt carries no `context` hash
-  (`BACKLOG.md`, BL-033).
+  `for: rcq:{key}` line. The prompt also carries a `context`,
+  `guide/rcq.py::rcq_context`: a hash of the list's cards, both boards
+  counted by name, and the expected archetypes, so another order or other
+  spacing is the same list and a card added, cut or moved is another. The
+  box stays usable while the preview catches up after an edit, so an
+  answer copied for one list can be saved with another; it is stored
+  against the list sent, as before, with the `context` it carried, and
+  `GET …/rcq` says `answered_for_another_list` when the two differ, which
+  the page shows in place of the "changed" note. An answer copied from a
+  prompt older than the hash has no `context` and is stored with it
+  unknown (`NULL`), never refused; a generated guide stores none either,
+  being written for the list sent with it.
   `sensei-top rcq --deck KEY --decklist FILE [--expect K1,K2] [--own K]
   --prompt` prints the prompt and makes no call; `--import FILE [--author
   NAME]` stores a written answer.
@@ -465,8 +475,9 @@ prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
   `coach_report`: each guide is written against one day's field and an
   older one stays readable. It holds the list as pasted, the expected keys,
   the prompt, the whole narrative with its plan problems, the newest corpus
-  event date and the measured cost (`NULL` when the model is unpriced).
-  `project()` never reads it.
+  event date, the measured cost (`NULL` when the model is unpriced) and,
+  since migration 069, `written_for`, the `context` a pasted or imported
+  answer brought back. `project()` never reads it.
 - **Routes.** `GET …/rcq` returns the latest stored guide (`status:
   "none"` before one exists); `GET …/rcq/markdown` renders it for the
   user's phone, since the server is loopback only.

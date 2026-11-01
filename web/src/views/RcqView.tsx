@@ -94,6 +94,9 @@ export function RcqView({ deckKey }: { deckKey: string }) {
   const sent = { decklist: inputs.decklist, expected: settled.expected, own: settled.own }
   const showOwnPicker = inputs.own != null || (current && preview.data?.own_archetype_key == null)
   const changed = response?.decklist_text != null && response.decklist_text.trim() !== inputs.decklist.trim()
+  // The stored answer's own prompt was for another list than the one saved
+  // beside it: said even when the box still holds the saved list.
+  const answeredElsewhere = response?.answered_for_another_list === true
   const names: Record<string, string> = Object.fromEntries(
     (preview.data?.expected ?? []).map((each) => [each.key, each.name]),
   )
@@ -132,8 +135,8 @@ export function RcqView({ deckKey }: { deckKey: string }) {
         model={response?.model}
         generatedAt={response?.generated_at}
         costUsd={response?.cost_usd}
-        stale={changed}
-        staleNote={t('rcq.view.staleNote')}
+        stale={changed || answeredElsewhere}
+        staleNote={answeredElsewhere ? t('rcq.view.answeredForAnotherList') : t('rcq.view.staleNote')}
         loading={!current && inputs.decklist.trim() !== ''}
         onGenerate={() =>
           generate.mutate({

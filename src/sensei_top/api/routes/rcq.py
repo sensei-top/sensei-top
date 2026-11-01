@@ -44,6 +44,7 @@ from sensei_top.guide.rcq import (
     RcqEvidence,
     RcqNarrative,
     build_rcq,
+    rcq_context,
     rcq_from_json,
     rcq_prompt,
     top8_name,
@@ -75,10 +76,17 @@ def _narrative_out(n: RcqNarrative) -> RcqNarrativeOut:
 
 
 def _guide_out(stored: StoredRcq) -> RcqGuideOut:
+    # The answer's context against the list stored beside it (migration 069):
+    # unknown, for a generated guide or an older prompt's answer, is not
+    # "another list".
+    another = stored.written_for is not None and stored.written_for != rcq_context(
+        parse_decklist(stored.decklist_text), stored.expected
+    )
     return RcqGuideOut(
         status="ok", id=stored.id, generated_at=stored.generated_at, model=stored.model,
         cost_usd=stored.cost_usd, decklist_text=stored.decklist_text,
         expected=list(stored.expected), guide=_narrative_out(stored.guide),
+        answered_for_another_list=another,
     )
 
 
@@ -257,10 +265,11 @@ def paste_rcq(
 
     422 for another card's or an unreadable answer, nothing stored (a flex
     note role other than core, flex or risk is refused as on the CLI); 413
-    over 256 KB; 404 an unknown deck. The RCQ prompt carries no context
-    hash, so the header is ``for`` alone. Stored with the sentinel model
-    ``pasted``, no tokens, no cost. Every paste keeps its own row, like a
-    generation.
+    over 256 KB; 404 an unknown deck. Stored with the ``context`` the
+    answer carries, the list it was written for (``rcq_context``; an answer
+    from a prompt older than the hash has none, and is stored with it
+    unknown), and the sentinel model ``pasted``, no tokens, no cost. Every
+    paste keeps its own row, like a generation.
     """
     check_pasted_length(body.answer)
     evidence, prompt = _evidence_and_prompt(request, conn, key, body, answer_contract=True)
@@ -285,6 +294,7 @@ def paste_rcq(
             model=PASTED_AUTHOR, decklist_text=body.decklist,
             expected=list(evidence.expected_keys), own_archetype_key=body.own,
             prompt=prompt, corpus_latest_event=_newest_event(evidence),
+            written_for=answer.context,
         ),
     )
     stored = latest_rcq(conn, key)

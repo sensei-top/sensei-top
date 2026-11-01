@@ -35,6 +35,9 @@ class StoredRcq:
     input_tokens: int | None
     output_tokens: int | None
     cost_usd: float | None
+    # The rcq_context the pasted answer brought back; None where unknown
+    # (migration 069).
+    written_for: str | None = None
 
 
 def _narrative_to_json(n: RcqNarrative) -> str:
@@ -89,19 +92,21 @@ def write_rcq(
     output_tokens: int | None = None,
     cost_usd: float | None = None,
     effort: str | None = None,
+    written_for: str | None = None,
 ) -> int:
-    """Append one guide; never replaces an earlier one. Returns its id."""
+    """Append one guide; never replaces an earlier one. Returns its id.
+    ``written_for`` is the ``context`` a pasted or imported answer carried."""
     cur = conn.execute(
         """
         INSERT INTO rcq_guide (deck_key, generated_at, model, effort, decklist_text,
             expected_json, own_archetype_key, prompt, guide_json,
-            corpus_latest_event, input_tokens, output_tokens, cost_usd)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            corpus_latest_event, input_tokens, output_tokens, cost_usd, written_for)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             deck_key, now_iso(), model, effort, decklist_text, json.dumps(list(expected)),
             own_archetype_key, prompt, _narrative_to_json(narrative),
-            corpus_latest_event, input_tokens, output_tokens, cost_usd,
+            corpus_latest_event, input_tokens, output_tokens, cost_usd, written_for,
         ),
     )
     assert cur.lastrowid is not None
@@ -124,4 +129,5 @@ def latest_rcq(conn: sqlite3.Connection, deck_key: str) -> StoredRcq | None:
         corpus_latest_event=row["corpus_latest_event"],
         input_tokens=row["input_tokens"], output_tokens=row["output_tokens"],
         cost_usd=row["cost_usd"],
+        written_for=row["written_for"],
     )

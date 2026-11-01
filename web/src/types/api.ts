@@ -1324,10 +1324,11 @@ export interface paths {
          *
          *     422 for another card's or an unreadable answer, nothing stored (a flex
          *     note role other than core, flex or risk is refused as on the CLI); 413
-         *     over 256 KB; 404 an unknown deck. The RCQ prompt carries no context
-         *     hash, so the header is ``for`` alone. Stored with the sentinel model
-         *     ``pasted``, no tokens, no cost. Every paste keeps its own row, like a
-         *     generation.
+         *     over 256 KB; 404 an unknown deck. Stored with the ``context`` the
+         *     answer carries, the list it was written for (``rcq_context``; an answer
+         *     from a prompt older than the hash has none, and is stored with it
+         *     unknown), and the sentinel model ``pasted``, no tokens, no cost. Every
+         *     paste keeps its own row, like a generation.
          */
         put: operations["paste_rcq_api_guide__key__rcq_narrative_put"];
         /**
@@ -4837,6 +4838,12 @@ export interface components {
             /** Expected */
             expected: string[];
             guide: components["schemas"]["RcqNarrativeOut"] | null;
+            /**
+             * Answered For Another List
+             * @description the pasted answer was written for another list than the one stored beside it: copied from the prompt for one list, saved after the list was edited; false when it was the same list or that is not known
+             * @default false
+             */
+            answered_for_another_list: boolean;
         };
         /** RcqMarkdownOut */
         RcqMarkdownOut: {

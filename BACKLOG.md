@@ -552,23 +552,6 @@ paper RCQs reach the field only through TopDeck (needs the user's key).
 **Needs:** A working TopDeck run, or another paper source
 (`docs/attribution.md`, "Rules for a new source").
 
-### BL-033 · An RCQ answer stored against an edited list
-
-type: fix · priority: P2 · status: ready · area: guide web
-
-The RCQ paste stores an answer against the list in the box at save time. The
-RCQ prompt carries no `context` hash, and the box stays usable while the
-preview catches up after an edit, so an answer copied for one list and saved
-after the list was edited is stored against the edited list, and the page's
-"changed" note cannot tell.
-
-**Why deferred:** Found in plan 24's review of phase 9c. Disabling the box
-while the preview updates would unmount it and lose the pasted text.
-
-**Needs:** A `context` hash on the RCQ prompt (the list as typed and the
-expected keys), stored with the guide so the page can say it was answered
-for another list.
-
 ### BL-034 · Detailed Logs off, untested
 
 type: fix · priority: P3 · status: needs-data · area: desktop

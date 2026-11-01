@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The live status no longer says Magic Online's game logs are being watched
   while their folder can't be read, such as a network share that isn't
   mounted. It says so again once the folder can be read.
+- An RCQ guide whose answer was copied for one list and saved after the
+  list was edited is now marked on the RCQ page as written for another
+  list. The prompt you copy says which list it was built from, so the page
+  can tell.
 
 ## [1.2.3] - 2026-10-24
 
