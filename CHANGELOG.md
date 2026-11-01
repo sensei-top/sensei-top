@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Every release is announced in the repository's
+  [Discussions](https://github.com/sensei-top/sensei-top/discussions/categories/announcements),
+  under Announcements, with its notes, so following Discussions is enough
+  to hear about a new version.
+
 ## [1.2.3] - 2026-10-24
 
 ### Added

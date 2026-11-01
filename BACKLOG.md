@@ -460,20 +460,6 @@ claim about another tracker taken from that tracker's own pages and dated;
 the new pages in `PORTUGUESE` and `run_worker_first`
 (`docs/frontend-site.md`, "The site").
 
-### BL-094 · An announcement for every release
-
-type: chore · priority: P1 · status: ready · area: release
-
-A release reaches the people who follow the repository only through
-GitHub's release feed. Discussions has an Announcements category that no
-release posts to.
-
-**Why deferred:** Asked 2026-11-01.
-
-**Needs:** The release job opens a discussion in Announcements, linked to
-the release, with the release's notes. It never blocks a release: the
-updater's feeds matter more than the post.
-
 ## Bugs
 
 ### BL-025 · A prepare face several cards share

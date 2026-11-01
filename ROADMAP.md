@@ -37,9 +37,10 @@ Magic Online's log is read, and Arena found on more Linux setups
    asks for more public use first. (BL-070, BL-072)
 2. **Being found.** The site found for what players search for (a free
    alternative to Untapped, a tracker for Linux and the Steam Deck, one
-   for Magic Online), every release announced in Discussions, an alert
-   whenever someone names the project in public, and both search engines'
-   reports on what the site is found for. (BL-093, BL-094, BL-095, BL-096)
+   for Magic Online), an alert whenever someone names the project in
+   public, and both search engines' reports on what the site is found
+   for. Every release is now announced in Discussions. (BL-093, BL-095,
+   BL-096)
 
 ## Next
 
