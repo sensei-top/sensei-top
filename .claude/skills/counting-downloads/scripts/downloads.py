@@ -2,8 +2,9 @@
 
 The site's Download buttons redirect to these same files (`worker/download.mjs`),
 so GitHub's counters are the one place a download is counted. Only the
-installers count as downloads; the updater feeds and blockmaps are separated
-out, and the feeds on the newest release give the active-install estimate.
+installers count as downloads; the updater feeds, blockmaps and the Store
+package are separated out, and the feeds on the newest release give the
+active-install estimate.
 Reads the public API without a token (60 requests an hour is plenty).
 """
 
@@ -17,8 +18,8 @@ from datetime import UTC, datetime
 
 RELEASES_API = "https://api.github.com/repos/sensei-top/sensei-top/releases?per_page=100"
 FIRST_PUBLIC = "v1.0.0"
-ROW = "{:<9} {:<11} {:>5} {:>5} {:>6} {:>4} {:>10} {:>6}"
-COLUMNS = ("release", "published", "days", "win", "appimg", "tar", "feeds w/l", "blkmap")
+ROW = "{:<9} {:<11} {:>5} {:>5} {:>6} {:>4} {:>10} {:>6} {:>5}"
+COLUMNS = ("release", "published", "days", "win", "appimg", "tar", "feeds w/l", "blkmap", "appx")
 
 
 def kind(name: str) -> str:
@@ -35,6 +36,10 @@ def kind(name: str) -> str:
         return "feed_linux"
     if name.endswith(".blockmap"):
         return "blockmap"
+    if name.endswith(".appx"):
+        # The Store package, fetched by hand to submit to Partner Center; the
+        # Store installs it from its own servers, so this is never a user.
+        return "store"
     return "other"
 
 
@@ -89,6 +94,7 @@ def main() -> int:
                 *(c.get(column, 0) for column in ("windows", "appimage", "tarball")),
                 feeds,
                 c.get("blockmap", 0),
+                c.get("store", 0),
             )
         )
         if c.get("other"):
