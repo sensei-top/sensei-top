@@ -209,6 +209,26 @@ def test_live_reports_mtgo_watching_when_the_watcher_has_a_directory(tmp_path, m
         assert body["mtgo_watching"] is True
 
 
+def test_live_says_mtgo_is_not_watched_while_its_folder_cannot_be_read(tmp_path, make_client):
+    """The watcher's last check of the folder raised (a share not mounted):
+    it still has the folder, but nothing in it is being stored."""
+    from sensei_top.live import LiveIngester
+
+    db_path = tmp_path / "w.db"
+    conn = open_database(db_path)
+    conn.execute("INSERT INTO projection_state (id, mtgo_unreachable) VALUES (1, 1)")
+    conn.close()
+    watcher = LiveIngester(
+        db_path=db_path, log_path=tmp_path / "Player.log", mtgo_dir=tmp_path / "mtgo"
+    )
+
+    with make_client(create_app(db_path, watcher=watcher)) as c:
+        watcher.stats.running = True
+        body = c.get("/api/live").json()
+        assert body["watching"] is True
+        assert body["mtgo_watching"] is False
+
+
 def test_query_only_pragma_actually_blocks_writes(tmp_path):
     """Guards the assumption the read-only claim rests on: if this SQLite build
     ever ignored query_only, every endpoint would silently regain write access."""

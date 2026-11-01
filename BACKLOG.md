@@ -599,19 +599,6 @@ a pick is per match.
 **Needs:** A decision on whether confirmed picks should override the store's
 format there.
 
-### BL-036 · mtgo_watching with an unreachable folder
-
-type: fix · priority: P3 · status: ready · area: api mtgo
-
-`mtgo_watching` reports true while the running watcher has an MTGO
-directory, even while that directory is unreachable (a share not mounted, a
-folder MTGO moved).
-
-**Why deferred:** Minor. The watcher warns once when a run of failed checks
-starts, and counts it as one error.
-
-**Needs:** Plumbing the last check's outcome through to the status route.
-
 ### BL-037 · Arena's rename during a read on Windows
 
 type: fix · priority: P3 · status: needs-data · area: reader

@@ -212,6 +212,9 @@ class LiveIngester:
     # True from a check whose folder could not be read until one that could:
     # a run of failing checks is warned about and counted once.
     _mtgo_failing: bool = field(default=False, repr=False)
+    # What projection_state.mtgo_unreachable last got from this watcher;
+    # None until the first check, which always writes (``_record_mtgo_reach``).
+    _mtgo_reach_written: bool | None = field(default=None, repr=False)
     # time.monotonic() of the last deck-file read (both folders); None until
     # the first one, which therefore happens on this instance's first
     # ingest_once.
@@ -277,9 +280,33 @@ class LiveIngester:
                     self.stats.errors += 1
                     self.stats.last_error = str(exc)
                 log.warning("mtgo poll failed: %s", exc)
+            self._record_mtgo_reach(conn, unreachable=True)
             return 0
         self._mtgo_failing = False
+        self._record_mtgo_reach(conn, unreachable=False)
         return inserted
+
+    def _record_mtgo_reach(self, conn: sqlite3.Connection, *, unreachable: bool) -> None:
+        """Mirror the last check's outcome into ``projection_state`` for
+        ``/api/live``'s ``mtgo_watching``, which runs in another process
+        (migration 068). Written when it changes and for the first check, so a
+        steady folder costs no write per poll and an earlier run's value never
+        stands. A failed write is warned of and left for the next change: the
+        status line is not worth stopping the watch for."""
+        if self._mtgo_reach_written is unreachable:
+            return
+        try:
+            conn.execute(
+                """
+                INSERT INTO projection_state (id, mtgo_unreachable) VALUES (1, ?)
+                ON CONFLICT(id) DO UPDATE SET mtgo_unreachable = excluded.mtgo_unreachable
+                """,
+                (int(unreachable),),
+            )
+        except sqlite3.Error as exc:
+            log.warning("could not record whether the MTGO folder is reachable: %s", exc)
+            return
+        self._mtgo_reach_written = unreachable
 
     def _warn_unstattable(self, path: Path, exc: OSError) -> None:
         """The scan's ``on_stat_error``: the first time a file cannot be

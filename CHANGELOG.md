@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A player who uses only Arena no longer gets a warning about Magic Online
   in the app's log every time the tracker rebuilds its matches, when the
   settings file holds something else, such as a Claude key.
+- The live status no longer says Magic Online's game logs are being watched
+  while their folder can't be read, such as a network share that isn't
+  mounted. It says so again once the folder can be read.
 
 ## [1.2.3] - 2026-10-24
 

@@ -115,15 +115,23 @@ def live(request: Request, conn: Conn) -> LiveStatus:
     # own) reads no row rather than answering 500.
     try:
         projection_row = conn.execute(
-            "SELECT last_projection_at, projections FROM projection_state WHERE id = 1"
+            "SELECT last_projection_at, projections, mtgo_unreachable "
+            "FROM projection_state WHERE id = 1"
         ).fetchone()
     except sqlite3.OperationalError:
         projection_row = None
     last_projection = projection_row[0] if projection_row else None
     projections = projection_row[1] if projection_row else 0
+    # The watcher's last check of its MTGO folder raised (migration 068).
+    mtgo_unreachable = bool(projection_row[2]) if projection_row else False
     return LiveStatus(
         watching=bool(watcher and watcher.is_alive()),
-        mtgo_watching=bool(watcher and watcher.is_alive() and getattr(watcher, "mtgo_dir", None)),
+        mtgo_watching=bool(
+            watcher
+            and watcher.is_alive()
+            and getattr(watcher, "mtgo_dir", None)
+            and not mtgo_unreachable
+        ),
         arena_log=_arena_log(watcher),
         watcher_stopped=bool(watcher and getattr(watcher, "stopped_unexpectedly", lambda: False)()),
         last_ingest_at=last_ingest,

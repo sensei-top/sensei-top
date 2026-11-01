@@ -30,7 +30,8 @@ class LiveStatus(BaseModel):
     nothing here can be read from in-memory watcher state. Only
     ``watching``, ``mtgo_watching`` and ``watcher_stopped`` are asked
     of the watcher object directly (``is_alive()`` on the child process, the
-    MTGO directory it was started with, and ``stopped_unexpectedly()``, which
+    MTGO directory it was started with, whose last check's outcome is read
+    from ``projection_state`` like the rest, and ``stopped_unexpectedly()``, which
     serve's own monitor thread sets), since none needs shared memory to
     answer. ``arena_log`` is the one field that is neither: the watcher's own
     path, or while it waits what the same resolver finds now.
@@ -39,8 +40,9 @@ class LiveStatus(BaseModel):
     watching: bool = Field(description="a watcher is running and reachable from this server")
     mtgo_watching: bool = Field(
         False,
-        description="the running watcher has an MTGO game-log directory and stores each "
-        "game from it once the game ends",
+        description="the running watcher has an MTGO game-log directory, its last check of "
+        "it succeeded, and it stores each game from it once the game ends; false while "
+        "that folder cannot be read",
     )
     arena_log: str | None = Field(
         None,
