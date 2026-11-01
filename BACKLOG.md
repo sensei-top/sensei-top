@@ -802,20 +802,6 @@ shows both side by side. Found by plan 35's reviewers.
 **Needs:** A decision: one cutoff for both, or a sentence on Live that
 says why they differ.
 
-### BL-081 · An MTGO deck file's time from a second stat
-
-type: fix · priority: P3 · status: ready · area: reader mtgo
-
-`reader/mtgo_decks.py::_ingest_one_deck` stats the file for its identity
-token, then `_mtime_iso(path)` stats it again for `logged_at`. A write
-landing between the two leaves `logged_at` newer than the token's mtime.
-Found by plan 35's reviewers.
-
-**Why deferred:** No visible effect: the next poll re-reads the file either
-way.
-
-**Needs:** `logged_at` from the first `stat()`'s `st_mtime`.
-
 ### BL-086 · A drawn game in the report's game-length rates
 
 type: fix · priority: P3 · status: ready · area: cli

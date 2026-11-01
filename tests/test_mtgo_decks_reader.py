@@ -15,6 +15,7 @@ import os
 import shutil
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -175,6 +176,36 @@ def test_the_state_row_keeps_the_size_in_byte_offset_and_the_token_in_inode(tmp_
     assert row["byte_offset"] == FIXTURE.stat().st_size
     assert row["last_size"] == FIXTURE.stat().st_size
     assert row["inode"] == f"{st.st_ino}:{st.st_mtime_ns}"
+
+
+def test_logged_at_comes_from_the_stat_the_token_came_from(tmp_path, monkeypatch):
+    """A write landing between the ``stat()`` and the read moves the file's
+    mtime on; the row is still dated by the first ``stat()``, the one its
+    identity token names, with the write made to land there on purpose."""
+    folder = _folder(tmp_path, "Alpha.dek")
+    deck = folder / "Alpha.dek"
+    first = deck.stat()
+    real_read = Path.read_bytes
+
+    def read_after_a_write(self):
+        if self == deck:
+            os.utime(self, ns=(first.st_atime_ns, first.st_mtime_ns + 120 * 1_000_000_000))
+        return real_read(self)
+
+    monkeypatch.setattr(Path, "read_bytes", read_after_a_write)
+    conn = open_database(tmp_path / "t.db")
+
+    ingest_deck_dir(conn, folder)
+
+    expected = datetime.fromtimestamp(first.st_mtime_ns // 1_000_000_000).isoformat(
+        timespec="seconds"
+    )
+    assert _deck_rows(conn)[0]["logged_at"] == expected
+    token = conn.execute(
+        "SELECT inode FROM ingest_state WHERE source_path = ?", (str(deck),)
+    ).fetchone()["inode"]
+    assert token == f"{first.st_ino}:{first.st_mtime_ns}"
+    assert deck.stat().st_mtime_ns != first.st_mtime_ns
 
 
 def test_the_same_bytes_under_another_name_is_another_row(tmp_path):
