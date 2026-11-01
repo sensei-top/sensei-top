@@ -1166,36 +1166,3 @@ say its content "is not for resale" and forbid use that would "in any way
 exploit any of the content"; only the API page's grant answers it today, and
 the question to TopDeck should quote both. The fetch runs on the user's own
 key.
-
-### BL-095 · Alerts for every mention
-
-type: chore · priority: P1 · status: blocked · area: release
-
-Nothing tells the maintainer when someone names Sensei Top in public, so a
-question or a complaint in a thread waits until someone stumbles on it.
-
-**Why deferred:** Asked 2026-11-01. Blocked on the maintainer: both are
-accounts of their own.
-
-**Needs:** An F5Bot account (free; Reddit, Hacker News and Lobsters by
-e-mail) with the keywords `"sensei top"` and `senseitop`, and a Google
-Alert for `"Sensei Top" Magic`. The plain name alone matches unrelated
-pages, so each keyword is checked against a week of alerts and narrowed.
-
-### BL-096 · Google Search Console and Bing Webmaster Tools
-
-type: chore · priority: P1 · status: blocked · area: site
-
-Neither search engine has been told the site exists, so there is no report
-of what it is found for, what is indexed, or what failed.
-
-**Why deferred:** Asked 2026-11-01. Blocked on the maintainer: both need
-their accounts and the domain's DNS, which is in Cloudflare.
-
-**Needs:** A Domain property in Search Console for `senseitop.com`,
-verified with the TXT record it gives, added in Cloudflare's DNS (nothing
-in `site/` changes, and the property covers `www` too); then Bing
-Webmaster Tools, imported from Search Console; then
-`https://senseitop.com/sitemap.xml`, which the site serves, submitted in
-both.
-Bing's index also feeds Copilot.
