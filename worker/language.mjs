@@ -13,6 +13,9 @@ export const PORTUGUESE = {
   '/': '/pt-br/',
   '/help/': '/pt-br/help/',
   '/privacy/': '/pt-br/privacy/',
+  '/untapped/': '/pt-br/untapped/',
+  '/linux/': '/pt-br/linux/',
+  '/mtgo/': '/pt-br/mtgo/',
 }
 
 /** The redirect to the Portuguese page, or null to serve the page asked for. */

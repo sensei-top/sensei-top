@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTG Arena tracker for Linux and the Steam Deck · Sensei Top</title>
+<meta name="description" content="Sensei Top is a free MTG Arena and Magic Online tracker that runs natively on Linux and the Steam Deck's desktop mode, and finds Arena's log in Steam's Proton prefix, Lutris, Heroic, Bottles or ~/.wine.">
+<link rel="canonical" href="https://senseitop.com/linux/">
+<link rel="alternate" hreflang="en" href="https://senseitop.com/linux/">
+<link rel="alternate" hreflang="pt-BR" href="https://senseitop.com/pt-br/linux/">
+<link rel="alternate" hreflang="x-default" href="https://senseitop.com/linux/">
+<meta name="theme-color" content="#0b0c14">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sensei Top">
+<meta property="og:title" content="MTG Arena tracker for Linux and the Steam Deck · Sensei Top">
+<meta property="og:description" content="Sensei Top is a free MTG Arena and Magic Online tracker that runs natively on Linux and the Steam Deck's desktop mode, and finds Arena's log in Steam's Proton prefix, Lutris, Heroic, Bottles or ~/.wine.">
+<meta property="og:url" content="https://senseitop.com/linux/">
+<meta property="og:image" content="https://senseitop.com/img/og-en.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Sensei Top dashboard's Home page: the last session's record and the last match.">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="pt_BR">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/site.css">
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "73e9bc45819145e3afbbde2244e8d023"}'></script>
+</head>
+<body>
+<div class="page">
+
+<header class="site-header">
+<a class="brand" href="/"><img src="/img/mark.svg" alt="" width="28" height="28">Sensei Top</a>
+<nav>
+<a href="/#download">Download</a>
+<a href="/help/">Help</a>
+<a href="/#never-leaves">Privacy</a>
+<a href="/#donate">Donate</a>
+</nav>
+<div class="lang" role="group" aria-label="Language" title="Language"><span aria-current="page">EN</span><a href="/pt-br/linux/" hreflang="pt-BR" lang="pt-BR" title="Ler em português" aria-label="Português (Brasil)">PT</a></div>
+</header>
+
+<main>
+<h1>Sensei Top on Linux and the Steam Deck</h1>
+<p class="lead">Arena and Magic Online both run on Linux, through Proton or Wine. Sensei Top runs beside them as a Linux app of its own: an AppImage that updates itself, with nothing to set up in the game's prefix.</p>
+
+<section id="native">
+<h2>A Linux app, not a Windows one under Proton</h2>
+<p>Most trackers are Windows programs, so on Linux they have to run inside the game's Proton or Wine prefix, and a Proton update can break them. Sensei Top runs outside the prefix. It only reads the log Arena writes there, and never touches anything the game owns.</p>
+</section>
+
+<section id="finding">
+<h2>Finding Arena's log</h2>
+<p>Under Proton or Wine, Arena's log sits deep inside its prefix's <code>drive_c</code> folder. The app looks for it in Steam's libraries, in <code>$WINEPREFIX</code>, in the prefixes Lutris, Heroic and Bottles make, and in <code>~/.wine</code>. If yours is somewhere else, open <b>Settings</b>, under <b>Sources</b>, and set the <b>Log file</b> there; the <a href="https://github.com/sensei-top/sensei-top/blob/main/INSTALL.md#linux">install guide</a> says where it is.</p>
+</section>
+
+<section id="install">
+<h2>Install</h2>
+<p>Download <a href="/download/linux">the AppImage</a>, allow it to run as a program in the file's properties, and double-click it. On the Steam Deck, do this in desktop mode. The <a href="/help/#install">help page</a> has each step, and a <code>.tar.gz</code> for a system where the AppImage will not run.</p>
+</section>
+
+<section id="mtgo">
+<h2>Magic Online too</h2>
+<p>Magic Online under Wine or Proton writes its game logs inside that prefix's <code>drive_c</code> folder. Give the app that folder once, with your name on Magic Online, and its matches join Arena's on the same dashboard. <a href="/mtgo/">Sensei Top for Magic Online</a></p>
+</section>
+</main>
+
+<footer class="site-footer">
+<p>Sensei Top is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.</p>
+<p>Card data and images come from <a href="https://scryfall.com">Scryfall</a>, tournament results from <a href="https://github.com/fbettega/MTG_decklistcache">MTG_decklistcache</a> and <a href="https://topdeck.gg">TopDeck.gg</a>, and archetype definitions from <a href="https://github.com/Badaro/MTGOFormatData">MTGOFormatData</a>. None of them produces or endorses Sensei Top. What is taken from each, and on what terms, is in the <a href="https://github.com/sensei-top/sensei-top/blob/main/docs/attribution.md">attribution page</a>.</p>
+<p><a href="/linux/">Linux and the Steam Deck</a> · <a href="/mtgo/">Magic Online</a> · <a href="/untapped/">Sensei Top and Untapped</a></p>
+<p><a href="/">Home</a> · <a href="/help/">Help</a> · <a href="/privacy/">Privacy</a> · <a href="/pt-br/linux/" hreflang="pt-BR" lang="pt-BR">Português (Brasil)</a></p>
+</footer>
+
+</div>
+</body>
+</html>
