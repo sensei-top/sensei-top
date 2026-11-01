@@ -20,6 +20,9 @@ test('a visitor in Brazil arriving from elsewhere gets the Portuguese page', asy
     ['/', '/pt-br/'],
     ['/help/', '/pt-br/help/'],
     ['/privacy/', '/pt-br/privacy/'],
+    ['/untapped/', '/pt-br/untapped/'],
+    ['/linux/', '/pt-br/linux/'],
+    ['/mtgo/', '/pt-br/mtgo/'],
     ['/?utm_source=x', '/pt-br/?utm_source=x'],
   ]) {
     for (const referer of [undefined, 'https://www.google.com/', 'not a url']) {

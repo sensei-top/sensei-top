@@ -37,6 +37,14 @@ PAGES = {
     "/pt-br/privacy/": ("pt-br/privacy/index.html", "pt-BR", "/privacy/"),
     "/help/": ("help/index.html", "en", "/pt-br/help/"),
     "/pt-br/help/": ("pt-br/help/index.html", "pt-BR", "/help/"),
+    # One page per search the app can win: the alternative to
+    # Untapped, Arena on Linux and the Steam Deck, and Magic Online.
+    "/untapped/": ("untapped/index.html", "en", "/pt-br/untapped/"),
+    "/pt-br/untapped/": ("pt-br/untapped/index.html", "pt-BR", "/untapped/"),
+    "/linux/": ("linux/index.html", "en", "/pt-br/linux/"),
+    "/pt-br/linux/": ("pt-br/linux/index.html", "pt-BR", "/linux/"),
+    "/mtgo/": ("mtgo/index.html", "en", "/pt-br/mtgo/"),
+    "/pt-br/mtgo/": ("pt-br/mtgo/index.html", "pt-BR", "/mtgo/"),
 }
 ALL_PAGES = list(PAGES)
 # The landing's feature rows, one per place in the dashboard's rail.
@@ -49,7 +57,7 @@ SHELL_PAGES = [*ALL_PAGES, NOT_FOUND]
 FIRST_PAINT_LIMIT = 600 * 1024
 WHOLE_PAGE_LIMIT = 1024 * 1024
 LANDINGS = ["/", "/pt-br/"]
-# The pages whose head carries the Open Graph card: all six, never the 404.
+# The pages whose head carries the Open Graph card: every page but the 404.
 OPEN_GRAPH_PAGES = ALL_PAGES
 
 
@@ -576,7 +584,16 @@ def test_the_download_buttons_go_to_the_worker_and_it_runs_only_for_them():
     config = json.loads((SITE.parent / "wrangler.json").read_text(encoding="utf-8"))
     assert (SITE.parent / config["main"]).is_file()
     first = config["assets"]["run_worker_first"]
-    assert first == ["/download/*", "/", "/help/", "/privacy/", "/pt-br/"]
+    assert first == [
+        "/download/*",
+        "/",
+        "/help/",
+        "/privacy/",
+        "/untapped/",
+        "/linux/",
+        "/mtgo/",
+        "/pt-br/",
+    ]
     assert set(first) == {"/download/*", *portuguese_redirects(), "/pt-br/"}
     assert config["assets"]["binding"] == "ASSETS"
     assert config["observability"] == {"enabled": False}
@@ -621,6 +638,35 @@ def test_the_static_buttons_keep_windows_first_for_an_unknown_visitor(url_path):
 def test_the_stylesheet_puts_the_primary_button_first():
     css = (SITE / "site.css").read_text(encoding="utf-8")
     assert ".actions .primary { order: -1; }" in css
+
+
+def test_the_sitemap_lists_every_page_with_its_other_language():
+    """`sitemap.xml` names each page once, with the same pair its own head names."""
+    import xml.etree.ElementTree as ET
+
+    ns = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9", "x": "http://www.w3.org/1999/xhtml"}
+    root = ET.parse(SITE / "sitemap.xml").getroot()
+    listed = {}
+    for url in root.findall("s:url", ns):
+        loc = url.find("s:loc", ns).text
+        listed[loc] = {link.get("hreflang"): link.get("href") for link in url.findall("x:link", ns)}
+    assert sorted(listed) == sorted(ORIGIN + path for path in ALL_PAGES)
+    for url_path in ALL_PAGES:
+        _, page = load(url_path)
+        own = {a["hreflang"]: a["href"] for a in page.find("link") if a.get("rel") == "alternate"}
+        assert listed[ORIGIN + url_path] == own, url_path
+    robots = (SITE / "robots.txt").read_text(encoding="utf-8")
+    assert f"Sitemap: {ORIGIN}/sitemap.xml" in robots.splitlines()
+
+
+def test_every_page_is_linked_from_the_landing_in_its_language():
+    """A page only the sitemap names is one a reader never finds."""
+    for landing in LANDINGS:
+        _, page = load(landing)
+        lang = PAGES[landing][1]
+        for url_path, (_, page_lang, _) in PAGES.items():
+            if page_lang == lang and url_path != landing:
+                assert url_path in hrefs(page), (landing, url_path)
 
 
 def portuguese_redirects():

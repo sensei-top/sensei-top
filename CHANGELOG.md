@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Every release is announced in the repository's
+  [Discussions](https://github.com/sensei-top/sensei-top/discussions/categories/announcements),
+  under Announcements, with its notes, so following Discussions is enough
+  to hear about a new version.
+- Three pages on [senseitop.com](https://senseitop.com), in English and
+  Brazilian Portuguese: how Sensei Top differs from Untapped, Sensei Top on
+  Linux and the Steam Deck, and Sensei Top for Magic Online. The site now
+  has a sitemap, and each page's title says what the app is.
+
 ## [1.2.3] - 2026-10-24
 
 ### Added

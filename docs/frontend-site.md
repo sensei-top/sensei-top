@@ -5,9 +5,9 @@ The static site in `site/`, the demo database and the screenshots taken against 
 ## The site
 
 `site/` is the public landing, help and privacy pages at `senseitop.com`, in
-English and Brazilian Portuguese: six hand-written HTML files (`index.html`,
-`help/index.html`, `privacy/index.html` and the same three under `pt-br/`), a
-seventh, `404.html`,
+English and Brazilian Portuguese: twelve hand-written HTML files (`index.html`,
+`help/index.html`, `privacy/index.html`, the three search pages below, and
+the same six under `pt-br/`), a thirteenth, `404.html`,
 in both languages on one page (served for any unknown path, because
 `wrangler.json` sets `not_found_handling` to `404-page`), one `site.css`, no build step and no JavaScript of ours. It is not part of `web/` and shares
 nothing with it at build time: the palette, the two fonts and the mark are
@@ -73,6 +73,21 @@ view())` and `prefers-reduced-motion: no-preference`, so a browser without
 scroll-driven animations, or a reader who asked for no motion, sees the
 page at rest. The landings alone preload the two latin woff2 files; a
 reading page's fonts arrive with its stylesheet.
+
+Three pages exist to be found in search, one per search the app can win:
+`untapped/`, how it differs from Untapped; `linux/`, Arena on Linux and the
+Steam Deck; `mtgo/`, Magic Online. They share the help page's layout and
+point to it for the steps rather than repeating them. What a page says
+about another tracker comes from that tracker's own pages, which it links,
+and carries the date it was read; a claim no page of theirs makes is left
+out. Read them again when the date is old, and change the date with them.
+Each page's `<title>` and description carry the words a player searches
+for ("tracker", "MTG Arena", "Magic Online", "Linux"), since the name alone
+is found only by someone who knows it. Every page is linked from the
+landing's footer in its language, and `sitemap.xml` lists each one with
+its other language, the same pair its head names; `robots.txt` names the
+sitemap. `tests/test_site.py` checks both against the pages, so a new page
+goes into `PAGES`, the sitemap and the landing's footer together.
 
 Every page but the 404 carries an Open Graph head, so a link posted on X,
 Discord or WhatsApp unfurls: `og:title` equal to the page's `<title>`,
