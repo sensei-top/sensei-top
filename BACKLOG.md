@@ -47,7 +47,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-093
+Next ID: BL-097
 
 ## Features
 
@@ -439,6 +439,40 @@ per-game screw beat reverses that, so it is a decision first.
 **Needs:** The decision, then, if it goes ahead, the strategy article the
 analyzer stands on (each analyzer has one, `docs/review.md`) and a
 threshold for screw that a fixture can pin.
+
+### BL-093 · Being found in search
+
+type: feat · priority: P1 · status: ready · area: site i18n
+
+The site is found only by its name. Every page's title is "Sensei Top"
+alone, the descriptions say "match analytics" where players search for a
+tracker, there is no sitemap, and no page answers the three searches the
+app can win: a free alternative to Untapped, a tracker for Arena on Linux
+and the Steam Deck, and a match tracker for Magic Online.
+
+**Why deferred:** The launch went to communities, not to search. Asked
+2026-11-01, after the AlternativeTo listing went up.
+
+**Needs:** Titles and descriptions with the words players search for; a
+`sitemap.xml` with each page's other language, named in `robots.txt`; one
+page per search above in both languages, linked from the landing, each
+claim about another tracker taken from that tracker's own pages and dated;
+the new pages in `PORTUGUESE` and `run_worker_first`
+(`docs/frontend-site.md`, "The site").
+
+### BL-094 · An announcement for every release
+
+type: chore · priority: P1 · status: ready · area: release
+
+A release reaches the people who follow the repository only through
+GitHub's release feed. Discussions has an Announcements category that no
+release posts to.
+
+**Why deferred:** Asked 2026-11-01.
+
+**Needs:** The release job opens a discussion in Announcements, linked to
+the release, with the release's notes. It never blocks a release: the
+updater's feeds matter more than the post.
 
 ## Bugs
 
@@ -1166,3 +1200,35 @@ say its content "is not for resale" and forbid use that would "in any way
 exploit any of the content"; only the API page's grant answers it today, and
 the question to TopDeck should quote both. The fetch runs on the user's own
 key.
+
+### BL-095 · Alerts for every mention
+
+type: chore · priority: P1 · status: blocked · area: release
+
+Nothing tells the maintainer when someone names Sensei Top in public, so a
+question or a complaint in a thread waits until someone stumbles on it.
+
+**Why deferred:** Asked 2026-11-01. Blocked on the maintainer: both are
+accounts of their own.
+
+**Needs:** An F5Bot account (free; Reddit, Hacker News and Lobsters by
+e-mail) with the keywords `"sensei top"` and `senseitop`, and a Google
+Alert for `"Sensei Top" Magic`. The plain name alone matches unrelated
+pages, so each keyword is checked against a week of alerts and narrowed.
+
+### BL-096 · Google Search Console and Bing Webmaster Tools
+
+type: chore · priority: P1 · status: blocked · area: site
+
+Neither search engine has been told the site exists, so there is no report
+of what it is found for, what is indexed, or what failed.
+
+**Why deferred:** Asked 2026-11-01. Blocked on the maintainer: both need
+their accounts and the domain's DNS, which is in Cloudflare.
+
+**Needs:** A Domain property in Search Console for `senseitop.com`,
+verified with the TXT record it gives, added in Cloudflare's DNS (nothing
+in `site/` changes, and the property covers `www` too); then Bing
+Webmaster Tools, imported from Search Console; then
+`https://senseitop.com/sitemap.xml` submitted in both (BL-093 writes it).
+Bing's index also feeds Copilot.
