@@ -75,6 +75,8 @@ from pathlib import Path
 import pytest
 
 from sensei_top.db import open_database
+from sensei_top.llm.config import config_path
+from sensei_top.projector.matches import project
 from sensei_top.projector.mtgo.decode import decode_strings
 from sensei_top.projector.mtgo.parse import last_game_decided, parse_strings
 from sensei_top.projector.mtgo.project import _resolve_grp_id, _Warner, project_mtgo
@@ -1216,6 +1218,31 @@ def test_no_handle_configured_projects_nothing_but_warns_once(conn):
     assert result["matches"] == 0
     assert result["warnings"] == 1
     assert conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0] == 0
+
+
+def test_a_rebuild_reads_the_mtgo_handle_only_with_mtgo_games_stored(tmp_path, caplog):
+    """A config file with no ``[mtgo]`` table (a Claude key alone) is an
+    Arena-only install's steady state: its rebuild says nothing about MTGO.
+    Once an MTGO game is stored, the missing handle costs the user that
+    match, and both warnings come back."""
+    path = config_path()
+    path.parent.mkdir(parents=True)
+    path.write_text('[claude]\nmodel = "claude-test"\n', encoding="utf-8")
+    conn = open_database(tmp_path / "t.db")
+    try:
+        with caplog.at_level(logging.WARNING):
+            project(conn)
+        assert "[mtgo]" not in caplog.text
+        assert "MTGO" not in caplog.text
+
+        _insert_mtgo_row(conn, data=FIXTURE_BYTES, logged_at="2026-09-14T12:42:37")
+        caplog.clear()
+        with caplog.at_level(logging.WARNING):
+            project(conn)
+        assert "has no [mtgo] table" in caplog.text
+        assert "no MTGO handle configured" in caplog.text
+    finally:
+        conn.close()
 
 
 def test_v_current_match_never_shows_mtgo_however_new(tmp_path):

@@ -776,17 +776,6 @@ Results come from each game's own lines, never from a score line.
 disagrees with the last score line), then `Match Tied` beside `leads the
 match`.
 
-### BL-056 · A warning on every rebuild without [mtgo]
-
-type: fix · priority: P2 · status: ready · area: projector mtgo
-
-`projector/matches.py` calls `mtgo.config.load_handle()` on every
-`project()`, so a config file with no `[mtgo]` table (an Arena-only user
-with a Claude key, say) logs a warning on every rebuild.
-
-**Needs:** Loading the handle only when MTGO `raw_events` exist, or a silent
-absence like `resolve_log_dir()`'s.
-
 ### BL-080 · Two cutoffs for an early play
 
 type: fix · priority: P3 · status: needs-decision · area: table
