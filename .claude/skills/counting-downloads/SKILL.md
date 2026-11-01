@@ -20,6 +20,7 @@ estimate. `--since` defaults to `v1.0.0`, the first public release
 | win, appimg, tar | `Sensei-Top-Setup-*.exe`, `Sensei-Top-*.AppImage`, `Sensei-Top-*.tar.gz` | **downloads** — the only columns summed |
 | feeds w/l | `latest.yml`, `latest-linux.yml` | updater checks, plus one per site Download click (below); never downloads |
 | blkmap | `*.exe.blockmap` | the Windows updater's differential download; never downloads |
+| appx | `Sensei-Top-*.appx` | the Store package, fetched by hand to submit to Partner Center (`docs/desktop.md`, "The Store build"); never downloads. The Store installs from its own servers, so no counter here sees a Store user |
 
 **The site cannot be split from GitHub.** `/download/windows`, `/download/linux`
 and `/download/linux-tar` (`worker/download.mjs`) redirect to the same
