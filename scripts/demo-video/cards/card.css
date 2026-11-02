@@ -1,0 +1,44 @@
+/* The demo video's cards: the dashboard's fonts and colours, from site/fonts
+   and web/scripts/og-card.html's custom properties. 1920x1080, with the bottom
+   band left clear for the burned-in caption. */
+@font-face {
+  font-family: "Bricolage Grotesque Variable";
+  font-weight: 200 800;
+  src: url(../../../site/fonts/bricolage-grotesque-latin-wght-normal.woff2) format("woff2-variations");
+}
+@font-face {
+  font-family: "Hanken Grotesk Variable";
+  font-weight: 100 900;
+  src: url(../../../site/fonts/hanken-grotesk-latin-wght-normal.woff2) format("woff2-variations");
+}
+:root {
+  --plane: #0b0c14;
+  --panel: #14162a;
+  --edge: rgb(150 160 230 / 0.22);
+  --ink: #f2f3f8;
+  --ink-2: #b9bdd0;
+  --muted: #989db5;
+  --accent: #f4b6e4;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: var(--plane);
+  color: var(--ink);
+  font-family: "Hanken Grotesk Variable", system-ui, sans-serif;
+  padding: 120px 150px 190px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+h1, h2 {
+  font-family: "Bricolage Grotesque Variable", system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+h2 { font-size: 64px; margin-bottom: 56px; }
+.mark { width: 112px; height: 112px; margin-bottom: 36px; }

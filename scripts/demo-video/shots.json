@@ -1,0 +1,11 @@
+[
+  {"id": "title", "kind": "card", "seconds": 5, "caption": "Reads your game logs. Shows you what to fix."},
+  {"id": "home", "kind": "video", "seconds": 11, "caption": "Home: last session, plus three things worth looking at."},
+  {"id": "live", "kind": "video", "seconds": 12, "caption": "Live: your remaining library and what they could hold."},
+  {"id": "report", "kind": "video", "seconds": 12, "caption": "Match history opens a report on where each game turned."},
+  {"id": "matchups", "kind": "video", "seconds": 10, "caption": "Matchups: your record against each deck you meet."},
+  {"id": "field", "kind": "video", "seconds": 11, "caption": "Field: what real tournaments play, sorted by evidence tier."},
+  {"id": "arch", "kind": "steps", "seconds": 12, "caption": "Raw logs kept verbatim; projections rebuild from them anytime."},
+  {"id": "how-built", "kind": "card", "seconds": 10, "caption": "I code, orchestrate agents and review every PR."},
+  {"id": "end", "kind": "card", "seconds": 8, "caption": "Free and open source. No account, no upload."}
+]

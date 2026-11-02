@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>How it's built card</title>
+<link rel="stylesheet" href="card.css">
+<style>
+ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 26px; }
+li {
+  background: var(--panel);
+  border: 2px solid var(--edge);
+  border-radius: 20px;
+  padding: 28px 40px;
+  font-size: 40px;
+  line-height: 1.3;
+}
+li b { color: var(--accent); font-weight: 700; }
+</style>
+</head>
+<body>
+  <h2>How it's built</h2>
+  <ol>
+    <li><b>I write code</b> and orchestrate Claude Code agents.</li>
+    <li><b>Spec → implement → review:</b> subagents implement, a separate agent reviews and runs the tests.</li>
+    <li><b>Tests run on anonymized captures of real logs.</b> CI runs on every pull request.</li>
+    <li><b>I review every PR.</b></li>
+  </ol>
+</body>
+</html>
