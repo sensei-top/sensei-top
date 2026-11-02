@@ -18,10 +18,13 @@ import re
 import sqlite3
 from pathlib import Path
 
+import pytest
+
 from sensei_top.db import open_database
 from sensei_top.reader.mtgo import (
     GameLogFile,
     _mtime_iso,
+    check_game_log_dir,
     ingest_mtgo_dir,
     read_game_log,
     scan_game_logs,
@@ -367,3 +370,9 @@ def test_ingest_mtgo_dir_warns_of_a_file_it_cannot_stat_on_every_call(
     warned = [m for m in caplog.messages if refused.name in m]
     assert len(warned) == 2
     assert all("could not stat" in m for m in warned)
+
+
+def test_check_game_log_dir_passes_a_folder_and_raises_for_a_missing_one(tmp_path):
+    check_game_log_dir(tmp_path)  # an empty folder lists fine
+    with pytest.raises(FileNotFoundError):
+        check_game_log_dir(tmp_path / "gone")

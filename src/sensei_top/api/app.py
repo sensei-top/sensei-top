@@ -132,8 +132,9 @@ def create_app(db_path: str | Path, watcher: object | None = None) -> FastAPI:
     ``getattr``) for ``mtgo_watching`` and ``watcher_stopped``; everything
     else that flag reports (``last_projection_at``) is read from the
     database's ``projection_state`` table instead, since a separate process
-    can't share in-memory state with this one. The API itself stays read-only
-    either way. The app's shutdown calls ``stop()``
+    can't share in-memory state with this one (``mtgo_unreachable`` is the
+    watcher's last check of the MTGO folder, which ``mtgo_watching`` reads). The API itself
+    stays read-only either way. The app's shutdown calls ``stop()``
     (``_stop_watcher_on_shutdown``).
     """
     database = Path(db_path)

@@ -881,6 +881,40 @@ def test_the_folders_reach_crosses_to_the_api_through_projection_state(
     assert _mtgo_unreachable(conn) == 0
 
 
+def test_a_missing_folder_is_unreachable_without_an_error(live, conn, share):
+    """A folder that moved: flagged, but as quiet as it always was (no error
+    counted); it reads reachable again once the folder is back."""
+    share.rmdir()
+    run_for(live, conn, 4)
+    assert _mtgo_unreachable(conn) == 1
+    assert live.stats.errors == 0
+    share.mkdir()
+    run_for(live, conn, 4)
+    assert _mtgo_unreachable(conn) == 0
+
+
+def test_a_folder_that_refuses_its_listing_is_unreachable(live, conn, share, caplog):
+    if os.geteuid() == 0:
+        pytest.skip("root lists any folder")
+    mode = share.stat().st_mode
+    share.chmod(0)
+    try:
+        with caplog.at_level(logging.WARNING):
+            run_for(live, conn, 4)
+        assert _mtgo_unreachable(conn) == 1
+        assert live.stats.errors == 1
+    finally:
+        share.chmod(mode)
+    run_for(live, conn, 4)
+    assert _mtgo_unreachable(conn) == 0
+
+
+def test_an_empty_existing_folder_is_reachable(live, conn, share):
+    run_for(live, conn, 4)
+    assert _mtgo_unreachable(conn) == 0
+    assert live.stats.errors == 0
+
+
 def test_a_new_watchers_first_check_overwrites_an_earlier_runs_outage(live, conn, tmp_path):
     """A watcher that stopped mid-outage left a 1 behind; the next one's first
     successful check clears it, though its own state never saw a failure."""

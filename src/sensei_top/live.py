@@ -44,6 +44,7 @@ from sensei_top.projector.mtgo.parse import last_game_decided
 from sensei_top.reader.ingest import default_log_path, ingest_file, ingest_with_recovery
 from sensei_top.reader.mtgo import (
     GameLogFile,
+    check_game_log_dir,
     ingest_mtgo_dir,
     read_game_log,
     scan_game_logs,
@@ -249,7 +250,10 @@ class LiveIngester:
         mid-session (unmounted, torn down, a VM stopped), and that must not
         end the Arena watch. The reader already tolerates one file going
         missing; this catches the coarser failure, the whole folder becoming
-        unreachable (``glob()`` raising on a dead mount). The clock is set
+        unreachable (``glob()`` raising on a dead mount), or a folder that
+        is missing or refuses its listing (``check_game_log_dir``, which the
+        scan itself does not do). A missing folder is recorded as unreachable
+        and otherwise quiet: no error counted, no warning. The clock is set
         before the attempt, so a failing folder is tried again on the next
         check, not on every ingest pass, and a run of failing checks is warned
         about and counted once rather than every ``mtgo_poll_every``. A failed
@@ -266,6 +270,11 @@ class LiveIngester:
         catch_up = self._last_mtgo_poll is None
         self._last_mtgo_poll = now
         try:
+            try:
+                check_game_log_dir(self.mtgo_dir)
+            except FileNotFoundError:
+                self._record_mtgo_reach(conn, unreachable=True)
+                return 0
             if catch_up:
                 stats = ingest_mtgo_dir(
                     conn, self.mtgo_dir, on_stat_error=self._warn_unstattable
@@ -291,8 +300,9 @@ class LiveIngester:
         ``/api/live``'s ``mtgo_watching``, which runs in another process
         (migration 068). Written when it changes and for the first check, so a
         steady folder costs no write per poll and an earlier run's value never
-        stands. A failed write is warned of and left for the next change: the
-        status line is not worth stopping the watch for."""
+        stands. A failed write is warned of and tried again on every check after
+        it, so it warns on every check until one succeeds: the status line is
+        not worth stopping the watch for."""
         if self._mtgo_reach_written is unreachable:
             return
         try:
