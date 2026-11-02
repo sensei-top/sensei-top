@@ -25,6 +25,7 @@ SITE = ROOT / "site"
 ORIGIN = "https://senseitop.com"
 PROJECT = "https://github.com/sensei-top/sensei-top"
 BEACON_SRC = "https://static.cloudflareinsights.com/beacon.min.js"
+HERO_SCRIPT = "/hero.js"
 # Answered by the Worker script in `worker/`, not by a file under `site/`.
 DOWNLOADS = ("/download/windows", "/download/linux")
 TARBALL = "/download/linux-tar"
@@ -248,10 +249,11 @@ def test_every_github_link_is_the_project_its_sponsors_or_a_credited_repository(
 def test_the_beacon_is_the_only_script_and_nothing_is_inline(url_path):
     raw, page = load(url_path)
     scripts = page.find("script")
-    assert len(scripts) == 1
+    # The landings alone carry the hero's video script, same origin and deferred.
+    expected = [BEACON_SRC, HERO_SCRIPT] if url_path in LANDINGS else [BEACON_SRC]
+    assert [s["src"] for s in scripts] == expected
+    assert all("defer" in s for s in scripts)
     script = scripts[0]
-    assert script["src"] == BEACON_SRC
-    assert "defer" in script
     beacon = json.loads(script["data-cf-beacon"])
     assert isinstance(beacon.get("token"), str) and beacon["token"]
     assert "".join(page.script_bodies).strip() == ""
@@ -303,6 +305,9 @@ def test_local_references_resolve(url_path):
     references = [h for h in hrefs(page) if h.startswith("/") and h not in (*DOWNLOADS, TARBALL)]
     references += [own + h for h in hrefs(page) if h.startswith("#")]
     references += [a["src"] for a in page.find("img")]
+    references += [a["src"] for t in ("source", "track") for a in page.find(t)]
+    references += [a["poster"] for a in page.find("video")]
+    references += [a["src"] for a in page.find("script") if a["src"].startswith("/")]
     references += [
         urlsplit(a["content"]).path for a in page.find("meta") if a.get("property") == "og:image"
     ]
@@ -340,35 +345,106 @@ def test_the_landing_has_the_feature_rows_in_the_rails_order(url_path):
 
 @pytest.mark.parametrize("url_path", LANDINGS)
 def test_the_hero_image_is_the_only_eager_one_on_the_landing(url_path):
+    """The eager picture is the video's poster, which comes before every image."""
     _, page = load(url_path)
-    images = [a for a in page.find("img") if a["src"] != "/img/mark.svg"]
-    eager = [a for a in images if a.get("loading") != "lazy"]
-    assert len(eager) == 1
-    # The first content image in the document, so a lazy hero beside an eager
-    # Home row fails.
-    assert eager[0] is images[0]
-    assert eager[0]["src"] == ("/img/home.webp" if url_path == "/" else "/img/pt-br/home.webp")
-    assert eager[0].get("fetchpriority") == "high"
-    for img in images:
-        if img is not eager[0]:
-            assert img.get("loading") == "lazy", img["src"]
-            assert "fetchpriority" not in img
-        assert (img["width"], img["height"]) == ("1440", "900"), img["src"]
+    poster = landing_poster(url_path)
+    content = [
+        (t, a) for t, a in page.tags if t == "video" or (t == "img" and a["src"] != "/img/mark.svg")
+    ]
+    assert content[0][0] == "video"
+    assert [a["poster"] for t, a in content if t == "video"] == [poster]
+    preloaded = [a for a in page.find("link") if a.get("rel") == "preload" and a["as"] == "image"]
+    assert [(a["href"], a.get("fetchpriority")) for a in preloaded] == [(poster, "high")]
+    for img in [a for t, a in content if t == "img"]:
+        assert img.get("loading") == "lazy", img["src"]
+        assert "fetchpriority" not in img
+        if img["src"].endswith(".svg"):
+            drawn = re.search(
+                r'<svg[^>]* width="(\d+)" height="(\d+)"',
+                (SITE / img["src"].lstrip("/")).read_text(encoding="utf-8"),
+            )
+            assert (img["width"], img["height"]) == drawn.groups(), img["src"]
+        else:
+            assert (img["width"], img["height"]) == ("1440", "900"), img["src"]
 
 
 @pytest.mark.parametrize("url_path", LANDINGS)
-def test_the_landing_preloads_the_two_latin_fonts_the_stylesheet_uses(url_path):
+def test_the_hero_video_works_with_no_script_and_loads_nothing_until_started(url_path):
+    """Without JS it is a poster with native controls; `hero.js` takes those away."""
+    _, page = load(url_path)
+    language = landing_language(url_path)
+    video = page.find("video")[0]
+    assert "controls" in video
+    assert video["preload"] == "none"
+    assert "muted" in video and "loop" in video and "playsinline" in video
+    assert "autoplay" not in video
+    assert video["aria-label"]
+    assert [(a["src"], a["type"]) for a in page.find("source")] == [
+        (f"/video/demo-{language}.mp4", "video/mp4")
+    ]
+    tracks = page.find("track")
+    assert [(a["src"], a["kind"]) for a in tracks] == [(f"/video/demo-{language}.vtt", "captions")]
+    assert tracks[0]["srclang"] == PAGES[url_path][1]
+    controls = [a for a in page.find("div") if a.get("class") == "ctl"]
+    assert len(controls) == 1 and "hidden" in controls[0]
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_the_chapter_strip_is_the_videos_chapters_and_links_to_the_feature_rows(url_path):
+    raw, _ = load(url_path)
+    chapters = demo_chapter_list(landing_language(url_path))["chapters"]
+    strip = Page()
+    strip.feed(re.search(r'<ol class="chapters".*?</ol>', raw, re.S).group(0))
+    assert strip.find("ol")[0]["aria-label"]
+    assert [text for _, text in strip.links] == [c["label"] for c in chapters]
+    assert [float(a["data-start"]) for a in strip.find("a")] == [c["start"] for c in chapters]
+    assert hrefs(strip) == ["#home", "#live", "#matches", "#decks", "#field"]
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_the_roadmap_section_comes_right_after_what_is_not_planned(url_path):
+    _, page = load(url_path)
+    sections = [a.get("id") for t, a in page.tags if t == "section" and a.get("class") == "card"]
+    assert sections[sections.index("not-planned") + 1] == "roadmap"
+
+
+def test_the_roadmap_image_shows_from_700_px_beside_its_words():
+    _, page = load("/")
+    images = [a for a in page.find("img") if a["src"] == "/img/roadmap-en.svg"]
+    assert [(a["alt"], a["loading"]) for a in images] == [
+        ("The same lists, drawn as a diagram.", "lazy")
+    ]
+    assert "@media (max-width: 699px) { .roadmap-image { display: none; } }" in (
+        SITE / "site.css"
+    ).read_text(encoding="utf-8")
+    assert "An overlay for Arena." in page.visible_text
+
+
+@pytest.mark.parametrize("name", ["roadmap-en.svg", "roadmap-pt-br.svg"])
+def test_the_roadmap_drawing_loads_nothing_and_runs_nothing(name):
+    svg = (SITE / "img" / name).read_text(encoding="utf-8")
+    assert "<script" not in svg and "<text" not in svg
+    assert not re.search(r'href="(?!#)', svg)
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_the_landing_preloads_the_latin_font_the_stylesheet_uses(url_path):
     _, page = load(url_path)
     css = (SITE / "site.css").read_text(encoding="utf-8")
-    preloads = [a for a in page.find("link") if a.get("rel") == "preload"]
-    assert sorted(a["href"] for a in preloads) == [
-        "/fonts/bricolage-grotesque-latin-wght-normal.woff2",
-        "/fonts/hanken-grotesk-latin-wght-normal.woff2",
-    ]
+    preloads = [a for a in page.find("link") if a.get("rel") == "preload" and a["as"] != "image"]
+    assert [a["href"] for a in preloads] == ["/fonts/inter-latin-wght-normal.woff2"]
     for link in preloads:
         assert link["as"] == "font" and link["type"] == "font/woff2"
         assert "crossorigin" in link
         assert link["href"].removeprefix("/") in css
+
+
+def landing_language(url_path: str) -> str:
+    return "en" if url_path == "/" else "pt-br"
+
+
+def landing_poster(url_path: str) -> str:
+    return "/img/" + DEMO_VIDEOS[landing_language(url_path)][1]
 
 
 def meta(page: Page, key: str, name: str = "property") -> list[str]:
@@ -524,6 +600,7 @@ def test_the_headers_allow_only_self_and_the_beacon():
     assert directives["style-src"] == ["'self'"]
     assert directives["font-src"] == ["'self'"]
     assert directives["img-src"] == ["'self'"]
+    assert directives["media-src"] == ["'self'"]
     assert (SITE / "_redirects").read_text(encoding="utf-8").split() == ["/pt-br", "/pt-br/", "301"]
     assert "Allow: /" in (SITE / "robots.txt").read_text(encoding="utf-8")
 
@@ -533,30 +610,40 @@ def test_the_stylesheet_loads_nothing_from_elsewhere_and_uses_only_the_two_subse
     assert "@import" not in css
     assert not re.search(r"url\(\s*['\"]?(https?:)?//", css)
     fonts = sorted(p.name for p in (SITE / "fonts").glob("*.woff2"))
+    subsets = [
+        "inter-latin-ext-wght-normal.woff2",
+        "inter-latin-wght-normal.woff2",
+    ]
+    # The other four are for the social card and the demo-video title cards
+    # until the cards are redone. No page or stylesheet of the site loads them.
     assert fonts == [
         "bricolage-grotesque-latin-ext-wght-normal.woff2",
         "bricolage-grotesque-latin-wght-normal.woff2",
         "hanken-grotesk-latin-ext-wght-normal.woff2",
         "hanken-grotesk-latin-wght-normal.woff2",
+        *subsets,
     ]
-    for font in fonts:
-        assert f"fonts/{font}" in css
-    for family in ("bricolage-grotesque", "hanken-grotesk"):
+    assert sorted(set(re.findall(r"fonts/([\w.-]+\.woff2)", css))) == subsets
+    for family in ("inter", "bricolage-grotesque", "hanken-grotesk"):
         licence = (SITE / "fonts" / f"LICENSE-{family}.txt").read_text(encoding="utf-8")
         assert "SIL OPEN FONT LICENSE" in licence.upper()
 
 
 @pytest.mark.parametrize("url_path", SHELL_PAGES)
 def test_what_first_paint_loads_stays_under_600_kb_and_the_whole_page_under_1_mb(url_path):
-    """First paint: the HTML, the stylesheet, every font and each image not marked lazy.
+    """First paint: the HTML, the stylesheet, every font, our script, the poster and eager images.
 
     A lazy image is fetched as it scrolls into view, so it counts toward the
     second cap only; each file counts once, however many times the page shows it.
+    The video starts after first paint and has its own cap, DEMO_VIDEO_CAP, in
+    `test_each_language_has_a_demo_video_under_the_cap`.
     """
     raw, page = load(url_path)
     total = len(raw.encode("utf-8")) + (SITE / "site.css").stat().st_size
     total += sum(p.stat().st_size for p in (SITE / "fonts").glob("*.woff2"))
     eager = {a["src"] for a in page.find("img") if a.get("loading") != "lazy"}
+    eager |= {a["poster"] for a in page.find("video")}
+    eager |= {a["src"] for a in page.find("script") if a["src"].startswith("/")}
     lazy = {a["src"] for a in page.find("img") if a.get("loading") == "lazy"} - eager
     first_paint = total + sum((SITE / src.lstrip("/")).stat().st_size for src in eager)
     whole = first_paint + sum((SITE / src.lstrip("/")).stat().st_size for src in lazy)
@@ -619,7 +706,7 @@ def test_the_download_buttons_go_to_the_worker_and_it_runs_only_for_them():
     for url_path in ("/", "/pt-br/"):
         _, page = load(url_path)
         buttons = [a["href"] for a in page.find("a") if "button" in (a.get("class") or "").split()]
-        assert buttons == [*DOWNLOADS, STORE], url_path
+        assert buttons == [STORE, "/download/linux", "/download/windows"], url_path
         assert not [h for h in hrefs(page) if "/releases" in h], url_path
 
 
@@ -648,9 +735,9 @@ def test_the_static_buttons_keep_windows_first_for_an_unknown_visitor(url_path):
     _, page = load(url_path)
     buttons = [a for a in page.find("a") if "button" in (a.get("class") or "").split()]
     assert [(a["href"], a["class"]) for a in buttons] == [
-        ("/download/windows", "button primary"),
+        (STORE, "button primary"),
         ("/download/linux", "button"),
-        (STORE, "button"),
+        ("/download/windows", "button quiet"),
     ], url_path
 
 

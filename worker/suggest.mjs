@@ -8,12 +8,20 @@
 
 export const VARY = 'Sec-CH-UA-Platform, User-Agent'
 
-/** Handler for `.actions a.button`: `primary` goes to the link that downloads for `os`. */
+// A Windows visitor's primary is the Microsoft Store: that build is signed, and
+// the standalone installer is not, so it stays the quiet third button.
+const PRIMARY = {
+  windows: 'https://apps.microsoft.com/detail/9NZ5GQMCG1ZN',
+  linux: '/download/linux',
+}
+
+/** Handler for `.actions a.button`: `primary` goes to the link for `os`; a `quiet` link keeps its class. */
 export function button(os) {
   return {
     element(element) {
       if (os === 'mac' || os === 'phone') return
-      const matches = element.getAttribute('href') === `/download/${os}`
+      if (element.getAttribute('class')?.split(' ').includes('quiet')) return
+      const matches = element.getAttribute('href') === PRIMARY[os]
       element.setAttribute('class', matches ? 'button primary' : 'button')
     },
   }

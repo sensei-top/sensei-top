@@ -23,10 +23,11 @@
 <meta property="og:locale:alternate" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="preload" href="/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/hanken-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/img/demo-poster-pt-br.webp" as="image" fetchpriority="high">
+<link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "73e9bc45819145e3afbbde2244e8d023"}'></script>
+<script defer src="/hero.js"></script>
 </head>
 <body class="landing">
 <div class="page">
@@ -48,11 +49,17 @@
 <h1>Suas partidas, seus decks, o meta de verdade. Tudo no seu próprio computador.</h1>
 <p class="lead">O Sensei Top lê os logs que o Arena e o Magic Online já escrevem e os transforma em um dashboard: cada partida e cada jogo, turno a turno, seu histórico com cada deck e contra cada arquétipo, e o metajogo dos torneios ao lado.</p>
 <ul class="facts"><li>Gratuito</li><li>Código aberto</li><li>Sem conta</li><li>Windows e Linux</li></ul>
-<p class="actions"><a class="button primary" href="/download/windows">Baixar para Windows</a> <a class="button" href="/download/linux">Baixar para Linux</a> <a class="button" href="https://apps.microsoft.com/detail/9NZ5GQMCG1ZN">Microsoft Store</a></p>
+<p class="actions"><a class="button primary" href="https://apps.microsoft.com/detail/9NZ5GQMCG1ZN">Baixar para Windows</a> <a class="button" href="/download/linux">Baixar para Linux</a> <a class="button quiet" href="/download/windows">Instalador para Windows</a></p>
 <p class="note" data-os="mac" hidden>Ainda não há versão para macOS. O Sensei Top roda em um computador com Windows ou Linux.</p>
 <p class="note" data-os="phone" hidden>O Sensei Top roda em um computador com Windows ou Linux, não em celular ou tablet.</p>
 </div>
-<figure><img src="/img/pt-br/home.webp" width="1440" height="900" fetchpriority="high" decoding="async" alt="A página Início: o histórico de vitórias e derrotas da última sessão, o dos últimos trinta dias e três cards: a última partida, um padrão entre as suas partidas e o meta em que você está jogando."></figure>
+<figure class="stage">
+<div class="frame">
+<video poster="/img/demo-poster-pt-br.webp" width="1920" height="1080" preload="none" controls muted loop playsinline aria-label="Demonstração do dashboard, sem som"><source src="/video/demo-pt-br.mp4" type="video/mp4"><track kind="captions" src="/video/demo-pt-br.vtt" srclang="pt-BR"></video>
+<div class="ctl" hidden><button type="button" class="play" aria-label="Reproduzir" title="Reproduzir" data-play="Reproduzir" data-pause="Pausar"><svg class="icon-play" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 3.2v9.6a.6.6 0 0 0 .9.5l7.6-4.8a.6.6 0 0 0 0-1L5.9 2.7a.6.6 0 0 0-.9.5z"/></svg><svg class="icon-pause" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="4" y="3" width="3" height="10" rx="1"/><rect x="9" y="3" width="3" height="10" rx="1"/></svg></button><button type="button" class="captions" aria-label="Mostrar legendas" title="Mostrar legendas" data-show="Mostrar legendas" data-hide="Ocultar legendas"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><rect x="1.7" y="3.2" width="12.6" height="9.6" rx="2"/><path d="M7 6.6a1.7 1.7 0 1 0 0 2.8M12 6.6a1.7 1.7 0 1 0 0 2.8"/></svg></button></div>
+</div>
+<ol class="chapters" aria-label="Capítulos"><li><a href="#home" data-start="0">Início</a></li><li><a href="#live" data-start="11">Ao vivo</a></li><li><a href="#matches" data-start="22.7">Partidas</a></li><li><a href="#decks" data-start="34.4">Matchups</a></li><li><a href="#field" data-start="44.1">Meta</a></li></ol>
+</figure>
 </section>
 
 <section id="download">
@@ -157,6 +164,26 @@
 <li>Telemetria, ou uma conta para qualquer coisa gratuita.</li>
 </ul>
 <p>O <a href="https://github.com/sensei-top/sensei-top/blob/main/ROADMAP.md">roadmap</a> tem os motivos, e o que vem a seguir.</p>
+</section>
+
+<section class="card" id="roadmap">
+<h2>Roadmap</h2>
+<p>A seguir, nesta ordem:</p>
+<ul>
+<li>Um overlay para o Arena.</li>
+<li>Guias de sideboard, sem respostas geradas.</li>
+<li>Taxas de vitórias por card, a partir dos seus próprios jogos.</li>
+<li>Suas partidas em um arquivo CSV, e cada coluna das tabelas explicada.</li>
+<li>Magic Online na página Ao vivo.</li>
+</ul>
+<p>Mais tarde, sem ordem definida:</p>
+<ul>
+<li>Uma página que mostra que o tracker está lendo o seu log.</li>
+<li>Guias escritos com qualquer modelo.</li>
+<li>macOS, só para o Arena.</li>
+<li>Os formatos Histórico, Explorador e Atemporal.</li>
+</ul>
+<p>Nenhuma data é prometida. O <a href="https://github.com/sensei-top/sensei-top/blob/main/ROADMAP.md">roadmap completo</a> tem o resto.</p>
 </section>
 
 <section class="card" id="free-software">
