@@ -495,22 +495,6 @@ behaviour byte-identical on purpose.
 **Needs:** A decision on one grain, then a real-data diff of the guide
 output.
 
-### BL-029 · One label on distinct archetype keys
-
-type: fix · priority: P2 · status: needs-decision · area: brief web
-
-A deck's coverage table and a pairing's heading can show one label on rows
-of distinct archetype keys: `brief/coverage.py` labels a row `field_name or
-faced_name`, and the corpus files "Dimir Midrange" under more than one key,
-so two rows can read alike.
-
-**Why deferred:** Found while rebuilding a deck's pages; telling the rows
-apart is a naming decision, not a patch.
-
-**Needs:** Decide how a shared label is told apart (a qualifier in the
-label, or the address alone as the identity), then fix `coverageName`
-(`web/src/lib/brief.ts`) and `pairingHeading` (`web/src/lib/pairing.ts`).
-
 ### BL-030 · Provisional corpus-naming constants
 
 type: fix · priority: P3 · status: needs-data · area: archetypes

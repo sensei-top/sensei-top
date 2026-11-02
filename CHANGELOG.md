@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   list or its expected archetypes were edited is now marked on the RCQ page
   as written for another list. The prompt you copy says what it was built
   from, so the page can tell.
+- Two rows in a deck's matchup coverage that share a name, because the
+  tournament data files one name under two archetypes, now say which is
+  which, as "Dimir Midrange · Bx Midrange".
 
 ## [1.2.3] - 2026-10-24
 

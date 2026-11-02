@@ -128,7 +128,7 @@ export function MatchupCoverageCard({ guideKey }: { guideKey: string }) {
             // `overflow-wrap: anywhere` lets a long word shrink the column.
             <div key="archetype" className="min-w-0 wrap-anywhere">
               <TextLink href={pairingAddress(guideKey, `archetype:${row.archetype_key}`)} className="text-body">
-                {coverageName(row)}
+                {coverageName(row, data.rows)}
               </TextLink>
             </div>,
             <Chip key="brief" size="sm">

@@ -155,8 +155,41 @@ describe('coverageStatusWord', () => {
 
 describe('coverageName', () => {
   it('is the row’s label, or its key spaced with none', () => {
-    expect(coverageName(row('Control', 'ok', { label: 'Jeskai Control' }))).toBe('Jeskai Control')
-    expect(coverageName(row('BorosBurn', 'ok'))).toBe('Boros Burn')
+    const a = row('Control', 'ok', { label: 'Jeskai Control' })
+    const b = row('BorosBurn', 'ok')
+    expect(coverageName(a, [a, b])).toBe('Jeskai Control')
+    expect(coverageName(b, [a, b])).toBe('Boros Burn')
+  })
+
+  it('qualifies both rows that share a label, and only those', () => {
+    const ub = row('UBMidrange', 'ok', { label: 'Dimir Midrange' })
+    const bx = row('BxMidrange', 'ok', { label: 'Dimir Midrange' })
+    const other = row('Control', 'ok', { label: 'Jeskai Control' })
+    const bare = row('Lifegain', 'ok')
+    const rows = [ub, bx, other, bare]
+    expect(coverageName(ub, rows)).toBe('Dimir Midrange · UBMidrange')
+    expect(coverageName(bx, rows)).toBe('Dimir Midrange · Bx Midrange')
+    expect(coverageName(other, rows)).toBe('Jeskai Control')
+    expect(coverageName(bare, rows)).toBe('Lifegain')
+  })
+
+  it('compares labels exactly and never collides a null label', () => {
+    const a = row('UBMidrange', 'ok', { label: 'Dimir Midrange' })
+    const b = row('BxMidrange', 'ok', { label: 'dimir midrange' })
+    expect(coverageName(a, [a, b])).toBe('Dimir Midrange')
+    const c = row('A', 'ok')
+    const d = row('B', 'ok')
+    expect(coverageName(c, [c, d])).toBe('A')
+  })
+
+  it('names a notes list with qualified names', () => {
+    const rows = [
+      row('UBMidrange', 'missing', { label: 'Dimir Midrange' }),
+      row('BxMidrange', 'missing', { label: 'Dimir Midrange' }),
+    ]
+    expect(coveragePromptNotes({ no_consensus: ['UBMidrange'], deferred: [] }, rows)[0]).toContain(
+      'Dimir Midrange · UBMidrange',
+    )
   })
 })
 

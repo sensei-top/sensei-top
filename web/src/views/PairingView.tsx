@@ -5,6 +5,7 @@ import { DeckMatchesCard } from '../components/DeckMatchesCard'
 import { PairingBrief } from '../components/PairingBrief'
 import { VersionSwitcher } from '../components/VersionSwitcher'
 import { BackLink, Button, EmptyState, ErrorNote, Loading, ManaPips, StatTile } from '../components/ui'
+import { coverageName } from '../lib/brief'
 import { deckAddress } from '../lib/decks'
 import { archetypeKeyOf, matchupRowOver } from '../lib/matchups'
 import {
@@ -74,7 +75,9 @@ export function PairingView({
     () => (matches.data ? pairingMatches(opponentKey, matches.data, format) : []),
     [opponentKey, matches.data, format],
   )
-  const label = coverage.data ? coverageRowOf(opponentKey, coverage.data)?.label : null
+  // Qualified against the sibling rows when two share a label.
+  const coverageRow = coverage.data ? coverageRowOf(opponentKey, coverage.data) : null
+  const label = coverageRow && coverage.data ? coverageName(coverageRow, coverage.data.rows) : null
   const heading = useMemo(() => pairingHeading(opponentKey, against, label, t), [opponentKey, against, label, t])
   // An archetype no match has met waits for coverage (answered or failed),
   // so its key never shows before its name.
