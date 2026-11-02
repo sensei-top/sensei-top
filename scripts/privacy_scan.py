@@ -1385,6 +1385,22 @@ def terms_for_demo(db: Path) -> list[Term]:
     return _filter_terms(terms + db_terms, card_words, dropped)
 
 
+def handles_for_demo(db: Path) -> list[Term]:
+    """Every name ``terms_for_demo`` can drop: the word terms before filtering.
+    A short or generic handle, or one that is a card's word, can't be searched
+    for as a word, so ``scripts/demo_db.py`` renames these only where a field
+    says the text is a name. ``db`` is opened as ``terms_for_demo`` opens it."""
+    previous_disable_level = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            terms = _terms_from_mtgo_handle() + _terms_from_db(db)[0]
+    finally:
+        logging.disable(previous_disable_level)
+    return [term for term in terms if term.match == MatchKind.WORD]
+
+
 def _run(args: argparse.Namespace) -> int:
     repo = Path(args.repo)
     _check_git_repo(repo)

@@ -388,6 +388,50 @@ def _load_script():
     return module
 
 
+def test_a_named_only_term_moves_only_in_a_name_field():
+    demo_db = _load_script()
+    term = demo_db.DemoTerm("opponent", "Zed", word=True, named_only=True)
+    matcher = demo_db.Matcher([term], {"zed": "Tom#00001"})
+    text = '{"playerName":"Zed"} {"screenName": "zed"} @PZed Turn 3: Zed Zed {"playerName":"Zedd"}'
+    assert matcher.rewrite(text) == (
+        '{"playerName":"Tom#00001"} {"screenName": "Tom#00001"} @PTom#00001 Turn 3: Tom#00001 Zed '
+        '{"playerName":"Zedd"}'
+    )
+
+
+def test_a_handle_the_scan_drops_is_rewritten(source_db, tmp_path):
+    """The fixtures' opponents under handles too short for the scan's terms."""
+    source, _names = source_db
+    demo_db = _load_script()
+    conn = open_database(source)
+    conn.execute(
+        "UPDATE raw_events SET payload = REPLACE(payload, 'OppPlayerOne', 'Zed') "
+        "WHERE source = 'arena'"
+    )
+    for row_id, payload in conn.execute(
+        "SELECT id, payload FROM raw_events WHERE source = 'mtgo'"
+    ).fetchall():
+        renamed = demo_db._rewrite_mtgo_payload(
+            "mtgo", payload, lambda text: text.replace("Player2000", "Alf")
+        )
+        conn.execute("UPDATE raw_events SET payload = ? WHERE id = ?", (renamed, row_id))
+    project(conn)
+    conn.commit()
+    names = {row[0] for row in conn.execute("SELECT opponent_name FROM matches")}
+    conn.close()
+    assert {"Zed", "Alf"} <= names
+
+    target = tmp_path / "demo.db"
+    result = _run("--from", str(source), "--to", str(target))
+
+    assert result.returncode == 0, result.stderr
+    assert all(PSEUDONYM.fullmatch(name) for name in _opponents(target))
+    # The MTGO match survives the rebuild: its players still resolve.
+    assert _count(target, "SELECT COUNT(*) FROM matches WHERE source = 'mtgo'") == 1
+    left = re.compile(r"\b(?:Zed|Alf)\b", re.IGNORECASE)
+    assert not any(left.search(text) for text in _texts(target))
+
+
 def test_a_term_left_behind_deletes_the_copy(source_db, tmp_path, monkeypatch, capsys):
     """Fail closed: a rewrite that misses a term must cost the copy, and the
     message must carry categories, never the term."""
