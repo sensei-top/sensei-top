@@ -226,7 +226,8 @@ export function FieldView({
   })()
   const eventsPart = (
     <EventsCard
-      key={`${format}:${window}:${tier}`}
+      // Prefixed: a tier and a pairs value can both be A, and these are siblings.
+      key={`events:${format}:${window}:${tier}`}
       rows={events.data}
       isPending={tier == null || events.isPending}
       error={tier == null ? presence.error : events.error}
@@ -250,7 +251,7 @@ export function FieldView({
         <WinrateCard key={`${format}:${window}`} rows={winrates} when={words.when} action={words.short} />
       )}
       <MatchupsCard
-        key={`${format}:${window}:${pairs ?? ''}`}
+        key={`pairs:${format}:${window}:${pairs ?? ''}`}
         pairs={pairs}
         rows={pairRows}
         isPending={pairs == null || matchups.isPending}

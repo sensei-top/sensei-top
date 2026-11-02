@@ -111,8 +111,10 @@
     "nowNote": "Agora marca uma mágica instantânea que ele pode conjurar com a mana que tem aberta.",
     "cards_one": "{{count}} card",
     "cards_other": "{{count}} cards",
-    "untappedLands": "{{open}} terrenos desvirados +{{other}} outros",
-    "untapped": "{{open}} desvirados",
+    "untappedLands_one": "{{count}} terreno desvirado +{{other}} de outras fontes",
+    "untappedLands_other": "{{count}} terrenos desvirados +{{other}} de outras fontes",
+    "untapped_one": "{{count}} desvirado",
+    "untapped_other": "{{count}} desvirados",
     "held_one": "segurado há {{count}} turno",
     "held_other": "segurado há {{count}} turnos"
   },

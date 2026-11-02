@@ -176,7 +176,8 @@ from pathlib import Path
 
 _MIN_TERM_LENGTH = 4
 # "sensei-top" is the public repository's owner (github.com/sensei-top/), not a person.
-_GENERIC_WORDS = frozenset({"mtga", "arena", "tracker", "sensei-top"})
+# Also a rules keyword the game's own text prints, which no card name holds as a word.
+_GENERIC_WORDS = frozenset({"mtga", "arena", "tracker", "sensei-top", "morph"})
 # The maintainer's public handle lives in AUTHORS and nowhere else (AGENTS.md, "Privacy").
 _PUBLIC_IDENTITY = {"AUTHORS": frozenset({"git-account"})}
 # The two categories the declared local name produces (`_terms_from_git_identity`).

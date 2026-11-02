@@ -266,6 +266,22 @@ def test_three_character_term_is_dropped_as_short(tmp_path):
     assert "zzq" not in result.stderr
 
 
+def test_a_rules_keyword_is_dropped_as_generic(tmp_path):
+    """The game's own log text prints it: ``Cast face-down with Morph.``"""
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    _write(repo, "README.md", "Cast face-down with Morph.\n")
+    _commit_all(repo)
+
+    db_path = tmp_path / "scratch.db"
+    _make_db(db_path, matches=[("Morph", None)])
+
+    result = _run_scan(repo, "--db", str(db_path))
+    assert result.returncode == 0
+    assert result.stdout == ""
+    assert "dropped 0 short, 1 generic, 0 card-word" in result.stderr
+
+
 def test_opponent_name_matching_a_card_word_is_dropped_and_counted(tmp_path):
     """An opponent handle that happens to equal a whole word from a real card
     name is filtered out before it ever becomes a searchable term, and the
