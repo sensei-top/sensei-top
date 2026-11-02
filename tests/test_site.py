@@ -641,19 +641,11 @@ def test_the_stylesheet_loads_nothing_from_elsewhere_and_uses_only_the_two_subse
         "inter-latin-ext-wght-normal.woff2",
         "inter-latin-wght-normal.woff2",
     ]
-    # The other four are for the social card and the demo-video title cards
-    # until the cards are redone. No page or stylesheet of the site loads them.
-    assert fonts == [
-        "bricolage-grotesque-latin-ext-wght-normal.woff2",
-        "bricolage-grotesque-latin-wght-normal.woff2",
-        "hanken-grotesk-latin-ext-wght-normal.woff2",
-        "hanken-grotesk-latin-wght-normal.woff2",
-        *subsets,
-    ]
+    assert fonts == subsets
     assert sorted(set(re.findall(r"fonts/([\w.-]+\.woff2)", css))) == subsets
-    for family in ("inter", "bricolage-grotesque", "hanken-grotesk"):
-        licence = (SITE / "fonts" / f"LICENSE-{family}.txt").read_text(encoding="utf-8")
-        assert "SIL OPEN FONT LICENSE" in licence.upper()
+    assert sorted(p.name for p in (SITE / "fonts").glob("LICENSE-*")) == ["LICENSE-inter.txt"]
+    licence = (SITE / "fonts" / "LICENSE-inter.txt").read_text(encoding="utf-8")
+    assert "SIL OPEN FONT LICENSE" in licence.upper()
 
 
 @pytest.mark.parametrize("url_path", SHELL_PAGES)

@@ -14,9 +14,8 @@ landings only. It is not part of `web/` and shares
 nothing with it at build time: the palette and the mark are
 copied by hand, and the site's one font, Inter, is its own, not one of the dashboard's (the hexes in `site.css` follow "Palette" in
 [design-system.md](design-system.md); `fonts/` holds Inter's latin and latin-ext
-subsets with their OFL text, and the two old fonts, which no page or
-stylesheet here loads: they stay only for `web/scripts/og-card.html` and
-`scripts/demo-video/cards/card.css`, until the social cards are redone;
+subsets with their OFL text, and nothing else (the social card uses Inter too; the
+dashboard's two fonts live in `scripts/demo-video/cards/fonts/`, for the title cards only);
 `img/` the landing's pictures, captured from the demo database (below) and
 never from `docs/images/`: six dashboard pages as WebP (`home`, `live`,
 `match-report`, `matchups`, `field`, `coach`), the Portuguese captures of
