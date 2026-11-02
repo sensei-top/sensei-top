@@ -66,6 +66,10 @@ In this order, unless Discussions says otherwise.
 
 ## Later
 
+- **An overlay for Arena.** The Live page's reads in a window of the
+  tracker's own, on top of the game, under the rule below for events. It
+  draws over Arena and never injects into it. Magic Online does not get
+  one. (BL-098)
 - **Written guides with any model.** Today a written deck guide, match
   report or coach report comes from a prompt you copy into whatever
   assistant you already use, or from an Anthropic key you set yourself.
@@ -98,8 +102,6 @@ In this order, unless Discussions says otherwise.
 
 These are decisions, not gaps. Each one was considered and refused.
 
-- **An overlay or any window over the game.** The Live page is a page in
-  the tracker's own window.
 - **Live advice during an event.** In an Arena event (paid events,
   drafts, the Arena Open, Directs, Qualifiers, a Direct Challenge) the Live
   page shows what any tracker shows: your library, draw odds, the cards

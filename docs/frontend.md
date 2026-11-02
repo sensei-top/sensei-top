@@ -456,7 +456,8 @@ the failed backup's sentences name.
   naming the welcome steps and "Go through them again", a link to
   `/welcome`.
 
-The Overlay section went with the pivot, since no overlay is planned.
+The Overlay section went with the pivot. An Arena overlay is planned again
+(`BACKLOG.md`'s BL-098), and it gets its section back when one is built.
 
 **Inside the desktop shell** every section above is drawn. The first-run
 steps are "Welcome", below.

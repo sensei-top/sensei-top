@@ -47,7 +47,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-098
+Next ID: BL-099
 
 ## Features
 
@@ -439,6 +439,21 @@ per-game screw beat reverses that, so it is a decision first.
 **Needs:** The decision, then, if it goes ahead, the strategy article the
 analyzer stands on (each analyzer has one, `docs/review.md`) and a
 threshold for screw that a fixture can pin.
+
+### BL-098 · An overlay for Arena
+
+type: feat · priority: P3 · status: needs-decision · area: desktop web table
+
+An overlay for Arena only: the Live page's reads in a window of the tracker's
+own, on top of the game. MTGO does not get one.
+
+**Why deferred:** The user reversed "no overlay" on 2026-11-02 and placed it
+in `ROADMAP.md`'s Later.
+
+**Needs:** Its own design: which reads it carries, how a window stays over the
+game on Windows and on Linux under Wine or Proton, and how Arena's fullscreen
+modes affect that. It holds to two standing rules: never injecting into the
+client (`ROADMAP.md`, "Never"), and the event rule (`table/queues.py`).
 
 ## Bugs
 
