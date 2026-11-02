@@ -39,7 +39,9 @@ memory.
 Sensei Top is not produced by, endorsed by or affiliated with Scryfall,
 TopDeck.gg, Daybreak Games and mtgo.com, melee.gg, Anthropic, or the
 maintainers of MTGOFormatData and MTG_decklistcache. Their names appear here
-to credit their work.
+to credit their work. Nor is it produced by, endorsed by or affiliated with
+Untapped.gg, which the site's comparison page names to compare the two and
+which the app downloads nothing from.
 
 ## Fonts and symbols
 
