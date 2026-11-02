@@ -40,24 +40,26 @@ Magic Online's log is read, and Arena found on more Linux setups
 
 In this order, unless Discussions says otherwise.
 
-1. **Seeing that the tracker is reading.** A page that says where your
-   log is, when it was last read, how many matches came from it, and
-   whether Arena's Detailed Logs setting is off, with the exact place to
-   turn it on; a warning when a match looks missing; and what changed in
-   each release, dated, inside the app. (BL-001)
-2. **Your data out, and every column explained.** Your matches and games
+1. **An overlay for Arena.** The Live page's reads in a window of the
+   tracker's own, on top of the game, under the rule below for events. It
+   draws over Arena and never injects into it. Magic Online does not get
+   one. (BL-098)
+2. **Sideboard guides, with no generated answers.** The cards in your 75
+   that answer what the opponent's deck does, as candidate ins, and a link
+   to a published sideboard guide for the pairing, found through the Skill
+   Issue Magic guide index, with credit to its author on every link.
+   Nothing is generated and no "outs" are invented. (BL-005)
+3. **Win rates per card**, from your own games: with the card in your
+   opening hand, drawn, and cast, with the number of games beside each
+   rate. (BL-004)
+4. **Your data out, and every column explained.** Your matches and games
    as a CSV file; a one-line definition on every table column; and a tour
    of the dashboard in the help pages, in both languages, which says what
    the tracker reads and that it sends nothing. (BL-002, BL-003)
-3. **Sideboard help without a model.** The cards in your 75 that answer
-   what the opponent's deck does, as candidate ins, and a link to a
-   published sideboard guide for the pairing, found through the Skill
-   Issue Magic guide index, with credit to its author on every link.
-   Nothing is generated and no "outs" are invented. (BL-005)
-4. **Win rates per card**, from your own games: with the card in your
-   opening hand, drawn, and cast, with the number of games beside each
-   rate. (BL-004)
-5. **The known bugs.** Everything [BACKLOG.md](BACKLOG.md) lists as a
+5. **MTGO on the Live page**: the opponent's revealed cards during a game
+   and the between-games plan, read from MTGO's game log the way Arena's
+   Live page reads Arena's. (BL-013)
+6. **The known bugs.** Everything [BACKLOG.md](BACKLOG.md) lists as a
    bug: a field with no paper results after 2026-08-16 first (BL-032);
    then the rest (BL-025, BL-026,
    BL-027, BL-028, BL-030, BL-031, BL-034, BL-035, BL-037,
@@ -66,10 +68,11 @@ In this order, unless Discussions says otherwise.
 
 ## Later
 
-- **An overlay for Arena.** The Live page's reads in a window of the
-  tracker's own, on top of the game, under the rule below for events. It
-  draws over Arena and never injects into it. Magic Online does not get
-  one. (BL-098)
+- **Seeing that the tracker is reading.** A page that says where your
+  log is, when it was last read, how many matches came from it, and
+  whether Arena's Detailed Logs setting is off, with the exact place to
+  turn it on; a warning when a match looks missing; and what changed in
+  each release, dated, inside the app. (BL-001)
 - **Written guides with any model.** Today a written deck guide, match
   report or coach report comes from a prompt you copy into whatever
   assistant you already use, or from an Anthropic key you set yourself.
@@ -78,9 +81,6 @@ In this order, unless Discussions says otherwise.
   wrote. (BL-007)
 - **macOS, Arena only.** An unsigned build from GitHub's runners first;
   notarization when donations cover Apple's fee. (BL-009)
-- **MTGO on the Live page**: the opponent's revealed cards during a game
-  and the between-games plan, read from MTGO's game log the way Arena's
-  Live page reads Arena's. (BL-013)
 - **Caution cards**: the cards to watch for from the deck your opponent
   most likely plays, with their rules text. (BL-020)
 - **Finding your history faster**: date ranges, a search, your matches

@@ -53,9 +53,9 @@ Next ID: BL-099
 
 ### BL-001 · Reader health in the dashboard
 
-type: feat · priority: P1 · status: ready · area: api web
+type: feat · priority: P3 · status: ready · area: api web
 
-Next 1. Reader health in the dashboard: the log's path and whether it was
+Reader health in the dashboard: the log's path and whether it was
 found, the last read, "waiting for the log to grow", raw and projected
 counts, and Detailed Logs off with the setting's exact path (on the empty
 Matches page too); a "Total matches · Last updated" line; a warning for a
@@ -77,7 +77,7 @@ never fetched.
 
 type: feat · priority: P1 · status: ready · area: api web i18n
 
-Next 2. A CSV export of the user's own matches, games and per-deck numbers
+Next 4. A CSV export of the user's own matches, games and per-deck numbers
 (an unknown value is an empty cell, never 0); a one-line definition on each
 table column; and the help tour below, with an entry that cites Arena's own
 article on Detailed Logs for community tools and says the app reads only the
@@ -93,7 +93,7 @@ other trackers charge for.
 
 type: feat · priority: P1 · status: needs-decision · area: site i18n
 
-Next 2, with the export above: the help pages' tour of the dashboard
+Next 4, with the export above: the help pages' tour of the dashboard
 (`site/help/`): what each page shows, in both languages, linked from the
 welcome steps' last step, Ready. The first cut (2026-10-13) covers
 installing, the first run, Magic Online, troubleshooting and the problem
@@ -117,7 +117,7 @@ drawn.
 
 type: feat · priority: P1 · status: ready · area: projector guide web
 
-Next 4. Per-card win rates from the user's own games: in the opening hand,
+Next 3. Per-card win rates from the user's own games: in the opening hand,
 drawn and cast, with n beside every rate. Today `key_card_timing`
 (`docs/guide.md`) covers maindeck cards with 3 or more copies only.
 
@@ -131,7 +131,7 @@ rebuild with NULL where the hand is unknown (rules 3 and 4); fixture tests
 
 type: feat · priority: P1 · status: blocked · area: guide archetypes web
 
-Sideboard help without a model (decided 2026-10-07; `ROADMAP.md`'s Next 3):
+Sideboard help without a model (decided 2026-10-07; `ROADMAP.md`'s Next 2):
 candidate ins by a card-role rule over the 75 (answers, threats, hate by the
 opponent's archetype), and a link to a sideboard guide for the pairing from
 the Skill Issue Magic guide index. No generated outs. The user's own
@@ -263,9 +263,9 @@ events. `ROADMAP.md` keeps them in Later (2026-10-19).
 
 ### BL-013 · MTGO on the Live page
 
-type: feat · priority: P3 · status: ready · area: table api web mtgo
+type: feat · priority: P1 · status: ready · area: table api web mtgo
 
-MTGO on the Live page: the opponent's revealed cards during a game (MTGO
+Next 5. MTGO on the Live page: the opponent's revealed cards during a game (MTGO
 appends to the game log every 1–8 s mid-game, median 2.3 s, and never
 rewrites what it wrote) and the between-games plan (see `docs/status.md`,
 "Limited on purpose").
@@ -442,13 +442,13 @@ threshold for screw that a fixture can pin.
 
 ### BL-098 · An overlay for Arena
 
-type: feat · priority: P3 · status: needs-decision · area: desktop web table
+type: feat · priority: P1 · status: needs-decision · area: desktop web table
 
-An overlay for Arena only: the Live page's reads in a window of the tracker's
-own, on top of the game. MTGO does not get one.
+Next 1. An overlay for Arena only: the Live page's reads in a window of the
+tracker's own, on top of the game. MTGO does not get one.
 
-**Why deferred:** The user reversed "no overlay" on 2026-11-02 and placed it
-in `ROADMAP.md`'s Later.
+**Why deferred:** The user reversed "no overlay" on 2026-11-02 and put it first
+in `ROADMAP.md`'s Next the same day. Not started: it has no design yet.
 
 **Needs:** Its own design: which reads it carries, how a window stays over the
 game on Windows and on Linux under Wine or Proton, and how Arena's fullscreen
