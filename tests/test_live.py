@@ -893,6 +893,7 @@ def test_a_missing_folder_is_unreachable_without_an_error(live, conn, share):
     assert _mtgo_unreachable(conn) == 0
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="chmod can't refuse a listing on Windows")
 def test_a_folder_that_refuses_its_listing_is_unreachable(live, conn, share, caplog):
     if os.geteuid() == 0:
         pytest.skip("root lists any folder")
