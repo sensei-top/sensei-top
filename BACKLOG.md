@@ -47,7 +47,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-097
+Next ID: BL-098
 
 ## Features
 
@@ -495,22 +495,6 @@ behaviour byte-identical on purpose.
 **Needs:** A decision on one grain, then a real-data diff of the guide
 output.
 
-### BL-029 · One label on distinct archetype keys
-
-type: fix · priority: P2 · status: needs-decision · area: brief web
-
-A deck's coverage table and a pairing's heading can show one label on rows
-of distinct archetype keys: `brief/coverage.py` labels a row `field_name or
-faced_name`, and the corpus files "Dimir Midrange" under more than one key,
-so two rows can read alike.
-
-**Why deferred:** Found while rebuilding a deck's pages; telling the rows
-apart is a naming decision, not a patch.
-
-**Needs:** Decide how a shared label is told apart (a qualifier in the
-label, or the address alone as the identity), then fix `coverageName`
-(`web/src/lib/brief.ts`) and `pairingHeading` (`web/src/lib/pairing.ts`).
-
 ### BL-030 · Provisional corpus-naming constants
 
 type: fix · priority: P3 · status: needs-data · area: archetypes
@@ -610,22 +594,6 @@ that came directly after `<==`.
 **Needs:** Harden only if a capture shows it. DeckDeleteDeck's second body
 line falls through as noise, which is harmless.
 
-### BL-041 · A dated twin of an undated entry
-
-type: fix · priority: P3 · status: ready · area: reader
-
-An entry stored with no time by `--locale auto` (`reader/dates.py`, step 6)
-gets a dated twin if the same bytes are read again once its shape's order is
-learned (`ingest --file` reads from the start), because the digest includes
-`logged_at`. A `--locale` change between two reads of one file does the
-same.
-
-**Why deferred:** Known when `auto` was built (plan 3, S10); out of its
-scope.
-
-**Needs:** Re-deriving `logged_at` from `raw_events.header`, which migration
-062 keeps for this.
-
 ### BL-042 · Windows' regional format in Arena's header
 
 type: fix · priority: P3 · status: needs-data · area: reader
@@ -640,21 +608,6 @@ locale did not change the header.
 **Needs:** One Windows capture with Arena in English and a day-first
 regional format. A new shape is a fixture and a row in `docs/arena-log.md`'s
 table; a day-first `slash-12h` header is one `auto` already settles.
-
-### BL-043 · Two grains in the keep guide's mulligan numbers
-
-type: fix · priority: P2 · status: needs-decision · area: table guide
-
-The keep guide's mulligan table counts one deck version (`table/keep.py`'s
-query on `m.deck_id = ?`), while its mulligan-cost line counts the whole
-deck identity (`guide_play.mulligan_record`), so the two can differ for a
-deck whose list was edited; both say "Kept 7".
-
-**Why deferred:** Found in plan 26's review of phase 3b; the two reads
-predate it.
-
-**Needs:** A decision on which grain the table should have, then the same
-grain for both, with a fixture-backed test (rule 7).
 
 ### BL-047 · Day and Night's shared oracle_id
 
@@ -715,37 +668,6 @@ halves resolve by the back-face rule since plan 13.
 
 **Needs:** A real capture naming one.
 
-### BL-053 · A summarized block at the end of a dead file
-
-type: fix · priority: P3 · status: ready · area: reader
-
-A summarized block (`docs/arena-log.md`, trap 18) that is the very last
-thing in a file that never grows again, such as the `Player-prev.log` the
-startup recovery reads, never warns: the segmenter holds the block open
-until a later line closes it.
-
-**Why deferred:** No summarized block has appeared in the user's logs, and
-closing it needs `reader/ingest.py` to flush the segmenter at the end of a
-dead file.
-
-**Needs:** A flush at the end of a dead file in `reader/ingest.py`, and a
-held-back-block test in `tests/test_ingest.py`.
-
-### BL-054 · MTGO's score line, unread
-
-type: fix · priority: P3 · status: ready · area: projector mtgo
-
-`ParsedMatch.score_line` (`projector/mtgo/parse.py`) is a self-check that
-nothing reads, and `Match Tied <a>-<b>`, MTGO's running score while a match
-is level (183 lines in the real history, 2026-10-19), is not parsed into it.
-Results come from each game's own lines, never from a score line.
-
-**Why deferred:** Left out of plan 30 (its D9): nothing would read it.
-
-**Needs:** A reader for the check (a warning when the counted score
-disagrees with the last score line), then `Match Tied` beside `leads the
-match`.
-
 ### BL-080 · Two cutoffs for an early play
 
 type: fix · priority: P3 · status: needs-decision · area: table
@@ -760,22 +682,6 @@ shows both side by side. Found by plan 35's reviewers.
 
 **Needs:** A decision: one cutoff for both, or a sentence on Live that
 says why they differ.
-
-### BL-086 · A drawn game in the report's game-length rates
-
-type: fix · priority: P3 · status: ready · area: cli
-
-`sensei-top report`'s game-length table prints a win rate per turn count,
-won over `v_deck_game_length.games`. That count has no result filter, so a
-drawn game and an unfinished one both sit in it and lower the rate. The
-average length is right to count both; only the rate is wrong. Found while
-fixing the play/draw rates.
-
-**Why deferred:** Outside that fix's scope, and the view has no
-`games_lost` column, so it needs a migration of its own.
-
-**Needs:** `games_lost` on `v_deck_game_length`, and the rate read as won
-over won plus lost.
 
 ### BL-087 · A mapped drive may not hold the backups
 
@@ -842,6 +748,32 @@ The backup's real cost. Every daily run records its duration in
 "SELECT last_duration_ms FROM backup_state"`); read it after a few runs and
 put it in `docs/architecture.md`'s Backups section. The WAL peak there is
 still an estimate, because nothing records it.
+
+### BL-097 · A repeated payload under a new undated stamp
+
+type: fix · priority: P2 · status: ready · area: reader
+
+Undated rows all have `logged_at` NULL, so they share one occurrence count
+across stamps. A later read that meets a payload already stored undated, under
+a different stamp it also can't date, gets occurrence 0, collides with the
+stored digest and is silently counted as a duplicate: the entry is lost. This
+happens across polls or files under an unknown stamp shape (every entry is
+undated, under `auto` and `mdy`), `--locale dmy` on a month-first log, and
+`auto` with stale, unlearned files. A live log under `auto` normally takes its
+order from the file's last write, so it is normally safe. A full read of the
+file restores the entry; a re-read of a later file alone does not, and an
+unknown shape never gets a date. One sequence got slightly worse when dated
+twins were fixed: stamp X in one poll, then Y and X in the next, one payload: 2
+rows before, 1 now, from 3 real entries. The second row was labelled X then
+too, and Y was lost both ways.
+
+**Why deferred:** Older than the dated-twin fix and found during it, by
+reasoning and a synthetic reproduction. How often real payloads repeat under undated stamps
+was not measured.
+
+**Needs:** The stamp inside the undated digest, in `compute_digest`, with
+stored undated rows' digests dealt with. Rows without a header can't be
+recomputed.
 
 ## Code health
 

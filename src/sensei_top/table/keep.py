@@ -24,7 +24,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from sensei_top.guide import play as guide_play
-from sensei_top.guide.deck import DeckIdentity, list_identities
+from sensei_top.guide.deck import DeckIdentity, deck_matches, list_identities
 from sensei_top.guide.play import MulliganBucket, WLTally, key_card_timing
 from sensei_top.i18n import N_, _, decimal, ngettext, percent
 from sensei_top.review import effects
@@ -467,27 +467,29 @@ def build_keep_guide(
         expected_lands_eight = (_OPENING_HAND_SIZE + 1) * land_count / maindeck_size
         keep_rate = sum(p for k, p in odds if land_min <= k <= land_max)
 
+    # The identity's deck_ids are the grain for the mulligan table and the cost line
+    # alike (guide_play.mulligan_record below): a list edit mints a new deck_id, and
+    # the identity (the stable Arena GUID) keeps the history. The identity lookup is
+    # the same one api/routes/current_match.py::_brief_response makes.
+    identity = next((i for i in list_identities(conn) if deck_id in i.deck_ids), None)
+    grain_ids = tuple(identity.deck_ids) if identity is not None else (deck_id,)
     mulligan_rows = conn.execute(
-        """
+        f"""
         SELECT g.self_mulligans AS mulligans, COUNT(*) AS games,
                SUM(CASE WHEN g.result = 'win' THEN 1 ELSE 0 END) AS wins
           FROM games g JOIN matches m USING (match_id)
-         WHERE m.deck_id = ? AND g.result IN ('win', 'loss') AND g.self_mulligans IS NOT NULL
+         WHERE m.match_id IN ({deck_matches(grain_ids)})
+           AND g.result IN ('win', 'loss') AND g.self_mulligans IS NOT NULL
          GROUP BY g.self_mulligans
          ORDER BY g.self_mulligans
         """,
-        (deck_id,),
+        grain_ids,
     ).fetchall()
     mulligan_record = tuple(
         MulliganRecord(mulligans=r["mulligans"], games=r["games"], wins=r["wins"] or 0)
         for r in mulligan_rows
     )
 
-    # This deck's own play evidence, scoped to the DeckIdentity (the stable
-    # Arena GUID) containing this deck_id -- the same lookup
-    # api/routes/current_match.py::_brief_response makes, so a list edit that
-    # mints a new deck_id never loses the identity's history.
-    identity = next((i for i in list_identities(conn) if deck_id in i.deck_ids), None)
     key_plays: tuple[KeyPlay, ...] = ()
     mulligan_cost: MulliganCost | None = None
     if identity is not None:

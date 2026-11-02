@@ -456,8 +456,8 @@ class LiveIngester:
         """One ingest pass: the previous-session recovery on this instance's
         first pass that has an Arena log, then a normal tail read, plus the MTGO game-log check
         (``_poll_mtgo``) and the MTGO deck-folder poll (``_poll_mtgo_decks``),
-        each on its own clock. Marks the projection dirty when anything landed.
-        Returns the number of rows inserted.
+        each on its own clock. Marks the projection dirty when anything landed
+        or a stored row took a date. Returns the number of rows inserted or dated.
 
         ``run_forever`` runs this on its own thread and its own connection,
         so a rebuild's write lock never holds up the next log line from
@@ -468,32 +468,31 @@ class LiveIngester:
 
         arena_log = self._find_arena_log()
         inserted = 0
+        dated = 0
         if arena_log is None:
             pass  # no Arena log yet; MTGO below still runs
         elif not self._recovered:
             # First pass only: Arena wipes Player.log on launch, so the previous
             # session survives only in Player-prev.log, and only until the next one.
-            inserted = sum(
-                result.rows_inserted
-                for result in ingest_with_recovery(
-                    conn, arena_log, locale_hint=self.locale_hint
-                ).values()
-            )
+            results = ingest_with_recovery(conn, arena_log, locale_hint=self.locale_hint)
+            inserted = sum(result.rows_inserted for result in results.values())
+            dated = sum(result.rows_dated for result in results.values())
             self._recovered = True
         else:
-            inserted = ingest_file(conn, arena_log, locale_hint=self.locale_hint).rows_inserted
+            result = ingest_file(conn, arena_log, locale_hint=self.locale_hint)
+            inserted, dated = result.rows_inserted, result.rows_dated
 
         inserted += self._poll_mtgo(conn)
         inserted += self._poll_mtgo_decks(conn)
 
-        if inserted:
+        if inserted or dated:
             with self._stats_lock:
                 self.stats.events_ingested += inserted
                 self.stats.last_ingest_at = _now()
             with self._dirty_lock:
                 self._dirty = True
 
-        return inserted
+        return inserted + dated
 
     def project_if_due(self, conn: sqlite3.Connection, *, force_project: bool = False) -> bool:
         """Rebuild the projection if the gate says it's due. Returns True
@@ -611,7 +610,7 @@ class LiveIngester:
     def poll_once(self, conn: sqlite3.Connection, *, force_project: bool = False) -> bool:
         """Ingest, then project if due, both on ``conn``. Returns True if
         anything changed — a rebuild ran, or (if not) at least one row was
-        inserted.
+        inserted or dated.
 
         For callers, mainly tests, that want one deterministic step rather
         than the two threads ``run_forever`` drives.

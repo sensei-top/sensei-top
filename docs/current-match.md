@@ -221,8 +221,7 @@ before the anchor is an earlier match's.
 `LiveState.deck_boarded` says `deck_maindeck` came from a SubmitDeckResp; the
 library panel (`build_library_remaining`) and the keep guide
 (`build_keep_guide(..., boarded=)`) then count that list rather than the
-`decks` row, which is game 1's. The keep guide's mulligan record still reads
-by `deck_id`, game 1's deck.
+`decks` row, which is game 1's.
 
 **The keep guide it builds along the way is reused, not recomputed.**
 `OpeningHandRead` exposes the `KeepGuide` it already built internally
@@ -372,7 +371,9 @@ Two coarse, explicitly-labelled heuristics, not a simulation:
 approximation) of lands in an opening 7, and `keep_rate` sums it over the
 band above — "62% of your opening sevens land in the 2-4 land band."
 `mulligan_record` is the deck's own empirical win rate at each mulligan
-count, grouped straight from `games.self_mulligans` — no reconstruction of
+count, grouped straight from `games.self_mulligans` over every `deck_id` of the
+deck's identity (the grain of `mulligan_cost` below, so a list edit splits
+neither), or over the single `deck_id` only when no identity exists — no reconstruction of
 the hand actually *shipped* (after bottoming cards under the London rule),
 which stays genuinely absent from the log at every point, unlike the
 pre-decision offer the opening-hand read above uses.

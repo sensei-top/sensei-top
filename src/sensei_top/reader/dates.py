@@ -10,9 +10,6 @@ Two contracts the doc doesn't spell out at this level:
   reaching step 6 reads as a date either way, which is what its warning says.
 - The resolver runs inside ``ingest_file``'s transaction, so what it learns
   commits or rolls back with the read's rows and ``ingest_state``.
-
-An entry stored with no time can get a dated twin on a later read
-(BACKLOG.md, BL-041).
 """
 
 from __future__ import annotations

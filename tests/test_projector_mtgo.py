@@ -70,6 +70,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import logging
+import re
 from pathlib import Path
 
 import pytest
@@ -626,6 +627,14 @@ def test_turn_line_not_ascii_digits_or_too_long_is_skipped_with_a_warning(digits
     assert parsed.games[0].turn_count == 1
     assert len(parsed.warnings) == 1
     assert "turn number" in parsed.warnings[0]
+
+
+@pytest.mark.parametrize("digits", ["\u0663", "9" * 5000])
+def test_match_tied_not_ascii_digits_or_too_long_is_skipped_with_a_warning(digits):
+    parsed = parse_strings(["Player1 joined the game.", f"Match Tied {digits}-{digits}"])
+    assert parsed.score_line is None
+    assert len(parsed.warnings) == 1
+    assert "match score" in parsed.warnings[0]
 
 
 @pytest.mark.parametrize("digits", ["\u0663", "9" * 5000])
@@ -2071,3 +2080,150 @@ def test_a_join_after_a_bare_concession_still_opens_the_next_game():
     assert parsed.games[1].mulligans_by_handle == {"Player1": 0, "Player2000": 0}
     assert len(parsed.warnings) == 1
     assert "game 1" in parsed.warnings[0]
+
+
+# --- the score line self-check ------------------------------------------------
+#
+# From the transcripts: `Match Tied <a>-<b>` follows a game that leaves the match
+# level (_CASE_6A, game 2 won by Player1 after Player1 won none before: 1-1), and
+# follows a drawn game too (_CASE_5: `Player1 and Player2000 lose the game.`, then
+# `Match Tied 1-1`, game 3 of its match, so a draw counted for neither side).
+
+def _swapped(strings):
+    swap = {"Player1": "Player2000", "Player2000": "Player1"}
+    return [
+        re.sub(r"Player(?:1|2000)", lambda m: swap[m.group(0)], s) for s in strings
+    ]
+
+
+# Game 1 won by Player2000 (`Player2000 leads the match 1-0`), then 6A's game 2,
+# won by Player1: level at 1-1, and the line says so.
+_LEVEL_AFTER_TWO = (
+    _swapped(_CASE_4A[: _CASE_4A.index("Player1 leads the match 1-0") + 1]) + _CASE_6A
+)
+
+
+def _score_warnings(caplog):
+    return [r for r in caplog.records if "score line" in r.getMessage()]
+
+
+def test_match_tied_is_parsed_into_a_score_line_with_no_handle():
+    parsed = parse_strings(_CASE_6A)
+    assert parsed.score_line == (None, 1, 1)
+    assert parsed.warnings == []
+
+
+def test_an_agreeing_tie_does_not_warn(conn, caplog):
+    with caplog.at_level(logging.WARNING):
+        _project_strings(conn, _LEVEL_AFTER_TWO)
+    assert _stored_match(conn)["games_won"] == 1
+    assert _stored_match(conn)["games_lost"] == 1
+    assert _score_warnings(caplog) == []
+
+
+def test_an_agreeing_final_score_does_not_warn(conn, caplog):
+    strings = decode_strings(FIXTURE_BYTES)
+    with caplog.at_level(logging.WARNING):
+        _project_strings(conn, strings)
+    assert _score_warnings(caplog) == []
+
+
+def test_a_disagreeing_score_warns_and_changes_no_result(conn, caplog):
+    # Game 2 alone, won by Player1, yet MTGO says 1-1: one game won is all the
+    # transcript counts.
+    with caplog.at_level(logging.WARNING):
+        _project_strings(conn, _CASE_6A)
+    assert len(_score_warnings(caplog)) == 1
+    assert "Player" not in _score_warnings(caplog)[0].getMessage()
+    match = _stored_match(conn)
+    assert (match["games_won"], match["games_lost"]) == (1, 0)
+    assert match["result"] == "win"
+
+
+def test_an_undecided_last_game_does_not_warn(conn, caplog):
+    # _CASE_5's line belongs to game 1; its last game is game 2, so the line is
+    # stale (score_line_game), not skipped by the undecided-game rule.
+    with caplog.at_level(logging.WARNING):
+        _project_strings(conn, _CASE_5)
+    assert _score_warnings(caplog) == []
+
+
+def test_an_undecided_game_the_line_follows_is_not_checked(conn, caplog):
+    strings = [
+        "Player1 joined the game.",
+        "Player2000 joined the game.",
+        "Player1 chooses to play first.",
+        "Player1 begins the game with seven cards in hand.",
+        "Player2000 begins the game with seven cards in hand.",
+        "Turn 1: Player1",
+        "Player2000 has conceded from the game.",
+        "Player1 leads the match 1-0",
+    ]
+    with caplog.at_level(logging.WARNING):
+        _project_strings(conn, strings)
+    assert [g["result"] for g in _stored_games(conn)] == ["incomplete"]
+    assert _score_warnings(caplog) == []
+
+
+def test_a_match_with_no_score_line_is_not_checked(conn, caplog):
+    strings = [s for s in _CASE_6A if not s.startswith("Match Tied")]
+    with caplog.at_level(logging.WARNING):
+        _project_strings(conn, strings)
+    assert _score_warnings(caplog) == []
+
+
+def _game_won_by(winner, loser, line):
+    """A decided game's lines from _CASE_4A's shape, then the score line."""
+    return [
+        "Player1 joined the game.",
+        "Player2000 joined the game.",
+        "Player1 chooses to play first.",
+        "Player1 begins the game with seven cards in hand.",
+        "Player2000 begins the game with seven cards in hand.",
+        "Turn 1: Player1",
+        "Turn 1: Player2000",
+        f"{winner} wins the game.",
+        f"{loser} loses the game.",
+        *line,
+    ]
+
+
+def test_a_decided_game_after_the_last_score_line_is_not_checked(conn, caplog):
+    # `leads the match 1-0` follows game 1; game 2 is decided with no line yet.
+    strings = _game_won_by("Player1", "Player2000", ["Player1 leads the match 1-0"])
+    strings += _game_won_by("Player2000", "Player1", [])
+    with caplog.at_level(logging.WARNING):
+        _project_strings(conn, strings)
+    assert (_stored_match(conn)["games_won"], _stored_match(conn)["games_lost"]) == (1, 1)
+    assert _score_warnings(caplog) == []
+
+
+def test_a_decided_game_after_a_tied_line_is_not_checked(conn, caplog):
+    strings = _game_won_by("Player1", "Player2000", [])
+    strings += _game_won_by("Player2000", "Player1", ["Match Tied 1-1"])
+    strings += _game_won_by("Player1", "Player2000", [])
+    with caplog.at_level(logging.WARNING):
+        _project_strings(conn, strings)
+    assert _score_warnings(caplog) == []
+
+
+_AFTER_A_DRAW = (
+    _game_won_by("Player2000", "Player1", [])
+    + _game_won_by("Player1", "Player2000", [])
+    + _CASE_5[: _CASE_5.index("Match Tied 1-1")]
+)
+
+
+def test_a_drawn_game_counts_for_neither_side(conn, caplog):
+    with caplog.at_level(logging.WARNING):
+        _project_strings(conn, [*_AFTER_A_DRAW, "Match Tied 1-1"])
+    match = _stored_match(conn)
+    assert (match["games_won"], match["games_lost"]) == (1, 1)
+    assert [g["result"] for g in _stored_games(conn)] == ["loss", "win", "draw"]
+    assert _score_warnings(caplog) == []
+
+
+def test_a_wrong_tie_after_a_drawn_game_warns(conn, caplog):
+    with caplog.at_level(logging.WARNING):
+        _project_strings(conn, [*_AFTER_A_DRAW, "Match Tied 2-2"])
+    assert len(_score_warnings(caplog)) == 1

@@ -26,6 +26,10 @@ recovery. How often this bites is measured in the same doc section.
 
 Changing this formula changes every digest, so a database ingested under the
 old one must have ``raw_events`` rebuilt from the logs rather than topped up.
+
+Identity by digest has one gap: the same entry read under a different date.
+``_insert_entries`` closes it by ``(header, payload)``; the rule is in the same
+doc section, "An entry read under a second date".
 """
 
 from __future__ import annotations
@@ -43,7 +47,7 @@ from pathlib import Path
 
 from sensei_top import steam, wine
 from sensei_top.reader.dates import AUTO, auto_resolver
-from sensei_top.reader.segmenter import LogEntry, Segmenter
+from sensei_top.reader.segmenter import DATE_ORDERS, LogEntry, Segmenter, _parse_stamp
 
 log = logging.getLogger(__name__)
 
@@ -57,6 +61,56 @@ MAX_PENDING_BYTES = 32 * 1024 * 1024
 # a real Player.log can be 100+ MB. Kept as a module attribute (not a default
 # argument) so a test can monkeypatch it small without writing a huge file.
 _CHUNK_BYTES = 1024 * 1024
+
+_INSERT = """
+    INSERT OR IGNORE INTO raw_events
+           (digest, source_file, logged_at, kind, label, payload, header)
+         VALUES (:digest, :source_file, :logged_at, :kind, :label, :payload, :header)
+"""
+
+# Stored under another reading of the same stamp: the stored date stands.
+_INSERT_UNLESS_READ_OTHERWISE = """
+    INSERT OR IGNORE INTO raw_events
+           (digest, source_file, logged_at, kind, label, payload, header)
+    SELECT :digest, :source_file, :logged_at, :kind, :label, :payload, :header
+     WHERE NOT EXISTS (SELECT 1 FROM raw_events
+                        WHERE header = :header AND payload = :payload
+                          AND logged_at = :reading)
+"""
+
+# An undated entry also compares against its stamp's undated rows. Dating a row
+# frees its undated digest, and the next undated entry of the read, under
+# another stamp, counts to that same digest: the digest can't tell it is already
+# stored. So it counts by stamp and payload instead. It compares against every
+# real reading: it has no date of its own to leave out.
+_INSERT_UNDATED = """
+    INSERT OR IGNORE INTO raw_events
+           (digest, source_file, logged_at, kind, label, payload, header)
+    SELECT :digest, :source_file, :logged_at, :kind, :label, :payload, :header
+     WHERE (SELECT COUNT(*) FROM raw_events
+             WHERE header = :header AND logged_at IS NULL AND payload = :payload) <= :ordinal
+       AND NOT EXISTS (SELECT 1 FROM raw_events
+                        WHERE header = :header AND payload = :payload
+                          AND logged_at IN (:reading, :second_reading))
+"""
+
+# The oldest undated row of this stamp and payload takes the date and keeps its
+# id, so replay order holds. Not looked up by digest: a stored undated row's
+# occurrence was counted across every undated row of its read, so a dated read
+# cannot recompute it. Both guards leave a twin pair from before this rule
+# alone: the first because the digest is UNIQUE, the second because a date
+# already stored stands.
+_DATE_UNDATED_ROW = """
+    UPDATE raw_events
+       SET logged_at = :logged_at, digest = :digest
+     WHERE id = (SELECT id FROM raw_events
+                  WHERE header = :header AND logged_at IS NULL AND payload = :payload
+                  ORDER BY id LIMIT 1)
+       AND NOT EXISTS (SELECT 1 FROM raw_events WHERE digest = :digest)
+       AND NOT EXISTS (SELECT 1 FROM raw_events
+                        WHERE header = :header AND payload = :payload
+                          AND logged_at = :reading)
+"""
 
 
 def compute_digest(entry: LogEntry, occurrence: int = 0) -> str:
@@ -80,11 +134,17 @@ class IngestStats:
     rows_duplicate: int = 0
     bytes_read: int = 0
     truncation_detected: bool = False
+    # Stored rows that took a date; each is also one of rows_duplicate. It
+    # changes what the projector reads, so whatever re-projects on rows_inserted
+    # has to fire on this too.
+    rows_dated: int = 0
 
     def __str__(self) -> str:
         return (
             f"{self.entries_seen} entries, {self.rows_inserted} new, "
-            f"{self.rows_duplicate} duplicate, {self.bytes_read} bytes"
+            f"{self.rows_duplicate} duplicate, "
+            + (f"{self.rows_dated} dated, " if self.rows_dated else "")
+            + f"{self.bytes_read} bytes"
             + (" (truncation detected)" if self.truncation_detected else "")
         )
 
@@ -156,50 +216,77 @@ def _write_state(
     )
 
 
+def _stamp_readings(stamp: str, readings: dict[str, tuple[str, ...]]) -> tuple[str, ...]:
+    """Every date ``stamp`` can be read as, through the read's own cache.
+    Empty for a stamp no captured shape reads."""
+    known = readings.get(stamp)
+    if known is None:
+        parsed = _parse_stamp(stamp)
+        whens = () if parsed is None else (parsed.reading(order) for order in DATE_ORDERS)
+        known = tuple(dict.fromkeys(w.isoformat() for w in whens if w is not None))
+        readings[stamp] = known
+    return known
+
+
 def _insert_entries(
     conn: sqlite3.Connection,
     entries: list[LogEntry],
     source_file: str,
     stats: IngestStats,
     occurrences: dict[tuple[str | None, str], int],
+    readings: dict[str, tuple[str, ...]],
+    undated: dict[tuple[str, str], int],
 ) -> None:
-    """Insert a batch, ignoring digest collisions (idempotent replay).
+    """Store a batch in file order, ignoring digest collisions (idempotent replay).
 
-    ``occurrences`` is owned by the caller and spans the whole read, not this
-    batch: the ordinal has to keep counting across the 500-entry flushes or a
-    repeat would reset to zero at an arbitrary boundary.
+    ``occurrences``, ``readings`` and ``undated`` are owned by the caller and
+    span the whole read, not this batch: an ordinal has to keep counting across
+    the 500-entry flushes or a repeat would reset to zero at an arbitrary
+    boundary. ``undated`` counts the read's undated entries by stamp and payload.
+
+    Every statement here is a write, never a SELECT first (``_segmenter``'s
+    docstring says why). An entry with a stamp may date a stored row instead of
+    adding one: docs/architecture.md, "Idempotency".
     """
-    if not entries:
-        return
-    rows = []
     for e in entries:
         key = (e.logged_at, e.payload)
         occurrence = occurrences.get(key, 0)
         occurrences[key] = occurrence + 1
-        rows.append(
-            (
-                compute_digest(e, occurrence),
-                source_file,
-                e.logged_at,
-                str(e.kind),
-                e.label,
-                e.payload,
-                e.header,
+        row = {
+            "digest": compute_digest(e, occurrence),
+            "source_file": source_file,
+            "logged_at": e.logged_at,
+            "kind": str(e.kind),
+            "label": e.label,
+            "payload": e.payload,
+            "header": e.header,
+        }
+        others: list[str] = []
+        if e.header is not None:
+            others = [r for r in _stamp_readings(e.header, readings) if r != e.logged_at]
+        reading = others[0] if others else None
+        if e.header is not None and e.logged_at is not None:
+            before = conn.total_changes
+            conn.execute(_DATE_UNDATED_ROW, {**row, "reading": reading})
+            stats.rows_dated += conn.total_changes - before
+        before = conn.total_changes
+        if e.header is not None and e.logged_at is None:
+            stamp_key = (e.header, e.payload)
+            ordinal = undated.get(stamp_key, 0)
+            undated[stamp_key] = ordinal + 1
+            second_reading = others[1] if len(others) > 1 else None
+            conn.execute(
+                _INSERT_UNDATED,
+                {**row, "ordinal": ordinal, "reading": reading, "second_reading": second_reading},
             )
-        )
-    before = conn.total_changes
-    conn.executemany(
-        """
-        INSERT OR IGNORE INTO raw_events
-               (digest, source_file, logged_at, kind, label, payload, header)
-             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """,
-        rows,
-    )
-    inserted = conn.total_changes - before
-    stats.entries_seen += len(rows)
-    stats.rows_inserted += inserted
-    stats.rows_duplicate += len(rows) - inserted
+        elif others:
+            conn.execute(_INSERT_UNLESS_READ_OTHERWISE, {**row, "reading": reading})
+        else:
+            conn.execute(_INSERT, row)
+        inserted = conn.total_changes - before
+        stats.entries_seen += 1
+        stats.rows_inserted += inserted
+        stats.rows_duplicate += 1 - inserted
 
 
 def _iter_raw_lines(fh) -> Iterator[bytes]:
@@ -283,6 +370,7 @@ def ingest_file(
     *,
     locale_hint: str | None = None,
     from_start: bool = False,
+    final: bool = False,
 ) -> IngestStats:
     """Ingest new content from ``path`` into ``raw_events``.
 
@@ -298,6 +386,10 @@ def ingest_file(
     ``locale_hint`` is ``"mdy"`` or ``"dmy"`` for one fixed order, ``"auto"``
     to settle each header on its own (``reader/dates.py``), or None for no
     order: only year-first headers are dated then.
+
+    ``final`` says the file never grows again, so nothing later can close what
+    the read ends inside: an open summarized block warns. The committed offset
+    and what is stored are the same either way.
     """
     path = Path(path)
     stats = IngestStats()
@@ -334,6 +426,8 @@ def ingest_file(
     batch: list[LogEntry] = []
     # Spans the whole read: see _insert_entries.
     occurrences: dict[tuple[str | None, str], int] = {}
+    readings: dict[str, tuple[str, ...]] = {}
+    undated: dict[tuple[str, str], int] = {}
 
     start_offset = offset
     # The offset/carry actually safe to persist: advances only when the
@@ -384,9 +478,13 @@ def ingest_file(
                     pending_started_at = None
 
                 if len(batch) >= 500:
-                    _insert_entries(conn, batch, source_file, stats, occurrences)
+                    _insert_entries(
+                        conn, batch, source_file, stats, occurrences, readings, undated
+                    )
                     batch.clear()
-        _insert_entries(conn, batch, source_file, stats, occurrences)
+        if final and segmenter.pending:
+            segmenter.flush()
+        _insert_entries(conn, batch, source_file, stats, occurrences, readings, undated)
         # Committed offset, not however far the read actually looked ahead:
         # a held-back entry's bytes were read but not committed, so they are
         # read again (and counted again) next time.
@@ -420,7 +518,7 @@ def ingest_with_recovery(
     results: dict[str, IngestStats] = {}
     prev = previous_log_path(path)
     if prev.exists():
-        results[prev.name] = ingest_file(conn, prev, locale_hint=locale_hint)
+        results[prev.name] = ingest_file(conn, prev, locale_hint=locale_hint, final=True)
     results[Path(path).name] = ingest_file(conn, path, locale_hint=locale_hint)
     return results
 

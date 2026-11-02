@@ -12,9 +12,13 @@ export function isCoverageGap(row: CoverageRowOut): boolean {
 }
 
 /** A coverage row's archetype by name: its label, `archetypeName` of its
- *  key when it has none. */
-export function coverageName(row: CoverageRowOut): string {
-  return row.label || archetypeName(row.archetype_key)
+ *  key when it has none. When another of `rows` has the same label (compared
+ *  exactly) under a different key, both read `<label> · <archetypeName(key)>`;
+ *  a row with no label cannot collide. The separator is not translated. */
+export function coverageName(row: CoverageRowOut, rows: CoverageRowOut[]): string {
+  if (!row.label) return archetypeName(row.archetype_key)
+  const shared = rows.some((other) => other.archetype_key !== row.archetype_key && other.label === row.label)
+  return shared ? `${row.label} · ${archetypeName(row.archetype_key)}` : row.label
 }
 
 /** A coverage row's status as the word on its chip; a status not known
@@ -100,7 +104,7 @@ export function coveragePromptNotes(
     formatList(
       keys.map((key) => {
         const row = byKey.get(key)
-        return row ? coverageName(row) : archetypeName(key)
+        return row ? coverageName(row, rows) : archetypeName(key)
       }),
     )
   const notes: string[] = []

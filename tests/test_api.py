@@ -4571,3 +4571,28 @@ def test_mtgo_picks_reads_the_one_colour_rule():
 
     assert mtgo_picks.played_colors_by_name is classify.played_colors_by_name
     assert mtgo_picks.played_colors_of is classify.played_colors_of
+
+
+def test_game_length_winrate_leaves_a_drawn_and_an_unfinished_game_out(client):
+    """Four games of 99 player-turns, won/lost/drawn/unfinished: games counts
+    all four, the rate is one of the two decided."""
+    conn = sqlite3.connect(client.app.state.database)
+    conn.execute(
+        "INSERT INTO matches (match_id, event_id, deck_id, self_seat, opponent_seat, "
+        "opponent_user_id, opponent_name, started_at, ended_at, result, games_won, "
+        "games_lost, completed_reason, best_of) VALUES ('m-len', 'e', NULL, 1, 2, 'u', 'n', "
+        "'t0', 't1', 'draw', 1, 1, 'r', 3)"
+    )
+    for number, result in enumerate(("win", "loss", "draw", None), start=1):
+        conn.execute(
+            "INSERT INTO games (match_id, game_number, on_play, result, result_reason, "
+            "turn_count, self_mulligans, opp_mulligans) VALUES ('m-len', ?, 1, ?, NULL, 99, 0, 0)",
+            (number, result),
+        )
+    conn.commit()
+    conn.close()
+
+    rows = client.get("/api/metrics/game-length", params={"source": "all"}).json()
+    row = next(r for r in rows if r["turn_count"] == 99 and r["deck_id"] is None)
+    assert (row["games"], row["games_won"]) == (4, 1)
+    assert row["winrate"] == pytest.approx(0.5)

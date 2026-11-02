@@ -83,3 +83,33 @@ def test_play_draw_counts_a_drawn_game_as_neither_won_nor_lost(tmp_path, capsys)
     args.func(args)
     out = capsys.readouterr().out
     assert f"{'(no deck)':<22} {'on the play':<12} 1/2 games  50.0%" in out
+
+
+def test_game_length_rate_is_won_over_won_plus_lost(tmp_path, capsys):
+    """Four games that ended on turn 6 in a deckless match: a win, a loss, a
+    draw and one with no result. The rate reads 1 of the 2 decided; the
+    average length still counts all four. Seeded rows, as the fixture has no
+    drawn game."""
+    db_path = tmp_path / "t.db"
+    conn = open_database(db_path)
+    conn.execute(
+        "INSERT INTO matches (match_id, event_id, deck_id, self_seat, opponent_seat, "
+        "opponent_user_id, opponent_name, started_at, ended_at, result, games_won, "
+        "games_lost, completed_reason, best_of) VALUES ('m', 'e', NULL, 1, 2, 'u', 'n', "
+        "'t', 't', 'draw', 1, 1, 'r', 3)"
+    )
+    for number, result in enumerate(("win", "loss", "draw", None), start=1):
+        conn.execute(
+            "INSERT INTO games (match_id, game_number, on_play, result, result_reason, "
+            "turn_count, self_mulligans, opp_mulligans) VALUES ('m', ?, 1, ?, NULL, 6, 0, 0)",
+            (number, result),
+        )
+    conn.commit()
+    conn.close()
+    capsys.readouterr()
+
+    args = cli_module.build_parser().parse_args(["--db", str(db_path), "report", "gamelength"])
+    args.func(args)
+    out = capsys.readouterr().out
+    assert f"{'(no deck)':<22} turn   6   1/2 games  50.0%" in out
+    assert f"{'(no deck)':<22} avg length 6.0 turns (4 games)" in out
