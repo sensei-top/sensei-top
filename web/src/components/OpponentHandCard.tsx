@@ -141,8 +141,8 @@ export function OpponentHandCard({
     hand.open_mana == null
       ? null
       : hand.other_mana_sources
-        ? t('live.opponentHand.untappedLands', { open: hand.open_mana, other: hand.other_mana_sources })
-        : t('live.opponentHand.untapped', { open: hand.open_mana })
+        ? t('live.opponentHand.untappedLands', { count: hand.open_mana, other: hand.other_mana_sources })
+        : t('live.opponentHand.untapped', { count: hand.open_mana })
 
   const subtitleParts = [
     hand.hand_size != null ? t('live.opponentHand.cards', { count: hand.hand_size }) : null,
