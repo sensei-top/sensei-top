@@ -41,7 +41,9 @@ TopDeck.gg, Daybreak Games and mtgo.com, melee.gg, Anthropic, or the
 maintainers of MTGOFormatData and MTG_decklistcache. Their names appear here
 to credit their work. Nor is it produced by, endorsed by or affiliated with
 Untapped.gg, which the site's comparison page names to compare the two and
-which the app downloads nothing from.
+which the app downloads nothing from. Its domain is on the coach's web-search
+allowlist (`coach/canon.py`), so a report the user pays for may read a page of
+it; that search runs on Anthropic's servers, not in the app.
 
 ## Fonts and symbols
 
