@@ -210,7 +210,7 @@ def test_live_reports_mtgo_watching_when_the_watcher_has_a_directory(tmp_path, m
 
 
 def test_live_says_mtgo_is_not_watched_while_its_folder_cannot_be_read(tmp_path, make_client):
-    """The watcher's last check of the folder raised (a share not mounted):
+    """The watcher's last check of the folder raised (a share that dropped):
     it still has the folder, but nothing in it is being stored."""
     from sensei_top.live import LiveIngester
 

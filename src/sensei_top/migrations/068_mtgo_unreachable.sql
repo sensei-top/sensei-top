@@ -2,8 +2,9 @@
 -- folder failed.
 --
 -- /api/live's mtgo_watching said true for as long as the running watcher had
--- an MTGO folder, even while that folder could not be read (a share not
--- mounted, a folder MTGO moved). The watcher knows, but it runs in its own
+-- an MTGO folder, even while that folder could not be read (a share that
+-- dropped, a folder MTGO moved; a mountpoint left empty still reads as an empty
+-- folder). The watcher knows, but it runs in its own
 -- process (live.py's WatcherProcess), so the answer crosses here, the way
 -- last_projection_at does (026). 1 while the last check of the folder raised,
 -- 0 once one succeeds; the watcher writes it when the answer changes, and

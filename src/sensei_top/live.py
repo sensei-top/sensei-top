@@ -252,8 +252,10 @@ class LiveIngester:
         missing; this catches the coarser failure, the whole folder becoming
         unreachable (``glob()`` raising on a dead mount), or a folder that
         is missing or refuses its listing (``check_game_log_dir``, which the
-        scan itself does not do). A missing folder is recorded as unreachable
-        and otherwise quiet: no error counted, no warning. The clock is set
+        scan itself does not do). A share unmounted cleanly leaves an empty
+        mountpoint, which reads as an empty folder and passes. A missing folder
+        is recorded as unreachable and otherwise quiet: no error counted, no
+        warning. The clock is set
         before the attempt, so a failing folder is tried again on the next
         check, not on every ingest pass, and a run of failing checks is warned
         about and counted once rather than every ``mtgo_poll_every``. A failed

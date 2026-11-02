@@ -903,6 +903,7 @@ def test_a_folder_that_refuses_its_listing_is_unreachable(live, conn, share, cap
             run_for(live, conn, 4)
         assert _mtgo_unreachable(conn) == 1
         assert live.stats.errors == 1
+        assert "mtgo poll failed" in caplog.text
     finally:
         share.chmod(mode)
     run_for(live, conn, 4)

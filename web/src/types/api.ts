@@ -4840,7 +4840,7 @@ export interface components {
             guide: components["schemas"]["RcqNarrativeOut"] | null;
             /**
              * Answered For Another List
-             * @description the pasted answer was written for another list than the one stored beside it: copied from the prompt for one list, saved after the list was edited; false when it was the same list or that is not known
+             * @description the pasted answer was written for another list or other expected archetypes than the ones stored beside it: copied from the prompt for one, saved after an edit; false when it was the same list or that is not known
              * @default false
              */
             answered_for_another_list: boolean;
