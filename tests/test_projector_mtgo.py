@@ -2082,7 +2082,7 @@ def test_a_join_after_a_bare_concession_still_opens_the_next_game():
     assert "game 1" in parsed.warnings[0]
 
 
-# --- the score line self-check (BL-054) ----------------------------------------
+# --- the score line self-check ------------------------------------------------
 #
 # From the transcripts: `Match Tied <a>-<b>` follows a game that leaves the match
 # level (_CASE_6A, game 2 won by Player1 after Player1 won none before: 1-1), and
