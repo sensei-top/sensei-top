@@ -158,7 +158,7 @@ branch stops.
     git switch -c hotfix/<topic>
 
 The fix arrives with its fixture-backed test (non-negotiable 7) and a patch
-version, then follows steps 2 to 6 of a release. If a release branch is open
+version, then follows steps 2 to 7 of a release. If a release branch is open
 at the time, the hotfix is merged into it as well.
 
 ## Commits
