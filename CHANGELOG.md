@@ -18,6 +18,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Linux and the Steam Deck, and Sensei Top for Magic Online. The site now
   has a sitemap, and each page's title says what the app is.
 
+### Fixed
+
+- A player who uses only Arena no longer gets a warning about Magic Online
+  in the app's log every time the tracker rebuilds its matches, when the
+  settings file holds something else, such as a Claude key.
+- The live status no longer says Magic Online's game logs are being watched
+  while their folder can't be read, such as a folder that moved or a network
+  share that dropped. It says so again once the folder can be read.
+- An RCQ guide whose answer was copied for one list and saved after the
+  list or its expected archetypes were edited is now marked on the RCQ page
+  as written for another list. The prompt you copy says what it was built
+  from, so the page can tell.
+
 ## [1.2.3] - 2026-10-24
 
 ### Added

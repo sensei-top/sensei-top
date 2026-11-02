@@ -552,23 +552,6 @@ paper RCQs reach the field only through TopDeck (needs the user's key).
 **Needs:** A working TopDeck run, or another paper source
 (`docs/attribution.md`, "Rules for a new source").
 
-### BL-033 · An RCQ answer stored against an edited list
-
-type: fix · priority: P2 · status: ready · area: guide web
-
-The RCQ paste stores an answer against the list in the box at save time. The
-RCQ prompt carries no `context` hash, and the box stays usable while the
-preview catches up after an edit, so an answer copied for one list and saved
-after the list was edited is stored against the edited list, and the page's
-"changed" note cannot tell.
-
-**Why deferred:** Found in plan 24's review of phase 9c. Disabling the box
-while the preview updates would unmount it and lose the pasted text.
-
-**Needs:** A `context` hash on the RCQ prompt (the list as typed and the
-expected keys), stored with the guide so the page can say it was answered
-for another list.
-
 ### BL-034 · Detailed Logs off, untested
 
 type: fix · priority: P3 · status: needs-data · area: desktop
@@ -598,19 +581,6 @@ a pick is per match.
 
 **Needs:** A decision on whether confirmed picks should override the store's
 format there.
-
-### BL-036 · mtgo_watching with an unreachable folder
-
-type: fix · priority: P3 · status: ready · area: api mtgo
-
-`mtgo_watching` reports true while the running watcher has an MTGO
-directory, even while that directory is unreachable (a share not mounted, a
-folder MTGO moved).
-
-**Why deferred:** Minor. The watcher warns once when a run of failed checks
-starts, and counts it as one error.
-
-**Needs:** Plumbing the last check's outcome through to the status route.
 
 ### BL-037 · Arena's rename during a read on Windows
 
@@ -776,17 +746,6 @@ Results come from each game's own lines, never from a score line.
 disagrees with the last score line), then `Match Tied` beside `leads the
 match`.
 
-### BL-056 · A warning on every rebuild without [mtgo]
-
-type: fix · priority: P2 · status: ready · area: projector mtgo
-
-`projector/matches.py` calls `mtgo.config.load_handle()` on every
-`project()`, so a config file with no `[mtgo]` table (an Arena-only user
-with a Claude key, say) logs a warning on every rebuild.
-
-**Needs:** Loading the handle only when MTGO `raw_events` exist, or a silent
-absence like `resolve_log_dir()`'s.
-
 ### BL-080 · Two cutoffs for an early play
 
 type: fix · priority: P3 · status: needs-decision · area: table
@@ -801,20 +760,6 @@ shows both side by side. Found by plan 35's reviewers.
 
 **Needs:** A decision: one cutoff for both, or a sentence on Live that
 says why they differ.
-
-### BL-081 · An MTGO deck file's time from a second stat
-
-type: fix · priority: P3 · status: ready · area: reader mtgo
-
-`reader/mtgo_decks.py::_ingest_one_deck` stats the file for its identity
-token, then `_mtime_iso(path)` stats it again for `logged_at`. A write
-landing between the two leaves `logged_at` newer than the token's mtime.
-Found by plan 35's reviewers.
-
-**Why deferred:** No visible effect: the next poll re-reads the file either
-way.
-
-**Needs:** `logged_at` from the first `stat()`'s `st_mtime`.
 
 ### BL-086 · A drawn game in the report's game-length rates
 

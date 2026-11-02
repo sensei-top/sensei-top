@@ -113,6 +113,13 @@ class RcqGuideOut(BaseModel):
     decklist_text: str | None
     expected: list[str]
     guide: RcqNarrativeOut | None
+    answered_for_another_list: bool = Field(
+        False,
+        description="the pasted answer was written for another list or other expected archetypes "
+        "than the ones stored beside it: copied from the prompt for one, saved after an "
+        "edit; "
+        "false when it was the same list or that is not known",
+    )
 
 
 class RcqMarkdownOut(BaseModel):

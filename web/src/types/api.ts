@@ -1324,10 +1324,11 @@ export interface paths {
          *
          *     422 for another card's or an unreadable answer, nothing stored (a flex
          *     note role other than core, flex or risk is refused as on the CLI); 413
-         *     over 256 KB; 404 an unknown deck. The RCQ prompt carries no context
-         *     hash, so the header is ``for`` alone. Stored with the sentinel model
-         *     ``pasted``, no tokens, no cost. Every paste keeps its own row, like a
-         *     generation.
+         *     over 256 KB; 404 an unknown deck. Stored with the ``context`` the
+         *     answer carries, the list it was written for (``rcq_context``; an answer
+         *     from a prompt older than the hash has none, and is stored with it
+         *     unknown), and the sentinel model ``pasted``, no tokens, no cost. Every
+         *     paste keeps its own row, like a generation.
          */
         put: operations["paste_rcq_api_guide__key__rcq_narrative_put"];
         /**
@@ -3020,7 +3021,8 @@ export interface components {
          *     nothing here can be read from in-memory watcher state. Only
          *     ``watching``, ``mtgo_watching`` and ``watcher_stopped`` are asked
          *     of the watcher object directly (``is_alive()`` on the child process, the
-         *     MTGO directory it was started with, and ``stopped_unexpectedly()``, which
+         *     MTGO directory it was started with, whose last check's outcome is read
+         *     from ``projection_state`` like the rest, and ``stopped_unexpectedly()``, which
          *     serve's own monitor thread sets), since none needs shared memory to
          *     answer. ``arena_log`` is the one field that is neither: the watcher's own
          *     path, or while it waits what the same resolver finds now.
@@ -3033,7 +3035,7 @@ export interface components {
             watching: boolean;
             /**
              * Mtgo Watching
-             * @description the running watcher has an MTGO game-log directory and stores each game from it once the game ends
+             * @description the running watcher has an MTGO game-log directory, its last check of it succeeded, and it stores each game from it once the game ends; false while that folder cannot be read
              * @default false
              */
             mtgo_watching: boolean;
@@ -4836,6 +4838,12 @@ export interface components {
             /** Expected */
             expected: string[];
             guide: components["schemas"]["RcqNarrativeOut"] | null;
+            /**
+             * Answered For Another List
+             * @description the pasted answer was written for another list or other expected archetypes than the ones stored beside it: copied from the prompt for one, saved after an edit; false when it was the same list or that is not known
+             * @default false
+             */
+            answered_for_another_list: boolean;
         };
         /** RcqMarkdownOut */
         RcqMarkdownOut: {

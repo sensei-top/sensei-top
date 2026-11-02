@@ -234,7 +234,11 @@ every changed file at once, decided or not: it catches up whatever was
 written while nothing watched. `sensei-top ingest-mtgo` does the same by
 hand, and a running watcher's `project_if_due` notices rows another process
 stored (comparing `raw_events`' high-water mark to what it has projected
-through) and rebuilds for them on its next due poll.
+through) and rebuilds for them on its next due poll. Each check also writes
+whether the folder could be listed to `projection_state.mtgo_unreachable`
+(migration 068), when it changes, because `/api/live`'s `mtgo_watching` runs
+in another process; a folder that is missing or refuses its listing counts
+as unreachable, an empty one does not.
 
 `--no-mtgo` disables the MTGO leg entirely, deck folder included. Otherwise
 the directory resolves in order — an explicit `--mtgo-dir`, then

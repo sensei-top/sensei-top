@@ -527,7 +527,7 @@ def test_a_paste_over_256_kb_is_413_on_the_brief_and_coverage_routes(client, key
 
 def test_rcq_paste_stores_a_row_and_serves_it_as_the_latest(client, key):
     prompt = _rcq_prompt(client, key)
-    assert _header(prompt) == {"for": f"rcq:{key}"}  # no context: nothing to go stale
+    assert set(_header(prompt)) == {"for", "context"}  # the list it is written for
 
     resp = client.put(f"/api/guide/{key}/rcq/narrative", json=_rcq_body(prompt))
     assert resp.status_code == 200
@@ -537,6 +537,7 @@ def test_rcq_paste_stores_a_row_and_serves_it_as_the_latest(client, key):
     assert out["cost_usd"] is None
     assert out["decklist_text"] == PASTED_LIST
     assert out["guide"]["game_plan"] == "Be the beatdown."
+    assert out["answered_for_another_list"] is False
     assert client.get(f"/api/guide/{key}/rcq").json() == out
 
     conn = _db(client)
@@ -549,6 +550,42 @@ def test_rcq_paste_stores_a_row_and_serves_it_as_the_latest(client, key):
     again = client.put(f"/api/guide/{key}/rcq/narrative", json=_rcq_body(prompt)).json()
     assert again["id"] > out["id"]
     assert _count(client, "rcq_guide") == 2
+
+
+def test_an_rcq_answer_saved_after_the_list_changed_says_so(client, key):
+    """Copied for one list, saved with the box edited since:
+    stored against the edited list, as before, and now marked as written for
+    another one, which the page says. The same cards retyped are the same
+    list."""
+    prompt = _rcq_prompt(client, key)
+    edited = PASTED_LIST.replace("2 Beta Card", "3 Beta Card")
+    out = client.put(
+        f"/api/guide/{key}/rcq/narrative", json=_rcq_body(prompt, decklist=edited),
+    ).json()
+    assert out["decklist_text"] == edited
+    assert out["answered_for_another_list"] is True
+    assert client.get(f"/api/guide/{key}/rcq").json()["answered_for_another_list"] is True
+
+    retyped = "Deck\n56 Mountain\n4 Alpha Card\n\nSideboard\n2  Beta Card\n\n"
+    out = client.put(
+        f"/api/guide/{key}/rcq/narrative", json=_rcq_body(prompt, decklist=retyped),
+    ).json()
+    assert out["answered_for_another_list"] is False
+
+
+def test_an_rcq_answer_from_an_older_prompt_is_stored_with_its_list_unknown(client, key):
+    """An answer copied before the RCQ prompt carried a context has only its
+    ``for``: stored, never refused, its list unknown rather than guessed."""
+    prompt = _rcq_prompt(client, key)
+    answer = json.dumps({"for": f"rcq:{key}", "answer": _RCQ})
+    out = client.put(
+        f"/api/guide/{key}/rcq/narrative", json={**_rcq_body(prompt), "answer": answer},
+    ).json()
+    assert out["status"] == "ok"
+    assert out["answered_for_another_list"] is False
+    conn = _db(client)
+    assert conn.execute("SELECT written_for FROM rcq_guide").fetchone()[0] is None
+    conn.close()
 
 
 @pytest.mark.parametrize("make", [

@@ -89,6 +89,7 @@ import base64
 import hashlib
 import json
 import logging
+import os
 import sqlite3
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -195,6 +196,18 @@ def _skip_unstattable(path: Path, exc: OSError) -> None:
     """``ingest_mtgo_dir``'s default ``on_stat_error``: a warning on every
     call that meets the file."""
     log.warning("mtgo: skipping %s (could not stat): %s", path.name, exc)
+
+
+def check_game_log_dir(directory: str | Path) -> None:
+    """List ``directory`` once and close the listing, letting ``OSError``
+    raise: ``FileNotFoundError`` for a folder that is gone, another
+    ``OSError`` for one that refuses its listing (permissions, a dead
+    mount). ``scan_game_logs`` cannot say either, since it returns ``[]`` for
+    a missing folder and ``glob`` swallows a denied listing. An empty
+    mountpoint can't be told from an empty folder, so it passes.
+    """
+    with os.scandir(directory):
+        pass
 
 
 def scan_game_logs(
