@@ -1,6 +1,7 @@
-// Records the product shots to demo/segments/<id>.mkv at 1920x1080.
+// Records the product shots at 1920x1080, to demo/segments/<id>.mkv, or to
+// demo/segments/pt-br/<id>.mkv with --lang pt-br.
 //
-//     node scripts/demo-video/record.ts [--only home,live]
+//     node scripts/demo-video/record.ts [--lang en|pt-br] [--only home,live]
 //
 // Starts its own two servers on the copies seed.py wrote, and refuses to go on
 // if a port is taken or the API names a real opponent. Every non-GET request is
@@ -20,11 +21,22 @@ import { parseArgs } from 'node:util'
 const root = resolve(import.meta.dirname, '../..')
 const { chromium } = createRequire(resolve(root, 'web/package.json'))('playwright')
 const { settle, resolveIds } = await import(resolve(root, 'web/scripts/views.mjs'))
-const { values: args } = parseArgs({ options: { only: { type: 'string' } } })
+const { values: args } = parseArgs({
+  options: { only: { type: 'string' }, lang: { type: 'string', default: 'en' } },
+})
 const wanted = args.only ? new Set(args.only.split(',')) : null
 
+// The browser's locale is the language: a context with nothing stored follows
+// it, and the dashboard sends it to the API as Accept-Language.
+const LANGUAGES: Record<string, { locale: string; catalogue: string; segments: string }> = {
+  en: { locale: 'en-US', catalogue: 'en', segments: 'demo/segments' },
+  'pt-br': { locale: 'pt-BR', catalogue: 'pt-BR', segments: 'demo/segments/pt-br' },
+}
+const language = LANGUAGES[args.lang as string]
+if (!language) throw new Error(`no language ${args.lang}: ${Object.keys(LANGUAGES).join(', ')}`)
+
 const data = resolve(homedir(), '.local/share/sensei-top-demo')
-const segments = resolve(root, 'demo/segments')
+const segments = resolve(root, language.segments)
 mkdirSync(segments, { recursive: true })
 const manifest = JSON.parse(readFileSync(resolve(data, 'manifest.json'), 'utf8'))
 const seconds: Record<string, number> = Object.fromEntries(
@@ -37,6 +49,32 @@ const LIVE = 'http://127.0.0.1:8792'
 // API's naive timestamps read as written.
 const UNCUT_CLOCK = new Date(`${manifest.uncut_last_match}Z`).getTime() + 2 * 3600_000
 const LIVE_CLOCK = new Date(`${manifest.live_clock}Z`).getTime()
+
+/** A dashboard string by its key, namespace first, as this language's page
+ *  shows it. Every one is read before a server starts, so a key that left the
+ *  catalogue stops the run there. */
+function label(key: string, values: Record<string, number> = {}): string {
+  const [namespace, ...path] = key.split('.')
+  const file = resolve(root, 'web/src/locales', language.catalogue, `${namespace}.json`)
+  const text = path.reduce((node: any, part) => node?.[part], JSON.parse(readFileSync(file, 'utf8')))
+  if (typeof text !== 'string') throw new Error(`${language.catalogue} has no string at ${key}`)
+  return text.replace(/\{\{(\w+)\}\}/g, (_, name) => String(values[name]))
+}
+
+const LABELS = {
+  pattern: label('home.things.kicker.pattern'),
+  // LibraryCard's "next draw" is its own key; two draws take this one.
+  withinTwoDraws: label('live.library.within', { n: 2 }),
+  couldBeHolding: label('live.opponentHand.couldBeHolding'),
+  yourLibrary: label('live.library.title'),
+  allMatches: label('matches.detail.all'),
+  gameOne: label('matches.game.title', { n: 1 }),
+  bestMatchup: label('matchups.tiles.best'),
+  tierMtgo: label('field.tier.option.B'),
+  tierPaper: label('field.tier.option.A'),
+  beingPlayed: label('field.share.title'),
+  events: label('field.events.title'),
+}
 
 // --- servers ---------------------------------------------------------------
 
@@ -122,6 +160,8 @@ class Shot {
   async go(path: string): Promise<void> {
     await this.page.goto(new URL(path, this.base).href, { waitUntil: 'domcontentloaded' })
     await this.settled(path)
+    const shown = await this.page.evaluate(() => document.documentElement.lang)
+    if (shown !== language.catalogue) throw new Error(`${this.id}: the page is in ${shown}`)
     await this.page.evaluate(() => document.fonts.ready)
     await this.page.waitForTimeout(2200) // the charts' draw-in
   }
@@ -280,7 +320,7 @@ const SHOTS: Record<string, (s: Shot) => Promise<void>> = {
     await s.go('/')
     await s.start()
     await s.hold(1800)
-    const pattern = s.page.getByText('Pattern', { exact: true }).first()
+    const pattern = s.page.getByText(LABELS.pattern, { exact: true }).first()
     await s.glide(pattern, 1200, 70)
     await s.hold(400)
     await s.zoom(pattern, 1.2)
@@ -291,11 +331,11 @@ const SHOTS: Record<string, (s: Shot) => Promise<void>> = {
     await s.go('/live')
     await s.start()
     await s.hold(1800)
-    await s.glide(s.page.getByText('Within 2 draws', { exact: true }).first(), 1000, 0, -22)
+    await s.glide(s.page.getByText(LABELS.withinTwoDraws, { exact: true }).first(), 1000, 0, -22)
     await s.hold(1400)
-    const holding = s.page.getByText('Could be holding', { exact: true }).first()
+    const holding = s.page.getByText(LABELS.couldBeHolding, { exact: true }).first()
     await s.glide(holding, 1000)
-    await s.zoom(holding, 1.25, s.page.getByText('Your library', { exact: true }).first())
+    await s.zoom(holding, 1.25, s.page.getByText(LABELS.yourLibrary, { exact: true }).first())
     await s.glideTo(s.x + 170, s.y + 240, 1200)
     await s.holdUntil(10.8)
     await s.unzoom()
@@ -303,7 +343,7 @@ const SHOTS: Record<string, (s: Shot) => Promise<void>> = {
   async report(s) {
     // The report first and back inside the app, so the click finds it loaded.
     await s.go(`/matches/${ids.report}`)
-    await s.page.getByText('All matches', { exact: true }).first().click()
+    await s.page.getByText(LABELS.allMatches, { exact: true }).first().click()
     const row = s.page.locator(`a[href*="${ids.report}"]`).first()
     await row.waitFor()
     await s.settled('/matches')
@@ -316,7 +356,7 @@ const SHOTS: Record<string, (s: Shot) => Promise<void>> = {
     await s.settled('the report')
     await s.hold(1400)
     await s.scrollBy(420, 1200)
-    const game = s.page.getByText('Game 1', { exact: true }).first()
+    const game = s.page.getByText(LABELS.gameOne, { exact: true }).first()
     await s.glide(game, 600, 60)
     await s.hold(300)
     await s.zoom(game, 1.15)
@@ -327,7 +367,7 @@ const SHOTS: Record<string, (s: Shot) => Promise<void>> = {
     await s.go(`/decks/${ids.largest}/matchups`)
     await s.start()
     await s.hold(1500)
-    const best = s.page.getByText('Best matchup', { exact: true }).first()
+    const best = s.page.getByText(LABELS.bestMatchup, { exact: true }).first()
     await s.glide(best, 800, 110)
     await s.zoom(best, 1.2)
     await s.hold(1600)
@@ -339,10 +379,10 @@ const SHOTS: Record<string, (s: Shot) => Promise<void>> = {
     // Both tiers once beforehand, so the bars redraw instead of loading.
     await s.go('/field')
     const tiers = s.page.locator('select').nth(2)
-    for (const label of ['MTGO challenges', 'Paper 64+']) {
-      await tiers.selectOption({ label })
-      await s.settled(label)
-      await s.page.getByText('What is being played', { exact: true }).first().waitFor({ timeout: 120_000 })
+    for (const tier of [LABELS.tierMtgo, LABELS.tierPaper]) {
+      await tiers.selectOption({ label: tier })
+      await s.settled(tier)
+      await s.page.getByText(LABELS.beingPlayed, { exact: true }).first().waitFor({ timeout: 120_000 })
       await s.page.waitForTimeout(2500)
     }
     await s.start()
@@ -351,11 +391,11 @@ const SHOTS: Record<string, (s: Shot) => Promise<void>> = {
     await s.zoom(tiers, 1.3)
     await s.hold(1000)
     await s.unzoom()
-    await tiers.selectOption({ label: 'MTGO challenges' })
+    await tiers.selectOption({ label: LABELS.tierMtgo })
     await s.hold(2000)
-    const cards = await s.page.getByText('The events', { exact: true }).count()
+    const cards = await s.page.getByText(LABELS.events, { exact: true }).count()
     if (cards !== 1) throw new Error(`field: ${cards} events cards on the page`)
-    await s.glide(s.page.getByText('What is being played', { exact: true }).first(), 800, 170)
+    await s.glide(s.page.getByText(LABELS.beingPlayed, { exact: true }).first(), 800, 170)
     await s.holdUntil(10.8)
   },
 }
@@ -378,7 +418,7 @@ try {
       viewport: { width: 1440, height: 810 },
       deviceScaleFactor: 4 / 3,
       colorScheme: 'dark',
-      locale: 'en-US',
+      locale: language.locale,
       timezoneId: 'UTC',
     })
     await context.clock.setFixedTime(new Date(id === 'live' ? LIVE_CLOCK : UNCUT_CLOCK))

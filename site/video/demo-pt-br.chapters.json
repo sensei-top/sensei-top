@@ -1,0 +1,30 @@
+{
+  "duration": 54.8,
+  "chapters": [
+    {
+      "id": "home",
+      "label": "Início",
+      "start": 0.0
+    },
+    {
+      "id": "live",
+      "label": "Ao vivo",
+      "start": 11.0
+    },
+    {
+      "id": "report",
+      "label": "Partidas",
+      "start": 22.7
+    },
+    {
+      "id": "matchups",
+      "label": "Matchups",
+      "start": 34.4
+    },
+    {
+      "id": "field",
+      "label": "Meta",
+      "start": 44.1
+    }
+  ]
+}

@@ -12,6 +12,7 @@ import re
 import shutil
 import struct
 import subprocess
+from collections import Counter
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -57,6 +58,24 @@ SHELL_PAGES = [*ALL_PAGES, NOT_FOUND]
 FIRST_PAINT_LIMIT = 600 * 1024
 WHOLE_PAGE_LIMIT = 1024 * 1024
 LANDINGS = ["/", "/pt-br/"]
+# Demo video language -> its catalogue folder and its poster.
+DEMO_VIDEOS = {
+    "en": ("en", "demo-poster.webp"),
+    "pt-br": ("pt-BR", "demo-poster-pt-br.webp"),
+}
+DEMO_VIDEO_CAP = 5 * 1024 * 1024
+# The poster is on the landing's first paint: the first frame, not a second video's worth.
+DEMO_POSTER_LIMIT = 150 * 1024
+DEMO_FADE = 0.3
+# Each chapter's shot -> the catalogue key the dashboard names its place by
+# (site_cut.py's CHAPTER_KEYS, restated so a swapped label shows).
+DEMO_CHAPTER_KEYS = {
+    "home": ("shell", "places", "home"),
+    "live": ("shell", "places", "live"),
+    "report": ("shell", "places", "matches"),
+    "matchups": ("decks", "layout", "tabs", "matchups"),
+    "field": ("shell", "places", "field"),
+}
 # The pages whose head carries the Open Graph card: every page but the 404.
 OPEN_GRAPH_PAGES = ALL_PAGES
 
@@ -697,3 +716,250 @@ def test_the_worker_script_passes_its_own_tests():
         timeout=60,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def demo_shots() -> list[dict]:
+    """The product shots of the video's one timeline, in order."""
+    shots = json.loads((ROOT / "scripts/demo-video/shots.json").read_text(encoding="utf-8"))
+    return [shot for shot in shots if shot["kind"] == "video"]
+
+
+def demo_times() -> tuple[list[tuple[float, float]], float]:
+    """Each shot's (start, end) and the length, from the lengths alone.
+
+    Each 0.3 s crossfade eats that much from a join. A shot has started once
+    the fade into it has finished, and it ends where the next one's begins.
+    """
+    shots = demo_shots()
+    fades = [sum(s["seconds"] - DEMO_FADE for s in shots[:i]) for i in range(len(shots))]
+    total = fades[-1] + shots[-1]["seconds"]
+    starts = [0.0, *[fade + DEMO_FADE for fade in fades[1:]]]
+    return list(zip(starts, [*fades[1:], total], strict=True)), total
+
+
+def demo_chapter_list(lang: str) -> dict:
+    return json.loads((SITE / "video" / f"demo-{lang}.chapters.json").read_text(encoding="utf-8"))
+
+
+def demo_video_length(lang: str) -> float:
+    """The file's own length where ffprobe is there, otherwise the chapter list's."""
+    if shutil.which("ffprobe") is None:
+        return demo_chapter_list(lang)["duration"]
+    probe = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0"]
+    path = str(SITE / "video" / f"demo-{lang}.mp4")
+    return float(subprocess.run([*probe, path], check=True, capture_output=True, text=True).stdout)
+
+
+def parse_vtt(text: str) -> list[tuple[float, float, str]]:
+    """(start, end, text) per cue. Anything but this file's plain shape fails here."""
+    header, *blocks = text.strip().split("\n\n")
+    assert header == "WEBVTT"
+    stamp = r"(\d\d):(\d\d):(\d\d)\.(\d{3})"
+    cues = []
+    for block in blocks:
+        _, timing, *lines = block.split("\n")
+        found = re.fullmatch(f"{stamp} --> {stamp}", timing)
+        assert found, timing
+        h0, m0, s0, ms0, h1, m1, s1, ms1 = (int(part) for part in found.groups())
+        start = h0 * 3600 + m0 * 60 + s0 + ms0 / 1000
+        end = h1 * 3600 + m1 * 60 + s1 + ms1 / 1000
+        cues.append((start, end, " ".join(lines)))
+    return cues
+
+
+@pytest.mark.parametrize("lang", DEMO_VIDEOS)
+def test_each_language_has_a_demo_video_under_the_cap(lang):
+    video = SITE / "video" / f"demo-{lang}.mp4"
+    assert video.is_file()
+    assert video.stat().st_size < DEMO_VIDEO_CAP
+
+
+@pytest.mark.parametrize("lang", DEMO_VIDEOS)
+def test_the_demo_video_starts_as_it_downloads_and_runs_the_timeline(lang):
+    """The index comes before the media, one H.264 stream, nothing to hear."""
+    video = SITE / "video" / f"demo-{lang}.mp4"
+    atoms = []
+    with video.open("rb") as stream:
+        while len(head := stream.read(8)) == 8:
+            size, name = struct.unpack(">I4s", head)
+            atoms.append(name)
+            if size == 1:
+                size = struct.unpack(">Q", stream.read(8))[0] - 8
+            stream.seek(size - 8, 1)
+    assert atoms.index(b"moov") < atoms.index(b"mdat")
+    assert abs(demo_video_length(lang) - demo_times()[1]) < 0.2
+    if shutil.which("ffprobe") is None:
+        return
+    streams = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "stream=codec_name,pix_fmt",
+            "-of",
+            "json",
+            str(video),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert json.loads(streams)["streams"] == [{"codec_name": "h264", "pix_fmt": "yuv420p"}]
+
+
+@pytest.mark.skipif(shutil.which("ffprobe") is None, reason="needs ffprobe")
+@pytest.mark.parametrize("lang", DEMO_VIDEOS)
+def test_the_demo_video_is_tagged_bt709_and_seeks_to_each_chapter(lang):
+    """An untagged file shifts the palette; a chapter off a keyframe seeks late."""
+    video = str(SITE / "video" / f"demo-{lang}.mp4")
+    tags = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v",
+            "-show_entries",
+            "stream=color_space,color_primaries,color_transfer",
+            "-of",
+            "json",
+            video,
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    (stream,) = json.loads(tags)["streams"]
+    assert stream == {
+        "color_space": "bt709",
+        "color_primaries": "bt709",
+        "color_transfer": "bt709",
+    }
+    keyframes = [
+        float(line)
+        for line in subprocess.run(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-skip_frame",
+                "nokey",
+                "-select_streams",
+                "v",
+                "-show_entries",
+                "frame=pts_time",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                video,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.split()
+    ]
+    for chapter in demo_chapter_list(lang)["chapters"]:
+        assert any(abs(key - chapter["start"]) < 0.02 for key in keyframes), chapter["id"]
+
+
+def first_frame_ground(path: Path, matrix: str) -> tuple[int, ...]:
+    """The darkest of a first frame's two commonest colours, read as `matrix`, limited range."""
+    raw = subprocess.run(
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-i",
+            str(path),
+            "-frames:v",
+            "1",
+            "-vf",
+            f"scale=in_color_matrix={matrix}:in_range=tv:out_range=pc:flags=accurate_rnd,"
+            "format=rgb24",
+            "-f",
+            "rawvideo",
+            "-",
+        ],
+        check=True,
+        capture_output=True,
+    ).stdout
+    pixels = Counter(zip(raw[0::3], raw[1::3], raw[2::3], strict=True))
+    return min((colour for colour, _ in pixels.most_common(2)), key=sum)
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
+@pytest.mark.parametrize("lang", DEMO_VIDEOS)
+def test_the_video_opens_in_the_posters_colours(lang):
+    """The video replaces the poster in place: a shifted ground shows as a flash."""
+    _, name = DEMO_VIDEOS[lang]
+    video = first_frame_ground(SITE / "video" / f"demo-{lang}.mp4", "bt709")
+    poster = first_frame_ground(SITE / "img" / name, "bt601")
+    assert all(abs(a - b) <= 2 for a, b in zip(video, poster, strict=True)), (video, poster)
+
+
+@pytest.mark.parametrize("lang", DEMO_VIDEOS)
+def test_the_captions_parse_fit_the_video_and_carry_the_supplied_words(lang):
+    shots = demo_shots()
+    if lang == "en":
+        words = [shot["caption"] for shot in shots]
+    else:
+        source = ROOT / "scripts/demo-video" / f"shots.{lang}.json"
+        supplied = json.loads(source.read_text(encoding="utf-8"))
+        assert list(supplied) == [shot["id"] for shot in shots]
+        words = list(supplied.values())
+    vtt = (SITE / "video" / f"demo-{lang}.vtt").read_text(encoding="utf-8")
+    cues = parse_vtt(vtt)
+    times, _ = demo_times()
+    assert [cue[2] for cue in cues] == words
+    assert [cue[0] for cue in cues] == pytest.approx([t[0] for t in times], abs=0.002)
+    assert [cue[1] for cue in cues] == pytest.approx([t[1] for t in times], abs=0.002)
+    length = demo_video_length(lang)
+    assert all(0 <= start < end <= length + 0.05 for start, end, _ in cues)
+
+
+@pytest.mark.parametrize("lang", DEMO_VIDEOS)
+def test_the_chapters_start_where_each_shot_shows_and_use_the_apps_words(lang):
+    listed = demo_chapter_list(lang)
+    times, total = demo_times()
+    assert listed["duration"] == pytest.approx(total, abs=0.002)
+    chapters = listed["chapters"]
+    assert [c["id"] for c in chapters] == [shot["id"] for shot in demo_shots()]
+    assert [c["start"] for c in chapters] == pytest.approx([t[0] for t in times], abs=0.002)
+    catalogue, _ = DEMO_VIDEOS[lang]
+    words = catalogue_strings(catalogue)
+    assert all(c["label"] in words for c in chapters)
+    for chapter in chapters:
+        namespace, *path = DEMO_CHAPTER_KEYS[chapter["id"]]
+        node = json.loads(
+            (ROOT / "web" / "src" / "locales" / catalogue / f"{namespace}.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        for part in path:
+            node = node[part]
+        assert chapter["label"] == node, chapter["id"]
+
+
+@pytest.mark.parametrize("lang", DEMO_VIDEOS)
+def test_the_demo_poster_is_small_enough_for_first_paint(lang):
+    _, name = DEMO_VIDEOS[lang]
+    poster = SITE / "img" / name
+    assert poster.is_file()
+    head = poster.read_bytes()[:12]
+    assert head[:4] == b"RIFF" and head[8:] == b"WEBP"
+    assert poster.stat().st_size < DEMO_POSTER_LIMIT
+
+
+@pytest.mark.parametrize("catalogue", [folder for folder, _ in DEMO_VIDEOS.values()])
+def test_every_label_the_recording_looks_for_is_in_the_catalogue(catalogue):
+    """record.ts finds a shot's targets by these; a key that left stops a take."""
+    script = (ROOT / "scripts/demo-video/record.ts").read_text(encoding="utf-8")
+    keys = re.findall(r"\blabel\('([\w.]+)'", script)
+    assert keys
+    for key in keys:
+        namespace, *path = key.split(".")
+        locale = ROOT / "web/src/locales" / catalogue / f"{namespace}.json"
+        node = json.loads(locale.read_text(encoding="utf-8"))
+        for part in path:
+            node = node[part]
+        assert isinstance(node, str), key

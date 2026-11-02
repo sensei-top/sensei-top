@@ -215,6 +215,64 @@ the Live header compares the match's start with today and calls the match
 abandoned. The Portuguese pictures are captured again with `--locale
 pt-BR`, from the same two copies, into `site/img/pt-br/`.
 
+### The demo video
+
+    node scripts/demo-video/record.ts --lang <en|pt-br>
+    uv run python scripts/demo-video/site_cut.py --lang <en|pt-br>
+
+The landing's hero is a cut of the demo video: the five product shots of
+`shots.json` (Home, Live, a report, Matchups, Field), with none of the LinkedIn
+cut's cards, no sound and nothing burned in. It is recorded once per language
+against the demo database's copies, with the dashboard in that language: the
+browser's locale decides it, since a browser with nothing stored follows its
+locale and the dashboard sends the language to the API as `Accept-Language`.
+`record.ts` finds what a shot points at through the language's catalogue
+(`label`), and refuses a page whose `lang` is another's. `en` writes to
+`demo/segments/`, `pt-br` to `demo/segments/pt-br/`. `assemble.py` reads only
+the first, so the Portuguese takes leave the LinkedIn cut alone.
+
+`site_cut.py` writes one set per language, into `site/video/`.
+`demo-<lang>.mp4` is the video. `demo-<lang>.vtt` is the captions, English from
+`shots.json` and Portuguese from `shots.pt-br.json`, written by an Opus agent;
+`shots.json` holds the lengths for both. `demo-<lang>.chapters.json` is
+`{"duration": s, "chapters": [{"id", "label", "start"}]}`, read by the page:
+each `label` is the dashboard's own word for the place, from its catalogue.
+`site/img/demo-poster.webp` and `demo-poster-pt-br.webp` are the first frame of
+Home, 1440 px wide, about 60 KB in English and 64 KB in Portuguese. The poster
+counts toward the page's first paint, so `tests/test_site.py` holds it under a
+150 KB budget, a ceiling chosen for that, not a limit anyone measured.
+
+A language's video is encoded beside its file and replaces it only once the
+length and the cap have passed.
+
+A chapter and a caption start where the crossfade into their shot has finished,
+not where it begins: a seek to the fade's first frame would show the shot
+before. A caption ends where the next fade begins, which leaves 0.3 s without
+one at each join. Each chapter's start is a keyframe, so a seek lands at once.
+
+The encoding was chosen by eye, from stills of Home and Field at the frame's
+1040 px. At about the same size, 4 MB, 1080p at CRF 23 kept small text sharper
+than 720p at CRF 19, whose thin strokes went soft. The script keeps 1080p at CRF
+24, 4.2 MB in English and 4.3 MB in Portuguese on the takes measured, which
+leaves room under the 5 MB cap for another take, since a language's text changes
+how the video compresses. The cap is pinned in `tests/test_site.py`, and the
+script exits 1 over it: every re-recording that ships stays in the public
+repository's history, so record again only for a change a visitor would see.
+
+`record.ts`'s segments hold BT.601 values with no tag, and a browser reads an
+untagged HD video as BT.709, which would shift the palette against the poster
+at the moment the video replaces it. `site_cut.py` converts them and tags the
+file, as the last step of the filter chain: any filter after `colormatrix`
+reads its tag and converts a second time, darkening the ground by up to two
+levels. On this ffmpeg `-color_primaries` and `-color_trc` have no effect, so a
+bitstream filter (ffmpeg's h264 metadata filter) writes the primaries, transfer and matrix.
+`-colorspace` has to stay as well: removing it changed the pixels, and the video
+no longer matched the poster (Chromium, red 8 against 11 on the ground). Why is
+inferred, probably a second conversion, not traced inside ffmpeg.
+`test_the_video_opens_in_the_posters_colours` pins the colour against the
+poster, a first frame read as BT.709 against the poster read as BT.601, within
+two levels.
+
 ## Screenshots
 
     pnpm shots --label before    # every view at 1280 and 1008 px
