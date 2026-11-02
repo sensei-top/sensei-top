@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/home.png" alt="The Home page: the last session's record, the last thirty days' record, and three cards: the last match, one pattern across your matches, and the field you are playing in.">
+  <img src="docs/images/demo.gif" alt="A walk through the dashboard on demo data: Home with the last session and three cards, Live with the remaining library and what the opponent could be holding, and a match report with each game's position turn by turn.">
 </p>
 
 Sensei Top reads the logs Arena and Magic Online already write on your

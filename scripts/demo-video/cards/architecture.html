@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Architecture card</title>
+<link rel="stylesheet" href="card.css">
+<!-- capture.ts opens this once per ?step=N, so the stages light up left to
+     right in the video. No step means all of them. -->
+<style>
+body { padding-left: 70px; padding-right: 70px; }
+.flow { display: flex; align-items: stretch; gap: 0; }
+.stage {
+  flex: 1 1 0;
+  background: var(--panel);
+  border: 2px solid var(--edge);
+  border-radius: 20px;
+  padding: 26px 20px;
+  min-height: 300px;
+  opacity: 0.22;
+}
+.stage.on { opacity: 1; }
+.stage.now { border-color: var(--accent); }
+.stage b {
+  display: block;
+  font-family: "Bricolage Grotesque Variable", system-ui, sans-serif;
+  font-size: 38px;
+  line-height: 1.15;
+  margin-bottom: 18px;
+}
+.stage span { font-size: 29px; line-height: 1.35; color: var(--ink-2); display: block; }
+.arrow { flex: 0 0 44px; align-self: center; text-align: center; font-size: 40px; color: var(--muted); opacity: 0.3; }
+.arrow.on { opacity: 1; color: var(--accent); }
+.frame {
+  flex: 2.35 1 0;
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  border: 2px dashed var(--edge);
+  border-radius: 28px;
+  padding: 16px;
+  opacity: 1;
+}
+.frame .label {
+  position: absolute;
+  top: -62px;
+  right: 8px;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.frame.on { border-color: var(--accent); }
+.frame.on .label { color: var(--accent); }
+.rules { margin-top: 56px; font-size: 32px; color: var(--ink-2); line-height: 1.45; }
+.rules em { font-style: normal; color: var(--ink); font-weight: 700; }
+</style>
+</head>
+<body>
+  <h2>Two stages, and everything rebuilds from raw</h2>
+  <div class="flow">
+    <div class="stage" data-step="0"><b>Client logs</b><span>Arena's Player.log and MTGO's game logs</span></div>
+    <div class="arrow" data-step="1">→</div>
+    <div class="stage" data-step="1"><b>Reader</b><span>Files, offsets, hashes. No game semantics</span></div>
+    <div class="arrow" data-step="2">→</div>
+    <div class="stage" data-step="2"><b>raw_events</b><span>SQLite. Append-only, verbatim</span></div>
+    <div class="arrow" data-step="3">→</div>
+    <div class="stage" data-step="3"><b>Projector</b><span>Matches, games, turns. Always a full rebuild</span></div>
+    <div class="arrow" data-step="4">→</div>
+    <div class="frame" data-step="5" id="frame">
+      <div class="label">Electron packages these</div>
+      <div class="stage" data-step="4"><b>FastAPI</b><span>JSON API, loopback only</span></div>
+      <div class="arrow" data-step="5">→</div>
+      <div class="stage" data-step="5"><b>React</b><span>TypeScript, typed from the API schema</span></div>
+    </div>
+  </div>
+  <script>
+    const raw = new URLSearchParams(location.search).get('step')
+    const step = raw === null ? 99 : Number(raw)
+    for (const el of document.querySelectorAll('[data-step]')) {
+      const n = Number(el.dataset.step)
+      if (n <= step) el.classList.add('on')
+      if (n === step && el.classList.contains('stage')) el.classList.add('now')
+    }
+  </script>
+</body>
+</html>
