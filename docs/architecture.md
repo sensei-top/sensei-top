@@ -797,7 +797,9 @@ The dashboard's core metrics are SQL **views** (`v_deck_winrate`,
 `v_play_draw_winrate`, `v_deck_game_length`, `v_deck_turn_curves`,
 `v_deck_identity`, `v_deck_identity_winrate`). API endpoints are thin
 `SELECT`s over them; rates are computed in SQL with
-`CAST(x AS REAL) / NULLIF(y, 0)`.
+`CAST(x AS REAL) / NULLIF(y, 0)`. A rate is won over won plus lost: a drawn or
+unfinished game is in neither, so `v_deck_game_length` carries `games_lost`
+(migration 071) beside `games`, which stays every game for the average length.
 
 `v_deck_identity` (migration `033_deck_identity.sql`) is the canonical map
 from a `decks.deck_id` content hash to the Arena deck it belongs to: one hash

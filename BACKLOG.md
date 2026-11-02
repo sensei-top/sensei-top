@@ -609,21 +609,6 @@ locale did not change the header.
 regional format. A new shape is a fixture and a row in `docs/arena-log.md`'s
 table; a day-first `slash-12h` header is one `auto` already settles.
 
-### BL-043 · Two grains in the keep guide's mulligan numbers
-
-type: fix · priority: P2 · status: needs-decision · area: table guide
-
-The keep guide's mulligan table counts one deck version (`table/keep.py`'s
-query on `m.deck_id = ?`), while its mulligan-cost line counts the whole
-deck identity (`guide_play.mulligan_record`), so the two can differ for a
-deck whose list was edited; both say "Kept 7".
-
-**Why deferred:** Found in plan 26's review of phase 3b; the two reads
-predate it.
-
-**Needs:** A decision on which grain the table should have, then the same
-grain for both, with a fixture-backed test (rule 7).
-
 ### BL-047 · Day and Night's shared oracle_id
 
 type: fix · priority: P3 · status: needs-decision · area: cards
@@ -697,22 +682,6 @@ shows both side by side. Found by plan 35's reviewers.
 
 **Needs:** A decision: one cutoff for both, or a sentence on Live that
 says why they differ.
-
-### BL-086 · A drawn game in the report's game-length rates
-
-type: fix · priority: P3 · status: ready · area: cli
-
-`sensei-top report`'s game-length table prints a win rate per turn count,
-won over `v_deck_game_length.games`. That count has no result filter, so a
-drawn game and an unfinished one both sit in it and lower the rate. The
-average length is right to count both; only the rate is wrong. Found while
-fixing the play/draw rates.
-
-**Why deferred:** Outside that fix's scope, and the view has no
-`games_lost` column, so it needs a migration of its own.
-
-**Needs:** `games_lost` on `v_deck_game_length`, and the rate read as won
-over won plus lost.
 
 ### BL-087 · A mapped drive may not hold the backups
 

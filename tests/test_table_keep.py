@@ -412,3 +412,38 @@ def test_best_key_play_band_prefers_a_well_sampled_band_over_a_small_sample_spik
     threat = next(p for p in guide.key_plays if p.card == "Threat")
     assert threat.best_band == "T5-6"
     assert threat.best_band_record == WLTally(w=10, l=9)
+
+
+def test_mulligan_table_and_cost_line_share_the_identitys_grain(conn):
+    """One identity (one Arena deck GUID), two deck_ids because the list was
+    edited. Twelve decided games, hand-counted:
+    d1: 4 kept-seven wins, 2 kept-seven losses.
+    d2: 3 kept-seven wins, 1 kept-seven loss, 1 mulliganed win, 1 mulliganed loss.
+    Over the identity: kept seven 7 wins of 10, mulliganed 1 of 2. The table
+    built for d2 reads all of it, as does the cost line."""
+    _insert_card(conn, 1, "Island", mana_cost=None, type_line="Basic Land — Island")
+    _insert_card(conn, 3, "Filler", mana_cost="{1}{U}", type_line="Instant")
+    _insert_deck(conn, "d1", [1] * 24 + [3] * 36)
+    _insert_deck(conn, "d2", [1] * 23 + [3] * 37)
+    for deck_id in ("d1", "d2"):
+        conn.execute(
+            "INSERT INTO deck_guids (deck_id, arena_deck_id, last_seen) VALUES (?, 'guid-a', 't')",
+            (deck_id,),
+        )
+    plan = (
+        [("d1", "win", 0)] * 4 + [("d1", "loss", 0)] * 2
+        + [("d2", "win", 0)] * 3 + [("d2", "loss", 0)]
+        + [("d2", "win", 1), ("d2", "loss", 1)]
+    )
+    for i, (deck_id, result, mulligans) in enumerate(plan):
+        _insert_match(conn, f"m{i}", deck_id)
+        _insert_game(conn, f"m{i}", result, self_mulligans=mulligans)
+    conn.commit()
+
+    guide = build_keep_guide(conn, "d2")
+
+    table = [(r.mulligans, r.games, r.wins) for r in guide.mulligan_record]
+    assert table == [(0, 10, 7), (1, 2, 1)]
+    assert guide.mulligan_cost is not None
+    assert guide.mulligan_cost.kept_seven == MulliganBucket(games=10, wins=7, losses=3)
+    assert guide.mulligan_cost.mulliganed == MulliganBucket(games=2, wins=1, losses=1)

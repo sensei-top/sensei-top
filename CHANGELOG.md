@@ -36,6 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reading a log again once its date format is known, or with a different
   `--locale`, no longer stores its entries a second time. An entry stored with
   no date takes its date instead.
+- The keep guide's mulligan table and its mulligan cost line now count the same
+  games: every version of the deck. The table used to count only the current
+  list, so the two could disagree after an edit.
+- Win rates by game length no longer count a drawn or unfinished game against
+  you, in `sensei-top report` and `/api/metrics/game-length`. The average length
+  still counts every game.
 
 ## [1.2.3] - 2026-10-24
 
