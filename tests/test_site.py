@@ -408,16 +408,43 @@ def test_the_roadmap_section_comes_right_after_what_is_not_planned(url_path):
     assert sections[sections.index("not-planned") + 1] == "roadmap"
 
 
-def test_the_roadmap_image_shows_from_700_px_beside_its_words():
-    _, page = load("/")
-    images = [a for a in page.find("img") if a["src"] == "/img/roadmap-en.svg"]
-    assert [(a["alt"], a["loading"]) for a in images] == [
-        ("The same lists, drawn as a diagram.", "lazy")
-    ]
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_the_roadmap_image_shows_from_700_px_beside_its_words(url_path):
+    _, page = load(url_path)
+    english = url_path == "/"
+    src = "/img/roadmap-en.svg" if english else "/img/roadmap-pt-br.svg"
+    alt = (
+        "The same lists, drawn as a diagram."
+        if english
+        else "As mesmas listas, desenhadas como um diagrama."
+    )
+    images = [a for a in page.find("img") if a["src"] == src]
+    assert [(a["alt"], a["loading"]) for a in images] == [(alt, "lazy")]
     assert "@media (max-width: 699px) { .roadmap-image { display: none; } }" in (
         SITE / "site.css"
     ).read_text(encoding="utf-8")
-    assert "An overlay for Arena." in page.visible_text
+    assert ("An overlay for Arena." if english else "Um overlay para o Arena.") in page.visible_text
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_the_overlay_is_no_longer_listed_as_not_planned(url_path):
+    raw, _ = load(url_path)
+    block = re.search(r'<section class="card" id="not-planned">.*?</section>', raw, re.S).group(0)
+    assert "overlay" not in block.lower()
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_the_landing_loads_the_hero_script_and_it_gates_autoplay(url_path):
+    raw, _ = load(url_path)
+    assert f'<script defer src="{HERO_SCRIPT}"></script>' in raw
+    script = (SITE / "hero.js").read_text(encoding="utf-8")
+    assert "matchMedia('(prefers-reduced-motion: no-preference)').matches" in script
+    assert "matchMedia('(min-width: 700px)').matches" in script
+    guard = re.search(r"^if \((.*)\) start\(\)$", script, re.M)
+    assert guard, "autoplay must be one guarded start() at the end"
+    conditions = {c.strip() for c in guard.group(1).split("&&")}
+    assert conditions == {"motionAllowed", "wideEnough", "!navigator.connection?.saveData"}
+    assert not re.search(r"^start\(\)", script, re.M)
 
 
 @pytest.mark.parametrize("name", ["roadmap-en.svg", "roadmap-pt-br.svg"])

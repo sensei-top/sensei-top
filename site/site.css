@@ -63,6 +63,7 @@ section > p:last-child, section > ul:last-child, section > ol:last-child { margi
 /* Read pages. */
 main { max-width: calc(var(--read) + 2 * var(--gutter)); margin-inline: auto; padding: 0 var(--gutter); }
 body:not(.landing) h1 { margin: 56px 0 16px; }
+body:not(.landing) main > section:first-child > .lead:first-child { margin-top: 56px; }
 body:not(.landing) h2 { margin: 56px 0 12px; font-size: 24px; }
 body:not(.landing) h3 { margin: 32px 0 8px; }
 h2 + h3 { margin-top: 0 !important; }

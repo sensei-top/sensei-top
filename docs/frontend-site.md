@@ -85,11 +85,10 @@ fetched until they are turned on. Their cues are narrowed to 70% of the frame so
 a long one wraps short of the buttons, which move to the top corner under 700 px
 for the same reason. It keeps playing when scrolled out of view.
 
-The English roadmap section carries the same lists as a drawing,
-`img/roadmap-en.svg`, after its words. It is lazy, hidden under 700 px, where its
+Each landing's roadmap section carries the same lists as a drawing,
+`img/roadmap-en.svg` and `img/roadmap-pt-br.svg`, after its words. It is lazy, hidden under 700 px, where its
 text would be too small to read, and its `alt` says only that it repeats the
-lists, since the words sit beside it. The Portuguese drawing is on disk for the
-Portuguese page.
+lists, since the words sit beside it.
 
 The motion here is the hero's entrance and a feature row rising as it scrolls
 into view, inside `@supports (animation-timeline: view())` where it is scroll-driven
