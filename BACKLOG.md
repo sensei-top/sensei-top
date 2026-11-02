@@ -715,21 +715,6 @@ dead file.
 **Needs:** A flush at the end of a dead file in `reader/ingest.py`, and a
 held-back-block test in `tests/test_ingest.py`.
 
-### BL-054 · MTGO's score line, unread
-
-type: fix · priority: P3 · status: ready · area: projector mtgo
-
-`ParsedMatch.score_line` (`projector/mtgo/parse.py`) is a self-check that
-nothing reads, and `Match Tied <a>-<b>`, MTGO's running score while a match
-is level (183 lines in the real history, 2026-10-19), is not parsed into it.
-Results come from each game's own lines, never from a score line.
-
-**Why deferred:** Left out of plan 30 (its D9): nothing would read it.
-
-**Needs:** A reader for the check (a warning when the counted score
-disagrees with the last score line), then `Match Tied` beside `leads the
-match`.
-
 ### BL-080 · Two cutoffs for an early play
 
 type: fix · priority: P3 · status: needs-decision · area: table

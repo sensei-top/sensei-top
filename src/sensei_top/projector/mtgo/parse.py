@@ -65,6 +65,9 @@ is a handle, read as "Handles" below says:
   running or final score, recorded as ``ParsedMatch.score_line`` (a
   **self-check only** — see below); only ``wins the match`` sets the
   authoritative ``winner_handle``.
+* ``Match Tied <a>-<b>`` -> the same ``score_line``, with no handle (None):
+  both sides have ``a`` games. A drawn game counts for neither side, so the
+  line after a draw can read ``Match Tied 1-1`` with three games played.
 
 Deliberately **not** parsed, even though real and present in the fixture:
 ``draws a card``, ``discards``, ``is being attacked by``, ``creates a ...
@@ -73,9 +76,7 @@ names; 25 surface through the plays/casts/activates/triggers lines above,
 and the 26th, ``Zombie Druid Token``, only as the target of a triggered
 ability, which the ``Trigger`` pattern does not capture
 (``tests/test_projector_mtgo.py::test_25_of_26_bracketed_names_become_card_events``).
-Nor are ``Match Tied
-<a>-<b>``, MTGO's running score while the match is level (``score_line``
-would be its only reader, and it is a self-check, see below), or ``has left
+Nor is ``has left
 the game``: a game that ends with a player leaving, or with a lost connection
 and no return, has no result here, since the log never says who MTGO awarded
 it to.
@@ -275,6 +276,7 @@ class _Patterns:
     wins_game: re.Pattern[str]
     wins_match: re.Pattern[str]
     leads_match: re.Pattern[str]
+    tied_match: re.Pattern[str]
     card_events: tuple[tuple[str, re.Pattern[str]], ...]
 
 
@@ -313,6 +315,7 @@ def _patterns(known: set[str]) -> _Patterns:
         leads_match=re.compile(
             rf"^{h} (?:leads|wins) the match (?P<a>\d+)-(?P<b>\d+)$"
         ),
+        tied_match=re.compile(r"^Match Tied (?P<a>\d+)-(?P<b>\d+)$"),
         card_events=(
             ("PlayLand", re.compile(rf"^{h} plays {_CARD_REF}\.$")),
             ("CastSpell", re.compile(rf"^{h} casts {_CARD_REF}\.$")),
@@ -435,7 +438,11 @@ class ParsedMatch:
     # Who wrote "has run out of time and has lost the match.": they lost the
     # match, so the other player won it even when no "wins the match" follows.
     timed_out_handle: str | None
-    score_line: tuple[str, int, int] | None   # self-check only; see docstring
+    # (leader or winner, their games, the other's); the handle is None for a
+    # tie. Self-check only; see docstring.
+    score_line: tuple[str | None, int, int] | None
+    # The number of games opened when that line was read (0 before any).
+    score_line_game: int
     # Never a handle or a raw line, which names one: project.py logs these,
     # and the log goes into the diagnostics zip a bug report attaches.
     warnings: list[str]
@@ -463,7 +470,8 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
     current_turn: int | None = None
     final_winner: str | None = None
     timed_out: str | None = None
-    score_line: tuple[str, int, int] | None = None
+    score_line: tuple[str | None, int, int] | None = None
+    score_line_game = 0
     warnings: list[str] = []
     # Handles that lost connection in the current, undecided game: any later
     # `joined` in that game is a rejoin, not a start block.
@@ -675,6 +683,19 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
                 )
             else:
                 score_line = (m.group("handle"), a, b)
+                score_line_game = len(games)
+            continue
+
+        m = patterns.tied_match.match(s)
+        if m:
+            a, b = _ascii_int(m.group("a")), _ascii_int(m.group("b"))
+            if a is None or b is None:
+                warnings.append(
+                    f"unrecognised match score {m.group('a')!r}-{m.group('b')!r}"
+                )
+            else:
+                score_line = (None, a, b)
+                score_line_game = len(games)
             continue
 
         # Anything else is real MTGO text this parser has no use for yet
@@ -688,7 +709,7 @@ def parse_strings(strings: list[str]) -> ParsedMatch:
     return ParsedMatch(
         match_id=match_id, handles=handles, spectators=spectators, games=games,
         winner_handle=final_winner, timed_out_handle=timed_out,
-        score_line=score_line, warnings=warnings,
+        score_line=score_line, score_line_game=score_line_game, warnings=warnings,
     )
 
 
