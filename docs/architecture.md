@@ -692,7 +692,9 @@ Everything is safe to re-run, and this is tested rather than assumed:
   incremental poll boundary is taken for a re-read and dropped; a full read
   of the file (`Player-prev.log` on recovery) counts from zero and restores
   it. Measured on real logs: two such pairs in 15,118 entries, both
-  same-second client-state polls, neither a game event.
+  same-second client-state polls, neither a game event. Undated entries have a
+  wider version of this: they share one count across stamps, so a repeated
+  payload under a new undated stamp is dropped too (BL-097).
 - **A poll boundary used to change what an entry digests to.** The live
   watcher calls `ingest_file` roughly once a second, and a fresh `Segmenter`
   per call lost two things at every boundary: the most recent header
@@ -716,10 +718,43 @@ Everything is safe to re-run, and this is tested rather than assumed:
   times the largest real payload measured, a 1,055,060-byte response), past
   which an entry that still hasn't closed is corrupt in some new way, not
   merely still arriving, and is abandoned rather than held back forever.
+- **An entry read under a second date.** The digest holds `logged_at`, so
+  two things used to split one entry into two rows: a row stored undated
+  (`--locale auto`'s last step, `reader/dates.py`) read again once its order is
+  known, and one file read under `--locale mdy` and then `dmy`. A row's
+  occurrence can't be recomputed from a later read, because undated rows all
+  share `logged_at` `NULL` and count together, so `_insert_entries` looks for
+  the stored row by `(header, payload)`, never by digest. Three rules:
+  - A dated entry finds an undated row: the oldest such row takes the date and
+    the digest it would have had, in place. It keeps its `id`, so replay order
+    is unchanged. This is the one write `raw_events` ever takes after its
+    insert, and it never touches the payload. A row that took a date counts in
+    `IngestStats.rows_dated`, and in the watcher's dirty check, since the
+    projector reads `logged_at`.
+  - An entry whose stamp has another real reading finds a row stored under
+    it, whether the entry is dated or not: the stored date stands and the entry
+    counts as a duplicate. The first date a row got is kept, and a later
+    `--locale` doesn't correct it. A dated entry compares only against the
+    stamp's other reading, so one under a year-first or single-reading stamp
+    rests on the digest alone. An undated entry has no date of its own, so it
+    compares against every real reading its stamp has, even when this read's
+    order finds that stamp impossible.
+  - An undated entry finds as many undated rows of its stamp and payload as
+    the read has met so far: it is already stored. The digest can't answer this:
+    dating a row frees its undated digest, and the next undated entry of the
+    read, under another stamp, counts to that same digest, so it would be stored
+    a second time.
+
+  A twin pair that already exists is left alone: dating its undated row would
+  collide on the digest, or contradict the date beside it. Rows from before
+  migration 062 have `header` `NULL` and are out of reach. Nothing dates a
+  row without a re-read of its bytes. A hand-run `ingest` that only dates rows
+  leaves `MAX(id)` where it was, so a running watcher sees them at its next
+  rebuild, not at once.
 - **Migration 042 stops the poll-boundary twin going forward, not
   retroactively.** A database ingested before it still holds, for some
   requests, the `logged_at = NULL` row and its fully-timestamped twin as two
-  separate `raw_events` rows — append-only, so nothing rewrites them. The
+  separate `raw_events` rows — their `header` is `NULL`, so nothing rewrites them. The
   twin lands at a higher `raw_events.id` than the request it duplicates, out
   of order relative to Arena's own timeline, which can revert state a
   request between the two legitimately changed (e.g. a stale deck name).
@@ -813,7 +848,7 @@ Each table has one owner, and confusing their lifecycles is how data gets destro
 
 | Owner | Tables | Rebuild behaviour |
 |---|---|---|
-| Reader | `raw_events`, `ingest_state`, `header_date_order` | `raw_events` append-only, the other two updated in place (`docs/arena-log.md`, "Timestamps", for the third); never deleted |
+| Reader | `raw_events`, `ingest_state`, `header_date_order` | `raw_events` append-only but for an undated row taking its date ("Idempotency"), the other two updated in place (`docs/arena-log.md`, "Timestamps", for the third); never deleted |
 | Projector | `decks`, `matches`, `games`, `turns`, `turn_zones`, `card_events`, `deck_guids`, `opponent_archetype`, `game_decks`, `rank_snapshot`, `combat_attacks`, `combat_blocks`, `damage_events`, `life_events` | Deleted and recomputed by every `project()` |
 | Format inference | `match_format_fit`, `match_format_inference` | Deleted and recomputed by every `classify_matches()`, which runs right after `project()`; `project()` itself never touches them. MTGO matches only |
 | Downloaded reference | `cards`, `card_legality`, `mtgo_card`, `archetypes`, `archetype_fetch`, `meta_event`, `meta_fetch`, `meta_fetch_source`, `meta_deck`, `meta_round_match` | Never deleted — a rebuild must not throw away a fetch |

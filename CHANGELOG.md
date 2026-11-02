@@ -33,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Two rows in a deck's matchup coverage that share a name, because the
   tournament data files one name under two archetypes, now say which is
   which, as "Dimir Midrange · Bx Midrange".
+- Reading a log again once its date format is known, or with a different
+  `--locale`, no longer stores its entries a second time. An entry stored with
+  no date takes its date instead.
 
 ## [1.2.3] - 2026-10-24
 

@@ -156,16 +156,18 @@ shape key (`date_order`, the stamp that `settled_by` it, its `source_file`,
 when it changes. What a read learns applies to its own later headers; there
 is no second pass, so an earlier `None` in that read stays `None`. A header
 that settles its shape against the learned order warns, and the new order is
-learned — the latest evidence wins — but rows already stored never change.
+learned — the latest evidence wins — but a date already stored never changes.
 The `mdy`/`dmy` overrides neither read nor write the table. `project()`
 never touches it: it is reader state, like `ingest_state`. Each `auto`
 warning fires once per process per file and shape, so a watcher polling
 every second doesn't repeat it.
 
 **The stamp is kept.** `raw_events.header` (migration 062) holds each
-entry's stamp exactly as written, outside the digest, so a date read wrongly
-today can be re-derived later. Nothing re-derives it yet; `BACKLOG.md`, BL-041,
-records the one case that would need it.
+entry's stamp exactly as written, outside the digest. It is how a later read
+of the same bytes finds an entry stored under no date, or under the stamp's
+other reading: the first takes the date, the second keeps the one it has
+(`docs/architecture.md`, "Idempotency"). Nothing re-derives a date without a
+re-read.
 
 ## The traps
 
@@ -421,8 +423,10 @@ followed by lines opening with three or two colons that give the counts,
 in place of the message itself. None has appeared in the user's logs (2026-10-19). The segmenter
 recognises the block, warns once per block with its counts, and stores
 nothing: the state it replaced is lost, and that game's replay is missing
-it. A block that is the very last thing in a file that never grows again
-does not warn (`BACKLOG.md`, BL-053).
+it. A block that is the very last thing in `Player-prev.log` warns when the
+startup recovery finishes reading that file, since nothing will ever close it.
+At the end of `Player.log` it waits for the next line, since that file can
+still grow.
 
 **19. One bad message must not cost its neighbours.** An event batches many
 messages (trap 3), the game's result often among them. The projector

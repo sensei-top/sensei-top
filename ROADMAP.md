@@ -61,8 +61,8 @@ In this order, unless Discussions says otherwise.
    bug: mulligan numbers counted two ways, a field with no paper results
    after 2026-08-16 first (BL-032, BL-043); then the rest (BL-025, BL-026,
    BL-027, BL-028, BL-030, BL-031, BL-034, BL-035, BL-037,
-   BL-040, BL-041, BL-042, BL-047, BL-048, BL-050, BL-051, BL-053,
-   BL-080, BL-086, BL-087).
+   BL-040, BL-042, BL-047, BL-048, BL-050, BL-051,
+   BL-080, BL-086, BL-087, BL-097).
 
 ## Later
 

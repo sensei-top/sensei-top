@@ -102,7 +102,9 @@ One line each; the detail is in the doc named, and
 2. **Raw events are append-only and verbatim.** Store the payload exactly as
    it appeared. Arena wipes `Player.log` on every launch, so a parsing bug can
    destroy data that no longer exists anywhere else — keeping the raw text is
-   what makes a fix retroactive.
+   what makes a fix retroactive. The one thing ever changed in a stored row is
+   a NULL `logged_at` and the digest over it, when the same entry is read again
+   with its date settled; the payload never.
 3. **Projection is always a full rebuild.** `project()` deletes every derived
    row and recomputes from `raw_events`. Never write an incremental path.
 4. **Never synthesize data.** Unknown or missing means `NULL` plus a warning —
