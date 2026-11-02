@@ -14,7 +14,7 @@
     "writeAgain": "Write the RCQ guide again",
     "subtitle": "A game plan, the field you will meet, a plan for each matchup checked against your 75, the flex slots and a checklist between rounds.",
     "staleNote": "The list has changed since.",
-    "answeredForAnotherList": "This answer was written for another list than the one saved with it: its prompt was copied before the list was edited."
+    "answeredForAnotherList": "This answer doesn't match what was saved with it: its prompt was copied before the list or the expected archetypes changed."
   },
   "inputs": {
     "title": "Your list and the store",

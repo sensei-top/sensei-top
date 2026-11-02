@@ -538,15 +538,25 @@ def _counts_block(title: str, counts: Counter) -> list[str]:
 def rcq_context(parsed: ParsedList, expected_keys) -> str:
     """The ``context`` an RCQ prompt carries and its answer copies back: a
     hash of the list's cards, both boards, and the expected archetypes, the
-    inputs the guide is written against. Counts by name, sorted, so a list
-    retyped in another order or with other spacing is the same list, and a
-    card added, cut or moved between boards is another: the case it is for
-    is an answer copied for one list and saved after an edit."""
+    inputs the guide is written against. Counts by name, casefolded (names
+    that casefold alike merge their counts) and sorted, and the expected keys
+    sorted, so a list retyped in another case or order, or the same chips
+    picked in another order, is the same list; a card added, cut or moved
+    between boards is another. The case it is for is an answer copied for one
+    list and saved after an edit."""
+
+    def board(cards) -> list:
+        counts: dict[str, int] = {}
+        for name, count in cards.items():
+            key = name.casefold()
+            counts[key] = counts.get(key, 0) + count
+        return sorted(counts.items())
+
     payload = json.dumps(
         {
-            "main": sorted(parsed.main.items()),
-            "side": sorted(parsed.side.items()),
-            "expected": list(expected_keys),
+            "main": board(parsed.main),
+            "side": board(parsed.side),
+            "expected": sorted(expected_keys),
         },
         sort_keys=True,
     )

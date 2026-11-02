@@ -458,8 +458,9 @@ prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
   rebuilds the prompt from that body and checks the answer's
   `for: rcq:{key}` line. The prompt also carries a `context`,
   `guide/rcq.py::rcq_context`: a hash of the list's cards, both boards
-  counted by name, and the expected archetypes, so another order or other
-  spacing is the same list and a card added, cut or moved is another. The
+  counted by name without regard to case, and the expected archetypes in any
+  order, so another order, other spacing or other case is the same list and
+  a card added, cut or moved is another. The
   box stays usable while the preview catches up after an edit, so an
   answer copied for one list can be saved with another; it is stored
   against the list sent, as before, with the `context` it carried, and

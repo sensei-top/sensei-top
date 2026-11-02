@@ -185,30 +185,20 @@ def _is_prose(body_schema: dict) -> bool:
     return set(body_schema.get("properties") or {}) == {PROSE}
 
 
-def answer_format(for_: str, context: str | None, body_schema: dict) -> str:
+def answer_format(for_: str, context: str, body_schema: dict) -> str:
     """The instruction every copied prompt ends with: one JSON object, the
     header copied back verbatim, then the body ``body_schema`` describes.
-    ``context`` is the hash the card's staleness compares; a card with none
-    passes ``None`` and the prompt asks for ``for`` alone."""
-    if context is not None:
-        lead = (
-            "Answer with exactly one JSON object and nothing else: no text before or\n"
-            "after it. The tracker this prompt came from reads the answer back, and its\n"
-            "first two fields tell it which card the answer belongs to and which data it\n"
-            "was written for, so copy them exactly as they are written here:\n"
-        )
-        header = [
-            f'  "for": {json.dumps(for_, ensure_ascii=False)},',
-            f'  "context": {json.dumps(context, ensure_ascii=False)},',
-        ]
-    else:
-        lead = (
-            "Answer with exactly one JSON object and nothing else: no text before or\n"
-            "after it. The tracker this prompt came from reads the answer back, and its\n"
-            "first field tells it which card the answer belongs to, so copy it exactly\n"
-            "as it is written here:\n"
-        )
-        header = [f'  "for": {json.dumps(for_, ensure_ascii=False)},']
+    ``context`` is the hash the card's staleness compares."""
+    lead = (
+        "Answer with exactly one JSON object and nothing else: no text before or\n"
+        "after it. The tracker this prompt came from reads the answer back, and its\n"
+        "first two fields tell it which card the answer belongs to and which data it\n"
+        "was written for, so copy them exactly as they are written here:\n"
+    )
+    header = [
+        f'  "for": {json.dumps(for_, ensure_ascii=False)},',
+        f'  "context": {json.dumps(context, ensure_ascii=False)},',
+    ]
     parts = [
         lead,
         "{",

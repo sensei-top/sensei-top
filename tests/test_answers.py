@@ -88,31 +88,6 @@ def test_the_contract_with_a_context_is_the_approved_wording():
     assert answer_format("guide:deck:d1", HASH, SCHEMA) == expected
 
 
-def test_the_contract_without_a_context_asks_for_the_for_line_alone():
-    expected = (
-        "Answer with exactly one JSON object and nothing else: no text before or\n"
-        "after it. The tracker this prompt came from reads the answer back, and its\n"
-        "first field tells it which card the answer belongs to, so copy it exactly\n"
-        "as it is written here:\n"
-        "\n"
-        "{\n"
-        '  "for": "rcq:deck:d1",\n'
-        '  "answer": {an object matching the schema below}\n'
-        "}\n"
-        "\n"
-        'The schema for "answer":\n'
-        "{\n"
-        '  "type": "object",\n'
-        '  "properties": {\n'
-        '    "engine": {\n'
-        '      "type": "string"\n'
-        "    }\n"
-        "  }\n"
-        "}"
-    )
-    assert answer_format("rcq:deck:d1", None, SCHEMA) == expected
-
-
 def test_a_prose_contract_says_how_to_write_the_text_inside_one_string():
     """The whole text sits in one JSON string, so the escaping is spelled out
     for the prose cards, and only for them."""
@@ -461,6 +436,21 @@ def test_the_rcq_context_is_the_lists_cards_not_its_spelling():
         rcq_context(parse_decklist("Deck\n4 Alpha Card\n56 Mountain\n"), ["b"]),
     ):
         assert other != base
+
+
+def test_the_rcq_context_ignores_case_and_the_order_of_the_expected_chips():
+    base = rcq_context(parse_decklist("Deck\n4 Alpha Card\n56 Mountain\n"), ["a", "b"])
+    assert rcq_context(parse_decklist("Deck\n4 alpha card\n56 MOUNTAIN\n"), ["a", "b"]) == base
+    assert rcq_context(parse_decklist("Deck\n4 Alpha Card\n56 Mountain\n"), ["b", "a"]) == base
+    # Names that casefold alike are one card, whose counts add up.
+    text = "Deck\n2 Alpha Card\n2 alpha card\n56 Mountain\n"
+    split = rcq_context(parse_decklist(text), ["a", "b"])
+    assert split == base
+    # A card moved between boards is still another list.
+    moved = rcq_context(
+        parse_decklist("Deck\n56 Mountain\n\nSideboard\n4 alpha card\n"), ["a", "b"]
+    )
+    assert moved != base
 
 
 def test_the_schema_is_said_once_in_a_copied_prompt(client, identity):
