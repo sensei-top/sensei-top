@@ -1,3 +1,4 @@
+import { useAiFeatures } from '../shell/aiFeatures'
 import { CopyPromptBody, CopyPromptCard } from './CopyPromptCard'
 import { GenerateCard } from './GenerateCard'
 import { CoachView } from './coach/CoachView'
@@ -39,8 +40,8 @@ export type AiRegistry = typeof SURFACES
  *  top of the component like any hook, and draws `ai.GenerateCard` and the
  *  rest from what it returns. `null` means AI features are off: the caller
  *  draws nothing of its AI part, its heading and any sentence about it
- *  included. Until the switch exists it never returns `null`, so a caller
- *  must still handle it. */
+ *  included. */
 export function useAi(): AiRegistry | null {
-  return SURFACES
+  const [on] = useAiFeatures()
+  return on ? SURFACES : null
 }

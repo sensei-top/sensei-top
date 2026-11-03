@@ -51,6 +51,7 @@ function app(change: Partial<AppSettings> = {}): AppSettings {
     diagnostic: false,
     update: { state: 'idle' },
     onboarded: false,
+    aiFeatures: true,
     askAutostart: false,
     canAutostart: true,
     windowsStore: false,

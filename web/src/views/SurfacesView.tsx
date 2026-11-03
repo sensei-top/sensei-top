@@ -61,6 +61,7 @@ const SAMPLE_APP: AppSettings = {
   diagnostic: false,
   update: { state: 'ready', version: '0.0.1-sample' },
   onboarded: true,
+  aiFeatures: true,
   askAutostart: false,
   canAutostart: true,
   windowsStore: false,
