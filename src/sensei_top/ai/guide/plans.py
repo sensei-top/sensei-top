@@ -2,7 +2,7 @@
 boarded out that isn't in the maindeck, nothing boarded in that isn't in
 the sideboard, every sideboard card used by at least one plan.
 
-Operates on structured data (the ``guide/narrative.py`` response), not
+Operates on structured data (the ``ai/guide/narrative.py`` response), not
 regex over prose — a plan the model gets wrong is caught and surfaced next
 to the matchup, never silently repaired.
 """

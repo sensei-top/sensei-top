@@ -38,7 +38,7 @@ sections for several archetypes at once.
 
 **What comes back**: the JSON object ``_BRIEF_TOOL``'s schema describes.
 ``brief_from_json`` parses it; ``brief/importer.py`` validates the plan
-against the real 75 via ``guide.plans.validate_plans`` before it is ever
+against the real 75 via ``ai.guide.plans.validate_plans`` before it is ever
 stored.
 """
 
@@ -50,16 +50,16 @@ from collections import Counter
 from dataclasses import dataclass
 
 from sensei_top.ai.answers import brief_for, coverage_for
-from sensei_top.ai.review.narrative import NarrativeError
-from sensei_top.brief.store import PlayAround, Staple, list_hash
-from sensei_top.guide.deck import DeckIdentity, identity_format
-from sensei_top.guide.field import _classified_deck_total, field_window, personal_rate
-from sensei_top.guide.narrative import (
+from sensei_top.ai.guide.narrative import (
     BoardCard,
     _oracle_text_block,
     _parse_json_object,
     _wrap_json_prompt,
 )
+from sensei_top.ai.review.narrative import NarrativeError
+from sensei_top.brief.store import PlayAround, Staple, list_hash
+from sensei_top.guide.deck import DeckIdentity, identity_format
+from sensei_top.guide.field import _classified_deck_total, field_window, personal_rate
 from sensei_top.guide.window import format_resets, legality_known, window_start
 from sensei_top.i18n import english
 from sensei_top.metagame.matchup import ranked_field_matchup

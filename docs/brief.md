@@ -51,8 +51,7 @@ generates a standalone brief on its own. The round trip:
    opponent, then validated against your real 75 and stored.
 
 **Most briefs never need step 1 or 3 individually.** A generated, pasted or
-imported deck guide (`POST` or `PUT /api/guide/{key}/narrative`, or
-`guide --deck KEY --import FILE`) writes a brief for every matchup that
+imported deck guide (`POST` or `PUT /api/guide/{key}/narrative`) writes a brief for every matchup that
 narrative covers, via
 `from_guide.py` — so one guide lights up the whole Live page. This is
 exactly why a generate button here would mostly duplicate a call the guide
@@ -60,7 +59,7 @@ already made; per-matchup imports are for filling a gap the guide missed.
 
 A plan that does not balance, or that names a card the deck does not hold, is
 **stored with the problem recorded** rather than rejected or silently
-repaired (`guide/plans.py`) — the dashboard shows the problem next to the
+repaired (`ai/guide/plans.py`) — the dashboard shows the problem next to the
 plan, and `tests/test_brief_importer.py` pins that.
 
 ## Why a brief is persisted
@@ -311,8 +310,7 @@ record numbers rather than re-querying them, and never overwrites an
 existing `source='live'` row whose `list_hash` still matches — a brief
 written for this exact matchup, from a prompt that carried that matchup's own
 consensus staples and oracle text, is not improved by a guide's broader
-sweep. `sensei-top guide --deck KEY --import FILE` and `POST` or `PUT
-/api/guide/{key}/narrative` drive this.
+sweep. `POST` or `PUT /api/guide/{key}/narrative` drive this.
 
 ## What this does not do
 

@@ -12,8 +12,8 @@ prose, both yours:
   missing, copy that card's prompt again. A pasted answer shows as
   "Pasted in." and costs nothing. Running from source, the guide and
   brief cards also show the command that saves an answer from a file,
-  such as `guide --deck KEY --import FILE`; `guide` and `brief` print the
-  prompt with `--prompt`.
+  such as `brief --deck KEY --archetype KEY --import FILE`; `brief` prints
+  the prompt with `--prompt`.
 - **Set your own Anthropic API key** and press the dashboard's generate
   button instead. A matchup brief has no button of its own: generating
   its deck's guide writes the deck's briefs too.

@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import pytest
 
+from sensei_top.ai.guide.narrative import BoardCard
+from sensei_top.ai.guide.plans import PlanProblem
 from sensei_top.brief.store import (
     Brief,
     PlayAround,
@@ -15,8 +17,6 @@ from sensei_top.brief.store import (
     write_brief,
 )
 from sensei_top.db import open_database
-from sensei_top.guide.narrative import BoardCard
-from sensei_top.guide.plans import PlanProblem
 
 
 @pytest.fixture

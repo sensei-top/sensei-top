@@ -1,6 +1,6 @@
-"""Tests for brief/importer.py and guide/authored.py: storing an authored
-brief or guide narrative — the CLI import path both keep regardless of
-whether a Claude credential is configured (AGENTS.md non-negotiable #5,
+"""Tests for brief/importer.py and ai/guide/authored.py: storing an authored
+brief or guide narrative, which both keep regardless of whether a
+Claude credential is configured (AGENTS.md non-negotiable #5,
 `docs/llm.md`).
 """
 
@@ -11,14 +11,14 @@ from dataclasses import replace
 
 import pytest
 
+from sensei_top.ai.guide.authored import narrative_for, read_narrative, write_narrative
+from sensei_top.ai.guide.narrative import BoardCard, CardNote, GuideNarrative, MatchupPlan
+from sensei_top.ai.guide.plans import PlanProblem
 from sensei_top.brief import store
 from sensei_top.brief.importer import import_brief, import_briefs
 from sensei_top.brief.narrative import NarrativeError
 from sensei_top.db import open_database
-from sensei_top.guide.authored import narrative_for, read_narrative, write_narrative
 from sensei_top.guide.deck import DeckIdentity
-from sensei_top.guide.narrative import BoardCard, CardNote, GuideNarrative, MatchupPlan
-from sensei_top.guide.plans import PlanProblem
 
 
 @pytest.fixture
@@ -104,7 +104,7 @@ def test_import_brief_stores_a_written_answer(conn):
 
 
 def test_import_brief_records_a_broken_plan_rather_than_rejecting_it(conn):
-    """guide/plans.py's standing rule: a plan the author got wrong is
+    """ai/guide/plans.py's standing rule: a plan the author got wrong is
     surfaced next to the matchup, never silently repaired — and never a
     reason to throw away prose that may still be worth reading."""
     _seed(conn)

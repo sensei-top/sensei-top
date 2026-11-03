@@ -1,6 +1,6 @@
-"""Tests for guide/narrative.py: the context and prompt ``full_prompt``
-builds, and ``guide_narrative_from_json`` — the parser both the CLI import
-and the API's generate route (``llm.write_json`` against this module's own
+"""Tests for ai/guide/narrative.py: the context and prompt ``full_prompt``
+builds, and ``guide_narrative_from_json`` — the parser the API's paste
+and generate routes (``llm.write_json`` against this module's own
 ``_GUIDE_TOOL`` schema) converge on. The module itself makes no call
 (``sensei_top.ai.llm`` does — see ``tests/test_llm.py``), so there is nothing
 here to fake an SDK response for.
@@ -12,6 +12,11 @@ import json
 
 import pytest
 
+from sensei_top.ai.guide.narrative import (
+    NarrativeError,
+    build_guide_context,
+    guide_narrative_from_json,
+)
 from sensei_top.db import open_database
 from sensei_top.guide.bundle import (
     DeckGuide,
@@ -21,11 +26,6 @@ from sensei_top.guide.bundle import (
 from sensei_top.guide.deck import DeckIdentity
 from sensei_top.guide.field import FieldEvidence, archetype_key_by_name
 from sensei_top.guide.list_diff import CardVerdict, ListDiff
-from sensei_top.guide.narrative import (
-    NarrativeError,
-    build_guide_context,
-    guide_narrative_from_json,
-)
 
 
 @pytest.fixture

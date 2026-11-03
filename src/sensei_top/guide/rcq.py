@@ -14,7 +14,7 @@ the player expects at the store. See docs/guide.md, "The RCQ guide".
 Expected archetypes are a nudge, never evidence: each one gets a prompt
 section and must get a plan, but none displaces a top-share section.
 
-Like ``guide/narrative.py``, this module never makes a call. The prompt
+Like ``ai/guide/narrative.py``, this module never makes a call. The prompt
 (``rcq_prompt``) and the answer's parser (``rcq_from_json``) are shared by
 the opt-in Claude call, a pasted answer and ``rcq --import``.
 """
@@ -30,6 +30,14 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 from sensei_top.ai.answers import rcq_for
+from sensei_top.ai.guide.narrative import (
+    BoardCard,
+    _opponent_sections,
+    _oracle_text_block,
+    _parse_json_object,
+    _wrap_json_prompt,
+)
+from sensei_top.ai.guide.plans import PlanProblem, validate_plans
 from sensei_top.ai.review.narrative import NarrativeError
 from sensei_top.archetypes.classify import (
     Verdict,
@@ -49,14 +57,6 @@ from sensei_top.guide.field import (
 )
 from sensei_top.guide.list_diff import ListDiff, build_list_diff
 from sensei_top.guide.markdown import render
-from sensei_top.guide.narrative import (
-    BoardCard,
-    _opponent_sections,
-    _oracle_text_block,
-    _parse_json_object,
-    _wrap_json_prompt,
-)
-from sensei_top.guide.plans import PlanProblem, validate_plans
 from sensei_top.i18n import N_, _, english
 from sensei_top.metagame.classify_meta import _colors_of
 from sensei_top.metagame.source import placement_of

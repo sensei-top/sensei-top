@@ -13,19 +13,19 @@ from datetime import date
 
 import pytest
 
-from sensei_top.db import open_database
-from sensei_top.guide.bundle import FORMAT_UNKNOWN_GAP, DeckGuide, build_deck_guide
-from sensei_top.guide.field import archetype_key_by_name, faced_archetypes
-from sensei_top.guide.list_diff import ListDiff
-from sensei_top.guide.markdown import render
-from sensei_top.guide.narrative import (
+from sensei_top.ai.guide.narrative import (
     MIN_TIMES_FACED,
     MOST_FACED_ARCHETYPES,
     TOP_ARCHETYPES_FOR_ORACLE_TEXT,
     _oracle_text_block,
     build_guide_context,
 )
-from sensei_top.guide.plans import PlanProblem
+from sensei_top.ai.guide.plans import PlanProblem
+from sensei_top.db import open_database
+from sensei_top.guide.bundle import FORMAT_UNKNOWN_GAP, DeckGuide, build_deck_guide
+from sensei_top.guide.field import archetype_key_by_name, faced_archetypes
+from sensei_top.guide.list_diff import ListDiff
+from sensei_top.guide.markdown import render
 from sensei_top.guide.rcq import (
     NarrativeError,
     RecentEvent,
@@ -521,7 +521,7 @@ def test_build_guide_context_is_unchanged_by_the_section_refactor(conn):
     assert build_guide_context(guide, conn=conn) == expected
 
 
-# The pre-refactor guide/narrative.py::build_guide_context, verbatim but for
+# The pre-refactor ai/guide/narrative.py::build_guide_context, verbatim but for
 # its name — the reference the test above compares against.
 def _pre_refactor_build_guide_context(guide: DeckGuide, *, conn) -> str | None:
     """Serialize a deck guide into the text a prompt sends. ``None`` when

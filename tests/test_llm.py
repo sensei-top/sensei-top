@@ -1362,7 +1362,7 @@ def test_config_status_names_the_mtgo_directory_and_its_source(monkeypatch, tmp_
 
 
 def test_strict_schema_adds_additional_properties_at_every_object_level():
-    from sensei_top.guide.narrative import _GUIDE_TOOL
+    from sensei_top.ai.guide.narrative import _GUIDE_TOOL
 
     schema = strict_schema(_GUIDE_TOOL["input_schema"])
     assert schema["additionalProperties"] is False
@@ -1376,7 +1376,7 @@ def test_strict_schema_does_not_mutate_its_argument():
     """_GUIDE_TOOL is the documented import contract -- a caller building a
     strict copy for structured outputs must never see the original schema
     change shape underneath it."""
-    from sensei_top.guide.narrative import _GUIDE_TOOL
+    from sensei_top.ai.guide.narrative import _GUIDE_TOOL
 
     before = json.dumps(_GUIDE_TOOL["input_schema"], sort_keys=True)
     strict_schema(_GUIDE_TOOL["input_schema"])
@@ -1435,9 +1435,9 @@ def test_generate_guide_narrative_converges_with_the_hand_import_parser(
 ):
     """The whole reason the generate path is safe: a ``write_json`` payload
     shaped like ``_GUIDE_TOOL``'s schema must parse through the exact same
-    ``guide_narrative_from_json`` the CLI import uses, and land in both
+    ``guide_narrative_from_json`` the paste route uses, and land in both
     ``deck_narrative`` and ``matchup_brief`` — proving the generate path and
-    the hand-import path converge on one validator, not two."""
+    the paste path converge on one validator, not two."""
     conn = sqlite3.connect(client.app.state.database)
     conn.execute(
         "INSERT INTO meta_event (event_id, path, blob_sha, source, name, event_date, "

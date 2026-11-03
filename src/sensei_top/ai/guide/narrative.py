@@ -7,11 +7,9 @@ imports ``anthropic`` (AGENTS.md non-negotiable #5). Every round trip
 shares this module's context, prompt, schema and parser:
 ``POST /api/guide/{key}/narrative`` sends ``full_prompt`` via
 ``llm.write_json`` against ``_GUIDE_TOOL``'s schema; a pasted answer
-(``PUT`` on the same path) and ``sensei-top guide --deck KEY --import
-FILE`` pass ``answers.read_answer`` first, which checks the header the
-copied prompt asks for (the CLI also takes a headerless answer, with a
-warning) and unwraps the body. All three parse through
-``guide_narrative_from_json`` and store the deck-level half in
+(``PUT`` on the same path) passes ``answers.read_answer`` first, which
+checks the header the copied prompt asks for and unwraps the body. Both
+parse through ``guide_narrative_from_json`` and store the deck-level half in
 ``deck_narrative`` and every matchup plan in ``matchup_brief``.
 
 **What the prompt carries** (``build_guide_context``): the whole evidence
@@ -28,7 +26,7 @@ surprise to the person pasting — or the model reading — it.
 ``GuideNarrative``. ``_GUIDE_TOOL``'s schema is the contract for the JSON
 both the generate route's structured-output request and a pasted or
 imported answer must supply. Requesting a shape rather than a document is
-what lets ``guide/plans.py`` validate every sideboard plan against the
+what lets ``ai/guide/plans.py`` validate every sideboard plan against the
 real 75 before it is ever shown.
 """
 
@@ -41,12 +39,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from sensei_top.ai.answers import answer_format, guide_for
+from sensei_top.ai.guide.plans import PlanProblem, validate_plans
 from sensei_top.ai.review.narrative import NarrativeError
 from sensei_top.guide.bundle import DeckGuide
 from sensei_top.guide.field import archetype_key_by_name, faced_archetypes
 from sensei_top.guide.list_diff import ListDiff
 from sensei_top.guide.markdown import render
-from sensei_top.guide.plans import PlanProblem, validate_plans
 from sensei_top.i18n import english
 from sensei_top.review.consensus import build_consensus
 
@@ -460,7 +458,7 @@ def guide_narrative_from_json(raw: str | dict, guide: DeckGuide) -> GuideNarrati
     Accepts the JSON object ``_GUIDE_TOOL``'s schema describes. Raises
     ``NarrativeError`` on anything malformed, so the caller can say what was
     wrong rather than storing a half-parsed guide. A plan the author got wrong is *caught and
-    surfaced*, never silently repaired: see ``guide/plans.py``.
+    surfaced*, never silently repaired: see ``ai/guide/plans.py``.
     """
     raw = _parse_json_object(raw)
     try:

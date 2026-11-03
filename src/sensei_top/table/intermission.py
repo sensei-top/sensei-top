@@ -69,7 +69,7 @@ class AlternativePlan:
 class PastBoardingCard:
     """One card from a past sideboard swap (``table/boarding.py``'s
     ``named_diff``), flagged against the deck's *current* 75 — the same
-    check ``guide/plans.py::validate_plans`` runs, applied to what was
+    check ``ai/guide/plans.py::validate_plans`` runs, applied to what was
     actually played rather than to a written plan. Never dropped, only
     flagged (rule 4): a card since cut is still part of what happened."""
 

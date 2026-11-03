@@ -224,7 +224,7 @@ def strict_schema(schema: dict) -> dict:
     """A deep copy of ``schema`` with ``additionalProperties: false`` added
     to every object node, for Anthropic's strict structured-output mode.
     Never mutates its argument — callers pass in schemas that double as an
-    import contract elsewhere (``guide/narrative.py``'s ``_GUIDE_TOOL``) and
+    import contract elsewhere (``ai/guide/narrative.py``'s ``_GUIDE_TOOL``) and
     must not see it change shape underneath them."""
     result = copy.deepcopy(schema)
 

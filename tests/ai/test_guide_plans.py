@@ -1,4 +1,4 @@
-"""Tests for guide/plans.py: validating a generated sideboard plan against
+"""Tests for ai/guide/plans.py: validating a generated sideboard plan against
 the synthetic maindeck (MAIN) and sideboard (SIDE) counters defined below.
 """
 
@@ -7,7 +7,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 
-from sensei_top.guide.plans import validate_plans
+from sensei_top.ai.guide.plans import validate_plans
 
 
 @dataclass(frozen=True, slots=True)

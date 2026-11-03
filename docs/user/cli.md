@@ -19,7 +19,7 @@ options.
     sensei-top restore FILE          # replace the database with a backup (stop serve first)
     sensei-top ingest-mtgo           # read MTGO game logs by hand
     sensei-top mtgo-status           # why aren't my MTGO matches showing up?
-    sensei-top guide                 # deck guides in the terminal (list, prompt, import)
+    sensei-top guide                 # a deck's evidence guide in the terminal (list, print)
     sensei-top brief                 # matchup briefs (list, prompt, import)
     sensei-top rcq                   # the RCQ guide's prompt for the exact 75 you register
     sensei-top config                # keys, Arena log, MTGO handle and log directory, backups

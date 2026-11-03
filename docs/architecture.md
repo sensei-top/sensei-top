@@ -44,14 +44,13 @@ been violated. `live.py` exists precisely so neither has to know the other.
 
 **Core never imports `ai/`.** `lint-imports` holds the contract in
 `pyproject.toml`; its `ignore_imports` names the edges still to cut. Core
-reaches `sensei_top.ai` through two doors, each opened only when
-`importlib.util.find_spec("sensei_top.ai")` finds the package and each an
+reaches `sensei_top.ai` through one door, opened only when
+`importlib.util.find_spec("sensei_top.ai")` finds the package and an
 `importlib.import_module`, which `lint-imports` does not count as an import:
 
 - `api/app.py::create_app` mounts `ai.routers()` after core's routers and
   before the dashboard's catch-all, and keeps `ai.providers()` on
   `app.state`.
-- `cli.py::build_parser` hands its subparsers to `ai.register_cli`.
 
 A core read that shows AI data, without computing it, takes that half from
 `api/providers.py`: `Providers` has one optional field per seam, typed by a

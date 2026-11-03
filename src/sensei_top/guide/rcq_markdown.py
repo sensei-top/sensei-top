@@ -5,7 +5,7 @@ generation date."""
 
 from __future__ import annotations
 
-from sensei_top.guide.narrative import BoardCard
+from sensei_top.ai.guide.narrative import BoardCard
 from sensei_top.guide.rcq_authored import StoredRcq
 
 __all__ = ["render_rcq"]

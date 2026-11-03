@@ -5,10 +5,9 @@ Core never imports this package. The tracker runs, and its tests pass, with
 ``ignore_imports`` list in ``pyproject.toml`` names the core edges still to cut
 while the move is under way. What lives here may import core freely.
 
-Core reaches it only through the three functions below, after
+Core reaches it only through the two functions below, after
 ``importlib.util.find_spec`` finds it (docs/architecture.md, "Who may know
-what"). The CLI imports this module on every command, so it imports nothing
-at module level: each function imports what it hands over.
+what"). Each function imports what it hands over.
 """
 
 from __future__ import annotations
@@ -16,8 +15,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import argparse
-
     from fastapi import APIRouter
 
     from sensei_top.api.providers import Providers
@@ -37,8 +34,3 @@ def providers() -> Providers:
     from sensei_top.api.providers import Providers
 
     return Providers()
-
-
-def register_cli(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    """Add the AI subcommands to ``build_parser``'s ``subparsers``, after
-    core's."""

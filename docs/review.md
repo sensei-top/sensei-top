@@ -489,7 +489,7 @@ import-only either. `POST /api/guide/{key}/narrative` writes
 `matchup_brief` rows as a second effect, via
 `brief/from_guide.py::store_guide_matchups`, for every matchup the generated
 guide covers. So a brief arrives by several paths: a CLI `brief --import`
-or `brief --missing --import`, a CLI `guide --import`, the guide's generate
+or `brief --missing --import`, the guide's generate
 route, or one of the guide's three `PUT` routes for a pasted answer (one
 brief, the multi-brief coverage answer, or a guide, which backfills briefs the
 same way; `docs/brief.md`). Its own card

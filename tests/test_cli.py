@@ -1232,3 +1232,13 @@ def test_help_description_names_every_registered_subcommand():
         name for name in subparsers.choices if f"sensei-top {name}" not in parser.description
     ]
     assert missing == []
+
+
+def test_guide_has_no_prompt_import_or_author_flag(capsys):
+    with pytest.raises(SystemExit):
+        cli_module.build_parser().parse_args(["guide", "--help"])
+    help_text = capsys.readouterr().out
+
+    assert "--markdown" in help_text
+    for flag in ("--prompt", "--import", "--author"):
+        assert flag not in help_text

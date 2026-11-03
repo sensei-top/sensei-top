@@ -26,18 +26,18 @@ import sqlite3
 from collections import Counter
 from dataclasses import dataclass
 
+from sensei_top.ai.guide.narrative import BoardCard
+from sensei_top.ai.guide.plans import validate_plans
 from sensei_top.brief import narrative as brief_narrative
 from sensei_top.brief import store
 from sensei_top.brief.store import Brief
 from sensei_top.clock import now_iso
 from sensei_top.guide.deck import DeckIdentity, identity_format
-from sensei_top.guide.narrative import BoardCard
-from sensei_top.guide.plans import validate_plans
 
 
 @dataclass(frozen=True, slots=True)
 class _AuthoredPlan:
-    """The minimal shape ``guide.plans.validate_plans`` needs (its
+    """The minimal shape ``ai.guide.plans.validate_plans`` needs (its
     ``_MatchupPlan`` protocol) for the one plan a brief carries."""
 
     archetype: str
@@ -152,7 +152,7 @@ def import_brief(
     own stored numbers to. A sideboard plan that does not
     balance, or names a card the deck does not hold, is **stored with the
     problem recorded** rather than rejected or silently repaired — the same
-    posture as ``guide/plans.py``, so the dashboard shows the problem next to
+    posture as ``ai/guide/plans.py``, so the dashboard shows the problem next to
     the plan.
 
     ``written_for`` is the ``list_hash`` the answer says it was written for

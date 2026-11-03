@@ -142,23 +142,3 @@ def test_without_ai_the_parser_still_builds(hide_ai):
     commands = _subcommands(build_parser())
 
     assert {"ingest", "project", "report", "serve", "doctor"} <= commands
-
-
-def test_with_ai_the_parser_hands_its_subparsers_to_register_cli(monkeypatch):
-    ai = pytest.importorskip("sensei_top.ai")
-    calls = []
-    monkeypatch.setattr(ai, "register_cli", calls.append)
-
-    build_parser()
-
-    (sub,) = calls
-    assert "ingest" in sub.choices
-
-
-def test_register_cli_adds_no_subcommand_yet(monkeypatch):
-    with monkeypatch.context() as m:
-        _hide_ai(m)
-        without = _subcommands(build_parser())
-    pytest.importorskip("sensei_top.ai")
-
-    assert _subcommands(build_parser()) == without

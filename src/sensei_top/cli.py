@@ -15,8 +15,6 @@
     sensei-top archetypes                            download deck archetype definitions
     sensei-top meta [--reclassify]                   tournament results for the Field page
     sensei-top guide [--deck KEY] [--markdown PATH]  one deck's guide (omit --deck to list)
-    sensei-top guide --deck KEY --prompt             text to write the narrative from
-    sensei-top guide --deck KEY --import FILE        store a written narrative
     sensei-top brief --deck KEY --archetype KEY --prompt | --import FILE
                                                       one matchup brief (omit --deck to list)
     sensei-top rcq --deck KEY --decklist FILE --prompt | --import FILE
@@ -48,8 +46,6 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import importlib
-import importlib.util
 import logging
 import multiprocessing
 import os
@@ -1572,66 +1568,10 @@ def cmd_guide(args) -> None:
     if guide is None:
         sys.exit(f"No deck found for key {args.deck!r}. Run `guide` with no --deck to list keys.")
 
-    # --prompt prints the text to hand an assistant, and stops: the
-    # no-credential path, answered with --import. See docs/guide.md, "CLI".
-    if args.prompt:
-        from sensei_top.guide.narrative import full_prompt
-
-        text = full_prompt(guide, conn=conn)
-        if text is None:
-            sys.exit("Nothing to write about for this deck yet (no recorded matches).")
-        print(text)
-        return
-
-    if args.import_file:
-        from sensei_top.ai.answers import guide_for
-        from sensei_top.brief.from_guide import store_guide_matchups
-        from sensei_top.brief.store import corpus_commit, list_hash
-        from sensei_top.guide.authored import write_narrative
-        from sensei_top.guide.narrative import (
-            NarrativeError,
-            full_prompt,
-            guide_narrative_from_json,
-        )
-
-        identity = guide.provenance.deck
-        answer = _read_import(args.import_file, guide_for(identity.key))
-        try:
-            narrative = guide_narrative_from_json(answer.body, guide)
-        except NarrativeError as exc:
-            sys.exit(f"Could not read {args.import_file}: {exc}")
-
-        write_narrative(
-            conn, identity.key, narrative,
-            # The 75 the answer says it was written for, so one written for
-            # an older list reads as stale.
-            list_hash=(
-                answer.context if answer.context is not None
-                else list_hash(identity.current_cards)
-            ),
-            prompt=full_prompt(guide, conn=conn) or "",
-            author=args.author,
-            corpus_commit=corpus_commit(conn),
-        )
-        written = store_guide_matchups(
-            conn, guide, narrative, model=args.author, list_hash=answer.context,
-        )
-        conn.commit()
-        print(f"Imported the guide for {identity.name or identity.key}.")
-        print(f"  {written} matchup brief(s) stored — these also drive the Live page.")
-        if narrative.problems:
-            print("  Sideboard plan problems (recorded, not repaired):")
-            for problem in narrative.problems:
-                print(f"    [{problem.archetype}] {problem.message}")
-        return
-
-    # Default: the evidence document, plus whatever narrative was imported.
-    from sensei_top.guide.authored import narrative_for
+    # The evidence document only; the stored narrative is the dashboard's.
     from sensei_top.guide.markdown import render
 
-    stored = narrative_for(conn, guide.provenance.deck.key)
-    narrative = stored[1] if stored is not None else None
-    markdown = render(guide, narrative)
+    markdown = render(guide)
 
     if args.markdown:
         Path(args.markdown).write_text(markdown, encoding="utf-8")
@@ -1709,7 +1649,7 @@ def cmd_brief(args) -> None:
                 )
         if not found_any:
             print("No matchup briefs stored yet.")
-            print("Write one with:  sensei-top guide --deck KEY --prompt   (then --import)")
+            print("Write one from the deck's Guide page in the dashboard.")
         return
 
     if args.archetype and args.missing:
@@ -2509,18 +2449,6 @@ def build_parser() -> argparse.ArgumentParser:
     p_guide.add_argument(
         "--markdown", default=None, help="write the guide to this file instead of stdout"
     )
-    p_guide.add_argument(
-        "--prompt", action="store_true",
-        help="print the text to write the narrative from, and stop (makes no network call)",
-    )
-    p_guide.add_argument(
-        "--import", dest="import_file", default=None, metavar="FILE",
-        help="store a written narrative (JSON); also fills every matchup brief it covers",
-    )
-    p_guide.add_argument(
-        "--author", default="hand-written",
-        help="recorded beside an imported narrative (default: hand-written)",
-    )
     p_guide.set_defaults(func=cmd_guide)
 
     p_rcq = sub.add_parser(
@@ -2849,9 +2777,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="print what would go in, one entry per line with its size, and write nothing",
     )
     p_diagnostics.set_defaults(func=cmd_diagnostics)
-    # Never a static import (api/app.py::create_app says why).
-    if importlib.util.find_spec("sensei_top.ai") is not None:
-        importlib.import_module("sensei_top.ai").register_cli(sub)
     return parser
 
 

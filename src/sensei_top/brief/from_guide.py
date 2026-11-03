@@ -3,8 +3,7 @@
 brief (``source='guide'``) unless ``store_guide_matchups`` skips it, with
 the guide's own ``FieldEvidence`` for the share and personal-record numbers
 rather than re-querying them. Callers:
-``guide --deck KEY --import FILE`` and ``POST``/``PUT
-/api/guide/{key}/narrative``. See docs/brief.md,
+``POST``/``PUT /api/guide/{key}/narrative``. See docs/brief.md,
 "Backfill: a generated guide is a free source of briefs".
 """
 
@@ -12,11 +11,11 @@ from __future__ import annotations
 
 import sqlite3
 
+from sensei_top.ai.guide.narrative import GuideNarrative
 from sensei_top.brief import store
 from sensei_top.clock import now_iso
 from sensei_top.guide.bundle import DeckGuide
 from sensei_top.guide.field import archetype_key_by_name
-from sensei_top.guide.narrative import GuideNarrative
 
 
 def store_guide_matchups(

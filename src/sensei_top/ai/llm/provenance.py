@@ -29,7 +29,7 @@ class AuthoredRecord:
     ``deck_narrative`` names two of the columns differently: a guide can be
     hand-authored as well as Claude-written, so it stores
     ``author``/``authored_at`` in place of ``model``/``generated_at`` — see
-    ``guide/authored.py::write_narrative``, which builds its own columns
+    ``ai/guide/authored.py::write_narrative``, which builds its own columns
     dict instead.
     """
 

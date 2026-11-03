@@ -11,6 +11,7 @@ import sqlite3
 from fastapi import APIRouter, HTTPException, Request
 
 from sensei_top.ai.answers import PASTED_AUTHOR, brief_for, coverage_for, guide_for
+from sensei_top.ai.guide import narrative as guide_narrative
 from sensei_top.ai.llm import client as llm_client
 from sensei_top.ai.routes.narrative import (
     check_pasted_length,
@@ -40,7 +41,6 @@ from sensei_top.api.models.guide import (
 from sensei_top.api.sql import _shared_report_cache
 from sensei_top.brief.coverage import build_coverage
 from sensei_top.brief.store import briefs_for_deck, corpus_commit, list_hash
-from sensei_top.guide import narrative as guide_narrative
 from sensei_top.guide.bundle import DeckGuide, build_deck_guide
 from sensei_top.guide.deck import identity_format, list_identities, resolve
 from sensei_top.guide.markdown import render as render_guide_markdown
@@ -138,7 +138,7 @@ def _stored_guide_response(
 ) -> GuideNarrativeResponse:
     """What the ``GET`` answers for a deck whose guide and copied prompt are
     already built — shared with the ``PUT``, which builds them once too."""
-    from sensei_top.guide.authored import narrative_for
+    from sensei_top.ai.guide.authored import narrative_for
 
     if prompt is None:
         return GuideNarrativeResponse(status="no_report")
@@ -178,13 +178,13 @@ def generate_guide_narrative(
     (``brief/from_guide.py``) — this is the whole reason the live
     matchup brief needs no generate button of its own.
     """
-    from sensei_top.brief.from_guide import store_guide_matchups
-    from sensei_top.guide.authored import narrative_for, write_narrative
-    from sensei_top.guide.narrative import (
+    from sensei_top.ai.guide.authored import narrative_for, write_narrative
+    from sensei_top.ai.guide.narrative import (
         _GUIDE_TOOL,
         NarrativeError,
         guide_narrative_from_json,
     )
+    from sensei_top.brief.from_guide import store_guide_matchups
 
     deck_guide, prompt = _guide_and_prompt(request, conn, key, answer_contract=False)
     if deck_guide is None:
@@ -266,9 +266,9 @@ def paste_guide_narrative(
     ``NULL``. Every matchup plan lands in ``matchup_brief`` in the same
     transaction, as for the CLI. Returns what ``GET`` on this path returns.
     """
+    from sensei_top.ai.guide.authored import write_narrative
+    from sensei_top.ai.guide.narrative import NarrativeError, guide_narrative_from_json
     from sensei_top.brief.from_guide import store_guide_matchups
-    from sensei_top.guide.authored import write_narrative
-    from sensei_top.guide.narrative import NarrativeError, guide_narrative_from_json
 
     check_pasted_length(body.answer)
     deck_guide, prompt = _guide_and_prompt(request, conn, key, answer_contract=True)

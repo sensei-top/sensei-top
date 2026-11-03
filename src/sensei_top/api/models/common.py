@@ -207,7 +207,9 @@ class MatchupBriefOut(BaseModel):
     board_out: list[BoardCardOut]
     staples: list[StapleOut]
     problems: list[PlanProblemOut] = Field(
-        description="sideboard plan problems caught by guide.plans.validate_plans, never repaired"
+        description=(
+            "sideboard plan problems caught by ai.guide.plans.validate_plans, never repaired"
+        )
     )
     model: str
     generated_at: str

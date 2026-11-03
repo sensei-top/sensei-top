@@ -30,13 +30,13 @@ from sensei_top.ai.answers import (
     rcq_for,
     read_answer,
 )
+from sensei_top.ai.guide.narrative import _GUIDE_TOOL
 from sensei_top.api.app import create_app
 from sensei_top.brief.narrative import _BRIEF_TOOL, _MULTI_BRIEF_TOOL
 from sensei_top.brief.store import list_hash
 from sensei_top.db import open_database
 from sensei_top.guide.deck import list_identities
 from sensei_top.guide.decklist import parse_decklist
-from sensei_top.guide.narrative import _GUIDE_TOOL
 from sensei_top.guide.rcq import _RCQ_TOOL, rcq_context
 from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file
@@ -467,60 +467,6 @@ def test_the_schema_is_said_once_in_a_copied_prompt(client, identity):
 def _guide_answer(matchups: list | None = None) -> dict:
     return {"engine": "Cantrips are your mana.", "fix": "Deploy earlier.",
             "card_notes": [], "matchups": matchups or [], "checklist": []}
-
-
-def test_a_headed_guide_import_stores_the_hash_it_was_written_for(db_path, identity, tmp_path):
-    """An answer written for an older 75 is stored with that 75's hash, so the
-    card's own staleness flags it."""
-    answer = tmp_path / "answer.txt"
-    matchup = {"archetype": "Mardu Discard", "prose": "Trade early.",
-               "board_in": [], "board_out": []}
-    body = _guide_answer([matchup])
-    answer.write_text(
-        "Here it is:\n```json\n"
-        + json.dumps(_headed(guide_for(identity.key), body, context=OTHER_HASH))
-        + "\n```\n"
-    )
-    cli.main(["--db", str(db_path), "guide", "--deck", identity.key, "--import", str(answer)])
-    conn = sqlite3.connect(db_path)
-    rows = conn.execute("SELECT deck_key, list_hash FROM deck_narrative").fetchall()
-    # The matchup plans it carries become briefs written for the same 75.
-    briefs = conn.execute(
-        "SELECT archetype_key, list_hash, source FROM matchup_brief"
-    ).fetchall()
-    conn.close()
-    assert rows == [(identity.key, OTHER_HASH)]
-    assert briefs == [("mardu_discard", OTHER_HASH, "guide")]
-
-
-def test_a_headed_guide_import_without_its_context_is_refused(db_path, identity, tmp_path):
-    answer = tmp_path / "answer.json"
-    answer.write_text(json.dumps(_headed(guide_for(identity.key), _guide_answer(), None)))
-    with pytest.raises(SystemExit) as exc:
-        cli.main([
-            "--db", str(db_path), "guide", "--deck", identity.key, "--import", str(answer),
-        ])
-    assert str(exc.value).endswith(
-        'The answer\'s "context" line was changed. It has to be copied back '
-        "exactly as the prompt gave it."
-    )
-    conn = sqlite3.connect(db_path)
-    assert conn.execute("SELECT COUNT(*) FROM deck_narrative").fetchone()[0] == 0
-    conn.close()
-
-
-def test_a_headerless_guide_import_is_read_with_a_warning(db_path, identity, tmp_path, capsys):
-    answer = tmp_path / "answer.json"
-    answer.write_text(json.dumps(_guide_answer()))
-    cli.main(["--db", str(db_path), "guide", "--deck", identity.key, "--import", str(answer)])
-    assert (
-        'This answer has no "for" line, so it was read as one saved before answers carried it.'
-        in capsys.readouterr().err
-    )
-    conn = sqlite3.connect(db_path)
-    rows = conn.execute("SELECT list_hash FROM deck_narrative").fetchall()
-    conn.close()
-    assert rows == [(list_hash(identity.current_cards),)]
 
 
 def test_a_brief_import_for_another_archetype_is_refused(db_path, identity, tmp_path):

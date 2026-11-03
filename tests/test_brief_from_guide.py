@@ -6,14 +6,14 @@ from __future__ import annotations
 
 import pytest
 
+from sensei_top.ai.guide.narrative import BoardCard, GuideNarrative, MatchupPlan
+from sensei_top.ai.guide.plans import PlanProblem
 from sensei_top.brief import store
 from sensei_top.brief.from_guide import store_guide_matchups
 from sensei_top.db import open_database
 from sensei_top.guide.bundle import DeckGuide, PlayEvidence, Provenance
 from sensei_top.guide.deck import DeckIdentity
 from sensei_top.guide.field import ArchetypeShare, FieldEvidence, PersonalRate
-from sensei_top.guide.narrative import BoardCard, GuideNarrative, MatchupPlan
-from sensei_top.guide.plans import PlanProblem
 
 
 @pytest.fixture
@@ -189,7 +189,7 @@ def test_carries_problems_scoped_to_their_own_archetype(conn):
 def test_a_shared_archetype_name_is_filed_under_its_majority_key(conn):
     """"Shared Midrange" labels 3 corpus decks under 'majority' and 1 under
     'minority' (inserted last). The plan lands under 'majority' — the same
-    key guide/narrative.py chose its section with — not whichever row a
+    key ai/guide/narrative.py chose its section with — not whichever row a
     DISTINCT lookup returned last."""
     conn.execute(
         "INSERT INTO meta_event (event_id, path, blob_sha, source, name, event_date, "

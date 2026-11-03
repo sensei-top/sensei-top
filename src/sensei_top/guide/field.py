@@ -232,7 +232,7 @@ def faced_archetypes(
     this deck has actually played against — win/loss decisions only, and
     only matches started on or after ``since`` when one is given (``None`` is
     full history). The one definition of "faced" shared by the guide's
-    most-faced matchup list (``guide/narrative.py``, windowed) and brief
+    most-faced matchup list (``ai/guide/narrative.py``, windowed) and brief
     coverage (``brief/coverage.py``, full history).
 
     Grouped on ``v_match_opponent``'s raw ``archetype_key``, never its display
