@@ -6,20 +6,24 @@ their spare time, and the order moves when players ask for something
 louder than the plan expected. Vote and argue in
 [Discussions](https://github.com/sensei-top/sensei-top/discussions).
 
-The tracker is free and needs no account, now and later: your match
-history, your record in every matchup, the leak finder, the turn-by-turn
-replay, and written guides through a prompt you paste into any assistant
-or through a key of your own. Two paid things are planned, and neither
-takes any of that away. The Microsoft Store build is the same app as the
-free download, [listed free](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN) since 2026-10-21 and priced later, for anyone who
-would rather support the project that way. Later, an [optional paid tier](#later) adds deeper
-features and a monthly allowance of written reports, and it is the only
-thing that asks for an account. If the tracker earns a place in your
-routine, [donations](#donations) keep it maintained.
+The tracker is free and works fully without an account, now and later:
+your match history, your record in every matchup, the leak finder, the
+turn-by-turn replay, and written guides through a prompt you paste into
+any assistant or through a key of your own. [Next](#next), a free,
+optional account adds a backup of your match history, error reports you
+choose to send, and a rules coach that answers with the rule numbers it
+relied on. Two paid things are planned, and neither takes any of that
+away. The Microsoft Store build is the same app as the free download,
+[listed free](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN) since
+2026-10-21 and priced later, for anyone who would rather support the
+project that way. Later, an [optional paid tier](#later) adds deeper
+features and a monthly allowance of written reports. If the tracker earns
+a place in your routine, [donations](#donations) keep it maintained.
 
 What it is for: one tracker for both Arena and Magic Online, on Windows
 and Linux (the Steam Deck included), that shares none of your matches
-with anyone and shows how many games stand behind every rate it gives you.
+with anyone, backs them up only if you ask, and shows how many games stand
+behind every rate it gives you.
 The order below follows from that.
 
 ## Now
@@ -40,26 +44,38 @@ Magic Online's log is read, and Arena found on more Linux setups
 
 In this order, unless Discussions says otherwise.
 
-1. **An overlay for Arena.** The Live page's reads in a window of the
+1. **A free, optional account, and a rules coach.** Sign in with Google,
+   or never: the tracker keeps working fully without it. The account
+   adds a backup of your match history, so it survives a reinstall and
+   reaches your other computers, and error reports, each only if you
+   turn it on, on one screen where nothing is ticked for you. The rules
+   coach answers rules and card questions in English, on the website and
+   in the app, and cites the rule numbers it used. It is a hosted AI
+   model, so each answer says it may be wrong and to ask a judge at a
+   tournament, and there is a daily limit per player. The coach is never
+   sent your matches. An "AI features" switch in Settings hides the
+   coach and the written guides. Testers get the account first, and both
+   go public together. (BL-100, BL-101, BL-102)
+2. **An overlay for Arena.** The Live page's reads in a window of the
    tracker's own, on top of the game, under the rule below for events. It
    draws over Arena and never injects into it. Magic Online does not get
    one. (BL-098)
-2. **Sideboard guides, with no generated answers.** The cards in your 75
+3. **Sideboard guides, with no generated answers.** The cards in your 75
    that answer what the opponent's deck does, as candidate ins, and a link
    to a published sideboard guide for the pairing, found through the Skill
    Issue Magic guide index, with credit to its author on every link.
    Nothing is generated and no "outs" are invented. (BL-005)
-3. **Win rates per card**, from your own games: with the card in your
+4. **Win rates per card**, from your own games: with the card in your
    opening hand, drawn, and cast, with the number of games beside each
    rate. (BL-004)
-4. **Your data out, and every column explained.** Your matches and games
+5. **Your data out, and every column explained.** Your matches and games
    as a CSV file; a one-line definition on every table column; and a tour
    of the dashboard in the help pages, in both languages, which says what
    the tracker reads and that it sends nothing. (BL-002, BL-003)
-5. **MTGO on the Live page**: the opponent's revealed cards during a game
+6. **MTGO on the Live page**: the opponent's revealed cards during a game
    and the between-games plan, read from MTGO's game log the way Arena's
    Live page reads Arena's. (BL-013)
-6. **The known bugs.** Everything [BACKLOG.md](BACKLOG.md) lists as a
+7. **The known bugs.** Everything [BACKLOG.md](BACKLOG.md) lists as a
    bug: a field with no paper results after 2026-08-16 first (BL-032);
    then the rest (BL-025, BL-026,
    BL-027, BL-028, BL-030, BL-031, BL-034, BL-035, BL-037,
@@ -123,21 +139,17 @@ These are decisions, not gaps. Each one was considered and refused.
 - **Reading the memory of, injecting into or automating either client.**
   The tracker reads the log files Arena and MTGO already write, with
   Arena's own Detailed Logs setting on, and nothing else.
-- **Collecting or sharing your matches.** Not by default, and not as an
-  opt-in: your match history is never contributed to us or to a shared
-  dataset. The one thing that leaves your computer is a report you ask to
-  generate with your own key, which sends that match to the model you
-  configured. The matchup numbers from outside your own games come from
-  published tournament results.
+- **Pooling or sharing your matches.** Not by default, and not as an
+  opt-in: your match history is never contributed to us for analysis or
+  to a shared dataset, and nobody else ever sees it. Two things leave your
+  computer, each only when you ask: a report you generate with your own
+  key, which sends that match to the model you configured, and, with the
+  account, a backup of your match summaries that only you can read. The
+  matchup numbers from outside your own games come from published
+  tournament results.
 - **Draft.** The draft assistant was removed in October 2026 and is not
   coming back in this project.
 - **Mobile.** iOS makes log reading impossible and Android impractical.
-- **Telemetry, or an account for anything free.** No usage reporting,
-  and nothing free ever asks you to sign up. The only requests the app
-  makes on its own
-  are reference downloads (card data, images, archetype definitions,
-  tournament results) and a daily version check, which a switch in
-  Settings turns off.
 - **Alchemy and Brawl.** Games in them still appear in your history, but
   no field data or format-specific feature is built for them.
 
@@ -148,10 +160,11 @@ These are decisions, not gaps. Each one was considered and refused.
   which [senseitop.com](https://senseitop.com) links to, and later from
   the Microsoft Store listing. Any other download site is not this
   project's.
-- **The app never contacts senseitop.com.** Updates and the version check
-  come from the GitHub releases, and the tracker runs on your computer
-  with no server of this project's behind it. If the site went away, the
-  tracker would keep working.
+- **The tracker never needs senseitop.com.** Updates and the version
+  check come from the GitHub releases, and the tracker runs on your
+  computer. Once they ship, the account and the rules coach are the only
+  parts that talk to a server of this project's, and only when you use
+  them. If the site went away, the tracker would keep working.
 - **The source is on GitHub under the AGPL-3.0**, developed in the open
   since 1.0.0, so anyone can build it, and fork it if the project ever
   stops.

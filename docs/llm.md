@@ -2,10 +2,10 @@
 
 Read this when touching `llm/`, a `.../narrative` POST route, or
 `GenerateCard`, or when planning anything hosted. It explains the one
-exception AGENTS.md non-negotiable #5 carves out, exactly what does and does
-not cross the loopback boundary because of it, why no hosted service of
-this project writes on a user's behalf today, and what the planned paid
-report allowance would change.
+exception AGENTS.md non-negotiable #5 carves out for a metered call,
+exactly what does and does not cross the loopback boundary because of it,
+and what the hosted services being built (the account, cloud history,
+error reports and the rules coach) receive.
 
 AGENTS.md states rule 5 as four short lines. This document is where the
 reasoning behind them lives — read it before arguing with any of them.
@@ -33,7 +33,9 @@ building it means revisiting rule 5, not extending it.
 **The one exception, stated plainly:** the five narrative routes send match
 evidence to Anthropic's API when — and only when — the user has configured a
 credential. That is the deliberate trade rule 5 makes. It does not extend to
-anything else this app fetches or sends.
+anything else this app fetches or sends: cloud history and error reports,
+once built, are separate yeses with rules of their own ("What is hosted,
+and what it receives", below).
 
 With no credential configured, none of the five routes may even build a
 client: `tests/test_llm.py::test_no_credential_means_no_client_is_constructed`
@@ -88,18 +90,21 @@ decision also ruled out a paid tier, a hosted proxy and an account. The
 prompt removed, three tiers, an account) is reversed. **Amended
 2026-10-12:** a paid subscription is planned, not built, and its monthly
 allowance of reports would be a third path, written by a hosted proxy
-holding the maintainer's key ("Nothing hosted writes for the user",
-below). It adds that path and removes neither of these: both stay free,
-and neither ever needs an account. What follows from that:
+holding the maintainer's key. **Amended 2026-11-02:** a free, optional
+account comes back, for cloud history, error reports and a hosted rules
+coach, and the subscription is not part of it ("What is hosted, and what
+it receives", below). Neither amendment removes these two paths: both
+stay free, and neither needs an account. What follows from that:
 
 - `CopyPromptCard` and the "Show the prompt" toggle stay, and the prompts
   keep improving as features of their own. A user with no key, or with an
   assistant subscription they already pay for, generates by pasting the
   prompt into it and the answer back into the card.
 - A configured credential is a user path, not a development setting. The
-  dashboard's Settings say so plainly, and the website never uses the
-  phrase "AI" as the pitch: the tracker, the field and the current-match
-  reads are the product, and writing is an option on top.
+  dashboard's Settings say so plainly. The tracker, the field and the
+  current-match reads are the product, and writing is an option on top.
+  Until 2026-11-02 the website also kept the word "AI" out of its pitch;
+  the account's shared sentence and the "AI features" switch use it now.
 - **Planned, not built: a provider adapter** (`ROADMAP.md`). The credential
   becomes a provider plus a base URL, a key and a model id, so the same
   five routes can call Anthropic, any OpenAI-compatible endpoint, or a
@@ -349,7 +354,7 @@ price for it again. No other route is marked. Each of them sends one request
 and samples once, so nothing would ever read what it wrote, and a
 five-minute cache write costs 1.25× the input price: marking them would
 raise their cost. A prefix shared across users would need a hosted proxy,
-and none is built ("Nothing hosted writes for the user", below).
+and none is built ("What is hosted, and what it receives", below).
 
 A cached call reports its prompt in three counts, and `coach_report` stores
 all three (migration 063): `input_tokens` is only the uncached remainder,
@@ -407,7 +412,7 @@ with it: with no credential configured, the `POST .../narrative`
 routes still answer 503, and a plan's press would have to go through the
 desktop shell, never through this API.
 
-## Nothing hosted writes for the user
+## What is hosted, and what it receives
 
 This repository is free software, AGPL-3.0-only (`LICENSE`), with
 contributions under the DCO (`CONTRIBUTING.md`): a contributor keeps their
@@ -417,63 +422,93 @@ not overlooked. The licence was AGPL from 2026-09-27, proprietary "for now"
 from 2026-10-01, and AGPL again from 2026-10-07; no copy was published in
 between, so no user ever held the proprietary notice.
 
-No hosted proxy is built, and today every generate press uses the user's
-own credential, on the user's own machine. One is planned since
-2026-10-12 (AGENTS.md rule 5): the paid subscription's monthly allowance
-of reports, written through a server of ours that holds the maintainer's
-key. The 2026-10-01 plan had the same server and three costs: a second
-recipient of match evidence, an account, and a secret prompt. The planned
-one accepts the first two and refuses the third. The prompt stays
-readable in the dashboard and in this repository, the copy prompt and
-the user's own credential stay free beside it, and the account is the
-subscriber's alone. What is sold is reports inside a subscription, never
-tokens, credits or a prepaid balance: Anthropic's terms permit a product
-built on the API, not resold access to it. Someone who runs a modified
-copy as a service for others owes its users the source under AGPL
-section 13, which is the licence working as intended, not a case this
-project has to design for.
+Since 2026-11-02 this project plans hosted services, reached through a
+free, optional account; none is built yet (`BACKLOG.md`, BL-100 to
+BL-102). The decision supersedes what this section used to say: that
+nothing hosted writes for the user, that nothing free needs an account,
+and that nothing reports back. The tracker keeps working fully without
+the account. What each part receives:
 
-Two paid things are planned, and what each waits on is in `BACKLOG.md`, BL-070
-and BL-006. The Microsoft Store listing is the same build as the free download,
-listed free since 2026-10-21 and priced once the blockers there clear. The
-subscription comes at around 3,000 monthly active users, gated by feature,
-never by the player's rank or event type. It is the one thing behind an
-account, made at checkout: an email code, or Google, Discord or X. The account
-lives in the hosted service; the local server keeps no login and stays
-loopback-only. Selling tokens, credits or a prepaid balance would be reselling
-the Services, which Anthropic's Commercial Terms (D.4) allow only with its
-express approval. Until the subscription is built, the two paths that generate
-prose are the user's own: the prompt round trip and a credential the user
-configures, and both stay free beside the allowance.
+- **The account** (Supabase Auth, Google sign-in only, with the openid,
+  email and profile scopes): an email, a sign-in identity, an age
+  confirmation (13 and over), and the player's three choices, each with
+  the policy version and the time it was given. One screen asks them
+  right after the first sign-in, none pre-ticked; each can be changed in
+  Account, in the app or on the website, and a new policy version asks
+  again.
+- **Cloud history** (Supabase, one row per match behind row-level
+  security, so only its owner reads it), when "Back up my match history"
+  is on: a summary of each match built from the projections, about 1.5 KB
+  at most. Never a raw event, the player's own account id or screen name,
+  an opponent's handle, or chat. An Arena match is keyed by Arena's match
+  id and an MTGO match by MTGO's, and an MTGO match goes up only once its
+  deck has been picked. The local database stays the source of truth: a
+  match pulled onto another install is stored as received, and a match
+  that install read from its own log wins over it (AGENTS.md rule 6).
+  Only the two picks can conflict, and the newer one wins.
+- **Error reports** (Sentry), when "Send error reports" is on, or one at a
+  time through Report a problem: crashes and errors, scrubbed by the same
+  code that redacts the diagnostics bundle (profile paths, emails, tokens,
+  account ids and opponent names removed), with the account id as the
+  Sentry user, never the email. The raw log is never attached.
+- **The rules coach** (the coach API, the one server this project runs,
+  on a subdomain of the site's domain): the player's rules or card
+  question, and never a match. It answers from the Comprehensive Rules and
+  Scryfall's card data through OpenAI's models, paid from a monthly budget
+  the maintainer sets, behind per-player daily limits, a daily cap for
+  everyone and a kill switch, all checked before every model call. The
+  question's text is kept only when "Keep my coach history" is on;
+  otherwise only the day's count is.
 
-The `writer` under "The fallback" above is where the allowance would
-enter the dashboard, as a third case beside nobody and a key; it is not
-built.
+Electron's main process holds the session, in the operating system's
+encrypted storage, and does the pushing and pulling. The Python server
+keeps no login and stays loopback-only: it builds the payloads in a GET and
+stores what a pull brings back through the one route rule 6 adds. An
+install run from source or from the command line gets no sync.
 
-Apart from that planned proxy and the account service behind it, which
-holds an email, a sign-in identity and an entitlement and never a match,
-what this project may host is static and receives nothing: a version
-file the app checks once a day (disclosed in the README, switchable in
-Settings; the request carries the version asked for and nothing else) and,
-only with Daybreak's written consent, a snapshot of the field feed
-(`docs/metagame.md`). Neither is a call out in rule 5's sense, and neither
-ever sees a match. A diagnostics bundle exists only as a file the user
-makes and sends by hand, redacted before it is written.
+What does not change: the five narrative routes still use the user's own
+credential or the copied prompt, on the user's own machine, and never go
+through the coach API, so the exception at the top of this document stays
+exact. An "AI features" switch hides the coach and every prompt feature
+together, and the code behind them moves into a package of its own that
+the core never imports (BL-102).
 
-The planned allowance receives match data, so these are the statements it
-makes false, and building it starts with rewriting them: the exception at
-the top of this document, which names
-the user's configured provider alone; rule 5's opening in AGENTS.md; "no
-account, no upload" in AGENTS.md's paragraph about the project, which the
-README and the dashboard's footer repeat; the fourth promise in
-`SECURITY.md`, that no match data leaves the machine except the prompt of
-a report the user asked for, and its third, that nothing calls a paid API
-without a configured key; the item about collecting or sharing matches
-under "Never" in `ROADMAP.md`; the first item of the "What never leaves
-your machine" card and the item about collecting or sharing matches in the
-"What is not planned" card, on
-the site's home page in both languages (`site/index.html`,
-`site/pt-br/index.html`); and the claim under "What calls out, and what
-it sends" that per-route tests cover what leaves the machine. Each stays
-true of the free app, so the rewrite adds the subscriber's case beside it
-rather than removing it.
+The paid subscription planned on 2026-10-12 (`BACKLOG.md`, BL-006) is not
+part of this and is not built: no paywall is planned for the account or
+the coach. If the subscription is built, its account is this one, and its
+report allowance is a proxy holding the maintainer's key, with the prompt
+still readable in the dashboard and in this repository. What it would sell
+is reports inside a subscription, never tokens, credits or a prepaid
+balance: that would be reselling the Services, which Anthropic's
+Commercial Terms (D.4) allow only with its express approval. The Microsoft
+Store listing is the same build as the free download, listed free since
+2026-10-21 and priced once the blockers in BL-070 clear. The `writer`
+under "The fallback" above is where an allowance would enter the
+dashboard, as a third case beside nobody and a key; it is not built.
+
+Static, and receiving nothing: a version file the app checks once a day
+(disclosed in the README, switchable in Settings; the request carries the
+version asked for and nothing else) and, only with Daybreak's written
+consent, a snapshot of the field feed (`docs/metagame.md`). Neither is a
+call out in rule 5's sense, and neither ever sees a match. A diagnostics
+bundle exists only as a file the user makes and sends by hand, redacted
+before it is written.
+
+These statements are true of the app as it ships today and become false
+in the build that ships the account, so they are rewritten in that build
+and not before: "no account, no upload" in the README and the dashboard's
+footer (`docs/frontend.md` quotes it); the third and fourth promises in
+`SECURITY.md`, that nothing calls a paid API without a configured key and
+that no match data leaves the machine except the prompt of a report the
+user asked for; the first item of the "What never leaves your machine"
+card and the item about collecting or sharing matches in the "What is not
+planned" card, on the site's home page in both languages
+(`site/index.html`, `site/pt-br/index.html`); the privacy pages, which
+name every request the app makes and gain Supabase, Sentry and the coach
+API (`tests/test_site.py` pins them); the paragraph on the only
+measurement in `docs/status.md`, "What works today"; and the claim under
+"What calls out, and what it sends" that per-route tests cover what
+leaves the machine. Each "no account" claim becomes one shared sentence,
+word for word everywhere: "Sensei Top works fully without an account. A
+free, optional account adds cloud backup of your match history, error
+reports, and the AI rules coach."

@@ -47,7 +47,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-100
+Next ID: BL-103
 
 ## Features
 
@@ -152,22 +152,21 @@ Plan `release-17-sideboard-referrals.md` (outline).
 type: feat · priority: P3 · status: blocked · area: llm api web legal
 
 The optional subscription (decided 2026-10-12, `AGENTS.md` rule 5,
-`docs/llm.md`, "Nothing hosted writes for the user"): gated by feature,
+`docs/llm.md`, "What is hosted, and what it receives"): gated by feature,
 never by rank or event type; a monthly report allowance inside it, never
 tokens, credits or a prepaid balance; a hosted proxy holding the
-maintainer's key; the only account in the project, made at checkout (an
-email code; Google, Discord and X sign-in). The free tracker, the copy
-prompt and the user's own key stay free beside it.
+maintainer's key; the free account BL-100 builds, used at checkout. The
+free tracker, the copy prompt and the user's own key stay free beside it.
 
 **Why deferred:** Deferred until around 3,000 monthly active users, which
-the launch's own counts measure.
+the launch's own counts measure. Not part of the account and rules coach
+decided on 2026-11-02, which plan no paywall.
 
-**Needs:** Which features it holds. A merchant of record (Paddle). An
-account service (Supabase Auth was the pick) and a privacy policy. X
-sign-in's terms, unread. Daybreak's Fansite license agreement if §14.3 asks
-for one. The notice Anthropic's Commercial Terms (D.3) require, that outputs
-are not to be relied on without checking, shown to subscribers. The rewrite
-`docs/llm.md` lists, and a new rule 5.
+**Needs:** Which features it holds. A merchant of record (Paddle). The
+account (BL-100). X sign-in's terms, unread. Daybreak's Fansite license
+agreement if §14.3 asks for one. The notice Anthropic's Commercial Terms
+(D.3) require, that outputs are not to be relied on without checking, shown
+to subscribers. A line in rule 5 for the allowance.
 
 ### BL-007 · A provider adapter for the generate routes
 
@@ -428,16 +427,88 @@ threshold for screw that a fixture can pin.
 
 type: feat · priority: P1 · status: needs-decision · area: desktop web table
 
-Next 1. An overlay for Arena only: the Live page's reads in a window of the
+Next 2. An overlay for Arena only: the Live page's reads in a window of the
 tracker's own, on top of the game. MTGO does not get one.
 
 **Why deferred:** The user reversed "no overlay" on 2026-11-02 and put it first
-in `ROADMAP.md`'s Next the same day. Not started: it has no design yet.
+in `ROADMAP.md`'s Next the same day; it is second since the account and the
+rules coach (BL-100, BL-101) went first. Not started: it has no design yet.
 
 **Needs:** Its own design: which reads it carries, how a window stays over the
 game on Windows and on Linux under Wine or Proton, and how Arena's fullscreen
 modes affect that. It holds to two standing rules: never injecting into the
 client (`ROADMAP.md`, "Never"), and the event rule (`table/queues.py`).
+
+### BL-100 · A free, optional account, with cloud history and error reports
+
+type: feat · priority: P1 · status: blocked · area: desktop api web site legal
+
+A free, optional account (Google sign-in through Supabase Auth) that adds
+cloud history and error reports, each a separate yes on one consent screen
+with nothing pre-ticked (decided 2026-11-02; AGENTS.md rules 5 and 6;
+`docs/llm.md`, "What is hosted, and what it receives"). Electron's main
+process holds the session and syncs; the local API builds the payloads
+and stores pulled matches in a new `cloud_match` table; Sentry in the
+shell and the local API, gated on consent; Report a problem; Settings →
+Account with export and delete; a restored marker in the match list.
+MTGO matches sync once their deck is picked. Notes and tags are not
+built, and installs run from source get no sync.
+
+**Why deferred:** Waits on setup only the user can do: the domain, the
+Supabase project and its region, the Google OAuth consent screen (about a
+week to approve), the Sentry projects, and the privacy policy and terms
+the consent screen links to.
+
+**Needs:** Its plan (`~/.claude/plans/release-40-coach-and-accounts.md`,
+sub-plan B, an outline). Supabase's CLI and Docker on the development
+machine, the user's call. The rewrite of every statement `docs/llm.md`
+lists as false once the account ships, in the same build.
+
+### BL-101 · The rules coach
+
+type: feat · priority: P1 · status: blocked · area: web desktop site legal
+
+A hosted rules coach that answers rules and card-interaction questions in
+English, with the rule numbers it relied on, on the website and in a tab
+of the app, for signed-in players (decided 2026-11-02; `docs/llm.md`,
+"What is hosted, and what it receives"). It answers from the
+Comprehensive Rules and Scryfall's Oracle cards and rulings, through
+OpenAI's gpt-5-nano with hard questions escalated to gpt-5-mini, under
+per-player daily limits, a monthly budget and a kill switch. Its own
+repository holds the ingest, the retrieval, the API and a public eval
+suite. The app's tab needs a name: the existing Coach page is the
+cross-deck report.
+
+**Why deferred:** Public only once the launch gate holds: Google sign-in
+on the website and in the app, the consent screens, privacy policy and
+terms live, the eval gate passed on the production model, and the budget
+cap and kill switch tested. Until then the hosted coach is limited to
+beta testers' accounts. The eval's gold set is the user's to write.
+
+**Needs:** Its plan (sub-plans C and E of
+`~/.claude/plans/release-40-coach-and-accounts.md`). The account
+(BL-100). An OpenAI account with a hard monthly limit. The Fan Content
+Policy notice in the site's footer and the app's About.
+
+### BL-102 · The AI package and its switch
+
+type: feat · priority: P1 · status: ready · area: llm api web review guide brief coach
+
+An "AI features" switch in Settings that hides the rules coach, every
+prompt-based feature (the match report's and the leak finder's prose,
+the deck and RCQ guides, the matchup briefs, the cross-deck coach report)
+and every mention of AI, while the local analyzers behind them stay. The
+code behind them moves into a package of its own, in Python and in the
+dashboard, which the core never imports; CI runs the core's tests with
+the package absent. A fresh install asks on its first run; an existing
+database or settings file means on (decided 2026-11-02).
+
+**Why deferred:** Not started. Nothing outside the code blocks it.
+
+**Needs:** Its plan (sub-plan D of
+`~/.claude/plans/release-40-coach-and-accounts.md`).
+`llm/config.py::config_path` moved to a core module first, since a dozen
+modules that have nothing to do with a model import it.
 
 ## Bugs
 

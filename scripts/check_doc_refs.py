@@ -104,6 +104,7 @@ ALLOW: dict[str, str] = {
     "AskClaudeCard": REMOVED,
     "useDraft": REMOVED,
     "site/help/tour/": "planned, not built (BACKLOG.md, BL-003)",
+    "cloud_match": "planned, not built (BACKLOG.md, BL-100)",
     "site/pt-br/help/tour/": "planned, not built (BACKLOG.md, BL-003)",
     "gameObject": ARENA,
     "EnterSideboardingReq": ARENA,
