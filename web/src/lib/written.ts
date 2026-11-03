@@ -3,7 +3,7 @@ import { formatDollars } from './format'
 import { formatShortDay, parseTimestamp } from './time'
 
 /** The author or model the API stores for an answer pasted into a card
- *  (`answers.py`'s `PASTED_AUTHOR`): a sentinel, never shown as written. */
+ *  (`ai/answers.py`'s `PASTED_AUTHOR`): a sentinel, never shown as written. */
 export const PASTED_AUTHOR = 'pasted'
 
 /** Whether the stored author or model says the answer was pasted in. */

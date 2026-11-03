@@ -19,6 +19,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "scripts" / "check_doc_refs.py"
 
 
+@pytest.mark.skipif(
+    importlib.util.find_spec("sensei_top.ai") is None,
+    reason="the docs describe the whole tree, which every build ships with ai/",
+)
 def test_every_name_the_docs_give_exists():
     out = subprocess.run(
         [sys.executable, str(SCRIPT)], cwd=REPO_ROOT, capture_output=True, text=True, timeout=60

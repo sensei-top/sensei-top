@@ -52,6 +52,12 @@ as an import:
   before the dashboard's catch-all, and keeps `ai.providers()` on
   `app.state`.
 
+The CLI has no such door: the AI features have no command, and core's
+`config` keeps `--set-key`, `--clear-key`, `--set-model`, `--set-effort`,
+`--json` and `--show`, which the desktop Settings use. They work without
+`ai/` because the credential resolver is core's `claude_config.py` (with
+`REPORT_MODELS`), not `ai/llm/`; only `ai/llm/client.py` imports `anthropic`.
+
 A core read that shows AI data, without computing it, takes that half from
 `api/providers.py`: `Providers` has one optional field per seam, typed by a
 Protocol declared beside the read, and `providers_of(app)` gives the

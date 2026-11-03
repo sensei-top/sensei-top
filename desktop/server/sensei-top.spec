@@ -31,6 +31,9 @@ hiddenimports += collect_submodules("uvicorn")
 # keyring picks a backend by entry-point name, then imports it. Every
 # platform's backend is listed; the unused ones are small.
 hiddenimports += collect_submodules("keyring.backends")
+# api/app.py finds ai/ with importlib.util.find_spec, so no import statement
+# leads the analysis there; the build always ships it.
+hiddenimports += collect_submodules("sensei_top.ai")
 
 a = Analysis(
     [str(entry)],

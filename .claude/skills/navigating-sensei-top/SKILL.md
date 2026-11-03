@@ -126,6 +126,7 @@ thousands of characters.
 
     uv run python .claude/skills/navigating-sensei-top/scripts/verify.py
     uv run python .claude/skills/navigating-sensei-top/scripts/verify.py --full   # + pnpm build
+    uv run python .claude/skills/navigating-sensei-top/scripts/verify.py --core   # CI's core-only job
 
 Runs `ruff check .`, `pytest -q`, `pnpm lint`, `pnpm test` (and `pnpm build`
 only under `--full`, since it writes `src/sensei_top/web_dist/`). Every output line is capped at 300
@@ -133,6 +134,7 @@ characters and each command's shown output at 60 lines; the untruncated log
 for a failing command is written to a temp file whose path gets printed.
 Exits non-zero on any failure. `pnpm lint` is expected clean:
 `KNOWN_ISSUES` in `verify.py` is empty, so any warning is a regression.
+`--core` runs only `pytest -q` on a temp copy of the tree without `ai/` (CI's core-only job); it never touches the working tree.
 
 This still doesn't replace judgment: read the actual failure, don't just
 re-run until green.

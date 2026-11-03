@@ -193,7 +193,9 @@ is older than its sources, freezes the server with PyInstaller
 `--version` equals the pyproject version, `doctor --json` parses, the
 frozen executable ingests and projects a fixture, and `serve --port 0
 --ready-line --exit-on-stdin-close` answers `/api/health`, reports the
-version and serves the dashboard, then exits when its stdin closes.
+version, serves the dashboard and answers `/api/llm/status` with 200, then
+exits when its stdin closes. That route lives in `ai/routes/`, which core
+finds only through `find_spec`, so the 200 proves the build collected `ai/`.
 `--smoke-only` skips both builds and tests an existing dist (`--dist` moves
 it). It is not part of `pytest -q`: it takes minutes with a cold web build.
 The smoke test runs on Linux and Windows; it writes only inside a
@@ -219,6 +221,11 @@ Each spec line is there for a reason:
 - **Hidden imports for `uvicorn` and `keyring.backends`.** uvicorn imports
   its loop, protocol and lifespan modules from strings, and keyring imports
   a backend by name; the analysis sees neither.
+- **`collect_submodules("sensei_top.ai")`.** `api/app.py` finds `ai/` with
+  `importlib.util.find_spec` and imports it by name, so no import statement
+  leads the analysis there. The frozen server, and so the AppImage, the NSIS
+  installer and the MSIX, always ships `ai/`; "absent" is a CI property only
+  ("CI" in [testing.md](testing.md)).
 - **`multiprocessing.freeze_support()` first in `cli.main`.** The only child
   `serve` starts is `--watch`'s watcher, forked on Linux and spawned on
   Windows. In a frozen build a spawned child is the same executable, and
