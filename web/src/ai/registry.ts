@@ -1,7 +1,8 @@
 import { CopyPromptBody, CopyPromptCard } from './CopyPromptCard'
 import { GenerateCard } from './GenerateCard'
+import { CoachView } from './coach/CoachView'
 
-const SURFACES = { GenerateCard, CopyPromptCard, CopyPromptBody } as const
+const SURFACES = { GenerateCard, CopyPromptCard, CopyPromptBody, CoachView } as const
 
 /** The AI surfaces a page outside `ai/` may draw. */
 export type AiRegistry = typeof SURFACES

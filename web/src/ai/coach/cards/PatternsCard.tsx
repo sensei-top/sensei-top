@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import type { CoachEvidenceModel, DeckLeaksOut } from '../../api'
-import { deckPatternsSummary, patternDirection } from '../../lib/coach'
-import { leakCategoryLabel } from '../../lib/guide'
-import { patternSentence, patternWords } from '../../lib/patterns'
-import { Card, Chip, Disclosure } from '../ui'
+import type { CoachEvidenceModel, DeckLeaksOut } from '../../../api'
+import { deckPatternsSummary, patternDirection } from '../coach'
+import { leakCategoryLabel } from '../../../lib/guide'
+import { patternSentence, patternWords } from '../../../lib/patterns'
+import { Card, Chip, Disclosure } from '../../../components/ui'
 
 type PatternLine = CoachEvidenceModel['leaks'][number]
 

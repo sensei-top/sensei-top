@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import type { CoachEvidenceModel, RateModel } from '../../api'
-import { deckName, rateWords } from '../../lib/coach'
-import { archetypeName } from '../../lib/decks'
-import { RATE_MIN_MATCHES } from '../../lib/sample'
-import { Card } from '../ui'
+import type { CoachEvidenceModel, RateModel } from '../../../api'
+import { deckName, rateWords } from '../coach'
+import { archetypeName } from '../../../lib/decks'
+import { RATE_MIN_MATCHES } from '../../../lib/sample'
+import { Card } from '../../../components/ui'
 
 type DeckLine = CoachEvidenceModel['by_deck'][number]
 

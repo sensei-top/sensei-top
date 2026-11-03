@@ -162,7 +162,7 @@ log's, else the MTGO pick, else the inferred format), and Standard when
 no match has one (`api/sql.py::default_format`). `formatOf`
 (`lib/field.ts`) reads `?format=` against the formats the API lists, and
 an absent or unknown value is that default. Coach reads `?format=` the
-same way (`lib/coach.ts::useCoachFormat`, with `formatOf` and
+same way (`ai/coach/coach.ts::useCoachFormat`, with `formatOf` and
 `paramFor`), so a bare `/coach` is the default format's page too.
 Neither page asks for anything that depends on the format before
 `/api/formats` answers, since a bare address means whatever format that
@@ -894,11 +894,12 @@ Both cards live in `src/ai/`, the dashboard's AI package, and
 files named in the lint rule's override (under "Checks") still import the
 cards directly until each one moves to the registry. The registry is one
 hook, `useAi()`, that returns the AI surfaces a page outside `ai/` may
-draw (`GenerateCard`, `CopyPromptCard`, `CopyPromptBody`, typed
-`AiRegistry`) or `null` when AI features are off. A page calls it once,
-like any hook, draws `ai.GenerateCard` and the rest from what it returns,
-and on `null` draws nothing of its AI part: not the card, not the heading
-over it, not a sentence about it. A hook rather than a list of components
+draw (the two cards, `CopyPromptBody`, and each AI-only view moved into
+`ai/`, such as `CoachView`; typed `AiRegistry`) or `null` when AI
+features are off. A page calls it once, like any hook, draws
+`ai.GenerateCard` and the rest from what it returns, and on `null` draws
+nothing of its AI part: not the card, not the heading over it, not a
+sentence about it. A hook rather than a list of components
 because a page needs the answer as a boolean too, to hide what surrounds a
 card, and because the switch it will read is itself a hook. Until that
 switch exists it never returns `null`. The boundary is a lint rule, under

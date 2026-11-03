@@ -18,14 +18,14 @@ import type {
   FormatsOut,
   RateModel,
   TurningBucketOut,
-} from '../api'
-import type { TFunction } from '../i18n'
-import { type TileText } from './matchups'
-import { formatDollars, formatList, formatPercent, formatPrice, formatRecord, WORD_JOINER } from './format'
-import { formatOf, paramFor } from './field'
-import { gapPoints } from './guide'
-import { RATE_MIN_MATCHES } from './sample'
-import { formatCount, formatIsoDateShort, formatShortDay, parseTimestamp } from './time'
+} from '../../api'
+import type { TFunction } from '../../i18n'
+import { type TileText } from '../../lib/matchups'
+import { formatDollars, formatList, formatPercent, formatPrice, formatRecord, WORD_JOINER } from '../../lib/format'
+import { formatOf, paramFor } from '../../lib/field'
+import { gapPoints } from '../../lib/guide'
+import { RATE_MIN_MATCHES } from '../../lib/sample'
+import { formatCount, formatIsoDateShort, formatShortDay, parseTimestamp } from '../../lib/time'
 
 /** The report an address names: `'latest'` for `/coach`, the number for
  *  `/coach/:id`. */

@@ -26,7 +26,6 @@
         "src/components/SideboardPlanCard.tsx",
         "src/components/guide/LeakCard.tsx",
         "src/components/guide/WriteAndExport.tsx",
-        "src/views/CoachView.tsx",
         "src/views/RcqView.tsx",
         "src/views/SurfacesView.tsx"
       ],

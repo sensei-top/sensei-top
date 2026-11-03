@@ -55,7 +55,7 @@ shows. Only a report of the requested format is ever the
 latest one on the narrative route, so another format's report can never read
 as current. The Coach page carries the format in its address and draws the
 same "Format" select the Field page does, only when more than one format has
-matches or a written report (`lib/coach.ts::coachFormatChoices`); its "Every
+matches or a written report (`ai/coach/coach.ts::coachFormatChoices`); its "Every
 report" list stays the whole history, each row
 naming its format.
 
@@ -449,8 +449,8 @@ stored prose stays verbatim and neither report can be rewritten in place.
   list, so anything else came from the model's memory, not a citation, and
   is dropped and counted rather than trusted. `ai/routes/coach.py::
   _sources_out` appends these after the stored web citations and reading
-  ids, skipping any URL already present. `CoachReport.tsx`'s `SourcesBody`
-  labels the two groups "Reading list" / "From the web" once both are
+  ids, skipping any URL already present. `ai/coach/CoachReport.tsx`'s
+  `SourcesBody` labels the two groups "Reading list" / "From the web" once both are
   non-empty.
 
 `build_coach_prompt` computes `context_hash` — reused from

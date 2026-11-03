@@ -1328,13 +1328,14 @@ and the same reset-aware windowing exist server-side in
 
 ## Coach
 
-`/coach` and `/coach/:id` are `pages/CoachPage.tsx`, which reads the
-address's parameter (`lib/coach.ts::reportParam`: no parameter is the
-latest report, a positive integer written in digits is that report,
-anything else is unknown), and `views/CoachView.tsx`. The page is keyed
-by the parameter, so moving between reports starts the model picker
-fresh. What the coach measures and what it leaves out is
-`docs/coach.md`; this section is what the page draws.
+`/coach` and `/coach/:id` are `pages/CoachPage.tsx`, which passes the
+address's raw parameter to `ai/coach/CoachView.tsx` through `useAi()` and
+draws nothing when AI features are off. The view parses it
+(`ai/coach/coach.ts::reportParam`: no parameter is the latest report, a
+positive integer written in digits is that report, anything else is
+unknown). The page keys the view by the parameter, so moving between
+reports starts the model picker fresh. What the coach measures and what it
+leaves out is `docs/coach.md`; this section is what the page draws.
 
 `/coach` is one format's page, and reads `?format=` as Field does
 (`docs/frontend.md`, "Filters are in the address"): `useCoachFormat` gives the address's
@@ -1358,17 +1359,17 @@ the API's default.
    ("Modern report of Sep 22"; `reportTitle`, and a report stored with no
    format is a Standard report, `reportFormat`) with a byline in one
    caption line (the model, what it cost, how many times it searched the
-   web), both drawn by `ReportDocument` in `views/CoachView.tsx`; then one
-   card per `## ` section of the prose (`components/CoachReport.tsx`). A citation in the prose (`[R4]`) is a
-   link to its article, opened in a new tab. The last card is the
-   sources, the reading-list entries and then the web pages, each a
+   web), both drawn by `ReportDocument` in `ai/coach/CoachView.tsx`; then one
+   card per `## ` section of the prose (`ai/coach/CoachReport.tsx`). A
+   citation in the prose (`[R4]`) is a link to its article, opened in a new
+   tab. The last card is the sources, the reading-list entries and then the web pages, each a
    `TextLink`.
 4. **The writing card** (`GenerateCard`), after the report because it is
    the action and the report is what the page is for. Its subtitle names
    the format whose news Claude searches for. Its picker lists the
    models by name alone; a caption says what the viewer's last report
    with the chosen model cost, when there is one.
-5. **Your numbers** (`components/coach/Profile.tsx`), the evidence the
+5. **Your numbers** (`ai/coach/cards/Profile.tsx`), the evidence the
    report is written from, drawn only when the coach has enough
    matches. Below.
 6. **Every report**, whenever a stored report is not the one on the page
@@ -1395,7 +1396,7 @@ the page waits for its own.
 
 ### Your numbers
 
-Every rate on the page is written by `lib/coach.ts::rateWords`, which
+Every rate on the page is written by `ai/coach/coach.ts::rateWords`, which
 turns the API's rate into three strings: the record, wins then losses
 ("174–211", `formatRecord`), the percent ("45%") and the range
 ("40%–50%", each end a whole percent). A rate the API marks `anecdotal`,
@@ -1412,7 +1413,7 @@ on the page. A range is written with word joiners round its dash
 break it in two. The coach's matches and games are wins and losses only,
 so a record's losses are the rate's `n` less its wins.
 
-The cards, in order, are in `components/coach/`:
+The cards, in order, are in `ai/coach/cards/`:
 
 1. **Six tiles** (`Profile`, `overallTiles`): matches, games, game 1,
    post-board, on the play, on the draw. Two to a row under 48rem,

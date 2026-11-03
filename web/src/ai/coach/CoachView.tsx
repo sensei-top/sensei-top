@@ -2,24 +2,26 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate } from 'react-router'
 import {
-  useAnyCoach,
-  useCoach,
-  useCoachNarrative,
-  useCoachReport,
   useFormats,
-  useGenerateCoachNarrative,
-  usePasteCoachNarrative,
   useLLMStatus,
   type CoachModelOption,
   type CoachNarrativeResponse,
   type CoachReportSummary,
   type FormatsOut,
-} from '../api'
-import { CoachReport } from '../components/CoachReport'
-import { Profile } from '../components/coach/Profile'
-import { GenerateCard } from '../ai/GenerateCard'
-import { isPasted } from '../lib/written'
-import { Callout, Card, EmptyState, ErrorNote, Loading, Select, TextLink } from '../components/ui'
+} from '../../api'
+import {
+  useAnyCoach,
+  useCoach,
+  useCoachNarrative,
+  useCoachReport,
+  useGenerateCoachNarrative,
+  usePasteCoachNarrative,
+} from '../hooks'
+import { CoachReport } from './CoachReport'
+import { Profile } from './cards/Profile'
+import { GenerateCard } from '../GenerateCard'
+import { isPasted } from '../../lib/written'
+import { Callout, Card, EmptyState, ErrorNote, Loading, Select, TextLink } from '../../components/ui'
 import {
   coachAddress,
   coachFormatChoices,
@@ -30,13 +32,13 @@ import {
   reportByline,
   reportFormat,
   reportLink,
+  reportParam,
   reportTitle,
   showHistory,
   useCoachFormat,
-  type ReportParam,
-} from '../lib/coach'
-import { writerFrom } from '../lib/writer'
-import { placeById } from '../shell/places'
+} from './coach'
+import { writerFrom } from '../../lib/writer'
+import { placeById } from '../../shell/places'
 
 /** "Every report": one row a report of any format, newest first
  *  (`/api/coach`'s order). A row's title opens that report at its address;
@@ -438,8 +440,10 @@ function EarlierCoach({ report: param }: { report: 'unknown' | number }) {
 }
 
 /** The Coach page: a dated, cross-deck report over every completed
- *  Arena and MTGO constructed match. `report` is what the address names
- *  (`reportParam`): the latest at `/coach`, one report at `/coach/:id`. */
-export function CoachView({ report }: { report: ReportParam }) {
+ *  Arena and MTGO constructed match. `id` is the address's raw parameter,
+ *  read by `reportParam`: the latest at `/coach`, one report at
+ *  `/coach/:id`. */
+export function CoachView({ id }: { id: string | undefined }) {
+  const report = reportParam(id)
   return report === 'latest' ? <LatestCoach /> : <EarlierCoach report={report} />
 }

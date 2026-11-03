@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import type { CoachSource } from '../api'
-import { citationOf, hostOf, readingOrder } from '../lib/coach'
-import { type Block, type Inline, parseReport } from '../lib/markdown'
-import { Card, SectionLabel, TextLink } from './ui'
+import type { CoachSource } from '../../api'
+import { citationOf, hostOf, readingOrder } from './coach'
+import { type Block, type Inline, parseReport } from '../../lib/markdown'
+import { Card, SectionLabel, TextLink } from '../../components/ui'
 
 /** A report's inline tree, drawn. A link's label holds no link, url or
  *  citation (`parseInline` sees to it), so one link never sits inside

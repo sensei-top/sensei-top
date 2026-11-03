@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
-import type { TurningBucketOut } from '../../api'
-import { turningSubtitle, turningTiles } from '../../lib/coach'
-import { Card, StatTile } from '../ui'
+import type { TurningBucketOut } from '../../../api'
+import { turningSubtitle, turningTiles } from '../coach'
+import { Card, StatTile } from '../../../components/ui'
 
 /** "Where lost games turned": a tile a stage, one column under 48rem and
  *  three from it. Drawn only when a cell is above zero. */

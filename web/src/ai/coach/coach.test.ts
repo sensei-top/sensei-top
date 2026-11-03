@@ -7,7 +7,7 @@ import type {
   FormatsOut,
   RateModel,
   TurningBucketOut,
-} from '../api'
+} from '../../api'
 import {
   citationOf,
   coachDay,
@@ -39,9 +39,9 @@ import {
   turningTiles,
   variantsWords,
 } from './coach'
-import { translator } from '../i18n'
-import { WORD_JOINER } from './format'
-import { NBSP } from './matchups'
+import { translator } from '../../i18n'
+import { WORD_JOINER } from '../../lib/format'
+import { NBSP } from '../../lib/matchups'
 
 const t = translator('en')
 

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { FieldLineOut, MatchupLineOut, RateModel } from '../../api'
+import type { FieldLineOut, MatchupLineOut, RateModel } from '../../../api'
 import {
   coachDay,
   listsWords,
@@ -8,11 +8,11 @@ import {
   roleRates,
   variantsWords,
   type LabelledRate,
-} from '../../lib/coach'
-import { archetypeName } from '../../lib/decks'
-import { formatPercent } from '../../lib/format'
-import { MIN_TRUSTED_FIELD_SAMPLE } from '../../lib/sample'
-import { Card, DataTable } from '../ui'
+} from '../coach'
+import { archetypeName } from '../../../lib/decks'
+import { formatPercent } from '../../../lib/format'
+import { MIN_TRUSTED_FIELD_SAMPLE } from '../../../lib/sample'
+import { Card, DataTable } from '../../../components/ui'
 
 /** A table's Record cell (D6): wins then losses, "174–211"; a dash with no
  *  match. */
