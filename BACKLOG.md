@@ -47,7 +47,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-103
+Next ID: BL-106
 
 ## Features
 
@@ -441,7 +441,7 @@ client (`ROADMAP.md`, "Never"), and the event rule (`table/queues.py`).
 
 ### BL-100 · A free, optional account, with cloud history and error reports
 
-type: feat · priority: P1 · status: blocked · area: desktop api web site legal
+type: feat · priority: P1 · status: in-progress · area: desktop api web site legal
 
 A free, optional account (Google sign-in through Supabase Auth) that adds
 cloud history and error reports, each a separate yes on one consent screen
@@ -509,6 +509,63 @@ database or settings file means on (decided 2026-11-02).
 `~/.claude/plans/release-40-coach-and-accounts.md`).
 `config_path` moved out of the credential module into core `config.py`
 first, since a dozen modules that have nothing to do with a model import it.
+
+### BL-103 · Contributing games
+
+type: feat · priority: P1 · status: in-progress · area: desktop api web site legal
+
+A yes of its own, with or without an account, that sends the player's
+games, past and new, to a private pool Sensei Top's own features are built
+from, as the published policy's "Contributing your games" describes: one
+record per game, built on the device and stripped of every handle, account
+and user ID, under a random code made fresh for that game, sent without the
+sign-in. The pool is `contrib.games` in Supabase, written only through an
+anonymous `security definer` function that nobody can read back from; the
+shell remembers which games it sent in its own `userData`, so no migration
+and no change to rule 6 (decided 2026-11-03).
+
+**Why deferred:** Being built with the account (BL-100), on
+`feature/accounts-sync`.
+
+**Needs:** Sub-plan B of `~/.claude/plans/release-40-coach-and-accounts.md`
+(`release-40b-accounts-sync.md`, S3, S7, S13, S15).
+
+### BL-104 · Deleting an inactive account
+
+type: feat · priority: P2 · status: blocked · area: api legal
+
+An account nobody has signed in to for 24 months is deleted, after an
+email 30 days before that says so and how to keep it. Not built with the
+account (BL-100): it needs an email sender, which nothing else in the app
+has yet. The first account can turn 24 months old in late 2028, so this is
+due well before then, not now (decided 2026-11-03).
+
+**Why deferred:** No email sender exists, and no account is old enough to
+need it.
+
+**Needs:** An email provider and its entry in the privacy policy's "Who
+handles your data"; a scheduled job in the coach repository's Supabase
+project.
+
+### BL-105 · Compacting the contributed-games pool
+
+type: perf · priority: P2 · status: blocked · area: api legal
+
+The contributed-games pool (BL-103) starts as one Postgres table, sharing
+Supabase Free's 500 MB with account backup. Before the pool reaches about
+150 MB (its size function in the coach repository, read in the weekly
+measuring), a scheduled job packs its older records into large
+compressed Parquet files in Supabase Storage, in the same São Paulo
+project, and deletes those rows.
+A file's timestamp then dates thousands of games at once, so the policy's
+"we do not record when a game arrives" still holds; the policy's "in our
+database" changes to name the storage in the same release (decided
+2026-11-03; plan 40B, DB13).
+
+**Why deferred:** The beta's pool is far below the threshold.
+
+**Needs:** The pool (BL-103) live; Supabase Storage prices and limits read
+again at the time; the policy wording change.
 
 ## Bugs
 
