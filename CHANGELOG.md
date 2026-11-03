@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Brazilian Portuguese: how Sensei Top differs from Untapped, Sensei Top on
   Linux and the Steam Deck, and Sensei Top for Magic Online. The site now
   has a sitemap, and each page's title says what the app is.
+- A new look for [senseitop.com](https://senseitop.com): the landing opens on
+  a short demo of the app with captions, in English and Brazilian Portuguese,
+  and now has a roadmap.
 
 ### Fixed
 

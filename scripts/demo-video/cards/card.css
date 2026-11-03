@@ -1,15 +1,15 @@
-/* The demo video's cards: the dashboard's fonts and colours, from site/fonts
-   and web/scripts/og-card.html's custom properties. 1920x1080, with the bottom
+/* The demo video's cards: the dashboard's fonts, kept in fonts/ beside this
+   file, and the site's colours (site/site.css). 1920x1080, with the bottom
    band left clear for the burned-in caption. */
 @font-face {
   font-family: "Bricolage Grotesque Variable";
   font-weight: 200 800;
-  src: url(../../../site/fonts/bricolage-grotesque-latin-wght-normal.woff2) format("woff2-variations");
+  src: url(fonts/bricolage-grotesque-latin-wght-normal.woff2) format("woff2-variations");
 }
 @font-face {
   font-family: "Hanken Grotesk Variable";
   font-weight: 100 900;
-  src: url(../../../site/fonts/hanken-grotesk-latin-wght-normal.woff2) format("woff2-variations");
+  src: url(fonts/hanken-grotesk-latin-wght-normal.woff2) format("woff2-variations");
 }
 :root {
   --plane: #0b0c14;

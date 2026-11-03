@@ -23,10 +23,11 @@
 <meta property="og:locale:alternate" content="pt_BR">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="preload" href="/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/hanken-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/img/demo-poster.webp" as="image" fetchpriority="high">
+<link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "73e9bc45819145e3afbbde2244e8d023"}'></script>
+<script defer src="/hero.js"></script>
 </head>
 <body class="landing">
 <div class="page">
@@ -48,15 +49,22 @@
 <h1>Your matches, your decks, the real metagame. All on your own computer.</h1>
 <p class="lead">Sensei Top reads the logs Arena and Magic Online already write and turns them into a dashboard: every match and game, turn by turn, your record with each deck and against each archetype, and what the tournament metagame looks like next to it.</p>
 <ul class="facts"><li>Free</li><li>Open source</li><li>No account</li><li>Windows and Linux</li></ul>
-<p class="actions"><a class="button primary" href="/download/windows">Download for Windows</a> <a class="button" href="/download/linux">Download for Linux</a> <a class="button" href="https://apps.microsoft.com/detail/9NZ5GQMCG1ZN">Microsoft Store</a></p>
+<p class="actions"><a class="button primary" href="https://apps.microsoft.com/detail/9NZ5GQMCG1ZN">Download for Windows</a> <a class="button" href="/download/linux">Download for Linux</a> <a class="button quiet" href="/download/windows">Windows installer</a></p>
 <p class="note" data-os="mac" hidden>There is no build for macOS yet. Sensei Top runs on a Windows or Linux computer.</p>
 <p class="note" data-os="phone" hidden>Sensei Top runs on a Windows or Linux computer, not on a phone or tablet.</p>
 </div>
-<figure><img src="/img/home.webp" width="1440" height="900" fetchpriority="high" decoding="async" alt="The Home page: the last session's record, the last thirty days' record, and three cards: the last match, one pattern across your matches, and the field you are playing in."></figure>
+<figure class="stage">
+<div class="frame">
+<video poster="/img/demo-poster.webp" width="1920" height="1080" preload="none" controls muted loop playsinline aria-label="Demo of the dashboard, with no sound"><source src="/video/demo-en.mp4" type="video/mp4"><track kind="captions" src="/video/demo-en.vtt" srclang="en"></video>
+<div class="ctl" hidden><button type="button" class="play" aria-label="Play" title="Play" data-play="Play" data-pause="Pause"><svg class="icon-play" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 3.2v9.6a.6.6 0 0 0 .9.5l7.6-4.8a.6.6 0 0 0 0-1L5.9 2.7a.6.6 0 0 0-.9.5z"/></svg><svg class="icon-pause" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="4" y="3" width="3" height="10" rx="1"/><rect x="9" y="3" width="3" height="10" rx="1"/></svg></button><button type="button" class="captions" aria-label="Show captions" title="Show captions" data-show="Show captions" data-hide="Hide captions"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><rect x="1.7" y="3.2" width="12.6" height="9.6" rx="2"/><path d="M7 6.6a1.7 1.7 0 1 0 0 2.8M12 6.6a1.7 1.7 0 1 0 0 2.8"/></svg></button></div>
+</div>
+<ol class="chapters" aria-label="Chapters"><li><a href="#home" data-start="0">Home</a></li><li><a href="#live" data-start="11">Live</a></li><li><a href="#matches" data-start="22.7">Matches</a></li><li><a href="#decks" data-start="34.4">Matchups</a></li><li><a href="#field" data-start="44.1">Field</a></li></ol>
+</figure>
 </section>
 
 <section id="download">
 <h2>Get started</h2>
+<p class="actions"><a class="button primary" href="https://apps.microsoft.com/detail/9NZ5GQMCG1ZN">Download for Windows</a> <a class="button" href="/download/linux">Download for Linux</a> <a class="button quiet" href="/download/windows">Windows installer</a></p>
 <ol class="steps">
 <li><strong>Download.</strong> The Windows installer or the Linux AppImage. Nothing to sign up for, and it never asks for administrator rights. <a href="/help/#install">How to install</a></li>
 <li><strong>Turn on Detailed Logs.</strong> In Arena, under Options → Account, turn on <strong>Detailed Logs (Plugin Support)</strong>, then restart Arena. <a href="/help/#first-run">The first run</a></li>
@@ -69,51 +77,45 @@
 <div class="features">
 <section class="feature" id="home">
 <div class="text">
-<p class="eyebrow">Home</p>
 <h2>Where you stand today</h2>
 <p>The last session in one line, your record over the last thirty days, your win rate by week, and three things worth a look: the last match, one pattern across your matches, and the field you are playing in.</p>
 </div>
-<figure><img src="/img/home.webp" width="1440" height="900" loading="lazy" decoding="async" alt="The Home page: the last session's record, the last thirty days' record, and three cards: the last match, one pattern across your matches, and the field you are playing in."></figure>
+<figure class="shot"><figcaption>Home</figcaption><img src="/img/home.webp" width="1326" height="1185" loading="lazy" decoding="async" alt="The Home page: the last session's record, the last thirty days' record, and three cards: the last match, one pattern across your matches, and the field you are playing in."></figure>
 </section>
-<section class="feature" id="live">
+<section class="feature wide" id="live">
 <div class="text">
-<p class="eyebrow">Live</p>
 <h2>The match in progress</h2>
 <p>Arena already shows life, hand size and open mana, so Sensei Top shows what it does not: what a keepable hand looks like for the deck you are on, what the opponent has revealed and what their archetype usually runs beside it, and exactly what is left in your own library with the odds of drawing it soon. Between games, the sideboard plan from your matchup brief, once you have written one. During an event it shows what every tracker shows, and no advice; a switch in Settings turns the advice off in every game.</p>
 </div>
-<figure><img src="/img/live.webp" width="1440" height="900" loading="lazy" decoding="async" alt="The Live page during an unranked match: the remaining library with the odds of each draw, and the opponent's revealed cards with what their archetype usually runs beside them."></figure>
+<figure class="shot"><figcaption>Live</figcaption><img src="/img/live.webp" width="1440" height="900" loading="lazy" decoding="async" alt="The Live page during an unranked match: the remaining library with the odds of each draw, and the opponent's revealed cards with what their archetype usually runs beside them."></figure>
 </section>
 <section class="feature" id="matches">
 <div class="text">
-<p class="eyebrow">Matches</p>
 <h2>Every match, every game, every turn</h2>
 <p>Each match gets a report of its own: who had to be the beatdown, how the damage race went, where the game turned and what was still live at the end, each measured against your other games with the deck. A turn-by-turn replay of every game sits under it, and a leak finder reads across all your matches for the patterns that cost you, with the sample size and the margin beside each one. A written report you can ask for.</p>
 </div>
-<figure><img src="/img/match-report.webp" width="1440" height="900" loading="lazy" decoding="async" alt="A match report: the damage race in each game, the turn the game turned, and the link to its turn-by-turn replay."></figure>
+<figure class="shot"><figcaption>Matches</figcaption><img src="/img/match-report.webp" width="1326" height="960" loading="lazy" decoding="async" alt="A match report: the damage race in each game, the turn the game turned, and the link to its turn-by-turn replay."></figure>
 </section>
 <section class="feature" id="decks">
 <div class="text">
-<p class="eyebrow">Decks</p>
 <h2>Each deck, over every version</h2>
 <p>Your record with each list you have played, split by version, with your matchups against each archetype and the sample behind every rate. The deck guide sets your list against what winning tournament pilots register and your matchup record against the field's shares, inside the current format's window, so a ban never mixes two formats into one. A written guide you can ask for.</p>
 </div>
-<figure><img src="/img/matchups.webp" width="1440" height="900" loading="lazy" decoding="async" alt="A deck's matchups: your record against each archetype, with the games behind each rate and how often that archetype wins in tournaments."></figure>
+<figure class="shot"><figcaption>Decks</figcaption><img src="/img/matchups.webp" width="1326" height="759" loading="lazy" decoding="async" alt="A deck's matchups: your record against each archetype, with the games behind each rate and how often that archetype wins in tournaments."></figure>
 </section>
-<section class="feature" id="field">
+<section class="feature wide" id="field">
 <div class="text">
-<p class="eyebrow">Field</p>
 <h2>The real metagame</h2>
 <p>The field from real tournament results, Magic Online and paper, tiered by how much evidence stands behind each archetype's share, with your own record against each one in the same period. Per format, and never across a ban.</p>
 </div>
-<figure><img src="/img/field.webp" width="1440" height="900" loading="lazy" decoding="async" alt="The Field page: the Standard metagame from Magic Online Challenge lists since the format's last reset, archetype by archetype, with your record against each."></figure>
+<figure class="shot"><figcaption>Field</figcaption><img src="/img/field.webp" width="1440" height="900" loading="lazy" decoding="async" alt="The Field page: the Standard metagame from paper tournaments of 64+ players since the format's last reset, archetype by archetype, with your record against each."></figure>
 </section>
 <section class="feature" id="coach">
 <div class="text">
-<p class="eyebrow">Coach</p>
 <h2>What to practise next</h2>
 <p>One report across every deck you play: your record on the play and on the draw, game one against post-sideboard games, kept hands against mulligans, where your losses turn, and three example games to go back to. Each report is dated and kept, and the next one is measured against it. A written report you can ask for.</p>
 </div>
-<figure><img src="/img/coach.webp" width="1440" height="900" loading="lazy" decoding="async" alt="The Coach page: the latest Standard report, with its date and measured cost, opening on the player profile's strengths and weaknesses."></figure>
+<figure class="shot"><figcaption>Coach</figcaption><img src="/img/coach.webp" width="1326" height="945" loading="lazy" decoding="async" alt="The Coach page: the latest Standard report, with its date and measured cost, opening on the player profile's strengths and weaknesses."></figure>
 </section>
 </div>
 
@@ -149,7 +151,6 @@
 <h2>What is not planned</h2>
 <p>Decisions, not gaps. Each was considered and refused.</p>
 <ul>
-<li>An overlay, or any window over the game.</li>
 <li>Live advice during an event.</li>
 <li>Reading the memory of, injecting into or automating either client.</li>
 <li>Collecting or sharing your matches, even as an opt-in.</li>
@@ -157,6 +158,27 @@
 <li>Telemetry, or an account for anything free.</li>
 </ul>
 <p>The <a href="https://github.com/sensei-top/sensei-top/blob/main/ROADMAP.md">roadmap</a> has the reasons, and what comes next.</p>
+</section>
+
+<section class="card" id="roadmap">
+<h2>Roadmap</h2>
+<p>Next, in this order:</p>
+<ul>
+<li>An overlay for Arena.</li>
+<li>Sideboard guides, with no generated answers.</li>
+<li>Win rates per card, from your own games.</li>
+<li>Your matches as a CSV file, and every table column explained.</li>
+<li>Magic Online on the Live page.</li>
+</ul>
+<p>Later, in no set order:</p>
+<ul>
+<li>A page that shows the tracker is reading your log.</li>
+<li>Written guides with any model.</li>
+<li>macOS, Arena only.</li>
+<li>Historic, Explorer and Timeless.</li>
+</ul>
+<p>Dates are not promised. The <a href="https://github.com/sensei-top/sensei-top/blob/main/ROADMAP.md">full roadmap</a> has the rest.</p>
+<img class="roadmap-image" src="/img/roadmap-en.svg" loading="lazy" width="1200" height="648" alt="The same lists, drawn as a diagram.">
 </section>
 
 <section class="card" id="free-software">
@@ -171,6 +193,8 @@
 <p class="links"><a href="https://apoia.se/senseitop">Apoia.se, for Brazil</a> · <a href="https://www.paypal.com/donate/?hosted_button_id=7J8M4EJ4DSVAW">PayPal, everywhere else</a></p>
 </section>
 </div>
+
+<p class="actions"><a class="button primary" href="https://apps.microsoft.com/detail/9NZ5GQMCG1ZN">Download for Windows</a> <a class="button" href="/download/linux">Download for Linux</a> <a class="button quiet" href="/download/windows">Windows installer</a></p>
 </main>
 
 <footer class="site-footer">

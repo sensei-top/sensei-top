@@ -16,25 +16,40 @@ function fake(attributes) {
   }
 }
 
-test('the matching download button becomes primary and the other does not', () => {
-  for (const os of ['windows', 'linux']) {
-    for (const target of ['windows', 'linux']) {
-      // Whatever class the static page carried, the link for `os` is primary.
-      const link = fake({ href: `/download/${target}`, class: target === 'windows' ? 'button primary' : 'button' })
-      button(os).element(link)
-      assert.equal(link.map.get('class'), target === os ? 'button primary' : 'button', `${os} / ${target}`)
-    }
+const STORE = 'https://apps.microsoft.com/detail/9NZ5GQMCG1ZN'
+
+// The three links as the static page carries them, for an unknown visitor.
+function staticButtons() {
+  return {
+    store: fake({ href: STORE, class: 'button primary' }),
+    linux: fake({ href: '/download/linux', class: 'button' }),
+    installer: fake({ href: '/download/windows', class: 'button quiet' }),
   }
+}
+
+test('a Windows visitor gets the Store as primary, and the installer stays quiet', () => {
+  const { store, linux, installer } = staticButtons()
+  for (const link of [store, linux, installer]) button('windows').element(link)
+  assert.equal(store.map.get('class'), 'button primary')
+  assert.equal(linux.map.get('class'), 'button')
+  assert.equal(installer.map.get('class'), 'button quiet')
+})
+
+test('a Linux visitor gets Linux as primary, and the installer stays quiet', () => {
+  const { store, linux, installer } = staticButtons()
+  for (const link of [store, linux, installer]) button('linux').element(link)
+  assert.equal(store.map.get('class'), 'button')
+  assert.equal(linux.map.get('class'), 'button primary')
+  assert.equal(installer.map.get('class'), 'button quiet')
 })
 
 test('mac and phone leave the buttons as they are', () => {
   for (const os of ['mac', 'phone']) {
-    const windows = fake({ href: '/download/windows', class: 'button primary' })
-    const linux = fake({ href: '/download/linux', class: 'button' })
-    button(os).element(windows)
-    button(os).element(linux)
-    assert.equal(windows.map.get('class'), 'button primary', os)
+    const { store, linux, installer } = staticButtons()
+    for (const link of [store, linux, installer]) button(os).element(link)
+    assert.equal(store.map.get('class'), 'button primary', os)
     assert.equal(linux.map.get('class'), 'button', os)
+    assert.equal(installer.map.get('class'), 'button quiet', os)
   }
 })
 
@@ -81,12 +96,11 @@ test('a rewritten response varies on the system and drops the asset\'s validator
     assert.deepEqual(rewriters.map(([selector]) => selector), ['.actions a.button', '[data-os]'])
 
     const [buttons] = rewriters.map(([, handler]) => handler)
-    const windows = fake({ href: '/download/windows', class: 'button primary' })
-    const linux = fake({ href: '/download/linux', class: 'button' })
-    buttons.element(windows)
+    const { store, linux } = staticButtons()
+    buttons.element(store)
     buttons.element(linux)
     assert.equal(linux.map.get('class'), 'button primary')
-    assert.equal(windows.map.get('class'), 'button')
+    assert.equal(store.map.get('class'), 'button')
   } finally {
     delete globalThis.HTMLRewriter
   }

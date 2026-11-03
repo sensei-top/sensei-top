@@ -6,7 +6,7 @@
     "directory": "./site",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/download/*", "/", "/help/", "/privacy/", "/untapped/", "/linux/", "/mtgo/", "/pt-br/"]
+    "run_worker_first": ["/download/*", "/", "/help/", "/privacy/", "/untapped/", "/linux/", "/mtgo/", "/pt-br/", "/video/*"]
   },
   "workers_dev": true,
   "preview_urls": false,

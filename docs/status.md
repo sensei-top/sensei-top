@@ -47,7 +47,8 @@ a sold product raised.
 app for Arena and MTGO: every MTGO format that has archetype rules, no
 Arena-only formats (Historic, Explorer, Timeless; reversed 2026-10-16 for
 those three, see `BACKLOG.md`'s BL-012, while Alchemy and Brawl stay
-out), no in-game overlay or companion window, and never reading the memory
+out), no in-game overlay or companion window (the overlay reversed
+2026-11-02 for Arena only, see `BACKLOG.md`'s BL-098), and never reading the memory
 of, injecting into or automating either client. Draft was deleted rather
 than hidden (`feature/remove-draft`; the last commit that has it is tagged
 `archive/draft` in the pre-public history, not in this repository), and

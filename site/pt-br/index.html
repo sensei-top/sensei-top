@@ -23,10 +23,11 @@
 <meta property="og:locale:alternate" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="preload" href="/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/hanken-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/img/demo-poster-pt-br.webp" as="image" fetchpriority="high">
+<link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "73e9bc45819145e3afbbde2244e8d023"}'></script>
+<script defer src="/hero.js"></script>
 </head>
 <body class="landing">
 <div class="page">
@@ -48,15 +49,22 @@
 <h1>Suas partidas, seus decks, o meta de verdade. Tudo no seu próprio computador.</h1>
 <p class="lead">O Sensei Top lê os logs que o Arena e o Magic Online já escrevem e os transforma em um dashboard: cada partida e cada jogo, turno a turno, seu histórico com cada deck e contra cada arquétipo, e o metajogo dos torneios ao lado.</p>
 <ul class="facts"><li>Gratuito</li><li>Código aberto</li><li>Sem conta</li><li>Windows e Linux</li></ul>
-<p class="actions"><a class="button primary" href="/download/windows">Baixar para Windows</a> <a class="button" href="/download/linux">Baixar para Linux</a> <a class="button" href="https://apps.microsoft.com/detail/9NZ5GQMCG1ZN">Microsoft Store</a></p>
+<p class="actions"><a class="button primary" href="https://apps.microsoft.com/detail/9NZ5GQMCG1ZN">Baixar para Windows</a> <a class="button" href="/download/linux">Baixar para Linux</a> <a class="button quiet" href="/download/windows">Instalador para Windows</a></p>
 <p class="note" data-os="mac" hidden>Ainda não há versão para macOS. O Sensei Top roda em um computador com Windows ou Linux.</p>
 <p class="note" data-os="phone" hidden>O Sensei Top roda em um computador com Windows ou Linux, não em celular ou tablet.</p>
 </div>
-<figure><img src="/img/pt-br/home.webp" width="1440" height="900" fetchpriority="high" decoding="async" alt="A página Início: o histórico de vitórias e derrotas da última sessão, o dos últimos trinta dias e três cards: a última partida, um padrão entre as suas partidas e o meta em que você está jogando."></figure>
+<figure class="stage">
+<div class="frame">
+<video poster="/img/demo-poster-pt-br.webp" width="1920" height="1080" preload="none" controls muted loop playsinline aria-label="Demonstração do dashboard, sem som"><source src="/video/demo-pt-br.mp4" type="video/mp4"><track kind="captions" src="/video/demo-pt-br.vtt" srclang="pt-BR"></video>
+<div class="ctl" hidden><button type="button" class="play" aria-label="Reproduzir" title="Reproduzir" data-play="Reproduzir" data-pause="Pausar"><svg class="icon-play" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 3.2v9.6a.6.6 0 0 0 .9.5l7.6-4.8a.6.6 0 0 0 0-1L5.9 2.7a.6.6 0 0 0-.9.5z"/></svg><svg class="icon-pause" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="4" y="3" width="3" height="10" rx="1"/><rect x="9" y="3" width="3" height="10" rx="1"/></svg></button><button type="button" class="captions" aria-label="Mostrar legendas" title="Mostrar legendas" data-show="Mostrar legendas" data-hide="Ocultar legendas"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><rect x="1.7" y="3.2" width="12.6" height="9.6" rx="2"/><path d="M7 6.6a1.7 1.7 0 1 0 0 2.8M12 6.6a1.7 1.7 0 1 0 0 2.8"/></svg></button></div>
+</div>
+<ol class="chapters" aria-label="Capítulos"><li><a href="#home" data-start="0">Início</a></li><li><a href="#live" data-start="11">Ao vivo</a></li><li><a href="#matches" data-start="22.7">Partidas</a></li><li><a href="#decks" data-start="34.4">Matchups</a></li><li><a href="#field" data-start="44.1">Meta</a></li></ol>
+</figure>
 </section>
 
 <section id="download">
 <h2>Primeiros passos</h2>
+<p class="actions"><a class="button primary" href="https://apps.microsoft.com/detail/9NZ5GQMCG1ZN">Baixar para Windows</a> <a class="button" href="/download/linux">Baixar para Linux</a> <a class="button quiet" href="/download/windows">Instalador para Windows</a></p>
 <ol class="steps">
 <li><strong>Baixe.</strong> O instalador para Windows ou o AppImage para Linux. Nada para se cadastrar, e ele nunca pede direitos de administrador. <a href="/pt-br/help/#install">Como instalar</a></li>
 <li><strong>Ligue os registros detalhados.</strong> No Arena, em Opções → Conta, ligue <strong>Registros detalhados (suporte de plugin)</strong> e abra o Arena de novo. <a href="/pt-br/help/#first-run">A primeira vez</a></li>
@@ -69,51 +77,45 @@
 <div class="features">
 <section class="feature" id="home">
 <div class="text">
-<p class="eyebrow">Início</p>
 <h2>Onde você está hoje</h2>
 <p>A última sessão em uma linha, seu histórico de vitórias e derrotas dos últimos trinta dias, sua taxa de vitórias por semana e três coisas que valem uma olhada: a última partida, um padrão entre as suas partidas e o meta em que você está jogando.</p>
 </div>
-<figure><img src="/img/pt-br/home.webp" width="1440" height="900" loading="lazy" decoding="async" alt="A página Início: o histórico de vitórias e derrotas da última sessão, o dos últimos trinta dias e três cards: a última partida, um padrão entre as suas partidas e o meta em que você está jogando."></figure>
+<figure class="shot"><figcaption>Início</figcaption><img src="/img/pt-br/home.webp" width="1326" height="1185" loading="lazy" decoding="async" alt="A página Início: o histórico de vitórias e derrotas da última sessão, o dos últimos trinta dias e três cards: a última partida, um padrão entre as suas partidas e o meta em que você está jogando."></figure>
 </section>
-<section class="feature" id="live">
+<section class="feature wide" id="live">
 <div class="text">
-<p class="eyebrow">Ao vivo</p>
 <h2>A partida em andamento</h2>
 <p>O Arena já mostra vida, tamanho da mão e mana disponível, então o Sensei Top mostra o que ele não mostra: como é uma mão que vale manter com o deck que você está jogando, o que o oponente já revelou e o que o arquétipo dele costuma jogar junto, e exatamente o que resta no seu grimório, com as chances de comprar cada card em breve. Entre os jogos, o plano de sideboard do seu resumo de matchup, depois que você tiver escrito um. Durante um evento, mostra o que qualquer tracker mostra, e nenhum conselho; uma chave em Configurações desliga os conselhos em qualquer jogo.</p>
 </div>
-<figure><img src="/img/pt-br/live.webp" width="1440" height="900" loading="lazy" decoding="async" alt="A página Ao vivo durante uma partida não ranqueada: o grimório restante com as chances de cada compra, e os cards revelados do oponente com o que o arquétipo dele costuma jogar junto."></figure>
+<figure class="shot"><figcaption>Ao vivo</figcaption><img src="/img/pt-br/live.webp" width="1440" height="900" loading="lazy" decoding="async" alt="A página Ao vivo durante uma partida não ranqueada: o grimório restante com as chances de cada compra, e os cards revelados do oponente com o que o arquétipo dele costuma jogar junto."></figure>
 </section>
 <section class="feature" id="matches">
 <div class="text">
-<p class="eyebrow">Partidas</p>
 <h2>Cada partida, cada jogo, cada turno</h2>
 <p>Cada partida ganha um relatório próprio: quem precisava ser o beatdown, como foi a corrida de dano, onde o jogo virou e o que ainda estava vivo no final, cada item medido contra os seus outros jogos com o deck. Um replay turno a turno de cada jogo fica logo abaixo, e um detector de leaks lê todas as suas partidas atrás dos padrões que custam jogos, com o tamanho da amostra e a margem ao lado de cada um. Um relatório escrito que você pode pedir.</p>
 </div>
-<figure><img src="/img/pt-br/match-report.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Um relatório de partida: a corrida de dano em cada jogo, o turno em que o jogo virou e o link para o replay turno a turno."></figure>
+<figure class="shot"><figcaption>Partidas</figcaption><img src="/img/pt-br/match-report.webp" width="1326" height="960" loading="lazy" decoding="async" alt="Um relatório de partida: a corrida de dano em cada jogo, o turno em que o jogo virou e o link para o replay turno a turno."></figure>
 </section>
 <section class="feature" id="decks">
 <div class="text">
-<p class="eyebrow">Decks</p>
 <h2>Cada deck, em cada versão</h2>
 <p>Seu histórico com cada lista que você jogou, separado por versão, com seus matchups contra cada arquétipo e a amostra por trás de cada taxa. O guia do deck coloca sua lista contra o que os jogadores que vencem torneios registram, e seu histórico por matchup contra a fatia de cada arquétipo no meta, dentro da janela do formato atual, para que um banimento nunca misture dois formatos em um só. Um guia escrito que você pode pedir.</p>
 </div>
-<figure><img src="/img/pt-br/matchups.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Os matchups de um deck: seu histórico contra cada arquétipo, com os jogos por trás de cada taxa e com que frequência aquele arquétipo vence em torneios."></figure>
+<figure class="shot"><figcaption>Decks</figcaption><img src="/img/pt-br/matchups.webp" width="1326" height="786" loading="lazy" decoding="async" alt="Os matchups de um deck: seu histórico contra cada arquétipo, com os jogos por trás de cada taxa e com que frequência aquele arquétipo vence em torneios."></figure>
 </section>
-<section class="feature" id="field">
+<section class="feature wide" id="field">
 <div class="text">
-<p class="eyebrow">Meta</p>
 <h2>O meta de verdade</h2>
 <p>O metajogo a partir de resultados reais de torneios, do Magic Online e de papel, separado em níveis pela quantidade de evidência por trás da fatia de cada arquétipo, com o seu próprio histórico contra cada um no mesmo período. Por formato, e nunca atravessando um banimento.</p>
 </div>
-<figure><img src="/img/pt-br/field.webp" width="1440" height="900" loading="lazy" decoding="async" alt="A página Meta: o metajogo de Standard a partir das listas dos Challenges do Magic Online desde o último reinício do formato, arquétipo por arquétipo, com o seu histórico contra cada um."></figure>
+<figure class="shot"><figcaption>Meta</figcaption><img src="/img/pt-br/field.webp" width="1440" height="900" loading="lazy" decoding="async" alt="A página Meta: o metajogo de Standard a partir de torneios de papel com 64+ jogadores desde o último reinício do formato, arquétipo por arquétipo, com o seu histórico contra cada um."></figure>
 </section>
 <section class="feature" id="coach">
 <div class="text">
-<p class="eyebrow">Treinador</p>
 <h2>O que treinar a seguir</h2>
 <p>Um relatório sobre todos os decks que você joga: seu histórico jogando primeiro e comprando primeiro, jogo 1 contra os jogos depois do sideboard, mãos mantidas contra mulligans, onde as suas derrotas viram e três jogos de exemplo para rever. Cada relatório é datado e guardado, e o seguinte é medido contra ele. Um relatório escrito que você pode pedir.</p>
 </div>
-<figure><img src="/img/pt-br/coach.webp" width="1440" height="900" loading="lazy" decoding="async" alt="A página Treinador: o relatório de Standard mais recente, com a data e o custo medido, aberto no perfil do jogador com seus pontos fortes e fracos."></figure>
+<figure class="shot"><figcaption>Treinador</figcaption><img src="/img/pt-br/coach.webp" width="1326" height="945" loading="lazy" decoding="async" alt="A página Treinador: o relatório de Standard mais recente, com a data e o custo medido, aberto no perfil do jogador com seus pontos fortes e fracos."></figure>
 </section>
 </div>
 
@@ -149,7 +151,6 @@
 <h2>O que não está planejado</h2>
 <p>Decisões, não lacunas. Cada uma foi considerada e recusada.</p>
 <ul>
-<li>Um overlay, ou qualquer janela sobre o jogo.</li>
 <li>Conselhos ao vivo durante um evento.</li>
 <li>Ler a memória, injetar código ou automatizar qualquer um dos clientes.</li>
 <li>Coletar ou compartilhar suas partidas, nem mesmo como opção.</li>
@@ -157,6 +158,27 @@
 <li>Telemetria, ou uma conta para qualquer coisa gratuita.</li>
 </ul>
 <p>O <a href="https://github.com/sensei-top/sensei-top/blob/main/ROADMAP.md">roadmap</a> tem os motivos, e o que vem a seguir.</p>
+</section>
+
+<section class="card" id="roadmap">
+<h2>Roadmap</h2>
+<p>A seguir, nesta ordem:</p>
+<ul>
+<li>Um overlay para o Arena.</li>
+<li>Guias de sideboard, sem respostas geradas.</li>
+<li>Taxas de vitórias por card, a partir dos seus próprios jogos.</li>
+<li>Suas partidas em um arquivo CSV, e cada coluna das tabelas explicada.</li>
+<li>Magic Online na página Ao vivo.</li>
+</ul>
+<p>Mais tarde, sem ordem definida:</p>
+<ul>
+<li>Uma página que mostra que o tracker está lendo o seu log.</li>
+<li>Guias escritos com qualquer modelo.</li>
+<li>macOS, só para o Arena.</li>
+<li>Os formatos Histórico, Explorador e Atemporal.</li>
+</ul>
+<p>Nenhuma data é prometida. O <a href="https://github.com/sensei-top/sensei-top/blob/main/ROADMAP.md">roadmap completo</a> tem o resto.</p>
+<img class="roadmap-image" src="/img/roadmap-pt-br.svg" loading="lazy" width="1200" height="648" alt="As mesmas listas, desenhadas como um diagrama.">
 </section>
 
 <section class="card" id="free-software">
@@ -171,6 +193,8 @@
 <p class="links"><a href="https://apoia.se/senseitop">Apoia.se, para o Brasil</a> · <a href="https://www.paypal.com/donate/?hosted_button_id=7J8M4EJ4DSVAW">PayPal, para o resto do mundo</a></p>
 </section>
 </div>
+
+<p class="actions"><a class="button primary" href="https://apps.microsoft.com/detail/9NZ5GQMCG1ZN">Baixar para Windows</a> <a class="button" href="/download/linux">Baixar para Linux</a> <a class="button quiet" href="/download/windows">Instalador para Windows</a></p>
 </main>
 
 <footer class="site-footer">

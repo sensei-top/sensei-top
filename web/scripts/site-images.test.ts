@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 // The scripts are plain .mjs, typed by inference (`allowJs` in
 // tsconfig.node.json); none of them opens a browser on import.
-import { OG_TEXT, SITE_VIEWS, VIEWPORT, convertToWebp, parseClock } from './site-images.mjs'
+import { OG_TEXT, SITE_VIEWS, VIEWPORT, convertToWebp, focalCapture, parseClock } from './site-images.mjs'
 import { VIEWS, addressOf } from './views.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -161,5 +161,31 @@ describe('parseClock', () => {
   it('refuses a value that is not a date', () => {
     expect(() => parseClock('last tuesday')).toThrow('--clock')
     expect(() => parseClock('')).toThrow('--clock')
+  })
+})
+
+describe('focal captures', () => {
+  it('holds y + height at 1008 wide and clips to the main column', () => {
+    expect(focalCapture({ y: 72, height: 790 }, 'en-US')).toEqual({
+      viewport: { width: 1008, height: 862 },
+      clip: { x: 104, y: 72, width: 884, height: 790 },
+    })
+  })
+
+  it("takes a locale's own height for the viewport and the clip, and falls back to height", () => {
+    const focal = { y: 470, height: 506, heightByLocale: { 'pt-BR': 524 } }
+    expect(focalCapture(focal, 'pt-BR')).toEqual({
+      viewport: { width: 1008, height: 994 },
+      clip: { x: 104, y: 470, width: 884, height: 524 },
+    })
+    expect(focalCapture(focal, 'en-US')).toEqual({
+      viewport: { width: 1008, height: 976 },
+      clip: { x: 104, y: 470, width: 884, height: 506 },
+    })
+  })
+
+  it('names the four views the landing crops, and no other', () => {
+    const focal = (SITE_VIEWS as { name: string; focal?: unknown }[]).filter((v) => v.focal).map((v) => v.name)
+    expect(focal).toEqual(['home', 'match-report', 'matchups', 'coach'])
   })
 })
