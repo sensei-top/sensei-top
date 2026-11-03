@@ -39,7 +39,7 @@ MTGO pick changes which deck a match reads through `v_match_deck` with no
 rebuild at all). The prose modules `narrative.py`, `authored.py` and `plans.py` live in
 `ai/guide/`, which core never imports. The authored narratives are:
 `ai/guide/authored.py` writes
-`deck_narrative` and `rcq_authored.py` writes `rcq_guide`.
+`deck_narrative` and `ai/guide/rcq_authored.py` writes `rcq_guide`.
 
 ### `deck.py` — deck identity, stitched across list edits
 
@@ -344,7 +344,7 @@ around it, rather than a Markdown-rendering dependency.
 
 `render(guide)` — one renderer, evidence only, used by the markdown route,
 `guide --markdown`, and the guide and RCQ prompts (`ai/guide/narrative.py`,
-`rcq.py`). It takes no narrative: the sections the narrative would fill
+`ai/guide/rcq_prompt.py`). It takes no narrative: the sections the narrative would fill
 (How it works, Matchups, Between rounds) print "Not generated yet."
 Section order: Scope → How it works → Your play (curves, then the leak
 finder, deck-scoped beside all-decks) → The list → The field → Matchups →
@@ -413,9 +413,11 @@ document for one event: the exact 75 the player is about to register,
 against the field of that week. It is its own tab, not a section of the
 Guide, because the Guide's sections are the deck's evidence and this is a
 single event's plan. Its address in 1.0.x, `/decks/:id/guide/rcq`, still
-opens it. Code: `guide/rcq.py` (evidence and
-prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
-(storage), `guide/rcq_markdown.py` (the export), `api/routes/rcq.py`.
+opens it. Code: `guide/rcq.py` (the evidence), `guide/decklist.py` (the
+parser) and `api/routes/rcq.py` (the preview) are core; `ai/guide/rcq_prompt.py`
+(the prompt, the answer's shape and its reader), `ai/guide/rcq_authored.py`
+(storage), `ai/guide/rcq_markdown.py` (the export) and `ai/routes/rcq.py`
+(generate, paste, latest, Markdown) live in `ai/`, which core never imports.
 
 - **The pasted 75.** `decklist.parse_decklist` reads an Arena export
   (`Deck` / `Sideboard` / `Companion` headers) or plain `N Name` lines into a
@@ -451,15 +453,17 @@ prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
   and the top eight archetypes where placements exist. Both windows are
   cut at the reset. The page shows each source's freshness
   (`docs/metagame.md`, "A third source: mtgo.com").
-- **Round trip.** The same as the guide's. `GET …/rcq/preview` always
-  returns the prompt, for the no-credential path.
+- **Round trip.** The same as the guide's. `GET …/rcq/preview` is core and
+  returns the prompt, for the no-credential path, through the provider
+  `ai/` lends it (`api/providers.py`); without `ai/` the field is `null`
+  and the page keeps its evidence.
   `POST …/rcq/narrative` (`{decklist, expected[], own?}`) calls Claude and
   stores the answer (503 with no credential, `docs/llm.md`).
   Or the answer to the copied prompt is pasted into the page's box
   (`PUT …/rcq/narrative`, the generate body plus `answer`): the server
   rebuilds the prompt from that body and checks the answer's
   `for: rcq:{key}` line. The prompt also carries a `context`,
-  `guide/rcq.py::rcq_context`: a hash of the list's cards, both boards
+  `ai/guide/rcq_prompt.py::rcq_context`: a hash of the list's cards, both boards
   counted by name without regard to case, and the expected archetypes in any
   order, so another order or other case is the same list and
   a card added, cut or moved is another. The
@@ -470,10 +474,8 @@ prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
   the page shows in place of the "changed" note. An answer copied from a
   prompt older than the hash has no `context` and is stored with it
   unknown (`NULL`), never refused; a generated guide stores none either,
-  being written for the list sent with it.
-  `sensei-top rcq --deck KEY --decklist FILE [--expect K1,K2] [--own K]
-  --prompt` prints the prompt and makes no call; `--import FILE [--author
-  NAME]` stores a written answer.
+  being written for the list sent with it. The command line has no RCQ
+  command: the guide is written from the page.
 - **Storage.** `rcq_guide` (migration 057) keeps every row, like
   `coach_report`: each guide is written against one day's field and an
   older one stays readable. It holds the list as pasted, the expected keys,

@@ -1121,86 +1121,10 @@ export interface paths {
         /**
          * Rcq Preview
          * @description The pasted 75 read back against the field, and the prompt that would
-         *     be sent. Read-only; makes no call. 404 is an unknown deck.
+         *     be sent when ``ai/`` lends one (``api/providers.py``), else ``null``.
+         *     Read-only; makes no call. 404 is an unknown deck.
          */
         get: operations["rcq_preview_api_guide__key__rcq_preview_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/guide/{key}/rcq/narrative": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Paste Rcq
-         * @description Store an answer pasted into the RCQ guide's card — what ``sensei-top
-         *     rcq --deck KEY --import FILE`` stores. Makes no model call. The body
-         *     carries the same list fields the preview and generate routes take, since
-         *     the guide is checked against that 75 and stored beside it.
-         *
-         *     422 for another card's or an unreadable answer, nothing stored (a flex
-         *     note role other than core, flex or risk is refused as on the CLI); 413
-         *     over 256 KB; 404 an unknown deck. Stored with the ``context`` the
-         *     answer carries, the list it was written for (``rcq_context``; an answer
-         *     from a prompt older than the hash has none, and is stored with it
-         *     unknown), and the sentinel model ``pasted``, no tokens, no cost. Every
-         *     paste keeps its own row, like a generation.
-         */
-        put: operations["paste_rcq_api_guide__key__rcq_narrative_put"];
-        /**
-         * Generate Rcq
-         * @description Write the RCQ guide with Claude, and store it (every generation keeps
-         *     its own row). Same posture as the deck guide's route: 503 with no
-         *     credential, 502 when the call or its answer fails.
-         */
-        post: operations["generate_rcq_api_guide__key__rcq_narrative_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/guide/{key}/rcq": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Rcq Latest
-         * @description The latest stored RCQ guide, or ``status: 'none'``.
-         */
-        get: operations["rcq_latest_api_guide__key__rcq_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/guide/{key}/rcq/markdown": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Rcq Markdown
-         * @description The latest stored guide as Markdown; 404 when none is stored.
-         */
-        get: operations["rcq_markdown_api_guide__key__rcq_markdown_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1534,6 +1458,83 @@ export interface paths {
          *     the live matchup brief needs no generate button of its own.
          */
         post: operations["generate_guide_narrative_api_guide__key__narrative_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guide/{key}/rcq/narrative": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Paste Rcq
+         * @description Store an answer pasted into the RCQ guide's card. Makes no model
+         *     call. The body carries the same list fields the preview and generate
+         *     routes take, since the guide is checked against that 75 and stored
+         *     beside it.
+         *
+         *     422 for another card's or an unreadable answer, nothing stored (a flex
+         *     note role other than core, flex or risk is one); 413 over 256 KB; 404
+         *     an unknown deck. Stored with the ``context`` the answer carries, the
+         *     list it was written for (``rcq_context``; an answer from a prompt older
+         *     than the hash has none, and is stored with it unknown), and the
+         *     sentinel model ``pasted``, no tokens, no cost. Every paste keeps its own
+         *     row, like a generation.
+         */
+        put: operations["paste_rcq_api_guide__key__rcq_narrative_put"];
+        /**
+         * Generate Rcq
+         * @description Write the RCQ guide with Claude, and store it (every generation keeps
+         *     its own row). Same posture as the deck guide's route: 503 with no
+         *     credential, 502 when the call or its answer fails.
+         */
+        post: operations["generate_rcq_api_guide__key__rcq_narrative_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guide/{key}/rcq": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Rcq Latest
+         * @description The latest stored RCQ guide, or ``status: 'none'``.
+         */
+        get: operations["rcq_latest_api_guide__key__rcq_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guide/{key}/rcq/markdown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Rcq Markdown
+         * @description The latest stored guide as Markdown; 404 when none is stored.
+         */
+        get: operations["rcq_markdown_api_guide__key__rcq_markdown_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6568,138 +6569,6 @@ export interface operations {
             };
         };
     };
-    paste_rcq_api_guide__key__rcq_narrative_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                key: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RcqPasteIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RcqGuideOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    generate_rcq_api_guide__key__rcq_narrative_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                key: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RcqGenerateIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RcqGuideOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    rcq_latest_api_guide__key__rcq_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                key: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RcqGuideOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    rcq_markdown_api_guide__key__rcq_markdown_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                key: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RcqMarkdownOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     coach_api_coach_get: {
         parameters: {
             query?: {
@@ -7203,6 +7072,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GuideNarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paste_rcq_api_guide__key__rcq_narrative_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcqPasteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RcqGuideOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_rcq_api_guide__key__rcq_narrative_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RcqGenerateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RcqGuideOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rcq_latest_api_guide__key__rcq_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RcqGuideOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rcq_markdown_api_guide__key__rcq_markdown_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RcqMarkdownOut"];
                 };
             };
             /** @description Validation Error */

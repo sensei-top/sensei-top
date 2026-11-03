@@ -14,8 +14,8 @@ from dataclasses import dataclass
 
 from sensei_top.ai.guide.narrative import BoardCard
 from sensei_top.ai.guide.plans import PlanProblem
+from sensei_top.ai.guide.rcq_prompt import FlexNote, RcqMatchup, RcqNarrative
 from sensei_top.clock import now_iso
-from sensei_top.guide.rcq import FlexNote, RcqMatchup, RcqNarrative
 
 __all__ = ["StoredRcq", "latest_rcq", "write_rcq"]
 

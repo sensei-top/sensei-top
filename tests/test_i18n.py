@@ -35,11 +35,13 @@ from fastapi import FastAPI
 
 from sensei_top import i18n
 from sensei_top.ai.guide import narrative as guide_narrative
+from sensei_top.ai.guide import rcq_prompt as rcq_prompt_module
 from sensei_top.ai.llm import config as llm_config
 from sensei_top.ai.review import leaks_narrative, narrative
 from sensei_top.ai.routes import guide as guide_ai_routes
 from sensei_top.ai.routes import leaks as leaks_routes
 from sensei_top.ai.routes import match_report as match_report_routes
+from sensei_top.ai.routes import rcq as rcq_ai_routes
 from sensei_top.api import create_app
 from sensei_top.api.app import RequestLanguage
 from sensei_top.api.convert import _list_diff_out
@@ -795,7 +797,7 @@ BUILDERS = {
     "review.leaks_narrative.full_prompt": lambda s: leaks_narrative.full_prompt(s),
     "guide.narrative.build_guide_context": lambda s: guide_narrative.build_guide_context(s, conn=s),
     "guide.narrative.full_prompt": lambda s: guide_narrative.full_prompt(s, conn=s),
-    "guide.rcq.rcq_prompt": lambda s: guide_rcq.rcq_prompt(s, conn=s),
+    "guide.rcq.rcq_prompt": lambda s: rcq_prompt_module.rcq_prompt(s, conn=s),
     "brief.narrative.build_brief_context":
         lambda s: brief_narrative.build_brief_context(s, s, "k", "Label"),
     "brief.narrative.full_multi_prompt":
@@ -1026,8 +1028,8 @@ def test_the_markdown_exports_are_english(marker_catalogue, client, monkeypatch)
         return "markdown"
 
     monkeypatch.setattr(guide_routes, "render_guide_markdown", recording)
-    monkeypatch.setattr(rcq_routes, "render_rcq", recording)
-    monkeypatch.setattr(rcq_routes, "latest_rcq", lambda *_args: object())
+    monkeypatch.setattr(rcq_ai_routes, "render_rcq", recording)
+    monkeypatch.setattr(rcq_ai_routes, "latest_rcq", lambda *_args: object())
     key = client.get("/api/guide/decks").json()[0]["key"]
     pt = {"Accept-Language": "pt-BR"}
     for path in (f"/api/guide/{key}/markdown", f"/api/guide/{key}/rcq/markdown"):
@@ -1051,6 +1053,7 @@ def test_the_guide_and_rcq_prompts_build_their_evidence_in_english(
     monkeypatch.setattr(guide_routes, "build_deck_guide", recording)
     monkeypatch.setattr(guide_ai_routes, "build_deck_guide", recording)
     monkeypatch.setattr(rcq_routes, "build_rcq", recording)
+    monkeypatch.setattr(rcq_ai_routes, "build_rcq", recording)
     pt = {"Accept-Language": "pt-BR"}
     assert client.get("/api/guide/k", headers=pt).status_code == 404
     assert client.get("/api/guide/k/narrative", headers=pt).status_code == 404
@@ -1176,7 +1179,7 @@ def test_the_rcq_prompt_drops_the_guides_own_unclassified_note_and_nothing_else(
         assert evidence.guide.own_unclassified
         assert evidence.guide.gaps[0].startswith(own_note)
         assert evidence.guide.provenance.oracle_coverage[1] > 0
-        prompt = guide_rcq.rcq_prompt(evidence, conn=conn)
+        prompt = rcq_prompt_module.rcq_prompt(evidence, conn=conn)
     finally:
         conn.close()
     assert own_note not in prompt

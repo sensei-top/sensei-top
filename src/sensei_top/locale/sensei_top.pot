@@ -176,7 +176,7 @@ msgstr ""
 msgid "Cards still in your hand on the last turn of a game you lost."
 msgstr ""
 
-#: sensei_top/ai/routes/guide.py sensei_top/api/routes/rcq.py
+#: sensei_top/ai/routes/guide.py sensei_top/ai/routes/rcq.py
 #, python-brace-format
 msgid "Claude's answer could not be read: {error}"
 msgstr ""
@@ -456,7 +456,7 @@ msgstr ""
 msgid "No Claude credential configured. Run 'sensei-top config --set-key'."
 msgstr ""
 
-#: sensei_top/api/routes/rcq.py
+#: sensei_top/ai/routes/rcq.py
 #, python-brace-format
 msgid "No RCQ guide stored for {key}."
 msgstr ""

@@ -12,13 +12,19 @@ where ``sensei_top.ai`` is already imported.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
+
+if TYPE_CHECKING:
+    from sensei_top.api.routes.rcq import RcqPromptProvider
 
 
 @dataclass(frozen=True, slots=True)
 class Providers:
     """Every seam's provider, each ``None`` by default."""
+
+    rcq_prompt: RcqPromptProvider | None = None
 
 
 NO_PROVIDERS = Providers()

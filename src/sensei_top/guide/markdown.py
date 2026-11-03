@@ -4,7 +4,7 @@ See docs/guide.md, "`markdown.py` — the exported document".
 One renderer, four callers: the export route (``GET /api/guide/{key}/
 markdown``), the CLI ``guide`` command (printed, or written by
 ``--markdown``), and the guide and RCQ prompts (``ai/guide/narrative.py``,
-``guide/rcq.py``), which send it as the numeric spine of what they ask the
+``ai/guide/rcq_prompt.py``), which send it as the numeric spine of what they ask the
 model to write prose around — so it is never asked to re-derive a number
 the reader can already see rendered.
 """

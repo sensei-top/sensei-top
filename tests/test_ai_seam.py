@@ -11,6 +11,7 @@ why the build without it still mounts ``CORE_NARRATIVE_ROUTES``.
 """
 
 import importlib.util
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
@@ -26,7 +27,6 @@ from sensei_top.db import open_database
 # (``api/routes/``), not by ``sensei_top.ai.routers``. Pinned so that no new
 # one joins them; every route leaving for ``ai/routes/`` leaves this set.
 CORE_NARRATIVE_ROUTES = {
-    "/api/guide/{key}/rcq/narrative",
     "/api/coach/narrative",
     "/api/coach/narrative/{report_id}",
 }
@@ -88,6 +88,10 @@ def test_without_ai_the_app_mounts_no_ai_route(hide_ai, build, make_client):
     assert {p for p in paths if p.endswith("/narrative") or "/narrative/" in p} == (
         CORE_NARRATIVE_ROUTES
     )
+    assert "/api/guide/{key}/rcq/preview" in paths
+    assert not {p for p in paths if p.startswith("/api/guide/{key}/rcq")} - {
+        "/api/guide/{key}/rcq/preview"
+    }
     assert _dashboard_is_last(app)
     with make_client(app) as client:
         assert client.get("/api/health").status_code == 200
@@ -141,3 +145,46 @@ def test_without_ai_the_parser_still_builds(hide_ai):
     commands = _subcommands(build_parser())
 
     assert {"ingest", "project", "report", "serve", "doctor"} <= commands
+
+
+# --- the RCQ preview's prompt ----------------------------------------------
+
+_PASTED = "Deck\n4 Alpha Card\n56 Mountain\n\nSideboard\n2 Beta Card\n"
+
+
+@pytest.fixture
+def projected_app(tmp_path):
+    from sensei_top.projector.matches import project
+    from sensei_top.reader.ingest import ingest_file
+
+    db_path = tmp_path / "rcq.db"
+    conn = open_database(db_path)
+    ingest_file(conn, Path(__file__).parent / "fixtures" / "match_session.log", locale_hint="mdy")
+    project(conn)
+    conn.close()
+    return lambda: create_app(db_path)
+
+
+def _preview(app, make_client):
+    with make_client(app) as client:
+        key = client.get("/api/guide/decks").json()[0]["key"]
+        resp = client.get(f"/api/guide/{key}/rcq/preview", params={"decklist": _PASTED})
+    assert resp.status_code == 200
+    return resp.json()
+
+
+def test_without_ai_the_rcq_preview_has_its_evidence_and_no_prompt(
+    hide_ai, projected_app, make_client,
+):
+    body = _preview(projected_app(), make_client)
+
+    assert body["prompt"] is None
+    assert (body["main_count"], body["side_count"]) == (60, 2)
+
+
+def test_with_ai_the_rcq_preview_carries_the_prompt(projected_app, make_client):
+    pytest.importorskip("sensei_top.ai")
+    body = _preview(projected_app(), make_client)
+
+    assert isinstance(body["prompt"], str) and body["prompt"].strip()
+    assert (body["main_count"], body["side_count"]) == (60, 2)

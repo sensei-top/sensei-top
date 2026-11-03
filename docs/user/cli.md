@@ -21,7 +21,6 @@ options.
     sensei-top mtgo-status           # why aren't my MTGO matches showing up?
     sensei-top guide                 # a deck's evidence guide in the terminal (list, print)
     sensei-top brief                 # matchup briefs (list, prompt, import)
-    sensei-top rcq                   # the RCQ guide's prompt for the exact 75 you register
     sensei-top config                # keys, Arena log, MTGO handle and log directory, backups
     sensei-top doctor                # what the app can find: Arena's log, MTGO, cards, the database
     sensei-top diagnostics --out FILE  # a zip of the logs and a secret-free report, for a bug report

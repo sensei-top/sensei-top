@@ -18,7 +18,7 @@ rules that package states for itself:
    all — the same reasoning ``review/__init__.py`` gives for why a stored
    report would read wrong, not merely stale. The authored narratives are
    persisted: ``deck_narrative`` (``authored.py``) and ``rcq_guide``
-   (``rcq_authored.py``).
+   (``ai/guide/rcq_authored.py``).
 """
 
 from sensei_top.guide.bundle import DeckGuide, Provenance, build_deck_guide

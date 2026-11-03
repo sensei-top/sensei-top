@@ -31,13 +31,13 @@ from sensei_top.ai.answers import (
     read_answer,
 )
 from sensei_top.ai.guide.narrative import _GUIDE_TOOL
+from sensei_top.ai.guide.rcq_prompt import _RCQ_TOOL, rcq_context
 from sensei_top.api.app import create_app
 from sensei_top.brief.narrative import _BRIEF_TOOL, _MULTI_BRIEF_TOOL
 from sensei_top.brief.store import list_hash
 from sensei_top.db import open_database
 from sensei_top.guide.deck import list_identities
 from sensei_top.guide.decklist import parse_decklist
-from sensei_top.guide.rcq import _RCQ_TOOL, rcq_context
 from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file
 
@@ -515,21 +515,6 @@ def test_a_coverage_import_reads_the_coverage_header(db_path, identity, tmp_path
     rows = conn.execute("SELECT archetype_key, list_hash FROM matchup_brief").fetchall()
     conn.close()
     assert rows == [("mardu_discard", HASH)]
-
-
-def test_an_rcq_import_of_a_guide_answer_is_refused(db_path, identity, tmp_path):
-    deck = tmp_path / "deck.txt"
-    deck.write_text("Deck\n4 Alpha Card\n56 Mountain\n")
-    answer = tmp_path / "answer.json"
-    answer.write_text(json.dumps(_headed(guide_for(identity.key), _guide_answer())))
-    with pytest.raises(SystemExit) as exc:
-        cli.main([
-            "--db", str(db_path), "rcq", "--deck", identity.key,
-            "--decklist", str(deck), "--import", str(answer),
-        ])
-    assert str(exc.value).endswith(
-        "This answer is for a deck guide, not this one. Paste it there."
-    )
 
 
 # --- the prose cards: the copied prompt asks for {"prose": ...}, the call does not

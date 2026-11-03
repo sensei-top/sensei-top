@@ -1,5 +1,5 @@
-"""The RCQ guide's four routes (``/api/guide/{key}/rcq*``) and the ``rcq``
-CLI subcommand, on the projected fixture database. The Claude call is always
+"""The RCQ guide's four routes (``/api/guide/{key}/rcq*``) on the projected
+fixture database. The Claude call is always
 monkeypatched; every expectation is read off the pasted list or the answer
 the test itself writes, never off the code's output."""
 
@@ -11,7 +11,6 @@ from pathlib import Path
 
 import pytest
 
-from sensei_top import cli
 from sensei_top.ai.llm import client as llm_client_module
 from sensei_top.ai.llm import config as llm_config_module
 from sensei_top.ai.llm.client import Completion
@@ -21,7 +20,7 @@ from sensei_top.db import open_database
 from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file
 
-FIXTURE = Path(__file__).parent / "fixtures" / "match_session.log"
+FIXTURE = Path(__file__).parent.parent / "fixtures" / "match_session.log"
 PASTED = "Deck\n4 Alpha Card\n56 Mountain\n\nSideboard\n2 Beta Card\n"
 
 
@@ -183,58 +182,3 @@ def test_generate_502s_on_an_unreadable_answer(monkeypatch, client, key):
     conn = sqlite3.connect(client.app.state.database)
     assert conn.execute("SELECT COUNT(*) FROM rcq_guide").fetchone()[0] == 0
     conn.close()
-
-
-def test_cli_rcq_prompt_prints_without_a_call(tmp_path, capsys, monkeypatch):
-    db_path = tmp_path / "cli.db"
-    conn = open_database(db_path)
-    ingest_file(conn, FIXTURE, locale_hint="mdy")
-    project(conn)
-    from sensei_top.guide.deck import list_identities
-
-    deck_key = list_identities(conn)[0].key
-    conn.close()
-    monkeypatch.setattr(
-        llm_client_module, "write_json",
-        lambda *a, **k: (_ for _ in ()).throw(AssertionError("no call expected")),
-    )
-    deck_file = tmp_path / "deck.txt"
-    deck_file.write_text(PASTED)
-    cli.main([
-        "--db", str(db_path), "rcq", "--deck", deck_key,
-        "--decklist", str(deck_file), "--prompt",
-    ])
-    assert capsys.readouterr().out.strip()
-
-
-def test_cli_rcq_import_stores_one_hand_written_row(tmp_path):
-    db_path = tmp_path / "imp.db"
-    conn = open_database(db_path)
-    ingest_file(conn, FIXTURE, locale_hint="mdy")
-    project(conn)
-    from sensei_top.guide.deck import list_identities
-
-    deck_key = list_identities(conn)[0].key
-    conn.close()
-    deck_file = tmp_path / "deck.txt"
-    deck_file.write_text(PASTED)
-    answer = tmp_path / "answer.json"
-    answer.write_text(json.dumps(_answer()))
-    cli.main([
-        "--db", str(db_path), "rcq", "--deck", deck_key,
-        "--decklist", str(deck_file), "--import", str(answer),
-    ])
-    conn = sqlite3.connect(db_path)
-    rows = conn.execute("SELECT model, cost_usd, decklist_text FROM rcq_guide").fetchall()
-    conn.close()
-    assert rows == [("hand-written", None, PASTED)]
-
-    bad = _answer()
-    bad["flex_notes"][0]["role"] = "keystone"
-    answer.write_text(json.dumps(bad))
-    with pytest.raises(SystemExit) as exc:
-        cli.main([
-            "--db", str(db_path), "rcq", "--deck", deck_key,
-            "--decklist", str(deck_file), "--import", str(answer),
-        ])
-    assert "Could not read" in str(exc.value)

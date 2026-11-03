@@ -17,8 +17,6 @@
     sensei-top guide [--deck KEY] [--markdown PATH]  one deck's guide (omit --deck to list)
     sensei-top brief --deck KEY --archetype KEY --prompt | --import FILE
                                                       one matchup brief (omit --deck to list)
-    sensei-top rcq --deck KEY --decklist FILE --prompt | --import FILE
-                                                      the RCQ guide for the exact 75 you register
     sensei-top config --set-key KEY                  opt in to Claude-generated narratives
     sensei-top config --set-key -                    the same, reading the key from stdin
     sensei-top config --clear-key                    remove the key
@@ -1580,53 +1578,6 @@ def cmd_guide(args) -> None:
         print(markdown)
 
 
-def cmd_rcq(args) -> None:
-    from sensei_top.guide.rcq import NarrativeError, build_rcq, rcq_from_json, rcq_prompt
-    from sensei_top.guide.rcq_authored import write_rcq
-
-    conn = _open(args)
-    text = Path(args.decklist).read_text(encoding="utf-8")
-    expected = [k.strip() for k in (args.expect or "").split(",") if k.strip()]
-    evidence = build_rcq(conn, args.deck, text, expected, args.own)
-    if evidence is None:
-        sys.exit(f"No deck found for key {args.deck!r}. Run `guide` with no --deck to list keys.")
-
-    prompt = rcq_prompt(evidence, conn=conn)
-    if args.prompt:
-        print(prompt)
-        return
-
-    if args.import_file:
-        from sensei_top.ai.answers import rcq_for
-
-        answer = _read_import(args.import_file, rcq_for(evidence.guide.provenance.deck.key))
-        try:
-            narrative = rcq_from_json(answer.body, evidence)
-        except NarrativeError as exc:
-            sys.exit(f"Could not read {args.import_file}: {exc}")
-        for note in narrative.flex_notes:
-            if note.role not in ("core", "flex", "risk"):
-                sys.exit(
-                    f"Could not read {args.import_file}: flex note role {note.role!r} "
-                    "is not core, flex or risk"
-                )
-        newest = [f.newest_event for f in evidence.freshness if f.newest_event]
-        write_rcq(
-            conn, args.deck, narrative,
-            model=args.author, decklist_text=text, expected=list(evidence.expected_keys),
-            own_archetype_key=args.own, prompt=prompt,
-            corpus_latest_event=max(newest) if newest else None,
-            written_for=answer.context,
-        )
-        conn.commit()
-        print(f"Imported the RCQ guide for {args.deck}.")
-        for problem in narrative.problems:
-            print(f"  [{problem.archetype}] {problem.message}")
-        return
-
-    sys.exit("Pass --prompt to print the prompt, or --import FILE to store an answer.")
-
-
 def cmd_brief(args) -> None:
     from sensei_top.brief.store import briefs_for_deck, corpus_commit
     from sensei_top.guide.deck import list_identities, resolve
@@ -2450,27 +2401,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--markdown", default=None, help="write the guide to this file instead of stdout"
     )
     p_guide.set_defaults(func=cmd_guide)
-
-    p_rcq = sub.add_parser(
-        "rcq", help="RCQ guide: the prompt for the exact 75 you register (makes no call)"
-    )
-    p_rcq.add_argument("--deck", required=True, help="a deck key from `guide`'s listing")
-    p_rcq.add_argument("--decklist", required=True, metavar="FILE", help="the 75, as pasted")
-    p_rcq.add_argument(
-        "--expect", default=None, metavar="K1,K2",
-        help="comma-separated archetype keys you expect at the store",
-    )
-    p_rcq.add_argument("--own", default=None, help="your own archetype key, if you must pick it")
-    p_rcq.add_argument("--prompt", action="store_true", help="print the prompt, and stop")
-    p_rcq.add_argument(
-        "--import", dest="import_file", default=None, metavar="FILE",
-        help="store a written answer (JSON)",
-    )
-    p_rcq.add_argument(
-        "--author", default="hand-written",
-        help="recorded beside an imported guide (default: hand-written)",
-    )
-    p_rcq.set_defaults(func=cmd_rcq)
 
     p_brief = sub.add_parser(
         "brief", help="matchup briefs: what to play around, stored per (deck, archetype)"

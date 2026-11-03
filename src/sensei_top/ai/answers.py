@@ -72,7 +72,7 @@ __all__ = [
 # Every staleness hash an answer can carry is a SHA-256 hex digest:
 # brief/store.py::list_hash (the deck guide, briefs, coverage),
 # ai/review/narrative_store.py's context hash (the prose cards) and
-# guide/rcq.py::rcq_context (the RCQ guide).
+# ai/guide/rcq_prompt.py::rcq_context (the RCQ guide).
 CONTEXT_SHAPE = re.compile(r"[0-9a-f]{64}")
 
 # A body past this is 413: no card's answer comes near it.

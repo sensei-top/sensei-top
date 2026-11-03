@@ -218,7 +218,7 @@ def _opponent_sections(
     """Append the opponent sections a prompt carries: the field's top
     archetypes by share, then ``extra`` (``(archetype_key, heading)`` pairs,
     each given a section even with no consensus on file — the RCQ guide's
-    expected archetypes, ``guide/rcq.py``) under ``extra_intro``, then the
+    expected archetypes, ``ai/guide/rcq_prompt.py``) under ``extra_intro``, then the
     archetypes this deck has faced most. A key already shown is never shown
     twice, and ``shown_grp_ids`` is updated in place, so oracle text stays
     de-duplicated across every section. ``extra`` empty, this is exactly the
@@ -393,7 +393,7 @@ def _wrap_json_prompt(
     answer_for: str | None = None, written_for: str | None = None,
 ) -> str:
     """The shape every JSON-schema-flavoured ``full_prompt`` in this project
-    uses. Shared with ``brief/narrative.py`` and ``guide/rcq.py`` — the same
+    uses. Shared with ``brief/narrative.py`` and ``ai/guide/rcq_prompt.py`` — the same
     idiom, a different ``SYSTEM_PROMPT`` and tool schema.
 
     With ``answer_for`` (a copied prompt): framing, ``---``, evidence,
@@ -418,7 +418,7 @@ def _parse_json_object(raw: str | dict) -> dict:
     """The str -> json -> dict ladder every JSON-schema-flavoured narrative
     parser in this project starts with, raising ``NarrativeError`` rather
     than a raw ``json`` exception. Shared with ``brief/narrative.py`` and
-    ``guide/rcq.py``."""
+    ``ai/guide/rcq_prompt.py``."""
     if isinstance(raw, str):
         try:
             raw = json.loads(raw)

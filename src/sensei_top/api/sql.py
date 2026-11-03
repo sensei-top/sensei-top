@@ -600,8 +600,8 @@ def _shared_report_cache(
     """The cross-request ``MatchReport`` cache that every ``find_leaks`` call
     (``api/routes/review.py``, ``ai/routes/leaks.py``), ``build_deck_guide`` (``guide/bundle.py``,
     via ``api/routes/guide.py``; via ``guide/rcq.py::build_rcq`` from
-    ``api/routes/rcq.py``; and directly from
-    ``api/routes/rcq.py::rcq_markdown``) and ``build_coach_evidence``
+    ``api/routes/rcq.py`` and ``ai/routes/rcq.py``; and directly from
+    ``ai/routes/rcq.py::rcq_markdown``) and ``build_coach_evidence``
     (``coach/evidence.py``, via ``api/routes/coach.py``) share, keyed by
     ``_report_inputs_token``. A ``MatchReport`` depends only on the database
     and ``consensus_since``
