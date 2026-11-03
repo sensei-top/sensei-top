@@ -4,15 +4,14 @@ that just ended and the next one's first state message
 "The break read (`table/intermission.py`)".
 
 ``build_break_read`` names the opponent from whatever has been revealed so
-far, without waiting on ``project()``, finds the stored matchup brief for
-that archetype (or the closest one already written for this deck), and
-surfaces what was actually boarded the last time this deck faced it.
+far, without waiting on ``project()``, and surfaces what was actually
+boarded the last time this deck faced it. The stored matchup brief for that
+archetype (or the closest one already written for this deck) and the prompt
+that writes a missing one come from ``BreakBriefProvider``, which ``ai/``
+lends (``api/providers.py``).
 Nothing here writes anything: it runs inside a GET on a ``query_only``
-connection (AGENTS.md non-negotiable #6). A brief is authored by the
-sideboard-plan card's paste box (the PUT
-``ai/routes/brief.py::paste_brief``) or the guide's own narrative, never
-by this module, which builds the brief prompt without ever sending it to a
-model (non-negotiable #5).
+connection (AGENTS.md non-negotiable #6), and a prompt is never sent to a
+model from here (non-negotiable #5).
 """
 
 from __future__ import annotations
@@ -21,9 +20,8 @@ import json
 import sqlite3
 from collections import Counter
 from dataclasses import dataclass
+from typing import Any, Protocol
 
-from sensei_top.ai.brief.narrative import full_prompt
-from sensei_top.ai.brief.store import Brief, is_stale, list_hash, read_brief
 from sensei_top.archetypes.classify import (
     Candidate,
     card_colors_by_name,
@@ -40,6 +38,33 @@ from sensei_top.table.boarding import named_diff
 
 MAX_ALTERNATIVES = 3
 MAX_PAST_BOARDING = 3
+
+
+@dataclass(frozen=True, slots=True)
+class StoredPlan:
+    """A stored matchup brief, and whether it predates the deck's current 75
+    or the corpus the database holds now."""
+
+    brief: Any  # opaque here; api/convert.py::_matchup_brief_out reads it
+    stale: bool
+
+
+class BreakBriefProvider(Protocol):
+    """The stored matchup briefs and the prompt that writes one (``ai/``
+    lends it)."""
+
+    def plan(
+        self, conn: sqlite3.Connection, identity: DeckIdentity, archetype_key: str
+    ) -> StoredPlan | None:
+        """The brief stored for ``(identity, archetype_key)``, else ``None``."""
+        ...
+
+    def prompt(
+        self, conn: sqlite3.Connection, identity: DeckIdentity, archetype_key: str,
+        label: str | None,
+    ) -> str | None:
+        """The prompt to write that brief; ``None`` when it cannot be built."""
+        ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,7 +87,8 @@ class AlternativePlan:
     label: str
     confidence: str
     fit: float
-    brief: Brief
+    brief: Any  # StoredPlan.brief
+    stale: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,7 +146,7 @@ class BreakRead:
     reason: str | None
     opponent: OpponentRead | None
     cards_seen: int
-    plan: Brief | None
+    plan: Any | None  # StoredPlan.brief
     plan_basis: str | None  # 'exact' | 'closest' | None
     plan_archetype_label: str | None
     stale: bool
@@ -256,6 +282,7 @@ def _closest_alternatives(
     names: list[str],
     exclude_key: str | None,
     *,
+    briefs: BreakBriefProvider,
     colors_by_name: dict[str, frozenset[str]],
     prior: CorpusPrior | None,
 ) -> list[AlternativePlan]:
@@ -272,11 +299,12 @@ def _closest_alternatives(
     for c in candidates:
         if c.confidence == "none" or c.key == exclude_key:
             continue
-        brief = read_brief(conn, identity.key, c.key)
-        if brief is None:
+        stored = briefs.plan(conn, identity, c.key)
+        if stored is None:
             continue
         out.append(AlternativePlan(
-            archetype_key=c.key, label=c.label, confidence=c.confidence, fit=c.fit, brief=brief,
+            archetype_key=c.key, label=c.label, confidence=c.confidence, fit=c.fit,
+            brief=stored.brief, stale=stored.stale,
         ))
     out.sort(key=lambda a: -a.fit)
     return out[:MAX_ALTERNATIVES]
@@ -419,6 +447,7 @@ def build_break_read(
     *,
     caches: dict,
     names: list[str] | None = None,
+    briefs: BreakBriefProvider | None = None,
 ) -> BreakRead | None:
     """Everything the Bo3 break card needs (the precedence is in
     docs/current-match.md, "The break read (`table/intermission.py`)"), or
@@ -430,6 +459,8 @@ def build_break_read(
     that already paid for ``opponent_seen_names`` (the API layer's own cache
     key) hand the result back in rather than this function querying it a
     second time on every cache miss; omitted, this computes it itself.
+    ``briefs`` is ``None`` with ``ai/`` absent: no plan, no alternatives, no
+    prompt, and past boarding reads only a named or picked archetype.
     """
     if live.intermission is None:
         return None
@@ -469,63 +500,56 @@ def build_break_read(
     )
 
     alternatives: list[AlternativePlan] = []
-    if identity is not None:
+    if identity is not None and briefs is not None:
         alternatives = _closest_alternatives(
             conn, match_id, identity, names, chosen_key,
-            colors_by_name=colors_by_name, prior=prior,
+            briefs=briefs, colors_by_name=colors_by_name, prior=prior,
         )
 
-    exact_brief = (
-        read_brief(conn, identity.key, chosen_key)
-        if identity is not None and chosen_key is not None
+    exact = (
+        briefs.plan(conn, identity, chosen_key)
+        if briefs is not None and identity is not None and chosen_key is not None
         else None
     )
 
-    plan: Brief | None
+    plan: Any | None
     plan_basis: str | None
     plan_archetype_label: str | None
     stale = False
-    if exact_brief is not None:
-        plan = exact_brief
+    if exact is not None:
+        plan = exact.brief
         plan_basis = "exact"
         plan_archetype_label = opponent.label if opponent is not None else None
-        stale = is_stale(
-            conn, exact_brief,
-            current_list_hash=list_hash(identity.current_cards) if identity is not None else None,
-        )
+        stale = exact.stale
     elif alternatives:
         first = alternatives[0]
         plan = first.brief
         plan_basis = "closest"
         plan_archetype_label = first.label
-        stale = is_stale(
-            conn, first.brief,
-            current_list_hash=list_hash(identity.current_cards) if identity is not None else None,
-        )
+        stale = first.stale
     else:
         plan = None
         plan_basis = None
         plan_archetype_label = None
 
     prompt: str | None = None
-    if identity is not None and chosen_key is not None and exact_brief is None:
+    if (
+        briefs is not None and identity is not None and chosen_key is not None
+        and exact is None
+    ):
         # The prompt to write the plan the opponent actually named doesn't
-        # have yet: the same call ``api/routes/current_match.py``'s
-        # ``_brief_response`` makes for the Live page's currently-known
-        # opponent, duplicated here (rather than imported) because
-        # ``table/`` must never import from ``api/``. Memoized per match in
-        # ``caches``: ``full_prompt`` is most of a cold build's cost
-        # (docs/current-match.md, "The break read (`table/intermission.py`)"),
-        # and nothing it reads moves while this match is still being played
-        # — only past, completed matches and the corpus feed it, and a
-        # corpus refresh resets ``caches`` wholesale (the API layer's own
-        # ``_cached_break_read``).
+        # have yet. Memoized per match in ``caches``: building it is most of
+        # a cold build's cost (docs/current-match.md, "The break read
+        # (`table/intermission.py`)"), and nothing it reads moves while this
+        # match is still being played — only past, completed matches and the
+        # corpus feed it, and a corpus refresh resets ``caches`` wholesale
+        # (the API layer's own ``_cached_break_read``).
         label = opponent.label if opponent is not None else None
         prompts = caches.setdefault("prompts", {})
-        prompt_key = (match_id, identity.key, list_hash(identity.current_cards), chosen_key, label)
+        current_75 = json.dumps(identity.current_cards, sort_keys=True)
+        prompt_key = (match_id, identity.key, current_75, chosen_key, label)
         if prompt_key not in prompts:
-            built = full_prompt(conn, identity, chosen_key, label)
-            prompts[prompt_key] = built[0] if built is not None else None
+            prompts[prompt_key] = briefs.prompt(conn, identity, chosen_key, label)
         prompt = prompts[prompt_key]
 
     past_boarding: list[PastBoarding] = []

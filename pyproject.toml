@@ -95,6 +95,4 @@ ignore_imports = [
     "sensei_top.coach.narrative -> sensei_top.ai.review.narrative",
     "sensei_top.coach.narrative -> sensei_top.ai.review.narrative_store",
     "sensei_top.coach.store -> sensei_top.ai.review.narrative_store",
-    "sensei_top.table.intermission -> sensei_top.ai.brief.narrative",
-    "sensei_top.table.intermission -> sensei_top.ai.brief.store",
 ]

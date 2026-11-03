@@ -28,6 +28,8 @@ Modules, in dependency order:
 * ``coverage.py`` — which of the field this deck's stored briefs cover.
 * ``from_guide.py`` — backfills the same cache from a deck guide's own
   matchup plans, for free.
+* ``break_plans.py`` — the stored briefs and their prompt, lent to the
+  Bo3 break read (``table/intermission.py``) as a provider.
 """
 
 from __future__ import annotations

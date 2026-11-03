@@ -48,7 +48,6 @@ from pathlib import Path
 
 import pytest
 
-from sensei_top.ai.brief.store import Brief, write_brief
 from sensei_top.api.convert import _intermission_out
 from sensei_top.api.models.current_match import PostboardRecordOut
 from sensei_top.api.sql import _cached_break_read
@@ -57,7 +56,7 @@ from sensei_top.db import open_database
 from sensei_top.guide.deck import list_identities
 from sensei_top.projector.live_state import Intermission, LiveState, replay_live_state
 from sensei_top.reader.ingest import ingest_file
-from sensei_top.table.intermission import build_break_read
+from sensei_top.table.intermission import PostboardRecord, build_break_read
 
 FIXTURE = Path(__file__).parent / "fixtures" / "intermission_session.log"
 
@@ -220,8 +219,9 @@ def test_bo1_game_complete_never_sets_an_intermission():
 
 
 # ---------------------------------------------------------------------------
-# build_break_read: naming the opponent, finding a plan, and
-# the past-boarding/caching reads around it. None of this has anything to do
+# build_break_read without ``ai/``'s brief provider: naming the opponent and
+# the past-boarding/caching reads around it (the plan, its alternatives and
+# its prompt are tests/ai/test_intermission_brief.py's). None of this has anything to do
 # with Player.log parsing, so there is no fixture fact to derive these
 # expectations from (AGENTS.md rule 8 names ``fixture_peek.py`` for exactly
 # that reason — it doesn't apply here); instead these build a synthetic
@@ -282,18 +282,6 @@ def _insert_cards(conn, names_by_grp_id: dict[int, str]):
         )
 
 
-def _brief(deck_key, archetype_key, **overrides) -> Brief:
-    defaults = dict(
-        deck_key=deck_key, archetype_key=archetype_key, archetype_label=None,
-        archetype_share=None, personal_matches=None, personal_wins=None, personal_losses=None,
-        prose="prose", play_around=(), board_in=(), board_out=(), staples=(), problems=(),
-        prompt="prompt", model="claude-sonnet-5", generated_at="2026-09-20T00:00:00.000Z",
-        corpus_commit=None, list_hash="hash", source="live",
-    )
-    defaults.update(overrides)
-    return Brief(**defaults)
-
-
 def _live_at_break(*, game_number=1, won=True, reason="ResultReason_Concede", zone_cards=()):
     return LiveState(
         self_seat=1, opponent_seat=2, turn_number=None, active_seat=None,
@@ -301,41 +289,6 @@ def _live_at_break(*, game_number=1, won=True, reason="ResultReason_Concede", zo
         zone_cards=zone_cards, offer=None,
         intermission=Intermission(game_number=game_number, won=won, reason=reason),
     )
-
-
-def test_manual_override_gives_an_exact_plan_and_beats_any_live_read(conn):
-    """The manual pick's precedence: ``opponent_deck_override`` always
-    wins, checked before ``classify_seen`` is ever called
-    (``table/intermission.py``'s ``_resolve_opponent`` returns on the
-    override row before it even looks at ``fmt``/``names``), which is what
-    lets this test name the opponent without seeding archetype definitions.
-    With a brief already stored for the picked archetype, the plan is
-    'exact'."""
-    deck_id = "deck-exact"
-    _insert_deck(
-        conn, deck_id, name="Test Deck", cards={"maindeck": [101, 102], "sideboard": [201]}
-    )
-    _insert_match(conn, "m-exact", deck_id, "incomplete", "2026-09-20T00:00:00")
-    _insert_override(conn, "m-exact", label="Rogue Aggro", archetype_key="rogue-aggro")
-    conn.commit()
-
-    identity = next(i for i in list_identities(conn) if deck_id in i.deck_ids)
-    write_brief(conn, _brief(identity.key, "rogue-aggro", archetype_label="Rogue Aggro"))
-    conn.commit()
-
-    result = build_break_read(conn, "m-exact", deck_id, _live_at_break(), caches={}, names=[])
-
-    assert result is not None
-    assert result.opponent is not None
-    assert result.opponent.source == "manual"
-    assert result.opponent.archetype_key == "rogue-aggro"
-    assert result.opponent.confidence == "high"
-    assert result.plan_basis == "exact"
-    assert result.plan is not None and result.plan.archetype_key == "rogue-aggro"
-    assert result.plan_archetype_label == "Rogue Aggro"
-    assert result.alternatives == ()
-    assert result.prompt is None  # already have an exact plan; nothing to draft
-    assert result.deck_key == identity.key
 
 
 def test_no_plan_when_nothing_is_named_or_stored(conn):
@@ -359,59 +312,6 @@ def test_no_plan_when_nothing_is_named_or_stored(conn):
     assert result.alternatives == ()
     assert result.past_boarding == ()
     assert result.prompt is None
-
-
-def test_closest_alternative_plan_when_the_named_archetype_has_no_brief(conn):
-    """The closest plan: the chosen archetype (a live rule-engine read, no
-    override) has no stored brief of its own, but a *different* archetype
-    the classifier also ranked does — offered as the closest alternative,
-    never substituted silently for the actual read.
-
-    Two ``fallback`` definitions, hand-computed against classify.py's own
-    constants (read directly, not run-and-observed — AGENTS.md rule 8):
-    revealing all 4 of fallback-a's common cards vs. 2 of fallback-b's 4
-    gives fit_a = 0.5 * min(4/4, 1) * 1.0 = 0.5 and fit_b = 0.5 * min(2/4, 1)
-    * 1.0 = 0.25 (``_FALLBACK_FIT_CAP=0.5``, ``_FALLBACK_FIT_RAMP=4``,
-    colour factor forced to 1.0 by each definition's empty ``Conditions``).
-    margin_a = fit_a / fit_b = 2.0 clears both ``MIN_FALLBACK_FIT`` (0.25)
-    and ``MIN_MARGIN`` (1.5), so ``choose()`` commits to fallback-a; its
-    fit/margin also clear ``_MEDIUM_FIT``/``_MEDIUM_MARGIN`` (0.30/2.0), so
-    its confidence is 'medium'. fallback-b's own fit (0.25) misses
-    ``_MEDIUM_FIT``, so it ranks at confidence 'low' — still offered by
-    ``rank_candidates`` (only 'none'-confidence rows are dropped), and it is
-    the one with a stored brief.
-    """
-    deck_id = "deck-closest"
-    _insert_deck(conn, deck_id, fmt="Standard", cards={"maindeck": [101], "sideboard": []})
-    _insert_match(conn, "m-closest", deck_id, "incomplete", "2026-09-20T00:00:00")
-    _insert_fallback(
-        conn, fmt="Standard", source="fallback-a", name="Fallback A",
-        common_cards=["Card A1", "Card A2", "Card A3", "Card A4"],
-    )
-    _insert_fallback(
-        conn, fmt="Standard", source="fallback-b", name="Fallback B",
-        common_cards=["Card B1", "Card B2", "Card B3", "Card B4"],
-    )
-    conn.commit()
-
-    identity = next(i for i in list_identities(conn) if deck_id in i.deck_ids)
-    write_brief(conn, _brief(identity.key, "fallback-b", archetype_label="Fallback B"))
-    conn.commit()
-
-    names = ["Card A1", "Card A2", "Card A3", "Card A4", "Card B1", "Card B2"]
-    result = build_break_read(
-        conn, "m-closest", deck_id, _live_at_break(), caches={}, names=names
-    )
-
-    assert result is not None
-    assert result.opponent is not None
-    assert result.opponent.archetype_key == "fallback-a"
-    assert result.opponent.confidence == "medium"
-    assert result.plan_basis == "closest"
-    assert result.plan is not None and result.plan.archetype_key == "fallback-b"
-    assert result.plan_archetype_label == "Fallback B"  # a different archetype than opponent.label
-    assert [a.archetype_key for a in result.alternatives] == ["fallback-b"]
-    assert result.alternatives[0].confidence == "low"
 
 
 def test_past_boarding_diffs_against_that_matchs_own_game_1_maindeck(conn):
@@ -510,48 +410,69 @@ def test_postboard_record_sums_games_2_and_3_of_earlier_best_of_three_matches(co
     assert _intermission_out(result).postboard_record == PostboardRecordOut(won=1, lost=2)
 
 
-def test_postboard_record_is_none_without_a_named_archetype_or_a_game(conn):
-    """Nothing named: ``None`` even though a closest alternative exists and a
-    Bo3 was played against it (the record reads ``chosen_key`` only). Named,
-    but the only earlier match is a Bo1: ``None`` as well."""
-    deck_id = "deck-post-none"
-    _insert_deck(conn, deck_id, cards={"maindeck": [101], "sideboard": []})
-    _insert_match(conn, "m-cur", deck_id, "incomplete", "2026-09-20T00:00:00", best_of=3)
-    _insert_match(conn, "m-bo1", deck_id, "win", "2026-09-10T00:00:00", best_of=1)
-    _insert_override(conn, "m-bo1", label="Rogue Aggro", archetype_key="rogue-aggro")
-    _insert_games(conn, "m-bo1", ["loss", "loss"])
-    # Two fallbacks, each with two of its four cards revealed, tie at fit
-    # 0.25, so the margin
-    # (1.0, under MIN_MARGIN 1.5, as hand-computed in the closest-alternative
-    # test above) commits to neither: both rank as alternatives, nothing is
-    # named. A finished Bo3 was played against the first.
-    for source, name in (("fallback-a", "Fallback A"), ("fallback-b", "Fallback B")):
-        _insert_fallback(
-            conn, fmt="Standard", source=source, name=name,
-            common_cards=[f"Card {name[-1]}{i}" for i in range(1, 5)],
-        )
-    _insert_match(conn, "m-alt", deck_id, "win", "2026-09-11T00:00:00", best_of=3)
-    _insert_override(conn, "m-alt", label="Fallback A", archetype_key="fallback-a")
-    _insert_games(conn, "m-alt", ["win", "loss", "loss"])
-    conn.commit()
-    # An alternative is one with a stored brief.
-    identity = next(i for i in list_identities(conn) if deck_id in i.deck_ids)
-    write_brief(conn, _brief(identity.key, "fallback-a", archetype_label="Fallback A"))
-    conn.commit()
-
-    names = ["Card A1", "Card A2", "Card B1", "Card B2"]
-    unnamed = build_break_read(
-        conn, "m-cur", deck_id, _live_at_break(), caches={}, names=names
+def _insert_brief_row(conn, deck_key, archetype_key):
+    """A ``matchup_brief`` row (migration 018's NOT NULL columns), written
+    without ``ai/``: core reads none of it without the provider."""
+    conn.execute(
+        "INSERT INTO matchup_brief (deck_key, archetype_key, list_hash, prose, "
+        "play_around_json, board_in_json, board_out_json, staples_json, problems_json, "
+        "prompt, model, generated_at, source) "
+        "VALUES (?, ?, 'hash', 'prose', '[]', '[]', '[]', '[]', '[]', 'prompt', 'm', 't', 'live')",
+        (deck_key, archetype_key),
     )
-    assert unnamed is not None
-    assert unnamed.opponent is None or unnamed.opponent.archetype_key is None
-    assert [a.archetype_key for a in unnamed.alternatives] == ["fallback-a"]
-    assert unnamed.postboard_record is None
 
+
+def test_without_a_brief_provider_the_break_read_keeps_its_local_part(conn):
+    """No provider (``ai/`` absent): briefs are stored for the picked
+    archetype and for one the revealed cards rank (all four of fallback-a's
+    common cards, so ``rank_candidates`` would offer it), yet the read has no
+    plan, no alternatives and no prompt. The opponent, past boarding (game 2
+    of the earlier match boarded 102 out for 201) and the post-board record
+    (that game, won) are all still there."""
+    deck_id = "deck-local"
+    _insert_deck(conn, deck_id, cards={"maindeck": [101, 102], "sideboard": [201]})
+    _insert_cards(conn, {101: "Card One", 102: "Card Two", 201: "Side One"})
+    _insert_fallback(
+        conn, fmt="Standard", source="fallback-a", name="Fallback A",
+        common_cards=["Card A1", "Card A2", "Card A3", "Card A4"],
+    )
+    _insert_match(conn, "m-cur", deck_id, "incomplete", "2026-09-20T00:00:00", best_of=3)
     _insert_override(conn, "m-cur", label="Rogue Aggro", archetype_key="rogue-aggro")
+    _insert_match(conn, "m-past", deck_id, "win", "2026-09-10T00:00:00", best_of=3)
+    _insert_override(conn, "m-past", label="Rogue Aggro", archetype_key="rogue-aggro")
+    _insert_games(conn, "m-past", ["loss", "win"])
+    conn.execute(
+        "INSERT INTO game_decks (match_id, game_number, deck_cards_json, sideboard_cards_json) "
+        "VALUES ('m-past', 2, ?, ?)",
+        (json.dumps([101, 201]), json.dumps([102])),
+    )
     conn.commit()
-    named = build_break_read(conn, "m-cur", deck_id, _live_at_break(), caches={}, names=[])
-    assert named is not None and named.postboard_record is None
+    identity = next(i for i in list_identities(conn) if deck_id in i.deck_ids)
+    _insert_brief_row(conn, identity.key, "rogue-aggro")
+    _insert_brief_row(conn, identity.key, "fallback-a")
+    conn.commit()
+
+    names = ["Card A1", "Card A2", "Card A3", "Card A4"]
+    result = build_break_read(conn, "m-cur", deck_id, _live_at_break(), caches={}, names=names)
+
+    assert result is not None
+    assert result.opponent is not None and result.opponent.source == "manual"
+    assert result.opponent.archetype_key == "rogue-aggro"
+    assert result.plan is None
+    assert result.plan_basis is None
+    assert result.plan_archetype_label is None
+    assert result.stale is False
+    assert result.alternatives == ()
+    assert result.prompt is None
+    assert result.deck_key == identity.key
+    assert result.fmt == "Standard"
+    assert [p.match_id for p in result.past_boarding] == ["m-past"]
+    game = result.past_boarding[0].games[0]
+    assert [c.grp_id for c in game.board_in] == [201]
+    assert [c.grp_id for c in game.board_out] == [102]
+    assert result.postboard_record == PostboardRecord(won=1, lost=0)
+    out = _intermission_out(result)
+    assert out.plan is None and out.alternatives == [] and out.prompt is None
 
 
 class _FakeAppState:
@@ -592,36 +513,6 @@ def test_cached_break_read_builds_once_for_unchanged_inputs(conn):
 
     assert first is not None
     assert first is second
-
-
-def test_cached_break_read_sees_a_pick_and_a_brief_made_during_the_break(conn):
-    """The two things a user actually does *during* a break — pick the
-    opponent's deck by hand, then import the brief written from this card's
-    own prompt — move no projection token, so the cache key has to carry
-    both itself. Without them the card would show the old answer until the
-    watcher happened to reproject."""
-    deck_id = "deck-edit"
-    _insert_deck(conn, deck_id, fmt="Standard", cards={"maindeck": [101], "sideboard": []})
-    _insert_match(conn, "m-edit", deck_id, "incomplete", "2026-09-20T00:00:00")
-    conn.commit()
-    live = _live_at_break()
-    request = _FakeRequest()
-
-    before = _cached_break_read(request, conn, "m-edit", deck_id, live)
-    assert before is not None and before.opponent is None
-
-    _insert_override(conn, "m-edit", label="Rogue Aggro", archetype_key="rogue-aggro")
-    conn.commit()
-    picked = _cached_break_read(request, conn, "m-edit", deck_id, live)
-    assert picked.opponent is not None and picked.opponent.source == "manual"
-    assert picked.plan is None
-
-    identity = next(i for i in list_identities(conn) if deck_id in i.deck_ids)
-    write_brief(conn, _brief(identity.key, "rogue-aggro", archetype_label="Rogue Aggro"))
-    conn.commit()
-    imported = _cached_break_read(request, conn, "m-edit", deck_id, live)
-    assert imported.plan_basis == "exact"
-    assert imported.plan is not None and imported.plan.archetype_key == "rogue-aggro"
 
 
 def test_unknown_format_reads_no_opponent_and_says_fmt_is_null(conn):

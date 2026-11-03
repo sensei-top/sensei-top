@@ -18,6 +18,7 @@ from fastapi import FastAPI
 
 if TYPE_CHECKING:
     from sensei_top.api.routes.rcq import RcqPromptProvider
+    from sensei_top.table.intermission import BreakBriefProvider
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,6 +26,7 @@ class Providers:
     """Every seam's provider, each ``None`` by default."""
 
     rcq_prompt: RcqPromptProvider | None = None
+    break_briefs: BreakBriefProvider | None = None
 
 
 NO_PROVIDERS = Providers()

@@ -14,6 +14,7 @@ from typing import Any
 
 from fastapi import Request
 
+from sensei_top.api.providers import providers_of
 from sensei_top.archetypes.corpus import CorpusPrior, build_prior
 from sensei_top.guide.window import format_resets, window_start
 from sensei_top.projector.live_state import LiveState
@@ -417,6 +418,7 @@ def _cached_break_read(
         cache.clear()  # the key changed; nothing older stays valid anyway
         cache[cache_key] = build_break_read(
             conn, match_id, deck_id, live_state, caches=classify_caches, names=names,
+            briefs=providers_of(request.app).break_briefs,
         )
     return cache[cache_key]
 

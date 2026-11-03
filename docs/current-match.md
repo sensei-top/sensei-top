@@ -547,7 +547,7 @@ excluding the archetype actually named); this deck identity's own **past
 boarding** the last time it faced this same archetype (`_past_boarding`,
 measured against the past match's own game-1 maindeck, never a chained
 diff); and, last, a **prompt** to write the exact plan from
-(`brief.narrative.full_prompt`, the same call `/api/current-match/brief`
+(`ai/brief/narrative.py::full_prompt`, the same call `/api/current-match/brief`
 makes for the ordinary in-game brief). Past boarding is not a fourth linear
 tier in the data itself — it is a supplementary field the frontend positions
 differently depending on which of the other three fired (below the plan
@@ -561,6 +561,25 @@ can still show as a "closest" plan, and past boarding reads that same
 alternative (`intermission.py::_past_boarding`). The
 prompt is `full_prompt`'s, so it is `None` too when the player's own deck has
 no format (`docs/brief.md`).
+
+**Where the briefs come from.** `table/` imports nothing from `ai/`
+(`docs/architecture.md`, "Who may know what"), so the stored briefs and the
+prompt reach the break read through a provider: `build_break_read`'s
+`briefs`, typed by `BreakBriefProvider` beside it, which `create_app` fills
+from `ai.providers()` (`ai/brief/break_plans.py`) and `_cached_break_read`
+hands in (`api/providers.py::providers_of`). The provider answers two
+questions: `plan`, the brief stored for one `(deck, archetype)` with its
+`stale` flag already worked out (a `StoredPlan`, whose brief the break read
+passes through untouched to `api/convert.py::_matchup_brief_out`), and
+`prompt`, the text to write a missing one. Staleness is the provider's
+because it compares the brief's own `list_hash` and `corpus_commit`, both
+`ai/` stamps; the prompt's memo key is the 75 itself, serialized, not that
+hash. With `ai/` absent the provider is `None`: no exact plan, no
+alternatives (`rank_candidates` is not even run), no prompt, `stale` false,
+and so past boarding reads only a named or picked archetype, never a
+"closest" one. The opponent, `fmt`, `cards_seen`, the match's record,
+past boarding and the post-board record are the same either way, and the
+response keeps its shape, every brief field null or empty.
 
 **Post-board record.** `postboard_record` (`{won, lost}`, or `None`) is this
 deck identity's games 2 and 3 against the archetype the read named or the
@@ -578,8 +597,9 @@ post-board games.
 from the alternatives may still show; no format → no
 live read, so the same unless the user picked the opponent's deck; `stale`
 flags a plan whose brief predates the current field or the current 75
-(`brief.store.is_stale`) without withholding it — a stale plan is still the
-best evidence available, just labelled as possibly out of date.
+(`ai/brief/store.py::is_stale`, through the provider) without withholding
+it — a stale plan is still the best evidence available, just labelled as
+possibly out of date. No `ai/`: no plan, so nothing to flag (above).
 
 **Per-match memoization and cost.** `caches` is a plain dict the API layer
 owns across polls: `definitions`/`colors_by_name`/`prior` (the classifier's
