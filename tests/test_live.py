@@ -857,6 +857,78 @@ def test_a_failing_folder_is_counted_once_per_outage(live, conn, share, monkeypa
     assert sum("mtgo poll failed" in message for message in caplog.messages) == 2
 
 
+def _mtgo_unreachable(conn):
+    return conn.execute("SELECT mtgo_unreachable FROM projection_state WHERE id = 1").fetchone()[0]
+
+
+def test_the_folders_reach_crosses_to_the_api_through_projection_state(
+    live, conn, share, monkeypatch
+):
+    """``/api/live`` runs in another process, so the watcher writes whether its
+    last check of the folder failed (migration 068): 1 through an outage, 0
+    once a check succeeds."""
+    real = live_module.scan_game_logs
+
+    def dead(*_args, **_kwargs):
+        raise OSError("not connected")
+
+    assert _mtgo_unreachable(conn) == 0  # the share fixture's first check
+    monkeypatch.setattr(live_module, "scan_game_logs", dead)
+    run_for(live, conn, 4)
+    assert _mtgo_unreachable(conn) == 1
+    monkeypatch.setattr(live_module, "scan_game_logs", real)
+    run_for(live, conn, 4)
+    assert _mtgo_unreachable(conn) == 0
+
+
+def test_a_missing_folder_is_unreachable_without_an_error(live, conn, share):
+    """A folder that moved: flagged, but as quiet as it always was (no error
+    counted); it reads reachable again once the folder is back."""
+    share.rmdir()
+    run_for(live, conn, 4)
+    assert _mtgo_unreachable(conn) == 1
+    assert live.stats.errors == 0
+    share.mkdir()
+    run_for(live, conn, 4)
+    assert _mtgo_unreachable(conn) == 0
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="chmod can't refuse a listing on Windows")
+def test_a_folder_that_refuses_its_listing_is_unreachable(live, conn, share, caplog):
+    if os.geteuid() == 0:
+        pytest.skip("root lists any folder")
+    mode = share.stat().st_mode
+    share.chmod(0)
+    try:
+        with caplog.at_level(logging.WARNING):
+            run_for(live, conn, 4)
+        assert _mtgo_unreachable(conn) == 1
+        assert live.stats.errors == 1
+        assert "mtgo poll failed" in caplog.text
+    finally:
+        share.chmod(mode)
+    run_for(live, conn, 4)
+    assert _mtgo_unreachable(conn) == 0
+
+
+def test_an_empty_existing_folder_is_reachable(live, conn, share):
+    run_for(live, conn, 4)
+    assert _mtgo_unreachable(conn) == 0
+    assert live.stats.errors == 0
+
+
+def test_a_new_watchers_first_check_overwrites_an_earlier_runs_outage(live, conn, tmp_path):
+    """A watcher that stopped mid-outage left a 1 behind; the next one's first
+    successful check clears it, though its own state never saw a failure."""
+    conn.execute("INSERT INTO projection_state (id, mtgo_unreachable) VALUES (1, 1)")
+    folder = tmp_path / "mtgo-share"
+    folder.mkdir()
+    live.mtgo_dir = folder
+    live.mtgo_clock = _Clock()
+    live.ingest_once(conn)
+    assert _mtgo_unreachable(conn) == 0
+
+
 def test_nonexistent_mtgo_dir_keeps_polling_without_growing_errors(live, conn, tmp_path):
     """A torn-down virtiofs share must not end the Arena watch (module
     docstring's _poll_mtgo contract) — ingest_mtgo_dir itself treats a

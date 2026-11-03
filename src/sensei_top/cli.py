@@ -1452,7 +1452,7 @@ def cmd_report(args) -> None:
         rows = conn.execute(
             """
             SELECT COALESCE(d.name, substr(v.deck_id, 1, 8), '(no deck)') AS deck,
-                   v.turn_count, v.games, v.games_won
+                   v.turn_count, v.games, v.games_won, v.games_lost
               FROM v_deck_game_length v
               LEFT JOIN decks d ON d.deck_id = v.deck_id
              ORDER BY deck, v.turn_count
@@ -1461,10 +1461,12 @@ def cmd_report(args) -> None:
         totals: dict[str, list[int]] = {}
         for r in rows:
             played = r["games"] or 0
-            rate = f"{100 * r['games_won'] / played:5.1f}%" if played else "    —"
+            # the rate is won over won plus lost; a drawn or unfinished game is neither
+            decided = (r["games_won"] or 0) + (r["games_lost"] or 0)
+            rate = f"{100 * r['games_won'] / decided:5.1f}%" if decided else "    —"
             print(
                 f"{r['deck'][:22]:<22} turn {r['turn_count']:>3}   "
-                f"{r['games_won']}/{played} games {rate}"
+                f"{r['games_won']}/{decided} games {rate}"
             )
             weighted = totals.setdefault(r["deck"], [0, 0])
             weighted[0] += r["turn_count"] * played
@@ -1670,6 +1672,7 @@ def cmd_rcq(args) -> None:
             model=args.author, decklist_text=text, expected=list(evidence.expected_keys),
             own_archetype_key=args.own, prompt=prompt,
             corpus_latest_event=max(newest) if newest else None,
+            written_for=answer.context,
         )
         conn.commit()
         print(f"Imported the RCQ guide for {args.deck}.")

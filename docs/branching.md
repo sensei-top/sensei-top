@@ -145,6 +145,12 @@ branch stops.
    together, so no run starts (0.7.0, 2026-10-13). Delete the tag on the
    public repository and push it again at the same commit; the second
    push is an ordinary tag push and starts the job.
+7. The job's last step opens a discussion in Discussions' Announcements
+   category, linked to the release and carrying its notes. The step is
+   fail-soft, so a run that is green may still have posted nothing: check
+   the release's page shows the discussion's link. If it does not, the
+   step's log says why; pick the category on the release's edit page
+   and the discussion opens from there.
 
 ## A hotfix
 
@@ -152,7 +158,7 @@ branch stops.
     git switch -c hotfix/<topic>
 
 The fix arrives with its fixture-backed test (non-negotiable 7) and a patch
-version, then follows steps 2 to 6 of a release. If a release branch is open
+version, then follows steps 2 to 7 of a release. If a release branch is open
 at the time, the hotfix is merged into it as well.
 
 ## Commits

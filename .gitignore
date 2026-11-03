@@ -64,3 +64,6 @@ guides/
 **/.impeccable/live/deferred-svelte-component-accepts.json
 **/.impeccable/live/*.png
 # impeccable-ignore-end
+
+# The demo video's working files and exports, kept locally; the README's GIF is docs/images/demo.gif
+demo/

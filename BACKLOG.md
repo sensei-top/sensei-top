@@ -47,15 +47,15 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-093
+Next ID: BL-099
 
 ## Features
 
 ### BL-001 · Reader health in the dashboard
 
-type: feat · priority: P1 · status: ready · area: api web
+type: feat · priority: P3 · status: ready · area: api web
 
-Next 1. Reader health in the dashboard: the log's path and whether it was
+Reader health in the dashboard: the log's path and whether it was
 found, the last read, "waiting for the log to grow", raw and projected
 counts, and Detailed Logs off with the setting's exact path (on the empty
 Matches page too); a "Total matches · Last updated" line; a warning for a
@@ -77,7 +77,7 @@ never fetched.
 
 type: feat · priority: P1 · status: ready · area: api web i18n
 
-Next 2. A CSV export of the user's own matches, games and per-deck numbers
+Next 4. A CSV export of the user's own matches, games and per-deck numbers
 (an unknown value is an empty cell, never 0); a one-line definition on each
 table column; and the help tour below, with an entry that cites Arena's own
 article on Detailed Logs for community tools and says the app reads only the
@@ -93,7 +93,7 @@ other trackers charge for.
 
 type: feat · priority: P1 · status: needs-decision · area: site i18n
 
-Next 2, with the export above: the help pages' tour of the dashboard
+Next 4, with the export above: the help pages' tour of the dashboard
 (`site/help/`): what each page shows, in both languages, linked from the
 welcome steps' last step, Ready. The first cut (2026-10-13) covers
 installing, the first run, Magic Online, troubleshooting and the problem
@@ -117,7 +117,7 @@ drawn.
 
 type: feat · priority: P1 · status: ready · area: projector guide web
 
-Next 4. Per-card win rates from the user's own games: in the opening hand,
+Next 3. Per-card win rates from the user's own games: in the opening hand,
 drawn and cast, with n beside every rate. Today `key_card_timing`
 (`docs/guide.md`) covers maindeck cards with 3 or more copies only.
 
@@ -131,7 +131,7 @@ rebuild with NULL where the hand is unknown (rules 3 and 4); fixture tests
 
 type: feat · priority: P1 · status: blocked · area: guide archetypes web
 
-Sideboard help without a model (decided 2026-10-07; `ROADMAP.md`'s Next 3):
+Sideboard help without a model (decided 2026-10-07; `ROADMAP.md`'s Next 2):
 candidate ins by a card-role rule over the 75 (answers, threats, hate by the
 opponent's archetype), and a link to a sideboard guide for the pairing from
 the Skill Issue Magic guide index. No generated outs. The user's own
@@ -263,9 +263,9 @@ events. `ROADMAP.md` keeps them in Later (2026-10-19).
 
 ### BL-013 · MTGO on the Live page
 
-type: feat · priority: P3 · status: ready · area: table api web mtgo
+type: feat · priority: P1 · status: ready · area: table api web mtgo
 
-MTGO on the Live page: the opponent's revealed cards during a game (MTGO
+Next 5. MTGO on the Live page: the opponent's revealed cards during a game (MTGO
 appends to the game log every 1–8 s mid-game, median 2.3 s, and never
 rewrites what it wrote) and the between-games plan (see `docs/status.md`,
 "Limited on purpose").
@@ -335,22 +335,6 @@ A pasted-decklist importer for MTGO lists the user no longer has as files.
 rebuild (rules 2 and 3). Until then such matches are picked format-only.
 
 **Needs:** Its own plan, if asked.
-
-### BL-019 · A Live clip on the landing
-
-type: feat · priority: P3 · status: needs-decision · area: site
-
-A Live clip or a short video on the landing (plan 21, D2): the page shows
-the Live capture of a real unranked match cut mid-game, and no motion beyond
-a row rising into view.
-
-**Why deferred:** Deferred to after the beta, by the user's choice
-(2026-10-13): a clip is a second pipeline (a cut match replayed through the
-dashboard, recorded, then cut and encoded) and a weight cap of its own.
-
-**Needs:** A decision on clip or video; the recording pipeline beside
-`site-images.mjs`; a cap in `tests/test_site.py`; `ffmpeg` is on the
-machine.
 
 ### BL-020 · Caution cards
 
@@ -440,6 +424,21 @@ per-game screw beat reverses that, so it is a decision first.
 analyzer stands on (each analyzer has one, `docs/review.md`) and a
 threshold for screw that a fixture can pin.
 
+### BL-098 · An overlay for Arena
+
+type: feat · priority: P1 · status: needs-decision · area: desktop web table
+
+Next 1. An overlay for Arena only: the Live page's reads in a window of the
+tracker's own, on top of the game. MTGO does not get one.
+
+**Why deferred:** The user reversed "no overlay" on 2026-11-02 and put it first
+in `ROADMAP.md`'s Next the same day. Not started: it has no design yet.
+
+**Needs:** Its own design: which reads it carries, how a window stays over the
+game on Windows and on Linux under Wine or Proton, and how Arena's fullscreen
+modes affect that. It holds to two standing rules: never injecting into the
+client (`ROADMAP.md`, "Never"), and the event rule (`table/queues.py`).
+
 ## Bugs
 
 ### BL-025 · A prepare face several cards share
@@ -495,22 +494,6 @@ behaviour byte-identical on purpose.
 **Needs:** A decision on one grain, then a real-data diff of the guide
 output.
 
-### BL-029 · One label on distinct archetype keys
-
-type: fix · priority: P2 · status: needs-decision · area: brief web
-
-A deck's coverage table and a pairing's heading can show one label on rows
-of distinct archetype keys: `brief/coverage.py` labels a row `field_name or
-faced_name`, and the corpus files "Dimir Midrange" under more than one key,
-so two rows can read alike.
-
-**Why deferred:** Found while rebuilding a deck's pages; telling the rows
-apart is a naming decision, not a patch.
-
-**Needs:** Decide how a shared label is told apart (a qualifier in the
-label, or the address alone as the identity), then fix `coverageName`
-(`web/src/lib/brief.ts`) and `pairingHeading` (`web/src/lib/pairing.ts`).
-
 ### BL-030 · Provisional corpus-naming constants
 
 type: fix · priority: P3 · status: needs-data · area: archetypes
@@ -552,23 +535,6 @@ paper RCQs reach the field only through TopDeck (needs the user's key).
 **Needs:** A working TopDeck run, or another paper source
 (`docs/attribution.md`, "Rules for a new source").
 
-### BL-033 · An RCQ answer stored against an edited list
-
-type: fix · priority: P2 · status: ready · area: guide web
-
-The RCQ paste stores an answer against the list in the box at save time. The
-RCQ prompt carries no `context` hash, and the box stays usable while the
-preview catches up after an edit, so an answer copied for one list and saved
-after the list was edited is stored against the edited list, and the page's
-"changed" note cannot tell.
-
-**Why deferred:** Found in plan 24's review of phase 9c. Disabling the box
-while the preview updates would unmount it and lose the pasted text.
-
-**Needs:** A `context` hash on the RCQ prompt (the list as typed and the
-expected keys), stored with the guide so the page can say it was answered
-for another list.
-
 ### BL-034 · Detailed Logs off, untested
 
 type: fix · priority: P3 · status: needs-data · area: desktop
@@ -599,19 +565,6 @@ a pick is per match.
 **Needs:** A decision on whether confirmed picks should override the store's
 format there.
 
-### BL-036 · mtgo_watching with an unreachable folder
-
-type: fix · priority: P3 · status: ready · area: api mtgo
-
-`mtgo_watching` reports true while the running watcher has an MTGO
-directory, even while that directory is unreachable (a share not mounted, a
-folder MTGO moved).
-
-**Why deferred:** Minor. The watcher warns once when a run of failed checks
-starts, and counts it as one error.
-
-**Needs:** Plumbing the last check's outcome through to the status route.
-
 ### BL-037 · Arena's rename during a read on Windows
 
 type: fix · priority: P3 · status: needs-data · area: reader
@@ -640,22 +593,6 @@ that came directly after `<==`.
 **Needs:** Harden only if a capture shows it. DeckDeleteDeck's second body
 line falls through as noise, which is harmless.
 
-### BL-041 · A dated twin of an undated entry
-
-type: fix · priority: P3 · status: ready · area: reader
-
-An entry stored with no time by `--locale auto` (`reader/dates.py`, step 6)
-gets a dated twin if the same bytes are read again once its shape's order is
-learned (`ingest --file` reads from the start), because the digest includes
-`logged_at`. A `--locale` change between two reads of one file does the
-same.
-
-**Why deferred:** Known when `auto` was built (plan 3, S10); out of its
-scope.
-
-**Needs:** Re-deriving `logged_at` from `raw_events.header`, which migration
-062 keeps for this.
-
 ### BL-042 · Windows' regional format in Arena's header
 
 type: fix · priority: P3 · status: needs-data · area: reader
@@ -670,21 +607,6 @@ locale did not change the header.
 **Needs:** One Windows capture with Arena in English and a day-first
 regional format. A new shape is a fixture and a row in `docs/arena-log.md`'s
 table; a day-first `slash-12h` header is one `auto` already settles.
-
-### BL-043 · Two grains in the keep guide's mulligan numbers
-
-type: fix · priority: P2 · status: needs-decision · area: table guide
-
-The keep guide's mulligan table counts one deck version (`table/keep.py`'s
-query on `m.deck_id = ?`), while its mulligan-cost line counts the whole
-deck identity (`guide_play.mulligan_record`), so the two can differ for a
-deck whose list was edited; both say "Kept 7".
-
-**Why deferred:** Found in plan 26's review of phase 3b; the two reads
-predate it.
-
-**Needs:** A decision on which grain the table should have, then the same
-grain for both, with a fixture-backed test (rule 7).
 
 ### BL-047 · Day and Night's shared oracle_id
 
@@ -745,48 +667,6 @@ halves resolve by the back-face rule since plan 13.
 
 **Needs:** A real capture naming one.
 
-### BL-053 · A summarized block at the end of a dead file
-
-type: fix · priority: P3 · status: ready · area: reader
-
-A summarized block (`docs/arena-log.md`, trap 18) that is the very last
-thing in a file that never grows again, such as the `Player-prev.log` the
-startup recovery reads, never warns: the segmenter holds the block open
-until a later line closes it.
-
-**Why deferred:** No summarized block has appeared in the user's logs, and
-closing it needs `reader/ingest.py` to flush the segmenter at the end of a
-dead file.
-
-**Needs:** A flush at the end of a dead file in `reader/ingest.py`, and a
-held-back-block test in `tests/test_ingest.py`.
-
-### BL-054 · MTGO's score line, unread
-
-type: fix · priority: P3 · status: ready · area: projector mtgo
-
-`ParsedMatch.score_line` (`projector/mtgo/parse.py`) is a self-check that
-nothing reads, and `Match Tied <a>-<b>`, MTGO's running score while a match
-is level (183 lines in the real history, 2026-10-19), is not parsed into it.
-Results come from each game's own lines, never from a score line.
-
-**Why deferred:** Left out of plan 30 (its D9): nothing would read it.
-
-**Needs:** A reader for the check (a warning when the counted score
-disagrees with the last score line), then `Match Tied` beside `leads the
-match`.
-
-### BL-056 · A warning on every rebuild without [mtgo]
-
-type: fix · priority: P2 · status: ready · area: projector mtgo
-
-`projector/matches.py` calls `mtgo.config.load_handle()` on every
-`project()`, so a config file with no `[mtgo]` table (an Arena-only user
-with a Claude key, say) logs a warning on every rebuild.
-
-**Needs:** Loading the handle only when MTGO `raw_events` exist, or a silent
-absence like `resolve_log_dir()`'s.
-
 ### BL-080 · Two cutoffs for an early play
 
 type: fix · priority: P3 · status: needs-decision · area: table
@@ -801,36 +681,6 @@ shows both side by side. Found by plan 35's reviewers.
 
 **Needs:** A decision: one cutoff for both, or a sentence on Live that
 says why they differ.
-
-### BL-081 · An MTGO deck file's time from a second stat
-
-type: fix · priority: P3 · status: ready · area: reader mtgo
-
-`reader/mtgo_decks.py::_ingest_one_deck` stats the file for its identity
-token, then `_mtime_iso(path)` stats it again for `logged_at`. A write
-landing between the two leaves `logged_at` newer than the token's mtime.
-Found by plan 35's reviewers.
-
-**Why deferred:** No visible effect: the next poll re-reads the file either
-way.
-
-**Needs:** `logged_at` from the first `stat()`'s `st_mtime`.
-
-### BL-086 · A drawn game in the report's game-length rates
-
-type: fix · priority: P3 · status: ready · area: cli
-
-`sensei-top report`'s game-length table prints a win rate per turn count,
-won over `v_deck_game_length.games`. That count has no result filter, so a
-drawn game and an unfinished one both sit in it and lower the rate. The
-average length is right to count both; only the rate is wrong. Found while
-fixing the play/draw rates.
-
-**Why deferred:** Outside that fix's scope, and the view has no
-`games_lost` column, so it needs a migration of its own.
-
-**Needs:** `games_lost` on `v_deck_game_length`, and the rate read as won
-over won plus lost.
 
 ### BL-087 · A mapped drive may not hold the backups
 
@@ -897,6 +747,32 @@ The backup's real cost. Every daily run records its duration in
 "SELECT last_duration_ms FROM backup_state"`); read it after a few runs and
 put it in `docs/architecture.md`'s Backups section. The WAL peak there is
 still an estimate, because nothing records it.
+
+### BL-097 · A repeated payload under a new undated stamp
+
+type: fix · priority: P2 · status: ready · area: reader
+
+Undated rows all have `logged_at` NULL, so they share one occurrence count
+across stamps. A later read that meets a payload already stored undated, under
+a different stamp it also can't date, gets occurrence 0, collides with the
+stored digest and is silently counted as a duplicate: the entry is lost. This
+happens across polls or files under an unknown stamp shape (every entry is
+undated, under `auto` and `mdy`), `--locale dmy` on a month-first log, and
+`auto` with stale, unlearned files. A live log under `auto` normally takes its
+order from the file's last write, so it is normally safe. A full read of the
+file restores the entry; a re-read of a later file alone does not, and an
+unknown shape never gets a date. One sequence got slightly worse when dated
+twins were fixed: stamp X in one poll, then Y and X in the next, one payload: 2
+rows before, 1 now, from 3 real entries. The second row was labelled X then
+too, and Y was lost both ways.
+
+**Why deferred:** Older than the dated-twin fix and found during it, by
+reasoning and a synthetic reproduction. How often real payloads repeat under undated stamps
+was not measured.
+
+**Needs:** The stamp inside the undated digest, in `compute_digest`, with
+stored undated rows' digests dealt with. Rows without a header can't be
+recomputed.
 
 ## Code health
 

@@ -23,7 +23,11 @@ its raw events and an opponent missing from ``matches`` would have no term.
 Matching follows the scan:
 case-insensitive, a name only as a whole word (and also right after MTGO's
 ``@P`` handle marker, which the scan's word rule would not see), an id or a
-path anywhere.
+path anywhere. A handle the scan drops (short, generic, a card's word) would
+hit everywhere as a word, so it is renamed only where a field says it is a
+name: after ``@P``, in an MTGO ``Turn N:`` line, and as Arena's ``playerName``
+or ``screenName``. Prose an
+authored table wrote about such a player keeps the name.
 
 **The rewrite** touches every text value of every table, longest term first,
 each term always to the same pseudonym: the user's Arena name becomes
@@ -139,6 +143,12 @@ class DemoTerm:
     category: str
     value: str
     word: bool
+    # Only where the text around it says it is a name: _FIELD_PREFIX.
+    named_only: bool = False
+
+
+# Lowercase, as a Matcher searches. The backslashes: a payload can hold JSON as a string.
+_FIELD_PREFIX = r'(?:\\?"(?:playername|screenname)\\?"\s*:\s*\\?"|@p|turn \d+: )'
 
 
 def _lower(text: str) -> str:
@@ -192,10 +202,20 @@ class Matcher:
         self.category: dict[str, str] = {}
         words: set[str] = set()
         substrings: set[str] = set()
+        named: set[str] = set()
         for term in terms:
             key = _lower(term.value)
             self.category.setdefault(key, term.category)
-            (words if term.word else substrings).add(key)
+            if term.named_only:
+                named.add(key)
+            else:
+                (words if term.word else substrings).add(key)
+        named_pattern = _trie_pattern(named - words - substrings, word=True)
+        self._named = (
+            None
+            if named_pattern is None
+            else re.compile(f"{_FIELD_PREFIX}({named_pattern.pattern})")
+        )
         self._word = _trie_pattern(words - substrings, word=True)
         self._substring = _trie_pattern(substrings, word=False)
         self.mapping = mapping or {}
@@ -206,6 +226,8 @@ class Matcher:
         found: list[tuple[int, int]] = []
         if self._substring is not None:
             found += [(m.start(), m.end()) for m in self._substring.finditer(lowered)]
+        if self._named is not None:
+            found += [m.span(1) for m in self._named.finditer(lowered)]
         if self._word is not None:
             pos = 0
             while (m := self._word.search(lowered, pos)) is not None:
@@ -657,6 +679,12 @@ def _build_copy(target: Path, args: argparse.Namespace) -> list[str]:
         _project(conn, None)
         privacy_scan = _load_privacy_scan()
         terms = _demo_terms(privacy_scan.terms_for_demo(target))
+        searched = {_lower(term.value) for term in terms}
+        terms += [
+            DemoTerm(handle.category, handle.value, word=True, named_only=True)
+            for handle in privacy_scan.handles_for_demo(target)
+            if _lower(handle.value) not in searched
+        ]
         mapping = build_mapping(terms, args.seed)
         matcher = Matcher(terms, mapping)
         matches_before = _count(conn, "matches")

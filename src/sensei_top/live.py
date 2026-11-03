@@ -44,6 +44,7 @@ from sensei_top.projector.mtgo.parse import last_game_decided
 from sensei_top.reader.ingest import default_log_path, ingest_file, ingest_with_recovery
 from sensei_top.reader.mtgo import (
     GameLogFile,
+    check_game_log_dir,
     ingest_mtgo_dir,
     read_game_log,
     scan_game_logs,
@@ -212,6 +213,9 @@ class LiveIngester:
     # True from a check whose folder could not be read until one that could:
     # a run of failing checks is warned about and counted once.
     _mtgo_failing: bool = field(default=False, repr=False)
+    # What projection_state.mtgo_unreachable last got from this watcher;
+    # None until the first check, which always writes (``_record_mtgo_reach``).
+    _mtgo_reach_written: bool | None = field(default=None, repr=False)
     # time.monotonic() of the last deck-file read (both folders); None until
     # the first one, which therefore happens on this instance's first
     # ingest_once.
@@ -246,7 +250,12 @@ class LiveIngester:
         mid-session (unmounted, torn down, a VM stopped), and that must not
         end the Arena watch. The reader already tolerates one file going
         missing; this catches the coarser failure, the whole folder becoming
-        unreachable (``glob()`` raising on a dead mount). The clock is set
+        unreachable (``glob()`` raising on a dead mount), or a folder that
+        is missing or refuses its listing (``check_game_log_dir``, which the
+        scan itself does not do). A share unmounted cleanly leaves an empty
+        mountpoint, which reads as an empty folder and passes. A missing folder
+        is recorded as unreachable and otherwise quiet: no error counted, no
+        warning. The clock is set
         before the attempt, so a failing folder is tried again on the next
         check, not on every ingest pass, and a run of failing checks is warned
         about and counted once rather than every ``mtgo_poll_every``. A failed
@@ -263,6 +272,11 @@ class LiveIngester:
         catch_up = self._last_mtgo_poll is None
         self._last_mtgo_poll = now
         try:
+            try:
+                check_game_log_dir(self.mtgo_dir)
+            except FileNotFoundError:
+                self._record_mtgo_reach(conn, unreachable=True)
+                return 0
             if catch_up:
                 stats = ingest_mtgo_dir(
                     conn, self.mtgo_dir, on_stat_error=self._warn_unstattable
@@ -277,9 +291,34 @@ class LiveIngester:
                     self.stats.errors += 1
                     self.stats.last_error = str(exc)
                 log.warning("mtgo poll failed: %s", exc)
+            self._record_mtgo_reach(conn, unreachable=True)
             return 0
         self._mtgo_failing = False
+        self._record_mtgo_reach(conn, unreachable=False)
         return inserted
+
+    def _record_mtgo_reach(self, conn: sqlite3.Connection, *, unreachable: bool) -> None:
+        """Mirror the last check's outcome into ``projection_state`` for
+        ``/api/live``'s ``mtgo_watching``, which runs in another process
+        (migration 068). Written when it changes and for the first check, so a
+        steady folder costs no write per poll and an earlier run's value never
+        stands. A failed write is warned of and tried again on every check after
+        it, so it warns on every check until one succeeds: the status line is
+        not worth stopping the watch for."""
+        if self._mtgo_reach_written is unreachable:
+            return
+        try:
+            conn.execute(
+                """
+                INSERT INTO projection_state (id, mtgo_unreachable) VALUES (1, ?)
+                ON CONFLICT(id) DO UPDATE SET mtgo_unreachable = excluded.mtgo_unreachable
+                """,
+                (int(unreachable),),
+            )
+        except sqlite3.Error as exc:
+            log.warning("could not record whether the MTGO folder is reachable: %s", exc)
+            return
+        self._mtgo_reach_written = unreachable
 
     def _warn_unstattable(self, path: Path, exc: OSError) -> None:
         """The scan's ``on_stat_error``: the first time a file cannot be
@@ -417,8 +456,8 @@ class LiveIngester:
         """One ingest pass: the previous-session recovery on this instance's
         first pass that has an Arena log, then a normal tail read, plus the MTGO game-log check
         (``_poll_mtgo``) and the MTGO deck-folder poll (``_poll_mtgo_decks``),
-        each on its own clock. Marks the projection dirty when anything landed.
-        Returns the number of rows inserted.
+        each on its own clock. Marks the projection dirty when anything landed
+        or a stored row took a date. Returns the number of rows inserted or dated.
 
         ``run_forever`` runs this on its own thread and its own connection,
         so a rebuild's write lock never holds up the next log line from
@@ -429,32 +468,31 @@ class LiveIngester:
 
         arena_log = self._find_arena_log()
         inserted = 0
+        dated = 0
         if arena_log is None:
             pass  # no Arena log yet; MTGO below still runs
         elif not self._recovered:
             # First pass only: Arena wipes Player.log on launch, so the previous
             # session survives only in Player-prev.log, and only until the next one.
-            inserted = sum(
-                result.rows_inserted
-                for result in ingest_with_recovery(
-                    conn, arena_log, locale_hint=self.locale_hint
-                ).values()
-            )
+            results = ingest_with_recovery(conn, arena_log, locale_hint=self.locale_hint)
+            inserted = sum(result.rows_inserted for result in results.values())
+            dated = sum(result.rows_dated for result in results.values())
             self._recovered = True
         else:
-            inserted = ingest_file(conn, arena_log, locale_hint=self.locale_hint).rows_inserted
+            result = ingest_file(conn, arena_log, locale_hint=self.locale_hint)
+            inserted, dated = result.rows_inserted, result.rows_dated
 
         inserted += self._poll_mtgo(conn)
         inserted += self._poll_mtgo_decks(conn)
 
-        if inserted:
+        if inserted or dated:
             with self._stats_lock:
                 self.stats.events_ingested += inserted
                 self.stats.last_ingest_at = _now()
             with self._dirty_lock:
                 self._dirty = True
 
-        return inserted
+        return inserted + dated
 
     def project_if_due(self, conn: sqlite3.Connection, *, force_project: bool = False) -> bool:
         """Rebuild the projection if the gate says it's due. Returns True
@@ -572,7 +610,7 @@ class LiveIngester:
     def poll_once(self, conn: sqlite3.Connection, *, force_project: bool = False) -> bool:
         """Ingest, then project if due, both on ``conn``. Returns True if
         anything changed — a rebuild ran, or (if not) at least one row was
-        inserted.
+        inserted or dated.
 
         For callers, mainly tests, that want one deterministic step rather
         than the two threads ``run_forever`` drives.

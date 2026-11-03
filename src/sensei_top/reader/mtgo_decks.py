@@ -67,7 +67,7 @@ import stat
 from pathlib import Path
 
 from sensei_top.reader.ingest import IngestStats, _read_state, _write_state
-from sensei_top.reader.mtgo import _file_digest, _mtime_iso
+from sensei_top.reader.mtgo import _file_digest, _local_iso
 from sensei_top.reader.segmenter import EntryKind
 
 log = logging.getLogger(__name__)
@@ -128,7 +128,8 @@ def _ingest_one_deck(conn: sqlite3.Connection, path: Path, stats: IngestStats) -
     be stored). ``stat()`` runs before the read, so a write landing in between
     leaves a recorded mtime older than the content and the next poll re-reads
     it: the digest then dedupes or stores the newer bytes, never loses
-    them."""
+    them. ``logged_at`` comes from that same ``stat()``, never a second one,
+    so the row's date and the identity token name the same moment."""
     stats.entries_seen += 1
     st = path.stat()
     data = path.read_bytes()
@@ -144,7 +145,7 @@ def _ingest_one_deck(conn: sqlite3.Connection, path: Path, stats: IngestStats) -
              VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
         (
-            digest, path.name, _mtime_iso(path), str(EntryKind.EVENT), _label(path.name),
+            digest, path.name, _local_iso(st.st_mtime_ns), str(EntryKind.EVENT), _label(path.name),
             payload, _SOURCE,
         ),
     )

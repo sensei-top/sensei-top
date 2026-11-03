@@ -22,6 +22,8 @@ the opt-in Claude call, a pasted answer and ``rcq --import``.
 from __future__ import annotations
 
 import dataclasses
+import hashlib
+import json
 import sqlite3
 from collections import Counter
 from dataclasses import dataclass
@@ -71,6 +73,7 @@ __all__ = [
     "SourceFreshness",
     "build_rcq",
     "classify_pasted",
+    "rcq_context",
     "rcq_from_json",
     "rcq_prompt",
     "top8_name",
@@ -532,13 +535,41 @@ def _counts_block(title: str, counts: Counter) -> list[str]:
     return lines
 
 
+def rcq_context(parsed: ParsedList, expected_keys) -> str:
+    """The ``context`` an RCQ prompt carries and its answer copies back: a
+    hash of the list's cards, both boards, and the expected archetypes, the
+    inputs the guide is written against. Counts by name, casefolded (names
+    that casefold alike merge their counts) and sorted, and the expected keys
+    sorted, so a list retyped in another case or order, or the same chips
+    picked in another order, is the same list; a card added, cut or moved
+    between boards is another. The case it is for is an answer copied for one
+    list and saved after an edit."""
+
+    def board(cards) -> list:
+        counts: dict[str, int] = {}
+        for name, count in cards.items():
+            key = name.casefold()
+            counts[key] = counts.get(key, 0) + count
+        return sorted(counts.items())
+
+    payload = json.dumps(
+        {
+            "main": board(parsed.main),
+            "side": board(parsed.side),
+            "expected": sorted(expected_keys),
+        },
+        sort_keys=True,
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 @english()
 def rcq_prompt(evidence: RcqEvidence, *, conn, answer_contract: bool = True) -> str:
     """The complete text to hand an assistant: the framing, the evidence —
     the deck guide's own evidence, with the pasted 75 in place of the
     identity's current list — then the answer contract (``answers.py``)
-    naming this deck's RCQ guide. No ``context``: an RCQ guide has no
-    staleness hash, since each one is the record of one pasted list.
+    naming this deck's RCQ guide, with ``rcq_context`` as its ``context``,
+    so a pasted answer says which list it was written for.
     ``answer_contract=False`` is the generate route's prompt, which puts the
     schema before the evidence and leaves the contract out."""
     guide = evidence.guide
@@ -645,6 +676,9 @@ def rcq_prompt(evidence: RcqEvidence, *, conn, answer_contract: bool = True) -> 
     return _wrap_json_prompt(
         RCQ_SYSTEM_PROMPT, _RCQ_TOOL["input_schema"], "\n".join(lines),
         answer_for=rcq_for(deck.key) if answer_contract else None,
+        written_for=(
+            rcq_context(evidence.parsed, evidence.expected_keys) if answer_contract else None
+        ),
     )
 
 

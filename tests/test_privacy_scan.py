@@ -266,6 +266,22 @@ def test_three_character_term_is_dropped_as_short(tmp_path):
     assert "zzq" not in result.stderr
 
 
+def test_a_rules_keyword_is_dropped_as_generic(tmp_path):
+    """The game's own log text prints it: ``Cast face-down with Morph.``"""
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    _write(repo, "README.md", "Cast face-down with Morph.\n")
+    _commit_all(repo)
+
+    db_path = tmp_path / "scratch.db"
+    _make_db(db_path, matches=[("Morph", None)])
+
+    result = _run_scan(repo, "--db", str(db_path))
+    assert result.returncode == 0
+    assert result.stdout == ""
+    assert "dropped 0 short, 1 generic, 0 card-word" in result.stderr
+
+
 def test_opponent_name_matching_a_card_word_is_dropped_and_counted(tmp_path):
     """An opponent handle that happens to equal a whole word from a real card
     name is filtered out before it ever becomes a searchable term, and the
@@ -2075,3 +2091,268 @@ def test_an_accepted_address_beside_a_non_ascii_letter_still_hits(tmp_path):
     assert result.stdout.splitlines() == ["git-account\tpush:log\t2"]
     assert "accepted emails set aside" not in result.stderr
     assert "qzxglobal" not in (result.stdout + result.stderr).lower()
+
+
+# --- .mp4: the mdat payload is left out, nothing else is ------------------------
+#
+# Boxes are built from the ISO BMFF layout (ISO/IEC 14496-12): a 4-byte
+# big-endian size that counts its own header, a 4-byte type, the payload; size 1
+# puts a 64-bit size after the type, size 0 runs to the end of the file.
+
+_MP4_TERM = "QzxVideoTermABC"
+
+
+def _box(
+    kind: bytes, payload: bytes = b"", *, size: int | None = None, wide: bool = False
+) -> bytes:
+    if wide:
+        return (1).to_bytes(4, "big") + kind + (16 + len(payload)).to_bytes(8, "big") + payload
+    if size is None:
+        size = 8 + len(payload)
+    return size.to_bytes(4, "big") + kind + payload
+
+
+def _ftyp() -> bytes:
+    return _box(b"ftyp", b"isom\x00\x00\x02\x00isomiso2")
+
+
+def _moov() -> bytes:
+    return _box(b"moov", b"clean")
+
+
+def _mp4_terms(tmp_path: Path) -> Path:
+    path = tmp_path / "mp4-terms.tsv"
+    path.write_text(f"mtgo-handle\t{_MP4_TERM}\n", encoding="utf-8")
+    return path
+
+
+def _mp4_repo(tmp_path: Path, data: bytes, name: str = "clip.mp4") -> Path:
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    (repo / name).write_bytes(data)
+    _commit_all(repo)
+    return repo
+
+
+def _term(text: str = _MP4_TERM) -> bytes:
+    return text.encode("ascii")
+
+
+def _no_leak(result: subprocess.CompletedProcess[str]) -> None:
+    assert _MP4_TERM not in result.stdout + result.stderr
+
+
+def test_mp4_term_in_mdat_payload_is_not_a_hit_in_tree_and_history(tmp_path):
+    data = _ftyp() + _box(b"mdat", b"\x00\x01" + _term() + b"\x02") + _box(b"moov", b"clean")
+    repo = _mp4_repo(tmp_path, data)
+    terms = _mp4_terms(tmp_path)
+
+    tree = _run_scan(repo, terms_file=terms)
+    assert tree.returncode == 0 and tree.stdout == ""
+    assert "1 mp4 video payloads left out" in tree.stderr
+    _no_leak(tree)
+
+    history = _run_scan(repo, "--history", terms_file=terms)
+    assert history.returncode == 0 and history.stdout == ""
+    assert "2 mp4 video payloads left out" in history.stderr  # the tree's and the blob's
+    _no_leak(history)
+
+
+def test_mp4_term_in_mdat_payload_is_not_a_hit_under_pre_push(tmp_path):
+    repo, env = _pushed_repo(tmp_path)
+    terms = _push_terms(tmp_path, f"mtgo-handle\t{_MP4_TERM}")
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+    (repo / "clip.mp4").write_bytes(_ftyp() + _moov() + _box(b"mdat", _term()))
+    _commit_as_declared(repo, env, "add a clip")
+
+    result = _scan_push(repo, env, _push_line(repo, env, "main", remote_sha), terms)
+    assert result.returncode == 0 and result.stdout == ""
+    assert "1 mp4 video payloads left out" in result.stderr
+    _no_leak(result)
+
+
+def test_mp4_term_in_metadata_boxes_is_a_hit_in_tree_and_history(tmp_path):
+    nested = _box(b"moov", _box(b"udta", _box(b"meta", b"x" + _term())))
+    cases = {
+        "nested": _ftyp() + nested + _box(b"mdat", b"video"),
+        "ftyp": _box(b"ftyp", b"isom" + _term()) + _moov() + _box(b"mdat", b"video"),
+        "after": _ftyp() + _moov() + _box(b"mdat", b"video") + _box(b"free", _term()),
+    }
+    for index, (name, data) in enumerate(cases.items()):
+        repo = _mp4_repo(tmp_path / str(index), data)
+        terms = _mp4_terms(tmp_path / str(index))
+        tree = _run_scan(repo, terms_file=terms)
+        assert tree.returncode == 1, name
+        assert tree.stdout.strip() == "mtgo-handle\tclip.mp4\t1", name
+        history = _run_scan(repo, "--history", terms_file=terms)
+        lines = history.stdout.splitlines()
+        assert any(line.startswith("mtgo-handle\thistory:clip.mp4@") for line in lines), name
+        _no_leak(tree)
+        _no_leak(history)
+
+
+def test_mp4_term_in_metadata_is_a_hit_under_pre_push(tmp_path):
+    repo, env = _pushed_repo(tmp_path)
+    terms = _push_terms(tmp_path, f"mtgo-handle\t{_MP4_TERM}")
+    remote_sha = _git_env(repo, env, "rev-parse", "origin/main")
+    clip = _ftyp() + _moov() + _box(b"mdat", b"v") + _box(b"free", _term())
+    (repo / "clip.mp4").write_bytes(clip)
+    _commit_as_declared(repo, env, "add a clip")
+
+    result = _scan_push(repo, env, _push_line(repo, env, "main", remote_sha), terms)
+    assert result.returncode == 1
+    assert result.stdout.startswith("mtgo-handle\tpush:clip.mp4@")
+    _no_leak(result)
+
+
+def test_mp4_utf16_term_in_metadata_is_still_a_hit(tmp_path):
+    data = _ftyp() + _box(b"moov", _term().decode().encode("utf-16-le")) + _box(b"mdat", b"v")
+    repo = _mp4_repo(tmp_path, data)
+    result = _run_scan(repo, terms_file=_mp4_terms(tmp_path))
+    assert result.returncode == 1
+    assert result.stdout.strip() == "mtgo-handle\tclip.mp4\t1"
+
+
+def test_mp4_term_in_the_path_is_a_name_hit_even_with_a_clean_file(tmp_path):
+    repo = _mp4_repo(tmp_path, _ftyp() + _moov() + _box(b"mdat", b"v"), name=f"{_MP4_TERM}.mp4")
+    result = _run_scan(repo, terms_file=_mp4_terms(tmp_path))
+    assert result.returncode == 1
+    assert result.stdout.strip() == "mtgo-handle\tname:[redacted].mp4\t1"
+    _no_leak(result)
+
+
+def test_mp4_two_wide_and_open_ended_mdat_boxes_are_all_left_out(tmp_path):
+    data = (
+        _ftyp()
+        + _moov()
+        + _box(b"mdat", _term())
+        + _box(b"mdat", _term(), wide=True)
+        + _box(b"free", b"clean")
+        + _box(b"mdat", _term(), size=0)
+    )
+    repo = _mp4_repo(tmp_path, data)
+    result = _run_scan(repo, terms_file=_mp4_terms(tmp_path))
+    assert result.returncode == 0 and result.stdout == ""
+    assert "3 mp4 video payloads left out" in result.stderr
+
+    after_wide = _ftyp() + _moov() + _box(b"mdat", _term(), wide=True) + _box(b"free", _term())
+    repo = _mp4_repo(tmp_path / "again", after_wide)
+    result = _run_scan(repo, terms_file=_mp4_terms(tmp_path / "again"))
+    assert result.returncode == 1
+    assert result.stdout.strip() == "mtgo-handle\tclip.mp4\t1"
+
+
+def test_mp4_that_does_not_walk_is_scanned_whole(tmp_path):
+    mdat = _box(b"mdat", _term())
+    wide_bad = (1).to_bytes(4, "big") + b"mdat"
+    cases = {
+        "no ftyp first": _box(b"free", b"x") + _ftyp() + _moov() + mdat,
+        "size past the end": _ftyp() + _moov() + _box(b"mdat", _term(), size=9999),
+        "size below header": _ftyp() + _moov() + mdat + _box(b"free", size=4),
+        "trailing junk": _ftyp() + _moov() + mdat + b"junk",
+        "truncated wide header": _ftyp() + _moov() + mdat + (1).to_bytes(4, "big") + b"free\x00",
+        "wide box size 8": (
+            _ftyp() + _moov() + mdat + (1).to_bytes(4, "big") + b"free" + (8).to_bytes(8, "big")
+        ),
+        "wide mdat size 0": _ftyp() + _moov() + wide_bad + (0).to_bytes(8, "big") + _term(),
+        "wide mdat size 15": _ftyp() + _moov() + wide_bad + (15).to_bytes(8, "big") + _term(),
+    }
+    for index, (name, data) in enumerate(cases.items()):
+        repo = _mp4_repo(tmp_path / str(index), data)
+        result = _run_scan(repo, terms_file=_mp4_terms(tmp_path / str(index)))
+        assert result.returncode == 1, name
+        assert result.stdout.strip() == "mtgo-handle\tclip.mp4\t1", name
+        assert "mp4 video payloads" not in result.stderr, name
+
+
+def test_mp4_without_a_top_level_moov_or_moof_is_scanned_whole(tmp_path):
+    inner = _box(b"mdat", _box(b"moov", b"x") + _term())
+    for index, data in enumerate((_ftyp() + _box(b"mdat", _term()), _ftyp() + inner)):
+        repo = _mp4_repo(tmp_path / str(index), data)
+        result = _run_scan(repo, terms_file=_mp4_terms(tmp_path / str(index)))
+        assert result.returncode == 1
+        assert result.stdout.strip() == "mtgo-handle\tclip.mp4\t1"
+
+
+def test_mp4_with_a_top_level_moof_leaves_the_mdat_payload_out(tmp_path):
+    data = _ftyp() + _box(b"moof", b"clean") + _box(b"mdat", _term())
+    repo = _mp4_repo(tmp_path, data)
+    result = _run_scan(repo, terms_file=_mp4_terms(tmp_path))
+    assert result.returncode == 0 and result.stdout == ""
+    assert "1 mp4 video payloads left out" in result.stderr
+
+
+def test_mp4_without_an_mdat_is_scanned_whole(tmp_path):
+    repo = _mp4_repo(tmp_path, _ftyp() + _box(b"moov", _term()))
+    result = _run_scan(repo, terms_file=_mp4_terms(tmp_path))
+    assert result.returncode == 1
+
+
+def test_the_same_bytes_under_another_name_are_scanned_whole(tmp_path):
+    data = _ftyp() + _moov() + _box(b"mdat", _term())
+    for index, name in enumerate(("x.bin", "x.webm", "x.mov", "x.mp4.txt")):
+        repo = _mp4_repo(tmp_path / str(index), data, name=name)
+        result = _run_scan(repo, terms_file=_mp4_terms(tmp_path / str(index)))
+        assert result.returncode == 1, name
+        assert result.stdout.strip() == f"mtgo-handle\t{name}\t1", name
+
+
+def test_an_uppercase_mp4_suffix_is_treated_as_mp4(tmp_path):
+    repo = _mp4_repo(tmp_path, _ftyp() + _moov() + _box(b"mdat", _term()), name="CLIP.MP4")
+    result = _run_scan(repo, terms_file=_mp4_terms(tmp_path))
+    assert result.returncode == 0 and result.stdout == ""
+
+
+def test_a_tracked_symlink_named_mp4_is_scanned_on_its_target_text(tmp_path):
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    os.symlink(f"missing/{_MP4_TERM}.bin", repo / "link.mp4")
+    _commit_all(repo)
+    result = _run_scan(repo, terms_file=_mp4_terms(tmp_path))
+    assert result.returncode == 1
+    assert result.stdout.strip() == "mtgo-handle\tlink.mp4\t1"
+
+
+def test_text_mode_never_leaves_mp4_bytes_out(tmp_path):
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    _write(repo, "a.txt", "clean\n")
+    _commit_all(repo)
+    body = tmp_path / "body.mp4"
+    body.write_bytes(_ftyp() + _moov() + _box(b"mdat", _term()))
+    result = _run_scan(repo, "--text", str(body), terms_file=_mp4_terms(tmp_path))
+    assert result.returncode == 1
+    assert result.stdout.strip() == "mtgo-handle\ttext\t1"
+    assert "mp4 video payloads" not in result.stderr
+
+
+def test_mp4_cut_puts_a_separator_where_the_payload_was():
+    """Called in-process: text ending one side of a payload and starting the
+    other must not become one string. The kept header ends in the box type, so
+    the separator is pinned directly."""
+    spec = importlib.util.spec_from_file_location("privacy_scan_mp4", SCRIPT)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["privacy_scan_mp4"] = module
+    spec.loader.exec_module(module)
+
+    mdat = _box(b"mdat", b"PAYLOAD")
+    after = _box(b"free", b"def")
+    head = _ftyp() + _moov()
+    got, cut = module._mp4_scannable("v.mp4", head + mdat + after)
+    assert cut == 1
+    assert got == head + mdat[:8] + b"\n" + after
+    assert module._mp4_scannable("v.bin", head + mdat) == (head + mdat, 0)
+
+    wide = _box(b"mdat", b"PAYLOAD", wide=True)
+    got, cut = module._mp4_scannable("v.mp4", head + wide + after)
+    assert cut == 1
+    assert got == head + wide[:16] + b"\n" + after
+
+
+def test_mp4_summary_prints_no_clause_when_nothing_was_left_out(tmp_path):
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    _write(repo, "a.txt", "clean\n")
+    _commit_all(repo)
+    result = _run_scan(repo, terms_file=_mp4_terms(tmp_path))
+    assert "mp4" not in result.stderr

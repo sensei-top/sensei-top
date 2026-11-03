@@ -690,7 +690,15 @@ def project(conn: sqlite3.Connection) -> dict[str, int]:
     # independent of the Arena replay above (which is itself scoped to
     # source='arena' at its own SELECT); see projector/mtgo/project.py's
     # module docstring.
-    mtgo_rows = read_mtgo(conn, mtgo_load_handle())
+    # The handle is read only when there is an MTGO game to read it for: an
+    # Arena-only install with a config file and no [mtgo] table (a Claude key
+    # alone, say) would otherwise log load_handle()'s warning on every
+    # rebuild. With MTGO rows stored, a missing handle still warns, there and
+    # in read_mtgo, because then it costs the user their matches.
+    has_mtgo = conn.execute(
+        "SELECT EXISTS (SELECT 1 FROM raw_events WHERE source = 'mtgo')"
+    ).fetchone()[0]
+    mtgo_rows = read_mtgo(conn, mtgo_load_handle() if has_mtgo else None)
     # MTGO's exported deck files, into the same `decks` table. Not tied to any
     # match: `matches.deck_id` stays NULL for MTGO — see projector/mtgo/decks.py.
     mtgo_deck_rows = read_mtgo_decks(conn)

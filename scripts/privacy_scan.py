@@ -147,6 +147,20 @@ The project's own name, `sensei-top`, is a generic word: it is the public
 repository's owner, so a clone of it would otherwise make every mention of
 the project a `git-account` hit.
 
+One loosening, for one format: in a `.mp4` file (the suffix in any case), the
+payload of each top-level `mdat` box is left out of the content scan, in the
+tracked tree and in the blobs --history and --pre-push read, because
+compressed video coincidentally contains the short ASCII runs a term can be.
+Every other box -- `ftyp`, `moov`, `udta`, `meta`, `free` -- and every box
+header is still scanned whole, since container metadata is where an
+identifier could really sit, as is the path's own name. It fails closed: the
+whole file is scanned unless the data walks as an MP4 exactly (first box
+`ftyp`, every header parsing, the boxes ending at the last byte, and a
+top-level `moov` or `moof` present). An `mdat` payload also holds audio and
+any timed-text samples; those are not scanned either. Never under
+--text or on a log, and no other format is touched. The summary counts the
+payloads left out.
+
 Opponent names (`opponent`, and `mtgo-player`, which also holds the user's
 own MTGO handle) are filtered against the `cards` table's own vocabulary before
 being checked -- an opponent whose handle happens to equal an ordinary word
@@ -176,7 +190,8 @@ from pathlib import Path
 
 _MIN_TERM_LENGTH = 4
 # "sensei-top" is the public repository's owner (github.com/sensei-top/), not a person.
-_GENERIC_WORDS = frozenset({"mtga", "arena", "tracker", "sensei-top"})
+# Also a rules keyword the game's own text prints, which no card name holds as a word.
+_GENERIC_WORDS = frozenset({"mtga", "arena", "tracker", "sensei-top", "morph"})
 # The maintainer's public handle lives in AUTHORS and nowhere else (AGENTS.md, "Privacy").
 _PUBLIC_IDENTITY = {"AUTHORS": frozenset({"git-account"})}
 # The two categories the declared local name produces (`_terms_from_git_identity`).
@@ -831,6 +846,56 @@ def _accumulate_hits(
                 hits[key] = hits.get(key, 0) + count
 
 
+_MP4_HEADER = 8
+_MP4_WIDE_HEADER = 16
+
+
+def _mp4_scannable(path: str, data: bytes) -> tuple[bytes, int]:
+    """``data`` for a ``.mp4`` path with every top-level ``mdat`` payload cut
+    out, and how many were cut. A cut leaves the box header and puts a newline
+    where the payload was, so text either side never joins into a match.
+    Fails closed: anything that does not walk as ISO BMFF end to end returns
+    ``data`` untouched, count 0, as does a file with no ``mdat`` or with no
+    top-level ``moov`` or ``moof`` (so an open-ended or wrapping ``mdat``
+    cannot swallow the file's real metadata unless a decoy sits beside it)."""
+    if not path.lower().endswith(".mp4"):
+        return data, 0
+    total = len(data)
+    pieces: list[bytes] = []
+    run_start = 0
+    pos = 0
+    cut = 0
+    has_movie = False
+    while pos < total:
+        if total - pos < _MP4_HEADER:
+            return data, 0
+        size = int.from_bytes(data[pos : pos + 4], "big")
+        kind = data[pos + 4 : pos + 8]
+        header = _MP4_HEADER
+        if size == 1:
+            header = _MP4_WIDE_HEADER
+            if total - pos < header:
+                return data, 0
+            size = int.from_bytes(data[pos + 8 : pos + 16], "big")
+        elif size == 0:
+            size = total - pos
+        if pos == 0 and kind != b"ftyp":
+            return data, 0
+        if size < header or size > total - pos:
+            return data, 0
+        if kind in (b"moov", b"moof"):
+            has_movie = True
+        if kind == b"mdat" and size > header:
+            pieces.append(data[run_start : pos + header])
+            run_start = pos + size
+            cut += 1
+        pos += size
+    if not cut or not has_movie:
+        return data, 0
+    pieces.append(data[run_start:])
+    return b"\n".join(pieces), cut
+
+
 def _tracked_file_content(
     full_path: Path,
     rel_label: str,
@@ -943,6 +1008,7 @@ class RangeScan:
     blobs: int = 0
     commits: int = 0
     tags: int = 0
+    mp4_payloads: int = 0
     declared_parts: list[str] = field(default_factory=list)
     emails: Counter[str] = field(default_factory=Counter)
     refused_emails: list[str] = field(default_factory=list)
@@ -1077,7 +1143,7 @@ def _scan_history_blobs(
     declared: DeclaredIdentity,
     revs: list[str],
     label: str,
-) -> tuple[int, list[str]]:
+) -> tuple[int, list[str], int]:
     """Every unique blob reachable from ``revs``, reported as
     ``<label>:<path>@<blob7>`` -- including a file that was committed and
     later removed, which ``git ls-files`` alone would never surface. Every
@@ -1089,7 +1155,7 @@ def _scan_history_blobs(
     why one alone under-reports a rename. ``rev-list --objects`` names an
     annotated tag object by its tag name, so that name is checked too, and
     the tag objects found are returned for ``_scan_history_log``, beside how
-    many blobs were read."""
+    many blobs were read and how many mp4 payloads were left out of them."""
     objects = _git_range(repo, ["rev-list", "--objects", *revs])
 
     entries: list[tuple[str, str]] = []
@@ -1105,15 +1171,16 @@ def _scan_history_blobs(
         _accumulate_path_name_hits(hits, path, f"{label}:", compiled)
 
     if not entries:
-        return 0, []
+        return 0, [], 0
 
     types = _object_types(repo, [sha for sha, _path in entries])
     tags = [sha for sha, _path in entries if types.get(sha) == "tag"]
     blob_paths = {sha: path for sha, path in entries if types.get(sha) == "blob"}
     if not blob_paths:
-        return 0, tags
+        return 0, tags, 0
 
     contents = _object_contents(repo, list(blob_paths))
+    mp4_cut = 0
     for sha, data in contents.items():
         path = blob_paths.get(sha)
         if path is None:
@@ -1121,8 +1188,13 @@ def _scan_history_blobs(
         # rev-list names each blob once, so a byte-identical copy of AUTHORS
         # elsewhere passes too: harmless, it carries only AUTHORS's own text.
         exempt = _exemption(path, declared)
+        # rev-list names a blob once, so a byte-identical copy under another
+        # suffix gets the mp4 rule too; only a file that already walks as MP4
+        # can reach this.
+        data, cut = _mp4_scannable(path, data)
+        mp4_cut += cut
         _accumulate_hits(hits, f"{label}:{path}@{sha[:7]}", data, compiled, exempt)
-    return len(contents), tags
+    return len(contents), tags, mp4_cut
 
 
 def _parse_batch_output(data: bytes) -> dict[str, bytes]:
@@ -1279,7 +1351,9 @@ def _scan_range(
     """The one walk --history and --pre-push share: the blobs and paths,
     then the log and the tags."""
     scan = RangeScan()
-    scan.blobs, tags = _scan_history_blobs(repo, compiled, hits, declared, revs, label)
+    scan.blobs, tags, scan.mp4_payloads = _scan_history_blobs(
+        repo, compiled, hits, declared, revs, label
+    )
     emails, scan.refused_emails = _accepted_emails(repo, declared)
     _scan_history_log(repo, compiled, hits, declared, emails, revs, tags, label, scan)
     return scan
@@ -1384,6 +1458,22 @@ def terms_for_demo(db: Path) -> list[Term]:
     return _filter_terms(terms + db_terms, card_words, dropped)
 
 
+def handles_for_demo(db: Path) -> list[Term]:
+    """Every name ``terms_for_demo`` can drop: the word terms before filtering.
+    A short or generic handle, or one that is a card's word, can't be searched
+    for as a word, so ``scripts/demo_db.py`` renames these only where a field
+    says the text is a name. ``db`` is opened as ``terms_for_demo`` opens it."""
+    previous_disable_level = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            terms = _terms_from_mtgo_handle() + _terms_from_db(db)[0]
+    finally:
+        logging.disable(previous_disable_level)
+    return [term for term in terms if term.match == MatchKind.WORD]
+
+
 def _run(args: argparse.Namespace) -> int:
     repo = Path(args.repo)
     _check_git_repo(repo)
@@ -1407,7 +1497,7 @@ def _run(args: argparse.Namespace) -> int:
     compiled = _compile_terms(terms)
 
     hits: dict[tuple[str, str], int] = {}
-    counts = {"missing": 0}
+    counts = {"missing": 0, "mp4": 0}
     scan = RangeScan()
     log_label = _HISTORY_LABEL
 
@@ -1419,6 +1509,7 @@ def _run(args: argparse.Namespace) -> int:
         if pushed:
             revs = _push_revs(pushed, args.pre_push)
             scan = _scan_range(repo, compiled, hits, declared, revs, log_label)
+            counts["mp4"] += scan.mp4_payloads
         scanned = (
             f"{scan.commits} pushed commits, {scan.blobs} pushed blobs, {scan.tags} pushed tags"
         )
@@ -1430,11 +1521,14 @@ def _run(args: argparse.Namespace) -> int:
             _accumulate_path_name_hits(hits, label, "", compiled)
             data = _tracked_file_content(repo / rel_path, label, compiled, counts)
             if data is not None:
+                data, cut = _mp4_scannable(label, data)
+                counts["mp4"] += cut
                 _accumulate_hits(hits, label, data, compiled, _exemption(prefix + label, declared))
         scanned = f"{len(tracked)} files"
         if args.history:
             scan = _scan_range(repo, compiled, hits, declared, ["--all"], log_label)
             scanned += f", {scan.blobs} history blobs"
+            counts["mp4"] += scan.mp4_payloads
 
     for (category, path), count in sorted(hits.items()):
         print(f"{category}\t{path}\t{count}")
@@ -1449,6 +1543,9 @@ def _run(args: argparse.Namespace) -> int:
     missing_clause = ""
     if counts["missing"] > 0:
         missing_clause = f"; {counts['missing']} missing from the working tree"
+    mp4_clause = ""
+    if counts["mp4"] > 0:
+        mp4_clause = f"; {counts['mp4']} mp4 video payloads left out"
     accepted_clause = ""
     if scan.declared_parts:
         accepted_clause = (
@@ -1467,7 +1564,7 @@ def _run(args: argparse.Namespace) -> int:
     print(
         f"privacy_scan: {terms_desc}, {scanned} scanned; "
         f"dropped {dropped['short']} short, {dropped['generic']} generic, "
-        f"{dropped['card-word']} card-word{missing_clause}{accepted_clause}",
+        f"{dropped['card-word']} card-word{missing_clause}{mp4_clause}{accepted_clause}",
         file=sys.stderr,
     )
     return 1 if hits else 0

@@ -18,6 +18,13 @@
 // no default: the real server answers on a default port, and its pages hold
 // real match history, which is not what the site shows.
 //
+// A view with a `focal: { y, height }` (CSS px; `heightByLocale` may override the height per locale) is also captured at a 1008 px
+// wide viewport, tall enough to hold `y + height`, at 1.5x, clipped to
+// `x: 104, width: 884` and never `fullPage` (a full-page capture restarts the
+// chart's draw and leaves the sidebar short). It is written as
+// `<name>-focal.png` and `.webp`: the landing's legible crop of that page. The
+// 1440x900 `<name>` capture, and the card's use of `home.webp`, are unchanged.
+//
 // What it does not do: copy anything into `site/` or `docs/`. It writes
 // `<out>/<name>.png` and `<out>/<name>.webp` for each view in `SITE_VIEWS`
 // and `<out>/og.png`; the files are moved by hand, after looking at each.
@@ -42,18 +49,33 @@ const HERE = path.dirname(fileURLToPath(import.meta.url))
 /** The site's views, by the name the image carries, with the address they
  *  are captured at. The placeholders are `views.mjs`'s. */
 export const SITE_VIEWS = [
-  { name: 'home', path: '/' },
+  { name: 'home', path: '/', focal: { y: 72, height: 790 } },
   { name: 'matches', path: '/matches' },
-  { name: 'match-report', path: '/matches/:match' },
+  { name: 'match-report', path: '/matches/:match', focal: { y: 118, height: 640 } },
   { name: 'replay', path: '/matches/:match/replay' },
-  { name: 'matchups', path: '/decks/:largest/matchups' },
+  { name: 'matchups', path: '/decks/:largest/matchups', focal: { y: 470, height: 506, heightByLocale: { 'pt-BR': 524 } } },
   { name: 'guide', path: '/decks/:largest/guide' },
   { name: 'field', path: '/field' },
-  { name: 'coach', path: '/coach' },
+  { name: 'coach', path: '/coach', focal: { y: 262, height: 630 } },
   { name: 'live', path: '/live' },
 ]
 
 export const VIEWPORT = { width: 1440, height: 900 }
+
+export const FOCAL_SCALE = 1.5
+
+/** The viewport and clip a focal capture uses: 1008 px wide, tall enough to
+ *  hold `y + height` (the locale's, when it has one), clipped to the main column. Pure, so the test reaches it
+ *  without a browser.
+ *  @param {{ y: number, height: number, heightByLocale?: Record<string, number> }} focal
+ *  @param {string} locale */
+export function focalCapture({ y, height, heightByLocale }, locale) {
+  const h = heightByLocale?.[locale] ?? height
+  return {
+    viewport: { width: 1008, height: Math.ceil(y + h) },
+    clip: { x: 104, y, width: 884, height: h },
+  }
+}
 
 /** The card's text, by the browser language it is rendered in (`--locale`).
  *  `title` and `lead` repeat the landing's hero word for word, and change
@@ -204,6 +226,31 @@ async function main() {
         await page.screenshot({ path: png, fullPage: false })
         const converted = convertToWebp(png, webp)
         if (converted.ok && view.name === 'home') homeImage = webp
+        if (view.focal) {
+          const { viewport, clip } = focalCapture(view.focal, args.locale)
+          const focalContext = await browser.newContext({
+            viewport,
+            deviceScaleFactor: FOCAL_SCALE,
+            colorScheme: 'dark',
+            locale: args.locale,
+          })
+          try {
+            const focalPage = await focalContext.newPage()
+            if (clock !== null) await focalPage.clock.setFixedTime(clock)
+            await focalPage.route('**/*', (route) =>
+              route.request().method() === 'GET' ? route.continue() : route.abort('blockedbyclient'),
+            )
+            await focalPage.goto(new URL(address, args.base).href, { waitUntil: 'domcontentloaded' })
+            await settle(focalPage)
+            await focalPage.evaluate(() => document.fonts.ready)
+            await focalPage.waitForTimeout(DRAW_IN_MS)
+            const focalPng = path.join(outDir, `${view.name}-focal.png`)
+            await focalPage.screenshot({ path: focalPng, fullPage: false, clip })
+            convertToWebp(focalPng, path.join(outDir, `${view.name}-focal.webp`))
+          } finally {
+            await focalContext.close()
+          }
+        }
         const notes = [loaded ? null : 'still loading when captured', converted.ok ? null : converted.reason].filter(Boolean)
         console.log(`${view.name}${notes.map((note) => `  (${note})`).join('')}`)
       } catch (error) {

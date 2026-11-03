@@ -56,7 +56,8 @@ account or a bill.
 - Card, deck and archetype names, prompts, guide exports and the CLI stay
   English in every language. Interface text is keyed and translated (en,
   pt-BR).
-- Competitive 1v1 constructed: no draft, no overlay, no Alchemy or Brawl.
+- Competitive 1v1 constructed: no draft, no Alchemy or Brawl. An overlay is
+  planned for Arena only, not built (`BACKLOG.md` BL-098).
 - Open: a paid Microsoft Store listing and a later optional subscription
   are planned, not built (`BACKLOG.md` BL-070, BL-006).
 

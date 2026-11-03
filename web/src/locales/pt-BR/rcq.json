@@ -13,7 +13,8 @@
     "write": "Escrever o guia de RCQ",
     "writeAgain": "Escrever o guia de RCQ de novo",
     "subtitle": "Um plano de jogo, o meta que você vai encontrar, um plano para cada matchup conferido contra seus 75, os slots flex e um checklist entre rodadas.",
-    "staleNote": "A lista mudou desde então."
+    "staleNote": "A lista mudou desde então.",
+    "answeredForAnotherList": "Esta resposta não corresponde ao que foi salvo com ela: o prompt foi copiado antes de a lista ou os arquétipos esperados mudarem."
   },
   "inputs": {
     "title": "Sua lista e a loja",

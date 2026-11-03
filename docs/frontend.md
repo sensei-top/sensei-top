@@ -219,7 +219,8 @@ It is a pill, and the pill is a button that opens a panel with the rest: a
 link to the match, whether the tracker is following Arena's
 log, when data last changed (`last_ingest_at`, which is when data changed,
 not when the reader last looked), and, when the tracker is also watching
-MTGO's game logs (`mtgo_watching`), that each MTGO game appears once it
+MTGO's game logs (`mtgo_watching`, false while the watcher's last check
+of the folder failed, migration 068), that each MTGO game appears once it
 ends. With the tracker not running the panel says only that,
 since what the heartbeat last said is old. The link sits in the panel and
 not the pill, because a button that is also a link has two jobs and a
@@ -455,7 +456,8 @@ the failed backup's sentences name.
   naming the welcome steps and "Go through them again", a link to
   `/welcome`.
 
-The Overlay section went with the pivot, since no overlay is planned.
+The Overlay section went with the pivot. An Arena overlay is planned again
+(`BACKLOG.md`'s BL-098), and it gets its section back when one is built.
 
 **Inside the desktop shell** every section above is drawn. The first-run
 steps are "Welcome", below.

@@ -15,7 +15,8 @@ import pytest
 from sensei_top import db, steam
 from sensei_top.cli import build_parser
 from sensei_top.db import open_database
-from sensei_top.reader import dates
+from sensei_top.live import LiveIngester
+from sensei_top.reader import dates, segmenter
 from sensei_top.reader.ingest import (
     compute_digest,
     default_log_path,
@@ -712,6 +713,332 @@ def test_migration_062_adds_nullable_header_columns_and_the_learned_order_table(
             "settled_at) VALUES ('slash-24h', 'ymd', 's', 'Player.log', '2026-10-06T17:00:00Z')"
         )
     conn.close()
+
+
+# --- the same entry read under a second date ---------------------------------
+
+# Stamps in the shape of header_languages.log's English line. The ambiguous one
+# is that line's own: October 6th month first, June 10th day first. The other
+# has a 25, so only month first reads as a date.
+AMBIGUOUS = "10/6/2026 2:37:04 PM"
+AMBIGUOUS_MDY = "2026-10-06T14:37:04"
+AMBIGUOUS_DMY = "2026-06-10T14:37:04"
+ONE_READING = "10/25/2026 2:37:04 PM"
+ONE_READING_MDY = "2026-10-25T14:37:04"
+
+
+def _write_log(path: Path, *sections: tuple[str, str]) -> Path:
+    """One header and one bare payload per ``(stamp, payload)``."""
+    path.write_text(
+        "".join(
+            f"[UnityCrossThreadLogger]{stamp}: Match to X: GreToClientEvent\r\n{payload}\r\n"
+            for stamp, payload in sections
+        ),
+        newline="",
+        encoding="utf-8",
+    )
+    return path
+
+
+def _ingest_undated(conn, log: Path) -> None:
+    """Read ``log`` under auto with its last write far from any reading and
+    nothing learned: the header's last step, no time."""
+    _touch(log, STALE)
+    ingest_file(conn, log, locale_hint="auto", from_start=True)
+
+
+def _learn_month_first(conn, directory: Path) -> None:
+    teacher = _write_log(directory / "teacher.log", (ONE_READING, '{"teacher": 1}'))
+    _touch(teacher, STALE)
+    ingest_file(conn, teacher, locale_hint="auto")
+    conn.execute("DELETE FROM raw_events WHERE source_file = 'teacher.log'")
+
+
+def _reread(conn, log: Path, locale_hint: str | None = "auto"):
+    _touch(log, STALE)
+    return ingest_file(conn, log, locale_hint=locale_hint, from_start=True)
+
+
+def _identity(conn) -> list[tuple]:
+    return [
+        tuple(r)
+        for r in conn.execute(
+            "SELECT id, digest, logged_at, header, payload FROM raw_events ORDER BY id"
+        )
+    ]
+
+
+def _digest(payload: str, logged_at: str | None, occurrence: int = 0) -> str:
+    return compute_digest(
+        LogEntry(kind=EntryKind.EVENT, payload=payload, logged_at=logged_at), occurrence
+    )
+
+
+def test_a_reread_dates_an_undated_row_in_place(conn, tmp_path):
+    payload = '{"a": 1}'
+    year_first = ("2026/10/06 14:37:42", '{"b": 2}')
+    log = _write_log(tmp_path / "Player.log", (AMBIGUOUS, payload), year_first)
+    _ingest_undated(conn, log)
+    (first_id, _, logged_at, header, _), later = _identity(conn)
+    assert (logged_at, header) == (None, AMBIGUOUS)
+
+    _learn_month_first(conn, tmp_path)
+    stats = _reread(conn, log)
+    rows = _identity(conn)
+    assert rows == [
+        (first_id, _digest(payload, AMBIGUOUS_MDY), AMBIGUOUS_MDY, AMBIGUOUS, payload),
+        later,
+    ]
+    assert (stats.rows_dated, stats.rows_inserted, stats.rows_duplicate) == (1, 0, 2)
+    assert "1 dated" in str(stats)
+
+    again = _reread(conn, log)
+    assert _identity(conn) == rows
+    assert (again.rows_dated, again.rows_inserted) == (0, 0)
+    assert "dated" not in str(again)
+
+
+def test_two_identical_payloads_under_one_undated_stamp_stay_two_rows(conn, tmp_path):
+    payload = '{"a": 1}'
+    log = _write_log(tmp_path / "Player.log", (AMBIGUOUS, payload), (AMBIGUOUS, payload))
+    _ingest_undated(conn, log)
+    ids = [row[0] for row in _identity(conn)]
+    assert len(ids) == 2
+
+    _learn_month_first(conn, tmp_path)
+    assert _reread(conn, log).rows_dated == 2
+    assert _identity(conn) == [
+        (ids[0], _digest(payload, AMBIGUOUS_MDY, 0), AMBIGUOUS_MDY, AMBIGUOUS, payload),
+        (ids[1], _digest(payload, AMBIGUOUS_MDY, 1), AMBIGUOUS_MDY, AMBIGUOUS, payload),
+    ]
+
+
+def test_identical_payloads_under_two_undated_stamps_each_find_their_own(conn, tmp_path):
+    payload = '{"a": 1}'
+    later_stamp = "10/7/2026 2:37:05 PM"
+    log = _write_log(tmp_path / "Player.log", (AMBIGUOUS, payload), (later_stamp, payload))
+    _ingest_undated(conn, log)
+    ids = [row[0] for row in _identity(conn)]
+
+    _learn_month_first(conn, tmp_path)
+    assert _reread(conn, log).rows_dated == 2
+    assert [row[0] for row in _identity(conn)] == ids
+    assert [(row[2], row[3]) for row in _identity(conn)] == [
+        (AMBIGUOUS_MDY, AMBIGUOUS),
+        ("2026-10-07T14:37:05", later_stamp),
+    ]
+
+
+def test_a_second_order_keeps_the_first_date(conn, tmp_path):
+    log = _write_log(tmp_path / "Player.log", (AMBIGUOUS, '{"a": 1}'))
+    ingest_file(conn, log, locale_hint="mdy")
+    stored = _identity(conn)
+    stats = _reread(conn, log, "dmy")
+    assert _identity(conn) == stored
+    assert stored[0][2] == AMBIGUOUS_MDY
+    assert (stats.rows_inserted, stats.rows_duplicate, stats.rows_dated) == (0, 1, 0)
+
+
+@pytest.mark.parametrize(
+    ("stamp", "later_hint"),
+    [(ONE_READING, "dmy"), (AMBIGUOUS, None)],
+    ids=["no-real-reading", "no-order"],
+)
+def test_a_stored_date_gets_no_undated_twin(conn, tmp_path, stamp, later_hint):
+    log = _write_log(tmp_path / "Player.log", (stamp, '{"a": 1}'))
+    ingest_file(conn, log, locale_hint="mdy")
+    stored = _identity(conn)
+    assert stored[0][2] is not None
+    stats = _reread(conn, log, later_hint)
+    assert _identity(conn) == stored
+    assert (stats.rows_inserted, stats.rows_duplicate) == (0, 1)
+
+
+def test_an_order_with_no_real_reading_is_dated_by_the_one_that_has_it(conn, tmp_path):
+    payload = '{"a": 1}'
+    log = _write_log(tmp_path / "Player.log", (ONE_READING, payload))
+    ingest_file(conn, log, locale_hint="dmy")
+    ((row_id, _, logged_at, _, _),) = _identity(conn)
+    assert logged_at is None
+    assert _reread(conn, log, "mdy").rows_dated == 1
+    assert _identity(conn) == [
+        (row_id, _digest(payload, ONE_READING_MDY), ONE_READING_MDY, ONE_READING, payload)
+    ]
+
+
+@pytest.mark.parametrize(
+    ("dated_stamp", "undated_stamp", "hint", "date"),
+    [
+        (AMBIGUOUS, ONE_READING, "dmy", AMBIGUOUS_DMY),
+        # A 25 settles the first under auto. The second is German's shape, which
+        # the first teaches nothing about, and neither of its readings is near
+        # the stale last write.
+        (ONE_READING, "06.10.2026 14:39:58", "auto", ONE_READING_MDY),
+    ],
+    ids=["dmy", "auto"],
+)
+def test_dating_a_row_does_not_free_its_digest_for_the_next_undated_entry(
+    conn, tmp_path, dated_stamp, undated_stamp, hint, date
+):
+    """Both entries digest under one undated count, so dating the first frees
+    occurrence 0, which the second, still undated, then counts to."""
+    payload = '{"a": 1}'
+    log = _write_log(tmp_path / "Player.log", (dated_stamp, payload), (undated_stamp, payload))
+    ingest_file(conn, log)
+    (first_id, *_), second = _identity(conn)
+    assert second[2] is None
+
+    stats = _reread(conn, log, hint)
+    rows = _identity(conn)
+    assert rows == [
+        (first_id, _digest(payload, date), date, dated_stamp, payload),
+        second,
+    ]
+    assert (stats.rows_dated, stats.rows_inserted, stats.rows_duplicate) == (1, 0, 2)
+
+    again = _reread(conn, log, hint)
+    assert _identity(conn) == rows
+    assert (again.rows_dated, again.rows_inserted) == (0, 0)
+
+
+def test_a_year_first_stamp_has_nothing_to_compare(conn, tmp_path):
+    log = _write_log(tmp_path / "Player.log", ("2026/10/06 14:37:42", '{"a": 1}'))
+    ingest_file(conn, log, locale_hint="mdy")
+    stored = _identity(conn)
+    stats = _reread(conn, log, "dmy")
+    assert _identity(conn) == stored
+    assert (stats.rows_inserted, stats.rows_duplicate, stats.rows_dated) == (0, 1, 0)
+
+
+def _store_legacy_twin(conn, payload: str, logged_at: str) -> None:
+    """The dated row of a pair stored before a re-read could date in place."""
+    conn.execute(
+        "INSERT INTO raw_events (digest, source_file, logged_at, kind, label, payload, header) "
+        "VALUES (?, 'Player.log', ?, 'event', 'GreToClientEvent', ?, ?)",
+        (_digest(payload, logged_at), logged_at, payload, AMBIGUOUS),
+    )
+
+
+@pytest.mark.parametrize("hint", ["mdy", "dmy"], ids=["same-date", "other-reading"])
+def test_a_legacy_twin_pair_is_left_alone(conn, tmp_path, hint):
+    payload = '{"a": 1}'
+    log = _write_log(tmp_path / "Player.log", (AMBIGUOUS, payload))
+    _ingest_undated(conn, log)
+    _store_legacy_twin(conn, payload, AMBIGUOUS_MDY)
+    stored = _identity(conn)
+    assert [row[2] for row in stored] == [None, AMBIGUOUS_MDY]
+
+    stats = _reread(conn, log, hint)
+    assert _identity(conn) == stored
+    assert (stats.rows_inserted, stats.rows_duplicate, stats.rows_dated) == (0, 1, 0)
+
+
+def test_a_reads_first_statement_is_a_write(conn, tmp_path):
+    """A SELECT first takes a WAL snapshot, and the next write can then fail at
+    once with SQLITE_BUSY (_segmenter's docstring)."""
+    log = _write_log(tmp_path / "Player.log", (AMBIGUOUS, '{"a": 1}'))
+    statements: list[str] = []
+    conn.set_trace_callback(statements.append)
+    try:
+        ingest_file(conn, log, locale_hint="mdy")
+    finally:
+        conn.set_trace_callback(None)
+    begin = statements.index("BEGIN")
+    assert statements[begin + 1].split()[0] == "UPDATE"
+    assert not any(s.split()[0] == "SELECT" for s in statements[begin + 1:])
+
+
+def test_a_dated_row_marks_the_projection_dirty(tmp_path):
+    log = _write_log(tmp_path / "Player.log", (AMBIGUOUS, '{"a": 1}'))
+    live = LiveIngester(db_path=tmp_path / "live.db", log_path=log, locale_hint="mdy", interval=0)
+    conn = open_database(live.db_path)
+    try:
+        _ingest_undated(conn, log)
+        conn.execute("UPDATE ingest_state SET byte_offset = 0, last_size = 0, inode = NULL")
+        assert live._dirty is False
+        assert live.ingest_once(conn) == 1
+        assert live._dirty is True
+        assert conn.execute("SELECT logged_at FROM raw_events").fetchone()[0] == AMBIGUOUS_MDY
+        assert live.stats.events_ingested == 0
+    finally:
+        conn.close()
+
+
+def test_migration_070_indexes_the_undated_rows_of_an_existing_database(tmp_path):
+    conn = db.connect(tmp_path / "at_69.db")
+    for version, migration_path in db.discover_migrations():
+        if version > 69:
+            break
+        conn.execute("BEGIN")
+        for statement in db._split_statements(migration_path.read_text(encoding="utf-8")):
+            conn.execute(statement)
+        conn.execute("INSERT INTO schema_version (version) VALUES (?)", (version,))
+        conn.execute("COMMIT")
+    conn.execute(
+        "INSERT INTO raw_events (digest, source_file, logged_at, kind, label, payload) "
+        "VALUES ('before', 'Player.log', NULL, 'response', 'EventGetActiveMatches', '{}')"
+    )
+    conn.commit()
+
+    assert 70 in db.migrate(conn)
+    plan = conn.execute(
+        "EXPLAIN QUERY PLAN SELECT id FROM raw_events "
+        "WHERE header = 's' AND logged_at IS NULL AND payload = 'p' ORDER BY id LIMIT 1"
+    ).fetchall()
+    assert any("idx_raw_events_undated_header" in row["detail"] for row in plan)
+    # No backfill (rule 4): a row from before 062 keeps no header and no time.
+    row = conn.execute("SELECT logged_at, header FROM raw_events").fetchone()
+    assert tuple(row) == (None, None)
+    conn.close()
+
+
+# --- a summarized block at the end of a dead file ------------------------------
+
+# SYNTHETIC, as tests/test_segmenter.py's: no real capture of this block exists.
+_SUMMARIZED_TAIL = (
+    "[UnityCrossThreadLogger]10/6/2026 2:37:04 PM: Match to X: GreToClientEvent\r\n"
+    '{"before": 1}\r\n'
+    "[Message summarized because one or more GameStateMessages exceeded the "
+    "50 GameObject or 50 Annotation limit.]\r\n"
+    "::: GameStateMessage\r\n"
+    ":: GameObject Count = 61\r\n"
+)
+_SUMMARY_MARKER_OFFSET = _SUMMARIZED_TAIL.index("[Message summarized")
+
+
+def _summary_warnings(caplog) -> list[str]:
+    return [r.getMessage() for r in caplog.records if "summarized" in r.getMessage()]
+
+
+def test_a_summarized_block_at_the_end_of_the_previous_log_warns_once(
+    conn, tmp_path, caplog, monkeypatch
+):
+    monkeypatch.setattr(segmenter, "_warned_summaries", set())
+    prev = tmp_path / "Player-prev.log"
+    prev.write_text(_SUMMARIZED_TAIL, newline="")
+    with caplog.at_level(logging.WARNING):
+        ingest_with_recovery(conn, tmp_path / "Player.log", locale_hint="mdy")
+        ingest_with_recovery(conn, tmp_path / "Player.log", locale_hint="mdy")
+    warnings = _summary_warnings(caplog)
+    assert len(warnings) == 1
+    assert "GameObject Count = 61" in warnings[0]
+    # What is stored is what a read without the flush stores: the entry before
+    # the block, and an offset still held at the block's marker.
+    assert [r["payload"] for r in _stored(conn)] == ['{"before": 1}']
+    offset = conn.execute("SELECT byte_offset FROM ingest_state").fetchone()[0]
+    assert offset == _SUMMARY_MARKER_OFFSET
+
+
+def test_a_summarized_block_at_the_end_of_the_live_log_waits(conn, tmp_path, caplog, monkeypatch):
+    monkeypatch.setattr(segmenter, "_warned_summaries", set())
+    log = tmp_path / "Player.log"
+    log.write_text(_SUMMARIZED_TAIL, newline="")
+    with caplog.at_level(logging.WARNING):
+        ingest_with_recovery(conn, log, locale_hint="mdy")
+    assert _summary_warnings(caplog) == []
+    assert conn.execute("SELECT byte_offset FROM ingest_state").fetchone()[0] == (
+        _SUMMARY_MARKER_OFFSET
+    )
 
 
 # --- default log path discovery ---------------------------------------------

@@ -1075,7 +1075,10 @@ out-of-date one, a "Write every missing brief" button that fetches the
 prompt for all of them only when pressed and shows it in place with
 `CopyPromptBody` and the import command; then a `DataTable` (Archetype,
 Brief, Field) whose archetype cell links to that pairing
-(`pairingAddress`), whose status is a neutral `Chip`, and whose field
+(`pairingAddress`) and reads the row's label, or `<label> · <archetype>`
+when another row of the table has the same label under a different key
+(`coverageName`; the Pairing page's heading and the prompt's notes
+read the same way), whose status is a neutral `Chip`, and whose field
 share is a whole percent or a dash. No rows at all is an `EmptyState`. A
 deck with no format (coverage's `fmt` null) has no rows and no tiles:
 the card is one `EmptyState`, "Nothing to cover yet", with

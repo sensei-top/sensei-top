@@ -111,8 +111,10 @@
     "nowNote": "Now marks an instant they can cast with the mana they have open.",
     "cards_one": "{{count}} card",
     "cards_other": "{{count}} cards",
-    "untappedLands": "{{open}} untapped lands +{{other}} other",
-    "untapped": "{{open}} untapped",
+    "untappedLands_one": "{{count}} untapped land +{{other}} other",
+    "untappedLands_other": "{{count}} untapped lands +{{other}} other",
+    "untapped_one": "{{count}} untapped",
+    "untapped_other": "{{count}} untapped",
     "held_one": "held {{count}} turn",
     "held_other": "held {{count}} turns"
   },

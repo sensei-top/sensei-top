@@ -12,6 +12,7 @@ import re
 import shutil
 import struct
 import subprocess
+from collections import Counter
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -24,6 +25,7 @@ SITE = ROOT / "site"
 ORIGIN = "https://senseitop.com"
 PROJECT = "https://github.com/sensei-top/sensei-top"
 BEACON_SRC = "https://static.cloudflareinsights.com/beacon.min.js"
+HERO_SCRIPT = "/hero.js"
 # Answered by the Worker script in `worker/`, not by a file under `site/`.
 DOWNLOADS = ("/download/windows", "/download/linux")
 TARBALL = "/download/linux-tar"
@@ -37,6 +39,14 @@ PAGES = {
     "/pt-br/privacy/": ("pt-br/privacy/index.html", "pt-BR", "/privacy/"),
     "/help/": ("help/index.html", "en", "/pt-br/help/"),
     "/pt-br/help/": ("pt-br/help/index.html", "pt-BR", "/help/"),
+    # One page per search the app can win: the alternative to
+    # Untapped, Arena on Linux and the Steam Deck, and Magic Online.
+    "/untapped/": ("untapped/index.html", "en", "/pt-br/untapped/"),
+    "/pt-br/untapped/": ("pt-br/untapped/index.html", "pt-BR", "/untapped/"),
+    "/linux/": ("linux/index.html", "en", "/pt-br/linux/"),
+    "/pt-br/linux/": ("pt-br/linux/index.html", "pt-BR", "/linux/"),
+    "/mtgo/": ("mtgo/index.html", "en", "/pt-br/mtgo/"),
+    "/pt-br/mtgo/": ("pt-br/mtgo/index.html", "pt-BR", "/mtgo/"),
 }
 ALL_PAGES = list(PAGES)
 # The landing's feature rows, one per place in the dashboard's rail.
@@ -49,7 +59,25 @@ SHELL_PAGES = [*ALL_PAGES, NOT_FOUND]
 FIRST_PAINT_LIMIT = 600 * 1024
 WHOLE_PAGE_LIMIT = 1024 * 1024
 LANDINGS = ["/", "/pt-br/"]
-# The pages whose head carries the Open Graph card: all six, never the 404.
+# Demo video language -> its catalogue folder and its poster.
+DEMO_VIDEOS = {
+    "en": ("en", "demo-poster.webp"),
+    "pt-br": ("pt-BR", "demo-poster-pt-br.webp"),
+}
+DEMO_VIDEO_CAP = 5 * 1024 * 1024
+# The poster is on the landing's first paint: the first frame, not a second video's worth.
+DEMO_POSTER_LIMIT = 150 * 1024
+DEMO_FADE = 0.3
+# Each chapter's shot -> the catalogue key the dashboard names its place by
+# (site_cut.py's CHAPTER_KEYS, restated so a swapped label shows).
+DEMO_CHAPTER_KEYS = {
+    "home": ("shell", "places", "home"),
+    "live": ("shell", "places", "live"),
+    "report": ("shell", "places", "matches"),
+    "matchups": ("decks", "layout", "tabs", "matchups"),
+    "field": ("shell", "places", "field"),
+}
+# The pages whose head carries the Open Graph card: every page but the 404.
 OPEN_GRAPH_PAGES = ALL_PAGES
 
 
@@ -221,10 +249,11 @@ def test_every_github_link_is_the_project_its_sponsors_or_a_credited_repository(
 def test_the_beacon_is_the_only_script_and_nothing_is_inline(url_path):
     raw, page = load(url_path)
     scripts = page.find("script")
-    assert len(scripts) == 1
+    # The landings alone carry the hero's video script, same origin and deferred.
+    expected = [BEACON_SRC, HERO_SCRIPT] if url_path in LANDINGS else [BEACON_SRC]
+    assert [s["src"] for s in scripts] == expected
+    assert all("defer" in s for s in scripts)
     script = scripts[0]
-    assert script["src"] == BEACON_SRC
-    assert "defer" in script
     beacon = json.loads(script["data-cf-beacon"])
     assert isinstance(beacon.get("token"), str) and beacon["token"]
     assert "".join(page.script_bodies).strip() == ""
@@ -276,6 +305,9 @@ def test_local_references_resolve(url_path):
     references = [h for h in hrefs(page) if h.startswith("/") and h not in (*DOWNLOADS, TARBALL)]
     references += [own + h for h in hrefs(page) if h.startswith("#")]
     references += [a["src"] for a in page.find("img")]
+    references += [a["src"] for t in ("source", "track") for a in page.find(t)]
+    references += [a["poster"] for a in page.find("video")]
+    references += [a["src"] for a in page.find("script") if a["src"].startswith("/")]
     references += [
         urlsplit(a["content"]).path for a in page.find("meta") if a.get("property") == "og:image"
     ]
@@ -313,35 +345,137 @@ def test_the_landing_has_the_feature_rows_in_the_rails_order(url_path):
 
 @pytest.mark.parametrize("url_path", LANDINGS)
 def test_the_hero_image_is_the_only_eager_one_on_the_landing(url_path):
+    """The eager picture is the video's poster, which comes before every image."""
     _, page = load(url_path)
-    images = [a for a in page.find("img") if a["src"] != "/img/mark.svg"]
-    eager = [a for a in images if a.get("loading") != "lazy"]
-    assert len(eager) == 1
-    # The first content image in the document, so a lazy hero beside an eager
-    # Home row fails.
-    assert eager[0] is images[0]
-    assert eager[0]["src"] == ("/img/home.webp" if url_path == "/" else "/img/pt-br/home.webp")
-    assert eager[0].get("fetchpriority") == "high"
-    for img in images:
-        if img is not eager[0]:
-            assert img.get("loading") == "lazy", img["src"]
-            assert "fetchpriority" not in img
-        assert (img["width"], img["height"]) == ("1440", "900"), img["src"]
+    poster = landing_poster(url_path)
+    content = [
+        (t, a) for t, a in page.tags if t == "video" or (t == "img" and a["src"] != "/img/mark.svg")
+    ]
+    assert content[0][0] == "video"
+    assert [a["poster"] for t, a in content if t == "video"] == [poster]
+    preloaded = [a for a in page.find("link") if a.get("rel") == "preload" and a["as"] == "image"]
+    assert [(a["href"], a.get("fetchpriority")) for a in preloaded] == [(poster, "high")]
+    for img in [a for t, a in content if t == "img"]:
+        assert img.get("loading") == "lazy", img["src"]
+        assert "fetchpriority" not in img
+        if img["src"].endswith(".svg"):
+            drawn = re.search(
+                r'<svg[^>]* width="(\d+)" height="(\d+)"',
+                (SITE / img["src"].lstrip("/")).read_text(encoding="utf-8"),
+            )
+            assert (img["width"], img["height"]) == drawn.groups(), img["src"]
+        else:
+            matchups = "786" if url_path.startswith("/pt-br") else "759"
+            focal = {"home": "1185", "match-report": "960", "matchups": matchups, "coach": "945"}
+            name = img["src"].rsplit("/", 1)[1].removesuffix(".webp")
+            expected = ("1326", focal[name]) if name in focal else ("1440", "900")
+            assert (img["width"], img["height"]) == expected, img["src"]
 
 
 @pytest.mark.parametrize("url_path", LANDINGS)
-def test_the_landing_preloads_the_two_latin_fonts_the_stylesheet_uses(url_path):
+def test_the_hero_video_works_with_no_script_and_loads_nothing_until_started(url_path):
+    """Without JS it is a poster with native controls; `hero.js` takes those away."""
+    _, page = load(url_path)
+    language = landing_language(url_path)
+    video = page.find("video")[0]
+    assert "controls" in video
+    assert video["preload"] == "none"
+    assert "muted" in video and "loop" in video and "playsinline" in video
+    assert "autoplay" not in video
+    assert video["aria-label"]
+    assert [(a["src"], a["type"]) for a in page.find("source")] == [
+        (f"/video/demo-{language}.mp4", "video/mp4")
+    ]
+    tracks = page.find("track")
+    assert [(a["src"], a["kind"]) for a in tracks] == [(f"/video/demo-{language}.vtt", "captions")]
+    assert tracks[0]["srclang"] == PAGES[url_path][1]
+    controls = [a for a in page.find("div") if a.get("class") == "ctl"]
+    assert len(controls) == 1 and "hidden" in controls[0]
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_the_chapter_strip_is_the_videos_chapters_and_links_to_the_feature_rows(url_path):
+    raw, _ = load(url_path)
+    chapters = demo_chapter_list(landing_language(url_path))["chapters"]
+    strip = Page()
+    strip.feed(re.search(r'<ol class="chapters".*?</ol>', raw, re.S).group(0))
+    assert strip.find("ol")[0]["aria-label"]
+    assert [text for _, text in strip.links] == [c["label"] for c in chapters]
+    assert [float(a["data-start"]) for a in strip.find("a")] == [c["start"] for c in chapters]
+    assert hrefs(strip) == ["#home", "#live", "#matches", "#decks", "#field"]
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_the_roadmap_section_comes_right_after_what_is_not_planned(url_path):
+    _, page = load(url_path)
+    sections = [a.get("id") for t, a in page.tags if t == "section" and a.get("class") == "card"]
+    assert sections[sections.index("not-planned") + 1] == "roadmap"
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_the_roadmap_image_shows_from_700_px_beside_its_words(url_path):
+    _, page = load(url_path)
+    english = url_path == "/"
+    src = "/img/roadmap-en.svg" if english else "/img/roadmap-pt-br.svg"
+    alt = (
+        "The same lists, drawn as a diagram."
+        if english
+        else "As mesmas listas, desenhadas como um diagrama."
+    )
+    images = [a for a in page.find("img") if a["src"] == src]
+    assert [(a["alt"], a["loading"]) for a in images] == [(alt, "lazy")]
+    assert "@media (max-width: 699px) { .roadmap-image { display: none; } }" in (
+        SITE / "site.css"
+    ).read_text(encoding="utf-8")
+    assert ("An overlay for Arena." if english else "Um overlay para o Arena.") in page.visible_text
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_the_overlay_is_no_longer_listed_as_not_planned(url_path):
+    raw, _ = load(url_path)
+    block = re.search(r'<section class="card" id="not-planned">.*?</section>', raw, re.S).group(0)
+    assert "overlay" not in block.lower()
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_the_landing_loads_the_hero_script_and_it_gates_autoplay(url_path):
+    raw, _ = load(url_path)
+    assert f'<script defer src="{HERO_SCRIPT}"></script>' in raw
+    script = (SITE / "hero.js").read_text(encoding="utf-8")
+    assert "matchMedia('(prefers-reduced-motion: no-preference)').matches" in script
+    assert "matchMedia('(min-width: 700px)').matches" in script
+    guard = re.search(r"^if \((.*)\) start\(\)$", script, re.M)
+    assert guard, "autoplay must be one guarded start() at the end"
+    conditions = {c.strip() for c in guard.group(1).split("&&")}
+    assert conditions == {"motionAllowed", "wideEnough", "!navigator.connection?.saveData"}
+    assert not re.search(r"^start\(\)", script, re.M)
+
+
+@pytest.mark.parametrize("name", ["roadmap-en.svg", "roadmap-pt-br.svg"])
+def test_the_roadmap_drawing_loads_nothing_and_runs_nothing(name):
+    svg = (SITE / "img" / name).read_text(encoding="utf-8")
+    assert "<script" not in svg and "<text" not in svg
+    assert not re.search(r'href="(?!#)', svg)
+
+
+@pytest.mark.parametrize("url_path", LANDINGS)
+def test_the_landing_preloads_the_latin_font_the_stylesheet_uses(url_path):
     _, page = load(url_path)
     css = (SITE / "site.css").read_text(encoding="utf-8")
-    preloads = [a for a in page.find("link") if a.get("rel") == "preload"]
-    assert sorted(a["href"] for a in preloads) == [
-        "/fonts/bricolage-grotesque-latin-wght-normal.woff2",
-        "/fonts/hanken-grotesk-latin-wght-normal.woff2",
-    ]
+    preloads = [a for a in page.find("link") if a.get("rel") == "preload" and a["as"] != "image"]
+    assert [a["href"] for a in preloads] == ["/fonts/inter-latin-wght-normal.woff2"]
     for link in preloads:
         assert link["as"] == "font" and link["type"] == "font/woff2"
         assert "crossorigin" in link
         assert link["href"].removeprefix("/") in css
+
+
+def landing_language(url_path: str) -> str:
+    return "en" if url_path == "/" else "pt-br"
+
+
+def landing_poster(url_path: str) -> str:
+    return "/img/" + DEMO_VIDEOS[landing_language(url_path)][1]
 
 
 def meta(page: Page, key: str, name: str = "property") -> list[str]:
@@ -451,7 +585,8 @@ def test_the_store_listing_is_a_button_a_step_and_a_help_line():
         raw, page = load(url_path)
         assert "STORE_URL" not in raw
         assert "Microsoft Store:" in page.visible_text
-        assert hrefs(page).count(STORE) == 2, url_path
+        # Three button groups and the Store step.
+        assert hrefs(page).count(STORE) == 4, url_path
     for url_path in ("/help/", "/pt-br/help/"):
         _, page = load(url_path)
         assert hrefs(page).count(STORE) == 1, url_path
@@ -497,6 +632,7 @@ def test_the_headers_allow_only_self_and_the_beacon():
     assert directives["style-src"] == ["'self'"]
     assert directives["font-src"] == ["'self'"]
     assert directives["img-src"] == ["'self'"]
+    assert directives["media-src"] == ["'self'"]
     assert (SITE / "_redirects").read_text(encoding="utf-8").split() == ["/pt-br", "/pt-br/", "301"]
     assert "Allow: /" in (SITE / "robots.txt").read_text(encoding="utf-8")
 
@@ -506,30 +642,32 @@ def test_the_stylesheet_loads_nothing_from_elsewhere_and_uses_only_the_two_subse
     assert "@import" not in css
     assert not re.search(r"url\(\s*['\"]?(https?:)?//", css)
     fonts = sorted(p.name for p in (SITE / "fonts").glob("*.woff2"))
-    assert fonts == [
-        "bricolage-grotesque-latin-ext-wght-normal.woff2",
-        "bricolage-grotesque-latin-wght-normal.woff2",
-        "hanken-grotesk-latin-ext-wght-normal.woff2",
-        "hanken-grotesk-latin-wght-normal.woff2",
+    subsets = [
+        "inter-latin-ext-wght-normal.woff2",
+        "inter-latin-wght-normal.woff2",
     ]
-    for font in fonts:
-        assert f"fonts/{font}" in css
-    for family in ("bricolage-grotesque", "hanken-grotesk"):
-        licence = (SITE / "fonts" / f"LICENSE-{family}.txt").read_text(encoding="utf-8")
-        assert "SIL OPEN FONT LICENSE" in licence.upper()
+    assert fonts == subsets
+    assert sorted(set(re.findall(r"fonts/([\w.-]+\.woff2)", css))) == subsets
+    assert sorted(p.name for p in (SITE / "fonts").glob("LICENSE-*")) == ["LICENSE-inter.txt"]
+    licence = (SITE / "fonts" / "LICENSE-inter.txt").read_text(encoding="utf-8")
+    assert "SIL OPEN FONT LICENSE" in licence.upper()
 
 
 @pytest.mark.parametrize("url_path", SHELL_PAGES)
 def test_what_first_paint_loads_stays_under_600_kb_and_the_whole_page_under_1_mb(url_path):
-    """First paint: the HTML, the stylesheet, every font and each image not marked lazy.
+    """First paint: the HTML, the stylesheet, every font, our script, the poster and eager images.
 
     A lazy image is fetched as it scrolls into view, so it counts toward the
     second cap only; each file counts once, however many times the page shows it.
+    The video starts after first paint and has its own cap, DEMO_VIDEO_CAP, in
+    `test_each_language_has_a_demo_video_under_the_cap`.
     """
     raw, page = load(url_path)
     total = len(raw.encode("utf-8")) + (SITE / "site.css").stat().st_size
     total += sum(p.stat().st_size for p in (SITE / "fonts").glob("*.woff2"))
     eager = {a["src"] for a in page.find("img") if a.get("loading") != "lazy"}
+    eager |= {a["poster"] for a in page.find("video")}
+    eager |= {a["src"] for a in page.find("script") if a["src"].startswith("/")}
     lazy = {a["src"] for a in page.find("img") if a.get("loading") == "lazy"} - eager
     first_paint = total + sum((SITE / src.lstrip("/")).stat().st_size for src in eager)
     whole = first_paint + sum((SITE / src.lstrip("/")).stat().st_size for src in lazy)
@@ -576,14 +714,26 @@ def test_the_download_buttons_go_to_the_worker_and_it_runs_only_for_them():
     config = json.loads((SITE.parent / "wrangler.json").read_text(encoding="utf-8"))
     assert (SITE.parent / config["main"]).is_file()
     first = config["assets"]["run_worker_first"]
-    assert first == ["/download/*", "/", "/help/", "/privacy/", "/pt-br/"]
-    assert set(first) == {"/download/*", *portuguese_redirects(), "/pt-br/"}
+    assert first == [
+        "/download/*",
+        "/",
+        "/help/",
+        "/privacy/",
+        "/untapped/",
+        "/linux/",
+        "/mtgo/",
+        "/pt-br/",
+        "/video/*",
+    ]
+    # `/video/*` stays: static assets ignore Range (`worker/range.mjs`).
+    assert set(first) == {"/download/*", *portuguese_redirects(), "/pt-br/", "/video/*"}
     assert config["assets"]["binding"] == "ASSETS"
     assert config["observability"] == {"enabled": False}
     for url_path in ("/", "/pt-br/"):
         _, page = load(url_path)
         buttons = [a["href"] for a in page.find("a") if "button" in (a.get("class") or "").split()]
-        assert buttons == [*DOWNLOADS, STORE], url_path
+        # The hero, under the "download" heading, and before the footer.
+        assert buttons == [STORE, "/download/linux", "/download/windows"] * 3, url_path
         assert not [h for h in hrefs(page) if "/releases" in h], url_path
 
 
@@ -612,15 +762,44 @@ def test_the_static_buttons_keep_windows_first_for_an_unknown_visitor(url_path):
     _, page = load(url_path)
     buttons = [a for a in page.find("a") if "button" in (a.get("class") or "").split()]
     assert [(a["href"], a["class"]) for a in buttons] == [
-        ("/download/windows", "button primary"),
+        (STORE, "button primary"),
         ("/download/linux", "button"),
-        (STORE, "button"),
-    ], url_path
+        ("/download/windows", "button quiet"),
+    ] * 3, url_path
 
 
 def test_the_stylesheet_puts_the_primary_button_first():
     css = (SITE / "site.css").read_text(encoding="utf-8")
     assert ".actions .primary { order: -1; }" in css
+
+
+def test_the_sitemap_lists_every_page_with_its_other_language():
+    """`sitemap.xml` names each page once, with the same pair its own head names."""
+    import xml.etree.ElementTree as ET
+
+    ns = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9", "x": "http://www.w3.org/1999/xhtml"}
+    root = ET.parse(SITE / "sitemap.xml").getroot()
+    listed = {}
+    for url in root.findall("s:url", ns):
+        loc = url.find("s:loc", ns).text
+        listed[loc] = {link.get("hreflang"): link.get("href") for link in url.findall("x:link", ns)}
+    assert sorted(listed) == sorted(ORIGIN + path for path in ALL_PAGES)
+    for url_path in ALL_PAGES:
+        _, page = load(url_path)
+        own = {a["hreflang"]: a["href"] for a in page.find("link") if a.get("rel") == "alternate"}
+        assert listed[ORIGIN + url_path] == own, url_path
+    robots = (SITE / "robots.txt").read_text(encoding="utf-8")
+    assert f"Sitemap: {ORIGIN}/sitemap.xml" in robots.splitlines()
+
+
+def test_every_page_is_linked_from_the_landing_in_its_language():
+    """A page only the sitemap names is one a reader never finds."""
+    for landing in LANDINGS:
+        _, page = load(landing)
+        lang = PAGES[landing][1]
+        for url_path, (_, page_lang, _) in PAGES.items():
+            if page_lang == lang and url_path != landing:
+                assert url_path in hrefs(page), (landing, url_path)
 
 
 def portuguese_redirects():
@@ -651,3 +830,250 @@ def test_the_worker_script_passes_its_own_tests():
         timeout=60,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def demo_shots() -> list[dict]:
+    """The product shots of the video's one timeline, in order."""
+    shots = json.loads((ROOT / "scripts/demo-video/shots.json").read_text(encoding="utf-8"))
+    return [shot for shot in shots if shot["kind"] == "video"]
+
+
+def demo_times() -> tuple[list[tuple[float, float]], float]:
+    """Each shot's (start, end) and the length, from the lengths alone.
+
+    Each 0.3 s crossfade eats that much from a join. A shot has started once
+    the fade into it has finished, and it ends where the next one's begins.
+    """
+    shots = demo_shots()
+    fades = [sum(s["seconds"] - DEMO_FADE for s in shots[:i]) for i in range(len(shots))]
+    total = fades[-1] + shots[-1]["seconds"]
+    starts = [0.0, *[fade + DEMO_FADE for fade in fades[1:]]]
+    return list(zip(starts, [*fades[1:], total], strict=True)), total
+
+
+def demo_chapter_list(lang: str) -> dict:
+    return json.loads((SITE / "video" / f"demo-{lang}.chapters.json").read_text(encoding="utf-8"))
+
+
+def demo_video_length(lang: str) -> float:
+    """The file's own length where ffprobe is there, otherwise the chapter list's."""
+    if shutil.which("ffprobe") is None:
+        return demo_chapter_list(lang)["duration"]
+    probe = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0"]
+    path = str(SITE / "video" / f"demo-{lang}.mp4")
+    return float(subprocess.run([*probe, path], check=True, capture_output=True, text=True).stdout)
+
+
+def parse_vtt(text: str) -> list[tuple[float, float, str]]:
+    """(start, end, text) per cue. Anything but this file's plain shape fails here."""
+    header, *blocks = text.strip().split("\n\n")
+    assert header == "WEBVTT"
+    stamp = r"(\d\d):(\d\d):(\d\d)\.(\d{3})"
+    cues = []
+    for block in blocks:
+        _, timing, *lines = block.split("\n")
+        found = re.fullmatch(f"{stamp} --> {stamp}", timing)
+        assert found, timing
+        h0, m0, s0, ms0, h1, m1, s1, ms1 = (int(part) for part in found.groups())
+        start = h0 * 3600 + m0 * 60 + s0 + ms0 / 1000
+        end = h1 * 3600 + m1 * 60 + s1 + ms1 / 1000
+        cues.append((start, end, " ".join(lines)))
+    return cues
+
+
+@pytest.mark.parametrize("lang", DEMO_VIDEOS)
+def test_each_language_has_a_demo_video_under_the_cap(lang):
+    video = SITE / "video" / f"demo-{lang}.mp4"
+    assert video.is_file()
+    assert video.stat().st_size < DEMO_VIDEO_CAP
+
+
+@pytest.mark.parametrize("lang", DEMO_VIDEOS)
+def test_the_demo_video_starts_as_it_downloads_and_runs_the_timeline(lang):
+    """The index comes before the media, one H.264 stream, nothing to hear."""
+    video = SITE / "video" / f"demo-{lang}.mp4"
+    atoms = []
+    with video.open("rb") as stream:
+        while len(head := stream.read(8)) == 8:
+            size, name = struct.unpack(">I4s", head)
+            atoms.append(name)
+            if size == 1:
+                size = struct.unpack(">Q", stream.read(8))[0] - 8
+            stream.seek(size - 8, 1)
+    assert atoms.index(b"moov") < atoms.index(b"mdat")
+    assert abs(demo_video_length(lang) - demo_times()[1]) < 0.2
+    if shutil.which("ffprobe") is None:
+        return
+    streams = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "stream=codec_name,pix_fmt",
+            "-of",
+            "json",
+            str(video),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert json.loads(streams)["streams"] == [{"codec_name": "h264", "pix_fmt": "yuv420p"}]
+
+
+@pytest.mark.skipif(shutil.which("ffprobe") is None, reason="needs ffprobe")
+@pytest.mark.parametrize("lang", DEMO_VIDEOS)
+def test_the_demo_video_is_tagged_bt709_and_seeks_to_each_chapter(lang):
+    """An untagged file shifts the palette; a chapter off a keyframe seeks late."""
+    video = str(SITE / "video" / f"demo-{lang}.mp4")
+    tags = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v",
+            "-show_entries",
+            "stream=color_space,color_primaries,color_transfer",
+            "-of",
+            "json",
+            video,
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    (stream,) = json.loads(tags)["streams"]
+    assert stream == {
+        "color_space": "bt709",
+        "color_primaries": "bt709",
+        "color_transfer": "bt709",
+    }
+    keyframes = [
+        float(line)
+        for line in subprocess.run(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-skip_frame",
+                "nokey",
+                "-select_streams",
+                "v",
+                "-show_entries",
+                "frame=pts_time",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                video,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.split()
+    ]
+    for chapter in demo_chapter_list(lang)["chapters"]:
+        assert any(abs(key - chapter["start"]) < 0.02 for key in keyframes), chapter["id"]
+
+
+def first_frame_ground(path: Path, matrix: str) -> tuple[int, ...]:
+    """The darkest of a first frame's two commonest colours, read as `matrix`, limited range."""
+    raw = subprocess.run(
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-i",
+            str(path),
+            "-frames:v",
+            "1",
+            "-vf",
+            f"scale=in_color_matrix={matrix}:in_range=tv:out_range=pc:flags=accurate_rnd,"
+            "format=rgb24",
+            "-f",
+            "rawvideo",
+            "-",
+        ],
+        check=True,
+        capture_output=True,
+    ).stdout
+    pixels = Counter(zip(raw[0::3], raw[1::3], raw[2::3], strict=True))
+    return min((colour for colour, _ in pixels.most_common(2)), key=sum)
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
+@pytest.mark.parametrize("lang", DEMO_VIDEOS)
+def test_the_video_opens_in_the_posters_colours(lang):
+    """The video replaces the poster in place: a shifted ground shows as a flash."""
+    _, name = DEMO_VIDEOS[lang]
+    video = first_frame_ground(SITE / "video" / f"demo-{lang}.mp4", "bt709")
+    poster = first_frame_ground(SITE / "img" / name, "bt601")
+    assert all(abs(a - b) <= 2 for a, b in zip(video, poster, strict=True)), (video, poster)
+
+
+@pytest.mark.parametrize("lang", DEMO_VIDEOS)
+def test_the_captions_parse_fit_the_video_and_carry_the_supplied_words(lang):
+    shots = demo_shots()
+    if lang == "en":
+        words = [shot["caption"] for shot in shots]
+    else:
+        source = ROOT / "scripts/demo-video" / f"shots.{lang}.json"
+        supplied = json.loads(source.read_text(encoding="utf-8"))
+        assert list(supplied) == [shot["id"] for shot in shots]
+        words = list(supplied.values())
+    vtt = (SITE / "video" / f"demo-{lang}.vtt").read_text(encoding="utf-8")
+    cues = parse_vtt(vtt)
+    times, _ = demo_times()
+    assert [cue[2] for cue in cues] == words
+    assert [cue[0] for cue in cues] == pytest.approx([t[0] for t in times], abs=0.002)
+    assert [cue[1] for cue in cues] == pytest.approx([t[1] for t in times], abs=0.002)
+    length = demo_video_length(lang)
+    assert all(0 <= start < end <= length + 0.05 for start, end, _ in cues)
+
+
+@pytest.mark.parametrize("lang", DEMO_VIDEOS)
+def test_the_chapters_start_where_each_shot_shows_and_use_the_apps_words(lang):
+    listed = demo_chapter_list(lang)
+    times, total = demo_times()
+    assert listed["duration"] == pytest.approx(total, abs=0.002)
+    chapters = listed["chapters"]
+    assert [c["id"] for c in chapters] == [shot["id"] for shot in demo_shots()]
+    assert [c["start"] for c in chapters] == pytest.approx([t[0] for t in times], abs=0.002)
+    catalogue, _ = DEMO_VIDEOS[lang]
+    words = catalogue_strings(catalogue)
+    assert all(c["label"] in words for c in chapters)
+    for chapter in chapters:
+        namespace, *path = DEMO_CHAPTER_KEYS[chapter["id"]]
+        node = json.loads(
+            (ROOT / "web" / "src" / "locales" / catalogue / f"{namespace}.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        for part in path:
+            node = node[part]
+        assert chapter["label"] == node, chapter["id"]
+
+
+@pytest.mark.parametrize("lang", DEMO_VIDEOS)
+def test_the_demo_poster_is_small_enough_for_first_paint(lang):
+    _, name = DEMO_VIDEOS[lang]
+    poster = SITE / "img" / name
+    assert poster.is_file()
+    head = poster.read_bytes()[:12]
+    assert head[:4] == b"RIFF" and head[8:] == b"WEBP"
+    assert poster.stat().st_size < DEMO_POSTER_LIMIT
+
+
+@pytest.mark.parametrize("catalogue", [folder for folder, _ in DEMO_VIDEOS.values()])
+def test_every_label_the_recording_looks_for_is_in_the_catalogue(catalogue):
+    """record.ts finds a shot's targets by these; a key that left stops a take."""
+    script = (ROOT / "scripts/demo-video/record.ts").read_text(encoding="utf-8")
+    keys = re.findall(r"\blabel\('([\w.]+)'", script)
+    assert keys
+    for key in keys:
+        namespace, *path = key.split(".")
+        locale = ROOT / "web/src/locales" / catalogue / f"{namespace}.json"
+        node = json.loads(locale.read_text(encoding="utf-8"))
+        for part in path:
+            node = node[part]
+        assert isinstance(node, str), key

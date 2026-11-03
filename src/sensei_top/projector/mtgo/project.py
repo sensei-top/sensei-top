@@ -343,6 +343,37 @@ _RESULT_REASONS = {
 }
 
 
+def _check_score_line(
+    parsed: ParsedMatch, self_handle: str, opponent_handle: str,
+    won: int, lost: int, warner: _Warner,
+) -> None:
+    """Warn when the last score line disagrees with the counted games. Self-check
+    only: nothing stored changes. Skipped with no score line, a line written
+    before the last game (it says nothing of that game), a last game that is
+    undecided, or a leader who is neither player. A drawn game counts for
+    neither side."""
+    if parsed.score_line is None or not parsed.games:
+        return
+    if parsed.score_line_game != parsed.games[-1].game_number:
+        return
+    if _game_outcome(parsed.games[-1], self_handle, opponent_handle) == "incomplete":
+        return
+    leader, a, b = parsed.score_line
+    if leader is None:
+        expected = (a, a)
+    elif leader == self_handle:
+        expected = (a, b)
+    elif leader == opponent_handle:
+        expected = (b, a)
+    else:
+        return
+    if expected != (won, lost):
+        warner.warn(
+            f"match {parsed.match_id}: the score line says {expected[0]}-{expected[1]} "
+            f"but the games count {won}-{lost}"
+        )
+
+
 @dataclass
 class MtgoRows:
     """Every row ``write_mtgo`` inserts, built by ``read_mtgo`` before the
@@ -419,6 +450,8 @@ def _match_rows(
                     event.name if grp_id is None else None,
                 )
             )
+
+    _check_score_line(parsed, self_handle, opponent_handle, won, lost, warner)
 
     match_winner = _match_winner(parsed, self_handle, opponent_handle)
     match_result = _game_result(match_winner, self_handle, opponent_handle)

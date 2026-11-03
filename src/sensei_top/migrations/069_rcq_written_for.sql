@@ -1,0 +1,13 @@
+-- 069_rcq_written_for.sql — the list a stored RCQ guide's answer was written for.
+--
+-- The RCQ paste stored an answer against the list in the box at save time,
+-- and the box stays usable while the preview catches up after an edit, so an
+-- answer copied for one list and saved after an edit was stored against the
+-- edited list with nothing to tell. The copied prompt now carries a
+-- ``context``: guide/rcq.py::rcq_context, a hash of the list's cards and the
+-- expected archetypes. written_for is the hash the answer brought back; the
+-- page compares it with the hash of the list stored beside it. NULL where it
+-- is not known: a guide stored before this column, a generated one (written
+-- for the list sent with it), or an answer copied from an older prompt.
+-- An authored artifact (AGENTS.md rule 6): project() never reads this table.
+ALTER TABLE rcq_guide ADD COLUMN written_for TEXT;

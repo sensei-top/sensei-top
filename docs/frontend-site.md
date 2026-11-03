@@ -5,19 +5,23 @@ The static site in `site/`, the demo database and the screenshots taken against 
 ## The site
 
 `site/` is the public landing, help and privacy pages at `senseitop.com`, in
-English and Brazilian Portuguese: six hand-written HTML files (`index.html`,
-`help/index.html`, `privacy/index.html` and the same three under `pt-br/`), a
-seventh, `404.html`,
+English and Brazilian Portuguese: twelve hand-written HTML files (`index.html`,
+`help/index.html`, `privacy/index.html`, the three search pages below, and
+the same six under `pt-br/`), a thirteenth, `404.html`,
 in both languages on one page (served for any unknown path, because
-`wrangler.json` sets `not_found_handling` to `404-page`), one `site.css`, no build step and no JavaScript of ours. It is not part of `web/` and shares
-nothing with it at build time: the palette, the two fonts and the mark are
-copied by hand (the hexes in `site.css` follow "Palette" in
-[design-system.md](design-system.md); `fonts/` holds the latin and latin-ext
-subsets of the two `@fontsource-variable` files with their OFL texts,
+`wrangler.json` sets `not_found_handling` to `404-page`), one `site.css`, no build step, and one script of ours, `/hero.js`, on the two
+landings only. It is not part of `web/` and shares
+nothing with it at build time: the palette and the mark are
+copied by hand, and the site's one font, Inter, is its own, not one of the dashboard's (the hexes in `site.css` follow "Palette" in
+[design-system.md](design-system.md); `fonts/` holds Inter's latin and latin-ext
+subsets with their OFL text, and nothing else (the social card uses Inter too; the
+dashboard's two fonts live in `scripts/demo-video/cards/fonts/`, for the title cards only);
 `img/` the landing's pictures, captured from the demo database (below) and
 never from `docs/images/`: six dashboard pages as WebP (`home`, `live`,
 `match-report`, `matchups`, `field`, `coach`), the Portuguese captures of
-the same six under `img/pt-br/`, and one 1200×630 PNG card per language
+the same six under `img/pt-br/`, the demo video's two posters, the two
+roadmap drawings, `roadmap-en.svg` and `roadmap-pt-br.svg`, which
+`scripts/roadmap_svg.py` draws with their text outlined, and one 1200×630 PNG card per language
 (`og-en.png`, `og-pt-br.png`) for a shared link's preview; the mark from
 `web/public/favicon.svg` and the language switcher's globe, drawn for the
 site with `--muted`'s hex baked in, since an image in CSS cannot take the
@@ -26,15 +30,17 @@ among them: the globe, the current language's code and a link to the
 other's, with the group labelled "Language" or "Idioma". A change to the dashboard's colours is not a
 change to the site until someone makes it there.
 
-The one script on a page is Cloudflare Web Analytics' beacon, carrying the
-site's token (not a secret: it is in every page's source); `_headers`
+Every page's script is Cloudflare Web Analytics' beacon, carrying the
+site's token (not a secret: it is in every page's source), and the landings
+add `/hero.js`; `_headers`
 sets a Content-Security-Policy that allows only the site itself and that
-beacon, so adding another script or font host fails in the browser and in
+beacon, with `media-src 'self'` for the video, so adding another script or font host fails in the browser and in
 `tests/test_site.py`. `tests/test_site.py` pins two weights per page: what
-the first paint fetches (the HTML, `site.css`, every woff2 and every image
+the first paint fetches (the HTML, `site.css`, every woff2, a local script, the
+video's poster and every image
 that is not lazy) under 600 KB, and the whole page with every lazy image
-under 1 MB. The landing's six feature images are lazy, so only the hero's
-counts against the first cap. The sentences on the pages are the
+under 1 MB. Every image on the landing is lazy, so of the pictures only the poster
+counts against the first cap; the video has its own cap. The sentences on the pages are the
 maintainer's, in both languages; the Fan Content notice is Wizards' wording,
 byte for byte the `WIZARDS_NOTICE` in `tests/test_attribution.py`, on the
 Portuguese pages too. Each home page's download steps end with a line
@@ -53,26 +59,56 @@ Windows dialog or a warning, is `<strong>`. Both languages carry the same
 section ids, so a link to `#report` works on either.
 
 The landing is the one page whose `<body>` carries a class, `landing`, and
-every rule for its layout is scoped under it in `site.css`: `.page` widens
-from the reading pages' 46rem to 76rem, and the prose inside it (the four
-cards, the written-reports section) keeps a measure of about 46rem. On a
-display 1024 px or wider the hero is two columns, text left and the Home
-capture right, allowed to run 4rem past the frame's right edge; the clip
-for that sits on `body.landing`, not `.page`, because `.page` would clip at
-its own padding box (the reason is in the stylesheet). Under the hero, the
-three "Get started" steps stand in three columns; then one `section.feature`
-per place of the dashboard's rail, in the rail's order (Home, Live, Matches,
-Decks, Field, Coach), each an eyebrow, a heading, one paragraph and one
-capture, image and text on alternating sides; then "Written reports" as
-two cards, and the four cards (what never leaves your machine, what is not
-planned, free software, donate) in two columns with their headings stepped
-down. Under 1024 px every grid is one column, in the same order, and the
-page reads as the help page does. The site's one motion is here: a feature
-row rises as it scrolls into view, inside `@supports (animation-timeline:
-view())` and `prefers-reduced-motion: no-preference`, so a browser without
-scroll-driven animations, or a reader who asked for no motion, sees the
-page at rest. The landings alone preload the two latin woff2 files; a
-reading page's fonts arrive with its stylesheet.
+every rule for its layout is scoped under it in `site.css`. Its hero is one
+centred column: the headline, the lead, the facts, the three download buttons
+(below), then the stage, a framed video with its chapter strip under it. Under
+the hero, the three "Get started" steps stand in three columns; then one
+`section.feature` per place of the dashboard's rail, in the rail's order (Home,
+Live, Matches, Decks, Field, Coach), each a heading, one paragraph and one
+capture whose `figcaption` names the place; then "Written reports" as two cards,
+and the four cards (what never leaves your machine, what is not planned, free
+software, donate) with the roadmap after what is not planned. Narrow widths
+are one column, in the same order, and the page reads as the help page does.
+
+The stage works with no script: a poster, the browser's own controls and
+`preload="none"`, so nothing of the video is fetched until someone asks, and
+chapters that are plain links to the feature rows. `/hero.js` takes over when it
+runs: it removes the native controls, shows Pause and captions buttons, and turns
+each chapter link into a seek to its `data-start`. Those starts are in the HTML,
+so reading a chapter costs no request, and `tests/test_site.py` holds them to
+`video/demo-*.chapters.json`. The video starts itself only from 700 px up, without
+a reduced-motion request and without Save-Data; otherwise the poster waits under
+a play button, and pressing a chapter there starts it. A chapter pressed while
+the video is paused seeks and stays paused. Captions start off, so the VTT is not
+fetched until they are turned on. Their cues are narrowed to 70% of the frame so
+a long one wraps short of the buttons, which move to the top corner under 700 px
+for the same reason. It keeps playing when scrolled out of view.
+
+Each landing's roadmap section carries the same lists as a drawing,
+`img/roadmap-en.svg` and `img/roadmap-pt-br.svg`, after its words. It is lazy, hidden under 700 px, where its
+text would be too small to read, and its `alt` says only that it repeats the
+lists, since the words sit beside it.
+
+The motion here is the hero's entrance and a feature row rising as it scrolls
+into view, inside `@supports (animation-timeline: view())` where it is scroll-driven
+and `prefers-reduced-motion: no-preference` for both, so a reader who asked for no
+motion sees the page at rest. The landings alone preload the poster and Inter's
+latin woff2; a reading page's font arrives with its stylesheet.
+
+Three pages exist to be found in search, one per search the app can win:
+`untapped/`, how it differs from Untapped; `linux/`, Arena on Linux and the
+Steam Deck; `mtgo/`, Magic Online. They share the help page's layout and
+point to it for the steps rather than repeating them. What a page says
+about another tracker comes from that tracker's own pages, which it links,
+and carries the date it was read; a claim no page of theirs makes is left
+out. Read them again when the date is old, and change the date with them.
+Each page's `<title>` and description carry the words a player searches
+for ("tracker", "MTG Arena", "Magic Online", "Linux"), since the name alone
+is found only by someone who knows it. Every page is linked from the
+landing's footer in its language, and `sitemap.xml` lists each one with
+its other language, the same pair its head names; `robots.txt` names the
+sitemap. `tests/test_site.py` checks both against the pages, so a new page
+goes into `PAGES`, the sitemap and the landing's footer together.
 
 Every page but the 404 carries an Open Graph head, so a link posted on X,
 Discord or WhatsApp unfurls: `og:title` equal to the page's `<title>`,
@@ -104,8 +140,7 @@ feed an installed copy's updater reads — and redirects to the file it names
 in that release, so the buttons follow each release with no step of their
 own. No feed lists the tarball, so `/download/linux-tar` builds its name,
 `Sensei-Top-<version>.tar.gz`, from the version in `latest-linux.yml`;
-only the two help pages link it, and the landing's buttons stay the two
-installers. GitHub's `releases/latest/download/<name>` cannot do it
+only the two help pages link it, and the landing's own buttons never do. GitHub's `releases/latest/download/<name>` cannot do it
 directly, because the installers' names carry the version (`electron-builder.yml`).
 The release job publishes every asset in one command, so the feed never
 names a file that is not there yet. A feed it cannot fetch or does not
@@ -139,7 +174,9 @@ is itself the rule, because Android's says Linux and an iPad's says
 Macintosh. It never sends `Accept-CH`, so no other hint is asked for. Through
 `HTMLRewriter` it moves `primary` to that system's button, which
 `.actions .primary { order: -1 }` puts first, or removes `hidden` from the
-note for a Mac or a phone; the notes' wording is in each page's HTML, and the
+note for a Mac or a phone. Windows' primary is the Microsoft Store listing,
+because that build is signed and the standalone installer is not; Linux's is
+`/download/linux`; the quiet "Windows installer" button is never rewritten; the notes' wording is in each page's HTML, and the
 markup is never reordered. The static page is the whole page for a visitor
 whose system is unknown, ChromeOS included, with Windows first. An iPad
 reports itself as a Mac, so the Mac note is written to be true on one. Both
@@ -149,6 +186,13 @@ drops the asset's `ETag` and `Last-Modified`, because those name the static
 page, not the one sent. The privacy pages name this read, so a new signal
 goes there first. Under `wrangler dev`, `curl -A '<User-Agent>'` shows each
 system's page.
+The same script answers byte ranges on `/video/*` (`worker/range.mjs`),
+because static assets ignore `Range` and reply with the whole file and a 200:
+Safari refuses a video without a 206, and the chapter strip seeks. It buffers
+the file, which the 5 MB cap on the videos allows, and slices it; a missing or
+malformed `Range`, several ranges or an `If-Range` that is not exactly the
+asset's `ETag` get the whole file, an unsatisfiable range a 416, and a status
+other than 200 passes through. Every other header of the asset is kept.
 The Worker answers on `senseitop.com`, with `www` redirecting there, and on
 the account's `workers.dev` address. It was meant to be a Pages project
 (plan 9, D2); the dashboard's git flow now creates a Worker, and a static
@@ -188,7 +232,7 @@ a demo copy (`web/scripts/site-images.mjs`; `--base` and `--out` have no
 default, since the real server's pages hold real match history). It opens
 each view of `SITE_VIEWS` at 1440×900, writes `<name>.png` and, with
 `magick`, `<name>.webp` at quality 85, then renders the language's card to
-`og.png` with the `home.webp` beside it; `--only` picks views by name. It
+`og.png` with the `home.webp` beside it; `--only` picks views by name. A view that carries `focal: { y, height }` (CSS px, with an optional `heightByLocale` where one language's page is taller above the crop's end: Home, the match report, Matchups, Coach) is also shot at a 1008 px viewport tall enough for `y + height`, at 1.5x, clipped to `x: 104, width: 884` and never full-page, and written as `<name>-focal.png` and `.webp`; the landing shows these crops at 1326 px wide, so they read at the page's width. `focalCapture` is the tested pure part. It
 copies nothing into `site/` or `docs/`: each file is looked at, then moved
 by hand. Two copies of the database are made for one set of captures. The
 uncut copy gives every view but Live; the Live capture needs a copy cut
@@ -199,6 +243,64 @@ browser's clock fixed at a moment inside the cut match, in UTC
 the Live header compares the match's start with today and calls the match
 abandoned. The Portuguese pictures are captured again with `--locale
 pt-BR`, from the same two copies, into `site/img/pt-br/`.
+
+### The demo video
+
+    node scripts/demo-video/record.ts --lang <en|pt-br>
+    uv run python scripts/demo-video/site_cut.py --lang <en|pt-br>
+
+The landing's hero is a cut of the demo video: the five product shots of
+`shots.json` (Home, Live, a report, Matchups, Field), with none of the LinkedIn
+cut's cards, no sound and nothing burned in. It is recorded once per language
+against the demo database's copies, with the dashboard in that language: the
+browser's locale decides it, since a browser with nothing stored follows its
+locale and the dashboard sends the language to the API as `Accept-Language`.
+`record.ts` finds what a shot points at through the language's catalogue
+(`label`), and refuses a page whose `lang` is another's. `en` writes to
+`demo/segments/`, `pt-br` to `demo/segments/pt-br/`. `assemble.py` reads only
+the first, so the Portuguese takes leave the LinkedIn cut alone.
+
+`site_cut.py` writes one set per language, into `site/video/`.
+`demo-<lang>.mp4` is the video. `demo-<lang>.vtt` is the captions, English from
+`shots.json` and Portuguese from `shots.pt-br.json`, written by an Opus agent;
+`shots.json` holds the lengths for both. `demo-<lang>.chapters.json` is
+`{"duration": s, "chapters": [{"id", "label", "start"}]}`, read by the page:
+each `label` is the dashboard's own word for the place, from its catalogue.
+`site/img/demo-poster.webp` and `demo-poster-pt-br.webp` are the first frame of
+Home, 1440 px wide, about 60 KB in English and 64 KB in Portuguese. The poster
+counts toward the page's first paint, so `tests/test_site.py` holds it under a
+150 KB budget, a ceiling chosen for that, not a limit anyone measured.
+
+A language's video is encoded beside its file and replaces it only once the
+length and the cap have passed.
+
+A chapter and a caption start where the crossfade into their shot has finished,
+not where it begins: a seek to the fade's first frame would show the shot
+before. A caption ends where the next fade begins, which leaves 0.3 s without
+one at each join. Each chapter's start is a keyframe, so a seek lands at once.
+
+The encoding was chosen by eye, from stills of Home and Field at the frame's
+1040 px. At about the same size, 4 MB, 1080p at CRF 23 kept small text sharper
+than 720p at CRF 19, whose thin strokes went soft. The script keeps 1080p at CRF
+24, 4.2 MB in English and 4.3 MB in Portuguese on the takes measured, which
+leaves room under the 5 MB cap for another take, since a language's text changes
+how the video compresses. The cap is pinned in `tests/test_site.py`, and the
+script exits 1 over it: every re-recording that ships stays in the public
+repository's history, so record again only for a change a visitor would see.
+
+`record.ts`'s segments hold BT.601 values with no tag, and a browser reads an
+untagged HD video as BT.709, which would shift the palette against the poster
+at the moment the video replaces it. `site_cut.py` converts them and tags the
+file, as the last step of the filter chain: any filter after `colormatrix`
+reads its tag and converts a second time, darkening the ground by up to two
+levels. On this ffmpeg `-color_primaries` and `-color_trc` have no effect, so a
+bitstream filter (ffmpeg's h264 metadata filter) writes the primaries, transfer and matrix.
+`-colorspace` has to stay as well: removing it changed the pixels, and the video
+no longer matched the poster (Chromium, red 8 against 11 on the ground). Why is
+inferred, probably a second conversion, not traced inside ffmpeg.
+`test_the_video_opens_in_the_posters_colours` pins the colour against the
+poster, a first frame read as BT.709 against the poster read as BT.601, within
+two levels.
 
 ## Screenshots
 

@@ -180,6 +180,8 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
+      # For the Announcements discussion linked to the release (last step).
+      discussions: write
     env:
       # Secrets cannot be read in a step's `if`, so the question is asked here.
       HAS_VIRUSTOTAL_KEY: ${{ secrets.VIRUSTOTAL_API_KEY != '' }}
@@ -262,3 +264,17 @@ jobs:
             assets/Sensei-Top-*.AppImage \
             assets/Sensei-Top-*.tar.gz \
             assets/latest-linux.yml
+      # Fail-soft, and after the release on purpose: the feeds above reach every
+      # installed copy, the post only the people who follow Discussions, so a post
+      # that cannot be opened never takes the release with it. Linking a category
+      # to a published release opens a discussion there with the release's notes;
+      # the category has to exist already, and a release with one is left alone.
+      - name: Announce the release in Discussions
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          id=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq .id)
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$id" \
+            -f discussion_category_name=Announcements --jq .discussion_url

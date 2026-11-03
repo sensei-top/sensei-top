@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-11-02
+
+### Added
+
+- Every release is announced in the repository's
+  [Discussions](https://github.com/sensei-top/sensei-top/discussions/categories/announcements),
+  under Announcements, with its notes, so following Discussions is enough
+  to hear about a new version.
+- Three pages on [senseitop.com](https://senseitop.com), in English and
+  Brazilian Portuguese: how Sensei Top differs from Untapped, Sensei Top on
+  Linux and the Steam Deck, and Sensei Top for Magic Online. The site now
+  has a sitemap, and each page's title says what the app is.
+- A new look for [senseitop.com](https://senseitop.com): the landing opens on
+  a short demo of the app with captions, in English and Brazilian Portuguese,
+  and now has a roadmap.
+
+### Fixed
+
+- The Microsoft Store package now carries Sensei Top's own tiles and Store logo
+  instead of the build tool's placeholder.
+- A player who uses only Arena no longer gets a warning about Magic Online
+  in the app's log every time the tracker rebuilds its matches, when the
+  settings file holds something else, such as a Claude key.
+- The live status no longer says Magic Online's game logs are being watched
+  while their folder can't be read, such as a folder that moved or a network
+  share that dropped. It says so again once the folder can be read.
+- An RCQ guide whose answer was copied for one list and saved after the
+  list or its expected archetypes were edited is now marked on the RCQ page
+  as written for another list. The prompt you copy says what it was built
+  from, so the page can tell.
+- Two rows in a deck's matchup coverage that share a name, because the
+  tournament data files one name under two archetypes, now say which is
+  which, as "Dimir Midrange · Bx Midrange".
+- Reading a log again once its date format is known, or with a different
+  `--locale`, no longer stores its entries a second time. An entry stored with
+  no date takes its date instead.
+- The keep guide's mulligan table and its mulligan cost line now count the same
+  games: every version of the deck. The table used to count only the current
+  list, so the two could disagree after an edit.
+- The Live page no longer reads "1 untapped lands" for the opponent's mana.
+- Win rates by game length no longer count a drawn or unfinished game against
+  you, in `sensei-top report` and `/api/metrics/game-length`. The average length
+  still counts every game.
+
 ## [1.2.3] - 2026-10-24
 
 ### Added
@@ -350,7 +394,8 @@ The app is the same as 0.7.1's; this release carries the website.
   keeps recording with the window closed, and start-with-Windows as an
   option. On Linux, an AppImage that updates itself in place.
 
-[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.2.3...HEAD
+[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.2.4...HEAD
+[1.2.4]: https://github.com/sensei-top/sensei-top/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/sensei-top/sensei-top/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/sensei-top/sensei-top/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/sensei-top/sensei-top/compare/v1.2.0...v1.2.1

@@ -164,7 +164,8 @@ def game_length(
         SELECT v.deck_id, d.name AS deck_name, v.turn_count,
                SUM(v.games)     AS games,
                SUM(v.games_won) AS games_won,
-               CAST(SUM(v.games_won) AS REAL) / NULLIF(SUM(v.games), 0) AS winrate
+               CAST(SUM(v.games_won) AS REAL)
+                   / NULLIF(SUM(v.games_won) + SUM(v.games_lost), 0) AS winrate
           FROM v_deck_game_length v
           LEFT JOIN decks d ON d.deck_id = v.deck_id
         """,

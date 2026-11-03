@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magic Online match tracker · Sensei Top</title>
+<meta name="description" content="Sensei Top reads Magic Online's game logs into a match history: every match and game, your record with each deck and against each archetype, beside the real metagame. Free, local, no account.">
+<link rel="canonical" href="https://senseitop.com/mtgo/">
+<link rel="alternate" hreflang="en" href="https://senseitop.com/mtgo/">
+<link rel="alternate" hreflang="pt-BR" href="https://senseitop.com/pt-br/mtgo/">
+<link rel="alternate" hreflang="x-default" href="https://senseitop.com/mtgo/">
+<meta name="theme-color" content="#0b0c14">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sensei Top">
+<meta property="og:title" content="Magic Online match tracker · Sensei Top">
+<meta property="og:description" content="Sensei Top reads Magic Online's game logs into a match history: every match and game, your record with each deck and against each archetype, beside the real metagame. Free, local, no account.">
+<meta property="og:url" content="https://senseitop.com/mtgo/">
+<meta property="og:image" content="https://senseitop.com/img/og-en.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Sensei Top dashboard's Home page: the last session's record and the last match.">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="pt_BR">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/site.css">
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "73e9bc45819145e3afbbde2244e8d023"}'></script>
+</head>
+<body>
+<div class="page">
+
+<header class="site-header">
+<a class="brand" href="/"><img src="/img/mark.svg" alt="" width="28" height="28">Sensei Top</a>
+<nav>
+<a href="/#download">Download</a>
+<a href="/help/">Help</a>
+<a href="/#never-leaves">Privacy</a>
+<a href="/#donate">Donate</a>
+</nav>
+<div class="lang" role="group" aria-label="Language" title="Language"><span aria-current="page">EN</span><a href="/pt-br/mtgo/" hreflang="pt-BR" lang="pt-BR" title="Ler em português" aria-label="Português (Brasil)">PT</a></div>
+</header>
+
+<main>
+<h1>Sensei Top for Magic Online</h1>
+<p class="lead">Magic Online writes a log of every game you play. Sensei Top reads those files and builds your match history from them, on the same dashboard as Arena's, on Windows or under Wine on Linux.</p>
+
+<section id="reads">
+<h2>What it reads</h2>
+<p>The <code>Match_GameLog</code> files Magic Online writes for each match, and the decks it keeps beside them, plus any <code>.dek</code> files you export to a folder of your own. It only reads them: nothing Magic Online owns is ever changed, and nothing reads the client's memory or plays for you.</p>
+</section>
+
+<section id="setup">
+<h2>What it needs from you</h2>
+<p>Magic Online's log never says which player is you, so the app asks for your name on Magic Online and the folder of game logs, in its welcome step or later in <b>Settings</b>, under <b>Sources</b>. On Windows, when it finds the folder Magic Online is writing, it fills it in for you. The log never names your deck either, so a match counts toward one of your decks once you pick it: open the match and answer <b>Which deck was this?</b>, or confirm a whole group from the <b>Needs a deck</b> card on <b>Home</b>. The <a href="/help/#mtgo">help page</a> has the details.</p>
+</section>
+
+<section id="what">
+<h2>What you get</h2>
+<ul>
+<li>Every match and game, with a report for each match and each game's plays, turn by turn.</li>
+<li>Your record with each deck and against each archetype, with the number of games behind every rate.</li>
+<li>The field from real Magic Online and paper tournament results, with your own record against each archetype in it.</li>
+<li>The coach and the leak finder, across Arena and Magic Online alike.</li>
+</ul>
+<p>The Live page, during a game, is Arena's only for now. Magic Online's log records plays and no board, so a game has no board and no charts, and the parts of a report that need one say what is missing.</p>
+<p><a href="/#download">Download Sensei Top</a>, free, for Windows or Linux.</p>
+</section>
+</main>
+
+<footer class="site-footer">
+<p>Sensei Top is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.</p>
+<p>Card data and images come from <a href="https://scryfall.com">Scryfall</a>, tournament results from <a href="https://github.com/fbettega/MTG_decklistcache">MTG_decklistcache</a> and <a href="https://topdeck.gg">TopDeck.gg</a>, and archetype definitions from <a href="https://github.com/Badaro/MTGOFormatData">MTGOFormatData</a>. None of them produces or endorses Sensei Top. What is taken from each, and on what terms, is in the <a href="https://github.com/sensei-top/sensei-top/blob/main/docs/attribution.md">attribution page</a>.</p>
+<p><a href="/linux/">Linux and the Steam Deck</a> · <a href="/mtgo/">Magic Online</a> · <a href="/untapped/">Sensei Top and Untapped</a></p>
+<p><a href="/">Home</a> · <a href="/help/">Help</a> · <a href="/privacy/">Privacy</a> · <a href="/pt-br/mtgo/" hreflang="pt-BR" lang="pt-BR">Português (Brasil)</a></p>
+</footer>
+
+</div>
+</body>
+</html>
