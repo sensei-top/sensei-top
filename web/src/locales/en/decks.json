@@ -112,6 +112,7 @@
       "theField": "The field",
       "sideboardPlans": "Sideboard plans",
       "matchupCoverage": "Matchup coverage",
+      "matchupCoverageField": "Archetypes to prepare for",
       "betweenRounds": "Between rounds",
       "write": "Write and export"
     },

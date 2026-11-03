@@ -112,6 +112,7 @@
       "theField": "O meta",
       "sideboardPlans": "Planos de sideboard",
       "matchupCoverage": "Cobertura de matchups",
+      "matchupCoverageField": "Para quais arquétipos se preparar",
       "betweenRounds": "Entre rodadas",
       "write": "Escrever e exportar"
     },

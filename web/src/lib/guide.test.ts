@@ -423,7 +423,7 @@ describe('guideSections', () => {
       'The list',
       'The field',
       'Sideboard plans',
-      'Matchup coverage',
+      'Archetypes to prepare for',
       'Between rounds',
     ])
   })

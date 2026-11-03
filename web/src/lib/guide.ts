@@ -14,7 +14,8 @@ export type GuideSection = { id: string; label: string }
  *  stored guide; `plans` a stored guide with a plan or a problem;
  *  `checklist` a stored guide with an item between rounds; `write` (true
  *  when omitted) the Write and export section, which AI features being
- *  off removes whole. */
+ *  off removes whole, and which then also gives the coverage section the
+ *  label of the card's AI-off title. */
 export type WrittenParts = { written: boolean; plans: boolean; checklist: boolean; write?: boolean }
 
 /** The Guide's sections in the page's order. A written section is in the
@@ -29,7 +30,10 @@ export function guideSections({ written, plans, checklist, write = true }: Writt
     { id: 'guide-the-field', label: t('decks.guide.sections.theField') },
   )
   if (plans) sections.push({ id: 'guide-sideboard-plans', label: t('decks.guide.sections.sideboardPlans') })
-  sections.push({ id: 'guide-matchup-coverage', label: t('decks.guide.sections.matchupCoverage') })
+  sections.push({
+    id: 'guide-matchup-coverage',
+    label: t(write ? 'decks.guide.sections.matchupCoverage' : 'decks.guide.sections.matchupCoverageField'),
+  })
   if (checklist) sections.push({ id: 'guide-between-rounds', label: t('decks.guide.sections.betweenRounds') })
   if (write) sections.push({ id: 'guide-write', label: t('decks.guide.sections.write') })
   return sections
