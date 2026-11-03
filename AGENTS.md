@@ -153,7 +153,7 @@ One line each; the detail is in the doc named, and
 
    Full picture — what each route sends, credential resolution, measured costs,
    and the TopDeck.gg wrinkle: [docs/llm.md](docs/llm.md). Pinned by
-   `tests/test_llm.py::test_no_credential_means_no_client_is_constructed`.
+   `tests/ai/test_llm.py::test_no_credential_means_no_client_is_constructed`.
 6. **The API writes only authored-artifact tables, never anything the
    projector rebuilds.** Every connection opens `PRAGMA query_only=ON` except
    the small allowlist of routes that write one of: `opponent_deck_override`

@@ -2,7 +2,7 @@
 builds, and ``guide_narrative_from_json`` — the parser the API's paste
 and generate routes (``llm.write_json`` against this module's own
 ``_GUIDE_TOOL`` schema) converge on. The module itself makes no call
-(``sensei_top.ai.llm`` does — see ``tests/test_llm.py``), so there is nothing
+(``sensei_top.ai.llm`` does — see ``tests/ai/test_llm.py``), so there is nothing
 here to fake an SDK response for.
 """
 

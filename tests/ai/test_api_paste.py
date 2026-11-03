@@ -23,7 +23,7 @@ from sensei_top.db import open_database
 from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file
 
-FIXTURE = Path(__file__).parent / "fixtures" / "match_session.log"
+FIXTURE = Path(__file__).parent.parent / "fixtures" / "match_session.log"
 PASTED_LIST = "Deck\n4 Alpha Card\n56 Mountain\n\nSideboard\n2 Beta Card\n"
 ARCHETYPE = "mardu_discard"
 CONTRACT = "Answer with exactly one JSON object"

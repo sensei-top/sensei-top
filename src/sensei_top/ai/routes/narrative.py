@@ -26,7 +26,7 @@ coverage card and the RCQ guide) shares ``refusal``, ``check_pasted_length``,
 the same keyed sentence, and none calls a model.
 
 **Why this module calls ``claude_config`` and ``llm.client`` through their
-modules**: ``tests/test_llm.py`` patches ``load``, ``write_prose`` and
+modules**: ``tests/ai/test_llm.py`` patches ``load``, ``write_prose`` and
 ``write_json`` on ``sensei_top.claude_config``/``sensei_top.ai.llm.client``
 themselves, and this file calls them as ``llm_config.load``/``llm_client.write_prose``, so the
 patch reaches it. A name imported *by name* into a route module
@@ -127,7 +127,7 @@ def require_credential() -> LLMConfig:
     """The identical 503 the match-report, leak-finder, deck-guide and RCQ
     ``POST .../narrative`` routes raise with nothing configured (the coach
     resolves ``load_coach()`` itself) —
-    ``tests/test_llm.py::test_no_credential_means_no_client_is_constructed``
+    ``tests/ai/test_llm.py::test_no_credential_means_no_client_is_constructed``
     pins the status code and the detail's ``config --set-key``."""
     cfg = llm_config.load()
     if cfg is None:

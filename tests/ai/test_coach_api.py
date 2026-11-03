@@ -3,7 +3,7 @@ free ``GET /api/coach`` and its ``.../narrative`` routes.
 
 Mirrors the credential-gating and stored-report coverage of the other four
 ``POST .../narrative`` routes (match report, leak finder, deck guide, RCQ
-guide: tests/test_llm.py, and tests/test_api_rcq.py for the RCQ guide's
+guide: tests/ai/test_llm.py, and tests/test_api_rcq.py for the RCQ guide's
 stored guide), adapted for what makes this one different (a plain history
 INSERT rather than a single overwritten slot, a credential resolved through
 ``load_coach()`` rather than ``load()``, and a ``write_report`` call that
@@ -108,7 +108,7 @@ def test_coach_narrative_by_id_404s_on_empty_db(empty_client):
 
 
 def test_no_credential_means_no_client_is_constructed(monkeypatch, client):
-    """The same guarantee tests/test_llm.py pins for the other four
+    """The same guarantee tests/ai/test_llm.py pins for the other four
     routes: with nothing configured, the route may not even try to build
     an Anthropic client."""
     monkeypatch.setattr(llm_config_module, "load_coach", lambda: None)

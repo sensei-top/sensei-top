@@ -35,7 +35,7 @@ def _isolate(monkeypatch, tmp_path: Path) -> None:
 
 def _run_status(db_path: Path, mtgo_dir: Path | None) -> None:
     """Build args the way argparse would and call the subcommand directly,
-    same pattern ``test_llm.py`` uses for ``cmd_config``. ``mtgo_dir=None``
+    same pattern ``test_claude_config.py`` uses for ``cmd_config``. ``mtgo_dir=None``
     omits ``--dir`` entirely, exercising the same config/env resolution a
     real invocation with no flag would go through."""
     parser = cli_module.build_parser()

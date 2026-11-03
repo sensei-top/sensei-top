@@ -40,7 +40,7 @@ from sensei_top.guide.decklist import parse_decklist
 from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file
 
-FIXTURE = Path(__file__).parent / "fixtures" / "match_session.log"
+FIXTURE = Path(__file__).parent.parent / "fixtures" / "match_session.log"
 HASH = "0123456789abcdef" * 4
 BODY = {"engine": "Cantrips are your mana.", "fix": "Deploy earlier."}
 SCHEMA = {"type": "object", "properties": {"engine": {"type": "string"}}}

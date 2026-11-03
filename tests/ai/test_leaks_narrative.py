@@ -1,6 +1,6 @@
 """Tests for ai/review/leaks_narrative.py — the training-plan prompt built over
 the leak finder's ranked output. The module itself no longer makes the call
-(that moved to ``sensei_top.ai.llm`` — see ``tests/test_llm.py`` for the
+(that moved to ``sensei_top.ai.llm`` — see ``tests/ai/test_llm.py`` for the
 credential-gating and fake-completion coverage), so there is nothing here to
 fake an SDK response for.
 """

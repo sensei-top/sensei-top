@@ -38,7 +38,7 @@ once built, are separate yeses with rules of their own ("What is hosted,
 and what it receives", below).
 
 With no credential configured, none of the five routes may even build a
-client: `tests/test_llm.py::test_no_credential_means_no_client_is_constructed`
+client: `tests/ai/test_llm.py::test_no_credential_means_no_client_is_constructed`
 pins it for the match report, the leak finder, the deck guide and the RCQ
 guide, and
 `tests/ai/test_coach_api.py::test_no_credential_means_no_client_is_constructed`
@@ -386,7 +386,7 @@ asynchronously, in up to a day. A report that arrives while the user waits
 on the page is the product, so no route uses it.
 
 Measured per-call costs, from real runs at `effort: high` against the
-fixture-backed scratch database used in `tests/test_llm.py`:
+fixture-backed scratch database used in `tests/ai/test_llm.py`:
 
 | Feature | Measured cost | Notes |
 |---|---|---|
