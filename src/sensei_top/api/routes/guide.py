@@ -12,6 +12,13 @@ from fastapi import APIRouter, HTTPException, Request
 
 from sensei_top.ai.answers import PASTED_AUTHOR, brief_for, coverage_for, guide_for
 from sensei_top.ai.llm import client as llm_client
+from sensei_top.ai.routes.narrative import (
+    check_pasted_length,
+    read_pasted,
+    require_credential,
+    run_authored_write,
+    unreadable_answer,
+)
 from sensei_top.api.convert import (
     _coverage_out,
     _deck_guide_out,
@@ -29,13 +36,6 @@ from sensei_top.api.models.guide import (
     DeckIdentityOut,
     GuideMarkdownOut,
     GuideNarrativeResponse,
-)
-from sensei_top.api.routes.narrative import (
-    check_pasted_length,
-    read_pasted,
-    require_credential,
-    run_authored_write,
-    unreadable_answer,
 )
 from sensei_top.api.sql import _shared_report_cache
 from sensei_top.brief.coverage import build_coverage

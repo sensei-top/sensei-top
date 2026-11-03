@@ -452,7 +452,7 @@ msgstr ""
 msgid "Never held a card-advantage lead this game"
 msgstr ""
 
-#: sensei_top/api/routes/narrative.py
+#: sensei_top/ai/routes/narrative.py
 msgid "No Claude credential configured. Run 'sensei-top config --set-key'."
 msgstr ""
 

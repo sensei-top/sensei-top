@@ -34,6 +34,12 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from sensei_top.ai.answers import PASTED_AUTHOR, coach_for
 from sensei_top.ai.llm import client as llm_client
 from sensei_top.ai.llm import config as llm_config
+from sensei_top.ai.routes.narrative import (
+    check_pasted_length,
+    no_credential_detail,
+    read_pasted_prose,
+    run_authored_write,
+)
 from sensei_top.api.deps import Conn, WritableConn
 from sensei_top.api.models.coach import (
     CoachEvidenceModel,
@@ -53,12 +59,6 @@ from sensei_top.api.models.coach import (
 )
 from sensei_top.api.models.common import PastedAnswerIn
 from sensei_top.api.models.metagame import FormatName
-from sensei_top.api.routes.narrative import (
-    check_pasted_length,
-    no_credential_detail,
-    read_pasted_prose,
-    run_authored_write,
-)
 from sensei_top.api.sql import _shared_report_cache, default_format
 from sensei_top.coach.canon import ALLOWED_DOMAINS, CANON
 from sensei_top.coach.evidence import (

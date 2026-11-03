@@ -242,6 +242,15 @@ foreign `Origin` or without the dashboard's `X-Tracker-Client` header before
 it reaches the route, so another page open in your browser cannot trigger a
 metered call.
 
+`GET /api/llm/status`, which tells the dashboard whether to offer a generate
+button ("The fallback"), is `ai/routes/status.py`, mounted only when `ai/` is
+installed (`docs/architecture.md`, "Who may know what"); without it the
+path is the API's JSON 404. The plumbing the five routes and the paste
+routes share — the 503 with no credential, the authored-write transaction and
+the paste refusals — is `ai/routes/narrative.py`. The routes themselves are
+still in their features' `api/routes/` modules while the move into
+`ai/routes/` is under way.
+
 ### Saving a pasted answer
 
 Seven `PUT` routes store an answer the user pasted into a card, one per

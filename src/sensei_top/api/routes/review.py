@@ -10,11 +10,7 @@ from collections.abc import Callable
 from fastapi import APIRouter, HTTPException, Request
 
 from sensei_top.ai.answers import LEAKS_FOR, PASTED_AUTHOR
-from sensei_top.api.convert import _leak_out
-from sensei_top.api.deps import Conn, DeckFilter, SourceFilter, WritableConn
-from sensei_top.api.models.common import NarrativeResponse, PastedAnswerIn
-from sensei_top.api.models.review import LeaksOut
-from sensei_top.api.routes.narrative import (
+from sensei_top.ai.routes.narrative import (
     NarrativeSpec,
     check_pasted_length,
     narrative_get,
@@ -22,6 +18,10 @@ from sensei_top.api.routes.narrative import (
     read_pasted_prose,
     run_authored_write,
 )
+from sensei_top.api.convert import _leak_out
+from sensei_top.api.deps import Conn, DeckFilter, SourceFilter, WritableConn
+from sensei_top.api.models.common import NarrativeResponse, PastedAnswerIn
+from sensei_top.api.models.review import LeaksOut
 from sensei_top.api.sql import _consensus_window, _shared_report_cache
 from sensei_top.i18n import _, english
 from sensei_top.review import leaks_narrative as review_leaks_narrative

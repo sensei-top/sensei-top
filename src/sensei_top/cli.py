@@ -48,6 +48,8 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import importlib
+import importlib.util
 import logging
 import multiprocessing
 import os
@@ -2847,6 +2849,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="print what would go in, one entry per line with its size, and write nothing",
     )
     p_diagnostics.set_defaults(func=cmd_diagnostics)
+    # Never a static import (api/app.py::create_app says why).
+    if importlib.util.find_spec("sensei_top.ai") is not None:
+        importlib.import_module("sensei_top.ai").register_cli(sub)
     return parser
 
 

@@ -14,6 +14,14 @@ from typing import Annotated, Any
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from sensei_top.ai.answers import PASTED_AUTHOR, match_for
+from sensei_top.ai.routes.narrative import (
+    NarrativeSpec,
+    check_pasted_length,
+    narrative_get,
+    narrative_post,
+    read_pasted_prose,
+    run_authored_write,
+)
 from sensei_top.api.convert import _finding_out, _summary_out
 from sensei_top.api.deps import Conn, DeckFilter, SourceFilter, WritableConn
 from sensei_top.api.models.common import NarrativeResponse, PastedAnswerIn
@@ -35,14 +43,6 @@ from sensei_top.api.models.matches import (
     SideboardCardOut,
     SideboardGameOut,
     SideboardingOut,
-)
-from sensei_top.api.routes.narrative import (
-    NarrativeSpec,
-    check_pasted_length,
-    narrative_get,
-    narrative_post,
-    read_pasted_prose,
-    run_authored_write,
 )
 from sensei_top.api.sql import (
     _attach_zones,

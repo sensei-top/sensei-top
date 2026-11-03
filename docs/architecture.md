@@ -37,9 +37,30 @@ over the entire history — every match ever recorded — by re-running one comm
 | `coach/` | `review/`, `guide/`, every deck's projected matches | `reader/`, `raw_events`, files |
 | `archetypes/` | Revealed cards, archetype definitions, the corpus | `reader/`, `raw_events`, files |
 | `api/routes/`, `api/sql.py` | SQL over views; the feature packages' public API | How anything was produced |
+| `ai/` | Core, freely; the Claude call, the prompts, pasted answers | Nothing core needs: core must run with it deleted |
 
 If you find yourself importing the projector from the reader, the design has
 been violated. `live.py` exists precisely so neither has to know the other.
+
+**Core never imports `ai/`.** `lint-imports` holds the contract in
+`pyproject.toml`; its `ignore_imports` names the edges still to cut. Core
+reaches `sensei_top.ai` through two doors, each opened only when
+`importlib.util.find_spec("sensei_top.ai")` finds the package and each an
+`importlib.import_module`, which `lint-imports` does not count as an import:
+
+- `api/app.py::create_app` mounts `ai.routers()` after core's routers and
+  before the dashboard's catch-all, and keeps `ai.providers()` on
+  `app.state`.
+- `cli.py::build_parser` hands its subparsers to `ai.register_cli`.
+
+A core read that shows AI data, without computing it, takes that half from
+`api/providers.py`: `Providers` has one optional field per seam, typed by a
+Protocol declared beside the read, and `providers_of(app)` gives the
+read whatever `ai.providers()` filled. Without `ai/` every field is `None` and
+the read shows its core half. Providers are kept per app rather than
+registered at import, so a test can build the app with `find_spec` hidden in a
+process that has already imported `ai/`; `tests/test_ai_seam.py` builds it
+both ways.
 
 The seven feature packages below the pipeline share one rule the pipeline rows
 do not: **they are pure functions of an already-projected database.** None of

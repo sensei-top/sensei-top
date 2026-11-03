@@ -5,7 +5,7 @@ The match report and the leak finder are the same shape end to end: build
 some evidence, wrap it in a prompt, and — on ``POST`` with a credential
 configured — send it through ``llm.write_prose`` and store the prose
 verbatim. ``NarrativeSpec`` plus ``narrative_get``/``narrative_post`` cover
-both; ``routes/matches.py`` and ``routes/review.py`` supply only the
+both; ``api/routes/matches.py`` and ``api/routes/review.py`` supply only the
 per-route closures (which evidence, which store).
 
 The deck guide and the RCQ guide are the JSON-schema-answer relatives: each
@@ -14,7 +14,7 @@ and its ``POST`` parses a structured answer instead of storing prose; the
 deck guide's also writes a second table (``matchup_brief``) in the same
 transaction. Forcing them through ``NarrativeSpec`` would cost more in
 indirection than it saves, so they share only ``require_credential``'s 503
-and ``run_authored_write``'s transaction. The coach (``routes/coach.py``)
+and ``run_authored_write``'s transaction. The coach (``api/routes/coach.py``)
 resolves its own credential and shares ``no_credential_detail``,
 ``run_authored_write`` and the paste helpers.
 

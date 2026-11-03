@@ -21,7 +21,7 @@ answer 503 and the dashboard falls back to the prompt/import path.
 ``model``/``effort``/``web_search`` overriding the base ``[claude]`` values
 for the coach report only. The other four ``POST .../narrative`` routes (the
 match report, the leak finder, the deck guide and the RCQ guide) resolve
-through ``api/routes/narrative.py::require_credential``, which calls
+through ``ai/routes/narrative.py::require_credential``, which calls
 ``load()``, so this table never affects them.
 """
 

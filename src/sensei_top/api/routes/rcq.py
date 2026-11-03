@@ -13,6 +13,13 @@ from fastapi import APIRouter, HTTPException, Query, Request
 
 from sensei_top.ai.answers import PASTED_AUTHOR, rcq_for
 from sensei_top.ai.llm import client as llm_client
+from sensei_top.ai.routes.narrative import (
+    check_pasted_length,
+    read_pasted,
+    require_credential,
+    run_authored_write,
+    unreadable_answer,
+)
 from sensei_top.api.convert import _list_diff_out
 from sensei_top.api.deps import Conn, WritableConn
 from sensei_top.api.models.common import BoardCardOut, PlanProblemOut
@@ -29,13 +36,6 @@ from sensei_top.api.models.rcq import (
     RcqPreviewOut,
     RcqRecentEventOut,
     RcqRecentShareOut,
-)
-from sensei_top.api.routes.narrative import (
-    check_pasted_length,
-    read_pasted,
-    require_credential,
-    run_authored_write,
-    unreadable_answer,
 )
 from sensei_top.api.sql import _shared_report_cache
 from sensei_top.guide.decklist import parse_decklist

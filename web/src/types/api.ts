@@ -21,31 +21,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/llm/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Llm Status
-         * @description Whether a Claude credential is resolved right now, and which
-         *     model would be used — never the key itself
-         *     (``sensei_top.ai.llm.config``). The dashboard reads this to
-         *     decide whether a narrative surface offers a generate button or
-         *     falls back to the copy-prompt path (``docs/llm.md``). No database
-         *     connection needed: this is purely local config, not derived data.
-         */
-        get: operations["llm_status_api_llm_status_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/live": {
         parameters: {
             query?: never;
@@ -1535,6 +1510,31 @@ export interface paths {
          *     never answer for each other.
          */
         get: operations["card_art_api_cards__grp_id__art_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/llm/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Llm Status
+         * @description Whether a Claude credential is resolved right now, and which
+         *     model would be used — never the key itself
+         *     (``sensei_top.ai.llm.config``). The dashboard reads this to
+         *     decide whether a narrative surface offers a generate button or
+         *     falls back to the copy-prompt path (``docs/llm.md``). No database
+         *     connection needed: this is purely local config, not derived data.
+         */
+        get: operations["llm_status_api_llm_status_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5332,26 +5332,6 @@ export interface operations {
             };
         };
     };
-    llm_status_api_llm_status_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LLMStatus"];
-                };
-            };
-        };
-    };
     live_api_live_get: {
         parameters: {
             query?: never;
@@ -7215,6 +7195,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    llm_status_api_llm_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LLMStatus"];
                 };
             };
         };
