@@ -12,24 +12,26 @@ import { placeById } from '../shell/places'
 import { useAi } from '../ai/registry'
 import { Card, Chip, DataTable, EmptyState, ErrorNote, Loading, StatTile, TextLink } from './ui'
 
-/** Which archetypes have a matchup brief (`brief/coverage.py`): every
+/** Which archetypes have a matchup brief (`ai/brief/coverage.py`): every
  *  archetype this deck has met and the field's most played ones, in the
- *  server's order. Three tiles (`coverageTiles`); when a row is missing
- *  or stale, and AI features are on, the prompt for every gap at once,
+ *  server's order. With AI features on, three tiles (`coverageTiles`) and,
+ *  when a row is missing or stale, the prompt for every gap at once,
  *  fetched only on its press and drawn in this card with no card of its
  *  own; then a row per
  *  archetype, its name a link to its pairing, where that brief's own
  *  prompt is, its status a word on a neutral chip and its share of the
- *  field. With no row, an empty state in the card. A failure to load is
- *  drawn in the card's place. A deck whose format is unknown (`fmt` null)
+ *  field. With AI features off the tiles, the prompt and the status chip
+ *  are not drawn: the archetype list and the Field column remain. With
+ *  no row, an empty state in the card. A failure to load is drawn in the
+ *  card's place. A deck whose format is unknown (`fmt` null)
  *  has no rows and no tiles: one empty state says so. */
 export function MatchupCoverageCard({ guideKey }: { guideKey: string }) {
   const { t } = useTranslation()
-  const title = t('matchups.coverage.title')
-  const subtitle = t('matchups.coverage.subtitle')
-  const formatUnknown = t('matchups.brief.formatUnknown')
   const coverage = useGuideCoverage(guideKey)
   const ai = useAi()
+  const title = ai ? t('matchups.coverage.title') : t('matchups.coverage.fieldTitle')
+  const subtitle = ai ? t('matchups.coverage.subtitle') : t('matchups.coverage.fieldSubtitle')
+  const formatUnknown = ai ? t('matchups.brief.formatUnknown') : t('matchups.coverage.fieldFormatUnknown')
 
   if (coverage.error) return <ErrorNote error={coverage.error} />
   if (coverage.isPending) {
@@ -69,11 +71,13 @@ export function MatchupCoverageCard({ guideKey }: { guideKey: string }) {
 
   return (
     <Card title={title} subtitle={subtitle}>
-      <div className="grid gap-4 md:grid-cols-3">
-        {coverageTiles(data, t).map((tile) => (
-          <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} />
-        ))}
-      </div>
+      {ai && (
+        <div className="grid gap-4 md:grid-cols-3">
+          {coverageTiles(data, t).map((tile) => (
+            <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} />
+          ))}
+        </div>
+      )}
 
       {ai && gaps && (
         <div className="mt-5">
@@ -81,11 +85,11 @@ export function MatchupCoverageCard({ guideKey }: { guideKey: string }) {
         </div>
       )}
 
-      <div className="mt-5">
+      <div className={ai ? 'mt-5' : undefined}>
         <DataTable
           columns={[
             t('matchups.coverage.columns.archetype'),
-            t('matchups.coverage.columns.brief'),
+            ...(ai ? [t('matchups.coverage.columns.brief')] : []),
             t('matchups.coverage.columns.field'),
           ]}
           rows={data.rows.map((row) => [
@@ -96,9 +100,13 @@ export function MatchupCoverageCard({ guideKey }: { guideKey: string }) {
                 {coverageName(row, data.rows)}
               </TextLink>
             </div>,
-            <Chip key="brief" size="sm">
-              {coverageStatusWord(row.status, t)}
-            </Chip>,
+            ...(ai
+              ? [
+                  <Chip key="brief" size="sm">
+                    {coverageStatusWord(row.status, t)}
+                  </Chip>,
+                ]
+              : []),
             <span key="field" className="whitespace-nowrap">
               {row.field_share == null ? '—' : formatPercent(row.field_share)}
             </span>,

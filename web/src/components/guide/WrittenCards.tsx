@@ -3,7 +3,8 @@ import type { BoardCardOut, GuideNarrativeOut, GuideNarrativeResponse, MatchupPl
 import { archetypeName } from '../../lib/decks'
 import { orphanProblems, ownedProblems, problemSentence } from '../../lib/guide'
 import { useNow } from '../../lib/time'
-import { writtenLine } from '../../lib/written'
+import { shownAuthor, writtenLine } from '../../lib/written'
+import { useAiFeatures } from '../../shell/aiFeatures'
 import { Callout, Card, Prose, SectionLabel } from '../ui'
 import { SectionLink } from './SectionNav'
 
@@ -36,16 +37,19 @@ export function HowItWorksCard({
 }) {
   const { t } = useTranslation()
   const now = useNow()
-  const line = writtenLine(response.author, response.authored_at, now, t)
+  const [aiOn] = useAiFeatures()
+  const line = writtenLine(shownAuthor(response.author, aiOn), response.authored_at, now, t)
   return (
     <Card title={t('decks.guide.sections.howItWorks')} subtitle={line ?? undefined}>
       {response.stale && (
         <div className="mb-4">
           <Callout tone="warn" title={t('decks.guide.written.stale.title')}>
             <p>{t('decks.guide.written.stale.message')}</p>
-            <p className="mt-2">
-              <SectionLink id={WRITE_ID}>{t('decks.guide.written.stale.again')}</SectionLink>
-            </p>
+            {aiOn && (
+              <p className="mt-2">
+                <SectionLink id={WRITE_ID}>{t('decks.guide.written.stale.again')}</SectionLink>
+              </p>
+            )}
           </Callout>
         </div>
       )}

@@ -193,11 +193,13 @@ export function SideboardPlanCard({
           {(ai || !pastBoarding) && (
             <EmptyState
               message={
-                intermission.opponent
-                  ? t('matchups.sideboard.noPlan')
-                  : intermission.fmt === null
-                    ? t('matchups.sideboard.formatUnknownNoPlan')
-                    : t('matchups.sideboard.unclassifiedNoPlan')
+                !ai
+                  ? t('matchups.sideboard.notBoardedYet')
+                  : intermission.opponent
+                    ? t('matchups.sideboard.noPlan')
+                    : intermission.fmt === null
+                      ? t('matchups.sideboard.formatUnknownNoPlan')
+                      : t('matchups.sideboard.unclassifiedNoPlan')
               }
             />
           )}
