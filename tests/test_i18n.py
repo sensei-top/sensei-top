@@ -35,7 +35,8 @@ from fastapi import FastAPI
 
 from sensei_top import i18n
 from sensei_top.ai.llm import config as llm_config
-from sensei_top.ai.review import narrative
+from sensei_top.ai.review import leaks_narrative, narrative
+from sensei_top.ai.routes import leaks as leaks_routes
 from sensei_top.ai.routes import match_report as match_report_routes
 from sensei_top.api import create_app
 from sensei_top.api.app import RequestLanguage
@@ -57,7 +58,6 @@ from sensei_top.metagame.tiers import TIER_WORDS, TIERS, tier_words
 from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file
 from sensei_top.review import leaks as review_leaks
-from sensei_top.review import leaks_narrative
 from sensei_top.review.findings import Category, Confidence, Finding, Gap, Severity
 from sensei_top.review.match_report import build_match_report
 from sensei_top.review.position import SWING_DECISIVE, SWING_NOTABLE, swing_words
@@ -897,6 +897,7 @@ def test_the_leaks_prompt_builds_its_leaks_in_english(marker_catalogue, client, 
         return []
 
     monkeypatch.setattr(review_routes, "find_leaks", recording)
+    monkeypatch.setattr(leaks_routes, "find_leaks", recording)
     pt = {"Accept-Language": "pt-BR"}
     client.get("/api/review/leaks", headers=pt)
     client.get("/api/review/leaks/narrative", headers=pt)

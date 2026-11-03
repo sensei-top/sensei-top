@@ -406,7 +406,7 @@ export const useLeaks = () =>
   })
 
 /** The stored training-plan prose over the leak finder's own ranked output
- *  (every deck, unscoped — see `review/leaks_store.py`), and always the
+ *  (every deck, unscoped — see `ai/review/leaks_store.py`), and always the
  *  prompt to (re)write it from. Free and local to fetch; an ordinary query
  *  on the heartbeat like the leak finder itself. */
 export const useLeaksNarrative = () =>

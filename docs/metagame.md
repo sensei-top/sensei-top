@@ -780,8 +780,8 @@ against — and every route below calls it rather than re-running
   `docs/review.md` and `docs/brief.md`. `ai/routes/match_report.py::
   _field_context` (the match-report narrative prompt's field section) reads
   the match's format the same way, and both `review/leaks.py::find_leaks`
-  call sites in `api/routes/review.py` (the leak finder and its narrative
-  prompt) build each match's report under its own format's window.
+  call sites, `api/routes/review.py` (the leak finder) and `ai/routes/leaks.py`
+  (its narrative prompt), build each match's report under its own format's window.
 
 A pre-reset round is never silently dropped and forgotten, either: when a
 windowed query has nothing on or after the cutoff, the caller gets `None`/no

@@ -5,7 +5,7 @@ The match report and the leak finder are the same shape end to end: build
 some evidence, wrap it in a prompt, and — on ``POST`` with a credential
 configured — send it through ``llm.write_prose`` and store the prose
 verbatim. ``NarrativeSpec`` plus ``narrative_get``/``narrative_post`` cover
-both; ``api/routes/matches.py`` and ``api/routes/review.py`` supply only the
+both; ``ai/routes/match_report.py`` and ``ai/routes/leaks.py`` supply only the
 per-route closures (which evidence, which store).
 
 The deck guide and the RCQ guide are the JSON-schema-answer relatives: each

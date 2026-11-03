@@ -95,8 +95,6 @@ ignore_imports = [
     "sensei_top.api.routes.rcq -> sensei_top.ai.answers",
     "sensei_top.api.routes.rcq -> sensei_top.ai.llm.client",
     "sensei_top.api.routes.rcq -> sensei_top.ai.routes.narrative",
-    "sensei_top.api.routes.review -> sensei_top.ai.answers",
-    "sensei_top.api.routes.review -> sensei_top.ai.routes.narrative",
     "sensei_top.brief.narrative -> sensei_top.ai.answers",
     "sensei_top.brief.narrative -> sensei_top.ai.review.narrative",
     "sensei_top.brief.store -> sensei_top.ai.llm.provenance",
@@ -113,8 +111,4 @@ ignore_imports = [
     "sensei_top.guide.narrative -> sensei_top.ai.review.narrative",
     "sensei_top.guide.rcq -> sensei_top.ai.answers",
     "sensei_top.guide.rcq -> sensei_top.ai.review.narrative",
-    "sensei_top.review.leaks_narrative -> sensei_top.ai.answers",
-    "sensei_top.review.leaks_narrative -> sensei_top.ai.review.narrative",
-    "sensei_top.review.leaks_store -> sensei_top.ai.llm.provenance",
-    "sensei_top.review.leaks_store -> sensei_top.ai.review.narrative_store",
 ]

@@ -12,7 +12,7 @@ evidence — a new finding, an updated field record — is caught without a
 per-feature hashing rule. It is reported, never acted on: nothing here
 regenerates itself, same posture ``brief/store.py::is_stale`` documents.
 
-``review/leaks_store.py`` is the same pattern for the leak finder's own
+``ai/review/leaks_store.py`` is the same pattern for the leak finder's own
 narrative, and imports ``context_hash`` from here rather than duplicating it
 — the two tables must agree on what "the evidence changed" means.
 """

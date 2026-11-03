@@ -1,7 +1,7 @@
 """The match report's coaching prompt — built here, sent from
 ``sensei_top.ai.llm`` only when the user has opted in. How the prompt is
 served, sent and stored: ``docs/review.md``, "The narrative
-(`ai/review/narrative.py`, `review/leaks_narrative.py`)".
+(`ai/review/narrative.py`, `ai/review/leaks_narrative.py`)".
 
 **This module never makes the call itself.** The only module that imports
 ``anthropic`` is ``sensei_top.ai.llm.client`` (AGENTS.md non-negotiable #5);
@@ -82,7 +82,7 @@ UNTRACKED = (
 
 def _wrap_prompt(system_prompt: str, context: str) -> str:
     """The framing-then-evidence shape: the system prompt, a divider, then
-    the evidence. Shared with ``review/leaks_narrative.py`` and
+    the evidence. Shared with ``ai/review/leaks_narrative.py`` and
     ``coach/narrative.py``, each with its own system prompt."""
     return f"{system_prompt}\n\n---\n\n{context}"
 

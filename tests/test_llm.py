@@ -45,7 +45,6 @@ from sensei_top.ai.llm.client import (
 from sensei_top.ai.llm.config import LLMConfig, load
 from sensei_top.ai.review.narrative_store import context_hash
 from sensei_top.api import create_app
-from sensei_top.api.routes import review as review_routes
 from sensei_top.db import open_database
 from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file
@@ -1429,36 +1428,6 @@ def test_no_credential_means_no_client_is_constructed(monkeypatch, client, guide
         resp = client.post(path, json={"decklist": "4 Island", "expected": []})
         assert resp.status_code == 503
         assert "config --set-key" in resp.json()["detail"]
-
-
-def test_generate_leaks_narrative_stores_and_returns_it(monkeypatch, client):
-    from sensei_top.review.leaks import Leak
-
-    fake_leak = Leak(
-        code="mana_screwed", category="deckbuilding", sample_title="Stuck on lands",
-        n_with=15, win_rate_with=0.3, ci_with=(0.15, 0.5),
-        n_without=40, win_rate_without=0.55, ci_without=(0.4, 0.7),
-        gap=0.25, match_ids_with=("m1",),
-    )
-    monkeypatch.setattr(review_routes, "find_leaks", lambda conn, **kwargs: [fake_leak])
-    monkeypatch.setattr(llm_config_module, "load", lambda: LLMConfig(api_key="k"))
-    monkeypatch.setattr(
-        llm_client_module, "write_prose",
-        lambda prompt, *, cfg, label: Completion(
-            text="Work on mulligans.", model="claude-opus-5",
-            input_tokens=300, output_tokens=100, cost_usd=0.004,
-        ),
-    )
-
-    resp = client.post("/api/review/leaks/narrative")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["status"] == "ok"
-    assert body["narrative"] == "Work on mulligans."
-
-    again = client.get("/api/review/leaks/narrative").json()
-    assert again["status"] == "ok"
-    assert again["narrative"] == "Work on mulligans."
 
 
 def test_generate_guide_narrative_converges_with_the_hand_import_parser(

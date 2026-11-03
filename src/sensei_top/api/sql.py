@@ -598,7 +598,7 @@ def _shared_report_cache(
     request: Request, conn: sqlite3.Connection
 ) -> ReportCache:
     """The cross-request ``MatchReport`` cache that every ``find_leaks`` call
-    (``api/routes/review.py``), ``build_deck_guide`` (``guide/bundle.py``,
+    (``api/routes/review.py``, ``ai/routes/leaks.py``), ``build_deck_guide`` (``guide/bundle.py``,
     via ``api/routes/guide.py``; via ``guide/rcq.py::build_rcq`` from
     ``api/routes/rcq.py``; and directly from
     ``api/routes/rcq.py::rcq_markdown``) and ``build_coach_evidence``

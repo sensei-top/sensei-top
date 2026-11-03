@@ -70,7 +70,7 @@ export function LeakCard({ leak, withDeck }: { leak: LeakOut; withDeck: boolean 
 }
 
 /** The leak finder's own training plan: over every deck, unscoped
- *  (`api/routes/review.py::_leaks_narrative_spec` calls `find_leaks` with
+ *  (`ai/routes/leaks.py::_leaks_narrative_spec` calls `find_leaks` with
  *  no `deck_ids`), so it reads the same under whichever deck's guide is
  *  open. It sits here rather than in a view of its own because it is the
  *  same thing the deck's own fix sentence is, prose over the leak finder's

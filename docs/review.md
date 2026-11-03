@@ -300,11 +300,11 @@ start), asks it once per format the population holds, and threads each
 match's window into that match's `build_match_report` call — the same
 field-matchup windowing `baseline.py` does for a single report, applied
 across the whole rerun. A match with no format gets no window and no
-consensus, never another format's. `api/routes/review.py`'s two routes
-(the leak finder itself and its narrative prompt) both pass a resolver over
-`_consensus_window(conn, fmt)` rather than leaving it `None`, and
-`guide/bundle.py` and `coach/evidence.py` pass
-`guide/window.py::consensus_window_resolver`, so a leak's own
+consensus, never another format's. The two `find_leaks` call sites,
+`api/routes/review.py` (the leak finder's GET) and `ai/routes/leaks.py` (its
+narrative prompt), both pass a resolver over `_consensus_window(conn, fmt)`
+rather than leaving it `None`, and `guide/bundle.py` and `coach/evidence.py`
+pass `guide/window.py::consensus_window_resolver`, so a leak's own
 `field_matchup_rate` finding, when it fires, never mixes pre- and
 post-reset field data, or one format's field with another's.
 `consensus_since` (one window for every match) is also accepted, though no
@@ -370,7 +370,7 @@ two `find_leaks` calls (`guide/bundle.py`) or a caller that already built
 some of these reports itself (`coach/evidence.py`) pays for each match's
 report at most once per request.
 
-## The narrative (`ai/review/narrative.py`, `review/leaks_narrative.py`)
+## The narrative (`ai/review/narrative.py`, `ai/review/leaks_narrative.py`)
 
 Two separate prompts to write coaching prose from — the coaching layer over
 the report, not a summary of it. Neither module makes the call itself —
@@ -461,7 +461,7 @@ plus `ai/review/narrative_store.py`, which sits in the `ai` package:
 `snapshot.py` (the per-match read the analyzers run on, a fixed set of
 queries, none per turn),
 `leaks.py` (the cross-match population, 6), `consensus.py` (the corpus scan,
-3), and `leaks_store.py` and `ai/review/narrative_store.py` (2 each). `match_report.py`
+3), and `ai/review/leaks_store.py` and `ai/review/narrative_store.py` (2 each). `match_report.py`
 takes a connection but issues no query of its own — it passes one through to
 `build_snapshot` and then runs the pure analyzers over the result.
 
@@ -482,7 +482,7 @@ to outcomes — turns the per-turn combat and life data ("What became possible, 
 anchors a game's turning point to.
 
 The narrative over this report is "The narrative (`ai/review/narrative.py`,
-`review/leaks_narrative.py`)" above.
+`ai/review/leaks_narrative.py`)" above.
 
 **The matchup brief has no generate button of its own**, but it is not
 import-only either. `POST /api/guide/{key}/narrative` writes

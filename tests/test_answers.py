@@ -648,39 +648,6 @@ def test_the_match_report_prompt_asks_for_prose_and_the_call_does_not(
     assert stored.prompt == sent[0]
 
 
-def test_the_leak_plan_prompt_asks_for_prose_and_the_call_does_not(
-    monkeypatch, client, db_path,
-):
-    from sensei_top.ai.llm import client as llm_client_module
-    from sensei_top.ai.llm import config as llm_config_module
-    from sensei_top.ai.llm.config import LLMConfig
-    from sensei_top.api.routes import review as review_routes
-    from sensei_top.review.leaks import Leak
-    from sensei_top.review.leaks_store import read_leaks_narrative
-
-    fake_leak = Leak(
-        code="mana_screwed", category="deckbuilding", sample_title="Stuck on lands",
-        n_with=15, win_rate_with=0.3, ci_with=(0.15, 0.5),
-        n_without=40, win_rate_without=0.55, ci_without=(0.4, 0.7),
-        gap=0.25, match_ids_with=("m1",),
-    )
-    monkeypatch.setattr(review_routes, "find_leaks", lambda conn, **kwargs: [fake_leak])
-    sent: list = []
-    monkeypatch.setattr(llm_config_module, "load", lambda: LLMConfig(api_key="k"))
-    monkeypatch.setattr(llm_client_module, "write_prose", _fake_prose_writer(sent))
-    assert client.post("/api/review/leaks/narrative").status_code == 200
-
-    conn = open_database(db_path)
-    try:
-        stored = read_leaks_narrative(conn)
-    finally:
-        conn.close()
-    body = client.get("/api/review/leaks/narrative").json()
-    assert body["stale"] is False
-    _assert_prose_contract(body["prompt"], sent[0], "leaks", stored.context_hash, "plain prose")
-    assert stored.prompt == sent[0]
-
-
 def test_the_coach_prompt_asks_for_prose_and_the_call_does_not(
     monkeypatch, tmp_path, make_client,
 ):

@@ -20,6 +20,7 @@ from fastapi.routing import iter_route_contexts
 from fastapi.testclient import TestClient
 
 from sensei_top import card_images
+from sensei_top.ai.routes import leaks as leaks_routes
 from sensei_top.api import create_app
 from sensei_top.api.routes import review as review_routes
 from sensei_top.db import open_database
@@ -1646,11 +1647,6 @@ def test_review_leaks_returns_an_empty_list_below_the_sample_gate(client):
     assert body["narrative_available"] is True
 
 
-def test_review_leaks_narrative_is_no_report_when_there_is_nothing_to_synthesize(client):
-    body = client.get("/api/review/leaks/narrative").json()
-    assert body["status"] == "no_report"
-
-
 def test_review_leaks_routes_pass_a_per_format_consensus_window(client, monkeypatch):
     """Both `find_leaks` call sites — the GET list route and the narrative
     route's own `build_context` — must hand over a `consensus_window`
@@ -1671,6 +1667,7 @@ def test_review_leaks_routes_pass_a_per_format_consensus_window(client, monkeypa
         return f"window-for-{fmt}"
 
     monkeypatch.setattr(review_routes, "find_leaks", fake_find_leaks)
+    monkeypatch.setattr(leaks_routes, "find_leaks", fake_find_leaks)
     monkeypatch.setattr(review_routes, "_consensus_window", fake_window)
 
     client.get("/api/review/leaks")

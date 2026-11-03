@@ -601,7 +601,7 @@ msgstr ""
 msgid "Nothing about the resource trade could be measured for this match."
 msgstr ""
 
-#: sensei_top/api/routes/review.py
+#: sensei_top/ai/routes/leaks.py
 msgid "Nothing to write a training plan from yet."
 msgstr ""
 

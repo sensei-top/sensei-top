@@ -3,7 +3,7 @@
 the call itself. A separate prompt from ``ai/review/narrative.py``'s, because
 the leak finder reads across every match rather than one. How the prompt is
 served, sent and stored: ``docs/review.md``, "The narrative
-(`ai/review/narrative.py`, `review/leaks_narrative.py`)".
+(`ai/review/narrative.py`, `ai/review/leaks_narrative.py`)".
 
 What it describes is aggregate: pattern codes, sample sizes, win rates and
 their Wilson intervals — never a specific match's turn-by-turn shape, since

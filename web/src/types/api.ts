@@ -888,41 +888,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/review/leaks/narrative": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Review Leaks Narrative Route
-         * @description The stored training-plan prose over the leak finder's own ranked
-         *     output, and always the prompt to (re)write it from. Same shape and
-         *     posture as the per-match narrative route.
-         */
-        get: operations["review_leaks_narrative_route_api_review_leaks_narrative_get"];
-        /**
-         * Paste Leaks Narrative
-         * @description Store an answer pasted into the training plan's card. Makes no model
-         *     call; same refusals, storage and response as the per-match paste route
-         *     (422 for another card's answer or one with no prose, 413 over 256 KB,
-         *     the header's context stored, the model ``pasted``).
-         */
-        put: operations["paste_leaks_narrative_api_review_leaks_narrative_put"];
-        /**
-         * Generate Leaks Narrative
-         * @description Write a training plan over the leak finder's own ranked output
-         *     with Claude, and store it. Same evidence and posture as the
-         *     per-match generate route.
-         */
-        post: operations["generate_leaks_narrative_api_review_leaks_narrative_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/guide/decks": {
         parameters: {
             query?: never;
@@ -1537,6 +1502,41 @@ export interface paths {
          *     wraps whatever the Claude API itself objected to.
          */
         post: operations["generate_match_report_narrative_api_matches__match_id__report_narrative_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/review/leaks/narrative": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Review Leaks Narrative Route
+         * @description The stored training-plan prose over the leak finder's own ranked
+         *     output, and always the prompt to (re)write it from. Same shape and
+         *     posture as the per-match narrative route.
+         */
+        get: operations["review_leaks_narrative_route_api_review_leaks_narrative_get"];
+        /**
+         * Paste Leaks Narrative
+         * @description Store an answer pasted into the training plan's card. Makes no model
+         *     call; same refusals, storage and response as the per-match paste route
+         *     (422 for another card's answer or one with no prose, 413 over 256 KB,
+         *     the header's context stored, the model ``pasted``).
+         */
+        put: operations["paste_leaks_narrative_api_review_leaks_narrative_put"];
+        /**
+         * Generate Leaks Narrative
+         * @description Write a training plan over the leak finder's own ranked output
+         *     with Claude, and store it. Same evidence and posture as the
+         *     per-match generate route.
+         */
+        post: operations["generate_leaks_narrative_api_review_leaks_narrative_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6258,79 +6258,6 @@ export interface operations {
             };
         };
     };
-    review_leaks_narrative_route_api_review_leaks_narrative_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NarrativeResponse"];
-                };
-            };
-        };
-    };
-    paste_leaks_narrative_api_review_leaks_narrative_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PastedAnswerIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NarrativeResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    generate_leaks_narrative_api_review_leaks_narrative_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NarrativeResponse"];
-                };
-            };
-        };
-    };
     guide_decks_api_guide_decks_get: {
         parameters: {
             query?: never;
@@ -7215,6 +7142,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_leaks_narrative_route_api_review_leaks_narrative_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NarrativeResponse"];
+                };
+            };
+        };
+    };
+    paste_leaks_narrative_api_review_leaks_narrative_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PastedAnswerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_leaks_narrative_api_review_leaks_narrative_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NarrativeResponse"];
                 };
             };
         };
