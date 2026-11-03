@@ -52,12 +52,15 @@ export interface ShellPrefs {
   language?: LanguageChoice;
   /** Plan 23: which clients the user plays; absent means both. */
   plays?: Play[];
+  /** Plan 40D: whether the page shows its AI features; absent means undecided
+   *  (`settleAiFeatures`), which the page reads as off. The server never reads it. */
+  aiFeatures?: boolean;
 }
 
 /** What is on disk: the known keys plus whatever else was there. */
 export type ShellJson = ShellPrefs & Record<string, unknown>;
 
-const BOOLEAN_KEYS = ['keepRunningOnClose', 'autostart', 'checkForUpdates', 'diagnostic', 'onboarded'] as const;
+const BOOLEAN_KEYS = ['keepRunningOnClose', 'autostart', 'checkForUpdates', 'diagnostic', 'onboarded', 'aiFeatures'] as const;
 
 function isInt(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value);
@@ -128,6 +131,28 @@ export function mergePrefs(current: ShellJson, patch: Partial<ShellJson>): Shell
     else next[key] = value;
   }
   return next;
+}
+
+/** An absent `aiFeatures` becomes `true` when onboarding was already
+ *  finished: that install never sees `/welcome` again, so nothing would ask.
+ *  Otherwise it stays absent, for `/welcome` to ask. A present value is never
+ *  decided again. Returns what the key holds afterwards.
+ *
+ *  Contract: call it before the settings are first published, so the page's
+ *  first read already carries the decision. */
+export function settleAiFeatures(
+  store: { get(): Readonly<ShellJson>; update(patch: Partial<ShellJson>): boolean },
+  log: Logger = silent,
+): boolean | undefined {
+  const prefs = store.get();
+  if (prefs.aiFeatures !== undefined) return prefs.aiFeatures;
+  if (!prefs.onboarded) {
+    log.info('aiFeatures undecided: the welcome page asks');
+    return undefined;
+  }
+  store.update({ aiFeatures: true });
+  log.info('aiFeatures on: onboarding was already finished');
+  return true;
 }
 
 /** Writes `data` to `file` through a temporary file beside it. */

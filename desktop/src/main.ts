@@ -42,7 +42,7 @@ import {
   type Saved,
 } from './settings';
 import { DB_NAME, resolveDataDir, serverCommand, ServerController, type ServerState } from './server';
-import { ShellStore } from './store';
+import { settleAiFeatures, ShellStore } from './store';
 import { StatusTray, type UpdateMenu } from './tray';
 import { updaterAvailability, UpdateService, type UpdateStatus } from './updater';
 import { appMenuTemplate, MainWindow } from './window';
@@ -94,6 +94,8 @@ if (!app.requestSingleInstanceLock()) {
 function run(): void {
   const store = ShellStore.load(app.getPath('userData'), shellLog.child('shell.store'));
   if (store.get().diagnostic) shellLog.setLevel('DEBUG');
+  // Before the settings are first read and published: the page's first read carries the decision.
+  settleAiFeatures(store, shellLog.child('shell.store'));
 
   log.info('start', {
     app: app.getVersion(),

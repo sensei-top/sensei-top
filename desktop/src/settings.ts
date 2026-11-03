@@ -118,6 +118,8 @@ export type AppSettings = {
   update: UpdateStatus;
   /** shell.json's `onboarded` (S15): the shell opens `/welcome` until it is true. */
   onboarded: boolean;
+  /** shell.json's `aiFeatures` (plan 40D); `null` while undecided, which the page reads as off. */
+  aiFeatures: boolean | null;
   /** Whether onboarding's last step asks about starting with the system (D25). */
   askAutostart: boolean;
   /** Whether this copy can start with the system at all; the page hides the toggle when not. */
@@ -132,7 +134,10 @@ export type AppSettings = {
 };
 
 /** An app-setting change the page can send. */
-export type AppChange = Partial<Pick<AppSettings, 'startWithSystem' | 'keepRunningOnClose' | 'checkForUpdates' | 'diagnostic' | 'language' | 'plays'>>;
+export type AppChange = Partial<Pick<AppSettings, 'startWithSystem' | 'keepRunningOnClose' | 'checkForUpdates' | 'diagnostic' | 'language' | 'plays'>> & {
+  /** Never `null`: once chosen, the switch is not undecided again. */
+  aiFeatures?: boolean;
+};
 
 /** What `window.senseiTopShell.initial` holds, and what a change sends. */
 export type BridgeSettings = ShellSettings & { app: AppSettings };
@@ -340,6 +345,7 @@ export function toAppSettings(
     plays: prefs.plays ?? ['arena', 'mtgo'],
     update: info.update,
     onboarded: prefs.onboarded ?? false,
+    aiFeatures: prefs.aiFeatures ?? null,
     askAutostart: info.askAutostart,
     canAutostart: info.canAutostart,
     windowsStore: info.windowsStore,
@@ -449,6 +455,8 @@ export function planAppChange(
   if (change.diagnostic !== undefined) patch.diagnostic = change.diagnostic;
   if (change.language !== undefined) patch.language = change.language;
   if (change.plays !== undefined) patch.plays = change.plays;
+  // A `null` stored would be dropped at the next launch and decided again.
+  if (typeof change.aiFeatures === 'boolean') patch.aiFeatures = change.aiFeatures;
   return { patch, restart: change.diagnostic !== undefined && change.diagnostic !== current.diagnostic };
 }
 
