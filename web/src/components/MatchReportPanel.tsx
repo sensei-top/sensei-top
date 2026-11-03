@@ -1,11 +1,7 @@
-import { useMemo, useState, useSyncExternalStore } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  useGenerateMatchReportNarrative,
-  usePasteMatchReportNarrative,
-  useLLMStatus,
   useMatchReport,
-  useReportNarrativePrompt,
   type PositionPoint,
   type ReportEvidence,
   type ReportFinding,
@@ -14,11 +10,9 @@ import {
 } from '../api'
 import type { TFunction } from '../i18n'
 import { formatNumber } from '../lib/format'
-import { writerFrom } from '../lib/writer'
-import { GenerateCard } from '../ai/GenerateCard'
+import { useAi } from '../ai/registry'
 import { GameCard, type WeighedGame } from './match/GameCard'
 import {
-  Button,
   Card,
   DataTable,
   Disclosure,
@@ -328,53 +322,6 @@ function Games({
 /** One empty list, so a game with no line passes the same array each time. */
 const NO_POINTS: PositionPoint[] = []
 
-function ReportNarrativeCard({ matchId }: { matchId: string }) {
-  const { t } = useTranslation()
-  const [open, setOpen] = useState(false)
-  const prompt = useReportNarrativePrompt(matchId, open)
-  const llmStatus = useLLMStatus()
-  const generate = useGenerateMatchReportNarrative()
-  const paste = usePasteMatchReportNarrative()
-
-  if (!open) {
-    return (
-      <Card
-        title={t('matches.report.coachTitle')}
-        subtitle={t('matches.report.coachSubtitle')}
-      >
-        <Button variant="primary" onClick={() => setOpen(true)}>
-          {t('matches.report.coachShow')}
-        </Button>
-      </Card>
-    )
-  }
-
-  const body = prompt.data
-  return (
-    <GenerateCard
-      title={t('matches.report.coachTitle')}
-      subtitle={t('matches.report.coachSubtitle')}
-      writer={writerFrom(llmStatus.data)}
-      prompt={body?.prompt}
-      narrative={body?.status === 'ok' ? body.narrative : null}
-      model={body?.model}
-      generatedAt={body?.generated_at}
-      costUsd={body?.cost_usd}
-      stale={body?.stale}
-      loading={prompt.isLoading}
-      error={
-        body?.status === 'no_report'
-          ? t('matches.report.nothingToReview')
-          : (prompt.error?.message ?? null)
-      }
-      onGenerate={() => generate.mutate(matchId)}
-      generating={generate.isPending}
-      generateError={generate.error?.message}
-      save={(answer) => paste.mutateAsync({ matchId, answer })}
-    />
-  )
-}
-
 /** The post-game report under the match's hero: local, deterministic
  *  findings computed fresh on every load (review/__init__.py — never
  *  stored, so it is always current with respect to `cards` and deck data),
@@ -390,6 +337,7 @@ function ReportNarrativeCard({ matchId }: { matchId: string }) {
 export function MatchReportPanel({ matchId }: { matchId: string }) {
   const { t } = useTranslation()
   const report = useMatchReport(matchId)
+  const ai = useAi()
   const wide = useWide()
   const data = report.data
   const turningPoints = useMemo(() => {
@@ -428,7 +376,7 @@ export function MatchReportPanel({ matchId }: { matchId: string }) {
           <div className="space-y-6">
             <Pairing beats={matchup} />
             <Gaps gapGroups={gapGroups} />
-            <ReportNarrativeCard matchId={matchId} />
+            {ai && <ai.ReportNarrativeCard matchId={matchId} />}
           </div>
         </div>
       ) : gapGroups.length > 0 ? (
@@ -437,11 +385,18 @@ export function MatchReportPanel({ matchId }: { matchId: string }) {
         <div className="space-y-6">
           <StoodOut findings={findings} />
           <Pairing beats={matchup} />
-          <ReportNarrativeCard matchId={matchId} />
+          {ai && <ai.ReportNarrativeCard matchId={matchId} />}
         </div>
       )}
     </div>
   )
+}
+
+const SPANS: Record<number, string> = { 2: 'lg:row-span-2', 3: 'lg:row-span-3', 4: 'lg:row-span-4' }
+const TEMPLATES: Record<number, string> = {
+  2: 'lg:grid-rows-[auto_1fr]',
+  3: 'lg:grid-rows-[auto_auto_1fr]',
+  4: 'lg:grid-rows-[auto_auto_auto_1fr]',
 }
 
 /** The report when no finding weighs more than a note, but it has gaps:
@@ -465,11 +420,15 @@ function GapsLead({
   matchId: string
   wide: boolean
 }) {
+  const ai = useAi()
   const withPairing = matchup.length > 0
+  // The narrow column's rows: what stood out, the pairing if any, the coach's
+  // card if drawn, then the one that takes the rest.
+  const rows = (withPairing ? 3 : 2) + (ai ? 1 : 0)
   const gaps = (
     <div
       key="gaps"
-      className={`min-w-0 lg:col-start-1 lg:row-start-1 ${withPairing ? 'lg:row-span-4' : 'lg:row-span-3'}`}
+      className={`min-w-0 lg:col-start-1 lg:row-start-1 ${SPANS[rows]}`}
     >
       <Gaps gapGroups={gapGroups} />
     </div>
@@ -484,15 +443,15 @@ function GapsLead({
       <Pairing beats={matchup} />
     </div>
   ) : null
-  const coach = (
+  const coach = ai && (
     <div key="coach" className="min-w-0 lg:col-start-2">
-      <ReportNarrativeCard matchId={matchId} />
+      <ai.ReportNarrativeCard matchId={matchId} />
     </div>
   )
   return (
     <div
       className={`grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start ${
-        withPairing ? 'lg:grid-rows-[auto_auto_auto_1fr]' : 'lg:grid-rows-[auto_auto_1fr]'
+        TEMPLATES[rows]
       }`}
     >
       {wide ? [gaps, stoodOut, pairing, coach] : [stoodOut, pairing, gaps, coach]}

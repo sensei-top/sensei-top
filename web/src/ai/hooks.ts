@@ -16,6 +16,8 @@ import {
   type MatchupBriefOut,
   type MatchupBriefResponse,
   type NarrativeResponse,
+  type RcqGenerateIn,
+  type RcqGuideOut,
 } from '../api'
 
 /** The coach tab's free, local evidence bundle — population, by-deck/role/
@@ -221,5 +223,77 @@ export const usePasteBrief = () => {
     mutationFn: ({ key, archetypeKey, answer }: { key: string; archetypeKey: string; answer: string }) =>
       putPasted<MatchupBriefOut>({ card: 'brief', key, archetypeKey }, answer),
     onSuccess: (_data, { key }) => invalidateBriefWrite(queryClient, key),
+  })
+}
+
+/** The stored "Coach's summary" for one match, and always the prompt to
+ *  (re)write it from. An ordinary query, enabled only while the panel is
+ *  open — the route recomputes the report/snapshot/field context on every
+ *  call, so this stays opt-in rather than riding the heartbeat. */
+export const useReportNarrativePrompt = (matchId: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ['match-report-narrative-prompt', matchId],
+    queryFn: () => get<NarrativeResponse>(`/api/matches/${matchId}/report/narrative`),
+    enabled,
+  })
+
+/** Write this match's "Coach's summary" with Claude, and store it.
+ *
+ *  The explicit invalidation is required, same reasoning as
+ *  `useSetOpponentDeck`: nothing about a stored narrative changes the
+ *  heartbeat's row-count revision, so without this the card would show a
+ *  stale "nothing written yet" until an unrelated refetch happened to
+ *  overwrite it. */
+export const useGenerateMatchReportNarrative = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (matchId: string) =>
+      post<NarrativeResponse>(`/api/matches/${matchId}/report/narrative`),
+    onSuccess: (_data, matchId) => {
+      queryClient.invalidateQueries({ queryKey: ['match-report-narrative-prompt', matchId] })
+    },
+  })
+}
+
+/** A pasted "Coach's summary" for one match. */
+export const usePasteMatchReportNarrative = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ matchId, answer }: { matchId: string; answer: string }) =>
+      putPasted<NarrativeResponse>({ card: 'match', matchId }, answer),
+    onSuccess: (_data, { matchId }) =>
+      queryClient.invalidateQueries({ queryKey: ['match-report-narrative-prompt', matchId] }),
+  })
+}
+
+/** Write this deck's RCQ guide with Claude from the pasted 75 and the
+ *  archetypes expected, and store it. A stored guide changes no row count
+ *  the heartbeat reads, so the answer goes straight into the guide's query
+ *  and that query is invalidated too. */
+export const useGenerateRcq = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ key, body }: { key: string; body: RcqGenerateIn }) =>
+      post<RcqGuideOut>(`/api/guide/${encodeURIComponent(key)}/rcq/narrative`, body),
+    onSuccess: (data, { key }) => {
+      queryClient.setQueryData(['rcq-guide', key], data)
+      queryClient.invalidateQueries({ queryKey: ['rcq-guide', key] })
+      queryClient.invalidateQueries({ queryKey: ['rcq-markdown', key] })
+    },
+  })
+}
+
+/** A pasted RCQ guide, sent with the 75 and the picks it was written
+ *  from (`inputs`, the same fields the generate route takes). */
+export const usePasteRcq = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ key, inputs, answer }: { key: string; inputs: RcqGenerateIn; answer: string }) =>
+      putPasted<RcqGuideOut>({ card: 'rcq', key, inputs }, answer),
+    onSuccess: (_data, { key }) =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['rcq-guide', key] }),
+        queryClient.invalidateQueries({ queryKey: ['rcq-markdown', key] }),
+      ]),
   })
 }

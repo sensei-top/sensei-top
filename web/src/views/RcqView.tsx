@@ -1,16 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  useGenerateRcq,
-  usePasteRcq,
   useGuide,
-  useLLMStatus,
   useMetaPresence,
   useRcqGuide,
   useRcqPreview,
   type MetaWindow,
 } from '../api'
-import { GenerateCard } from '../ai/GenerateCard'
+import { useAi } from '../ai/registry'
 import { InputsCard } from '../components/rcq/InputsCard'
 import { PreviewCard } from '../components/rcq/PreviewCard'
 import { RcqResult } from '../components/rcq/RcqResult'
@@ -26,7 +23,6 @@ import {
   writeInputs,
   type RcqInputs,
 } from '../lib/rcq'
-import { writerFrom } from '../lib/writer'
 
 /** A deck's RCQ prep: the 75 the player will register and the archetypes
  *  they expect, read back by the preview, then one button that writes a
@@ -50,9 +46,7 @@ export function RcqView({ deckKey }: { deckKey: string }) {
   const { t } = useTranslation()
   const guide = useGuide(deckKey)
   const stored = useRcqGuide(deckKey)
-  const llmStatus = useLLMStatus()
-  const generate = useGenerateRcq()
-  const paste = usePasteRcq()
+  const ai = useAi()
 
   // The field the chips offer: the last two weeks of the deck's format, the
   // field a store's players will have netdecked from. Nothing is asked
@@ -88,15 +82,10 @@ export function RcqView({ deckKey }: { deckKey: string }) {
   if (guide.isPending) return <Loading />
   if (guide.error) return <ErrorNote error={guide.error} />
 
-  const response = stored.data?.status === 'ok' ? stored.data : undefined
   // What the write and the pasted answer both send: the list as typed with the
   // settled preview's keys.
   const sent = { decklist: inputs.decklist, expected: settled.expected, own: settled.own }
   const showOwnPicker = inputs.own != null || (current && preview.data?.own_archetype_key == null)
-  const changed = response?.decklist_text != null && response.decklist_text.trim() !== inputs.decklist.trim()
-  // The stored answer's own prompt was for another list than the one saved
-  // beside it: said even when the box still holds the saved list.
-  const answeredElsewhere = response?.answered_for_another_list === true
   const names: Record<string, string> = Object.fromEntries(
     (preview.data?.expected ?? []).map((each) => [each.key, each.name]),
   )
@@ -125,35 +114,14 @@ export function RcqView({ deckKey }: { deckKey: string }) {
         inputs={inputs}
       />
 
-      <GenerateCard
-        title={response ? t('rcq.view.writeAgain') : t('rcq.view.write')}
-        subtitle={t('rcq.view.subtitle')}
-        accent
-        writer={writerFrom(llmStatus.data)}
-        prompt={current ? preview.data?.prompt : undefined}
-        narrative={undefined}
-        model={response?.model}
-        generatedAt={response?.generated_at}
-        costUsd={response?.cost_usd}
-        stale={changed || answeredElsewhere}
-        staleNote={answeredElsewhere ? t('rcq.view.answeredForAnotherList') : t('rcq.view.staleNote')}
-        loading={!current && inputs.decklist.trim() !== ''}
-        onGenerate={() =>
-          generate.mutate({
-            key: deckKey,
-            body: sent,
-          })
-        }
-        generating={generate.isPending}
-        generateError={generate.error?.message}
-        save={(answer) =>
-          paste.mutateAsync({
-            key: deckKey,
-            inputs: sent,
-            answer,
-          })
-        }
-      />
+      {ai && (
+        <ai.RcqWrite
+          deckKey={deckKey}
+          sent={sent}
+          prompt={current ? preview.data?.prompt : undefined}
+          loading={!current && inputs.decklist.trim() !== ''}
+        />
+      )}
 
       {stored.error ? (
         <ErrorNote error={stored.error} />

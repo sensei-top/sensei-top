@@ -4,6 +4,8 @@ import { CoachView } from './coach/CoachView'
 import { MatchupBriefCard } from './brief/MatchupBriefCard'
 import { PairingBrief } from './brief/PairingBrief'
 import { LeaksNarrativeCard } from './guide/LeaksNarrativeCard'
+import { RcqWrite } from './guide/RcqWrite'
+import { ReportNarrativeCard } from './report/ReportNarrativeCard'
 import { NarrativeAndExport } from './guide/WriteAndExport'
 import { WritingSection, WritingStatus } from './settings/WritingSection'
 
@@ -15,6 +17,8 @@ const SURFACES = {
   MatchupBriefCard,
   PairingBrief,
   LeaksNarrativeCard,
+  RcqWrite,
+  ReportNarrativeCard,
   NarrativeAndExport,
   WritingSection,
   WritingStatus,

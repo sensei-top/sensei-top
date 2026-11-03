@@ -19,11 +19,8 @@
   "overrides": [
     {
       "files": [
-        "src/components/MatchReportPanel.tsx",
         "src/components/MatchupCoverageCard.tsx",
-        "src/components/SideboardPlanCard.tsx",
-        "src/views/RcqView.tsx",
-        "src/views/SurfacesView.tsx"
+        "src/components/SideboardPlanCard.tsx"
       ],
       "rules": {
         "no-restricted-imports": "off"

@@ -744,8 +744,10 @@ stood out" heads the narrow one (`GapsLead`). The cards are one grid's
 children at every width, so a card keeps its state when the window
 crosses 64rem. With no gaps either, the report is one column.
 
-`ReportNarrativeCard` starts closed behind a "Show the coach's summary"
-button, since building the prompt means building the whole report's
+`ReportNarrativeCard` (`ai/report/ReportNarrativeCard.tsx`, drawn by
+`MatchReportPanel` through `useAi()`, so with AI off the report has no
+such card) starts closed behind a "Show the coach's summary" button,
+since building the prompt means building the whole report's
 context, which is not worth doing each time a match is opened. Open, it
 is a `GenerateCard` that carries the game's turn-by-turn shape beside
 the findings, and never a raw hand or graveyard. Unlike the guide it has
@@ -952,7 +954,9 @@ layout's fourth tab ("RCQ"), beside the Guide; like the Guide it reads the
 deck whole and drops `?version=`. `/decks/:id/guide/rcq`, its address in
 1.0.x, is `RcqRedirect`: it replaces itself with the tab and keeps the
 search and hash. It hands the deck key to `RcqView` (`views/RcqView.tsx`, parts
-in `components/rcq/`; pure helpers in `lib/rcq.ts`). Inputs card: the
+in `components/rcq/`; pure helpers in `lib/rcq.ts`); the write-and-paste
+card is `RcqWrite` (`ai/guide/RcqWrite.tsx`), drawn through `useAi()`,
+while the preview and the stored guide are core. Inputs card: the
 pasted 75 (prefilled with the deck's list, editable), the expected
 archetypes as chips from `/api/metagame/presence` over the last 14 days
 of the deck's format (`CHIP_WINDOW_DAYS`; the format is the guide's
@@ -965,9 +969,10 @@ expected archetypes stored from before are left out of the preview's key
 (`RcqView.tsx`), so they reach neither the preview nor the guide's
 request. Then the preview (counts, warnings, freshness per source; with
 no format, one line in place of the expected archetypes, the freshness
-and the recent events), `GenerateCard` with the prompt behind its
-toggle, and the latest stored guide with "Copy as Markdown" and
-"Download .md" (`docs/guide.md`, "The RCQ guide").
+and the recent events), `RcqWrite`'s `GenerateCard` with the prompt
+behind its toggle (not drawn with AI off), and the latest stored guide
+with "Copy as Markdown" and "Download .md" (`docs/guide.md`, "The RCQ
+guide").
 
 ## The Deck guide tab
 

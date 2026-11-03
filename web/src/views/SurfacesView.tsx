@@ -10,7 +10,7 @@
  */
 import { useEffect, useState } from 'react'
 import type { AppSettings, Saved, Shell } from '../bridge'
-import { GenerateCard } from '../ai/GenerateCard'
+import { useAi } from '../ai/registry'
 import { DetailedLogsGuide } from '../components/onboarding/DetailedLogsGuide'
 import { PageHeader, SectionLabel, Select, TextLink } from '../components/ui'
 import { SAMPLE_OPTIONS, sampleWriting, useSampleShell, type SampleId } from '../lib/sampleShell'
@@ -143,10 +143,12 @@ const SAMPLE_WRITE_MS = 400
 /** The section of two report cards, one for each writer: nobody, and a
  *  key of the viewer's. */
 function WritingSamples() {
+  const ai = useAi()
   const samples: { label: string; writer: Writer }[] = [
     { label: 'Nobody', writer: { by: 'nobody' } },
     { label: 'A key of your own', writer: { by: 'key' } },
   ]
+  if (!ai) return null
   return (
     <section aria-labelledby="writing-title" className="space-y-4">
       <h2 id="writing-title" className="font-display text-heading text-ink">
@@ -170,6 +172,7 @@ function WritingSamples() {
  *  request; one with no writer starts with the invented report, and its
  *  Save replaces that with the pasted text, in memory, with no request. */
 function SampleWriting({ writer }: { writer: Writer }) {
+  const ai = useAi()
   const writes = writer.by === 'key'
   const [narrative, setNarrative] = useState<string | null>(writes ? null : SAMPLE_PROSE)
   const [generating, setGenerating] = useState(false)
@@ -183,8 +186,9 @@ function SampleWriting({ writer }: { writer: Writer }) {
     return () => window.clearTimeout(timer)
   }, [generating])
 
+  if (!ai) return null
   return (
-    <GenerateCard
+    <ai.GenerateCard
       title="Coach report"
       writer={writer}
       prompt={SAMPLE_PROMPT}
