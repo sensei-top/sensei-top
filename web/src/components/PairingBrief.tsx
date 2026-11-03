@@ -6,7 +6,7 @@ import { archetypeKeyOf } from '../lib/matchups'
 import { briefState } from '../lib/pairing'
 import { useNow } from '../lib/time'
 import { writtenNote } from '../lib/written'
-import { CopyPromptBody } from './CopyPromptCard'
+import { CopyPromptBody } from '../ai/CopyPromptCard'
 import { PlanBody } from './guide/WrittenCards'
 import { Button, Callout, Card, ErrorNote, Loading, SectionLabel } from './ui'
 

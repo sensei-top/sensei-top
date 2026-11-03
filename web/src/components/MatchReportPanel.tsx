@@ -15,7 +15,7 @@ import {
 import type { TFunction } from '../i18n'
 import { formatNumber } from '../lib/format'
 import { writerFrom } from '../lib/writer'
-import { GenerateCard } from './GenerateCard'
+import { GenerateCard } from '../ai/GenerateCard'
 import { GameCard, type WeighedGame } from './match/GameCard'
 import {
   Button,

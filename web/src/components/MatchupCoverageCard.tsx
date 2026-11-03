@@ -11,7 +11,7 @@ import {
 import { formatPercent } from '../lib/format'
 import { pairingAddress } from '../lib/pairing'
 import { placeById } from '../shell/places'
-import { CopyPromptBody } from './CopyPromptCard'
+import { CopyPromptBody } from '../ai/CopyPromptCard'
 import { Button, Card, Chip, DataTable, EmptyState, ErrorNote, Loading, StatTile, TextLink } from './ui'
 
 /** Which archetypes have a matchup brief (`brief/coverage.py`): every

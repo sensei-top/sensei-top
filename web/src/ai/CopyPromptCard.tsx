@@ -2,7 +2,7 @@ import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '../api'
 import { useCopied } from '../lib/clipboard'
-import { Button, Card, TextBlock } from './ui'
+import { Button, Card, TextBlock } from '../components/ui'
 
 /** Stores an answer pasted into the card: the card's `PUT`, one of the
  *  `usePaste…` mutations in `api.ts`, closed over everything but the

@@ -889,14 +889,29 @@ art — are in docs/design-system.md's "Card art".
 
 ## Writing prose: `GenerateCard` and `CopyPromptCard`
 
-`components/CopyPromptCard.tsx` has two exports. `CopyPromptBody` is
+Both cards live in `src/ai/`, the dashboard's AI package, and
+`ai/registry.ts` is the only intended way into it from outside, though the
+files named in the lint rule's override (under "Checks") still import the
+cards directly until each one moves to the registry. The registry is one
+hook, `useAi()`, that returns the AI surfaces a page outside `ai/` may
+draw (`GenerateCard`, `CopyPromptCard`, `CopyPromptBody`, typed
+`AiRegistry`) or `null` when AI features are off. A page calls it once,
+like any hook, draws `ai.GenerateCard` and the rest from what it returns,
+and on `null` draws nothing of its AI part: not the card, not the heading
+over it, not a sentence about it. A hook rather than a list of components
+because a page needs the answer as a boolean too, to hide what surrounds a
+card, and because the switch it will read is itself a hook. Until that
+switch exists it never returns `null`. The boundary is a lint rule, under
+"Checks".
+
+`ai/CopyPromptCard.tsx` has two exports. `CopyPromptBody` is
 everything inside the card (the buttons to copy and to show the prompt, the
 error, the box to paste the answer into, and the prompt itself, scrolling,
 once shown) with no card of its own, for a caller that already has a title:
 the Guide's "Matchup coverage" and a pairing's brief. `CopyPromptCard` wraps
 that body in a `Card`, for everywhere else. Both take `children`, drawn first.
 
-`components/GenerateCard.tsx` (`docs/llm.md`) takes `writer`, who
+`ai/GenerateCard.tsx` (`docs/llm.md`) takes `writer`, who
 writes the report, and builds one body: the written note (`writtenNote`,
 `lib/written.ts`: the author, the day, the cost and, when out of date, a
 sentence, the caller's own or "The evidence has changed since."), then
@@ -1077,6 +1092,17 @@ mistyped one.
 Strict TypeScript is not optional; it caught the readonly-payload and label
 formatter mismatches in recharts' own types. Fix the type, do not cast it away.
 
+`pnpm lint` also holds the boundary around `src/ai/`: `.oxlintrc.json`'s
+`no-restricted-imports` fails, as an error, any import of an `ai/` module
+from outside `ai/` other than `ai/registry`. The pattern refuses any
+import path with an `ai` segment, `ai` itself included, so no other folder
+or package subpath named `ai` can be imported. The files that still import
+a card directly are named in an override that turns the rule off for them;
+each leaves that list as it moves to the registry, and the list is meant
+to end empty. `scripts/aiBoundary.test.ts` runs oxlint against probe files
+to prove a forbidden import fails, and fails itself when a listed file no
+longer imports past the registry.
+
 ### Tests
 
 What is tested is what counts, not what draws: the pure functions under
@@ -1097,12 +1123,13 @@ pattern, and so does `components/settings/AppSection.tsx`, which checks
 which rows the App section draws depending on `canAutostart` and
 `windowsStore`; no other component has a test, and a hook that reads a
 query or the address (`useFilters`, `useMatchInProgress`) has none either: what a page
-looks like and does is still checked in a browser. Three tests sit outside
+looks like and does is still checked in a browser. Four tests sit outside
 `src/`, in `scripts/`, and they are the dashboard tests that touch the
 filesystem: `thirdPartyNotices.test.ts`, for the build step that writes the
 dashboard's third-party notices, builds package folders in a temporary
 directory and reads them back; `i18nCheck.test.ts` reads `src/` and the
-catalogues; `site-images.test.ts` reads `routes.tsx` and the site's files.
+catalogues; `site-images.test.ts` reads `routes.tsx` and the site's files;
+`aiBoundary.test.ts` lints probe files in a temporary directory.
 
 Three rules hold them:
 

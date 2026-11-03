@@ -6,7 +6,7 @@ import { useCopied } from '../../lib/clipboard'
 import { saveMarkdown } from '../../lib/download'
 import { writerFrom } from '../../lib/writer'
 import { Button, Card, Loading, TextBlock } from '../ui'
-import { GenerateCard } from '../GenerateCard'
+import { GenerateCard } from '../../ai/GenerateCard'
 
 /** Write and export: the card that writes the guide (with Claude when a
  *  credential is configured, `docs/llm.md`, or through the prompt and an

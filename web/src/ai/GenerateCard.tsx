@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNow } from '../lib/time'
 import type { Writer } from '../lib/writer'
 import { writtenNote } from '../lib/written'
-import { Button, Card, Prose, TextBlock } from './ui'
+import { Button, Card, Prose, TextBlock } from '../components/ui'
 import { CopyPromptCard, type SaveAnswer } from './CopyPromptCard'
 
 /** A report's card, drawn by who writes the report (`writer`), the

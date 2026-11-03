@@ -10,7 +10,7 @@
  */
 import { useEffect, useState } from 'react'
 import type { AppSettings, Saved, Shell } from '../bridge'
-import { GenerateCard } from '../components/GenerateCard'
+import { GenerateCard } from '../ai/GenerateCard'
 import { DetailedLogsGuide } from '../components/onboarding/DetailedLogsGuide'
 import { PageHeader, SectionLabel, Select, TextLink } from '../components/ui'
 import { SAMPLE_OPTIONS, sampleWriting, useSampleShell, type SampleId } from '../lib/sampleShell'

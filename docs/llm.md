@@ -405,8 +405,11 @@ measurement, so the Opus 5 and Fable 5.1 rows overstate what they cost now.
 
 `GET /api/llm/status` reports `{configured: bool, model: str | None}`,
 never the key itself. Each of the five callers reads it and hands
-`GenerateCard` (`web/src/components/GenerateCard.tsx`) a `writer`, who
-writes the report, from `writerFrom` (`web/src/lib/writer.ts`). The
+`GenerateCard` (`web/src/ai/GenerateCard.tsx`, meant to be reached
+through `useAi()` in `web/src/ai/registry.ts`, though the callers named
+in `web/.oxlintrc.json`'s override still import it directly until each
+one moves) a `writer`, who writes the report, from `writerFrom`
+(`web/src/lib/writer.ts`). The
 card builds one body, the same whoever writes: a written note
 (`writtenNote`, `lib/written.ts`: who wrote it, when, what it cost and,
 when the evidence has moved on since, a sentence saying so), then the

@@ -4,7 +4,7 @@ import type { BoardCardOut, CurrentMatch, MatchupBriefOut, PlanProblemOut, PlayA
 import type { TFunction } from '../i18n'
 import { ageText, seenOpponentCards } from '../lib/brief'
 import { isPasted } from '../lib/written'
-import { CopyPromptCard } from './CopyPromptCard'
+import { CopyPromptCard } from '../ai/CopyPromptCard'
 import { Card, Chip, EmptyState, Loading, Prose, SectionLabel } from './ui'
 import { formatList, formatPercent, formatRecord } from '../lib/format'
 

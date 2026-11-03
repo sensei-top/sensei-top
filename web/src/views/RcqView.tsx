@@ -10,7 +10,7 @@ import {
   useRcqPreview,
   type MetaWindow,
 } from '../api'
-import { GenerateCard } from '../components/GenerateCard'
+import { GenerateCard } from '../ai/GenerateCard'
 import { InputsCard } from '../components/rcq/InputsCard'
 import { PreviewCard } from '../components/rcq/PreviewCard'
 import { RcqResult } from '../components/rcq/RcqResult'

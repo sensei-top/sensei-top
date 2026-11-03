@@ -17,7 +17,7 @@ import {
 } from '../api'
 import { CoachReport } from '../components/CoachReport'
 import { Profile } from '../components/coach/Profile'
-import { GenerateCard } from '../components/GenerateCard'
+import { GenerateCard } from '../ai/GenerateCard'
 import { isPasted } from '../lib/written'
 import { Callout, Card, EmptyState, ErrorNote, Loading, Select, TextLink } from '../components/ui'
 import {

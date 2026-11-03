@@ -7,7 +7,7 @@ import { patternSentence, patternWords } from '../../lib/patterns'
 import { formatCount } from '../../lib/time'
 import { writerFrom } from '../../lib/writer'
 import { Card, Chip, Disclosure, IntervalBar } from '../ui'
-import { GenerateCard } from '../GenerateCard'
+import { GenerateCard } from '../../ai/GenerateCard'
 import { PatternMatches } from './PatternMatches'
 
 /** One recurring pattern (`review/leaks.py`'s `Leak`): the same title and
