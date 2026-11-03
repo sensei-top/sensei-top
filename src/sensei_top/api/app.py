@@ -8,8 +8,10 @@ belongs on is docs/architecture.md, "Aggregation: views versus Python"), and
 every connection opens ``PRAGMA query_only=ON`` except the one
 ``deps.get_writable_conn`` hands to the authored-artifact routes. Which
 tables those may write, and why, is AGENTS.md non-negotiable 6;
-``tests/test_api.py::test_only_authored_artifact_routes_write`` pins the
-exact set of non-GET routes, so an addition is a design change, not a patch.
+``tests/ai/test_write_allowlist.py::test_only_authored_artifact_routes_write``
+pins the exact set of non-GET routes, and
+``tests/test_api.py::test_core_alone_writes_only_the_picks`` the picks alone
+without ``ai/``, so an addition is a design change, not a patch.
 ``GET /api/cards/{grp_id}/image`` and ``/art`` write too, but picture files
 beside the database, never rows (docs/architecture.md, "Who owns which
 table").

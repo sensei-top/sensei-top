@@ -3,8 +3,8 @@
 Every expectation here comes from the line format docs/architecture.md,
 "The log file", fixes: UTC times, an 8-hex-char session id per launch,
 WARNING and up (DEBUG with ``--verbose``), the home directory written as
-``~``. The console and the file also take ``sensei_top.ai.llm``'s INFO lines,
-the cost of each generate call; two tests pin that. The watcher child's
+``~``. The console and the file also take the generate call's INFO lines,
+the cost of each one; ``tests/ai/test_logs_llm.py`` pins that. The watcher child's
 records reaching ``serve``'s file are tested against a real ``serve`` in
 ``test_live.py``, where its child runs.
 
@@ -28,7 +28,6 @@ from pathlib import Path
 import pytest
 
 from sensei_top import cli, logs
-from sensei_top.ai.llm import client as llm_client
 from sensei_top.config import config_path
 
 LINE = re.compile(
@@ -236,30 +235,12 @@ def bare_root():
 
 
 @pytest.mark.parametrize("verbose", [False, True])
-def test_the_generate_calls_info_line_reaches_the_console_and_the_file(
-    tmp_path, capsys, verbose
-):
-    """The cost of each generate call is logged at INFO by
-    ``sensei_top.ai.llm.client``, and a user is promised it (non-negotiable 5,
-    "never silent"): it reaches the console and the file at the default
-    levels and under ``--verbose``."""
-    with bare_root():
-        path = run(tmp_path, *(["--verbose"] if verbose else []), "config")
-        capsys.readouterr()
-        logging.getLogger(llm_client.__name__).info("the cost line")
-        console = capsys.readouterr().err.splitlines()
-
-    assert console == ["INFO the cost line"]
-    assert [line["message"] for line in lines(path)[1:]] == ["the cost line"]
-
-
-@pytest.mark.parametrize("verbose", [False, True])
 @pytest.mark.parametrize("name", ["sensei_top.probe", "httpx", "sensei_top.llmx"])
 def test_every_other_loggers_info_line_stays_out(tmp_path, capsys, verbose, name):
-    """Only the ``sensei_top.ai.llm`` prefix is let through at INFO: another
-    module's, a library's and a name that merely starts with ``sensei_top.ai.llm``
-    reach neither the console nor, without ``--verbose``, the file. Under
-    ``--verbose`` the file takes DEBUG and up, so it takes them as it did."""
+    """Only the generate call's logger prefix is let through at INFO: another
+    module's and a library's reach neither the console nor, without
+    ``--verbose``, the file. Under ``--verbose`` the file takes DEBUG and up,
+    so it takes them as it did."""
     with bare_root():
         path = run(tmp_path, *(["--verbose"] if verbose else []), "config")
         capsys.readouterr()

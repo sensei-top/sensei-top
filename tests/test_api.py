@@ -20,9 +20,7 @@ from fastapi.routing import iter_route_contexts
 from fastapi.testclient import TestClient
 
 from sensei_top import card_images
-from sensei_top.ai.routes import leaks as leaks_routes
 from sensei_top.api import create_app
-from sensei_top.api.routes import review as review_routes
 from sensei_top.db import open_database
 from sensei_top.guide.bundle import FORMAT_UNKNOWN_GAP
 from sensei_top.metagame.classify_meta import classify_meta_decks
@@ -818,7 +816,6 @@ def test_openapi_schema_is_generated(client):
         "/api/matches",
         "/api/matches/{match_id}",
         "/api/matches/{match_id}/report",
-        "/api/matches/{match_id}/report/narrative",
         "/api/cards/{grp_id}/image",
         "/api/cards/{grp_id}/art",
     } <= set(schema["paths"])
@@ -1645,39 +1642,6 @@ def test_review_leaks_returns_an_empty_list_below_the_sample_gate(client):
     body = client.get("/api/review/leaks").json()
     assert body["leaks"] == []
     assert body["narrative_available"] is True
-
-
-def test_review_leaks_routes_pass_a_per_format_consensus_window(client, monkeypatch):
-    """Both `find_leaks` call sites — the GET list route and the narrative
-    route's own `build_context` — must hand over a `consensus_window`
-    resolver, so each match's report is windowed by its own format's reset
-    and the field record inside
-    `review/analyzers/baseline.py` never pools rounds from across one
-    (`docs/metagame.md`'s format-reset boundary). The window lookup is
-    replaced with one that names the format it was asked for, so this pins
-    that the resolver asks for the format it is given, not one fixed
-    format's window."""
-    calls = []
-
-    def fake_find_leaks(conn, **kwargs):
-        calls.append(kwargs)
-        return []
-
-    def fake_window(conn, fmt):
-        return f"window-for-{fmt}"
-
-    monkeypatch.setattr(review_routes, "find_leaks", fake_find_leaks)
-    monkeypatch.setattr(leaks_routes, "find_leaks", fake_find_leaks)
-    monkeypatch.setattr(review_routes, "_consensus_window", fake_window)
-
-    client.get("/api/review/leaks")
-    client.get("/api/review/leaks/narrative")
-
-    assert len(calls) == 2
-    for call in calls:
-        assert "consensus_since" not in call
-        assert call["consensus_window"]("Modern") == "window-for-Modern"
-        assert call["consensus_window"]("Standard") == "window-for-Standard"
 
 
 # --- shared report cache (api/sql.py::_shared_report_cache) -----------------
@@ -3719,19 +3683,10 @@ def test_a_pick_row_for_an_arena_match_never_overrides_its_deck(mtgo_pick_db):
     assert tuple(row) == (arena_deck, None, 1)
 
 
-def test_only_authored_artifact_routes_write():
-    """AGENTS.md rule 6 allows writes only to authored-artifact tables, never
-    anything the projector rebuilds. A route outside this allowlist is a
-    design change, not a patch — this test is where that conversation
-    starts.
-
-    Walks ``iter_route_contexts`` rather than ``app.routes`` directly: since
-    the API became a package of routers, every route arrives via
-    ``include_router``, and FastAPI resolves those lazily — ``app.routes``
-    holds one opaque wrapper per included router, not the routes themselves.
-    ``iter_route_contexts`` is what FastAPI's own ``get_openapi`` walks, so
-    this sees exactly the set the published schema does.
-    """
+def test_core_alone_writes_only_the_picks(hide_ai):
+    """AGENTS.md rule 6's core half: with ``ai/`` hidden, the only non-GET
+    routes are the user's picks. The full allowlist, authored prose included,
+    is ``tests/ai/test_write_allowlist.py``."""
     app = create_app("unused.db")
     writers = {
         (route.path, method)
@@ -3743,19 +3698,6 @@ def test_only_authored_artifact_routes_write():
         ("/api/matches/{match_id}/opponent-deck", "PUT"),
         ("/api/matches/{match_id}/mtgo-pick", "PUT"),
         ("/api/mtgo/picks", "PUT"),
-        ("/api/matches/{match_id}/report/narrative", "POST"),
-        ("/api/review/leaks/narrative", "POST"),
-        ("/api/guide/{key}/narrative", "POST"),
-        ("/api/guide/{key}/rcq/narrative", "POST"),
-        ("/api/coach/narrative", "POST"),
-        # Pasted answers: no model call, only the same tables.
-        ("/api/guide/{key}/narrative", "PUT"),
-        ("/api/guide/{key}/rcq/narrative", "PUT"),
-        ("/api/guide/{key}/briefs/{archetype_key}", "PUT"),
-        ("/api/guide/{key}/coverage", "PUT"),
-        ("/api/matches/{match_id}/report/narrative", "PUT"),
-        ("/api/review/leaks/narrative", "PUT"),
-        ("/api/coach/narrative", "PUT"),
     }
 
 

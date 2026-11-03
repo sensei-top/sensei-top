@@ -6,11 +6,11 @@ it, and an app built without it carries ``api/providers.py``'s
 A core test: it must pass with ``src/sensei_top/ai/`` deleted, so it never
 imports ``sensei_top.ai`` statically, and the cases that need ``ai/`` skip
 without it. Hiding ``ai/`` is ``find_spec`` answering ``None``; the package
-stays in ``sys.modules`` through core's remaining static edges. Core mounts
+stays in ``sys.modules`` when other tests in the run imported it; core has
+no static edge to it. Core mounts
 no ``/narrative`` route at all.
 """
 
-import importlib.util
 from pathlib import Path
 
 import pytest
@@ -22,22 +22,6 @@ from sensei_top.api import create_app
 from sensei_top.api.providers import NO_PROVIDERS, Providers, providers_of
 from sensei_top.cli import build_parser
 from sensei_top.db import open_database
-
-
-def _hide_ai(monkeypatch):
-    real = importlib.util.find_spec
-
-    def find_spec(name, package=None):
-        if name == "sensei_top.ai" or name.startswith("sensei_top.ai."):
-            return None
-        return real(name, package)
-
-    monkeypatch.setattr(importlib.util, "find_spec", find_spec)
-
-
-@pytest.fixture
-def hide_ai(monkeypatch):
-    _hide_ai(monkeypatch)
 
 
 @pytest.fixture
@@ -55,7 +39,7 @@ def build(tmp_path, monkeypatch):
 
 def _paths(app: FastAPI) -> set[str]:
     """Every route's path, through included routers
-    (``test_api.py::test_only_authored_artifact_routes_write`` says why)."""
+    (``tests/ai/test_write_allowlist.py`` says why)."""
     return {route.path for route in iter_route_contexts(app.routes)}
 
 
@@ -112,12 +96,12 @@ def test_with_ai_its_routers_mount_before_the_dashboard(build, make_client):
 # --- the providers ---------------------------------------------------------
 
 
-def test_each_app_keeps_the_providers_it_was_built_with(build, monkeypatch):
+def test_each_app_keeps_the_providers_it_was_built_with(build, monkeypatch, hider):
     ai = pytest.importorskip("sensei_top.ai")
     lent = Providers()
     monkeypatch.setattr(ai, "providers", lambda: lent)
     with_ai = build()
-    _hide_ai(monkeypatch)
+    hider()
     without = build()
 
     assert providers_of(with_ai) is lent

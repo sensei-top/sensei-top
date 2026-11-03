@@ -173,9 +173,9 @@ One line each; the detail is in the doc named, and
    `cloud_match` (a match pulled back from the user's own cloud history,
    stored as received, never derived; a match read from this install's own
    log always wins over it). Nothing on this allowlist is ever read by
-   `project()`. `tests/test_api.py::test_only_authored_artifact_routes_write`
-   asserts the exact set of non-GET routes against this allowlist — an
-   addition to it is a design change, not a patch.
+   `project()`. `tests/ai/test_write_allowlist.py` pins this allowlist route
+   by route, and `tests/test_api.py` that core alone mounts only the picks'
+   — an addition to either is a design change, not a patch.
 7. **Every parsing rule needs a fixture-backed test.** The log format changes
    without notice; tests against real captured logs are the only early warning.
 8. **Derive test expectations from the data, not from the code.** Read the

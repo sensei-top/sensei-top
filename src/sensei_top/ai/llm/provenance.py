@@ -6,8 +6,8 @@ table's provenance columns beside its feature-specific ones.
 non-negotiable #6's write allowlist. ``coach_report`` and ``rcq_guide`` keep
 every row, so their stores ``INSERT`` and take their timestamp from ``clock.now_iso``.
 This module never grows that allowlist:
-``tests/test_api.py::test_only_authored_artifact_routes_write`` pins the
-route set that may write it.
+``tests/ai/test_write_allowlist.py::test_only_authored_artifact_routes_write``
+pins the route set that may write it.
 """
 
 from __future__ import annotations

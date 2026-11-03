@@ -24,20 +24,7 @@ from sensei_top.api import create_app
 from sensei_top.api.guard import CLIENT_HEADER, LoopbackGuard, is_loopback_host
 from sensei_top.db import open_database
 
-
-@pytest.fixture(autouse=True)
-def _no_claude_calls(monkeypatch):
-    """This module deliberately pokes at every non-GET route, including the
-    four ``.../narrative`` ones. ``conftest.py``'s ``_no_ambient_config``
-    already keeps a real credential out of the environment, but a test here
-    must fail loudly — not place a real, billed call — if that isolation
-    ever regresses. ``llm/client.py::_run`` is the one place every Claude
-    call goes through (``client.messages.stream(...)``)."""
-
-    def _forbidden(*args, **kwargs):
-        pytest.fail("a test in test_guard.py tried to call the Claude API")
-
-    monkeypatch.setattr("sensei_top.ai.llm.client._run", _forbidden)
+pytestmark = pytest.mark.usefixtures("no_claude_calls")
 
 
 @pytest.fixture
@@ -121,35 +108,10 @@ def test_missing_host_header_is_refused(app):
     assert start["status"] == 400
 
 
-# --- the two 2026-09-26 reproductions -----------------------------------------
-
-
-def test_2026_09_26_dns_rebinding_get_is_now_refused(app):
-    """Verified 2026-09-26: ``GET /api/llm/status`` with
-    ``Host: rebind.evil.example`` answered 200 before this guard existed — a
-    DNS-rebinding page could have read the whole match history."""
-    client = TestClient(app, base_url="http://127.0.0.1:8000")
-    response = client.get("/api/llm/status", headers={"host": "rebind.evil.example"})
-    assert response.status_code == 400
-
-
-def test_2026_09_26_cross_site_coach_post_is_now_refused(app):
-    """Verified 2026-09-26: ``POST /api/coach/narrative`` with
-    ``Origin: https://evil.example`` and ``Content-Type: text/plain`` reached
-    the handler (503 only for lack of a credential) — any web page's no-cors
-    ``fetch()`` could have spent a configured Claude credential."""
-    client = TestClient(app, base_url="http://127.0.0.1:8000")
-    response = client.post(
-        "/api/coach/narrative",
-        headers={"origin": "https://evil.example", "content-type": "text/plain"},
-    )
-    assert response.status_code == 403
-
-
 # --- every non-GET route needs the header ------------------------------------
 
 # Route introspection only, on a path that is never opened (mirrors
-# test_api.py::test_only_authored_artifact_routes_write's own
+# test_api.py::test_core_alone_writes_only_the_picks's own
 # create_app("unused.db")) — this exists purely to build the parametrize
 # list at collection time, before the `app` fixture (which needs `tmp_path`)
 # is available.
@@ -163,7 +125,7 @@ def _non_get_routes() -> list:
     generically rather than naming either one.
 
     Walks ``iter_route_contexts`` rather than ``app.routes`` directly, for
-    the same reason ``test_api.py::test_only_authored_artifact_routes_write``
+    the same reason ``test_api.py::test_core_alone_writes_only_the_picks``
     does: every route arrives via ``include_router``, and plain ``app.routes``
     holds one opaque wrapper per included router, not the routes themselves.
     """
@@ -286,53 +248,6 @@ def test_same_origin_or_absent_fetch_site_passes(app, site):
     client = TestClient(app, base_url="http://127.0.0.1:8000")
     response = client.get("/api/health", headers={"sec-fetch-site": site})
     assert response.status_code == 200
-
-
-def test_same_origin_post_without_client_header_is_still_refused(app):
-    """Fetch metadata alone doesn't satisfy check 4 — a same-origin POST
-    still needs the dashboard's own header."""
-    client = TestClient(app, base_url="http://127.0.0.1:8000")
-    response = client.post("/api/coach/narrative", headers={"sec-fetch-site": "same-origin"})
-    assert response.status_code == 403
-
-
-def test_post_claiming_navigation_fetch_metadata_is_still_refused(app):
-    """The navigation exception in check 3 is GET/HEAD-only (``_evaluate``'s
-    own docstring) — a POST cannot claim it just by sending the same
-    ``sec-fetch-mode: navigate``/``sec-fetch-dest: document`` pair a real
-    link click would send. The client header is present here, so check 4
-    cannot be what refuses this request: this is the only test that fails
-    if ``method in ("GET", "HEAD")`` were dropped from check 3's exception."""
-    client = TestClient(app, base_url="http://127.0.0.1:8000")
-    response = client.post(
-        "/api/coach/narrative",
-        headers={
-            "sec-fetch-site": "cross-site",
-            "sec-fetch-mode": "navigate",
-            "sec-fetch-dest": "document",
-            CLIENT_HEADER: "dashboard",
-        },
-    )
-    assert response.status_code == 403
-    assert response.json() == {"detail": "Cross-origin request refused"}
-
-
-# --- OPTIONS preflight ---------------------------------------------------
-
-
-def test_options_preflight_with_foreign_origin_is_refused_and_carries_no_cors_header(app):
-    """There is no CORS middleware and never was: nothing here ever sends
-    ``Access-Control-Allow-Origin``, so a preflight can never succeed even if
-    this 403 didn't exist — but it does, so the browser never gets far
-    enough to notice that on its own."""
-    client = TestClient(app, base_url="http://127.0.0.1:8000")
-    response = client.request(
-        "OPTIONS",
-        "/api/coach/narrative",
-        headers={"origin": "https://evil.example", "access-control-request-method": "POST"},
-    )
-    assert response.status_code == 403
-    assert "access-control-allow-origin" not in response.headers
 
 
 # --- frame headers ---------------------------------------------------------

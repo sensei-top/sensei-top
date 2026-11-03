@@ -363,8 +363,8 @@ the multi-brief coverage answer, and the RCQ guide's
 `deck_narrative` plus `matchup_brief` (the RCQ ones write
 `rcq_guide`), all on the
 authored-artifact allowlist `AGENTS.md` non-negotiable #6 now states;
-`tests/test_api.py::test_only_authored_artifact_routes_write` asserts the
-exact set of writing routes.
+`tests/ai/test_write_allowlist.py::test_only_authored_artifact_routes_write`
+asserts the exact set of writing routes.
 
 | Route | Returns |
 |---|---|

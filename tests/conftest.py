@@ -4,6 +4,7 @@ Kept deliberately small: fixtures that only one module needs stay in that
 module, per docs/testing.md.
 """
 
+import importlib.util
 import logging
 from pathlib import Path
 
@@ -148,6 +149,45 @@ def make_client():
         return TestClient(app, base_url="http://127.0.0.1:8000", headers=headers, **kwargs)
 
     return _make
+
+
+@pytest.fixture
+def no_claude_calls(monkeypatch):
+    """A test that pokes at the metered routes must fail loudly, not place a
+    real, billed call, if ``_no_ambient_config``'s isolation ever regresses.
+    ``ai/llm/client.py::_run`` is the one place every Claude call goes
+    through. Does nothing when ``ai/`` is absent."""
+    if importlib.util.find_spec("sensei_top.ai") is None:
+        return
+
+    def _forbidden(*args, **kwargs):
+        pytest.fail("a test tried to call the Claude API")
+
+    monkeypatch.setattr("sensei_top.ai.llm.client._run", _forbidden)
+
+
+@pytest.fixture
+def hider(monkeypatch):
+    """Returns the function that hides ``sensei_top.ai`` from core's
+    ``find_spec`` check: the package stays in ``sys.modules`` when other tests
+    in the run imported it (core has no static edge to it), so only the
+    seam's own lookup answers ``None``."""
+    real = importlib.util.find_spec
+
+    def find_spec(name, package=None):
+        if name == "sensei_top.ai" or name.startswith("sensei_top.ai."):
+            return None
+        return real(name, package)
+
+    def hide():
+        monkeypatch.setattr(importlib.util, "find_spec", find_spec)
+
+    return hide
+
+
+@pytest.fixture
+def hide_ai(hider):
+    hider()
 
 
 @pytest.fixture
