@@ -46,6 +46,7 @@ a = Analysis(
     excludes=[
         "pytest", "_pytest",  # anyio's pytest plugin
         "pygments",  # httpx2's _main command-line interface
+        "rich", "markdown_it", "mdurl",  # httpx2's _main interface, through import-linter's rich
         "setuptools", "pkg_resources", "_distutils_hack",  # optional imports
         "packaging",  # optional import (PyInstaller itself needs it, not the server)
     ],
