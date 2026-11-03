@@ -1004,6 +1004,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sync/payloads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sync Payloads
+         * @description Every backed-up match with its digest, oldest first, all of them on
+         *     every call: the caller pushes the ones whose digest differs from the one
+         *     it last pushed, which catches a rebuild or a pick that a timestamp would
+         *     miss.
+         */
+        get: operations["sync_payloads_api_sync_payloads_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/llm/status": {
         parameters: {
             query?: never;
@@ -5172,6 +5195,154 @@ export interface components {
             /** Blocked */
             blocked?: string[];
         };
+        /** SyncDeck */
+        SyncDeck: {
+            /**
+             * Name
+             * @description the deck's own name, as the client saved it
+             */
+            name: string | null;
+            /**
+             * Main
+             * @description [card name, copies], by name
+             */
+            main: [
+                string,
+                number
+            ][];
+            /**
+             * Side
+             * @description [card name, copies], by name
+             */
+            side: [
+                string,
+                number
+            ][];
+        };
+        /** SyncMatchPayload */
+        SyncMatchPayload: {
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: 1;
+            /**
+             * Played At
+             * @description UTC ISO-8601; null when the log never said
+             */
+            played_at: string | null;
+            /**
+             * Event
+             * @description Arena's event id; always null for MTGO
+             */
+            event: string | null;
+            /** Format */
+            format: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            /** Best Of */
+            best_of: number | null;
+            deck: components["schemas"]["SyncDeck"] | null;
+            /** Result */
+            result: ("win" | "loss" | "draw" | "incomplete") | null;
+            /**
+             * Won
+             * @description games won
+             */
+            won: number | null;
+            /**
+             * Lost
+             * @description games lost
+             */
+            lost: number | null;
+            /**
+             * Play
+             * @description game 1 only
+             */
+            play: ("play" | "draw") | null;
+            /** @description null when the opponent's deck is unknown */
+            opp: components["schemas"]["SyncOpponent"] | null;
+            /**
+             * Opp Cards
+             * @description distinct names of the opponent's cards seen
+             */
+            opp_cards: string[];
+            /**
+             * Duration S
+             * @description Seconds from the match's start to its end; null for an MTGO match, whose log shows only when it was first seen, not when it began.
+             */
+            duration_s: number | null;
+            /**
+             * Unknown Cards
+             * @description cards left out for having no name: each deck copy, and each distinct opponent card
+             */
+            unknown_cards: number;
+            picks: components["schemas"]["SyncPicks"];
+        };
+        /** SyncMtgoPick */
+        SyncMtgoPick: {
+            /** Format */
+            format: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            /**
+             * Updated At
+             * @description UTC ISO-8601, when the user last set it
+             */
+            updated_at: string;
+        };
+        /** SyncOpponent */
+        SyncOpponent: {
+            /**
+             * Label
+             * @description the name the app gave the opponent's deck
+             */
+            label: string;
+            /**
+             * Key
+             * @description its grouping identity, as matchups group on it
+             */
+            key: string;
+        };
+        /** SyncOpponentPick */
+        SyncOpponentPick: {
+            /** Label */
+            label: string;
+            /** Archetype Key */
+            archetype_key: string | null;
+            /**
+             * Updated At
+             * @description UTC ISO-8601, when the user last set it
+             */
+            updated_at: string;
+        };
+        /** SyncPayload */
+        SyncPayload: {
+            /**
+             * Match Id
+             * @description Arena's or MTGO's own id for the match
+             */
+            match_id: string;
+            /**
+             * Source
+             * @description arena | mtgo
+             */
+            source: string;
+            /**
+             * Played At
+             * @description the payload's played_at, for ordering
+             */
+            played_at: string | null;
+            /**
+             * Digest
+             * @description SHA-256 hex of the payload's canonical JSON (sorted keys, no whitespace); a changed digest is a payload to push again
+             */
+            digest: string;
+            payload: components["schemas"]["SyncMatchPayload"];
+        };
+        /** SyncPicks */
+        SyncPicks: {
+            /** @description the user's pick of the opponent's deck */
+            opp: components["schemas"]["SyncOpponentPick"] | null;
+            /** @description the user's pick of their own MTGO deck and format; the deck itself is the payload's deck */
+            mtgo: components["schemas"]["SyncMtgoPick"] | null;
+        };
         /** TurnCurve */
         TurnCurve: {
             /**
@@ -6403,6 +6574,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_payloads_api_sync_payloads_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncPayload"][];
                 };
             };
         };

@@ -78,6 +78,7 @@ source_modules = [
     "sensei_top.review",
     "sensei_top.secrets",
     "sensei_top.steam",
+    "sensei_top.sync",
     "sensei_top.table",
     "sensei_top.wine",
 ]
