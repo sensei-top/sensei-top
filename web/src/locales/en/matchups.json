@@ -116,6 +116,9 @@
   "coverage": {
     "title": "Matchup coverage",
     "subtitle": "Which archetypes have a brief: the ones you have met, most met first, then the most played ones you have not. Each opens its matchup, where its brief is.",
+    "fieldTitle": "Archetypes to prepare for",
+    "fieldSubtitle": "The archetypes you have met, most met first, then the most played ones you have not, with each one's share of tournament decks. Each opens its matchup.",
+    "fieldFormatUnknown": "No tournament format is known for this deck, so there are no tournament results to compare it with. On MTGO, you can set it by confirming the format of one of its matches.",
     "nothingTitle": "Nothing to cover yet",
     "nothingMessage": "Once you meet a named archetype, or tournament results are downloaded, it is listed here.",
     "writeAll": "Write every missing brief",
@@ -217,6 +220,7 @@
     "noPlan": "No written plan for this matchup, and nothing to write one from.",
     "formatUnknownNoPlan": "No tournament format is known for this match, so the opponent's deck can't be named from the cards seen, and there is no plan to show.",
     "unclassifiedNoPlan": "Opponent not identified yet — no plan to show until a card is seen.",
+    "notBoardedYet": "You haven't boarded in this matchup yet.",
     "noPlanYet": "No written plan for this matchup yet.",
     "closest": "No written plan for {{label}} — closest written plan: {{closest}}",
     "stale": "Stale",

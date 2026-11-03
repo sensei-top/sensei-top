@@ -1,0 +1,40 @@
+"""Every AI feature: the opt-in Claude call, the prompts and the prose they bring back.
+
+Core never imports this package. The tracker runs, and its tests pass, with
+``ai/`` deleted; ``lint-imports`` holds that contract, with no
+exception. What lives here may import core freely.
+
+Core reaches it only through the two functions below, after
+``importlib.util.find_spec`` finds it (docs/architecture.md, "Who may know
+what"). Each function imports what it hands over.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from fastapi import APIRouter
+
+    from sensei_top.api.providers import Providers
+
+
+def routers() -> list[APIRouter]:
+    """The AI routers, which ``create_app`` mounts after core's and before
+    the dashboard's catch-all; the order is the generated schema's."""
+    from sensei_top.ai.routes import brief, coach, guide, leaks, match_report, rcq, status
+
+    return [
+        status.router, match_report.router, leaks.router, guide.router,
+        brief.router, rcq.router, coach.router,
+    ]
+
+
+def providers() -> Providers:
+    """The core seams this package fills (``api/providers.py``); called once
+    per ``create_app``."""
+    from sensei_top.ai.brief.break_plans import BreakBriefs
+    from sensei_top.ai.guide.rcq_prompt import rcq_prompt
+    from sensei_top.api.providers import Providers
+
+    return Providers(rcq_prompt=rcq_prompt, break_briefs=BreakBriefs())

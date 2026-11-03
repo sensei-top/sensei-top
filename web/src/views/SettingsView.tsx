@@ -4,7 +4,8 @@ import type { Shell } from '../bridge'
 import { AppSection } from '../components/settings/AppSection'
 import { BackupSection } from '../components/settings/BackupSection'
 import { SourcesSection } from '../components/settings/SourcesSection'
-import { WritingSection, WritingStatus, type WritingStatusAnswer } from '../components/settings/WritingSection'
+import { useAi } from '../ai/registry'
+import type { WritingStatusAnswer } from '../lib/settings'
 
 /** Settings, as sections under their titles: Sources, Writing, Backup and
  *  App, then `children`, the sections that belong to the browser rather
@@ -23,6 +24,7 @@ export function SettingsView({
   children?: ReactNode
 }) {
   const { t } = useTranslation()
+  const ai = useAi()
   return (
     <div className="space-y-10">
       {shell && (
@@ -31,6 +33,7 @@ export function SettingsView({
             sources={shell.settings.sources}
             save={(change) => shell.save({ sources: change })}
             pickFolder={() => shell.pickFolder()}
+            topdeck={{ set: shell.settings.writing.topdeckKey, setKey: (which, key) => shell.setKey(which, key) }}
             showDataFolder={shell.app && (() => shell.app!.showDataFolder())}
             app={
               shell.app && {
@@ -42,17 +45,19 @@ export function SettingsView({
           />
         </SettingsSection>
       )}
-      <SettingsSection id="writing" title={t('settings.sections.writing')}>
-        {shell ? (
-          <WritingSection
-            writing={shell.settings.writing}
-            save={(change) => shell.save({ writing: change })}
-            setKey={(which, key) => shell.setKey(which, key)}
-          />
-        ) : (
-          <WritingStatus answer={writing} />
-        )}
-      </SettingsSection>
+      {ai && (
+        <SettingsSection id="writing" title={t('settings.sections.writing')}>
+          {shell ? (
+            <ai.WritingSection
+              writing={shell.settings.writing}
+              save={(change) => shell.save({ writing: change })}
+              setKey={(which, key) => shell.setKey(which, key)}
+            />
+          ) : (
+            <ai.WritingStatus answer={writing} />
+          )}
+        </SettingsSection>
+      )}
       {shell && (
         <SettingsSection id="backup" title={t('settings.sections.backup')}>
           <BackupSection

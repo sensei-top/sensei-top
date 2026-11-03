@@ -5,17 +5,17 @@ Resolution order, first match wins:
 
 1. ``TOPDECK_API_KEY`` in the environment.
 2. The system keyring (``secrets.get(secrets.TOPDECK)``), where one exists.
-3. ``[topdeck]`` in ``llm.config.config_path()`` — the same
+3. ``[topdeck]`` in ``config.config_path()`` — the same
    ``~/.config/sensei-top/config.toml`` the Claude credential lives in
    (``$XDG_CONFIG_HOME`` if set), which ``sensei-top config
    --set-topdeck-key`` writes only when the keyring does not take the key.
 
 Nothing here raises. A missing file, a missing table, or a malformed one all
-resolve the same way ``llm/config.py`` and ``metagame/source.py`` do: log a
+resolve the same way ``claude_config.py`` and ``metagame/source.py`` do: log a
 warning and hand back the "not configured" state (``None``), never an
 exception.
 
-A sibling to ``llm/config.py``, sharing only ``config_path()``: TopDeck's key
+A sibling to ``claude_config.py``, sharing only ``config_path()``: TopDeck's key
 is a free download source's, not the metered credential AGENTS.md's
 non-negotiable #5 governs. See docs/metagame.md, "A second source:
 TopDeck.gg".
@@ -29,7 +29,7 @@ import tomllib
 from dataclasses import dataclass
 
 from sensei_top import secrets
-from sensei_top.llm.config import config_path
+from sensei_top.config import config_path
 
 log = logging.getLogger(__name__)
 

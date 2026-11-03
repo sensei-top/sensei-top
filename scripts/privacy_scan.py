@@ -102,6 +102,15 @@ too -- the public clone's declared name is the handle, and AUTHORS is where
 the handle lives. The global, personal name gets no such pass: only the
 declared value, only in AUTHORS, only those two categories.
 
+The privacy policy and the terms name the maintainer, who is the data
+controller and must be named there (LGPD art. 9, II; GDPR art. 13(1)(a)).
+The name is never written in this file: it comes from ``privacy-terms.tsv``
+(or --terms-file) under the label ``published-name``. It is a term like any
+other line there, so the full name anywhere else is a hit; and on those four
+pages, and nowhere else, that exact string -- case and spacing as published
+-- is set aside before matching, so any other occurrence of a word in it --
+a home path, a bare first name, an OS user -- is still a hit there.
+
 The git name is read twice: the repository's effective `user.name` and the
 global one (`git config --global`). The public repository's clone sets a
 public identity in its own configuration, which hides the global one from a
@@ -184,7 +193,7 @@ import sys
 import traceback
 import warnings
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from pathlib import Path
 
@@ -194,6 +203,17 @@ _MIN_TERM_LENGTH = 4
 _GENERIC_WORDS = frozenset({"mtga", "arena", "tracker", "sensei-top", "morph"})
 # The maintainer's public handle lives in AUTHORS and nowhere else (AGENTS.md, "Privacy").
 _PUBLIC_IDENTITY = {"AUTHORS": frozenset({"git-account"})}
+# The terms-file label of the controller's name as the policy pages publish
+# it, and the only pages that may carry it (module docstring).
+_PUBLISHED_NAME_CATEGORY = "published-name"
+_PUBLISHED_NAME_PATHS = frozenset(
+    {
+        "site/privacy/index.html",
+        "site/pt-br/privacy/index.html",
+        "site/terms/index.html",
+        "site/pt-br/terms/index.html",
+    }
+)
 # The two categories the declared local name produces (`_terms_from_git_identity`).
 _DECLARED_NAME_CATEGORIES = frozenset({"git-name", "git-first-name"})
 # Other players' names, checked against card-name words first (module docstring).
@@ -225,21 +245,26 @@ class DeclaredIdentity:
     either ``None`` when unset. Never a term source: it only sets fields
     aside in ``history:log`` and ``push:log`` (its email anywhere in them,
     as an accepted email), and its name aside in ``AUTHORS``. Under
-    --pre-push, a ``None`` name refuses the push."""
+    --pre-push, a ``None`` name refuses the push. ``published`` is the
+    ``published-name`` terms, set aside on the policy pages only."""
 
     name: str | None
     email: str | None
+    published: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
 class Exemption:
     """What one file may carry: whole categories (``git-account`` in
     AUTHORS), and the lowercase values a ``git-name`` / ``git-first-name``
-    hit may equal there (the declared name and its first word, in AUTHORS).
-    ``NO_EXEMPTION`` for every other file."""
+    hit may equal there (the declared name and its first word, in AUTHORS);
+    and exact strings taken out of the text before any term is matched (the
+    published name, on the policy pages). ``NO_EXEMPTION`` for every other
+    file."""
 
     categories: frozenset[str] = frozenset()
     names: frozenset[str] = frozenset()
+    published: tuple[str, ...] = ()
 
     def covers(self, candidate: Term, value_lower: str) -> bool:
         if candidate.category in self.categories:
@@ -253,6 +278,8 @@ NO_EXEMPTION = Exemption()
 def _exemption(path: str, declared: DeclaredIdentity) -> Exemption:
     """``path`` is repo-relative (``AUTHORS``, or ``docs/AUTHORS``, which
     gets nothing), as both the tree walk and ``rev-list`` label it."""
+    if path in _PUBLISHED_NAME_PATHS:
+        return Exemption(published=declared.published)
     categories = _PUBLIC_IDENTITY.get(path)
     if categories is None:
         return NO_EXEMPTION
@@ -374,7 +401,7 @@ def _terms_from_git_account(repo: Path) -> list[Term]:
 
 
 def _terms_from_claude_key() -> list[Term]:
-    from sensei_top.llm.config import load
+    from sensei_top.claude_config import load
 
     config = load()
     if config is None or not config.api_key:
@@ -425,7 +452,7 @@ def _terms_from_privacy_terms_file() -> list[Term]:
     """``privacy-terms.tsv`` beside the config file the MTGO, Claude and
     TopDeck loaders read, resolved the same way; absent, nothing. Its errors
     name the file by that bare name, never by its path."""
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     path = config_path().with_name(_PRIVACY_TERMS_FILE)
     if not path.exists():
@@ -834,6 +861,9 @@ def _accumulate_hits(
     per call, since the label never changes across candidates or decodings."""
     masked_label: str | None = None
     for text in _decode_variants(data):
+        for published in exempt.published:
+            # A newline, so the text either side never joins into a match.
+            text = text.replace(published, "\n")
         text_lower = text.lower()
         for candidate, value_lower, pattern in compiled:
             if exempt.covers(candidate, value_lower) or value_lower not in text_lower:
@@ -1492,6 +1522,12 @@ def _run(args: argparse.Namespace) -> int:
             return 1
 
     terms, card_words = _gather_terms(args, repo)
+    declared = replace(
+        declared,
+        published=tuple(
+            term.value for term in terms if term.category == _PUBLISHED_NAME_CATEGORY
+        ),
+    )
     dropped = {"short": 0, "generic": 0, "card-word": 0}
     terms = _filter_terms(terms, card_words, dropped)
     compiled = _compile_terms(terms)

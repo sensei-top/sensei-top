@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   useGuideDecks,
@@ -41,6 +41,7 @@ import {
 } from '../lib/home'
 import { castCards, takeUnused, type ArtCard } from '../lib/matchArt'
 import { useNow } from '../lib/time'
+import { useAiFeatures } from '../shell/aiFeatures'
 
 const MINUTE = 60_000
 
@@ -241,22 +242,36 @@ export function HomeView({
         <HomeDecks decks={decks} art={deckArt} now={minute} />
       )}
 
-      <div className="grid gap-4 md:gap-6 lg:grid-cols-3">
-        {showField && (
-          <div className="min-w-0 lg:col-span-2">
-            {fieldError ? (
+      <FieldAndCoach
+        field={
+          showField ? (
+            fieldError ? (
               <ErrorNote error={fieldError} />
             ) : fieldPending || !field ? (
               <Skeleton className="h-[360px] rounded-card" />
             ) : (
               <FieldAgainstYou field={field} now={minute} />
-            )}
-          </div>
-        )}
-        <div className={`min-w-0 ${showField ? '' : 'lg:col-span-3'}`}>
+            )
+          ) : null
+        }
+      />
+    </div>
+  )
+}
+
+/** The field beside the coach's pointer; the pointer goes with AI features
+ *  off, and the field then has the row, or the row is not drawn. */
+export function FieldAndCoach({ field }: { field: ReactNode }) {
+  const [aiOn] = useAiFeatures()
+  if (!field && !aiOn) return null
+  return (
+    <div className="grid gap-4 md:gap-6 lg:grid-cols-3">
+      {field && <div className={`min-w-0 ${aiOn ? 'lg:col-span-2' : 'lg:col-span-3'}`}>{field}</div>}
+      {aiOn && (
+        <div className={`min-w-0 ${field ? '' : 'lg:col-span-3'}`}>
           <CoachPointer />
         </div>
-      </div>
+      )}
     </div>
   )
 }

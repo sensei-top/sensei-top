@@ -621,6 +621,67 @@ def test_history_blob_scan_exempts_root_authors_the_same_way(tmp_path):
     assert "QzxPublicHandleABC" not in result.stdout
 
 
+# --- the controller's name on the policy pages ------------------------------
+
+_PUBLISHED = "Qzxpub Midname Lastqzx"
+
+
+def _name_terms(tmp_path: Path) -> Path:
+    """The published name, and its middle word as a git-name term, as the
+    maintainer's global git name is on the real machine."""
+    terms_file = tmp_path / "terms.tsv"
+    terms_file.write_text(
+        f"published-name\t{_PUBLISHED}\ngit-name\tMidname\n", encoding="utf-8"
+    )
+    return terms_file
+
+
+@pytest.mark.parametrize(
+    "page",
+    [
+        "site/privacy/index.html",
+        "site/pt-br/privacy/index.html",
+        "site/terms/index.html",
+        "site/pt-br/terms/index.html",
+    ],
+)
+def test_the_published_name_on_a_policy_page_is_not_a_hit(tmp_path, page):
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    _write(repo, page, f"<p>Sensei Top is made by {_PUBLISHED}.</p>\n")
+    _commit_all(repo)
+
+    result = _run_scan(repo, "--history", terms_file=_name_terms(tmp_path))
+    assert result.returncode == 0, result.stdout
+    assert result.stdout == ""
+
+
+def test_the_name_elsewhere_on_a_policy_page_is_still_a_hit(tmp_path):
+    """Only the exact published string is set aside: a home path is not."""
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    _write(repo, "site/privacy/index.html", f"<p>{_PUBLISHED}, /home/midname/x</p>\n")
+    _commit_all(repo)
+
+    result = _run_scan(repo, terms_file=_name_terms(tmp_path))
+    assert result.returncode == 1
+    assert result.stdout.strip() == "git-name\tsite/privacy/index.html\t1"
+
+
+def test_the_published_name_on_another_page_is_still_a_hit(tmp_path):
+    repo = tmp_path / "repo"
+    _init_repo(repo)
+    _write(repo, "site/help/index.html", f"<p>{_PUBLISHED}</p>\n")
+    _commit_all(repo)
+
+    result = _run_scan(repo, terms_file=_name_terms(tmp_path))
+    assert result.returncode == 1
+    assert result.stdout.splitlines() == [
+        "git-name\tsite/help/index.html\t1",
+        "published-name\tsite/help/index.html\t1",
+    ]
+
+
 # --- errors ----------------------------------------------------------------
 
 
@@ -669,7 +730,7 @@ def test_hermetic_run_without_no_local_suppresses_config_loader_warnings(
     tmp_path, monkeypatch, caplog
 ):
     """Without --no-local, the automatic local sources run for real --
-    including sensei_top.llm.config's own loader, which logs a warning
+    including sensei_top.claude_config's own loader, which logs a warning
     naming this machine's absolute config path when a config file exists but
     has no [claude] table. That warning must never reach this process's own
     stderr, since the path it names sits under the real home directory
@@ -696,7 +757,7 @@ def test_hermetic_run_without_no_local_suppresses_config_loader_warnings(
 
     monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg_config))
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    from sensei_top.llm import config as llm_config
+    from sensei_top import claude_config as llm_config
 
     with caplog.at_level(logging.WARNING):
         assert llm_config.load() is None

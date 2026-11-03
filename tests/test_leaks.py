@@ -554,11 +554,11 @@ def test_since_scopes_out_matches_before_the_date(conn):
     assert not [leak for leak in leaks if leak.code == "mana_screwed"]
 
 
-# --- coach/evidence.py's exact-set scoping ----------------------------------
+# --- ai/coach/evidence.py's exact-set scoping ----------------------------------
 
 
 def test_match_ids_scopes_the_mana_leak_population_to_an_exact_set(conn):
-    """``match_ids`` (added for coach/evidence.py, which already knows its
+    """``match_ids`` (added for ai/coach/evidence.py, which already knows its
     own population and needs no deck/date filter to express it) must scope
     exactly like ``deck_ids`` does above -- everything in the set counts,
     everything outside it is invisible to the comparison, regardless of

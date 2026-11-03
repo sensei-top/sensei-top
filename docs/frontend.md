@@ -98,6 +98,9 @@ posts and links, so it stays responsive (`docs/frontend-site.md`).
   itself; it also closes on a press outside it, on its Close button and on
   any navigation. More reads as current when the page is one of the places
   behind it. A place's item in the bar or the sheet is at least 44 px high.
+- **Coach is a place only with AI features on.** The rail and the bottom bar
+  draw `visiblePlaces(aiOn)` (`shell/places.ts`), which leaves Coach out
+  when they are off; `/coach` redirects Home then.
 
 The current place's item carries `aria-current="page"`. Live carries a
 dot on its icon while a match is in progress, with the words for a screen
@@ -162,7 +165,7 @@ log's, else the MTGO pick, else the inferred format), and Standard when
 no match has one (`api/sql.py::default_format`). `formatOf`
 (`lib/field.ts`) reads `?format=` against the formats the API lists, and
 an absent or unknown value is that default. Coach reads `?format=` the
-same way (`lib/coach.ts::useCoachFormat`, with `formatOf` and
+same way (`ai/coach/coach.ts::useCoachFormat`, with `formatOf` and
 `paramFor`), so a bare `/coach` is the default format's page too.
 Neither page asks for anything that depends on the format before
 `/api/formats` answers, since a bare address means whatever format that
@@ -287,49 +290,55 @@ same change.
 ### Settings
 
 `/settings` is `pages/SettingsPage.tsx` over `views/SettingsView.tsx`.
-The page reads four things, `useShell()`, `useLLMStatus()`, the
-density and the Live advice switch, and draws its own Language section, which reads
-`useLanguage()`, first, above the view; the view then draws the
-sections in this order, each an `h2` over its cards, with an id an
-address can name:
+The page reads five things, `useShell()`, `useLLMStatus()`, the density, the
+Live advice switch and `useAiFeatures()`, and draws its own Language section,
+which reads `useLanguage()`, first, above the view; the view then draws the
+sections in this order, each an `h2` over its cards, with an id an address can
+name:
 
 | Section | Id | Component | Drawn when |
 |---|---|---|---|
 | Language | `language` | `settings/LanguageSection.tsx` | always |
 | Sources | `sources` | `settings/SourcesSection.tsx` | a desktop shell |
-| Writing | `writing` | `settings/WritingSection.tsx` | always; with no shell, its `WritingStatus` |
+| Writing | `writing` | `ai/settings/WritingSection.tsx` | AI features on; with no shell, its `WritingStatus` |
 | Backup | `backup` | `settings/BackupSection.tsx` | a desktop shell |
 | App | `app` | `settings/AppSection.tsx` | a desktop shell |
 | Appearance | `appearance` | the page's own | always |
 | Live | `live-settings` | the page's own | always |
+| AI features | `ai-settings` | the page's own | always |
 | About and credits | `credits` | `CreditsView` | always |
 
-Language, Appearance, Live and About and credits are drawn with or
-without a shell. Language is drawn by the page above the view;
-Appearance, Live and About and credits reach the view as its children. Language is a
+Language, Appearance, Live, AI features and About and credits are drawn with or
+without a shell. Language is drawn by the page above the view; Appearance, Live,
+AI features and About and credits reach the view as its children. Language is a
 `Segmented` (System, English, Português (Brasil)) over `i18n.ts`'s
-`useLanguage`. The choice is kept in a shell's `shell.json` (written
-through `app.set({ language })`, and the shell's publish of it wins at
-the next start), else in the browser's own storage; "System" is the
-first English or Portuguese tag among the viewer's languages, English
-when there is none (`i18n.ts`'s `systemLanguage`); `docs/i18n.md`,
-"The language, from setting to sentence", has the same facts beside the
-server's half. Appearance is the density control, a `Segmented` (Comfortable,
-Compact); `docs/design-system.md`'s "Density" says what it changes and
-where the choice is kept. Live is one `Switch`, "Advice during a game",
-on by default and kept in the browser's own storage
-(`shell/liveAdvice.ts`); `docs/current-match.md`,
-"The event rule (`table/queues.py`)", says what it hides and why the
-server never sees it.
+`useLanguage`. The choice is kept in a shell's `shell.json` (written through
+`app.set({ language })`, and the shell's publish of it wins at the next start),
+else in the browser's own storage; "System" is the first English or Portuguese
+tag among the viewer's languages, English when there is none (`i18n.ts`'s
+`systemLanguage`); `docs/i18n.md`, "The language, from setting to sentence", has
+the same facts beside the server's half. Appearance is the density control, a
+`Segmented` (Comfortable, Compact); `docs/design-system.md`'s "Density" says
+what it changes and where the choice is kept. Live is one `Switch`, "Advice
+during a game", on by default and kept in the browser's own storage
+(`shell/liveAdvice.ts`); `docs/current-match.md`, "The event rule
+(`table/queues.py`)", says what it hides and why the server never sees it. With
+AI features off, the switch's description (`settings.liveAdvice.descriptionOff`)
+stops listing the matchup brief, which is hidden then; the switch itself and the
+rest of the sentence are unchanged. AI features is one `SavingSwitch` whose
+value is `useAiFeatures()`'s: in a desktop shell it writes shell.json's
+`aiFeatures` through `app.set`, in a browser it writes `localStorage`. Its
+description says what goes: the coach, written reports and guides, matchup
+briefs and the prompts that write them; nothing already written is deleted.
+Writing is drawn only while it is on.
 
-**In a browser, `/settings` is Language, Writing, Appearance, Live and
-About and credits.** Writing is then one card of sentences from
-`GET /api/llm/status`: a Claude key is set and which model writes, by
-its id as the API gives it; or none is set, and what the app does then
-(the prompt is copied, the answer pasted back). Nothing in it can be
-changed there: the key is set in the config file (`docs/llm.md`). While
-the answer loads the card draws nothing; when it failed, one sentence
-says so.
+**In a browser, `/settings` is Language, Writing, Appearance, Live, AI features
+and About and credits.** Writing is then one card of sentences from `GET
+/api/llm/status`: a Claude key is set and which model writes, by its id as the
+API gives it; or none is set, and what the app does then (the prompt is copied,
+the answer pasted back). Nothing in it can be changed there: the key is set in
+the config file (`docs/llm.md`). While the answer loads the card draws nothing;
+when it failed, one sentence says so.
 
 #### The bridge
 
@@ -358,10 +367,11 @@ mapping. Four rules hold every section:
   `Switch` each have a read-only form).
 - **No stored secret reaches the page.** `writing.claudeKey` and
   `writing.topdeckKey` say whether a key is set, never the key, and
-  `save()` never carries one. A key's block (`settings/KeyField.tsx`)
-  holds what is typed in its own state, sends it through `setKey` alone,
-  and clears it when the shell answers and on "Cancel". A key is never
-  put in the address, in storage or in a `console` call.
+  `save()` never carries one. A key's block (`settings/KeyField.tsx`;
+  Sources and Writing both draw it) holds what is typed in its own
+  state, sends it through `setKey` alone, and clears it when the shell
+  answers and on "Cancel". A key is never put in the address, in
+  storage or in a `console` call.
 - **Nothing invented reaches the app.** A section is drawn only where
   what it shows comes from something true, and with no shell nothing is
   but Writing's sentences. A backup's date made up in the app would be
@@ -429,16 +439,17 @@ the failed backup's sentences name.
 
 - **Sources.** Arena (the log's path; the date order, a `Select` of
   "Read it from the log", "Month first" and "Day first"), Magic Online
-  (the handle, the folder of game logs, the folder of decks) and, with
-  a shell, Card data: how many cards have rules text, the download as
-  `CardDataProgress` draws it (below, "Welcome"), and "Download card
-  data", or "Download again" once there is any or a run has ended.
-  Under them, where the matches are kept, read-only, with "Open
-  folder". When the shell found the log itself (`arenaLog.found`) the
-  path's hint says so.
-- **Writing**, with a shell. Claude (its key; the model, from the
+  (the handle, the folder of game logs, the folder of decks), TopDeck.gg
+  (its key: a download source, not a metered call, so it is drawn
+  whether or not AI features are on) and, with a shell, Card data: how
+  many cards have rules text, the download as `CardDataProgress` draws
+  it (below, "Welcome"), and "Download card data", or "Download again"
+  once there is any or a run has ended. Under them, where the matches
+  are kept, read-only, with "Open folder". When the shell found the log
+  itself (`arenaLog.found`) the path's hint says so.
+- **Writing**, with a shell. Claude: its key; the model, from the
   shell's `models`; one sentence that a report's cost is measured and
-  shown on the report, with no number) and TopDeck.gg (its key).
+  shown on the report, with no number.
 - **Backup.** The last backup as a sentence, when and how large
   (`sizeOf`, `lib/size.ts`), or a `warn` callout when it failed; the
   folder; how many copies are kept (3, 7, 14 or 30); "Back up now";
@@ -542,6 +553,13 @@ Notes the table does not carry:
   meter), `done` or `failed`; leaving the page does not stop the run,
   and coming back shows where it is. `done`'s line is never shown: the
   CLI's last line names the database's full path.
+- **Ready asks one question first: AI features.** It sits above the
+  daily-update switch, two buttons (`AiQuestion`), neither pressed
+  until the person answers. It is asked only when the shell's
+  `aiFeatures` is null at mount, so an install that already decided
+  never sees it, and never in a browser, which has no Welcome. Go to
+  Home waits for a press of one of the two answers, which saves
+  `aiFeatures` through `app.set`.
 - **Ready holds the two preferences**: the update check, where the
   build has an updater, and autostart, where the shell asks. Both are
   preferences, and Ready is where the person stops reading. Ready
@@ -889,15 +907,32 @@ art — are in docs/design-system.md's "Card art".
 
 ## Writing prose: `GenerateCard` and `CopyPromptCard`
 
-`components/CopyPromptCard.tsx` has two exports. `CopyPromptBody` is
-everything inside the card (the buttons to copy and to show the prompt, the
-error, the box to paste the answer into, the import command as a `TextBlock`
-with its own copy button, and the prompt itself, scrolling, once shown) with
-no card of its own, for a caller that already has a title: the Guide's
-"Matchup coverage" and a pairing's brief. `CopyPromptCard` wraps that body
-in a `Card`, for everywhere else. Both take `children`, drawn first.
+Both cards live in `src/ai/`, the dashboard's AI package, and
+`ai/registry.ts` is the only way into it from outside, enforced by the lint
+rule under "Checks". The registry is one hook, `useAi()`, that returns the
+AI surfaces a page outside `ai/` may draw (the two cards, `CopyPromptBody`,
+and each AI-only view moved into `ai/`, such as `CoachView`; typed
+`AiRegistry`) or `null` when AI features are off. A page calls it once, like
+any hook, draws `ai.GenerateCard` and the rest from what it returns, and on
+`null` draws nothing of its AI part: not the card, not the heading over it,
+not a sentence about it. A hook rather than a list of components because a
+page needs the answer as a boolean too, to hide what surrounds a card, and
+because the switch it reads is itself a hook. The boundary is a lint
+rule, under "Checks".
 
-`components/GenerateCard.tsx` (`docs/llm.md`) takes `writer`, who
+The switch is `shell/aiFeatures.ts`'s `useAiFeatures()`, which resolves in
+this order: a context override (`AiFeaturesContext`, for tests and the
+reference page), then the desktop shell's `aiFeatures` (null, undecided,
+reads as off), then `localStorage` in a browser, on by default.
+
+`ai/CopyPromptCard.tsx` has two exports. `CopyPromptBody` is
+everything inside the card (the buttons to copy and to show the prompt, the
+error, the box to paste the answer into, and the prompt itself, scrolling,
+once shown) with no card of its own, for a caller that already has a title:
+the Guide's "Matchup coverage" and a pairing's brief. `CopyPromptCard` wraps
+that body in a `Card`, for everywhere else. Both take `children`, drawn first.
+
+`ai/GenerateCard.tsx` (`docs/llm.md`) takes `writer`, who
 writes the report, and builds one body: the written note (`writtenNote`,
 `lib/written.ts`: the author, the day, the cost and, when out of date, a
 sentence, the caller's own or "The evidence has changed since."), then
@@ -916,20 +951,21 @@ badge or a price, and the button's words do not change with the writer.
 The `POST .../narrative` routes answer 503 with no key configured.
 
 The deck guide's narrative is structured rather than a prose blob, so
-its caller (`WriteAndExport.tsx`) passes no `narrative` and lets
+its caller (`ai/guide/WriteAndExport.tsx`) passes no `narrative` and lets
 `generatedAt` alone say that something is stored (`GenerateCard`'s
 `hasContent`); the match report's summary and the training plan pass
 their prose directly.
 
-The prompt, the Markdown export and every command to run are drawn as
+The prompt, the Markdown export and the field sources' commands
+(`components/field/SourcesDisclosure.tsx`) are drawn as
 `components/ui/TextBlock.tsx`: a `pre` in the interface face, wrapped so
 nothing runs past its card, capped at `max-h-64` with its own scroll
 when the `scroll` prop is set (the prompt, the Markdown) and as tall as
-its text otherwise (an import command). Copying is `useCopied()`
+its text otherwise (a command). Copying is `useCopied()`
 (`lib/clipboard.ts`), one hook shared by both cards and by
-`WriteAndExport.tsx`'s Markdown button: whether a copy landed in the
-last two seconds, and the function that makes one. A refused copy stays
-silent; the button's label is the only feedback either way.
+`ai/guide/WriteAndExport.tsx`'s Markdown button: whether a copy landed
+in the last two seconds, and the function that makes one. A refused copy
+stays silent; the button's label is the only feedback either way.
 
 An optional `controls` prop renders a picker in the button row, before
 the "write it" button; the Coach page's model picker (`docs/coach.md`)
@@ -946,14 +982,9 @@ server's sentence under it and marks the box invalid; a request that
 got no answer says the tracker did not answer and that the text is
 still in the box. A pasted answer's author, `pasted`, is never shown:
 `lib/written.ts::isPasted` turns it into "Pasted in on {day}.", the
-brief card into "pasted in", the coach byline into "Pasted in.". The
-import command (`guide --import`, `brief --import`; the other cards
-have none) is drawn only when `useShell()` is null, a browser with no
-desktop shell, where a terminal is at hand, under "Or save it with
-this command:". `CopyPromptCard` calls `useShell()` itself, the one
-component that does (`bridge.ts` names the exception). `GenerateCard`
-forwards `save` only when nobody writes the report; with a key, the
-generate button is the write. Every write is still a route on
+brief card into "pasted in", the coach byline into "Pasted in.".
+`GenerateCard` forwards `save` only when nobody writes the report; with
+a key, the generate button is the write. Every write is still a route on
 non-negotiable #6's allowlist; the box adds no table.
 
 ## Charts
@@ -1082,6 +1113,15 @@ mistyped one.
 Strict TypeScript is not optional; it caught the readonly-payload and label
 formatter mismatches in recharts' own types. Fix the type, do not cast it away.
 
+`pnpm lint` also holds the boundary around `src/ai/`: `.oxlintrc.json`'s
+`no-restricted-imports` fails, as an error, any import of an `ai/` module
+from outside `ai/` other than `ai/registry`. The pattern refuses any
+import path with an `ai` segment, `ai` itself included, so no other folder
+or package subpath named `ai` can be imported. No file is excepted: the
+rule has no override. `scripts/aiBoundary.test.ts` runs oxlint against
+probe files to prove a forbidden import fails, and fails itself if an
+override that weakens the rule below an error comes back.
+
 ### Tests
 
 What is tested is what counts, not what draws: the pure functions under
@@ -1102,12 +1142,13 @@ pattern, and so does `components/settings/AppSection.tsx`, which checks
 which rows the App section draws depending on `canAutostart` and
 `windowsStore`; no other component has a test, and a hook that reads a
 query or the address (`useFilters`, `useMatchInProgress`) has none either: what a page
-looks like and does is still checked in a browser. Three tests sit outside
+looks like and does is still checked in a browser. Four tests sit outside
 `src/`, in `scripts/`, and they are the dashboard tests that touch the
 filesystem: `thirdPartyNotices.test.ts`, for the build step that writes the
 dashboard's third-party notices, builds package folders in a temporary
 directory and reads them back; `i18nCheck.test.ts` reads `src/` and the
-catalogues; `site-images.test.ts` reads `routes.tsx` and the site's files.
+catalogues; `site-images.test.ts` reads `routes.tsx` and the site's files;
+`aiBoundary.test.ts` lints probe files in a temporary directory.
 
 Three rules hold them:
 

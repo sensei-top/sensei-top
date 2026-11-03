@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { translator } from '../i18n'
-import { documentTitle, layoutName, placeAt, type RouteHandle } from './places'
+import { documentTitle, layoutName, placeAt, visiblePlaces, type RouteHandle } from './places'
 
 // The English catalogue itself: the words below are the layout's own, as
 // docs/frontend.md ("The layout") gives them.
@@ -37,5 +37,14 @@ describe('layoutName', () => {
   it('is not found for the not-found route and for an unnamed non-place', () => {
     expect(layoutName(null, { notFound: true }, true, t).name).toBe('No such page')
     expect(layoutName(null, undefined, true, t).name).toBe('No such page')
+  })
+})
+
+describe('visiblePlaces', () => {
+  it('drops the Coach with AI features off and keeps the rest in order', () => {
+    const on = visiblePlaces(true).map((place) => place.id)
+    const off = visiblePlaces(false).map((place) => place.id)
+    expect(on).toContain('coach')
+    expect(off).toEqual(on.filter((id) => id !== 'coach'))
   })
 })

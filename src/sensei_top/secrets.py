@@ -3,7 +3,7 @@ Manager, Secret Service on Linux, Keychain on macOS).
 
 Generic on purpose: it stores and returns strings under the service
 ``sensei-top`` and knows nothing about what they are for. Which credential
-wins, and in what order, is decided by the callers (``llm/config.py`` for the
+wins, and in what order, is decided by the callers (``claude_config.py`` for the
 metered Claude key — AGENTS.md non-negotiable #5 — and ``metagame/config.py``
 for the free TopDeck.gg one), never here.
 

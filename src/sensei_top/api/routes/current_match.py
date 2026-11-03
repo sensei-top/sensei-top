@@ -1,6 +1,6 @@
-"""The current-match reads: the match in progress, the live matchup brief,
-and the opening-hand/keep/opponent-hand/library reads that replaced board
-math, play-around and the scoreboard (``sensei_top.table``,
+"""The current-match reads: the match in progress, and the
+opening-hand/keep/opponent-hand/library reads that replaced board math,
+play-around and the scoreboard (``sensei_top.table``,
 ``docs/current-match.md``).
 """
 
@@ -14,11 +14,9 @@ from sensei_top.api.convert import (
     _hand_read_out,
     _intermission_out,
     _keep_guide_out,
-    _matchup_brief_out,
     _opening_hand_out,
 )
 from sensei_top.api.deps import Conn
-from sensei_top.api.models.common import MatchupBriefResponse
 from sensei_top.api.models.current_match import (
     CurrentGame,
     CurrentMatch,
@@ -35,9 +33,6 @@ from sensei_top.api.sql import (
     _rows,
     match_format,
 )
-from sensei_top.brief import narrative as brief_narrative
-from sensei_top.brief.store import is_stale, list_hash, read_brief
-from sensei_top.guide.deck import identity_format, list_identities
 from sensei_top.table.hand_read import build_hand_read
 from sensei_top.table.keep import build_keep_guide
 from sensei_top.table.live import build_library_remaining, build_live_state
@@ -45,73 +40,6 @@ from sensei_top.table.opening_hand import build_opening_hand_read
 from sensei_top.table.queues import allows_advice
 
 router = APIRouter()
-
-
-def _brief_response(
-    conn: Conn, request: Request, match_id: str, deck_id: str
-) -> MatchupBriefResponse:
-    """The body of ``GET /api/current-match/brief``. Not shared with
-    ``current_match_read``'s own ``intermission`` field: that field is built
-    from a name set that pools the live replay's own revealed zones with
-    ``card_events`` (``table/intermission.py``), which can know more about
-    the opponent mid-break than this route's ``_cached_match_opponent`` (a
-    projection-only read) does — sharing this function there would silently
-    cap the break read's opponent knowledge at whatever ``project()`` last
-    saw.
-    """
-    identity = next((i for i in list_identities(conn) if deck_id in i.deck_ids), None)
-    if identity is None:
-        return MatchupBriefResponse(status="no_match")
-    no_format = identity_format(conn, identity) is None
-    opp_row = _cached_match_opponent(request, conn, match_id)
-    opponent_key = opp_row["opponent_key"] if opp_row else None
-    if not opponent_key or not opponent_key.startswith("archetype:"):
-        # Before ``unclassified``: the classifier never names an opponent in
-        # a match with no format, so "unclassified" would promise a read that
-        # never comes.
-        return MatchupBriefResponse(
-            status="format_unknown" if no_format else "unclassified"
-        )
-    archetype_key = opponent_key.removeprefix("archetype:")
-    archetype_label = opp_row["opponent_label"]
-
-    if no_format:
-        # A brief stored while the deck had a format is still the user's:
-        # returned first, with no prompt (none can be built without a
-        # format). Only when nothing is stored is the format the answer.
-        stored = read_brief(conn, identity.key, archetype_key)
-        if stored is None:
-            return MatchupBriefResponse(status="format_unknown")
-        return MatchupBriefResponse(
-            status="ok", brief=_matchup_brief_out(stored),
-            deck_key=identity.key, archetype_key=archetype_key,
-            stale=is_stale(
-                conn, stored, current_list_hash=list_hash(identity.current_cards)
-            ),
-        )
-
-    built = brief_narrative.full_prompt(conn, identity, archetype_key, archetype_label)
-    if built is None:
-        # No field consensus for this archetype: there is nothing to
-        # anchor a brief to, and saying so is more honest than offering
-        # a prompt that would be written from nothing.
-        return MatchupBriefResponse(status="no_consensus")
-    prompt = built[0]
-
-    brief = read_brief(conn, identity.key, archetype_key)
-    if brief is None:
-        return MatchupBriefResponse(
-            status="prompt", prompt=prompt,
-            deck_key=identity.key, archetype_key=archetype_key,
-        )
-
-    return MatchupBriefResponse(
-        status="ok", brief=_matchup_brief_out(brief), prompt=prompt,
-        deck_key=identity.key, archetype_key=archetype_key,
-        stale=is_stale(
-            conn, brief, current_list_hash=list_hash(identity.current_cards)
-        ),
-    )
 
 
 @router.get("/api/current-match", response_model=CurrentMatch | None, tags=["matches"])
@@ -190,27 +118,6 @@ def current_match(request: Request, conn: Conn) -> CurrentMatch | None:
         turns=turns,
         cards=cards,
     )
-
-
-@router.get("/api/current-match/brief", response_model=MatchupBriefResponse, tags=["matches"])
-def current_match_brief(request: Request, conn: Conn) -> MatchupBriefResponse:
-    """The stored matchup brief for the match in progress, and the prompt
-    to write one from — except an ``ok`` with no format, which has none (a
-    prompt needs a format to name its corpus). See ``brief/__init__.py`` and
-    ``docs/brief.md``.
-
-    Deliberately has no generate route of its own, unlike the match
-    report and the deck guide (``docs/llm.md``): a brief is pasted into its
-    card (``PUT /api/guide/{key}/briefs/{archetype_key}``) or the coverage
-    card (``PUT /api/guide/{key}/coverage``), written by ``sensei-top brief
-    --import``, or — far more often — filled as a side effect of
-    generating, pasting or importing a full deck guide
-    (``POST``/``PUT /api/guide/{key}/narrative``, ``brief/from_guide.py``).
-    """
-    match_row = conn.execute("SELECT match_id, deck_id FROM v_current_match").fetchone()
-    if match_row is None or match_row["deck_id"] is None:
-        return MatchupBriefResponse(status="no_match")
-    return _brief_response(conn, request, match_row["match_id"], match_row["deck_id"])
 
 
 @router.get("/api/current-match/read", response_model=CurrentMatchRead, tags=["matches"])

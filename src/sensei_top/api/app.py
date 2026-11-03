@@ -8,8 +8,10 @@ belongs on is docs/architecture.md, "Aggregation: views versus Python"), and
 every connection opens ``PRAGMA query_only=ON`` except the one
 ``deps.get_writable_conn`` hands to the authored-artifact routes. Which
 tables those may write, and why, is AGENTS.md non-negotiable 6;
-``tests/test_api.py::test_only_authored_artifact_routes_write`` pins the
-exact set of non-GET routes, so an addition is a design change, not a patch.
+``tests/ai/test_write_allowlist.py::test_only_authored_artifact_routes_write``
+pins the exact set of non-GET routes, and
+``tests/test_api.py::test_core_alone_writes_only_the_picks`` the picks alone
+without ``ai/``, so an addition is a design change, not a patch.
 ``GET /api/cards/{grp_id}/image`` and ``/art`` write too, but picture files
 beside the database, never rows (docs/architecture.md, "Who owns which
 table").
@@ -24,13 +26,16 @@ source filters; ``sql.py`` the SQL helpers shared across routers and the
 caches kept on ``app.state`` across requests; ``convert.py`` the
 dataclass-to-wire-model translation; ``models/`` the response models, grouped
 by router, the shared ones in ``common.py``; ``routes/`` one
-``APIRouter`` per file (``narrative.py`` is shared plumbing, not a router),
-registered in ``create_app`` in an order the schema depends on;
-``dashboard.py`` the mount that serves the built dashboard.
+``APIRouter`` per file, registered in ``create_app`` in an order the schema
+depends on, then ``sensei_top.ai``'s when it is installed; ``providers.py``
+the seams ``ai/`` fills; ``dashboard.py`` the mount that serves the built
+dashboard.
 """
 
 from __future__ import annotations
 
+import importlib
+import importlib.util
 import sqlite3
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -45,9 +50,9 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from sensei_top.api.dashboard import DashboardFiles
 from sensei_top.api.guard import LoopbackGuard
+from sensei_top.api.providers import NO_PROVIDERS
 from sensei_top.api.routes import (
     cards,
-    coach,
     current_match,
     guide,
     matches,
@@ -173,8 +178,15 @@ def create_app(db_path: str | Path, watcher: object | None = None) -> FastAPI:
     app.include_router(review.router)
     app.include_router(guide.router)
     app.include_router(rcq.router)
-    app.include_router(coach.router)
     app.include_router(cards.router)
+    app.state.providers = NO_PROVIDERS
+    # Never a static import: lint-imports reads only import statements, and
+    # core must start with ai/ deleted (docs/architecture.md, "Who may know what").
+    if importlib.util.find_spec("sensei_top.ai") is not None:
+        ai = importlib.import_module("sensei_top.ai")
+        for router in ai.routers():
+            app.include_router(router)
+        app.state.providers = ai.providers()
 
     # Serve the built dashboard when it exists, so a single command gives the
     # whole tool. In development Vite serves the UI and proxies /api here.

@@ -21,7 +21,6 @@ from fastapi.testclient import TestClient
 
 from sensei_top import card_images
 from sensei_top.api import create_app
-from sensei_top.api.routes import review as review_routes
 from sensei_top.db import open_database
 from sensei_top.guide.bundle import FORMAT_UNKNOWN_GAP
 from sensei_top.metagame.classify_meta import classify_meta_decks
@@ -31,7 +30,6 @@ from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file
 from sensei_top.reader.mtgo_decks import ingest_deck_dir
 from sensei_top.review import leaks as leaks_mod
-from sensei_top.review import narrative
 
 FIXTURE = Path(__file__).parent / "fixtures" / "match_session.log"
 DECK_FIXTURE = Path(__file__).parent / "fixtures" / "mtgo_deck_sample.dek"
@@ -818,7 +816,6 @@ def test_openapi_schema_is_generated(client):
         "/api/matches",
         "/api/matches/{match_id}",
         "/api/matches/{match_id}/report",
-        "/api/matches/{match_id}/report/narrative",
         "/api/cards/{grp_id}/image",
         "/api/cards/{grp_id}/art",
     } <= set(schema["paths"])
@@ -1587,13 +1584,8 @@ def test_sideboarding_diffs_against_the_picked_mtgo_deck(tmp_path, monkeypatch, 
 
 
 # --- match report ------------------------------------------------------------
-# The post-game report retires the old live hint (AGENTS.md rule 5's fourth
-# outbound call moved from /api/current-match/hint to
-# /api/matches/{id}/report/narrative). Every narrative test controls the
-# API-key env vars explicitly so a real key in the runner's own environment
-# can never make one of these accidentally reach the network, and
-# narrative.request_narrative is always monkeypatched rather than called —
-# no test in this suite touches the network (docs/testing.md).
+# The report route itself. Its narrative routes are tested in
+# tests/ai/test_match_report_routes.py.
 
 
 def test_match_report_returns_findings_and_gaps_for_a_completed_match(client):
@@ -1650,43 +1642,6 @@ def test_review_leaks_returns_an_empty_list_below_the_sample_gate(client):
     body = client.get("/api/review/leaks").json()
     assert body["leaks"] == []
     assert body["narrative_available"] is True
-
-
-def test_review_leaks_narrative_is_no_report_when_there_is_nothing_to_synthesize(client):
-    body = client.get("/api/review/leaks/narrative").json()
-    assert body["status"] == "no_report"
-
-
-def test_review_leaks_routes_pass_a_per_format_consensus_window(client, monkeypatch):
-    """Both `find_leaks` call sites — the GET list route and the narrative
-    route's own `build_context` — must hand over a `consensus_window`
-    resolver, so each match's report is windowed by its own format's reset
-    and the field record inside
-    `review/analyzers/baseline.py` never pools rounds from across one
-    (`docs/metagame.md`'s format-reset boundary). The window lookup is
-    replaced with one that names the format it was asked for, so this pins
-    that the resolver asks for the format it is given, not one fixed
-    format's window."""
-    calls = []
-
-    def fake_find_leaks(conn, **kwargs):
-        calls.append(kwargs)
-        return []
-
-    def fake_window(conn, fmt):
-        return f"window-for-{fmt}"
-
-    monkeypatch.setattr(review_routes, "find_leaks", fake_find_leaks)
-    monkeypatch.setattr(review_routes, "_consensus_window", fake_window)
-
-    client.get("/api/review/leaks")
-    client.get("/api/review/leaks/narrative")
-
-    assert len(calls) == 2
-    for call in calls:
-        assert "consensus_since" not in call
-        assert call["consensus_window"]("Modern") == "window-for-Modern"
-        assert call["consensus_window"]("Standard") == "window-for-Standard"
 
 
 # --- shared report cache (api/sql.py::_shared_report_cache) -----------------
@@ -2019,117 +1974,6 @@ def test_guide_request_after_leaks_request_reuses_its_reports(
 
     client.get(f"/api/guide/{guide_key}")
     assert counting_build_match_report == []
-
-
-def test_narrative_route_hands_over_a_prompt_with_no_key_anywhere(client, monkeypatch):
-    """The GET route never checks for a credential at all — only the POST
-    generate route does — so it hands over the prompt the same way whether
-    or not one is configured (AGENTS.md #5, `docs/llm.md`)."""
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
-    body = client.get(f"/api/matches/{MATCH_WIN}/report/narrative").json()
-    assert body["status"] == "prompt"
-    assert body["narrative"] is None
-    assert narrative.SYSTEM_PROMPT in body["prompt"]
-
-
-def test_narrative_404s_for_an_unknown_match(client):
-    assert client.get("/api/matches/nope/report/narrative").status_code == 404
-
-
-def test_narrative_prompt_carries_the_evidence_and_the_framing(client):
-    body = client.get(
-        f"/api/matches/{MATCH_WIN}/report/narrative", params={"preview": "1"}
-    ).json()
-    assert body["status"] == "prompt"
-    assert body["narrative"] is None
-    assert "Findings:" in body["prompt"]
-    assert "Not tracked by this reader at all, for any match" in body["prompt"]
-
-
-def test_narrative_prompt_carries_no_local_paths(client, monkeypatch):
-    """This prompt deliberately carries the game's own shape
-    (review/narrative.py's module docstring). What would still be wrong to
-    leak is a filesystem path, which would reveal the machine and buy the
-    coaching nothing."""
-    body = client.get(
-        f"/api/matches/{MATCH_WIN}/report/narrative", params={"preview": "1"}
-    ).json()
-    prompt = body["prompt"].lower()
-    for leaked in ("/home/", "c:\\users", "/users/", "appdata"):
-        assert leaked not in prompt
-
-
-def _store_field_row(db_path, fmt: str) -> None:
-    """One Tier A deck, 2-1-0, of the 'Test' archetype, in a ``fmt`` event."""
-    conn = sqlite3.connect(db_path)
-    event = ParsedEvent(
-        event_id="e1", source="MTGmelee", name="Champs", event_date="2026-08-01",
-        format=fmt, tier="A", standings_rows=1, uri=None, blob_sha="s1",
-    )
-    conn.execute(
-        "INSERT INTO meta_event (event_id, path, blob_sha, source, name, event_date, format, "
-        "tier, standings_rows, uri) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (event.event_id, event.event_id, event.blob_sha, event.source, event.name,
-         event.event_date, event.format, event.tier, event.standings_rows, event.uri),
-    )
-    conn.execute(
-        "INSERT INTO meta_deck (event_id, deck_ord, result, wins, losses, draws, "
-        "mainboard_json, sideboard_json) VALUES (?, 0, '2-1-0', 2, 1, 0, '[]', '[]')",
-        (event.event_id,),
-    )
-    conn.execute(
-        "INSERT INTO meta_deck_archetype (event_id, deck_ord, archetype_key, archetype_name, "
-        "colors, label, method, classified_at) "
-        "VALUES (?, 0, 'Test', 'Test Deck', '', 'Test Deck', 'archetype', '2026-08-01T00:00:00Z')",
-        (event.event_id,),
-    )
-    conn.commit()
-    conn.close()
-
-
-def test_narrative_prompt_includes_field_context_for_a_classified_opponent(
-    named_client, monkeypatch
-):
-    """MATCH_WIN resolves to the 'Test' archetype in named_client — with
-    metagame data stored for that same archetype_key, the prompt must carry
-    the field figure. The vocabulary is shared on purpose: the
-    same archetype_key names both a personal match and a corpus decklist."""
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
-    _store_field_row(named_client.app.state.database, "Standard")
-
-    body = named_client.get(
-        f"/api/matches/{MATCH_WIN}/report/narrative", params={"preview": "1"}
-    ).json()
-    assert "Field context" in body["prompt"]
-    assert "Test Deck has won" in body["prompt"]
-
-
-def test_narrative_prompt_field_context_is_the_matchs_own_formats(named_client, monkeypatch):
-    """MATCH_WIN is Standard by its log; the same archetype key in a Modern
-    event is another format's field and stays out of its prompt."""
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
-    _store_field_row(named_client.app.state.database, "Modern")
-
-    body = named_client.get(
-        f"/api/matches/{MATCH_WIN}/report/narrative", params={"preview": "1"}
-    ).json()
-    assert body["prompt"] is not None
-    assert "Field context" not in body["prompt"]
-
-
-def test_narrative_prompt_omits_field_context_for_a_colours_only_opponent(
-    named_client, monkeypatch
-):
-    """MATCH_LOSS falls back to a colours-only label in named_client — its
-    opponent_key never starts with 'archetype:', so there is no shared
-    vocabulary to join field data on, and the prompt must not claim one."""
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
-    body = named_client.get(
-        f"/api/matches/{MATCH_LOSS}/report/narrative", params={"preview": "1"}
-    ).json()
-    if body["prompt"] is not None:
-        assert "Field context" not in body["prompt"]
 
 
 # --- deck selector ----------------------------------------------------------
@@ -3839,19 +3683,10 @@ def test_a_pick_row_for_an_arena_match_never_overrides_its_deck(mtgo_pick_db):
     assert tuple(row) == (arena_deck, None, 1)
 
 
-def test_only_authored_artifact_routes_write():
-    """AGENTS.md rule 6 allows writes only to authored-artifact tables, never
-    anything the projector rebuilds. A route outside this allowlist is a
-    design change, not a patch — this test is where that conversation
-    starts.
-
-    Walks ``iter_route_contexts`` rather than ``app.routes`` directly: since
-    the API became a package of routers, every route arrives via
-    ``include_router``, and FastAPI resolves those lazily — ``app.routes``
-    holds one opaque wrapper per included router, not the routes themselves.
-    ``iter_route_contexts`` is what FastAPI's own ``get_openapi`` walks, so
-    this sees exactly the set the published schema does.
-    """
+def test_core_alone_writes_only_the_picks(hide_ai):
+    """AGENTS.md rule 6's core half: with ``ai/`` hidden, the only non-GET
+    routes are the user's picks. The full allowlist, authored prose included,
+    is ``tests/ai/test_write_allowlist.py``."""
     app = create_app("unused.db")
     writers = {
         (route.path, method)
@@ -3863,19 +3698,6 @@ def test_only_authored_artifact_routes_write():
         ("/api/matches/{match_id}/opponent-deck", "PUT"),
         ("/api/matches/{match_id}/mtgo-pick", "PUT"),
         ("/api/mtgo/picks", "PUT"),
-        ("/api/matches/{match_id}/report/narrative", "POST"),
-        ("/api/review/leaks/narrative", "POST"),
-        ("/api/guide/{key}/narrative", "POST"),
-        ("/api/guide/{key}/rcq/narrative", "POST"),
-        ("/api/coach/narrative", "POST"),
-        # Pasted answers: no model call, only the same tables.
-        ("/api/guide/{key}/narrative", "PUT"),
-        ("/api/guide/{key}/rcq/narrative", "PUT"),
-        ("/api/guide/{key}/briefs/{archetype_key}", "PUT"),
-        ("/api/guide/{key}/coverage", "PUT"),
-        ("/api/matches/{match_id}/report/narrative", "PUT"),
-        ("/api/review/leaks/narrative", "PUT"),
-        ("/api/coach/narrative", "PUT"),
     }
 
 
@@ -3907,57 +3729,6 @@ def guide_key(client):
     return client.get("/api/guide/decks").json()[0]["key"]
 
 
-def test_guide_coverage_200_shape(client, guide_key):
-    body = client.get(f"/api/guide/{guide_key}/coverage").json()
-    assert body["fmt"] == "Standard"
-    assert isinstance(body["rows"], list)
-    assert "matches_covered_numerator" in body
-    assert "matches_covered_denominator" in body
-    assert "field_covered" in body
-    for row in body["rows"]:
-        assert row["status"] in ("ok", "stale", "missing")
-
-
-def test_guide_coverage_404_for_unknown_deck(client):
-    resp = client.get("/api/guide/nope/coverage")
-    assert resp.status_code == 404
-
-
-def test_guide_brief_prompt_no_consensus_with_no_corpus_loaded(client, guide_key):
-    """The fixture-backed client has no metagame corpus at all, so any
-    archetype key asked about here has no field consensus to anchor a
-    brief to -- the ordinary 'not yet' outcome, not a server error."""
-    resp = client.get(f"/api/guide/{guide_key}/briefs/some_archetype/prompt")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["status"] == "no_consensus"
-    assert body["archetype_key"] == "some_archetype"
-    assert body["prompt"] is None
-
-
-def test_guide_brief_prompt_404_for_unknown_deck(client):
-    resp = client.get("/api/guide/nope/briefs/some_archetype/prompt")
-    assert resp.status_code == 404
-
-
-def test_guide_coverage_prompt_200_with_no_gaps_or_consensus(client, guide_key):
-    """No metagame corpus means build_coverage names no archetypes at all
-    (nothing faced resolves to a classified archetype_key in this fixture,
-    and the field has no top archetypes to report), so there is nothing
-    missing to prompt for."""
-    resp = client.get(f"/api/guide/{guide_key}/coverage/prompt")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["status"] in ("nothing_missing", "no_consensus")
-    assert body["included"] == []
-    assert body["deferred"] == []
-
-
-def test_guide_coverage_prompt_404_for_unknown_deck(client):
-    resp = client.get("/api/guide/nope/coverage/prompt")
-    assert resp.status_code == 404
-
-
 def test_a_guide_for_a_deck_with_no_format_is_200_with_a_null_field_format(client, guide_key):
     """Draft names no constructed format and no match carries one,
     so the guide still answers, with no field and the format_unknown note."""
@@ -3973,97 +3744,6 @@ def test_a_guide_for_a_deck_with_no_format_is_200_with_a_null_field_format(clien
     assert body["field"]["fmt"] is None
     assert body["field"]["shares"] == []
     assert FORMAT_UNKNOWN_GAP in body["gaps"]
-
-
-def test_guide_coverage_for_a_deck_with_no_format_is_200_with_a_null_format(client, guide_key):
-    """With no resolvable format there is no field to list, so
-    coverage answers with ``fmt`` null and no rows."""
-    conn = sqlite3.connect(client.app.state.database)
-    conn.execute("UPDATE decks SET format = 'Draft'")
-    conn.execute("UPDATE matches SET format = NULL")
-    conn.commit()
-    conn.close()
-
-    resp = client.get(f"/api/guide/{guide_key}/coverage")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["fmt"] is None
-    assert body["rows"] == []
-
-
-def _make_deck_formatless(client):
-    conn = sqlite3.connect(client.app.state.database)
-    conn.execute("UPDATE decks SET format = 'Draft'")
-    conn.execute("UPDATE matches SET format = NULL")
-    conn.commit()
-    conn.close()
-
-
-def test_guide_brief_prompt_for_a_deck_with_no_format_is_format_unknown(client, guide_key):
-    _make_deck_formatless(client)
-    body = client.get(f"/api/guide/{guide_key}/briefs/some_archetype/prompt").json()
-    assert body["status"] == "format_unknown"
-    assert body["archetype_key"] == "some_archetype"
-    assert body["prompt"] is None
-
-
-def test_guide_coverage_prompt_for_a_deck_with_no_format_is_format_unknown(client, guide_key):
-    _make_deck_formatless(client)
-    body = client.get(f"/api/guide/{guide_key}/coverage/prompt").json()
-    assert body["status"] == "format_unknown"
-    assert body["prompt"] is None
-    assert body["included"] == [] and body["no_consensus"] == [] and body["deferred"] == []
-
-
-def test_current_match_brief_for_a_deck_with_no_format_is_format_unknown(live_client):
-    """No opponent override: the format is checked before ``unclassified``."""
-    _make_deck_formatless(live_client)
-    body = live_client.get("/api/current-match/brief").json()
-    assert body["status"] == "format_unknown"
-    assert body["brief"] is None and body["prompt"] is None
-
-
-def test_current_match_brief_returns_a_stored_brief_even_with_no_format(live_client):
-    """A brief written while the deck had a format is still the user's: with
-    the format gone and the opponent picked, the stored brief comes back
-    ``ok`` (with its staleness), not ``format_unknown``."""
-    from sensei_top.brief.store import Brief, write_brief
-    from sensei_top.guide.deck import list_identities
-
-    match_id = "fa7a4d16-afb7-4094-bae2-111092fc71d2"
-    conn = sqlite3.connect(live_client.app.state.database)
-    conn.row_factory = sqlite3.Row
-    identity = list_identities(conn)[0]
-    conn.execute(
-        "INSERT INTO opponent_deck_override (match_id, label, updated_at, archetype_key) "
-        "VALUES (?, 'Some Deck', 't', 'some_deck')",
-        (match_id,),
-    )
-    conn.commit()
-    conn.close()
-    _make_deck_formatless(live_client)
-
-    # Nothing stored yet: the format is the answer.
-    assert live_client.get("/api/current-match/brief").json()["status"] == "format_unknown"
-
-    conn = sqlite3.connect(live_client.app.state.database)
-    conn.row_factory = sqlite3.Row
-    write_brief(conn, Brief(
-        deck_key=identity.key, archetype_key="some_deck", archetype_label="Some Deck",
-        archetype_share=None, personal_matches=None, personal_wins=None,
-        personal_losses=None, prose="Stored earlier.", play_around=(),
-        board_in=(), board_out=(), staples=(), problems=(), prompt="p",
-        model="pasted", generated_at="2026-09-01T00:00:00.000Z",
-        corpus_commit=None, list_hash="old", source="live",
-    ))
-    conn.commit()
-    conn.close()
-
-    body = live_client.get("/api/current-match/brief").json()
-    assert body["status"] == "ok"
-    assert body["brief"]["prose"] == "Stored earlier."
-    assert body["stale"] is True
-    assert body["prompt"] is None
 
 
 def test_current_match_read_for_a_match_with_no_format_has_a_format_unknown_hand(

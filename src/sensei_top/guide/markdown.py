@@ -1,23 +1,18 @@
-"""Render one ``DeckGuide`` (and, optionally, its ``GuideNarrative``) as a
-Markdown document. See docs/guide.md, "`markdown.py` — the exported document".
+"""Render one ``DeckGuide``'s evidence as a Markdown document.
+See docs/guide.md, "`markdown.py` — the exported document".
 
 One renderer, four callers: the export route (``GET /api/guide/{key}/
 markdown``), the CLI ``guide`` command (printed, or written by
-``--markdown``), and the guide and RCQ prompts (``guide/narrative.py``,
-``guide/rcq.py``), which send the evidence-only form (``narrative=None``)
-as the numeric spine of what they ask the model to write prose around — so
-it is never asked to re-derive a number the reader can already see rendered.
+``--markdown``), and the guide and RCQ prompts (``ai/guide/narrative.py``,
+``ai/guide/rcq_prompt.py``), which send it as the numeric spine of what they ask the
+model to write prose around — so it is never asked to re-derive a number
+the reader can already see rendered.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from sensei_top.guide.bundle import DeckGuide
 from sensei_top.guide.play import BoardCurvePoint
-
-if TYPE_CHECKING:
-    from sensei_top.guide.narrative import GuideNarrative
 
 
 def _pct(value: float | None) -> str:
@@ -64,10 +59,10 @@ def _render_scope(guide: DeckGuide) -> str:
     return "\n".join(lines)
 
 
-def _render_engine(narrative: GuideNarrative | None) -> str:
-    if narrative is None:
-        return "## How it works\n\n_Not generated yet._"
-    return f"## How it works\n\n{narrative.engine}"
+# The three placeholder renderers below stay: the guide and RCQ prompts embed
+# this output byte for byte, so dropping them would change every prompt.
+def _render_engine() -> str:
+    return "## How it works\n\n_Not generated yet._"
 
 
 def _board_curve_cells(point: BoardCurvePoint | None) -> list[str]:
@@ -76,7 +71,7 @@ def _board_curve_cells(point: BoardCurvePoint | None) -> list[str]:
     return [str(point.n), str(point.hand), str(point.life), str(point.opp_permanents)]
 
 
-def _render_play(guide: DeckGuide, narrative: GuideNarrative | None) -> str:
+def _render_play(guide: DeckGuide) -> str:
     lines = ["## Your play", ""]
 
     bc = guide.play.board_curve
@@ -144,9 +139,6 @@ def _render_play(guide: DeckGuide, narrative: GuideNarrative | None) -> str:
 
     lines.append("### Your leak, and the fix")
     lines.append("")
-    if narrative is not None:
-        lines.append(narrative.fix)
-        lines.append("")
     if not guide.leaks:
         lines.append("_No pattern in this deck's own matches cleared a real sample size yet._")
     for leak in guide.leaks:
@@ -167,7 +159,7 @@ def _render_play(guide: DeckGuide, narrative: GuideNarrative | None) -> str:
     return "\n".join(lines)
 
 
-def _render_list(guide: DeckGuide, narrative: GuideNarrative | None) -> str:
+def _render_list(guide: DeckGuide) -> str:
     diff = guide.list_diff
     if diff is None:
         return "## The list\n\n_Your deck could not be classified against the field._"
@@ -178,14 +170,13 @@ def _render_list(guide: DeckGuide, narrative: GuideNarrative | None) -> str:
         f"(≥{diff.min_wins} wins), archetype **{diff.archetype_name}**.",
         "",
     ]
-    note_by_card = {n.card: n.why for n in narrative.card_notes} if narrative else {}
     for board, cards in (("Maindeck", diff.maindeck), ("Sideboard", diff.sideboard)):
         lines.append(f"### {board}")
         headers = ["Card", "Yours", "Consensus copies", "Share", "Verdict", "Why"]
         rows = [
             [c.card, str(c.yours),
              f"{c.consensus_copies:.1f}" if c.consensus_copies is not None else "-",
-             _pct(c.consensus_share), c.verdict, note_by_card.get(c.card, "")]
+             _pct(c.consensus_share), c.verdict, ""]
             for c in cards
         ]
         lines.append(_table(headers, rows))
@@ -226,49 +217,31 @@ def _render_field(guide: DeckGuide) -> str:
     return "\n".join(lines)
 
 
-def _render_matchups(narrative: GuideNarrative | None) -> str:
-    if narrative is None or not narrative.matchups:
-        return "## Matchups\n\n_Not generated yet._"
-    lines = ["## Matchups", ""]
-    for plan in narrative.matchups:
-        lines.append(f"### {plan.archetype}")
-        lines.append(plan.prose)
-        in_str = ", ".join(f"+{c.n} {c.card}" for c in plan.board_in) or "-"
-        out_str = ", ".join(f"-{c.n} {c.card}" for c in plan.board_out) or "-"
-        lines.append(f"\n**IN:** {in_str}  \n**OUT:** {out_str}")
-        problems = [p for p in narrative.problems if p.archetype == plan.archetype]
-        for problem in problems:
-            lines.append(f"\n> ⚠ {problem.message}")
-        lines.append("")
-    return "\n".join(lines)
+def _render_matchups() -> str:
+    return "## Matchups\n\n_Not generated yet._"
 
 
-def _render_checklist(narrative: GuideNarrative | None) -> str:
-    if narrative is None or not narrative.checklist:
-        return "## Between rounds\n\n_Not generated yet._"
-    lines = ["## Between rounds", ""]
-    for i, item in enumerate(narrative.checklist, start=1):
-        lines.append(f"{i}. {item}")
-    return "\n".join(lines)
+def _render_checklist() -> str:
+    return "## Between rounds\n\n_Not generated yet._"
 
 
-def render(guide: DeckGuide, narrative: GuideNarrative | None = None) -> str:
+def render(guide: DeckGuide) -> str:
     deck = guide.provenance.deck
     sections = [
         f"# {deck.name or deck.key} — Deck & Sideboard Guide",
         "",
         _render_scope(guide),
         "",
-        _render_engine(narrative),
+        _render_engine(),
         "",
-        _render_play(guide, narrative),
+        _render_play(guide),
         "",
-        _render_list(guide, narrative),
+        _render_list(guide),
         "",
         _render_field(guide),
         "",
-        _render_matchups(narrative),
+        _render_matchups(),
         "",
-        _render_checklist(narrative),
+        _render_checklist(),
     ]
     return "\n".join(sections)

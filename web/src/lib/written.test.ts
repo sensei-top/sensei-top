@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { translator } from '../i18n'
-import { isPasted, writtenLine, writtenNote } from './written'
+import { isPasted, shownAuthor, writtenLine, writtenNote } from './written'
 
 const t = translator('en')
 
@@ -159,5 +159,16 @@ describe('writtenNote', () => {
     expect(
       writtenNote({ author: null, authoredAt: null, costUsd: null, stale: false, staleNote: undefined, now }, t),
     ).toBeNull()
+  })
+})
+
+describe('shownAuthor', () => {
+  it('keeps the author with AI features on', () => {
+    expect(shownAuthor('claude-opus-5', true)).toBe('claude-opus-5')
+  })
+
+  it('drops a model with them off, but not the pasted sentinel', () => {
+    expect(shownAuthor('claude-opus-5', false)).toBeNull()
+    expect(shownAuthor('pasted', false)).toBe('pasted')
   })
 })

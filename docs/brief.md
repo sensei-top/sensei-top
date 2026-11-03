@@ -1,21 +1,21 @@
 # The live matchup brief
 
-Read this when touching `brief/`, or deciding whether a new signal on the
+Read this when touching `ai/brief/`, or deciding whether a new signal on the
 Live page belongs here versus the deck guide (`docs/guide.md`) or the
 per-match report (`docs/review.md`).
 
 ## Why this question is worth writing down once
 
-`advisor.py` — since folded into `review/narrative.py` — asked *"what is the
+`advisor.py` — since folded into `ai/review/narrative.py` — asked *"what is the
 right play on this board?"* during a match, and was retired because the
 projector only ever has an end-of-turn snapshot to reason from mid-match: no
 combat, no stack, no opponent hand. The advice rested on a board the player
 could not verify, offered at the exact moment they could least afford to be
 wrong.
 
-`brief/` asks a different question: *"what does this archetype do to me, and
+`ai/brief/` asks a different question: *"what does this archetype do to me, and
 what do I board?"* That is a question about **two decklists and the
-tournament corpus**, not about a game — and `brief/narrative.py`'s prompt
+tournament corpus**, not about a game — and `ai/brief/narrative.py`'s prompt
 carries **no board state, no turn, no life total, no hand, no match result,
 ever**. `tests/test_brief_context.py::
 test_context_never_carries_any_game_in_progress_signal` pins this by seeding
@@ -31,28 +31,25 @@ paragraphs that keep paying off all season.
 ## Prompt out, answer in — this feature has no generate button
 
 AGENTS.md non-negotiable #5 now permits an opt-in Claude call (`docs/llm.md`)
-elsewhere in this project, but `brief/` deliberately doesn't use it: nothing
+elsewhere in this project, but `ai/brief/` deliberately doesn't use it: nothing
 generates a standalone brief on its own. The round trip:
 
-1. `sensei-top brief --deck KEY --archetype KEY --prompt` prints the
-   framing plus the evidence. The Live page offers the same text
-   behind **Copy the prompt** when no brief is stored yet, and
-   a pairing's page offers it behind **Build the prompt**, or **Write it
-   again** once a stored one is out of date ("The brief on a pairing's
-   page", below).
+1. The Live page offers the framing plus the evidence behind **Copy the
+   prompt** when no brief is stored yet, and a pairing's page offers it
+   behind **Build the prompt**, or **Write it again** once a stored one
+   is out of date ("The brief on a pairing's page", below).
 2. Paste it into whatever assistant you already pay for. It answers with one
    JSON object: a `for` and a `context` line, then an `answer` matching
    `_BRIEF_TOOL`'s schema (the prompt's last section says so).
 3. Paste the answer into the card's box and save it
-   (`PUT /api/guide/{key}/briefs/{archetype_key}`), or from a terminal
-   `sensei-top brief --deck KEY --archetype KEY --import FILE`. Either
-   way it is read through `answers.py::read_answer`, whose
+   (`PUT /api/guide/{key}/briefs/{archetype_key}`). It is read through
+   `ai/answers.py::read_answer`, whose
    `for: brief:{deck key}:{archetype key}` line must name this deck and
-   opponent, then validated against your real 75 and stored.
+   opponent, then validated against your real 75 and stored. There is
+   no command-line path: the dashboard is where a brief is written.
 
 **Most briefs never need step 1 or 3 individually.** A generated, pasted or
-imported deck guide (`POST` or `PUT /api/guide/{key}/narrative`, or
-`guide --deck KEY --import FILE`) writes a brief for every matchup that
+imported deck guide (`POST` or `PUT /api/guide/{key}/narrative`) writes a brief for every matchup that
 narrative covers, via
 `from_guide.py` — so one guide lights up the whole Live page. This is
 exactly why a generate button here would mostly duplicate a call the guide
@@ -60,8 +57,8 @@ already made; per-matchup imports are for filling a gap the guide missed.
 
 A plan that does not balance, or that names a card the deck does not hold, is
 **stored with the problem recorded** rather than rejected or silently
-repaired (`guide/plans.py`) — the dashboard shows the problem next to the
-plan, and `tests/test_brief_importer.py` pins that.
+repaired (`ai/guide/plans.py`) — the dashboard shows the problem next to the
+plan, and `tests/ai/test_brief_importer.py` pins that.
 
 ## Why a brief is persisted
 
@@ -69,7 +66,7 @@ plan, and `tests/test_brief_importer.py` pins that.
 evidence, because both packages compute *derivations* of the current database
 that a later rebuild could silently disagree with; only their authored
 narratives are stored (`deck_narrative`, `rcq_guide`, `match_narrative`,
-`leaks_narrative`). `brief/` persists one authored artifact per `(deck,
+`leaks_narrative`). `ai/brief/` persists one authored artifact per `(deck,
 archetype)`, in `matchup_brief`. A brief is different from a derivation: it
 is prose written once from a decklist and a corpus snapshot, both stamped
 beside it (`matchup_brief.list_hash`, `.corpus_commit`), so a stored brief
@@ -84,9 +81,9 @@ wrong are recorded and checked before it is ever read back as current.
   difference automatically — the API surfaces it as `stale: true` and lets
   the reader judge, the same posture `docs/guide.md`'s own provenance takes.
 
-`matchup_brief.prompt` holds the build context `brief/importer.py`
+`matchup_brief.prompt` holds the build context `ai/brief/importer.py`
 is given, not the text a card offered to copy, for a brief stored by
-`brief --import` or either `PUT`: one coverage prompt covers up to
+either `PUT`: one coverage prompt covers up to
 eight briefs, and nothing reads the column back.
 
 ## Never pooled across an undetected reset either
@@ -96,7 +93,7 @@ A brief skips the deck guide's most expensive machinery
 `guide.window.format_resets`. Everything here is the deck's own format's
 (`guide.deck.identity_format`, `docs/guide.md`): a deck with no format has
 no field to read, so `full_prompt` and `full_multi_prompt` return `None`
-for it. `brief/narrative.py::_current_window_start(conn, fmt)`
+for it. `ai/brief/narrative.py::_current_window_start(conn, fmt)`
 computes the same "day after the most recent detected reset" window
 `guide/bundle.py` uses, for that format, once per generation, and threads
 it into `build_consensus`, the archetype's own field share (both read only
@@ -134,11 +131,11 @@ answered properly.
 
 An earlier version of this package ran a second daemon thread that polled for
 a live, unbriefed opponent and made an API call to fill the gap. That thread
-is gone with the call. Nothing in `brief/` runs on a timer, and no thread
+is gone with the call. Nothing in `ai/brief/` runs on a timer, and no thread
 `serve --watch` starts ever writes a brief or calls a model.
 
 What survives from that design is the guard order it needed, now
-inside the API route (`api/routes/current_match.py::_brief_response`):
+inside the API route (`ai/routes/brief.py::_brief_response`):
 no current match (`no_match`); an opponent the classifier has not
 named, `format_unknown` when the deck has no format (the classifier
 never names an opponent in a match with no format, so `unclassified`
@@ -166,10 +163,9 @@ schedule" already rules it out, and a break is exactly the kind of moment a
 schedule would be tempting to add one for. What the break phase *does*
 offer, with no plan stored at all, is the same prompt/import round trip as
 any other missing brief: a **Copy prompt** card that takes the written
-answer back in its box, with the `brief --import` command beside it when
-running from source.
+answer back in its box.
 
-## `brief/coverage.py` — which of the field this deck's briefs actually cover
+## `ai/brief/coverage.py` — which of the field this deck's briefs actually cover
 
 *"How much of what I'll actually face already has a plan?"* — a read, not a
 computation the guide performs: nothing here is stored, and nothing here
@@ -199,13 +195,13 @@ no brief *can* be written yet no matter what (`full_prompt` would return
 `None` the same way it does everywhere else in this package) — keeping the
 two apart stops an archetype faced once, long since dropped from the field,
 from reading as work still waiting to be done. `ok` and `stale` cover a
-brief that already exists, `stale` per `brief/store.py::is_stale` exactly as
+brief that already exists, `stale` per `ai/brief/store.py::is_stale` exactly as
 elsewhere in this file.
 
 **Measured on the real Spellementals deck:** 29 coverage rows, 12
 `no_consensus`. Every stored brief was stale on that run (a corpus refresh
 had moved past every `list_hash`/`corpus_commit` stamp), so coverage read
-0 of 63 faced matches covered until `brief --missing` was rerun.
+0 of 63 faced matches covered until the missing briefs were written again.
 `build_coverage` itself costs ~0.73 s on that database.
 
 ## The brief on a pairing's page
@@ -239,19 +235,17 @@ states:
   written, and a **Write it again** button sits below it.
 
 Either button opens the prompt in place; the prompt is fetched only on that
-press (`useGuideBriefPrompt`), never on the page's load. Under it, a box
-takes the answer back (`PUT /api/guide/{key}/briefs/{archetype_key}`);
-running from source, the import command is filled in too, `sensei-top brief
---deck "<deck key>" --archetype "<archetype>" --import brief.json`. When the
+press (`useGuideBriefPrompt`), never on the page's load. Under it, a box takes the answer back
+(`PUT /api/guide/{key}/briefs/{archetype_key}`). When the
 route answers `format_unknown` or `no_consensus` instead of a prompt, the
 sentence for that state stands where the prompt would have been.
 
-## The multi-brief prompt, and `brief --missing`
+## The multi-brief prompt
 
 Writing one archetype's brief at a time is fine when coverage is already
 good; it is not fine the day a deck guide's own top-6 pick misses most of
 what a deck actually faces on the ladder (`docs/guide.md`'s guide-prompt
-coverage section exists for exactly this reason). `brief/narrative.py`'s
+coverage section exists for exactly this reason). `ai/brief/narrative.py`'s
 `full_multi_prompt` builds
 **one prompt covering several matchups at once** — the player's 75 and its
 oracle text appear exactly once, not once per matchup, and each opponent
@@ -263,26 +257,22 @@ sections one prompt covers; anything past the cap comes back in
 with no consensus at all comes back in `.no_consensus` rather than silently
 dropped. The model still answers with one JSON object — `_MULTI_BRIEF_TOOL`
 wraps `_BRIEF_TOOL`'s own per-matchup shape in a `briefs` array, one entry
-per section, and `brief/importer.py`'s `import_briefs` stores each answer
+per section, and `ai/brief/importer.py`'s `import_briefs` stores each answer
 through the same single-brief path a one-at-a-time import would have used,
 so nothing about how a brief is validated or stored depends on how it
 arrived.
 
-**CLI:** `sensei-top brief --deck KEY --missing --prompt` prints the
-multi-brief prompt for every archetype `brief/coverage.py` marks
-`missing`/`stale` for that deck, in coverage order (times faced desc, then
-field share desc, then key — the same order the dashboard's own coverage
-table uses, so a gap never moves between the two); `--missing --import
-FILE` stores every answer via `import_briefs`.
-The Guide's coverage card saves the same answer pasted into its box
-(`PUT /api/guide/{key}/coverage`), every brief through `import_briefs`;
-an archetype with no consensus is skipped, and when every one is, the
-answer is refused (409) and nothing is stored. `--missing` and `--archetype`
-are mutually exclusive on the same `brief` subcommand. No consensus for
-*any* missing/stale archetype prints "No field consensus for any
-missing/stale archetype yet." rather than naming which ones — the same
-coarse, all-or-nothing message `full_multi_prompt` itself returns `None`
-for.
+The Guide's coverage card asks for that prompt for every archetype
+`ai/brief/coverage.py` marks `missing`/`stale` for the deck, in coverage
+order (times faced desc, then field share desc, then key — the same
+order the coverage table uses, so a gap never moves between the two and
+the busiest gaps are never the ones `MULTI_BRIEF_MAX` defers). It saves
+the answer pasted into its box (`PUT /api/guide/{key}/coverage`), every
+brief through `import_briefs`; an archetype with no consensus is
+skipped, and when every one is, the answer is refused (409) and nothing
+is stored. No consensus for *any* missing/stale archetype is reported
+all-or-nothing, every gap under `no_consensus`, because
+`full_multi_prompt` returns `None` rather than naming which ones.
 
 **API:** `GET /api/guide/{key}/coverage` returns the coverage rows
 (`CoverageOut`); `GET /api/guide/{key}/briefs` returns every brief stored
@@ -291,8 +281,7 @@ coverage to tell a written brief from a gap; `GET
 /api/guide/{key}/briefs/{archetype_key}/prompt` is one archetype's
 prompt, fetched only when a pairing's **Build the prompt** or **Write it
 again** is pressed; and `GET /api/guide/{key}/coverage/prompt` is the
-multi-brief prompt for every `missing` or `stale` row, the same text
-`brief --missing --prompt` prints. Both prompt routes answer
+multi-brief prompt for every `missing` or `stale` row. Both prompt routes answer
 `format_unknown` (`BriefPromptOut.status`, `CoveragePromptOut.status`)
 when the deck has no format, checked first: there is no field, so nothing
 can be missing or short of consensus, and `no_consensus` or
@@ -304,15 +293,14 @@ status for the same reason (above).
 
 A written deck-guide narrative already contains a `MatchupPlan` per top field
 archetype — the same shape a brief stores, from a prompt that showed its
-author the whole field at once. `brief.from_guide.
+author the whole field at once. `ai.brief.from_guide.
 store_guide_matchups` writes one `Brief` per plan (`source='guide'`), reusing
 the guide's own already-computed `FieldEvidence` for the share and personal-
 record numbers rather than re-querying them, and never overwrites an
 existing `source='live'` row whose `list_hash` still matches — a brief
 written for this exact matchup, from a prompt that carried that matchup's own
 consensus staples and oracle text, is not improved by a guide's broader
-sweep. `sensei-top guide --deck KEY --import FILE` and `POST` or `PUT
-/api/guide/{key}/narrative` drive this.
+sweep. `POST` or `PUT /api/guide/{key}/narrative` drive this.
 
 ## What this does not do
 
@@ -320,11 +308,10 @@ sweep. `sensei-top guide --deck KEY --import FILE` and `POST` or `PUT
   judge.
 - It does not write anything by itself, and has no generate button — unlike
   the match report and the deck guide (`docs/llm.md`). The dashboard offers
-  the prompt and the import command; the writing happens wherever the user
+  the prompt; the writing happens wherever the user
   chooses, or as a side effect of generating a deck guide. The brief card
   saves a pasted brief through `PUT /api/guide/{key}/briefs/{archetype_key}`,
-  on non-negotiable #6's authored-artifact allowlist, and `brief --import`
-  is the terminal equivalent.
+  on non-negotiable #6's authored-artifact allowlist.
 - It does not compute `structural_change`'s per-archetype "changed/gone"
   verdict. That is a real, small gap (see above), acceptable because the
   Live page's own field-share number is windowed correctly regardless, and

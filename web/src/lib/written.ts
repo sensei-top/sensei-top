@@ -3,12 +3,19 @@ import { formatDollars } from './format'
 import { formatShortDay, parseTimestamp } from './time'
 
 /** The author or model the API stores for an answer pasted into a card
- *  (`answers.py`'s `PASTED_AUTHOR`): a sentinel, never shown as written. */
+ *  (`ai/answers.py`'s `PASTED_AUTHOR`): a sentinel, never shown as written. */
 export const PASTED_AUTHOR = 'pasted'
 
 /** Whether the stored author or model says the answer was pasted in. */
 export function isPasted(author: string | null | undefined): boolean {
   return author === PASTED_AUTHOR
+}
+
+/** The author a stored line may show: as stored with AI features on; with
+ *  them off, none (the model's name is not shown), except the sentinel for
+ *  a pasted answer, which names no model. */
+export function shownAuthor(author: string | null | undefined, aiOn: boolean): string | null | undefined {
+  return aiOn || isPasted(author) ? author : null
 }
 
 /** Who wrote it and on which day: "Written by claude-opus-5 on

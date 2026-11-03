@@ -1,6 +1,6 @@
 """The static site in `site/` keeps the promises its own copy makes.
 
-Seven hand-written pages, no build step (`docs/frontend-site.md`, "The site"). The
+Fifteen hand-written pages, no build step (`docs/frontend-site.md`, "The site"). The
 checks read the HTML with the standard library's parser: the pages are small
 enough that a structural slip (a second script, a refresh, a link to the wrong
 repository, a drifted Fan Content notice) is the realistic failure, and none of
@@ -37,6 +37,8 @@ PAGES = {
     "/privacy/": ("privacy/index.html", "en", "/pt-br/privacy/"),
     "/pt-br/": ("pt-br/index.html", "pt-BR", "/"),
     "/pt-br/privacy/": ("pt-br/privacy/index.html", "pt-BR", "/privacy/"),
+    "/terms/": ("terms/index.html", "en", "/pt-br/terms/"),
+    "/pt-br/terms/": ("pt-br/terms/index.html", "pt-BR", "/terms/"),
     "/help/": ("help/index.html", "en", "/pt-br/help/"),
     "/pt-br/help/": ("pt-br/help/index.html", "pt-BR", "/help/"),
     # One page per search the app can win: the alternative to
@@ -49,6 +51,8 @@ PAGES = {
     "/pt-br/mtgo/": ("pt-br/mtgo/index.html", "pt-BR", "/mtgo/"),
 }
 ALL_PAGES = list(PAGES)
+# The privacy policy and the terms of use, in both languages.
+POLICY_PAGES = ["/privacy/", "/pt-br/privacy/", "/terms/", "/pt-br/terms/"]
 # The landing's feature rows, one per place in the dashboard's rail.
 FEATURE_IDS = {"home", "live", "matches", "decks", "field", "coach"}
 # The 404 page is one page in both languages: no counterpart, no hreflang pair,
@@ -226,7 +230,11 @@ def test_the_fan_content_notice_is_the_policy_wording(url_path):
 
 @pytest.mark.parametrize("url_path", SHELL_PAGES)
 def test_no_page_says_the_word_ai(url_path):
+    """Except the policy pages: Anthropic's terms require the rules coach to
+    say an AI writes its answers, and those pages describe that coach."""
     raw, _ = load(url_path)
+    if url_path in POLICY_PAGES:
+        return
     assert not re.search(r"\bAI\b", raw)
 
 
@@ -592,11 +600,12 @@ def test_the_store_listing_is_a_button_a_step_and_a_help_line():
         assert hrefs(page).count(STORE) == 1, url_path
 
 
-def test_the_privacy_pages_carry_the_date_they_changed():
-    phrases = {"/privacy/": "Last changed", "/pt-br/privacy/": "Última alteração:"}
-    for url_path, phrase in phrases.items():
+def test_the_policy_pages_carry_the_date_they_changed():
+    """The privacy policy's date is its version, which an account's consent records."""
+    for url_path in POLICY_PAGES:
+        phrase = "Last changed" if PAGES[url_path][1] == "en" else "Última alteração:"
         _, page = load(url_path)
-        assert f"{phrase} 2026-10-19" in page.paragraphs
+        assert f"{phrase} 2026-11-03" in page.paragraphs, url_path
 
 
 def test_the_privacy_pages_name_every_request_the_app_makes():
@@ -719,6 +728,7 @@ def test_the_download_buttons_go_to_the_worker_and_it_runs_only_for_them():
         "/",
         "/help/",
         "/privacy/",
+        "/terms/",
         "/untapped/",
         "/linux/",
         "/mtgo/",

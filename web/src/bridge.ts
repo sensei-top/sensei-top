@@ -7,9 +7,7 @@ import { useSyncExternalStore } from 'react'
  * none, so here it answers `null` and every page draws what the API alone
  * can say. A component takes the parts it shows as props and never reads
  * this module's hook itself, so a change of the shell's shape is a change
- * of one mapping, in the page that calls `useShell()`. The one exception is
- * `CopyPromptBody`, which asks only whether a shell exists (to hide the
- * import command), never its shape.
+ * of one mapping, in the page that calls `useShell()`.
  */
 
 /** Every field of `T` optional, at every depth; an array is taken whole. */
@@ -101,6 +99,9 @@ export type AppSettings = {
   update: UpdateStatus
   /** Whether onboarding is finished; the shell opens `/welcome` until it is. */
   onboarded: boolean
+  /** Whether AI features are on. `null`: undecided, a fresh install that
+   *  `/welcome` will ask; it reads as off. */
+  aiFeatures: boolean | null
   /** Whether onboarding's last step asks about starting with the system. */
   askAutostart: boolean
   /** Whether this copy can start at login: not the Linux tarball. */
@@ -124,7 +125,7 @@ export type AppSettings = {
 /** What the page can change of `AppSettings`. */
 export type AppChange = Partial<
   Pick<AppSettings, 'startWithSystem' | 'keepRunningOnClose' | 'checkForUpdates' | 'diagnostic' | 'language' | 'plays'>
->
+> & { aiFeatures?: boolean }
 
 /** The shell's actions. `exportDiagnostics` answers `{ ok: true }` when the
  *  viewer cancels the shell's dialog too, so `ok` never means "exported". */

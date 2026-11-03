@@ -153,7 +153,7 @@ FastAPI, built by `create_app(db_path, watcher=None)`.
 
 - **Metric endpoints are thin `SELECT`s over views**, and aggregation a `SELECT`
   can express belongs in the view, not the handler. Endpoints that serve a
-  feature package's own analysis (`review/`, `guide/`, `table/`, `coach/`) call
+  feature package's own analysis (`review/`, `guide/`, `table/`, `ai/coach/`) call
   that package instead and convert its dataclasses — see "Aggregation: views
   versus Python" in [architecture.md](architecture.md).
 - **Pydantic response models are the contract.** They drive the OpenAPI schema,
@@ -202,7 +202,7 @@ Prefer the standard library. Every dependency added so far earns its place:
 `fastapi`/`uvicorn` for the API, `pydantic` for the schema contract, `orjson`
 for parsing the log's payloads, `polib` for the API's translation catalogues,
 `keyring` for keys kept in the system keyring, and `anthropic` for the opt-in
-call in `llm/client.py`; for development, `pytest` and `ruff`, `httpx2` for
+call in `ai/llm/client.py`; for development, `pytest` and `ruff`, `httpx2` for
 FastAPI's `TestClient`, and `pyinstaller` for the frozen server. Log tailing
 is a plain polling loop on purpose — `watchdog` misbehaves on the virtiofs and network mounts this log may live on,
 and two seconds of latency is irrelevant for a dashboard.

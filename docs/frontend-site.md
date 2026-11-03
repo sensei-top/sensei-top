@@ -4,10 +4,10 @@ The static site in `site/`, the demo database and the screenshots taken against 
 
 ## The site
 
-`site/` is the public landing, help and privacy pages at `senseitop.com`, in
-English and Brazilian Portuguese: twelve hand-written HTML files (`index.html`,
-`help/index.html`, `privacy/index.html`, the three search pages below, and
-the same six under `pt-br/`), a thirteenth, `404.html`,
+`site/` is the public landing, help, privacy and terms pages at `senseitop.com`, in
+English and Brazilian Portuguese: fourteen hand-written HTML files (`index.html`,
+`help/index.html`, `privacy/index.html`, `terms/index.html`, the three search
+pages below, and the same seven under `pt-br/`), a fifteenth, `404.html`,
 in both languages on one page (served for any unknown path, because
 `wrangler.json` sets `not_found_handling` to `404-page`), one `site.css`, no build step, and one script of ours, `/hero.js`, on the two
 landings only. It is not part of `web/` and shares
@@ -57,6 +57,22 @@ renaming a button means changing the page with it. Arena's own labels count,
 because the welcome step's instructions quote them. Anything else in bold, a
 Windows dialog or a warning, is `<strong>`. Both languages carry the same
 section ids, so a link to `#report` works on either.
+
+The privacy policy and the terms of use are legal documents, and their text
+is the approved draft's, word for word: a change to either is made in the
+draft and reviewed there first, never in the HTML alone. They describe the
+free account before it exists, in boxes marked "Not yet available"
+(`.notice`), and carry tables (`.table-wrap`, which scrolls sideways on a
+narrow screen rather than squeezing). They use `<strong>` only, since the
+account's labels are not in the catalogues yet. They are the one place the
+site says "AI", because Anthropic's terms require the coach to say an AI
+writes its answers, and `tests/test_site.py` exempts the four pages from
+that check and no others. Each carries the date it last changed, which is
+also its version, in the opening note and the footer; `tests/test_site.py`
+pins one date on all four, so a change to any of them moves all four. They name the maintainer as the data controller, which
+`privacy_scan.py` allows on these four pages only, through a
+`published-name` line in the maintainer's local `privacy-terms.tsv`, never
+in the script.
 
 The landing is the one page whose `<body>` carries a class, `landing`, and
 every rule for its layout is scoped under it in `site.css`. Its hero is one
@@ -151,7 +167,7 @@ export of `index.mjs` for an entry point, so it exports only the handler;
 does not start the runtime, and missed exactly that mistake.
 
 The same script picks the language (`worker/language.mjs`, for every
-English page with a Portuguese version: `/`, `/help/` and `/privacy/`): a visitor whose `request.cf.country` is `BR` gets a
+English page with a Portuguese version: `/`, `/help/`, `/privacy/` and `/terms/`): a visitor whose `request.cf.country` is `BR` gets a
 redirect to the Portuguese page, unless the request's Referer is a page of
 the site itself, which is what keeps the English link on a Portuguese page
 from bouncing straight back. Without a cookie (the privacy pages promise

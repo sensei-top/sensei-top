@@ -3,6 +3,17 @@
   "plugins": ["react", "typescript", "oxc"],
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["**/ai", "**/ai/**", "!**/ai/registry"],
+            "message": "Outside src/ai/, import only src/ai/registry (useAi), never another ai/ module."
+          }
+        ]
+      }
+    ]
   }
 }

@@ -4,7 +4,7 @@ game logs moved, the store that records the bytes it is handed, and
 full-file-per-row storage model, and fail-soft handling of a file that
 vanishes mid-scan. Directory *resolution* (env var, config file, no
 autodetection) is ``mtgo/config.py::resolve_log_dir``'s contract instead —
-see ``test_llm.py``, which already exercises that module's config-file
+see ``test_claude_config.py``, which already exercises that module's config-file
 fail-soft behaviour end to end.
 
 The bytes here are synthetic: the reader never decodes a payload, so what is

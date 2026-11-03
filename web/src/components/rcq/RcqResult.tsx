@@ -7,7 +7,8 @@ import { archetypeName } from '../../lib/decks'
 import { orphanProblems, ownedProblems, problemSentence } from '../../lib/guide'
 import { markdownFileName } from '../../lib/rcq'
 import { useNow } from '../../lib/time'
-import { writtenLine } from '../../lib/written'
+import { shownAuthor, writtenLine } from '../../lib/written'
+import { useAiFeatures } from '../../shell/aiFeatures'
 import { Button, Callout, Card, Chip, Prose, type ChipVariant } from '../ui'
 import { PlanBody } from '../guide/WrittenCards'
 
@@ -127,9 +128,10 @@ function CarryCard({ deckKey, response }: { deckKey: string; response: RcqGuideO
 export function RcqResult({ deckKey, response }: { deckKey: string; response: RcqGuideOut }) {
   const { t } = useTranslation()
   const now = useNow()
+  const [aiOn] = useAiFeatures()
   const guide = response.guide
   if (response.status !== 'ok' || guide == null) return null
-  const line = writtenLine(response.model, response.generated_at, now, t)
+  const line = writtenLine(shownAuthor(response.model, aiOn), response.generated_at, now, t)
 
   return (
     <div className="space-y-6">

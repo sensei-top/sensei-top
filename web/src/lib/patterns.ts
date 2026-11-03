@@ -1,7 +1,7 @@
 /**
  * A pattern's own words: the title and sentence-clause Home
  * (`components/home/ThreeThings.tsx`), the Guide (`components/guide/
- * LeakCard.tsx`) and the Coach's profile (`components/coach/`) draw from
+ * LeakCard.tsx`) and the Coach's profile (`ai/coach/cards/`) draw from
  * one `Leak` (`review/leaks.py`), and the sentence the Guide and the Coach
  * both write. Shared here so the pages never say a pattern's story two
  * different ways.

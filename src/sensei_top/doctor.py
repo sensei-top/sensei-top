@@ -29,8 +29,8 @@ import sqlite3
 from pathlib import Path
 
 from sensei_top import arena_config, secrets
+from sensei_top.config import config_path
 from sensei_top.db import discover_migrations
-from sensei_top.llm.config import config_path
 from sensei_top.mtgo import discover
 from sensei_top.mtgo.config import load_handle, resolve_deck_dir, resolve_log_dir
 from sensei_top.reader.ingest import found_log_paths

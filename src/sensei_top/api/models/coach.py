@@ -4,8 +4,8 @@
 These drive the OpenAPI schema, which openapi-typescript turns into the
 frontend's types — so field names here are the frontend's contract.
 
-The evidence and report models mirror ``coach/evidence.py`` and
-``coach/store.py`` dataclasses (``api/routes/coach.py``'s
+The evidence and report models mirror ``ai/coach/evidence.py`` and
+``ai/coach/store.py`` dataclasses (``ai/routes/coach.py``'s
 ``from_evidence``/``_report_out`` do the conversion explicitly, never via
 ``model_validate`` on a dataclass instance). The evidence fields only the
 prompt uses are left off ``CoachEvidenceModel``: the Coach page never
@@ -20,7 +20,7 @@ from sensei_top.api.models.metagame import FormatName
 
 
 class RateModel(BaseModel):
-    """One win rate, split out of ``coach.evidence.Rate`` — ``ci`` (a tuple
+    """One win rate, split out of ``ai/coach/evidence.py::Rate`` — ``ci`` (a tuple
     there) becomes ``ci_low``/``ci_high`` here since a plain 2-tuple gives
     the frontend nothing to name each half by."""
 
@@ -82,9 +82,9 @@ class FieldLineOut(BaseModel):
 
 
 class CoachEvidenceModel(BaseModel):
-    """Mirrors ``coach.evidence.CoachEvidence``, minus ``source`` (always
+    """Mirrors ``ai/coach/evidence.py::CoachEvidence``, minus ``source`` (always
     ``"all"`` — there is no source query parameter, see
-    ``api/routes/coach.py``), ``format_population`` (the ``gaps`` lines
+    ``ai/routes/coach.py``), ``format_population`` (the ``gaps`` lines
     already say how many matches each exclusion reason removed), and the
     prompt-only ``by_source``, ``examples``, ``decklists`` and
     ``format_counts``. ``fmt`` is carried once, as
@@ -112,7 +112,7 @@ class CoachEvidenceModel(BaseModel):
 
 
 class CoachModelOption(BaseModel):
-    """One choice in the Coach tab's model dropdown — ``llm.client.
+    """One choice in the Coach tab's model dropdown — ``claude_config.
     REPORT_MODELS`` plus its own price, resolved server-side so the
     dashboard never has to know the pricing table."""
 
@@ -177,7 +177,7 @@ class CoachResponse(BaseModel):
 
 class CoachSource(BaseModel):
     """One citation a stored report actually used — either a reading-list
-    entry (``coach.canon.CANON``) or a web page ``llm.client.write_report``'s
+    entry (``ai/coach/canon.py::CANON``) or a web page ``llm.client.write_report``'s
     search tool visited."""
 
     kind: str = Field(description="reading | web")
@@ -198,7 +198,7 @@ class CoachNarrativeResponse(BaseModel):
     ``'prompt'`` when there is evidence but nothing stored yet,
     ``'no_report'`` when there isn't even enough evidence for a prompt. The
     latest-report GET is always a 200; the by-id GET, the POST and the PUT
-    have their own error codes (see ``api/routes/coach.py``).
+    have their own error codes (see ``ai/routes/coach.py``).
     """
 
     status: str = Field(description="ok | prompt | no_report")

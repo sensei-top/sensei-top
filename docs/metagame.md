@@ -136,7 +136,7 @@ decklist, complete) write the same `archetype_key`, the `Definition.key`
 that is the file stem in `MTGOFormatData`. That shared key is what makes
 `v_meta_winrate` and a personal `v_match_opponent` row joinable at all:
 the dashboard's field numbers (`docs/frontend-pages.md`, "Field, and the
-field-winrate join") and `review/narrative.py`'s `FieldContext` both key
+field-winrate join") and `ai/review/narrative.py`'s `FieldContext` both key
 off `opponent_key`'s `'archetype:' + archetype_key` form, and both
 refuse to join anything else. A manual label, a colours-only guess, or
 `'unknown'` shares no vocabulary with the corpus, so there is nothing
@@ -342,7 +342,7 @@ way `test_parse_event_never_retains_a_player_name` does for the fbettega side.
 **Credential, deliberately not the metered kind.** TopDeck's key is free and
 rate-limited (~100 requests/minute), not billed — it exists for attribution
 and abuse prevention, not cost. AGENTS.md non-negotiable #5 says so
-explicitly: `llm/config.py` is the only place a *metered*
+explicitly: `claude_config.py` is the only place a *metered*
 credential is resolved, and TopDeck's key is resolved by its own sibling,
 `metagame/config.py` (`TOPDECK_API_KEY` env var, else the system keyring
 (service `sensei-top`), else a `[topdeck]` table in the same
@@ -772,16 +772,16 @@ against — and every route below calls it rather than re-running
   no field win rate at all.
 - `review/snapshot.py::build_snapshot`'s `field_matchup` (surfaced by
   `review/analyzers/baseline.py` in the match report) and
-  `brief/narrative.py`'s "Field record for this pairing" line both
+  `ai/brief/narrative.py`'s "Field record for this pairing" line both
   read one format's field — the match report the match's format, the brief
   the deck's — windowed to that format's latest reset rather than the whole
   corpus. Each passes its format to `metagame/matchup.py::ranked_field_matchup
   (..., fmt=)`, which answers `None` when there is none — see
-  `docs/review.md` and `docs/brief.md`. `api/routes/matches.py::
+  `docs/review.md` and `docs/brief.md`. `ai/routes/match_report.py::
   _field_context` (the match-report narrative prompt's field section) reads
   the match's format the same way, and both `review/leaks.py::find_leaks`
-  call sites in `api/routes/review.py` (the leak finder and its narrative
-  prompt) build each match's report under its own format's window.
+  call sites, `api/routes/review.py` (the leak finder) and `ai/routes/leaks.py`
+  (its narrative prompt), build each match's report under its own format's window.
 
 A pre-reset round is never silently dropped and forgotten, either: when a
 windowed query has nothing on or after the cutoff, the caller gets `None`/no

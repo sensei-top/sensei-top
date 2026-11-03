@@ -1,11 +1,11 @@
 # The opt-in Claude API call
 
-Read this when touching `llm/`, a `.../narrative` POST route, or
+Read this when touching `ai/llm/`, a `.../narrative` POST route, or
 `GenerateCard`, or when planning anything hosted. It explains the one
-exception AGENTS.md non-negotiable #5 carves out, exactly what does and does
-not cross the loopback boundary because of it, why no hosted service of
-this project writes on a user's behalf today, and what the planned paid
-report allowance would change.
+exception AGENTS.md non-negotiable #5 carves out for a metered call,
+exactly what does and does not cross the loopback boundary because of it,
+and what the hosted services being built (the account, cloud history,
+error reports and the rules coach) receive.
 
 AGENTS.md states rule 5 as four short lines. This document is where the
 reasoning behind them lives — read it before arguing with any of them.
@@ -20,7 +20,7 @@ default someone may tune.
 Before this feature existed, "this app cannot spend money" was a *structural*
 fact — there was no HTTP client for Anthropic in the runtime dependency set at
 all. It is now a *configuration* fact: no key, no call. That is a genuinely
-weaker guarantee, and the three things that keep it honest are `llm/config.py`
+weaker guarantee, and the three things that keep it honest are `claude_config.py`
 returning `None`, every caller checking for it, and the tests named at the
 bottom of this section.
 
@@ -33,13 +33,15 @@ building it means revisiting rule 5, not extending it.
 **The one exception, stated plainly:** the five narrative routes send match
 evidence to Anthropic's API when — and only when — the user has configured a
 credential. That is the deliberate trade rule 5 makes. It does not extend to
-anything else this app fetches or sends.
+anything else this app fetches or sends: cloud history and error reports,
+once built, are separate yeses with rules of their own ("What is hosted,
+and what it receives", below).
 
 With no credential configured, none of the five routes may even build a
-client: `tests/test_llm.py::test_no_credential_means_no_client_is_constructed`
+client: `tests/ai/test_llm.py::test_no_credential_means_no_client_is_constructed`
 pins it for the match report, the leak finder, the deck guide and the RCQ
 guide, and
-`tests/test_coach_api.py::test_no_credential_means_no_client_is_constructed`
+`tests/ai/test_coach_api.py::test_no_credential_means_no_client_is_constructed`
 for the coach.
 
 ## The standard for the free downloads
@@ -60,7 +62,7 @@ metered-call rule. Their standard:
 a user-supplied credential. It is still not a metered call — the key exists for
 rate-limiting and attribution, never billing — so it is configured the same way
 (`sensei-top config --set-topdeck-key`, or a `TOPDECK_API_KEY` env var,
-resolved by `metagame/config.py`, a *sibling* to `llm/config.py` rather than an
+resolved by `metagame/config.py`, a *sibling* to `claude_config.py` rather than an
 extension of it) while staying governed by the free-download standard above.
 With no key configured the corpus refresh simply skips that source, no
 different from any other unreachable download. See `docs/metagame.md`.
@@ -88,24 +90,27 @@ decision also ruled out a paid tier, a hosted proxy and an account. The
 prompt removed, three tiers, an account) is reversed. **Amended
 2026-10-12:** a paid subscription is planned, not built, and its monthly
 allowance of reports would be a third path, written by a hosted proxy
-holding the maintainer's key ("Nothing hosted writes for the user",
-below). It adds that path and removes neither of these: both stay free,
-and neither ever needs an account. What follows from that:
+holding the maintainer's key. **Amended 2026-11-02:** a free, optional
+account comes back, for cloud history, error reports and a hosted rules
+coach, and the subscription is not part of it ("What is hosted, and what
+it receives", below). Neither amendment removes these two paths: both
+stay free, and neither needs an account. What follows from that:
 
 - `CopyPromptCard` and the "Show the prompt" toggle stay, and the prompts
   keep improving as features of their own. A user with no key, or with an
   assistant subscription they already pay for, generates by pasting the
   prompt into it and the answer back into the card.
 - A configured credential is a user path, not a development setting. The
-  dashboard's Settings say so plainly, and the website never uses the
-  phrase "AI" as the pitch: the tracker, the field and the current-match
-  reads are the product, and writing is an option on top.
+  dashboard's Settings say so plainly. The tracker, the field and the
+  current-match reads are the product, and writing is an option on top.
+  Until 2026-11-02 the website also kept the word "AI" out of its pitch;
+  the account's shared sentence and the "AI features" switch use it now.
 - **Planned, not built: a provider adapter** (`ROADMAP.md`). The credential
   becomes a provider plus a base URL, a key and a model id, so the same
   five routes can call Anthropic, any OpenAI-compatible endpoint, or a
   local model (Ollama, LM Studio) on the machine. Three consequences are
   decided with it: "the only module that imports `anthropic`" becomes "the
-  only package that talks to a model" (`llm/`), with one adapter per
+  only package that talks to a model" (`ai/llm/`), with one adapter per
   protocol; every stored narrative carries the model id that wrote it, and
   the dashboard shows it, because a report from a small local model is
   not the report the prompt was tuned for; and the coach's web search,
@@ -126,23 +131,27 @@ along with what pins it down.
 
 ## Credential resolution
 
-`src/sensei_top/llm/config.py` is the only place a *metered, billing*
-credential is read — the Claude API key. The free, rate-limited TopDeck.gg
-credential is resolved by its own sibling module, `metagame/config.py`, under
-the free-download standard above rather than this rule.
+`src/sensei_top/claude_config.py` is the only place a *metered, billing*
+credential is read — the Claude API key. It lives in core, not in `ai/`,
+because `config --show` and `config --json` report the credential, the
+model and the models offered whether or not `ai/` is installed; it imports
+only `secrets.py` and `config.py`, and nothing in it can make a call. The
+free, rate-limited TopDeck.gg credential is resolved by its own sibling
+module, `metagame/config.py`, under the free-download standard above rather
+than this rule.
 
 Order, first match wins:
 
 1. `ANTHROPIC_API_KEY` environment variable.
 2. The system keyring (Windows Credential Manager, Secret Service on Linux),
    service `sensei-top`, username `claude`, read through `secrets.py`. That
-   module is a generic, fail-soft store and imports nothing from `llm/`; this
-   module stays the only place the credential is *resolved*. The `fail` and
-   `null` keyring backends count as "no backend" (silently skipped); a backend
-   that exists but errors logs a WARNING (never the value) and resolution
-   moves on to the file.
+   module is a generic, fail-soft store and imports nothing that resolves a
+   credential; `claude_config.py` stays the only place the credential is
+   *resolved*. The `fail` and `null` keyring backends count as "no backend"
+   (silently skipped); a backend that exists but errors logs a WARNING (never
+   the value) and resolution moves on to the file.
 3. `~/.config/sensei-top/config.toml` (`$XDG_CONFIG_HOME` if set), or on
-   Windows `%APPDATA%\sensei-top\config.toml` (`llm/config.py::config_path`;
+   Windows `%APPDATA%\sensei-top\config.toml` (`config.py::config_path`;
    a file left at the old `~/.config` path is still read there, with a
    warning to move it, until the `%APPDATA%` one exists), a `[claude]`
    table:
@@ -184,12 +193,12 @@ and exits non-zero, since either choice would change which key is in force.
 shell: the `[arena]`, `[mtgo]` and backup values, the model and effort, the
 models offered, and for each key only `key_set` and `key_source` (`env`,
 `keyring`, `file` or `null`), never the key. `key_source` comes from
-`llm/config.py::key_source()` and `metagame/config.py::key_source()`, the
+`claude_config.py::key_source()` and `metagame/config.py::key_source()`, the
 same resolution `load()` runs; `cli.py` writes through `secrets.py` but never
 decides which key is in force.
 
 The coach reads the same `[claude]` table plus an optional `[claude.coach]`
-table layered on top of it, resolved by `llm/config.py::load_coach()`:
+table layered on top of it, resolved by `claude_config.py::load_coach()`:
 
 ```toml
 [claude.coach]
@@ -202,9 +211,10 @@ Any key left out of `[claude.coach]` falls back to `[claude]`'s own value
 (or the built-in default), and `load_coach()` returns `None` under the exact
 same missing-credential rule as `load()` — the coach is not a separate
 credential, only an optional override of model, effort, and whether it may
-search at all. Written by `sensei-top config --set-coach-model`,
-`--set-coach-effort`, and `--coach-web-search on|off`; `config --show` prints
-the resolved coach override alongside the base model/effort when one is set.
+search at all. No command writes this table; it is edited by hand.
+`config --show` prints the resolved coach override alongside the base
+model/effort when one is set, and the Coach page's model dropdown preselects
+its `model`.
 
 The TopDeck.gg key follows the same order (`TOPDECK_API_KEY`, keyring username
 `topdeck`, `[topdeck]` in the file) in `metagame/config.py`.
@@ -220,22 +230,31 @@ degrades the one surface that needs it, not the whole app.
 
 ## What calls out, and what it sends
 
-Only `src/sensei_top/llm/client.py` imports `anthropic`, and only these
+Only `src/sensei_top/ai/llm/client.py` imports `anthropic`, and only these
 five routes ever construct a client — each fired by a button press, never a
 schedule, never a background worker:
 
 | Route | Sends | Writes |
 |---|---|---|
-| `POST /api/matches/{id}/report/narrative` | `review/narrative.py`'s existing `full_prompt` — this game's turn-by-turn shape and the report's findings, no raw hand or graveyard | `match_narrative` |
-| `POST /api/guide/{key}/narrative` | `guide/narrative.py`'s existing `full_prompt` — the player's 75 and the field's top archetypes' consensus staples, both with oracle text | `deck_narrative` **and** `matchup_brief` (every matchup plan the guide covers) |
-| `POST /api/review/leaks/narrative` | `review/leaks_narrative.py`'s existing `full_prompt` — one bullet per recurring pattern with its win-rate interval | `leaks_narrative` |
-| `POST /api/coach/narrative` | `coach/narrative.py`'s `full_prompt` — cross-deck win rates and recurring patterns over every completed constructed match, worked example losses, a curated reading list, and the previous report's own progress metrics; every field is a rate, a pattern label, or a reading id — no opponent name, user id, local path, or deck GUID, with the one documented exception of an example game's own `match_id` (`docs/coach.md`). Also takes an optional JSON body, `{"model": "..."}`, from the Coach page's model dropdown — one of `llm/client.py::REPORT_MODELS`, else a 422 naming the allowed ids; left out, the call uses the configured coach model exactly as before the dropdown existed. | `coach_report` (a new row every time — a coach report is history, never overwritten) |
-| `POST /api/guide/{key}/rcq/narrative` | `guide/rcq.py`'s `rcq_prompt` — the exact 75 the user pasted, with oracle text, the list's diff against the field's consensus, the expected archetypes the user picked (corpus keys, each with consensus and oracle text), the field's shares since the format reset and over the last 14 days, and every event of the last 7 days (date, name, tier, players, top-8 archetypes). The body is `{decklist, expected[], own?}`; no opponent name, handle or local path. 503 with no credential, 502 on an `LLMError` | `rcq_guide` (a new row every time — each is the record of one event's preparation) |
+| `POST /api/matches/{id}/report/narrative` | `ai/review/narrative.py`'s existing `full_prompt` — this game's turn-by-turn shape and the report's findings, no raw hand or graveyard | `match_narrative` |
+| `POST /api/guide/{key}/narrative` | `ai/guide/narrative.py`'s existing `full_prompt` — the player's 75 and the field's top archetypes' consensus staples, both with oracle text | `deck_narrative` **and** `matchup_brief` (every matchup plan the guide covers) |
+| `POST /api/review/leaks/narrative` | `ai/review/leaks_narrative.py`'s existing `full_prompt` — one bullet per recurring pattern with its win-rate interval | `leaks_narrative` |
+| `POST /api/coach/narrative` | `ai/coach/narrative.py`'s `full_prompt` — cross-deck win rates and recurring patterns over every completed constructed match, worked example losses, a curated reading list, and the previous report's own progress metrics; every field is a rate, a pattern label, or a reading id — no opponent name, user id, local path, or deck GUID, with the one documented exception of an example game's own `match_id` (`docs/coach.md`). Also takes an optional JSON body, `{"model": "..."}`, from the Coach page's model dropdown — one of `claude_config.py::REPORT_MODELS`, else a 422 naming the allowed ids; left out, the call uses the configured coach model exactly as before the dropdown existed. | `coach_report` (a new row every time — a coach report is history, never overwritten) |
+| `POST /api/guide/{key}/rcq/narrative` | `ai/guide/rcq_prompt.py`'s `rcq_prompt` — the exact 75 the user pasted, with oracle text, the list's diff against the field's consensus, the expected archetypes the user picked (corpus keys, each with consensus and oracle text), the field's shares since the format reset and over the last 14 days, and every event of the last 7 days (date, name, tier, players, top-8 archetypes). The body is `{decklist, expected[], own?}`; no opponent name, handle or local path. 503 with no credential, 502 on an `LLMError` | `rcq_guide` (a new row every time — each is the record of one event's preparation) |
 
 All five routes sit behind `api/guard.py`, which refuses a POST from a
 foreign `Origin` or without the dashboard's `X-Tracker-Client` header before
 it reaches the route, so another page open in your browser cannot trigger a
 metered call.
+
+`GET /api/llm/status`, which tells the dashboard whether to offer a generate
+button ("The fallback"), is `ai/routes/status.py`, mounted only when `ai/` is
+installed (`docs/architecture.md`, "Who may know what"); without it the
+path is the API's JSON 404. The plumbing the five routes and the paste
+routes share — the 503 with no credential, the authored-write transaction and
+the paste refusals — is `ai/routes/narrative.py`. The routes themselves are
+still in their features' `api/routes/` modules while the move into
+`ai/routes/` is under way.
 
 ### Saving a pasted answer
 
@@ -246,7 +265,7 @@ card that offers a prompt: `PUT /api/matches/{match_id}/report/narrative`,
 `PUT /api/guide/{key}/briefs/{archetype_key}`,
 `PUT /api/guide/{key}/coverage` and `PUT /api/guide/{key}/rcq/narrative`.
 None constructs a client or sends anything anywhere. Each reads the
-answer through `answers.py::read_answer`, the parser the CLI importers
+answer through `ai/answers.py::read_answer`, the parser the CLI importers
 use, and writes the table its generate route or importer writes
 (non-negotiable #6's allowlist; `test_only_authored_artifact_routes_write`
 pins all seven). The answer's `for` line must name this card: an answer
@@ -257,20 +276,20 @@ is looked up (413). A pasted answer is stored with the author `pasted`
 and no cost or token counts, which stay `NULL` ("Model, effort, and
 cost", below); the dashboard says "Pasted in." where it would name a
 model. The stored prompt is the copied prompt rebuilt at save time,
-except on the brief and coverage routes, which store what
-`brief --import` stores, the build context (`docs/brief.md`).
+except on the brief and coverage routes, which store
+the build context (`docs/brief.md`).
 
 The coach's call is also the only one that can reach the network *during* the
 call, not just at its start and end: `write_report` (below) hands Claude a
-server-side web-search tool restricted to `coach/canon.py::ALLOWED_DOMAINS`,
+server-side web-search tool restricted to `ai/coach/canon.py::ALLOWED_DOMAINS`,
 a fixed list of magic-strategy and metagame sites. The model decides whether
 to search at all — most of the prompt needs no search — and never sees a
 raw URL outside that list to visit.
 
 Each call also logs at `INFO` level — the model and effort before the call,
 then input/output tokens, cost, and elapsed time once it completes (or a
-`WARNING` if it fails). `llm/client.py` sets its own logger's level
-explicitly, and `logs.py` lets the `INFO` lines of any `sensei_top.llm`
+`WARNING` if it fails). `ai/llm/client.py` sets its own logger's level
+explicitly, and `logs.py` lets the `INFO` lines of any `sensei_top.ai.llm`
 logger through to both the console and the log file at the default levels,
 so a user watching `serve` sees what a button press spent (rule 5, "never
 silent"). Every other logger's `INFO` stays out.
@@ -283,19 +302,19 @@ call's whole prompt, which is the user's own match data, written to
 
 **A generate call sends the copied prompt without its last section.**
 The prompt a card offers to copy ends with the answer contract
-(`answers.py::answer_format`): a `for` line naming the card, a
+(`ai/answers.py::answer_format`): a `for` line naming the card, a
 `context` hash of what the prompt was built from, and the JSON shape to
 answer in, one `{"prose": ...}` object for the prose cards. A generate
 call sends the prompt without that contract (`full_prompt`, the coach's
 `CoachPrompt.prompt`), because its reply is stored whole or read through
 the tool's own schema. The evidence is the same text either way, tested
 the same way, one route's builder at a time:
-`test_narrative_prompt_carries_no_local_paths` (`tests/test_api.py`,
-`tests/test_narrative.py`) for the match report,
+`test_narrative_prompt_carries_no_local_paths` (`tests/ai/test_match_report_routes.py`,
+`tests/ai/test_narrative.py`) for the match report,
 `test_leaks_context_carries_no_local_paths` for the leak finder,
 `test_build_guide_context_carries_no_local_paths` for the deck guide, and
 `test_build_coach_prompt_over_a_projected_database_no_privacy_leak` with
-`tests/test_coach_evidence.py`'s two `test_privacy_*` tests for the coach.
+`tests/ai/test_coach_evidence.py`'s two `test_privacy_*` tests for the coach.
 The RCQ guide's prompt has no such test. These tests are load-bearing
 now in a way they were only decorative before: a bug in one of those
 builders used to produce a prompt a human read before pasting anywhere; now it's a
@@ -304,8 +323,8 @@ prompt the API sends.
 The matchup brief (`GET /api/current-match/brief`) deliberately has **no**
 generate button — it stays `CopyPromptCard`-only. It still gets filled
 automatically for any archetype the deck guide covers, because generating the
-guide writes into `matchup_brief` the same way `guide --import` already does
-via `brief/from_guide.py`.
+guide writes into `matchup_brief` the same way a pasted guide already does
+via `ai/brief/from_guide.py`.
 
 ## Model, effort, and cost
 
@@ -315,15 +334,15 @@ Default `claude-opus-5-5`, `thinking: {"type": "adaptive"}`,
 requests structured output (`output_config.format`) against the existing
 `_GUIDE_TOOL["input_schema"]` schema, so the generate path returns the exact
 JSON shape `guide_narrative_from_json` already parses — one validation path,
-not two. The RCQ guide does the same with `guide/rcq.py`'s
+not two. The RCQ guide does the same with `ai/guide/rcq_prompt.py`'s
 `_RCQ_TOOL["input_schema"]` and `rcq_from_json`.
 
 Every generated artifact records `model`, `input_tokens`, `output_tokens`, and
 `cost_usd` computed from the response's own `usage` block against a small
-priced-models table in `llm/client.py` (`_PRICES`): `claude-opus-5` ($5/$25
+priced-models table in `ai/llm/client.py` (`_PRICES`): `claude-opus-5` ($5/$25
 per MTok in/out), `claude-opus-5-5` ($4/$20), `claude-fable-5-1` ($10/$50),
 `claude-sonnet-5` ($2/$10), and `claude-haiku-4-5` ($1/$5) — five priced
-models, a `--set-model`/`--set-coach-model` override may name any of them.
+models, a `--set-model` or `[claude.coach]` `model` override may name any of them.
 The coach's own dropdown offers only four of the five (`REPORT_MODELS`,
 above) — every priced model but Haiku 4.5, which rejects the adaptive
 thinking and explicit effort `write_report` always sends. An unrecognized
@@ -349,7 +368,7 @@ price for it again. No other route is marked. Each of them sends one request
 and samples once, so nothing would ever read what it wrote, and a
 five-minute cache write costs 1.25× the input price: marking them would
 raise their cost. A prefix shared across users would need a hosted proxy,
-and none is built ("Nothing hosted writes for the user", below).
+and none is built ("What is hosted, and what it receives", below).
 
 A cached call reports its prompt in three counts, and `coach_report` stores
 all three (migration 063): `input_tokens` is only the uncached remainder,
@@ -367,14 +386,14 @@ asynchronously, in up to a day. A report that arrives while the user waits
 on the page is the product, so no route uses it.
 
 Measured per-call costs, from real runs at `effort: high` against the
-fixture-backed scratch database used in `tests/test_llm.py`:
+fixture-backed scratch database used in `tests/ai/test_llm.py`:
 
 | Feature | Measured cost | Notes |
 |---|---|---|
 | Match report (the `"Coach's summary"` card) | $0.098 | A real 2-game match. The card predates the Coach tab and is unrelated to it — one match, not a cross-deck report |
 | Deck guide | $0.066 | Against the fixture's 2-match deck with **no card oracle text loaded** (`sensei-top cards --scryfall` never run on this scratch DB) — a real deck's guide, with oracle text for its own 75 and the field's top archetypes, will cost more; re-measure against a real `$MTGA_LOG` before trusting this number for planning |
 | Leak narrative | not yet measured | the fixture has only 2 matches — `leaks.MIN_SAMPLE` (10) can never clear on either side of any comparison, so there was nothing to generate a training plan from |
-| Coach report | $0.8482 | Before prompt caching. Opus 5 over a real 245-match database, 2026-09-20: 110,718 input / 9,384 output tokens and 6 web searches (6 × $0.01 = $0.06 of that total). Measured against `$MTGA_LOG`, not the fixture, which can't reach `MIN_SAMPLE` (10) constructed matches. **The prompt is only ~10k tokens**; the billed input is it re-sent on every `pause_turn` continuation, so searches drive this cost, not history size — `--coach-web-search off` takes it to a few cents. See `docs/coach.md` |
+| Coach report | $0.8482 | Before prompt caching. Opus 5 over a real 245-match database, 2026-09-20: 110,718 input / 9,384 output tokens and 6 web searches (6 × $0.01 = $0.06 of that total). Measured against `$MTGA_LOG`, not the fixture, which can't reach `MIN_SAMPLE` (10) constructed matches. **The prompt is only ~10k tokens**; the billed input is it re-sent on every `pause_turn` continuation, so searches drive this cost, not history size — `web_search = false` under `[claude.coach]` takes it to a few cents. See `docs/coach.md` |
 | Coach report, Fable 5.1 | $3.2292 | Before prompt caching. Picked from the Coach tab's model dropdown, 2026-09-22, over 249 matches at `effort: high`: 238,886 input / 15,206 output tokens and 8 web searches ($0.08). About 3.8× the Opus 5 run: 2× from the per-token price, the rest from 2.2× the billed input through the same `pause_turn` re-sends. Not a controlled comparison — it was the second report, so its prompt also carried the first. See `docs/coach.md` |
 | Coach report, Opus 5.5, cached | $0.5998 | With prompt caching, 2026-10-07, Standard over 360 Standard matches (633 Constructed): 20 uncached input, 42,645 cache-write and 256,003 cache-read tokens (a 298,668-token prompt across the loop), 12,763 output tokens and 8 web searches ($0.08). Uncached, the same counts would have cost about $1.53. The last uncached Opus 5.5 report, 2026-10-02, with the same 8 searches, cost $1.7522 (345,874 input / 14,437 output). Not a controlled comparison: that one predates the per-format report, so its prompt differs |
 
@@ -384,20 +403,21 @@ measurement, so the Opus 5 and Fable 5.1 rows overstate what they cost now.
 
 ## The fallback
 
-`GET /api/llm/status` reports `{configured: bool, model: str | None}`,
-never the key itself. Each of the five callers reads it and hands
-`GenerateCard` (`web/src/components/GenerateCard.tsx`) a `writer`, who
-writes the report, from `writerFrom` (`web/src/lib/writer.ts`). The
-card builds one body, the same whoever writes: a written note
-(`writtenNote`, `lib/written.ts`: who wrote it, when, what it cost and,
-when the evidence has moved on since, a sentence saying so), then the
-stored prose, or "Nothing written yet." with neither. With no key
-configured nobody writes, and that body becomes `CopyPromptCard`'s
-children, above its "Copy the prompt" button. With one, the key writes,
-and the same body sits above a "Write it with Claude" button ("Rewrite
-with Claude" once something is stored) and a "Show the prompt" toggle.
-While it writes, the button counts the seconds: these calls are slow,
-and a guide at `effort: high` can take minutes.
+`GET /api/llm/status` reports `{configured: bool, model: str | None}`, never
+the key itself. Each of the five callers reads it and hands `GenerateCard`
+(`web/src/ai/GenerateCard.tsx`, reached through `useAi()` in
+`web/src/ai/registry.ts`, the only import of `ai/` the lint rule allows from
+outside it) a `writer`, who writes the report, from `writerFrom`
+(`web/src/lib/writer.ts`). The card builds one body, the same whoever
+writes: a written note (`writtenNote`, `lib/written.ts`: who wrote it, when,
+what it cost and, when the evidence has moved on since, a sentence saying
+so), then the stored prose, or "Nothing written yet." with neither. With no
+key configured nobody writes, and that body becomes `CopyPromptCard`'s
+children, above its "Copy the prompt" button. With one, the key writes, and
+the same body sits above a "Write it with Claude" button ("Rewrite with
+Claude" once something is stored) and a "Show the prompt" toggle. While it
+writes, the button counts the seconds: these calls are slow, and a guide at
+`effort: high` can take minutes.
 
 `Writer` has those two cases, nobody and a key (`docs/frontend.md`,
 "Writing prose: `GenerateCard` and `CopyPromptCard`"). A paid plan's
@@ -407,7 +427,7 @@ with it: with no credential configured, the `POST .../narrative`
 routes still answer 503, and a plan's press would have to go through the
 desktop shell, never through this API.
 
-## Nothing hosted writes for the user
+## What is hosted, and what it receives
 
 This repository is free software, AGPL-3.0-only (`LICENSE`), with
 contributions under the DCO (`CONTRIBUTING.md`): a contributor keeps their
@@ -417,63 +437,93 @@ not overlooked. The licence was AGPL from 2026-09-27, proprietary "for now"
 from 2026-10-01, and AGPL again from 2026-10-07; no copy was published in
 between, so no user ever held the proprietary notice.
 
-No hosted proxy is built, and today every generate press uses the user's
-own credential, on the user's own machine. One is planned since
-2026-10-12 (AGENTS.md rule 5): the paid subscription's monthly allowance
-of reports, written through a server of ours that holds the maintainer's
-key. The 2026-10-01 plan had the same server and three costs: a second
-recipient of match evidence, an account, and a secret prompt. The planned
-one accepts the first two and refuses the third. The prompt stays
-readable in the dashboard and in this repository, the copy prompt and
-the user's own credential stay free beside it, and the account is the
-subscriber's alone. What is sold is reports inside a subscription, never
-tokens, credits or a prepaid balance: Anthropic's terms permit a product
-built on the API, not resold access to it. Someone who runs a modified
-copy as a service for others owes its users the source under AGPL
-section 13, which is the licence working as intended, not a case this
-project has to design for.
+Since 2026-11-02 this project plans hosted services, reached through a
+free, optional account; none is built yet (`BACKLOG.md`, BL-100 to
+BL-102). The decision supersedes what this section used to say: that
+nothing hosted writes for the user, that nothing free needs an account,
+and that nothing reports back. The tracker keeps working fully without
+the account. What each part receives:
 
-Two paid things are planned, and what each waits on is in `BACKLOG.md`, BL-070
-and BL-006. The Microsoft Store listing is the same build as the free download,
-listed free since 2026-10-21 and priced once the blockers there clear. The
-subscription comes at around 3,000 monthly active users, gated by feature,
-never by the player's rank or event type. It is the one thing behind an
-account, made at checkout: an email code, or Google, Discord or X. The account
-lives in the hosted service; the local server keeps no login and stays
-loopback-only. Selling tokens, credits or a prepaid balance would be reselling
-the Services, which Anthropic's Commercial Terms (D.4) allow only with its
-express approval. Until the subscription is built, the two paths that generate
-prose are the user's own: the prompt round trip and a credential the user
-configures, and both stay free beside the allowance.
+- **The account** (Supabase Auth, Google sign-in only, with the openid,
+  email and profile scopes): an email, a sign-in identity, an age
+  confirmation (13 and over), and the player's three choices, each with
+  the policy version and the time it was given. One screen asks them
+  right after the first sign-in, none pre-ticked; each can be changed in
+  Account, in the app or on the website, and a new policy version asks
+  again.
+- **Cloud history** (Supabase, one row per match behind row-level
+  security, so only its owner reads it), when "Back up my match history"
+  is on: a summary of each match built from the projections, about 1.5 KB
+  at most. Never a raw event, the player's own account id or screen name,
+  an opponent's handle, or chat. An Arena match is keyed by Arena's match
+  id and an MTGO match by MTGO's, and an MTGO match goes up only once its
+  deck has been picked. The local database stays the source of truth: a
+  match pulled onto another install is stored as received, and a match
+  that install read from its own log wins over it (AGENTS.md rule 6).
+  Only the two picks can conflict, and the newer one wins.
+- **Error reports** (Sentry), when "Send error reports" is on, or one at a
+  time through Report a problem: crashes and errors, scrubbed by the same
+  code that redacts the diagnostics bundle (profile paths, emails, tokens,
+  account ids and opponent names removed), with the account id as the
+  Sentry user, never the email. The raw log is never attached.
+- **The rules coach** (the coach API, the one server this project runs,
+  on a subdomain of the site's domain): the player's rules or card
+  question, and never a match. It answers from the Comprehensive Rules and
+  Scryfall's card data through OpenAI's models, paid from a monthly budget
+  the maintainer sets, behind per-player daily limits, a daily cap for
+  everyone and a kill switch, all checked before every model call. The
+  question's text is kept only when "Keep my coach history" is on;
+  otherwise only the day's count is.
 
-The `writer` under "The fallback" above is where the allowance would
-enter the dashboard, as a third case beside nobody and a key; it is not
-built.
+Electron's main process holds the session, in the operating system's
+encrypted storage, and does the pushing and pulling. The Python server
+keeps no login and stays loopback-only: it builds the payloads in a GET and
+stores what a pull brings back through the one route rule 6 adds. An
+install run from source or from the command line gets no sync.
 
-Apart from that planned proxy and the account service behind it, which
-holds an email, a sign-in identity and an entitlement and never a match,
-what this project may host is static and receives nothing: a version
-file the app checks once a day (disclosed in the README, switchable in
-Settings; the request carries the version asked for and nothing else) and,
-only with Daybreak's written consent, a snapshot of the field feed
-(`docs/metagame.md`). Neither is a call out in rule 5's sense, and neither
-ever sees a match. A diagnostics bundle exists only as a file the user
-makes and sends by hand, redacted before it is written.
+What does not change: the five narrative routes still use the user's own
+credential or the copied prompt, on the user's own machine, and never go
+through the coach API, so the exception at the top of this document stays
+exact. An "AI features" switch hides the coach and every prompt feature
+together, and the code behind them moves into a package of its own that
+the core never imports (BL-102).
 
-The planned allowance receives match data, so these are the statements it
-makes false, and building it starts with rewriting them: the exception at
-the top of this document, which names
-the user's configured provider alone; rule 5's opening in AGENTS.md; "no
-account, no upload" in AGENTS.md's paragraph about the project, which the
-README and the dashboard's footer repeat; the fourth promise in
-`SECURITY.md`, that no match data leaves the machine except the prompt of
-a report the user asked for, and its third, that nothing calls a paid API
-without a configured key; the item about collecting or sharing matches
-under "Never" in `ROADMAP.md`; the first item of the "What never leaves
-your machine" card and the item about collecting or sharing matches in the
-"What is not planned" card, on
-the site's home page in both languages (`site/index.html`,
-`site/pt-br/index.html`); and the claim under "What calls out, and what
-it sends" that per-route tests cover what leaves the machine. Each stays
-true of the free app, so the rewrite adds the subscriber's case beside it
-rather than removing it.
+The paid subscription planned on 2026-10-12 (`BACKLOG.md`, BL-006) is not
+part of this and is not built: no paywall is planned for the account or
+the coach. If the subscription is built, its account is this one, and its
+report allowance is a proxy holding the maintainer's key, with the prompt
+still readable in the dashboard and in this repository. What it would sell
+is reports inside a subscription, never tokens, credits or a prepaid
+balance: that would be reselling the Services, which Anthropic's
+Commercial Terms (D.4) allow only with its express approval. The Microsoft
+Store listing is the same build as the free download, listed free since
+2026-10-21 and priced once the blockers in BL-070 clear. The `writer`
+under "The fallback" above is where an allowance would enter the
+dashboard, as a third case beside nobody and a key; it is not built.
+
+Static, and receiving nothing: a version file the app checks once a day
+(disclosed in the README, switchable in Settings; the request carries the
+version asked for and nothing else) and, only with Daybreak's written
+consent, a snapshot of the field feed (`docs/metagame.md`). Neither is a
+call out in rule 5's sense, and neither ever sees a match. A diagnostics
+bundle exists only as a file the user makes and sends by hand, redacted
+before it is written.
+
+These statements are true of the app as it ships today and become false
+in the build that ships the account, so they are rewritten in that build
+and not before: "no account, no upload" in the README and the dashboard's
+footer (`docs/frontend.md` quotes it); the third and fourth promises in
+`SECURITY.md`, that nothing calls a paid API without a configured key and
+that no match data leaves the machine except the prompt of a report the
+user asked for; the first item of the "What never leaves your machine"
+card and the item about collecting or sharing matches in the "What is not
+planned" card, on the site's home page in both languages
+(`site/index.html`, `site/pt-br/index.html`); the privacy pages, which
+name every request the app makes and gain Supabase, Sentry and the coach
+API (`tests/test_site.py` pins them); the paragraph on the only
+measurement in `docs/status.md`, "What works today"; and the claim under
+"What calls out, and what it sends" that per-route tests cover what
+leaves the machine. Each "no account" claim becomes one shared sentence,
+word for word everywhere: "Sensei Top works fully without an account. A
+free, optional account adds cloud backup of your match history, error
+reports, and the AI rules coach."

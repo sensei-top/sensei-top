@@ -38,6 +38,7 @@ import tempfile
 import threading
 import time
 import tomllib
+import urllib.error
 import urllib.request
 from importlib import metadata
 from pathlib import Path
@@ -464,6 +465,15 @@ def _serve_check(
         served = _get_json(f"{base}/openapi.json")["info"]["version"]
         if served != expected:
             _fail(f"the API reports version {served!r}, expected {expected}")
+        # The route lives in ai/routes/, which core finds with find_spec: a
+        # 200 proves the build collected ai/.
+        try:
+            with urllib.request.urlopen(f"{base}/api/llm/status", timeout=15) as response:
+                status = response.status
+        except urllib.error.HTTPError as error:
+            status = error.code
+        if status != 200:
+            _fail(f"/api/llm/status answered {status}: the build did not collect ai/")
         with urllib.request.urlopen(f"{base}/", timeout=15) as response:
             if b'<div id="root"' not in response.read():
                 _fail("/ did not serve the bundled dashboard")

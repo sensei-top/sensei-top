@@ -1,4 +1,4 @@
-import type { AppSettings, DateOrder, DeepPartial, Saved, ShellSettings } from '../../bridge'
+import type { AppSettings, DateOrder, DeepPartial, KeyName, Saved, ShellSettings } from '../../bridge'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from '../../i18n'
@@ -6,16 +6,20 @@ import { failureOf, settle, useRestart, useTextSave } from '../../lib/settings'
 import { formatCount } from '../../lib/time'
 import { CardDataProgress } from '../onboarding/CardDataProgress'
 import { Card, Field } from '../ui'
+import { KeyField } from './KeyField'
 import { FolderField, PressButton, RestartNote, SaveButton, SavingSelect } from './SaveButton'
 
 // The games' own names, the same in every language.
 const ARENA = 'Arena'
 const MAGIC_ONLINE = 'Magic Online'
+const TOPDECK = 'TopDeck.gg'
 
 type Sources = ShellSettings['sources']
 type SaveSources = (change: DeepPartial<Sources>) => Promise<Saved>
 
-/** What the app reads: the two games' logs, in a card each, then the card
+/** What the app reads: the two games' logs, in a card each, then the
+ *  TopDeck.gg key (a download source, so it is here and not under Writing;
+ *  drawn only when the shell passes `topdeck`), then the card
  *  data (drawn only when the shell passes its app part), then the folder
  *  where the matches are kept. Only a shell knows any of it, so with
  *  no shell the page does not draw this section at all. With a shell and no
@@ -26,6 +30,7 @@ export function SourcesSection({
   pickFolder,
   showDataFolder,
   app,
+  topdeck,
 }: {
   sources: Sources
   save?: SaveSources
@@ -33,11 +38,15 @@ export function SourcesSection({
   showDataFolder?: () => Promise<Saved>
   /** The shell's app state; with none, the Card data card is not drawn. */
   app?: Pick<AppSettings, 'rulesText' | 'firstData'> & { startFirstData(): Promise<Saved> }
+  /** Whether a TopDeck.gg key is set, and the way to set one; with none,
+   *  the TopDeck.gg card is not drawn. */
+  topdeck?: { set: boolean; setKey?: (which: KeyName, key: string | null) => Promise<Saved> }
 }) {
   return (
     <div className="max-w-3xl space-y-6">
       <ArenaCard sources={sources} save={save} />
       <MagicOnlineCard sources={sources} save={save} pickFolder={pickFolder} />
+      {topdeck && <TopDeckCard set={topdeck.set} setKey={topdeck.setKey} />}
       {app && <CardDataCard app={app} />}
       <DataFolderCard dataDir={sources.dataDir} showDataFolder={showDataFolder} />
     </div>
@@ -166,6 +175,29 @@ function MagicOnlineCard({
           error={text.errorOf('mtgoDeckDir')}
         />
         {save && <SaveButton dirty={text.dirty} onSave={text.submit} />}
+        <RestartNote show={restart} />
+      </div>
+    </Card>
+  )
+}
+
+function TopDeckCard({
+  set,
+  setKey,
+}: {
+  set: boolean
+  setKey?: (which: KeyName, key: string | null) => Promise<Saved>
+}) {
+  const { t } = useTranslation()
+  const { restart, watch } = useRestart()
+  return (
+    <Card title={TOPDECK} subtitle={t('settings.sources.topdeckSubtitle')}>
+      <div className="space-y-5">
+        <KeyField
+          set={set}
+          onSet={setKey && ((key) => watch(setKey('topdeck', key)))}
+          removeBody={t('settings.sources.topdeckRemoveBody')}
+        />
         <RestartNote show={restart} />
       </div>
     </Card>

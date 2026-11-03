@@ -69,7 +69,7 @@ msgid_plural "An even race: {n} damage each way"
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "An example match chosen for \"{chosen_for}\" could not be rebuilt for "
@@ -176,7 +176,7 @@ msgstr ""
 msgid "Cards still in your hand on the last turn of a game you lost."
 msgstr ""
 
-#: sensei_top/api/routes/guide.py sensei_top/api/routes/rcq.py
+#: sensei_top/ai/routes/guide.py sensei_top/ai/routes/rcq.py
 #, python-brace-format
 msgid "Claude's answer could not be read: {error}"
 msgstr ""
@@ -452,11 +452,11 @@ msgstr ""
 msgid "Never held a card-advantage lead this game"
 msgstr ""
 
-#: sensei_top/api/routes/narrative.py
+#: sensei_top/ai/routes/narrative.py
 msgid "No Claude credential configured. Run 'sensei-top config --set-key'."
 msgstr ""
 
-#: sensei_top/api/routes/rcq.py
+#: sensei_top/ai/routes/rcq.py
 #, python-brace-format
 msgid "No RCQ guide stored for {key}."
 msgstr ""
@@ -479,7 +479,7 @@ msgid ""
 "before trusting them."
 msgstr ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 msgid "No classified field corpus exists in this report's format window."
 msgstr ""
 
@@ -491,7 +491,7 @@ msgid ""
 "correctly could not be checked."
 msgstr ""
 
-#: sensei_top/api/routes/coach.py
+#: sensei_top/ai/routes/coach.py
 #, python-brace-format
 msgid "No coach report with id {id}."
 msgstr ""
@@ -547,7 +547,7 @@ msgstr ""
 msgid "No such archetype {key}."
 msgstr ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "No {fmt} card legality data is present, so a format reset cannot be detected"
@@ -556,14 +556,14 @@ msgid ""
 "report before trusting them."
 msgstr ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "No {fmt} format reset was detected — the format sections span every {fmt} "
 "match in this report rather than a post-reset window."
 msgstr ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "No {fmt} matches on file: the per-deck, per-role and per-opponent records "
@@ -571,7 +571,7 @@ msgid ""
 "played, and the field section still shows the {fmt} field."
 msgstr ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "No {fmt} matches since {win_start} (the last {fmt} format change): the per-"
@@ -580,7 +580,7 @@ msgid ""
 "shows the {fmt} field."
 msgstr ""
 
-#: sensei_top/api/routes/coach.py
+#: sensei_top/ai/routes/coach.py
 #, python-brace-format
 msgid ""
 "Not enough completed constructed matches yet — the coach needs at least "
@@ -601,15 +601,15 @@ msgstr ""
 msgid "Nothing about the resource trade could be measured for this match."
 msgstr ""
 
-#: sensei_top/api/routes/review.py
+#: sensei_top/ai/routes/leaks.py
 msgid "Nothing to write a training plan from yet."
 msgstr ""
 
-#: sensei_top/api/routes/guide.py
+#: sensei_top/ai/routes/guide.py
 msgid "Nothing to write about for this deck yet."
 msgstr ""
 
-#: sensei_top/api/routes/matches.py
+#: sensei_top/ai/routes/match_report.py
 msgid "Nothing to write about for this match yet."
 msgstr ""
 
@@ -629,7 +629,7 @@ msgid ""
 " what that card is for."
 msgstr ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 msgid ""
 "One or more decklists include a card with no matching row in the local card "
 "database; those copies are counted as unnamed rather than guessed at. Run "
@@ -852,38 +852,38 @@ msgstr ""
 msgid "T9+"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 #, python-brace-format
 msgid "The answer could not be read: {detail}"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "The answer has its \"for\" line but no \"answer\" object after it."
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid ""
 "The answer has no \"for\" line, so there is no telling where it belongs. "
 "Copy the prompt here again and paste the new answer."
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "The answer has no text in it."
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid ""
 "The answer is longer than any answer here needs to be. Check that only the "
 "answer was pasted."
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid ""
 "The answer is not a JSON object. Paste the whole answer, from its first `{{`"
 " to its last `}}`."
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid ""
 "The answer's \"context\" line was changed. It has to be copied back exactly "
 "as the prompt gave it."
@@ -917,14 +917,14 @@ msgid ""
 "definitions are kept per format."
 msgstr ""
 
-#: sensei_top/api/routes/guide.py
+#: sensei_top/ai/routes/brief.py
 #, python-brace-format
 msgid ""
 "The field has no consensus list for {archetype} yet, so there is nothing to "
 "anchor a brief to."
 msgstr ""
 
-#: sensei_top/api/routes/guide.py
+#: sensei_top/ai/routes/brief.py
 msgid ""
 "The field has no consensus list yet for any archetype in this answer, so "
 "none of its briefs could be stored."
@@ -1028,18 +1028,18 @@ msgid ""
 " convert into damage, on either side, is a card losing this particular race."
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid ""
 "This answer has no \"for\" line, so it was read as one saved before answers "
 "carried it."
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 #, python-brace-format
 msgid "This answer is for {card} of {subject}. Paste it there."
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 #, python-brace-format
 msgid "This answer is for {card}, not this one. Paste it there."
 msgstr ""
@@ -1070,7 +1070,7 @@ msgstr[1] ""
 msgid "This deck's average"
 msgstr ""
 
-#: sensei_top/api/routes/guide.py
+#: sensei_top/ai/routes/brief.py
 msgid ""
 "This deck's format is not known yet, so there is no field to anchor a brief "
 "to."
@@ -1227,7 +1227,7 @@ msgstr ""
 msgid "Turns with both hand sizes recorded"
 msgstr ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 msgid "Unnamed deck"
 msgstr ""
 
@@ -1456,7 +1456,7 @@ msgstr ""
 msgid "Your turn at the low point"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "a coach report"
 msgstr ""
 
@@ -1464,19 +1464,19 @@ msgstr ""
 msgid "a decisive swing"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "a deck guide"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "a match report"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "a matchup brief"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "a matchup coverage"
 msgstr ""
 
@@ -1488,7 +1488,7 @@ msgstr ""
 msgid "a small swing"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "an RCQ guide"
 msgstr ""
 
@@ -1496,19 +1496,19 @@ msgstr ""
 msgid "an unidentified opponent"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "another deck"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "another deck or opponent"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "another format"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "another match"
 msgstr ""
 
@@ -1571,7 +1571,7 @@ msgstr[1] ""
 msgid "matched {card}"
 msgstr ""
 
-#: sensei_top/api/routes/coach.py
+#: sensei_top/ai/routes/coach.py
 #, python-brace-format
 msgid "model must be one of {models}"
 msgstr ""
@@ -1628,7 +1628,7 @@ msgstr[1] ""
 msgid "players"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "the training plan"
 msgstr ""
 
@@ -1733,7 +1733,7 @@ msgid ""
 "once, as it enters"
 msgstr ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} Arena match(es) excluded: no event id was recorded, so the queue they "
@@ -1744,7 +1744,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} MTGO match(es) are counted in the overall rate, the skill splits, leaks "
@@ -1757,7 +1757,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} MTGO match(es) excluded: no one of the seven formats this app tracks "
@@ -1768,7 +1768,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} MTGO match(es) excluded: revealed a card the local card database could "
@@ -1779,7 +1779,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} MTGO match(es) excluded: revealed a card with no legality on file (run "
@@ -1790,7 +1790,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} MTGO match(es) excluded: the revealed cards fit two or more formats, "
@@ -1801,7 +1801,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} MTGO match(es) excluded: too few distinct cards revealed to judge the "
@@ -1846,7 +1846,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} deck(s) below {minimum} population matches are not broken out into their"
@@ -1859,7 +1859,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} deck(s) beyond the top {top} by sample size are not shown in the per-"
@@ -1884,7 +1884,7 @@ msgid_plural "{n} lands (outside this deck's {land_min}-{land_max} band)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} lost game(s) have a turning_point finding on a turn with no own-turn "
@@ -1897,7 +1897,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} lost game(s) have no turning_point finding to place in the turning-point"
@@ -1921,7 +1921,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} match(es) excluded: none of the seven formats this app tracks is known "
@@ -1934,7 +1934,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} match(es) excluded: played in a Limited queue, out of scope for this "
@@ -1945,14 +1945,14 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid "{n} match(es) excluded: played in an excluded event ({events})."
 msgid_plural "{n} match(es) excluded: played in an excluded event ({events})."
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} match(es) in the format window have no classified opponent archetype and"
@@ -1963,7 +1963,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} opponent archetype(s) beyond the top {top} by sample size are not shown "
@@ -1981,7 +1981,7 @@ msgid_plural "{n} permanents, sweeper unaccounted for"
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} recurring pattern(s) beyond the top {top} by win-rate gap are not shown."
@@ -1990,7 +1990,7 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: sensei_top/coach/evidence.py
+#: sensei_top/ai/coach/evidence.py
 #, python-brace-format
 msgid ""
 "{n} {fmt} match(es) were played with a deck whose own format is another one,"

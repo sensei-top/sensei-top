@@ -6,7 +6,8 @@ import { num, TIMING_BUCKETS, timingLabel, timingRecord, turnsOf, zoneLabel } fr
 import { rateOrRecord } from '../../lib/sample'
 import { formatCount } from '../../lib/time'
 import { Card, DataTable, Disclosure, EmptyState, Prose, SectionLabel, StatTile } from '../ui'
-import { LeakCard, LeaksNarrativeCard } from './LeakCard'
+import { useAi } from '../../ai/registry'
+import { LeakCard } from './LeakCard'
 
 /** "11 turns", "1 turn", or a dash alone for no median. */
 function turnsValue(median: number | null, t: TFunction): string {
@@ -219,6 +220,7 @@ export function YourPlayCard({
   narrative: GuideNarrativeOut | undefined
 }) {
   const { t } = useTranslation()
+  const ai = useAi()
   const boardCurve = guide.play.board_curve as BoardCurve
   const zoneCurve = guide.play.zone_curve as ZoneCurve
   const keyCardTiming = guide.play.key_card_timing as KeyCardTiming
@@ -232,7 +234,7 @@ export function YourPlayCard({
 
         <PatternsSection leaks={guide.leaks} leaksAllDecks={guide.leaks_all_decks} fix={narrative?.fix} />
 
-        <LeaksNarrativeCard />
+        {ai && <ai.LeaksNarrativeCard />}
 
         <KeyCardTimingSection timing={keyCardTiming} />
         <BoardOnYourTurn curve={boardCurve} />

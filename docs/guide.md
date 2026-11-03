@@ -29,15 +29,17 @@ from every game the player has played and the freshest corpus, on demand.
 
 ## The modules, in dependency order
 
-Each is a pure function of the projected DB (or, for `narrative.py` and
+Each is a pure function of the projected DB (or, for `ai/guide/narrative.py` and
 `markdown.py`, of an already-built `DeckGuide`) — same discipline as
 `review/`: only the modules that say so touch `sqlite3`, and the evidence
 bundle is never persisted (a rebuild is one request; see `review/__init__.py`'s
 reasoning, which applies here for the same cause — the corpus and the card
 database change independently of any projector rebuild, and the user's
 MTGO pick changes which deck a match reads through `v_match_deck` with no
-rebuild at all). The authored narratives are: `authored.py` writes
-`deck_narrative` and `rcq_authored.py` writes `rcq_guide`.
+rebuild at all). The prose modules `narrative.py`, `authored.py` and `plans.py` live in
+`ai/guide/`, which core never imports. The authored narratives are:
+`ai/guide/authored.py` writes
+`deck_narrative` and `ai/guide/rcq_authored.py` writes `rcq_guide`.
 
 ### `deck.py` — deck identity, stitched across list edits
 
@@ -94,7 +96,7 @@ ever imported from Arena has `'banned'` for nothing and detects no reset no
 matter how plainly the corpus shows one. `legality_known(conn, fmt)` is what
 separates that from the real "nothing is banned" answer, and every caller of
 `format_resets` must branch on it — `bundle.py`'s gaps and
-`brief/narrative.py`'s `_window_note` both do. Reporting the two the same
+`ai/brief/narrative.py`'s `_window_note` both do. Reporting the two the same
 way is not a cosmetic difference: it once pooled a Standard corpus across a
 ban and opened a guide prompt with a 20.7% field share for an archetype that
 had already dropped to 9%.
@@ -201,12 +203,12 @@ only when a row carries a pre-reset share. A row whose personal record
 `structural_change` voids (`"changed"` or `"gone"`) shows the record
 muted, with the caption "Your record does not carry over."
 
-### `plans.py` — validate a sideboard plan against the real 75
+### `ai/guide/plans.py` — validate a sideboard plan against the real 75
 
 It checks balanced IN/OUT counts, nothing boarded in beyond what the
 sideboard holds, nothing boarded out beyond what the maindeck holds, every
 sideboard card used by at least one plan. Operates on structured data
-(`narrative.py`'s response shape), not regex over prose, so a plan the model
+(`ai/guide/narrative.py`'s response shape), not regex over prose, so a plan the model
 gets wrong is caught and surfaced next to that matchup — never silently
 repaired.
 
@@ -255,9 +257,9 @@ corpus from ~34s to ~10s per guide build — still the single most expensive
 route in this API, acceptable for a click-triggered, non-heartbeat page
 rather than something polled.
 
-### `narrative.py` — the prompt, and the shape of the answer
+### `ai/guide/narrative.py` — the prompt, and the shape of the answer
 
-**No call is made from here** — only `sensei_top.llm.client` imports
+**No call is made from here** — only `sensei_top.ai.llm.client` imports
 `anthropic` (AGENTS.md non-negotiable #5, `docs/llm.md`). `build_guide_context`
 assembles the evidence, `full_prompt` wraps it with the framing and the
 answer schema, and `guide_narrative_from_json` reads a written answer back —
@@ -269,16 +271,14 @@ the one parser both round trips converge on:
   the structured answer straight through `guide_narrative_from_json`.
 - **No credential, the same round trip, now ending in the dashboard.**
   The Guide page's prompt → an assistant → its answer pasted into the
-  card and saved (`PUT /api/guide/{key}/narrative`), or from a terminal
-  `guide --deck KEY --prompt` → `guide --deck KEY --import FILE`. Both
-  read the answer through `answers.py::read_answer`, which checks its
+  card and saved (`PUT /api/guide/{key}/narrative`). It reads the answer through `ai/answers.py::read_answer`, which checks its
   `for: guide:{key}` line and unwraps its `answer` object, before
   `guide_narrative_from_json`. The stored `list_hash` is the answer's
   `context`, the hash of the 75 the prompt was built from, so a guide
   answered for an older list reads as out of date.
 
 Either way the result stores the deck-level half in `deck_narrative`
-(`guide/authored.py`) and every matchup plan in `matchup_brief`, so one
+(`ai/guide/authored.py`) and every matchup plan in `matchup_brief`, so one
 write also fills the Live page. See `docs/brief.md`.
 
 **What the prompt carries** (`build_guide_context`): the whole evidence bundle
@@ -298,11 +298,11 @@ actually meets on the ladder are often a different list. `build_guide_context`
 adds up to `MOST_FACED_ARCHETYPES` (5) more: any archetype not already
 covered by the top-6 pass, faced at least `MIN_TIMES_FACED` (3) times since
 the guide's own reset window opened (`guide.field.faced_archetypes`, the
-same "faced" definition `brief/coverage.py`'s own faced counts delegate to,
+same "faced" definition `ai/brief/coverage.py`'s own faced counts delegate to,
 so the guide's most-faced list and brief coverage never disagree about what
 counts as a match against an archetype), sorted by times-faced descending.
 Every added archetype also gets its own `matchup_brief` written
-(`brief/from_guide.py` stores one per plan), so this is also what widens
+(`ai/brief/from_guide.py` stores one per plan), so this is also what widens
 which matchups the Live page's break card already has a plan for —
 see `docs/brief.md`. Oracle text is de-duplicated globally across every
 section, including the player's own 75: a staple that recurs across
@@ -320,7 +320,7 @@ of 6.
 
 **Resolving an archetype's display name back to its corpus key is a
 majority vote, not `SELECT DISTINCT`.** `guide.field.archetype_key_by_name`
-is the one name→key lookup this prompt and `brief/from_guide.py` both use,
+is the one name→key lookup this prompt and `ai/brief/from_guide.py` both use,
 so a plan named in one is filed under the same key by the other. A display
 name is not unique to a key — the corpus files 290 "Dimir Midrange" decks
 under `UBMidrange` and 2 under `BxMidrange` — and the function it replaced (`SELECT DISTINCT`, last row wins)
@@ -342,12 +342,14 @@ around it, rather than a Markdown-rendering dependency.
 
 ### `markdown.py` — the exported document
 
-`render(guide, narrative=None)` — one renderer, used by the markdown route,
-`guide --markdown`, and the guide and RCQ prompts (`narrative.py`, `rcq.py`;
-`narrative=None`, the evidence-only form).
+`render(guide)` — one renderer, evidence only, used by the markdown route,
+`guide --markdown`, and the guide and RCQ prompts (`ai/guide/narrative.py`,
+`ai/guide/rcq_prompt.py`). It takes no narrative: the sections the narrative would fill
+(How it works, Matchups, Between rounds) print "Not generated yet."
 Section order: Scope → How it works → Your play (curves, then the leak
-finder and its fix, deck-scoped beside all-decks) → The list → The field →
-Matchups → Between rounds.
+finder, deck-scoped beside all-decks) → The list → The field → Matchups →
+Between rounds. The three placeholders stay so that the prompts, which embed
+this output, do not change.
 
 ## API surface
 
@@ -361,8 +363,8 @@ the multi-brief coverage answer, and the RCQ guide's
 `deck_narrative` plus `matchup_brief` (the RCQ ones write
 `rcq_guide`), all on the
 authored-artifact allowlist `AGENTS.md` non-negotiable #6 now states;
-`tests/test_api.py::test_only_authored_artifact_routes_write` asserts the
-exact set of writing routes.
+`tests/ai/test_write_allowlist.py::test_only_authored_artifact_routes_write`
+asserts the exact set of writing routes.
 
 | Route | Returns |
 |---|---|
@@ -374,7 +376,7 @@ exact set of writing routes.
 | `GET /api/guide/{key}/markdown` | the evidence-only exported document |
 | `GET /api/guide/{key}/briefs` | every matchup brief cached for this deck |
 | `PUT /api/guide/{key}/briefs/{archetype_key}` | stores one pasted brief, with no model call |
-| `GET /api/guide/{key}/coverage` | how much of the field this deck's cached briefs cover (`brief/coverage.py`'s `Coverage`) |
+| `GET /api/guide/{key}/coverage` | how much of the field this deck's cached briefs cover (`ai/brief/coverage.py`'s `Coverage`) |
 | `PUT /api/guide/{key}/coverage` | stores every brief in a pasted multi-brief answer, with no model call |
 | `GET /api/guide/{key}/briefs/{archetype_key}/prompt` | the single-brief prompt for one archetype, fetched on demand |
 | `GET /api/guide/{key}/coverage/prompt` | the multi-brief prompt for every `missing`/`stale` coverage row |
@@ -411,9 +413,11 @@ document for one event: the exact 75 the player is about to register,
 against the field of that week. It is its own tab, not a section of the
 Guide, because the Guide's sections are the deck's evidence and this is a
 single event's plan. Its address in 1.0.x, `/decks/:id/guide/rcq`, still
-opens it. Code: `guide/rcq.py` (evidence and
-prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
-(storage), `guide/rcq_markdown.py` (the export), `api/routes/rcq.py`.
+opens it. Code: `guide/rcq.py` (the evidence), `guide/decklist.py` (the
+parser) and `api/routes/rcq.py` (the preview) are core; `ai/guide/rcq_prompt.py`
+(the prompt, the answer's shape and its reader), `ai/guide/rcq_authored.py`
+(storage), `ai/guide/rcq_markdown.py` (the export) and `ai/routes/rcq.py`
+(generate, paste, latest, Markdown) live in `ai/`, which core never imports.
 
 - **The pasted 75.** `decklist.parse_decklist` reads an Arena export
   (`Deck` / `Sideboard` / `Companion` headers) or plain `N Name` lines into a
@@ -449,15 +453,17 @@ prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
   and the top eight archetypes where placements exist. Both windows are
   cut at the reset. The page shows each source's freshness
   (`docs/metagame.md`, "A third source: mtgo.com").
-- **Round trip.** The same as the guide's. `GET …/rcq/preview` always
-  returns the prompt, for the no-credential path.
+- **Round trip.** The same as the guide's. `GET …/rcq/preview` is core and
+  returns the prompt, for the no-credential path, through the provider
+  `ai/` lends it (`api/providers.py`); without `ai/` the field is `null`
+  and the page keeps its evidence.
   `POST …/rcq/narrative` (`{decklist, expected[], own?}`) calls Claude and
   stores the answer (503 with no credential, `docs/llm.md`).
   Or the answer to the copied prompt is pasted into the page's box
   (`PUT …/rcq/narrative`, the generate body plus `answer`): the server
   rebuilds the prompt from that body and checks the answer's
   `for: rcq:{key}` line. The prompt also carries a `context`,
-  `guide/rcq.py::rcq_context`: a hash of the list's cards, both boards
+  `ai/guide/rcq_prompt.py::rcq_context`: a hash of the list's cards, both boards
   counted by name without regard to case, and the expected archetypes in any
   order, so another order or other case is the same list and
   a card added, cut or moved is another. The
@@ -468,10 +474,8 @@ prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
   the page shows in place of the "changed" note. An answer copied from a
   prompt older than the hash has no `context` and is stored with it
   unknown (`NULL`), never refused; a generated guide stores none either,
-  being written for the list sent with it.
-  `sensei-top rcq --deck KEY --decklist FILE [--expect K1,K2] [--own K]
-  --prompt` prints the prompt and makes no call; `--import FILE [--author
-  NAME]` stores a written answer.
+  being written for the list sent with it. The command line has no RCQ
+  command: the guide is written from the page.
 - **Storage.** `rcq_guide` (migration 057) keeps every row, like
   `coach_report`: each guide is written against one day's field and an
   older one stays readable. It holds the list as pasted, the expected keys,
@@ -486,14 +490,10 @@ prompt), `guide/decklist.py` (the parser), `guide/rcq_authored.py`
 ## CLI
 
 `sensei-top guide` with no `--deck` lists deck keys; `sensei-top guide
---deck <key> [--markdown PATH]` prints (or writes) one guide, including any
-narrative that has been generated or imported for it. `--prompt` prints the
-text to write that narrative from; `--import FILE` stores it, as the Guide
-page's box does with a pasted answer. A deck's Guide page does the same
-round trip in one press, in its "Write the guide" section, when `sensei-top
-config --set-key` has been run (`docs/llm.md`). This is what makes a one-off
-script per deck redundant — regenerate any deck's guide the same way
-instead.
+--deck <key> [--markdown PATH]` prints (or writes) one guide's evidence, never a stored narrative; the CLI
+has no prompt or import flag for it. The narrative is written from a deck's
+Guide page, in its "Write the guide" section: by pasting an answer, or with
+one press when `sensei-top config --set-key` has been run (`docs/llm.md`).
 
 ## What this does not do
 

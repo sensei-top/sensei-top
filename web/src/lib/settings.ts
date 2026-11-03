@@ -117,3 +117,8 @@ export function updateSentence(update: UpdateStatus, now: number, t: TFunction):
     }
   }
 }
+
+/** What the API says of writing, with no shell: `configured` and the
+ *  model's id as it came, `'loading'` while it is asked, `'failed'` when
+ *  it did not answer. */
+export type WritingStatusAnswer = { configured: boolean; model: string | null } | 'loading' | 'failed'

@@ -1,5 +1,5 @@
 """Post-game match analysis: local heuristic findings over already-projected
-data, plus the prompt for an optional narrative over them (``narrative.py``).
+data, plus the prompt for an optional narrative over them (``ai/review/narrative.py``).
 It only ever runs once a match is over; why there is no mid-match version is
 ``docs/brief.md``, "Why this question is worth writing down once". The
 design is ``docs/review.md``, "The match report, and its optional narrative".

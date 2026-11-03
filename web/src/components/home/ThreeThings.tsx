@@ -8,6 +8,7 @@ import type { ArtCard } from '../../lib/matchArt'
 import { opponentLabelText } from '../../lib/opponent'
 import { patternWords } from '../../lib/patterns'
 import { formatPercent, formatRecord } from '../../lib/format'
+import { useAiFeatures } from '../../shell/aiFeatures'
 import { ago, formatIsoDateShort } from '../../lib/time'
 import { Button, CardArt, ErrorNote, SectionLabel, Skeleton } from '../ui'
 
@@ -33,7 +34,8 @@ function kickerOf(kind: Exclude<Thing['kind'], 'error' | 'pending'>, t: TFunctio
  *  them), each carrying its place among them in an accent disc. The art
  *  is on top with a fade down; the words stay under it. The action is a
  *  button rather than the whole card, since the art has a control of its
- *  own. */
+ *  own. With AI features off the pattern card stays, since the
+ *  pattern is a core read, but loses its button, which opens the coach. */
 export function ThreeThings({ things, now }: { things: Thing[]; now: number }) {
   if (things.length === 0) return null
   return (
@@ -97,6 +99,7 @@ function PendingCard({ slot, place }: { slot: 'pattern' | 'field'; place: number
 
 function ThingCard({ thing, place, now }: { thing: Exclude<Thing, { kind: 'error' | 'pending' }>; place: number; now: number }) {
   const { t } = useTranslation()
+  const [aiOn] = useAiFeatures()
   const words = thingWords(thing, now, t)
   const art = thing.art
   return (
@@ -114,9 +117,11 @@ function ThingCard({ thing, place, now }: { thing: Exclude<Thing, { kind: 'error
         </div>
         <h2 className="font-display text-title text-ink">{words.title}</h2>
         <div className="flex-1 space-y-1.5 text-body text-ink2">{words.body}</div>
-        <div className="pt-2">
-          <Button href={words.href}>{words.action}</Button>
-        </div>
+        {(aiOn || thing.kind !== 'pattern') && (
+          <div className="pt-2">
+            <Button href={words.href}>{words.action}</Button>
+          </div>
+        )}
       </div>
     </section>
   )

@@ -23,9 +23,9 @@ import pytest
 
 from sensei_top import cli as cli_module
 from sensei_top import live as live_module
+from sensei_top.config import config_path
 from sensei_top.db import open_database
 from sensei_top.live import LiveIngester
-from sensei_top.llm.config import config_path
 from sensei_top.mtgo import config as mtgo_config
 from sensei_top.reader import mtgo_decks
 from sensei_top.reader.mtgo_decks import ingest_deck_dir

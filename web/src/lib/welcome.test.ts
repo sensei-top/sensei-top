@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { WELCOME_STEPS, neighbour, stepHref, stepNumber, stepOf, stepsFor, withStop } from './welcome'
+import { WELCOME_STEPS, answerWaits, neighbour, stepHref, stepNumber, stepOf, stepsFor, withStop } from './welcome'
 
 describe('stepOf', () => {
   it('reads each step the address can name', () => {
@@ -89,5 +89,14 @@ describe('withStop', () => {
   it('adds a full stop only where there is none', () => {
     expect(withStop('The download was stopped')).toBe('The download was stopped.')
     expect(withStop('The download was stopped.')).toBe('The download was stopped.')
+  })
+})
+
+describe('answerWaits', () => {
+  it('waits only while a question that was asked has no answer', () => {
+    expect(answerWaits(true, null, null)).toBe(true)
+    expect(answerWaits(true, null, false)).toBe(false)
+    expect(answerWaits(true, true, null)).toBe(false)
+    expect(answerWaits(false, null, null)).toBe(false)
   })
 })

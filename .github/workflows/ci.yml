@@ -41,6 +41,7 @@ jobs:
           cache-dependency-path: web/pnpm-lock.yaml
       - run: uv sync --locked
       - run: uv run ruff check .
+      - run: uv run lint-imports
       - run: uv run pytest -q
       - run: pnpm install --frozen-lockfile
         working-directory: web
@@ -55,6 +56,22 @@ jobs:
       - run: pnpm gen:types
         working-directory: web
       - run: git diff --exit-code
+
+  # Core must run with ai/ absent (docs/testing.md, "CI"). ruff and
+  # lint-imports already ran over the whole tree in the linux job.
+  core-only:
+    if: github.event_name != 'push' || github.repository == 'sensei-top/sensei-top'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: rm -rf src/sensei_top/ai
+      - run: uv run pytest -q tests --ignore=tests/ai
 
   windows:
     if: github.event_name != 'push' || github.repository == 'sensei-top/sensei-top'

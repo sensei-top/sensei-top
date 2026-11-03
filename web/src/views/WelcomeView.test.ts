@@ -51,6 +51,7 @@ function app(change: Partial<AppSettings> = {}): AppSettings {
     diagnostic: false,
     update: { state: 'idle' },
     onboarded: false,
+    aiFeatures: true,
     askAutostart: false,
     canAutostart: true,
     windowsStore: false,
@@ -440,5 +441,39 @@ describe('the page', () => {
     )
     expect(html).toContain('Nothing is at this address.')
     expect(html).not.toContain('Step 3 of')
+  })
+})
+
+describe('the AI features question', () => {
+  const question = 'Sensei Top can write match reports, deck guides, matchup briefs and a coach\'s report'
+
+  it('sits on the Done step above the daily-update switch, neither button pressed', () => {
+    const { text, html } = render('done', { app: app({ aiFeatures: null }) })
+    expect(text).toContain('AI features')
+    expect(text).toContain(question)
+    expect(text).toContain('You can change this later in Settings.')
+    expect(html).toContain('>Turn them on<')
+    expect(html).toContain('>Leave them off<')
+    expect(html.match(/aria-pressed="false"/g)).toHaveLength(2)
+    expect(html.indexOf('Turn them on')).toBeLessThan(html.indexOf('Check for a new version once a day'))
+  })
+
+  it('makes Go to Home wait until one is pressed', () => {
+    const { html } = render('done', { app: app({ aiFeatures: null }) })
+    const home = html.indexOf('>Go to Home<')
+    expect(html.slice(html.lastIndexOf('<button', home), home)).toContain('disabled=""')
+  })
+
+  it('is not asked of an install that already has a value, and Go to Home is free', () => {
+    for (const aiFeatures of [true, false]) {
+      const { text, html } = render('done', { app: app({ aiFeatures }) })
+      expect(text).not.toContain(question)
+      const home = html.indexOf('>Go to Home<')
+      expect(html.slice(html.lastIndexOf('<button', home), home)).not.toContain('disabled=""')
+    }
+  })
+
+  it('is on no other step', () => {
+    expect(render('start', { app: app({ aiFeatures: null }) }).text).not.toContain(question)
   })
 })

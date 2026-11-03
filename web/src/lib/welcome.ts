@@ -49,3 +49,10 @@ export function withStop(sentence: string): string {
   const trimmed = sentence.trim()
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`
 }
+
+/** Whether Go to Home waits on the AI features question: it was asked when
+ *  the run began (`asked`) and neither the shell's value nor a press of this
+ *  run has answered it. */
+export function answerWaits(asked: boolean, aiFeatures: boolean | null, picked: boolean | null): boolean {
+  return asked && aiFeatures === null && picked === null
+}
