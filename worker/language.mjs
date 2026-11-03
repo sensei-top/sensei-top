@@ -13,6 +13,7 @@ export const PORTUGUESE = {
   '/': '/pt-br/',
   '/help/': '/pt-br/help/',
   '/privacy/': '/pt-br/privacy/',
+  '/terms/': '/pt-br/terms/',
   '/untapped/': '/pt-br/untapped/',
   '/linux/': '/pt-br/linux/',
   '/mtgo/': '/pt-br/mtgo/',

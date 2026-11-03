@@ -72,4 +72,16 @@
 <xhtml:link rel="alternate" hreflang="pt-BR" href="https://senseitop.com/pt-br/mtgo/"/>
 <xhtml:link rel="alternate" hreflang="x-default" href="https://senseitop.com/mtgo/"/>
 </url>
+<url>
+<loc>https://senseitop.com/terms/</loc>
+<xhtml:link rel="alternate" hreflang="en" href="https://senseitop.com/terms/"/>
+<xhtml:link rel="alternate" hreflang="pt-BR" href="https://senseitop.com/pt-br/terms/"/>
+<xhtml:link rel="alternate" hreflang="x-default" href="https://senseitop.com/terms/"/>
+</url>
+<url>
+<loc>https://senseitop.com/pt-br/terms/</loc>
+<xhtml:link rel="alternate" hreflang="en" href="https://senseitop.com/terms/"/>
+<xhtml:link rel="alternate" hreflang="pt-BR" href="https://senseitop.com/pt-br/terms/"/>
+<xhtml:link rel="alternate" hreflang="x-default" href="https://senseitop.com/terms/"/>
+</url>
 </urlset>
