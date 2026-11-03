@@ -1055,6 +1055,16 @@ def test_move_keys_to_keyring_with_no_keyring_leaves_the_file_alone(tmp_path):
     assert 'api_key = "file-key"' in _config_file()
 
 
+@pytest.mark.parametrize(
+    "flag", ["--set-coach-model", "--set-coach-effort", "--coach-web-search"]
+)
+def test_config_rejects_the_removed_coach_flags(flag, capsys):
+    parser = cli_module.build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(["config", flag, "x"])
+    assert "unrecognized arguments" in capsys.readouterr().err
+
+
 def test_config_json_refuses_a_setter_beside_it(tmp_path):
     with pytest.raises(SystemExit):
         _config(tmp_path, "--json", "--set-mtgo-handle", "Player1")

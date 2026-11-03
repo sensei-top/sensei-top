@@ -802,7 +802,7 @@ def test_web_search_disabled_400_gives_a_config_hint(monkeypatch):
         response=httpx2.Response(400, request=request), body=None,
     )
     _patch_client(monkeypatch, error=error)
-    with pytest.raises(LLMError, match="coach-web-search off"):
+    with pytest.raises(LLMError, match="web_search = false"):
         write_report(
             "p", cfg=LLMConfig(api_key="k"), label="coach", allowed_domains=["mtggoldfish.com"]
         )
@@ -878,6 +878,16 @@ def test_load_coach_returns_none_with_no_credential_and_builds_no_client(monkeyp
 # --- cli.py: the config subcommand's [claude.coach] table -----------------
 
 
+def _seed_coach_table(config_home):
+    """No command writes ``[claude.coach]``; a user edits the file by hand."""
+    path = config_home / "sensei-top" / "config.toml"
+    with path.open("a") as handle:
+        handle.write(
+            '\n[claude.coach]\nmodel = "claude-fable-5-1"\neffort = "max"\n'
+            "web_search = false\n"
+        )
+
+
 def test_write_llm_config_round_trips_the_coach_table_and_preserves_other_keys(
     monkeypatch, tmp_path
 ):
@@ -890,10 +900,7 @@ def test_write_llm_config_round_trips_the_coach_table_and_preserves_other_keys(
 
     cli_module._write_llm_config(api_key="base-key", model=None, effort=None)
     cli_module._write_topdeck_config(api_key="topdeck-key")
-    cli_module._write_llm_config(
-        api_key=None, model=None, effort=None,
-        coach_model="claude-fable-5-1", coach_effort="max", coach_web_search=False,
-    )
+    _seed_coach_table(tmp_path)
 
     cfg = llm_config_module.load()
     assert cfg.api_key == "base-key"
@@ -936,10 +943,7 @@ def test_write_topdeck_config_after_coach_overrides_preserves_the_coach_table(
     from sensei_top.metagame import config as topdeck_config_module
 
     cli_module._write_llm_config(api_key="base-key", model=None, effort=None)
-    cli_module._write_llm_config(
-        api_key=None, model=None, effort=None,
-        coach_model="claude-fable-5-1", coach_effort="max", coach_web_search=False,
-    )
+    _seed_coach_table(tmp_path)
     cli_module._write_topdeck_config(api_key="topdeck-key")
 
     coach = llm_config_module.load_coach()
@@ -1077,12 +1081,6 @@ def test_setting_backup_keep_alone_does_not_erase_a_configured_backup_dir(monkey
     cfg_again = backup_config_module.resolve(tmp_path / "data" / "sensei-top.db")
     assert cfg_again.directory == tmp_path / "another-dir"
     assert cfg_again.keep == 5
-
-
-def test_config_subcommand_rejects_an_invalid_coach_effort(capsys):
-    parser = cli_module.build_parser()
-    with pytest.raises(SystemExit):
-        parser.parse_args(["config", "--set-coach-effort", "not-a-level"])
 
 
 def test_config_shows_mtgo_not_configured_and_names_the_fix(monkeypatch, tmp_path, capsys):

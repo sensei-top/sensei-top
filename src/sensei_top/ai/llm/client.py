@@ -183,12 +183,13 @@ def _run(client: anthropic.Anthropic, **kwargs: object) -> anthropic.types.Messa
         message = (exc.message or "").lower()
         if exc.status_code == 400 and ("web search" in message or "web_search" in message):
             # An org-level "web search disabled" rejection: point at the
-            # coach-specific escape hatch rather than the generic message
+            # coach's own setting rather than the generic message
             # below.
             raise LLMError(
                 "Claude API rejected the web search tool (likely disabled for "
-                "this organization) — run `sensei-top config "
-                "--coach-web-search off` to disable it for the coach."
+                "this organization) — set `web_search = false` under "
+                "`[claude.coach]` in sensei-top's config.toml to turn it off "
+                "for the coach."
             ) from exc
         raise LLMError(f"Claude API error ({exc.status_code}): {exc.message}") from exc
     except anthropic.APIConnectionError as exc:

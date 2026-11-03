@@ -809,16 +809,13 @@ def _write_llm_config(
     api_key: str | None,
     model: str | None,
     effort: str | None,
-    coach_model: str | None = None,
-    coach_effort: str | None = None,
-    coach_web_search: bool | None = None,
 ) -> None:
-    """Merge the given fields into the existing ``[claude]`` table (if any)
-    and its ``[claude.coach]`` sub-table, leaving every other table
-    untouched. ``None`` leaves a field as it is and an empty
-    string removes it (``_merge``). The key need not be in this file for the
-    other fields to be written: it may live in the keyring or the
-    environment, or be set later."""
+    """Merge the given fields into the existing ``[claude]`` table (if any),
+    carrying its ``[claude.coach]`` sub-table through unchanged (no command
+    writes it) and leaving every other table untouched. ``None`` leaves a
+    field as it is and an empty string removes it (``_merge``). The key need
+    not be in this file for the other fields to be written: it may live in
+    the keyring or the environment, or be set later."""
     tables = _read_config_tables()
     claude = dict(tables.get("claude", {}))
     coach = claude.pop("coach", None)
@@ -827,10 +824,6 @@ def _write_llm_config(
     _merge(claude, "api_key", api_key)
     _merge(claude, "model", model)
     _merge(claude, "effort", effort)
-    _merge(coach, "model", coach_model)
-    _merge(coach, "effort", coach_effort)
-    if coach_web_search is not None:
-        coach["web_search"] = bool(coach_web_search)
     if coach:
         claude["coach"] = coach
 
@@ -1135,13 +1128,7 @@ def cmd_config(args) -> None:
     from sensei_top.config import config_path
     from sensei_top.metagame import config as topdeck_config
 
-    coach_web_search = {"on": True, "off": False}.get(args.coach_web_search)
-    llm_fields = (
-        args.set_model,
-        args.set_effort,
-        args.set_coach_model,
-        args.set_coach_effort,
-    )
+    llm_fields = (args.set_model, args.set_effort)
     writes = any(
         value is not None
         for value in (
@@ -1154,7 +1141,6 @@ def cmd_config(args) -> None:
             args.set_backup_keep,
             args.set_arena_log,
             args.set_date_order,
-            coach_web_search,
             *llm_fields,
         )
     ) or (args.clear_key or args.clear_topdeck_key or args.move_keys_to_keyring)
@@ -1223,14 +1209,11 @@ def cmd_config(args) -> None:
         _write_backup_config(directory=args.set_backup_dir, keep=args.set_backup_keep)
         print(f"Backup settings written to {config_path()}{_mode_600()}.")
 
-    if any(value is not None for value in llm_fields) or coach_web_search is not None:
+    if any(value is not None for value in llm_fields):
         _write_llm_config(
             api_key=None,
             model=args.set_model,
             effort=args.set_effort,
-            coach_model=args.set_coach_model,
-            coach_effort=args.set_coach_effort,
-            coach_web_search=coach_web_search,
         )
         print(f"Config written to {config_path()}{_mode_600()}.")
 
@@ -2445,23 +2428,6 @@ def build_parser() -> argparse.ArgumentParser:
     p_config.add_argument(
         "--set-backup-keep", type=_positive_int_or_empty, default=None, metavar="N",
         help="how many backup slots to retain (default: 1)",
-    )
-    # Coach-only overrides: written to a separate [claude.coach] table,
-    # never touching the [claude] defaults the other four POST .../narrative
-    # routes use via load().
-    p_config.add_argument(
-        "--set-coach-model", default=None, metavar="ID",
-        help="the coach report's default model, which the Coach tab's model picker "
-        "preselects, e.g. claude-fable-5-1",
-    )
-    p_config.add_argument(
-        "--set-coach-effort", default=None, metavar="LEVEL",
-        choices=["low", "medium", "high", "xhigh", "max", ""],
-        help="effort override for the coach report only: low | medium | high | xhigh | max",
-    )
-    p_config.add_argument(
-        "--coach-web-search", default=None, choices=["on", "off"],
-        help="enable or disable the coach's web search tool (default: on)",
     )
     p_config.set_defaults(func=cmd_config)
 

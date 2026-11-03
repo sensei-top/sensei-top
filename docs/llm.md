@@ -207,9 +207,10 @@ Any key left out of `[claude.coach]` falls back to `[claude]`'s own value
 (or the built-in default), and `load_coach()` returns `None` under the exact
 same missing-credential rule as `load()` — the coach is not a separate
 credential, only an optional override of model, effort, and whether it may
-search at all. Written by `sensei-top config --set-coach-model`,
-`--set-coach-effort`, and `--coach-web-search on|off`; `config --show` prints
-the resolved coach override alongside the base model/effort when one is set.
+search at all. No command writes this table; it is edited by hand.
+`config --show` prints the resolved coach override alongside the base
+model/effort when one is set, and the Coach page's model dropdown preselects
+its `model`.
 
 The TopDeck.gg key follows the same order (`TOPDECK_API_KEY`, keyring username
 `topdeck`, `[topdeck]` in the file) in `metagame/config.py`.
@@ -337,7 +338,7 @@ Every generated artifact records `model`, `input_tokens`, `output_tokens`, and
 priced-models table in `ai/llm/client.py` (`_PRICES`): `claude-opus-5` ($5/$25
 per MTok in/out), `claude-opus-5-5` ($4/$20), `claude-fable-5-1` ($10/$50),
 `claude-sonnet-5` ($2/$10), and `claude-haiku-4-5` ($1/$5) — five priced
-models, a `--set-model`/`--set-coach-model` override may name any of them.
+models, a `--set-model` or `[claude.coach]` `model` override may name any of them.
 The coach's own dropdown offers only four of the five (`REPORT_MODELS`,
 above) — every priced model but Haiku 4.5, which rejects the adaptive
 thinking and explicit effort `write_report` always sends. An unrecognized
@@ -388,7 +389,7 @@ fixture-backed scratch database used in `tests/test_llm.py`:
 | Match report (the `"Coach's summary"` card) | $0.098 | A real 2-game match. The card predates the Coach tab and is unrelated to it — one match, not a cross-deck report |
 | Deck guide | $0.066 | Against the fixture's 2-match deck with **no card oracle text loaded** (`sensei-top cards --scryfall` never run on this scratch DB) — a real deck's guide, with oracle text for its own 75 and the field's top archetypes, will cost more; re-measure against a real `$MTGA_LOG` before trusting this number for planning |
 | Leak narrative | not yet measured | the fixture has only 2 matches — `leaks.MIN_SAMPLE` (10) can never clear on either side of any comparison, so there was nothing to generate a training plan from |
-| Coach report | $0.8482 | Before prompt caching. Opus 5 over a real 245-match database, 2026-09-20: 110,718 input / 9,384 output tokens and 6 web searches (6 × $0.01 = $0.06 of that total). Measured against `$MTGA_LOG`, not the fixture, which can't reach `MIN_SAMPLE` (10) constructed matches. **The prompt is only ~10k tokens**; the billed input is it re-sent on every `pause_turn` continuation, so searches drive this cost, not history size — `--coach-web-search off` takes it to a few cents. See `docs/coach.md` |
+| Coach report | $0.8482 | Before prompt caching. Opus 5 over a real 245-match database, 2026-09-20: 110,718 input / 9,384 output tokens and 6 web searches (6 × $0.01 = $0.06 of that total). Measured against `$MTGA_LOG`, not the fixture, which can't reach `MIN_SAMPLE` (10) constructed matches. **The prompt is only ~10k tokens**; the billed input is it re-sent on every `pause_turn` continuation, so searches drive this cost, not history size — `web_search = false` under `[claude.coach]` takes it to a few cents. See `docs/coach.md` |
 | Coach report, Fable 5.1 | $3.2292 | Before prompt caching. Picked from the Coach tab's model dropdown, 2026-09-22, over 249 matches at `effort: high`: 238,886 input / 15,206 output tokens and 8 web searches ($0.08). About 3.8× the Opus 5 run: 2× from the per-token price, the rest from 2.2× the billed input through the same `pause_turn` re-sends. Not a controlled comparison — it was the second report, so its prompt also carried the first. See `docs/coach.md` |
 | Coach report, Opus 5.5, cached | $0.5998 | With prompt caching, 2026-10-07, Standard over 360 Standard matches (633 Constructed): 20 uncached input, 42,645 cache-write and 256,003 cache-read tokens (a 298,668-token prompt across the loop), 12,763 output tokens and 8 web searches ($0.08). Uncached, the same counts would have cost about $1.53. The last uncached Opus 5.5 report, 2026-10-02, with the same 8 searches, cost $1.7522 (345,874 input / 14,437 output). Not a controlled comparison: that one predates the per-format report, so its prompt differs |
 

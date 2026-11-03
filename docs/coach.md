@@ -491,14 +491,14 @@ These four are `ai/llm/client.py::REPORT_MODELS` — the Coach page's model
 dropdown picks one of them per report, preselected to the `[claude.coach]`
 model or the base `[claude]` model (`load_coach()`'s own resolution); left
 alone, the dropdown sends nothing and the server uses that same configured
-model. `--set-coach-model` sets only that preselected default, not the
+model. `[claude.coach]`'s `model` sets only that preselected default, not the
 ceiling on what a report can be written with.
 
 `ai/llm/client.py::_PRICES` also prices `claude-haiku-4-5` ($1/$5), but it is
 not offered in the dropdown or `REPORT_MODELS`: it rejects the adaptive
 thinking and explicit effort `write_report` always sends, so it can't take
-a coach call regardless of price. It remains available as a `--set-coach-model`
-override in name only — a call with it would fail.
+a coach call regardless of price. It remains accepted as a `[claude.coach]`
+`model` in name only — a call with it would fail.
 
 **Measured, 2026-09-20.** One Opus 5 run at `effort: high` over 245
 constructed matches: 110,718 input / 9,384 output tokens, 6 searches,
