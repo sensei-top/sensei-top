@@ -47,7 +47,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-099
+Next ID: BL-100
 
 ## Features
 
@@ -851,6 +851,21 @@ and into `guide/rcq.py` from `metagame/`. `tests/` and `scripts/` add 31.
 
 **Needs:** Promote the shared ones to public names, or pin them with a test.
 No visible effect.
+
+### BL-099 · A watcher stop test that times out on Windows CI
+
+type: chore · priority: P2 · status: ready · area: release
+
+`tests/test_live.py::test_stop_ends_a_running_watcher_process_without_terminating_it`
+failed once on Windows CI, on the release 1.2.4 pull request (run
+41561563951, 2026-11-03). The child process didn't exit within `stop()`'s 5 s
+`join`, so it was terminated (exit code -15). The same tree minus six PNGs
+passed minutes earlier, and a re-run of the same commit passed, so it is
+timing. It may only be a slow runner, or a real stop could also take more than
+5 s on a slow Windows machine and be cut short. Nobody has checked which.
+
+**Needs:** Measure how long `stop()` takes on the Windows runner. Then either
+give the test a longer timeout or change the 5 s default in `live.py`.
 
 ## Outside the code
 
