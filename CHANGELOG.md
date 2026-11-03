@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-11-02
+
 ### Added
 
 - Every release is announced in the repository's
@@ -23,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Microsoft Store package now carries Sensei Top's own tiles and Store logo
+  instead of the build tool's placeholder.
 - A player who uses only Arena no longer gets a warning about Magic Online
   in the app's log every time the tracker rebuilds its matches, when the
   settings file holds something else, such as a Claude key.
@@ -42,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The keep guide's mulligan table and its mulligan cost line now count the same
   games: every version of the deck. The table used to count only the current
   list, so the two could disagree after an edit.
+- The Live page no longer reads "1 untapped lands" for the opponent's mana.
 - Win rates by game length no longer count a drawn or unfinished game against
   you, in `sensei-top report` and `/api/metrics/game-length`. The average length
   still counts every game.
@@ -389,7 +394,8 @@ The app is the same as 0.7.1's; this release carries the website.
   keeps recording with the window closed, and start-with-Windows as an
   option. On Linux, an AppImage that updates itself in place.
 
-[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.2.3...HEAD
+[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.2.4...HEAD
+[1.2.4]: https://github.com/sensei-top/sensei-top/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/sensei-top/sensei-top/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/sensei-top/sensei-top/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/sensei-top/sensei-top/compare/v1.2.0...v1.2.1
