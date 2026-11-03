@@ -31,7 +31,6 @@ from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file
 from sensei_top.reader.mtgo_decks import ingest_deck_dir
 from sensei_top.review import leaks as leaks_mod
-from sensei_top.review import narrative
 
 FIXTURE = Path(__file__).parent / "fixtures" / "match_session.log"
 DECK_FIXTURE = Path(__file__).parent / "fixtures" / "mtgo_deck_sample.dek"
@@ -1587,13 +1586,8 @@ def test_sideboarding_diffs_against_the_picked_mtgo_deck(tmp_path, monkeypatch, 
 
 
 # --- match report ------------------------------------------------------------
-# The post-game report retires the old live hint (AGENTS.md rule 5's fourth
-# outbound call moved from /api/current-match/hint to
-# /api/matches/{id}/report/narrative). Every narrative test controls the
-# API-key env vars explicitly so a real key in the runner's own environment
-# can never make one of these accidentally reach the network, and
-# narrative.request_narrative is always monkeypatched rather than called —
-# no test in this suite touches the network (docs/testing.md).
+# The report route itself. Its narrative routes are tested in
+# tests/ai/test_match_report_routes.py.
 
 
 def test_match_report_returns_findings_and_gaps_for_a_completed_match(client):
@@ -2019,117 +2013,6 @@ def test_guide_request_after_leaks_request_reuses_its_reports(
 
     client.get(f"/api/guide/{guide_key}")
     assert counting_build_match_report == []
-
-
-def test_narrative_route_hands_over_a_prompt_with_no_key_anywhere(client, monkeypatch):
-    """The GET route never checks for a credential at all — only the POST
-    generate route does — so it hands over the prompt the same way whether
-    or not one is configured (AGENTS.md #5, `docs/llm.md`)."""
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
-    body = client.get(f"/api/matches/{MATCH_WIN}/report/narrative").json()
-    assert body["status"] == "prompt"
-    assert body["narrative"] is None
-    assert narrative.SYSTEM_PROMPT in body["prompt"]
-
-
-def test_narrative_404s_for_an_unknown_match(client):
-    assert client.get("/api/matches/nope/report/narrative").status_code == 404
-
-
-def test_narrative_prompt_carries_the_evidence_and_the_framing(client):
-    body = client.get(
-        f"/api/matches/{MATCH_WIN}/report/narrative", params={"preview": "1"}
-    ).json()
-    assert body["status"] == "prompt"
-    assert body["narrative"] is None
-    assert "Findings:" in body["prompt"]
-    assert "Not tracked by this reader at all, for any match" in body["prompt"]
-
-
-def test_narrative_prompt_carries_no_local_paths(client, monkeypatch):
-    """This prompt deliberately carries the game's own shape
-    (review/narrative.py's module docstring). What would still be wrong to
-    leak is a filesystem path, which would reveal the machine and buy the
-    coaching nothing."""
-    body = client.get(
-        f"/api/matches/{MATCH_WIN}/report/narrative", params={"preview": "1"}
-    ).json()
-    prompt = body["prompt"].lower()
-    for leaked in ("/home/", "c:\\users", "/users/", "appdata"):
-        assert leaked not in prompt
-
-
-def _store_field_row(db_path, fmt: str) -> None:
-    """One Tier A deck, 2-1-0, of the 'Test' archetype, in a ``fmt`` event."""
-    conn = sqlite3.connect(db_path)
-    event = ParsedEvent(
-        event_id="e1", source="MTGmelee", name="Champs", event_date="2026-08-01",
-        format=fmt, tier="A", standings_rows=1, uri=None, blob_sha="s1",
-    )
-    conn.execute(
-        "INSERT INTO meta_event (event_id, path, blob_sha, source, name, event_date, format, "
-        "tier, standings_rows, uri) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (event.event_id, event.event_id, event.blob_sha, event.source, event.name,
-         event.event_date, event.format, event.tier, event.standings_rows, event.uri),
-    )
-    conn.execute(
-        "INSERT INTO meta_deck (event_id, deck_ord, result, wins, losses, draws, "
-        "mainboard_json, sideboard_json) VALUES (?, 0, '2-1-0', 2, 1, 0, '[]', '[]')",
-        (event.event_id,),
-    )
-    conn.execute(
-        "INSERT INTO meta_deck_archetype (event_id, deck_ord, archetype_key, archetype_name, "
-        "colors, label, method, classified_at) "
-        "VALUES (?, 0, 'Test', 'Test Deck', '', 'Test Deck', 'archetype', '2026-08-01T00:00:00Z')",
-        (event.event_id,),
-    )
-    conn.commit()
-    conn.close()
-
-
-def test_narrative_prompt_includes_field_context_for_a_classified_opponent(
-    named_client, monkeypatch
-):
-    """MATCH_WIN resolves to the 'Test' archetype in named_client — with
-    metagame data stored for that same archetype_key, the prompt must carry
-    the field figure. The vocabulary is shared on purpose: the
-    same archetype_key names both a personal match and a corpus decklist."""
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
-    _store_field_row(named_client.app.state.database, "Standard")
-
-    body = named_client.get(
-        f"/api/matches/{MATCH_WIN}/report/narrative", params={"preview": "1"}
-    ).json()
-    assert "Field context" in body["prompt"]
-    assert "Test Deck has won" in body["prompt"]
-
-
-def test_narrative_prompt_field_context_is_the_matchs_own_formats(named_client, monkeypatch):
-    """MATCH_WIN is Standard by its log; the same archetype key in a Modern
-    event is another format's field and stays out of its prompt."""
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
-    _store_field_row(named_client.app.state.database, "Modern")
-
-    body = named_client.get(
-        f"/api/matches/{MATCH_WIN}/report/narrative", params={"preview": "1"}
-    ).json()
-    assert body["prompt"] is not None
-    assert "Field context" not in body["prompt"]
-
-
-def test_narrative_prompt_omits_field_context_for_a_colours_only_opponent(
-    named_client, monkeypatch
-):
-    """MATCH_LOSS falls back to a colours-only label in named_client — its
-    opponent_key never starts with 'archetype:', so there is no shared
-    vocabulary to join field data on, and the prompt must not claim one."""
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
-    body = named_client.get(
-        f"/api/matches/{MATCH_LOSS}/report/narrative", params={"preview": "1"}
-    ).json()
-    if body["prompt"] is not None:
-        assert "Field context" not in body["prompt"]
 
 
 # --- deck selector ----------------------------------------------------------

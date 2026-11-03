@@ -1,7 +1,7 @@
 """The match report's coaching prompt — built here, sent from
 ``sensei_top.ai.llm`` only when the user has opted in. How the prompt is
 served, sent and stored: ``docs/review.md``, "The narrative
-(`review/narrative.py`, `review/leaks_narrative.py`)".
+(`ai/review/narrative.py`, `review/leaks_narrative.py`)".
 
 **This module never makes the call itself.** The only module that imports
 ``anthropic`` is ``sensei_top.ai.llm.client`` (AGENTS.md non-negotiable #5);

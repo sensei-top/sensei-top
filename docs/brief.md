@@ -6,7 +6,7 @@ per-match report (`docs/review.md`).
 
 ## Why this question is worth writing down once
 
-`advisor.py` — since folded into `review/narrative.py` — asked *"what is the
+`advisor.py` — since folded into `ai/review/narrative.py` — asked *"what is the
 right play on this board?"* during a match, and was retired because the
 projector only ever has an end-of-turn snapshot to reason from mid-match: no
 combat, no stack, no opponent hand. The advice rested on a board the player

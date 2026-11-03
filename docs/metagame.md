@@ -136,7 +136,7 @@ decklist, complete) write the same `archetype_key`, the `Definition.key`
 that is the file stem in `MTGOFormatData`. That shared key is what makes
 `v_meta_winrate` and a personal `v_match_opponent` row joinable at all:
 the dashboard's field numbers (`docs/frontend-pages.md`, "Field, and the
-field-winrate join") and `review/narrative.py`'s `FieldContext` both key
+field-winrate join") and `ai/review/narrative.py`'s `FieldContext` both key
 off `opponent_key`'s `'archetype:' + archetype_key` form, and both
 refuse to join anything else. A manual label, a colours-only guess, or
 `'unknown'` shares no vocabulary with the corpus, so there is nothing
@@ -777,7 +777,7 @@ against — and every route below calls it rather than re-running
   the deck's — windowed to that format's latest reset rather than the whole
   corpus. Each passes its format to `metagame/matchup.py::ranked_field_matchup
   (..., fmt=)`, which answers `None` when there is none — see
-  `docs/review.md` and `docs/brief.md`. `api/routes/matches.py::
+  `docs/review.md` and `docs/brief.md`. `ai/routes/match_report.py::
   _field_context` (the match-report narrative prompt's field section) reads
   the match's format the same way, and both `review/leaks.py::find_leaks`
   call sites in `api/routes/review.py` (the leak finder and its narrative

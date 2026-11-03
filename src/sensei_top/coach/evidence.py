@@ -22,6 +22,7 @@ from collections import Counter, defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from sensei_top.ai.review.narrative import finding_line, play_lines_of, turn_lines_of
 from sensei_top.archetypes.classify import card_colors_by_name
 from sensei_top.guide.deck import DeckIdentity, deck_matches, identity_format, list_identities
 from sensei_top.guide.field import field_by_key
@@ -45,7 +46,6 @@ from sensei_top.review.leaks import (
     wilson,
 )
 from sensei_top.review.match_report import build_match_report
-from sensei_top.review.narrative import finding_line, play_lines_of, turn_lines_of
 from sensei_top.review.snapshot import build_snapshot, classify_own_deck
 
 # Arena's event-name prefix for each draft queue: "QuickDraft_SOS_20260831".

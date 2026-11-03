@@ -370,7 +370,7 @@ two `find_leaks` calls (`guide/bundle.py`) or a caller that already built
 some of these reports itself (`coach/evidence.py`) pays for each match's
 report at most once per request.
 
-## The narrative (`review/narrative.py`, `review/leaks_narrative.py`)
+## The narrative (`ai/review/narrative.py`, `review/leaks_narrative.py`)
 
 Two separate prompts to write coaching prose from — the coaching layer over
 the report, not a summary of it. Neither module makes the call itself —
@@ -456,11 +456,12 @@ makes them testable from a constructed snapshot with no database at all — ever
 one has the signature `analyze_*(snap: MatchSnapshot) -> AnalyzerResult`, with
 zero database access in `review/analyzers/`.
 
-Query access in this package is confined to five modules with distinct jobs:
+Query access in `review/` is confined to four modules with distinct jobs,
+plus `ai/review/narrative_store.py`, which sits in the `ai` package:
 `snapshot.py` (the per-match read the analyzers run on, a fixed set of
 queries, none per turn),
 `leaks.py` (the cross-match population, 6), `consensus.py` (the corpus scan,
-3), and `narrative_store.py` / `leaks_store.py` (2 each). `match_report.py`
+3), and `leaks_store.py` and `ai/review/narrative_store.py` (2 each). `match_report.py`
 takes a connection but issues no query of its own — it passes one through to
 `build_snapshot` and then runs the pure analyzers over the result.
 
@@ -480,7 +481,7 @@ a transparent, fixed-weight formula over life/board/hand/mana, never fitted
 to outcomes — turns the per-turn combat and life data ("What became possible, and why" above) into the number `trajectory.py`
 anchors a game's turning point to.
 
-The narrative over this report is "The narrative (`review/narrative.py`,
+The narrative over this report is "The narrative (`ai/review/narrative.py`,
 `review/leaks_narrative.py`)" above.
 
 **The matchup brief has no generate button of its own**, but it is not

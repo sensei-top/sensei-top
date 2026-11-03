@@ -609,7 +609,7 @@ msgstr ""
 msgid "Nothing to write about for this deck yet."
 msgstr ""
 
-#: sensei_top/api/routes/matches.py
+#: sensei_top/ai/routes/match_report.py
 msgid "Nothing to write about for this match yet."
 msgstr ""
 

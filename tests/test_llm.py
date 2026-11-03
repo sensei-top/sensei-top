@@ -43,13 +43,12 @@ from sensei_top.ai.llm.client import (
     write_report,
 )
 from sensei_top.ai.llm.config import LLMConfig, load
+from sensei_top.ai.review.narrative_store import context_hash
 from sensei_top.api import create_app
-from sensei_top.api.routes import matches as matches_routes
 from sensei_top.api.routes import review as review_routes
 from sensei_top.db import open_database
 from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file
-from sensei_top.review.narrative_store import context_hash
 
 FIXTURE = Path(__file__).parent / "fixtures" / "match_session.log"
 MATCH_WIN = "fa7a4d16-afb7-4094-bae2-111092fc71d2"
@@ -1430,41 +1429,6 @@ def test_no_credential_means_no_client_is_constructed(monkeypatch, client, guide
         resp = client.post(path, json={"decklist": "4 Island", "expected": []})
         assert resp.status_code == 503
         assert "config --set-key" in resp.json()["detail"]
-
-
-def test_generate_match_report_narrative_stores_and_returns_it(monkeypatch, client):
-    monkeypatch.setattr(llm_config_module, "load", lambda: LLMConfig(api_key="k"))
-    monkeypatch.setattr(
-        llm_client_module, "write_prose",
-        lambda prompt, *, cfg, label: Completion(
-            text="You won because of X.", model="claude-opus-5",
-            input_tokens=500, output_tokens=200, cost_usd=0.0075,
-        ),
-    )
-
-    resp = client.post(f"/api/matches/{MATCH_WIN}/report/narrative")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["status"] == "ok"
-    assert body["narrative"] == "You won because of X."
-    assert body["cost_usd"] == pytest.approx(0.0075)
-
-    again = client.get(f"/api/matches/{MATCH_WIN}/report/narrative").json()
-    assert again["status"] == "ok"
-    assert again["narrative"] == "You won because of X."
-    assert again["stale"] is False
-
-
-def test_generate_match_report_narrative_404s_with_nothing_to_narrate(monkeypatch, client):
-    monkeypatch.setattr(llm_config_module, "load", lambda: LLMConfig(api_key="k"))
-    monkeypatch.setattr(
-        matches_routes, "build_match_report",
-        lambda conn, match_id, **kwargs: SimpleNamespace(
-            findings=(), gaps=(), games=(), result=None,
-        ),
-    )
-    resp = client.post(f"/api/matches/{MATCH_WIN}/report/narrative")
-    assert resp.status_code == 404
 
 
 def test_generate_leaks_narrative_stores_and_returns_it(monkeypatch, client):

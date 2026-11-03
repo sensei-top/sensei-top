@@ -35,6 +35,8 @@ from fastapi import FastAPI
 
 from sensei_top import i18n
 from sensei_top.ai.llm import config as llm_config
+from sensei_top.ai.review import narrative
+from sensei_top.ai.routes import match_report as match_report_routes
 from sensei_top.api import create_app
 from sensei_top.api.app import RequestLanguage
 from sensei_top.api.convert import _list_diff_out
@@ -55,7 +57,7 @@ from sensei_top.metagame.tiers import TIER_WORDS, TIERS, tier_words
 from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file
 from sensei_top.review import leaks as review_leaks
-from sensei_top.review import leaks_narrative, narrative
+from sensei_top.review import leaks_narrative
 from sensei_top.review.findings import Category, Confidence, Finding, Gap, Severity
 from sensei_top.review.match_report import build_match_report
 from sensei_top.review.position import SWING_DECISIVE, SWING_NOTABLE, swing_words
@@ -878,6 +880,7 @@ def test_the_match_report_prompt_builds_its_report_in_english(
         return real(*args, **kwargs)
 
     monkeypatch.setattr(matches_routes, "build_match_report", recording)
+    monkeypatch.setattr(match_report_routes, "build_match_report", recording)
     pt = {"Accept-Language": "pt-BR"}
     client.get(f"/api/matches/{MATCH_WIN}/report", headers=pt)
     client.get(f"/api/matches/{MATCH_WIN}/report/narrative", headers=pt)
@@ -970,7 +973,7 @@ def test_a_page_in_portuguese_never_hands_its_reports_to_a_prompt(
     the same deck, so the leak finder's ``MIN_SAMPLE`` of ten holds on both
     sides and the fixture's loss, the one with ``turns`` rows, is a coach
     example."""
-    for module in (review_leaks, coach_evidence, matches_routes):
+    for module in (review_leaks, coach_evidence, matches_routes, match_report_routes):
         monkeypatch.setattr(module, "build_match_report", _probing_report)
     conn = open_database(fixture_db)
     [deck_id] = conn.execute(

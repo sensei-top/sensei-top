@@ -30,6 +30,8 @@ from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 from sensei_top.ai.answers import answer_format, coach_for, prose_schema
+from sensei_top.ai.review.narrative import UNTRACKED, _wrap_prompt
+from sensei_top.ai.review.narrative_store import context_hash as _context_hash
 from sensei_top.coach.canon import ALLOWED_DOMAINS, CanonEntry, entries_for
 from sensei_top.coach.evidence import (
     CoachEvidence,
@@ -41,8 +43,6 @@ from sensei_top.coach.evidence import (
 )
 from sensei_top.coach.store import CoachReport, extract_focus_section, latest_coach_report
 from sensei_top.i18n import english
-from sensei_top.review.narrative import UNTRACKED, _wrap_prompt
-from sensei_top.review.narrative_store import context_hash as _context_hash
 
 __all__ = [
     "HEADINGS",
@@ -532,7 +532,7 @@ def build_coach_context(
         for g in evidence.gaps:
             lines.append(f"- {g}")
 
-    # The untracked sentence, shared verbatim with review/narrative.py.
+    # The untracked sentence, shared verbatim with ai/review/narrative.py.
     lines.append(UNTRACKED)
 
     return "\n".join(lines)

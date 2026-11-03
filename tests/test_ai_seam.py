@@ -26,7 +26,6 @@ from sensei_top.db import open_database
 # (``api/routes/``), not by ``sensei_top.ai.routers``. Pinned so that no new
 # one joins them; every route leaving for ``ai/routes/`` leaves this set.
 CORE_NARRATIVE_ROUTES = {
-    "/api/matches/{match_id}/report/narrative",
     "/api/review/leaks/narrative",
     "/api/guide/{key}/narrative",
     "/api/guide/{key}/rcq/narrative",

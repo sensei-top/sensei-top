@@ -396,7 +396,7 @@ Since your last report (omitted entirely on a first report), Focus areas,
 Training plan, At the LGS, Format notes, Sources. `build_coach_context`
 renders every evidence section above as labelled text blocks, ending with the
 gap lines and the same "not tracked at all" sentence
-(`review/narrative.py::UNTRACKED`) every other prompt in this project uses
+(`ai/review/narrative.py::UNTRACKED`) every other prompt in this project uses
 verbatim — the stack, counters and continuous effects, attachments, exact
 phase/step, and the opponent's hand. Combat *is* projected
 (`migrations/014_combat.sql`), so it is not on that list.
@@ -454,7 +454,7 @@ stored prose stays verbatim and neither report can be rewritten in place.
   non-empty.
 
 `build_coach_prompt` computes `context_hash` — reused from
-`review/narrative_store.py`, the same SHA-256-of-the-prompt-context
+`ai/review/narrative_store.py`, the same SHA-256-of-the-prompt-context
 `match_narrative` and `leaks_narrative` use to mean "the evidence changed"
 — over the evidence **alone**: `build_coach_context` called with
 `previous=None, progress=()`, never the full context actually sent to

@@ -782,59 +782,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/matches/{match_id}/report/narrative": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Match Report Narrative
-         * @description The stored "Coach's summary" for this match, and always the
-         *     prompt to (re)write it from — see ``docs/llm.md``.
-         *
-         *     ``status`` is ``'ok'`` once ``POST`` on this same path has generated
-         *     one or ``PUT`` has stored a pasted one, ``'prompt'`` when there is
-         *     evidence but nothing stored yet, and ``'no_report'`` when there is
-         *     nothing to narrate at all — an empty report is an ordinary outcome, not
-         *     an error. Always a 200 for a match that exists; an unknown
-         *     ``match_id`` is a 404.
-         */
-        get: operations["match_report_narrative_api_matches__match_id__report_narrative_get"];
-        /**
-         * Paste Match Report Narrative
-         * @description Store an answer pasted into this match's "Coach's summary" card.
-         *
-         *     Makes no model call. The answer is read through the answer contract
-         *     (``answers.read_answer``, header required): 422 when it is another
-         *     card's or another match's, is not JSON, or carries no prose, and nothing
-         *     is stored; 413 over 256 KB, before anything else; 404 for an unknown
-         *     match, as for ``GET``. It is stored with the context its header says it
-         *     was written for, so one written for older evidence reads as stale, and
-         *     beside the copyable prompt rebuilt now; the model is the sentinel
-         *     ``pasted``, tokens and cost ``NULL``. Returns what ``GET`` on this path
-         *     returns.
-         */
-        put: operations["paste_match_report_narrative_api_matches__match_id__report_narrative_put"];
-        /**
-         * Generate Match Report Narrative
-         * @description Write this match's "Coach's summary" with Claude, and store it.
-         *
-         *     Sends ``full_prompt`` (``review/narrative.py``): the evidence ``GET``
-         *     on this same path builds, without the answer contract that ``GET``'s
-         *     ``copied_prompt`` adds, since the reply is prose. 503
-         *     with no credential configured (``sensei-top config --set-key``) —
-         *     the dashboard falls back to the copy-prompt path automatically. 502
-         *     wraps whatever the Claude API itself objected to.
-         */
-        post: operations["generate_match_report_narrative_api_matches__match_id__report_narrative_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/mtgo/picks/candidates": {
         parameters: {
             query?: never;
@@ -1537,6 +1484,59 @@ export interface paths {
         get: operations["llm_status_api_llm_status_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/matches/{match_id}/report/narrative": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Match Report Narrative
+         * @description The stored "Coach's summary" for this match, and always the
+         *     prompt to (re)write it from — see ``docs/llm.md``.
+         *
+         *     ``status`` is ``'ok'`` once ``POST`` on this same path has generated
+         *     one or ``PUT`` has stored a pasted one, ``'prompt'`` when there is
+         *     evidence but nothing stored yet, and ``'no_report'`` when there is
+         *     nothing to narrate at all — an empty report is an ordinary outcome, not
+         *     an error. Always a 200 for a match that exists; an unknown
+         *     ``match_id`` is a 404.
+         */
+        get: operations["match_report_narrative_api_matches__match_id__report_narrative_get"];
+        /**
+         * Paste Match Report Narrative
+         * @description Store an answer pasted into this match's "Coach's summary" card.
+         *
+         *     Makes no model call. The answer is read through the answer contract
+         *     (``answers.read_answer``, header required): 422 when it is another
+         *     card's or another match's, is not JSON, or carries no prose, and nothing
+         *     is stored; 413 over 256 KB, before anything else; 404 for an unknown
+         *     match, as for ``GET``. It is stored with the context its header says it
+         *     was written for, so one written for older evidence reads as stale, and
+         *     beside the copyable prompt rebuilt now; the model is the sentinel
+         *     ``pasted``, tokens and cost ``NULL``. Returns what ``GET`` on this path
+         *     returns.
+         */
+        put: operations["paste_match_report_narrative_api_matches__match_id__report_narrative_put"];
+        /**
+         * Generate Match Report Narrative
+         * @description Write this match's "Coach's summary" with Claude, and store it.
+         *
+         *     Sends ``full_prompt`` (``ai/review/narrative.py``): the evidence ``GET``
+         *     on this same path builds, without the answer contract that ``GET``'s
+         *     ``copied_prompt`` adds, since the reply is prose. 503
+         *     with no credential configured (``sensei-top config --set-key``) —
+         *     the dashboard falls back to the copy-prompt path automatically. 502
+         *     wraps whatever the Claude API itself objected to.
+         */
+        post: operations["generate_match_report_narrative_api_matches__match_id__report_narrative_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6151,103 +6151,6 @@ export interface operations {
             };
         };
     };
-    match_report_narrative_api_matches__match_id__report_narrative_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                match_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NarrativeResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    paste_match_report_narrative_api_matches__match_id__report_narrative_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                match_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PastedAnswerIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NarrativeResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    generate_match_report_narrative_api_matches__match_id__report_narrative_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                match_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NarrativeResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     mtgo_picks_candidates_api_mtgo_picks_candidates_get: {
         parameters: {
             query?: never;
@@ -7215,6 +7118,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LLMStatus"];
+                };
+            };
+        };
+    };
+    match_report_narrative_api_matches__match_id__report_narrative_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paste_match_report_narrative_api_matches__match_id__report_narrative_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PastedAnswerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_match_report_narrative_api_matches__match_id__report_narrative_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

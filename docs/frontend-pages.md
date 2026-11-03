@@ -1323,8 +1323,8 @@ windows the field's win rate to `{ since: format_reset_start }` once a
 reset is detected, else a fixed 365 days; `/field` is where a narrower
 or explicit window belongs. The same guard, the same per-format field
 and the same reset-aware windowing exist server-side in
-`api/routes/matches.py`'s `_field_context`, which feeds
-`review/narrative.py`'s optional `FieldContext` the same way.
+`ai/routes/match_report.py`'s `_field_context`, which feeds
+`ai/review/narrative.py`'s optional `FieldContext` the same way.
 
 ## Coach
 

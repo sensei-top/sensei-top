@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 from sensei_top.ai.answers import rcq_for
+from sensei_top.ai.review.narrative import NarrativeError
 from sensei_top.archetypes.classify import (
     Verdict,
     card_colors_by_name,
@@ -59,7 +60,6 @@ from sensei_top.guide.plans import PlanProblem, validate_plans
 from sensei_top.i18n import N_, _, english
 from sensei_top.metagame.classify_meta import _colors_of
 from sensei_top.metagame.source import placement_of
-from sensei_top.review.narrative import NarrativeError
 
 __all__ = [
     "RCQ_SYSTEM_PROMPT",

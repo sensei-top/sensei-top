@@ -2,7 +2,7 @@
 
 Single row, not a table of them: the leaks narrative routes call
 ``find_leaks`` with no deck scope, so there is exactly one narrative to
-store, ever. See ``review/narrative_store.py`` for the
+store, ever. See ``ai/review/narrative_store.py`` for the
 shared ``context_hash`` staleness signal this mirrors.
 """
 
@@ -12,8 +12,8 @@ import sqlite3
 from dataclasses import dataclass
 
 from sensei_top.ai.llm.provenance import AuthoredRecord, upsert_authored
+from sensei_top.ai.review.narrative_store import context_hash
 from sensei_top.clock import now_iso
-from sensei_top.review.narrative_store import context_hash
 
 __all__ = ["LeaksNarrative", "context_hash", "read_leaks_narrative", "write_leaks_narrative"]
 

@@ -41,6 +41,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from sensei_top.ai.answers import answer_format, guide_for
+from sensei_top.ai.review.narrative import NarrativeError
 from sensei_top.guide.bundle import DeckGuide
 from sensei_top.guide.field import archetype_key_by_name, faced_archetypes
 from sensei_top.guide.list_diff import ListDiff
@@ -48,7 +49,6 @@ from sensei_top.guide.markdown import render
 from sensei_top.guide.plans import PlanProblem, validate_plans
 from sensei_top.i18n import english
 from sensei_top.review.consensus import build_consensus
-from sensei_top.review.narrative import NarrativeError
 
 __all__ = [
     "BoardCard",

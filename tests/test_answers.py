@@ -626,7 +626,7 @@ def test_the_match_report_prompt_asks_for_prose_and_the_call_does_not(
     from sensei_top.ai.llm import client as llm_client_module
     from sensei_top.ai.llm import config as llm_config_module
     from sensei_top.ai.llm.config import LLMConfig
-    from sensei_top.review.narrative_store import read_match_narrative
+    from sensei_top.ai.review.narrative_store import read_match_narrative
 
     match_id = "fa7a4d16-afb7-4094-bae2-111092fc71d2"
     sent: list = []

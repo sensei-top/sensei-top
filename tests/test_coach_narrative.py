@@ -22,6 +22,7 @@ import logging
 
 import pytest
 
+from sensei_top.ai.review.narrative import UNTRACKED
 from sensei_top.coach.canon import CANON, entries_for
 from sensei_top.coach.evidence import (
     CoachEvidence,
@@ -49,7 +50,6 @@ from sensei_top.coach.narrative import (
 )
 from sensei_top.coach.store import CoachReport, write_coach_report
 from sensei_top.db import open_database
-from sensei_top.review.narrative import UNTRACKED
 
 # --- SYSTEM_PROMPT / HEADINGS ------------------------------------------------
 

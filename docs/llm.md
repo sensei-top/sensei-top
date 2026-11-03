@@ -231,7 +231,7 @@ schedule, never a background worker:
 
 | Route | Sends | Writes |
 |---|---|---|
-| `POST /api/matches/{id}/report/narrative` | `review/narrative.py`'s existing `full_prompt` — this game's turn-by-turn shape and the report's findings, no raw hand or graveyard | `match_narrative` |
+| `POST /api/matches/{id}/report/narrative` | `ai/review/narrative.py`'s existing `full_prompt` — this game's turn-by-turn shape and the report's findings, no raw hand or graveyard | `match_narrative` |
 | `POST /api/guide/{key}/narrative` | `guide/narrative.py`'s existing `full_prompt` — the player's 75 and the field's top archetypes' consensus staples, both with oracle text | `deck_narrative` **and** `matchup_brief` (every matchup plan the guide covers) |
 | `POST /api/review/leaks/narrative` | `review/leaks_narrative.py`'s existing `full_prompt` — one bullet per recurring pattern with its win-rate interval | `leaks_narrative` |
 | `POST /api/coach/narrative` | `coach/narrative.py`'s `full_prompt` — cross-deck win rates and recurring patterns over every completed constructed match, worked example losses, a curated reading list, and the previous report's own progress metrics; every field is a rate, a pattern label, or a reading id — no opponent name, user id, local path, or deck GUID, with the one documented exception of an example game's own `match_id` (`docs/coach.md`). Also takes an optional JSON body, `{"model": "..."}`, from the Coach page's model dropdown — one of `ai/llm/client.py::REPORT_MODELS`, else a 422 naming the allowed ids; left out, the call uses the configured coach model exactly as before the dropdown existed. | `coach_report` (a new row every time — a coach report is history, never overwritten) |
@@ -304,8 +304,8 @@ call sends the prompt without that contract (`full_prompt`, the coach's
 `CoachPrompt.prompt`), because its reply is stored whole or read through
 the tool's own schema. The evidence is the same text either way, tested
 the same way, one route's builder at a time:
-`test_narrative_prompt_carries_no_local_paths` (`tests/test_api.py`,
-`tests/test_narrative.py`) for the match report,
+`test_narrative_prompt_carries_no_local_paths` (`tests/ai/test_match_report_routes.py`,
+`tests/ai/test_narrative.py`) for the match report,
 `test_leaks_context_carries_no_local_paths` for the leak finder,
 `test_build_guide_context_carries_no_local_paths` for the deck guide, and
 `test_build_coach_prompt_over_a_projected_database_no_privacy_leak` with

@@ -50,6 +50,7 @@ from collections import Counter
 from dataclasses import dataclass
 
 from sensei_top.ai.answers import brief_for, coverage_for
+from sensei_top.ai.review.narrative import NarrativeError
 from sensei_top.brief.store import PlayAround, Staple, list_hash
 from sensei_top.guide.deck import DeckIdentity, identity_format
 from sensei_top.guide.field import _classified_deck_total, field_window, personal_rate
@@ -64,7 +65,6 @@ from sensei_top.i18n import english
 from sensei_top.metagame.matchup import ranked_field_matchup
 from sensei_top.metagame.tiers import TIER_WORDS
 from sensei_top.review.consensus import ArchetypeConsensus, build_consensus
-from sensei_top.review.narrative import NarrativeError
 
 __all__ = [
     "BriefFacts",

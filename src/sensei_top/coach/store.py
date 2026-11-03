@@ -5,7 +5,7 @@ A new report's progress is measured against the previous report's
 ``metrics_json``, so ``write_coach_report`` is a plain ``INSERT``, never an
 upsert, and this module reads back a history rather than a single slot.
 
-``context_hash`` is re-exported from ``review/narrative_store.py`` so
+``context_hash`` is re-exported from ``ai/review/narrative_store.py`` so
 ``coach_report``, ``match_narrative`` and ``leaks_narrative`` agree on what
 "the evidence changed" means: a SHA-256 of the prompt context string.
 
@@ -19,8 +19,8 @@ import json
 import sqlite3
 from dataclasses import dataclass
 
+from sensei_top.ai.review.narrative_store import context_hash
 from sensei_top.clock import now_iso
-from sensei_top.review.narrative_store import context_hash
 
 __all__ = [
     "CoachReport",

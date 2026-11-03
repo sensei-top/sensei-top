@@ -1,9 +1,9 @@
 """The leak finder's training-plan prompt — built here, sent from
 ``sensei_top.ai.llm`` only when the user has opted in; this module never makes
-the call itself. A separate prompt from ``review/narrative.py``'s, because
+the call itself. A separate prompt from ``ai/review/narrative.py``'s, because
 the leak finder reads across every match rather than one. How the prompt is
 served, sent and stored: ``docs/review.md``, "The narrative
-(`review/narrative.py`, `review/leaks_narrative.py`)".
+(`ai/review/narrative.py`, `review/leaks_narrative.py`)".
 
 What it describes is aggregate: pattern codes, sample sizes, win rates and
 their Wilson intervals — never a specific match's turn-by-turn shape, since
@@ -15,9 +15,9 @@ every leak is about this player's own patterns across their own matches.
 from __future__ import annotations
 
 from sensei_top.ai.answers import answer_format, prose_schema
+from sensei_top.ai.review.narrative import NarrativeError, _wrap_prompt
 from sensei_top.i18n import english
 from sensei_top.review.leaks import Leak
-from sensei_top.review.narrative import NarrativeError, _wrap_prompt
 
 __all__ = [
     "NarrativeError",

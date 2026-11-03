@@ -1,4 +1,4 @@
-"""Tests for review/narrative.py: the context it builds from an
+"""Tests for ai/review/narrative.py: the context it builds from an
 already-computed MatchReport plus its MatchSnapshot, and the framing
 ``full_prompt`` wraps it with.
 
@@ -16,7 +16,7 @@ really can leave the machine.
 
 from __future__ import annotations
 
-from sensei_top.review import narrative
+from sensei_top.ai.review import narrative
 from sensei_top.review.findings import (
     Category,
     Confidence,
