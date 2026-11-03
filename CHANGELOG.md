@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Microsoft Store package now carries Sensei Top's own tiles and Store logo
+  instead of the build tool's placeholder.
 - A player who uses only Arena no longer gets a warning about Magic Online
   in the app's log every time the tracker rebuilds its matches, when the
   settings file holds something else, such as a Claude key.
