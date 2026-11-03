@@ -336,22 +336,6 @@ rebuild (rules 2 and 3). Until then such matches are picked format-only.
 
 **Needs:** Its own plan, if asked.
 
-### BL-019 · A Live clip on the landing
-
-type: feat · priority: P3 · status: needs-decision · area: site
-
-A Live clip or a short video on the landing (plan 21, D2): the page shows
-the Live capture of a real unranked match cut mid-game, and no motion beyond
-a row rising into view.
-
-**Why deferred:** Deferred to after the beta, by the user's choice
-(2026-10-13): a clip is a second pipeline (a cut match replayed through the
-dashboard, recorded, then cut and encoded) and a weight cap of its own.
-
-**Needs:** A decision on clip or video; the recording pipeline beside
-`site-images.mjs`; a cap in `tests/test_site.py`; `ffmpeg` is on the
-machine.
-
 ### BL-020 · Caution cards
 
 type: feat · priority: P3 · status: needs-decision · area: table web
