@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-03
+
+### Added
+
+- A switch in Settings, "AI features", that hides everything AI writes:
+  the coach, the written match reports and deck guides, the matchup briefs,
+  and the prompts that write them. With it off, the app shows only what it
+  reads from your games and from tournament results, and nothing already
+  written is deleted. A new install asks on the Welcome screen; an install
+  already set up keeps the features on.
+- Terms of use on [senseitop.com](https://senseitop.com/terms/), in English
+  and Brazilian Portuguese, linked from every page's footer.
+
+### Changed
+
+- The [privacy policy](https://senseitop.com/privacy/) is rewritten. It
+  describes what the app does today, and in sections marked "Not available
+  yet", the optional account, error reports, the rules coach and
+  contributing games that are planned. None of those is in this release.
+- The TopDeck.gg key moves from Settings' Writing section to Sources.
+- The prompt cards no longer show a command-line import command; paste the
+  answer in the dashboard instead.
+
+### Removed
+
+- The command-line paths that wrote with AI: `guide --prompt`, `--import`
+  and `--author`, `rcq`, `brief`, and the coach's `config` flags. The
+  dashboard does all of these. Every other command is unchanged.
+
 ## [1.2.4] - 2026-11-02
 
 ### Added
@@ -394,7 +423,8 @@ The app is the same as 0.7.1's; this release carries the website.
   keeps recording with the window closed, and start-with-Windows as an
   option. On Linux, an AppImage that updates itself in place.
 
-[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.2.4...HEAD
+[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/sensei-top/sensei-top/compare/v1.2.4...v1.3.0
 [1.2.4]: https://github.com/sensei-top/sensei-top/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/sensei-top/sensei-top/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/sensei-top/sensei-top/compare/v1.2.1...v1.2.2
