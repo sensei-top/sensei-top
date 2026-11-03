@@ -798,7 +798,7 @@ def _config_json(tmp_path: Path, capsys) -> dict:
 
 
 def _config_file() -> str:
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     path = config_path()
     return path.read_text(encoding="utf-8") if path.exists() else ""
@@ -837,8 +837,8 @@ def test_config_json_round_trips_every_setter(tmp_path, monkeypatch, capsys, mem
     )
     body = _config_json(tmp_path, capsys)
 
+    from sensei_top.config import config_path
     from sensei_top.llm.client import REPORT_MODELS
-    from sensei_top.llm.config import config_path
 
     assert body == {
         "config_path": str(config_path()),
@@ -1007,7 +1007,7 @@ def test_key_source_reports_env_over_keyring_over_file(tmp_path, monkeypatch, ca
 
 
 def test_the_summary_names_the_keyring_not_the_file(tmp_path, capsys, memory_keyring):
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     cli_module._write_mtgo_config(handle="Player1")  # so the file exists
     memory_keyring[("sensei-top", "claude")] = CLAUDE_KEY

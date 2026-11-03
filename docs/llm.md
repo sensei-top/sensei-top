@@ -147,7 +147,7 @@ Order, first match wins:
    that exists but errors logs a WARNING (never the value) and resolution
    moves on to the file.
 3. `~/.config/sensei-top/config.toml` (`$XDG_CONFIG_HOME` if set), or on
-   Windows `%APPDATA%\sensei-top\config.toml` (`llm/config.py::config_path`;
+   Windows `%APPDATA%\sensei-top\config.toml` (`config.py::config_path`;
    a file left at the old `~/.config` path is still read there, with a
    warning to move it, until the `%APPDATA%` one exists), a `[claude]`
    table:

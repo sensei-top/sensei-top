@@ -21,9 +21,10 @@ import json
 import sqlite3
 from dataclasses import dataclass
 
+from sensei_top.clock import now_iso
 from sensei_top.guide.narrative import CardNote, GuideNarrative, MatchupPlan
 from sensei_top.guide.plans import PlanProblem
-from sensei_top.llm.provenance import now_iso, upsert_authored
+from sensei_top.llm.provenance import upsert_authored
 
 
 @dataclass(frozen=True, slots=True)

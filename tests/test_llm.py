@@ -28,6 +28,7 @@ import httpx2
 import pytest
 
 from sensei_top import cli as cli_module
+from sensei_top import config as config_module
 from sensei_top.api import create_app
 from sensei_top.api.routes import matches as matches_routes
 from sensei_top.api.routes import review as review_routes
@@ -1291,7 +1292,7 @@ def test_config_set_mtgo_dir_flag_writes_the_resolved_path(monkeypatch, tmp_path
     args.func(args)
 
     out = capsys.readouterr().out
-    assert f"MTGO log directory written to {llm_config_module.config_path()} (mode 600)." in out
+    assert f"MTGO log directory written to {config_module.config_path()} (mode 600)." in out
 
     directory, source = resolve_log_dir()
     assert directory == share.resolve()
@@ -1313,7 +1314,7 @@ def test_config_set_mtgo_dir_flag_omits_mode_600_on_windows(monkeypatch, tmp_pat
     args.func(args)
 
     out = capsys.readouterr().out
-    assert f"MTGO log directory written to {llm_config_module.config_path()}." in out
+    assert f"MTGO log directory written to {config_module.config_path()}." in out
     assert "(mode 600)" not in out
 
 
@@ -1585,24 +1586,24 @@ def _windows_env(monkeypatch, tmp_path):
     home.mkdir()
     appdata.mkdir()
     monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
-    monkeypatch.setattr(llm_config_module.sys, "platform", "win32")
+    monkeypatch.setattr(config_module.sys, "platform", "win32")
     monkeypatch.setenv("APPDATA", str(appdata))
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
-    monkeypatch.setattr(llm_config_module, "_warned_old_config", False)
+    monkeypatch.setattr(config_module, "_warned_old_config", False)
     return home / ".config" / "sensei-top" / "config.toml", appdata / "sensei-top" / "config.toml"
 
 
 def test_windows_config_lives_in_appdata(monkeypatch, tmp_path):
     _old, new = _windows_env(monkeypatch, tmp_path)
-    assert llm_config_module.config_path() == new
+    assert config_module.config_path() == new
 
 
 def test_windows_falls_back_to_the_old_file_and_warns_once(monkeypatch, tmp_path, caplog):
     old, new = _windows_env(monkeypatch, tmp_path)
     old.parent.mkdir(parents=True)
     old.write_text('[claude]\napi_key = "old-key"\n')
-    with caplog.at_level("WARNING", logger=llm_config_module.log.name):
-        assert llm_config_module.config_path() == old
+    with caplog.at_level("WARNING", logger=config_module.log.name):
+        assert config_module.config_path() == old
         assert load() == LLMConfig(api_key="old-key")
     warnings = [r.getMessage() for r in caplog.records if "now belongs at" in r.getMessage()]
     assert warnings == [
@@ -1617,7 +1618,7 @@ def test_windows_new_file_wins_over_the_old_one(monkeypatch, tmp_path, caplog):
         path.parent.mkdir(parents=True)
     old.write_text('[claude]\napi_key = "old-key"\n')
     new.write_text('[claude]\napi_key = "new-key"\n')
-    assert llm_config_module.config_path() == new
+    assert config_module.config_path() == new
     assert load().api_key == "new-key"
     assert not [r for r in caplog.records if "now belongs at" in r.getMessage()]
 
@@ -1625,13 +1626,13 @@ def test_windows_new_file_wins_over_the_old_one(monkeypatch, tmp_path, caplog):
 def test_xdg_config_home_wins_on_windows_too(monkeypatch, tmp_path):
     _windows_env(monkeypatch, tmp_path)
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg"))
-    assert llm_config_module.config_path() == tmp_path / "xdg" / "sensei-top" / "config.toml"
+    assert config_module.config_path() == tmp_path / "xdg" / "sensei-top" / "config.toml"
 
 
 def test_non_windows_keeps_dot_config_even_with_appdata_set(monkeypatch, tmp_path):
     old, _new = _windows_env(monkeypatch, tmp_path)
-    monkeypatch.setattr(llm_config_module.sys, "platform", "linux")
-    assert llm_config_module.config_path() == old
+    monkeypatch.setattr(config_module.sys, "platform", "linux")
+    assert config_module.config_path() == old
 
 
 # --- key_source(): which of the three places the key in force came from -----

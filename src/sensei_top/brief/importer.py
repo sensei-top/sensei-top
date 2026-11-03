@@ -29,10 +29,10 @@ from dataclasses import dataclass
 from sensei_top.brief import narrative as brief_narrative
 from sensei_top.brief import store
 from sensei_top.brief.store import Brief
+from sensei_top.clock import now_iso
 from sensei_top.guide.deck import DeckIdentity, identity_format
 from sensei_top.guide.narrative import BoardCard
 from sensei_top.guide.plans import validate_plans
-from sensei_top.llm.provenance import now_iso
 
 
 @dataclass(frozen=True, slots=True)

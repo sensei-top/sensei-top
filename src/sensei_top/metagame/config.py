@@ -5,7 +5,7 @@ Resolution order, first match wins:
 
 1. ``TOPDECK_API_KEY`` in the environment.
 2. The system keyring (``secrets.get(secrets.TOPDECK)``), where one exists.
-3. ``[topdeck]`` in ``llm.config.config_path()`` — the same
+3. ``[topdeck]`` in ``config.config_path()`` — the same
    ``~/.config/sensei-top/config.toml`` the Claude credential lives in
    (``$XDG_CONFIG_HOME`` if set), which ``sensei-top config
    --set-topdeck-key`` writes only when the keyring does not take the key.
@@ -29,7 +29,7 @@ import tomllib
 from dataclasses import dataclass
 
 from sensei_top import secrets
-from sensei_top.llm.config import config_path
+from sensei_top.config import config_path
 
 log = logging.getLogger(__name__)
 

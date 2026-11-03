@@ -28,7 +28,7 @@ from pathlib import Path
 import pytest
 
 from sensei_top import cli, logs
-from sensei_top.llm import config as llm_config
+from sensei_top.config import config_path
 
 LINE = re.compile(
     r"(?P<stamp>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3})Z (?P<session>[0-9a-f]{8}) "
@@ -166,7 +166,7 @@ def test_no_credential_reaches_the_file(tmp_path, flag, store, memory_keyring):
     run(tmp_path, "--verbose", "config", flag, key)
     path = run(tmp_path, "--verbose", "config")
 
-    config_file = llm_config.config_path()
+    config_file = config_path()
     if store == "keyring":
         username = "claude" if flag == "--set-key" else "topdeck"
         assert memory_keyring == {("sensei-top", username): key}

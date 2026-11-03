@@ -732,7 +732,7 @@ def _read_config_tables() -> dict[str, dict[str, object]]:
     """
     import tomllib
 
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     def _table(raw: dict) -> dict[str, object]:
         result: dict[str, object] = {}
@@ -761,7 +761,7 @@ def _write_config_tables(tables: dict[str, dict[str, object]]) -> None:
     sub-table (e.g. ``[claude.coach]``) and real TOML booleans.
     Hand-written TOML, not a library: the value set stays small enough that
     a ``tomli-w`` dependency buys nothing here."""
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     def _escaped(value: str) -> str:
         return value.replace("\\", "\\\\").replace('"', '\\"')
@@ -942,7 +942,7 @@ def _key_source(which: str) -> str | None:
 def _source_label(which: str) -> str:
     """``config``'s summary names where a key came from."""
     from sensei_top import secrets
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     source = _key_source(which)
     if source == "env":
@@ -975,7 +975,7 @@ def _store_key(which: str, key: str) -> None:
     """The system keyring when it takes the key, and then the file's copy is
     removed; else the file (chmod 600), saying why."""
     from sensei_top import secrets
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     name, table, env = _KEYS[which]
     if secrets.set(which, key):
@@ -1020,7 +1020,7 @@ def _move_keys_to_keyring() -> None:
     holds a different key keeps it, and the file's copy stays where it is,
     since overwriting would change which key is in force."""
     from sensei_top import secrets
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     path = config_path()
     backend = secrets.backend_name()
@@ -1065,8 +1065,9 @@ def _config_json(db_path: Path) -> dict[str, object]:
     are resolved against ``--db``, as the summary resolves them."""
     from sensei_top.arena_config import load_date_order
     from sensei_top.backup import resolve as resolve_backup_config
+    from sensei_top.config import config_path
     from sensei_top.llm import client as llm_client
-    from sensei_top.llm.config import DEFAULT_EFFORT, DEFAULT_MODEL, config_path
+    from sensei_top.llm.config import DEFAULT_EFFORT, DEFAULT_MODEL
 
     tables = _read_config_tables()
 
@@ -1107,7 +1108,7 @@ def _mode_600() -> str:
 
 
 def _written(what: str, value: str) -> None:
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     if value == "":
         print(f"{what} cleared in {config_path()}.")
@@ -1137,6 +1138,7 @@ def cmd_config(args) -> None:
     the backup destination and retention count. A flag for one never touches
     another's table (``_read_config_tables``).
     """
+    from sensei_top.config import config_path
     from sensei_top.llm import config as llm_config
     from sensei_top.metagame import config as topdeck_config
 
@@ -1226,7 +1228,7 @@ def cmd_config(args) -> None:
 
     if args.set_backup_dir is not None or args.set_backup_keep is not None:
         _write_backup_config(directory=args.set_backup_dir, keep=args.set_backup_keep)
-        print(f"Backup settings written to {llm_config.config_path()}{_mode_600()}.")
+        print(f"Backup settings written to {config_path()}{_mode_600()}.")
 
     if any(value is not None for value in llm_fields) or coach_web_search is not None:
         _write_llm_config(
@@ -1237,7 +1239,7 @@ def cmd_config(args) -> None:
             coach_effort=args.set_coach_effort,
             coach_web_search=coach_web_search,
         )
-        print(f"Config written to {llm_config.config_path()}{_mode_600()}.")
+        print(f"Config written to {config_path()}{_mode_600()}.")
 
     if writes and not args.show:
         return
@@ -1286,7 +1288,7 @@ def cmd_config(args) -> None:
         print("  Run 'sensei-top config --set-mtgo-handle YOURHANDLE', or export MTGO_HANDLE.")
     else:
         env_set = os.environ.get("MTGO_HANDLE")
-        source = "$MTGO_HANDLE" if env_set else str(llm_config.config_path())
+        source = "$MTGO_HANDLE" if env_set else str(config_path())
         print(f"MTGO handle source: {source}")
         print(f"  Handle: {mtgo_handle}")
 

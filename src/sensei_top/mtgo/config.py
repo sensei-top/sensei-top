@@ -15,7 +15,7 @@ Resolution order, first match wins:
 Handle —
 
 1. ``MTGO_HANDLE`` in the environment.
-2. ``[mtgo] handle`` in ``llm.config.config_path()`` (the one config file
+2. ``[mtgo] handle`` in ``config.config_path()`` (the one config file
    every table lives in).
 
 Directory —
@@ -49,7 +49,7 @@ import os
 import tomllib
 from pathlib import Path
 
-from sensei_top.llm.config import config_path
+from sensei_top.config import config_path
 
 log = logging.getLogger(__name__)
 

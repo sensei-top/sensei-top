@@ -1,5 +1,5 @@
 """Where the backup destination and retention count come from: a small,
-independent owner of the ``[backup]`` table in ``llm.config.config_path()``,
+independent owner of the ``[backup]`` table in ``config.config_path()``,
 shaped like ``mtgo/config.py``. Each field's precedence is ``resolve``'s; see
 docs/architecture.md, "Backups".
 
@@ -28,7 +28,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from sensei_top.llm.config import config_path
+from sensei_top.config import config_path
 
 log = logging.getLogger(__name__)
 

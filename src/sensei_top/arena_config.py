@@ -23,7 +23,7 @@ import tomllib
 from collections.abc import Callable
 from pathlib import Path
 
-from sensei_top.llm.config import config_path
+from sensei_top.config import config_path
 from sensei_top.reader.dates import AUTO
 from sensei_top.reader.ingest import default_log_path
 from sensei_top.reader.segmenter import DATE_ORDERS

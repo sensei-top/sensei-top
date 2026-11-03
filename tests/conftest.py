@@ -52,7 +52,7 @@ def _no_ambient_config(monkeypatch, tmp_path):
       empty, never-created temp folders too.
 
     Pointing ``XDG_CONFIG_HOME`` at an empty, never-created temp directory
-    (``llm/config.py::config_path()`` honours it) makes every one of those
+    (``config.py::config_path()`` honours it) makes every one of those
     lookups miss cleanly, the same way a fresh install would. A test body
     that explicitly wants one of these still wins: it sets its own value
     with its own ``monkeypatch`` call after this fixture's already ran

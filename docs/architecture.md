@@ -28,6 +28,7 @@ over the entire history — every match ever recorded — by re-running one comm
 | `projector/matches.py` | Match/game lifecycle, deck identity | Files, offsets, polling |
 | `projector/game_state.py` | Board state accumulation | Files, offsets, polling |
 | `live.py` | Orchestration only — runs one then the other | Parsing details of either |
+| `config.py`, `clock.py` | Where the config file lives; the time now, as ISO text | What any feature keeps in that file; any credential |
 | `review/` | Projected data, `cards`, the corpus | `reader/`, `raw_events`, files |
 | `guide/` | `review/`, `metagame/`, one deck's identity | `reader/`, `raw_events`, files |
 | `brief/` | One `(deck, archetype)` pairing | Any board state, any game in progress |
@@ -635,7 +636,7 @@ of a log, never a client's data, and where nothing is found it answers
   `steam.py`'s library glob, which covers Steam alone. Reading one line is
   not log semantics, so the module sits outside `reader/` and never touches
   `raw_events`.
-- **The config file** (`llm/config.py::config_path`):
+- **The config file** (`config.py::config_path`):
   `~/.config/sensei-top/config.toml` on Linux and macOS,
   `%APPDATA%\sensei-top\config.toml` on Windows, and `$XDG_CONFIG_HOME` on
   every platform when it is set. On Windows, when only the old `~/.config`

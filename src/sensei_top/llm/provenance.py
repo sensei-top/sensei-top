@@ -1,11 +1,10 @@
-"""Shared plumbing for the authored-prose tables: a timestamp helper and the
-upsert that writes a table's provenance columns beside its feature-specific
-ones.
+"""Shared plumbing for the authored-prose tables: the upsert that writes a
+table's provenance columns beside its feature-specific ones.
 
 ``upsert_authored`` backs the four one-slot tables (``match_narrative``,
 ``leaks_narrative``, ``deck_narrative``, ``matchup_brief``), four of AGENTS.md
 non-negotiable #6's write allowlist. ``coach_report`` and ``rcq_guide`` keep
-every row, so their stores ``INSERT`` and take only ``now_iso`` from here.
+every row, so their stores ``INSERT`` and take their timestamp from ``clock.now_iso``.
 This module never grows that allowlist:
 ``tests/test_api.py::test_only_authored_artifact_routes_write`` pins the
 route set that may write it.
@@ -15,13 +14,8 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
-from datetime import UTC, datetime
 
-__all__ = ["AuthoredRecord", "now_iso", "upsert_authored"]
-
-
-def now_iso() -> str:
-    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+__all__ = ["AuthoredRecord", "upsert_authored"]
 
 
 @dataclass(frozen=True, slots=True)

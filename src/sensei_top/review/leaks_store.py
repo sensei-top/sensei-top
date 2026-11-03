@@ -11,7 +11,8 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 
-from sensei_top.llm.provenance import AuthoredRecord, now_iso, upsert_authored
+from sensei_top.clock import now_iso
+from sensei_top.llm.provenance import AuthoredRecord, upsert_authored
 from sensei_top.review.narrative_store import context_hash
 
 __all__ = ["LeaksNarrative", "context_hash", "read_leaks_narrative", "write_leaks_narrative"]

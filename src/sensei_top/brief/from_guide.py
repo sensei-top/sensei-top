@@ -13,10 +13,10 @@ from __future__ import annotations
 import sqlite3
 
 from sensei_top.brief import store
+from sensei_top.clock import now_iso
 from sensei_top.guide.bundle import DeckGuide
 from sensei_top.guide.field import archetype_key_by_name
 from sensei_top.guide.narrative import GuideNarrative
-from sensei_top.llm.provenance import now_iso
 
 
 def store_guide_matchups(

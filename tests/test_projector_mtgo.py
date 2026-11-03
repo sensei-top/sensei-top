@@ -75,8 +75,8 @@ from pathlib import Path
 
 import pytest
 
+from sensei_top.config import config_path
 from sensei_top.db import open_database
-from sensei_top.llm.config import config_path
 from sensei_top.projector.matches import project
 from sensei_top.projector.mtgo.decode import decode_strings
 from sensei_top.projector.mtgo.parse import last_game_decided, parse_strings

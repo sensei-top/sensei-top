@@ -17,8 +17,8 @@ import pytest
 
 from sensei_top import cli as cli_module
 from sensei_top import secrets
+from sensei_top.config import config_path
 from sensei_top.db import open_database
-from sensei_top.llm.config import config_path
 
 FIXTURES = Path(__file__).parent / "fixtures"
 HEADER_LOG = FIXTURES / "client_header.log"

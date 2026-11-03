@@ -6,7 +6,7 @@ Resolution order, first match wins:
 
 1. ``ANTHROPIC_API_KEY`` in the environment.
 2. The system keyring (``secrets.get("claude")``), where one exists.
-3. ``[claude]`` in ``config_path()``'s file, written by ``sensei-top config
+3. ``[claude]`` in ``config.py::config_path()``'s file, written by ``sensei-top config
    --set-key`` only when there is no usable keyring.
 
 Nothing here raises, because a feature this optional must never be what
@@ -29,12 +29,12 @@ from __future__ import annotations
 
 import logging
 import os
-import sys
 import tomllib
 from dataclasses import dataclass, replace
 from pathlib import Path
 
 from sensei_top import secrets
+from sensei_top.config import config_path
 
 log = logging.getLogger(__name__)
 
@@ -48,36 +48,6 @@ class LLMConfig:
     model: str = DEFAULT_MODEL
     effort: str = DEFAULT_EFFORT
     web_search: bool = True
-
-
-_warned_old_config = False
-
-
-def config_path() -> Path:
-    """The one config file every reader and writer agrees on. Order: an
-    explicit ``XDG_CONFIG_HOME`` on every platform (tests rely on it); on
-    Windows ``%APPDATA%``, unless only the old ``~/.config`` file exists;
-    otherwise ``~/.config``. Only where the file is found changes here, never
-    how the credential inside it is resolved."""
-    global _warned_old_config
-    base = os.environ.get("XDG_CONFIG_HOME")
-    if base:
-        return Path(base) / "sensei-top" / "config.toml"
-    old = Path.home() / ".config" / "sensei-top" / "config.toml"
-    appdata = os.environ.get("APPDATA")
-    if sys.platform == "win32" and appdata:
-        new = Path(appdata) / "sensei-top" / "config.toml"
-        if not new.exists() and old.exists():
-            if not _warned_old_config:
-                _warned_old_config = True
-                log.warning(
-                    "config file read from %s; on Windows it now belongs at %s, so move it there",
-                    old,
-                    new,
-                )
-            return old
-        return new
-    return old
 
 
 def load() -> LLMConfig | None:
