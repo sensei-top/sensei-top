@@ -87,6 +87,7 @@ with `--verbose`.
 | `src/i18n.ts` | The shell's own catalogue, `src/locales/<language>.json`: the tray, the app menu, the loading page and every sentence a dialog or the page shows, in `shell.json`'s language |
 | `scripts/notices.ts` | The third-party notices for the shell's npm packages, written to `dist/notices/` before packaging; fails when a package names no licence |
 | `build/appx-extensions.xml` | The Store package's startup task (Windows' Startup list, off), spliced into the appx manifest by electron-builder |
+| `build/appx/` | The Store package's tiles and Store logo, rendered from the favicon's glyph; without them electron-builder ships its own placeholder |
 | `server/` | The PyInstaller build of the server (`uv run python scripts/build_server.py`) |
 
 Everything but `main.ts` and `preload.ts` takes Electron's classes as
