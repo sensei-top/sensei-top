@@ -494,11 +494,9 @@ export const useGuide = (key: string | undefined) =>
   })
 
 /** This deck's stored narrative, and always the prompt to (re)write it
- *  from. Free and local to read — the write is `useGenerateGuideNarrative`
- *  below, or `sensei-top guide --deck KEY --import FILE` with no
- *  credential configured. Riding the heartbeat as an ordinary query is what
- *  makes either path show up in the tab within a beat, generate button or
- *  terminal alike. */
+ *  from. Free and local to read; the writes are `useGenerateGuideNarrative`
+ *  and `usePasteGuideNarrative` below, and each refetches this query
+ *  before it resolves. */
 export const useGuideNarrative = (key: string | undefined) =>
   useQuery({
     queryKey: ['guide-narrative', key],

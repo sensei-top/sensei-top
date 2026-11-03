@@ -1,7 +1,6 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '../api'
-import { useShell } from '../bridge'
 import { useCopied } from '../lib/clipboard'
 import { Button, Card, TextBlock } from './ui'
 
@@ -20,8 +19,7 @@ export type SaveAnswer = (answer: string) => Promise<unknown>
  *  that easy to copy into an assistant the user already pays for, and,
  *  given `save`, taking the answer back: a box to paste it into and a
  *  button that stores it through the card's `PUT`, which never calls a
- *  model (`docs/llm.md`). In a browser with no desktop shell, where a
- *  terminal is at hand, the import command is shown too.
+ *  model (`docs/llm.md`).
  *
  *  `GenerateCard` renders this component whenever nobody writes the
  *  report, passing it the same written note and stored prose it would
@@ -39,7 +37,6 @@ export function CopyPromptCard({
   prompt,
   loading = false,
   error,
-  importCommand,
   save,
   accent = false,
   children,
@@ -49,7 +46,6 @@ export function CopyPromptCard({
   prompt: string | null | undefined
   loading?: boolean
   error?: string | null
-  importCommand?: string
   /** The card's `PUT`; without it the card draws no box to paste into. */
   save?: SaveAnswer
   /** A written narrative is an authored/metered artefact even before one
@@ -66,7 +62,6 @@ export function CopyPromptCard({
         prompt={prompt}
         loading={loading}
         error={error}
-        importCommand={importCommand}
         save={save}
       >
         {children}
@@ -81,22 +76,19 @@ type SaveFailure = { kind: 'refused'; detail: string } | { kind: 'offline' }
 
 /** Everything `CopyPromptCard` draws inside its card, with no card of its
  *  own: `children` first, then the buttons to copy and show the prompt,
- *  the error, the prompt when shown, the box to paste the answer into
- *  (given `save`), and the command that saves the answer (only with no
- *  desktop shell). Use it inside a card that already has its title; use
+ *  the error, the prompt when shown, and the box to paste the answer into
+ *  (given `save`). Use it inside a card that already has its title; use
  *  `CopyPromptCard` when the prompt is a card of its own. */
 export function CopyPromptBody({
   prompt,
   loading = false,
   error,
-  importCommand,
   save,
   children,
 }: {
   prompt: string | null | undefined
   loading?: boolean
   error?: string | null
-  importCommand?: string
   /** The card's `PUT`; without it the card draws no box to paste into. */
   save?: SaveAnswer
   children?: React.ReactNode
@@ -104,14 +96,6 @@ export function CopyPromptBody({
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const promptCopy = useCopied()
-  const commandCopy = useCopied()
-  // The installed app has no terminal to hand: the box alone.
-  // Read here despite `bridge.ts`'s rule that pages pass the shell down:
-  // only whether a shell exists matters, never its shape, and a prop
-  // through every page that draws a prompt is a lot of plumbing for one
-  // boolean.
-  const shell = useShell()
-  const showCommand = importCommand != null && importCommand !== '' && shell == null
 
   return (
     <>
@@ -148,22 +132,6 @@ export function CopyPromptBody({
       )}
 
       {save && <PasteBox save={save} />}
-
-      {showCommand && (
-        <div className="mt-3">
-          <p className="text-caption text-muted">
-            {save ? t('prompts.copy.orCommand') : t('prompts.copy.thenSave')}
-          </p>
-          <div className="mt-1">
-            <TextBlock>{importCommand}</TextBlock>
-          </div>
-          <div className="mt-2">
-            <Button variant="secondary" size="sm" onClick={() => commandCopy.copy(importCommand)}>
-              {commandCopy.copied ? t('prompts.copy.copied') : t('prompts.copy.copyCommand')}
-            </Button>
-          </div>
-        </div>
-      )}
     </>
   )
 }

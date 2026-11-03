@@ -43,15 +43,13 @@ const SECTION_CLASS =
  *  drawn by `components/guide/`, in the order of `guideSections`, and a
  *  section not in that list is not drawn.
  *
- *  The written sections come from whatever was generated or imported
- *  for this deck. `NarrativeAndExport` offers to write it with Claude
- *  when a credential is configured (`docs/llm.md`), and
- *  otherwise takes an answer pasted into the card (or, in a browser with
- *  no desktop shell, `sensei-top guide --deck KEY --import FILE`). Both land in
- *  the same query, an ordinary one on the heartbeat, so an import from
- *  the terminal shows on the page within a few seconds. While that query
- *  is pending neither a written section nor the callout that says there
- *  is none is drawn. */
+ *  The written sections come from whatever was generated or pasted for
+ *  this deck. `NarrativeAndExport` offers to write it with Claude when a
+ *  credential is configured (`docs/llm.md`), and otherwise takes an
+ *  answer pasted into the card. Either write refetches the narrative
+ *  query before it resolves, so the page shows it at once. While that
+ *  query is pending neither a written section nor the callout that says
+ *  there is none is drawn. */
 export function GuideView({ deckKey }: { deckKey: string }) {
   const { t } = useTranslation()
   const guide = useGuide(deckKey)

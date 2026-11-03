@@ -891,11 +891,10 @@ art — are in docs/design-system.md's "Card art".
 
 `components/CopyPromptCard.tsx` has two exports. `CopyPromptBody` is
 everything inside the card (the buttons to copy and to show the prompt, the
-error, the box to paste the answer into, the import command as a `TextBlock`
-with its own copy button, and the prompt itself, scrolling, once shown) with
-no card of its own, for a caller that already has a title: the Guide's
-"Matchup coverage" and a pairing's brief. `CopyPromptCard` wraps that body
-in a `Card`, for everywhere else. Both take `children`, drawn first.
+error, the box to paste the answer into, and the prompt itself, scrolling,
+once shown) with no card of its own, for a caller that already has a title:
+the Guide's "Matchup coverage" and a pairing's brief. `CopyPromptCard` wraps
+that body in a `Card`, for everywhere else. Both take `children`, drawn first.
 
 `components/GenerateCard.tsx` (`docs/llm.md`) takes `writer`, who
 writes the report, and builds one body: the written note (`writtenNote`,
@@ -921,11 +920,12 @@ its caller (`WriteAndExport.tsx`) passes no `narrative` and lets
 `hasContent`); the match report's summary and the training plan pass
 their prose directly.
 
-The prompt, the Markdown export and every command to run are drawn as
+The prompt, the Markdown export and the field sources' commands
+(`components/field/SourcesDisclosure.tsx`) are drawn as
 `components/ui/TextBlock.tsx`: a `pre` in the interface face, wrapped so
 nothing runs past its card, capped at `max-h-64` with its own scroll
 when the `scroll` prop is set (the prompt, the Markdown) and as tall as
-its text otherwise (an import command). Copying is `useCopied()`
+its text otherwise (a command). Copying is `useCopied()`
 (`lib/clipboard.ts`), one hook shared by both cards and by
 `WriteAndExport.tsx`'s Markdown button: whether a copy landed in the
 last two seconds, and the function that makes one. A refused copy stays
@@ -946,14 +946,9 @@ server's sentence under it and marks the box invalid; a request that
 got no answer says the tracker did not answer and that the text is
 still in the box. A pasted answer's author, `pasted`, is never shown:
 `lib/written.ts::isPasted` turns it into "Pasted in on {day}.", the
-brief card into "pasted in", the coach byline into "Pasted in.". The
-import command (`guide --import`, `brief --import`; the other cards
-have none) is drawn only when `useShell()` is null, a browser with no
-desktop shell, where a terminal is at hand, under "Or save it with
-this command:". `CopyPromptCard` calls `useShell()` itself, the one
-component that does (`bridge.ts` names the exception). `GenerateCard`
-forwards `save` only when nobody writes the report; with a key, the
-generate button is the write. Every write is still a route on
+brief card into "pasted in", the coach byline into "Pasted in.".
+`GenerateCard` forwards `save` only when nobody writes the report; with
+a key, the generate button is the write. Every write is still a route on
 non-negotiable #6's allowlist; the box adds no table.
 
 ## Charts

@@ -27,8 +27,6 @@ export function NarrativeAndExport({
   const generate = useGenerateGuideNarrative()
   const paste = usePasteGuideNarrative()
 
-  const importCommand = `sensei-top guide --deck "${guideKey}" --import guide.json`
-
   return (
     <div className="space-y-6">
       <GenerateCard
@@ -51,7 +49,6 @@ export function NarrativeAndExport({
         onGenerate={() => generate.mutate(guideKey)}
         generating={generate.isPending}
         generateError={generate.error?.message}
-        importCommand={importCommand}
         save={(answer) => paste.mutateAsync({ key: guideKey, answer })}
       />
 

@@ -625,8 +625,7 @@ function TextBlocks() {
       <Card>
         <div className="space-y-3">
           <TextBlock>
-            sensei-top guide --deck "a-sample-deck-name-with-no-spaces-long-enough-to-run-past-a-narrow-card"
-            --import guide.json
+            a-sample-deck-name-with-no-spaces-long-enough-to-run-past-a-narrow-card
           </TextBlock>
           <TextBlock scroll>
             {'A block long enough to scroll rather than grow the card: '.repeat(8)}

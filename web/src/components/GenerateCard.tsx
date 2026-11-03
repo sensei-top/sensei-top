@@ -34,7 +34,6 @@ export function GenerateCard({
   onGenerate,
   generating = false,
   generateError,
-  importCommand,
   save,
   accent = false,
   controls,
@@ -59,7 +58,6 @@ export function GenerateCard({
   onGenerate: () => void
   generating?: boolean
   generateError?: string | null
-  importCommand?: string
   /** The card's `PUT` for a pasted answer, handed to `CopyPromptCard` when
    *  nobody writes the report; the writing branch draws no box. */
   save?: SaveAnswer
@@ -129,7 +127,6 @@ export function GenerateCard({
         prompt={prompt}
         loading={loading}
         error={error}
-        importCommand={importCommand}
         save={save}
         accent={accent}
       >

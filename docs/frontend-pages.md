@@ -543,8 +543,8 @@ A brief is written once per `(deck, archetype)` and reused in every future
 match against that archetype, so the common case is that one is already
 stored — either from an import, or as a side effect of generating a deck
 guide (`docs/llm.md`) — and this renders instantly off the heartbeat. When
-none is, `CopyPromptCard` offers the text to write one from and the exact
-`sensei-top brief --import` command line to save the answer.
+none is, `CopyPromptCard` offers the text to write one from and the box to
+paste the answer into.
 Deliberately no generate button here, unlike the match report and the deck
 guide: generating the guide already fills this cache for every matchup it
 covers, so a second button on this card would mostly duplicate a call the
@@ -1073,7 +1073,7 @@ written guide or not: three `StatTile`s (matches covered, field covered,
 left to write); then, when any archetype lacks a brief or has an
 out-of-date one, a "Write every missing brief" button that fetches the
 prompt for all of them only when pressed and shows it in place with
-`CopyPromptBody` and the import command; then a `DataTable` (Archetype,
+`CopyPromptBody`; then a `DataTable` (Archetype,
 Brief, Field) whose archetype cell links to that pairing
 (`pairingAddress`) and reads the row's label, or `<label> · <archetype>`
 when another row of the table has the same label under a different key

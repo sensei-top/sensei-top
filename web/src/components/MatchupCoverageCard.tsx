@@ -101,7 +101,6 @@ export function MatchupCoverageCard({ guideKey }: { guideKey: string }) {
                         ? t('matchups.coverage.allWritten')
                         : undefined)
                 }
-                importCommand={`sensei-top brief --deck "${guideKey}" --missing --import briefs.json`}
                 save={(answer) => paste.mutateAsync({ key: guideKey, answer })}
               >
                 {multi &&

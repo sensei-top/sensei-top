@@ -7,9 +7,7 @@ import { useSyncExternalStore } from 'react'
  * none, so here it answers `null` and every page draws what the API alone
  * can say. A component takes the parts it shows as props and never reads
  * this module's hook itself, so a change of the shell's shape is a change
- * of one mapping, in the page that calls `useShell()`. The one exception is
- * `CopyPromptBody`, which asks only whether a shell exists (to hide the
- * import command), never its shape.
+ * of one mapping, in the page that calls `useShell()`.
  */
 
 /** Every field of `T` optional, at every depth; an array is taken whole. */

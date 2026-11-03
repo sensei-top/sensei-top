@@ -98,7 +98,6 @@ export function PairingBrief({ deckKey, opponentKey }: { deckKey: string; oppone
             ? cannotWrite
             : undefined)
       }
-      importCommand={`sensei-top brief --deck "${deckKey}" --archetype "${state.archetype}" --import brief.json`}
       save={(answer) => paste.mutateAsync({ key: deckKey, archetypeKey: state.archetype, answer })}
     />
   )

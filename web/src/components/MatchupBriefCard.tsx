@@ -247,12 +247,6 @@ export function MatchupBriefCard({ match }: { match: CurrentMatch }) {
       title={title}
       subtitle={t('matchups.briefCard.noBrief')}
       prompt={data.prompt}
-      importCommand={
-        data.deck_key && data.archetype_key
-          ? `sensei-top brief --deck "${data.deck_key}" ` +
-            `--archetype "${data.archetype_key}" --import brief.json`
-          : undefined
-      }
       save={
         data.deck_key && data.archetype_key
           ? (answer) =>

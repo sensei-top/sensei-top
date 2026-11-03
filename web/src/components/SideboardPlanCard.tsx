@@ -213,12 +213,6 @@ export function SideboardPlanCard({
         title={title}
         subtitle={t('matchups.sideboard.noPlanYet')}
         prompt={intermission.prompt}
-        importCommand={
-          intermission.deck_key && intermission.opponent?.archetype_key
-            ? `sensei-top brief --deck "${intermission.deck_key}" ` +
-              `--archetype "${intermission.opponent.archetype_key}" --import brief.json`
-            : undefined
-        }
         save={
           intermission.deck_key && intermission.opponent?.archetype_key
             ? (answer) =>
