@@ -1,9 +1,11 @@
 import { useLLMStatus } from '../api'
 import { useTranslation } from 'react-i18next'
 import { useShell } from '../bridge'
+import { SavingSwitch } from '../components/settings/SaveButton'
 import { LanguageSection } from '../components/settings/LanguageSection'
 import { Card, Segmented, Switch } from '../components/ui'
 import type { WritingStatusAnswer } from '../lib/settings'
+import { useAiFeatures } from '../shell/aiFeatures'
 import { useDensity } from '../shell/density'
 import { useLiveAdvice } from '../shell/liveAdvice'
 import { CreditsView } from '../views/CreditsView'
@@ -11,7 +13,8 @@ import { SettingsView } from '../views/SettingsView'
 
 /** `/settings`: the language first, then the shell's settings and what the
  *  API says of writing, then the density control and the Live page's
- *  advice switch, which are the browser's own, then what the credits show.
+ *  advice switch, which are the browser's own, then the AI features
+ *  switch, then what the credits show.
  *  With no shell that is the language, Writing as sentences, the density,
  *  the advice switch and the credits. `#credits` is where
  *  the footer's "Credits" lands; `scroll-mt-16` keeps the heading clear of
@@ -22,6 +25,7 @@ export function SettingsPage() {
   const status = useLLMStatus()
   const [density, setDensity] = useDensity()
   const [liveAdvice, setLiveAdvice] = useLiveAdvice()
+  const [aiOn, setAiOn] = useAiFeatures()
   const densityOptions = [
     { value: 'comfortable' as const, label: t('settings.density.comfortable') },
     { value: 'compact' as const, label: t('settings.density.compact') },
@@ -57,9 +61,23 @@ export function SettingsPage() {
           <Card className="max-w-3xl">
             <Switch
               label={t('settings.liveAdvice.label')}
-              description={t('settings.liveAdvice.description')}
+              description={aiOn ? t('settings.liveAdvice.description') : t('settings.liveAdvice.descriptionOff')}
               checked={liveAdvice}
               onChange={setLiveAdvice}
+            />
+          </Card>
+        </section>
+
+        <section aria-labelledby="ai-settings" className="space-y-4">
+          <h2 id="ai-settings" className="font-display text-title text-ink">
+            {t('settings.sections.ai')}
+          </h2>
+          <Card className="max-w-3xl">
+            <SavingSwitch
+              label={t('settings.ai.label')}
+              description={t('settings.ai.description')}
+              checked={aiOn}
+              onSave={setAiOn}
             />
           </Card>
         </section>

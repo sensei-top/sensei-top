@@ -7,6 +7,7 @@
     "app": "App",
     "appearance": "Appearance",
     "live": "Live",
+    "ai": "AI features",
     "credits": "About and credits"
   },
   "language": {
@@ -23,7 +24,12 @@
   },
   "liveAdvice": {
     "label": "Advice during a game",
-    "description": "The keep guide, what the opponent may be holding and the matchup brief, in casual games and on the ranked ladder. Events never show them, and the sideboard plan between games stays either way."
+    "description": "The keep guide, what the opponent may be holding and the matchup brief, in casual games and on the ranked ladder. Events never show them, and the sideboard plan between games stays either way.",
+    "descriptionOff": "The keep guide and what the opponent may be holding, in casual games and on the ranked ladder. Events never show them, and the sideboard plan between games stays either way."
+  },
+  "ai": {
+    "label": "AI features",
+    "description": "The coach, written reports and guides, matchup briefs, and the prompts that write them. Off, the app shows only what it reads from your games and from tournament results. Nothing already written is deleted."
   },
   "saveFailed": "It was not saved. Try again.",
   "restartNeeded": "This takes effect the next time the app starts.",

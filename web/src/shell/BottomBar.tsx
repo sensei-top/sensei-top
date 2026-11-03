@@ -5,10 +5,8 @@ import { Link, useLocation } from 'react-router'
 import { Button } from '../components/ui'
 import { useMatchInProgress } from '../lib/liveMatch'
 import { PlaceIcon } from './Rail'
-import { BAR_PLACES, placeLabel, PLACES, type Place } from './places'
-
-const BAR = PLACES.filter((place) => BAR_PLACES.includes(place.id))
-const MORE = PLACES.filter((place) => !BAR_PLACES.includes(place.id))
+import { useAiFeatures } from './aiFeatures'
+import { BAR_PLACES, placeLabel, visiblePlaces, type Place } from './places'
 
 const ITEM_CLASS =
   'flex min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-control px-1 py-1.5 text-chip font-medium transition-chrome'
@@ -25,11 +23,15 @@ function itemLook(current: boolean) {
 export function BottomBar({ current }: { current: Place | null }) {
   const { t } = useTranslation()
   const matchInProgress = useMatchInProgress()
+  const [aiOn] = useAiFeatures()
+  const places = visiblePlaces(aiOn)
+  const barPlaces = places.filter((place) => BAR_PLACES.includes(place.id))
+  const morePlaces = places.filter((place) => !BAR_PLACES.includes(place.id))
   const isLive = (place: Place) => place.id === 'live' && matchInProgress
   const sheet = useRef<HTMLDialogElement>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const location = useLocation()
-  const moreCurrent = current !== null && MORE.some((place) => place.id === current.id)
+  const moreCurrent = current !== null && morePlaces.some((place) => place.id === current.id)
 
   // Any navigation closes the sheet, Back included.
   useEffect(() => {
@@ -42,7 +44,7 @@ export function BottomBar({ current }: { current: Place | null }) {
       className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface px-1.5 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] md:hidden"
     >
       <div className="grid grid-cols-5 gap-1">
-        {BAR.map((place) => {
+        {barPlaces.map((place) => {
           const isCurrent = current?.id === place.id
           return (
             <Link
@@ -89,7 +91,7 @@ export function BottomBar({ current }: { current: Place | null }) {
               {t('shell.nav.close')}
             </Button>
           </div>
-          {MORE.map((place) => {
+          {morePlaces.map((place) => {
             const isCurrent = current?.id === place.id
             return (
               <Link
