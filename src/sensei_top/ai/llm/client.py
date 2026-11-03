@@ -9,7 +9,7 @@ non-streaming request can wait out — and all three return a ``Completion``
 carrying its own measured cost, never a guessed one (AGENTS.md
 non-negotiable #4 applies to money the same as it applies to match data).
 
-Every route that calls in here has already checked ``llm.config.load()`` (or
+Every route that calls in here has already checked ``claude_config.load()`` (or
 ``load_coach()``) is not ``None``; nothing in this module resolves
 credentials itself.
 """
@@ -25,10 +25,9 @@ from dataclasses import dataclass, field
 
 import anthropic
 
-from sensei_top.ai.llm.config import LLMConfig
+from sensei_top.claude_config import LLMConfig
 
 __all__ = [
-    "REPORT_MODELS",
     "Citation",
     "Completion",
     "LLMError",
@@ -73,23 +72,6 @@ _SEARCH_COST_PER_1000 = 10.0
 _DYNAMIC_FILTERING_MODELS = frozenset(
     {"claude-opus-5", "claude-opus-5-5", "claude-fable-5-1", "claude-sonnet-5"}
 )
-
-# The models the coach's dashboard dropdown may ask ``write_report`` to use
-# (``ai/routes/coach.py``'s ``POST .../narrative``), in the order the
-# dropdown lists them, with display labels. Each one is priced (``_PRICES``),
-# gets the dynamic-filtering search tool (``_DYNAMIC_FILTERING_MODELS``), and
-# accepts what ``write_report`` always sends: ``thinking={"type": "adaptive"}``
-# plus an explicit ``output_config.effort``. Haiku 4.5 is priced above but
-# deliberately excluded here — it rejects adaptive thinking and an explicit
-# effort outright, so it can't take a coach call regardless of price. Opus
-# 5.5's own default effort is ``medium``, but that default never applies:
-# every call through this module sends effort explicitly.
-REPORT_MODELS: dict[str, str] = {
-    "claude-opus-5": "Opus 5",
-    "claude-opus-5-5": "Opus 5.5",
-    "claude-fable-5-1": "Fable 5.1",
-    "claude-sonnet-5": "Sonnet 5",
-}
 
 _MAX_PAUSE_TURN_CONTINUATIONS = 3
 

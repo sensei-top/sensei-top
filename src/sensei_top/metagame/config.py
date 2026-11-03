@@ -11,11 +11,11 @@ Resolution order, first match wins:
    --set-topdeck-key`` writes only when the keyring does not take the key.
 
 Nothing here raises. A missing file, a missing table, or a malformed one all
-resolve the same way ``llm/config.py`` and ``metagame/source.py`` do: log a
+resolve the same way ``claude_config.py`` and ``metagame/source.py`` do: log a
 warning and hand back the "not configured" state (``None``), never an
 exception.
 
-A sibling to ``llm/config.py``, sharing only ``config_path()``: TopDeck's key
+A sibling to ``claude_config.py``, sharing only ``config_path()``: TopDeck's key
 is a free download source's, not the metered credential AGENTS.md's
 non-negotiable #5 governs. See docs/metagame.md, "A second source:
 TopDeck.gg".

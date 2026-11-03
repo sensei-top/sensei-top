@@ -59,6 +59,7 @@ source_modules = [
     "sensei_top.card_images",
     "sensei_top.cards",
     "sensei_top.cli",
+    "sensei_top.claude_config",
     "sensei_top.clock",
     "sensei_top.config",
     "sensei_top.db",
@@ -82,7 +83,3 @@ source_modules = [
 ]
 forbidden_modules = ["sensei_top.ai"]
 allow_indirect_imports = true
-ignore_imports = [
-    "sensei_top.cli -> sensei_top.ai.llm.client",
-    "sensei_top.cli -> sensei_top.ai.llm.config",
-]

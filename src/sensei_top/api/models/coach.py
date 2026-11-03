@@ -112,7 +112,7 @@ class CoachEvidenceModel(BaseModel):
 
 
 class CoachModelOption(BaseModel):
-    """One choice in the Coach tab's model dropdown — ``llm.client.
+    """One choice in the Coach tab's model dropdown — ``claude_config.
     REPORT_MODELS`` plus its own price, resolved server-side so the
     dashboard never has to know the pricing table."""
 

@@ -33,7 +33,7 @@ def _no_ambient_config(monkeypatch, tmp_path):
       deck folder.
     - ``api/guard.py`` lets a request carrying the dashboard's header through
       to the four metered ``.../narrative`` handlers, which resolve a Claude
-      credential from the environment or that same file (``llm/config.py``).
+      credential from the environment or that same file (``claude_config.py``).
       A real credential on the developer's machine must never turn a test's
       "no credential configured" path into a configured one — a configured
       one is a paid call.

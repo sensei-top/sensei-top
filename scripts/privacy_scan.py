@@ -374,7 +374,7 @@ def _terms_from_git_account(repo: Path) -> list[Term]:
 
 
 def _terms_from_claude_key() -> list[Term]:
-    from sensei_top.ai.llm.config import load
+    from sensei_top.claude_config import load
 
     config = load()
     if config is None or not config.api_key:

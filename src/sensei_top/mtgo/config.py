@@ -27,7 +27,7 @@ Directory —
 Deck folder (``resolve_deck_dir``) — the same shape, for the user's exported
 ``.dek`` files: ``MTGO_DECK_DIR``, then ``[mtgo] deck_dir``, then ``None``.
 
-Mirrors ``llm/config.py``'s fail-soft contract: a config file that exists
+Mirrors ``claude_config.py``'s fail-soft contract: a config file that exists
 but can't be parsed logs a warning and hands back ``None`` rather than
 raising, for all three. Past that, the handle and the two directories don't
 warn alike. The directories are silent on every kind of absence — no env

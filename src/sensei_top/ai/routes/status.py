@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from sensei_top.ai.llm import config as llm_config
+from sensei_top import claude_config as llm_config
 from sensei_top.api.models.common import LLMStatus
 
 router = APIRouter()
@@ -19,7 +19,7 @@ router = APIRouter()
 def llm_status() -> LLMStatus:
     """Whether a Claude credential is resolved right now, and which
     model would be used — never the key itself
-    (``sensei_top.ai.llm.config``). The dashboard reads this to
+    (``sensei_top.claude_config``). The dashboard reads this to
     decide whether a narrative surface offers a generate button or
     falls back to the copy-prompt path (``docs/llm.md``). No database
     connection needed: this is purely local config, not derived data.

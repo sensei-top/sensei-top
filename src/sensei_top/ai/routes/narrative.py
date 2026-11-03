@@ -25,10 +25,10 @@ coverage card and the RCQ guide) shares ``refusal``, ``check_pasted_length``,
 ``unreadable_answer``, so each refuses an answer with the same status and
 the same keyed sentence, and none calls a model.
 
-**Why this module calls ``sensei_top.ai.llm`` through its modules**:
-``tests/test_llm.py`` patches ``load``, ``write_prose`` and ``write_json``
-on ``sensei_top.ai.llm.config``/``sensei_top.ai.llm.client`` themselves, and this
-file calls them as ``llm_config.load``/``llm_client.write_prose``, so the
+**Why this module calls ``claude_config`` and ``llm.client`` through their
+modules**: ``tests/test_llm.py`` patches ``load``, ``write_prose`` and
+``write_json`` on ``sensei_top.claude_config``/``sensei_top.ai.llm.client``
+themselves, and this file calls them as ``llm_config.load``/``llm_client.write_prose``, so the
 patch reaches it. A name imported *by name* into a route module
 (``review.py``'s ``find_leaks``, say) is patched on that route module, so it
 has to stay called from that module's own closures.
@@ -43,6 +43,7 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from sensei_top import claude_config as llm_config
 from sensei_top.ai.answers import (
     Answer,
     AnswerError,
@@ -52,8 +53,8 @@ from sensei_top.ai.answers import (
     unreadable,
 )
 from sensei_top.ai.llm import client as llm_client
-from sensei_top.ai.llm import config as llm_config
-from sensei_top.ai.llm.client import Completion, LLMConfig
+from sensei_top.ai.llm.client import Completion
+from sensei_top.claude_config import LLMConfig
 from sensei_top.i18n import N_, _
 
 NO_CREDENTIAL_DETAIL = N_("No Claude credential configured. Run 'sensei-top config --set-key'.")

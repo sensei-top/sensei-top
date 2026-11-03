@@ -917,9 +917,9 @@ def _key_source(which: str) -> str | None:
     """Where the key in force comes from, asked of the one module that
     resolves it (AGENTS.md non-negotiable #5 for the Claude key)."""
     if which == "claude":
-        from sensei_top.ai.llm import config as llm_config
+        from sensei_top import claude_config
 
-        return llm_config.key_source()
+        return claude_config.key_source()
     from sensei_top.metagame import config as topdeck_config
 
     return topdeck_config.key_source()
@@ -1049,10 +1049,9 @@ def _config_json(db_path: Path) -> dict[str, object]:
     ``keyring``, ``file`` or ``null``). Other values are the file's own,
     with the built-in default where one exists; the backup folder and count
     are resolved against ``--db``, as the summary resolves them."""
-    from sensei_top.ai.llm import client as llm_client
-    from sensei_top.ai.llm.config import DEFAULT_EFFORT, DEFAULT_MODEL
     from sensei_top.arena_config import load_date_order
     from sensei_top.backup import resolve as resolve_backup_config
+    from sensei_top.claude_config import DEFAULT_EFFORT, DEFAULT_MODEL, REPORT_MODELS
     from sensei_top.config import config_path
 
     tables = _read_config_tables()
@@ -1082,7 +1081,7 @@ def _config_json(db_path: Path) -> dict[str, object]:
         "topdeck": {"key_set": topdeck_source is not None, "key_source": topdeck_source},
         "models": [
             {"value": model_id, "label": label}
-            for model_id, label in llm_client.REPORT_MODELS.items()
+            for model_id, label in REPORT_MODELS.items()
         ],
     }
 
@@ -1124,7 +1123,7 @@ def cmd_config(args) -> None:
     the backup destination and retention count. A flag for one never touches
     another's table (``_read_config_tables``).
     """
-    from sensei_top.ai.llm import config as llm_config
+    from sensei_top import claude_config as llm_config
     from sensei_top.config import config_path
     from sensei_top.metagame import config as topdeck_config
 

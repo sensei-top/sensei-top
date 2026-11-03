@@ -487,7 +487,7 @@ roughly 50-60k input tokens, 20-30k output tokens (thinking included), and
 | Fable 5.1 | $10 / $50 | ~$1.8-2.5 — **measured $3.23** (below) | Thinking is always on. |
 | Sonnet 5 | $2 / $10 | ~$0.4-0.5 | The cheaper option if quality holds. |
 
-These four are `ai/llm/client.py::REPORT_MODELS` — the Coach page's model
+These four are `claude_config.py::REPORT_MODELS` — the Coach page's model
 dropdown picks one of them per report, preselected to the `[claude.coach]`
 model or the base `[claude]` model (`load_coach()`'s own resolution); left
 alone, the dropdown sends nothing and the server uses that same configured

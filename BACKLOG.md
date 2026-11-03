@@ -187,7 +187,7 @@ after "no account". Moved from Next to Later on 2026-10-19: the 2026-10-19
 tracker research found no demand either way. Not started.
 
 **Needs:** Its plan (`~/.claude/plans/release-16-provider-adapter.md`,
-outline). One adapter per protocol under `llm/`, `llm/config.py` widened,
+outline). One adapter per protocol under `ai/llm/`, `claude_config.py` widened,
 `REPORT_MODELS` reworked into a per-provider list, Settings' Writing
 section, and the route additions to rule 5's list and
 `test_only_authored_artifact_routes_write`.
@@ -507,8 +507,8 @@ database or settings file means on (decided 2026-11-02).
 
 **Needs:** Its plan (sub-plan D of
 `~/.claude/plans/release-40-coach-and-accounts.md`).
-`llm/config.py::config_path` moved to a core module first, since a dozen
-modules that have nothing to do with a model import it.
+`config_path` moved out of the credential module into core `config.py`
+first, since a dozen modules that have nothing to do with a model import it.
 
 ## Bugs
 

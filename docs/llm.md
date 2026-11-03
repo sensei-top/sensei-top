@@ -20,7 +20,7 @@ default someone may tune.
 Before this feature existed, "this app cannot spend money" was a *structural*
 fact — there was no HTTP client for Anthropic in the runtime dependency set at
 all. It is now a *configuration* fact: no key, no call. That is a genuinely
-weaker guarantee, and the three things that keep it honest are `ai/llm/config.py`
+weaker guarantee, and the three things that keep it honest are `claude_config.py`
 returning `None`, every caller checking for it, and the tests named at the
 bottom of this section.
 
@@ -62,7 +62,7 @@ metered-call rule. Their standard:
 a user-supplied credential. It is still not a metered call — the key exists for
 rate-limiting and attribution, never billing — so it is configured the same way
 (`sensei-top config --set-topdeck-key`, or a `TOPDECK_API_KEY` env var,
-resolved by `metagame/config.py`, a *sibling* to `ai/llm/config.py` rather than an
+resolved by `metagame/config.py`, a *sibling* to `claude_config.py` rather than an
 extension of it) while staying governed by the free-download standard above.
 With no key configured the corpus refresh simply skips that source, no
 different from any other unreachable download. See `docs/metagame.md`.
@@ -131,21 +131,25 @@ along with what pins it down.
 
 ## Credential resolution
 
-`src/sensei_top/ai/llm/config.py` is the only place a *metered, billing*
-credential is read — the Claude API key. The free, rate-limited TopDeck.gg
-credential is resolved by its own sibling module, `metagame/config.py`, under
-the free-download standard above rather than this rule.
+`src/sensei_top/claude_config.py` is the only place a *metered, billing*
+credential is read — the Claude API key. It lives in core, not in `ai/`,
+because `config --show` and `config --json` report the credential, the
+model and the models offered whether or not `ai/` is installed; it imports
+only `secrets.py` and `config.py`, and nothing in it can make a call. The
+free, rate-limited TopDeck.gg credential is resolved by its own sibling
+module, `metagame/config.py`, under the free-download standard above rather
+than this rule.
 
 Order, first match wins:
 
 1. `ANTHROPIC_API_KEY` environment variable.
 2. The system keyring (Windows Credential Manager, Secret Service on Linux),
    service `sensei-top`, username `claude`, read through `secrets.py`. That
-   module is a generic, fail-soft store and imports nothing from `ai/llm/`; this
-   module stays the only place the credential is *resolved*. The `fail` and
-   `null` keyring backends count as "no backend" (silently skipped); a backend
-   that exists but errors logs a WARNING (never the value) and resolution
-   moves on to the file.
+   module is a generic, fail-soft store and imports nothing that resolves a
+   credential; `claude_config.py` stays the only place the credential is
+   *resolved*. The `fail` and `null` keyring backends count as "no backend"
+   (silently skipped); a backend that exists but errors logs a WARNING (never
+   the value) and resolution moves on to the file.
 3. `~/.config/sensei-top/config.toml` (`$XDG_CONFIG_HOME` if set), or on
    Windows `%APPDATA%\sensei-top\config.toml` (`config.py::config_path`;
    a file left at the old `~/.config` path is still read there, with a
@@ -189,12 +193,12 @@ and exits non-zero, since either choice would change which key is in force.
 shell: the `[arena]`, `[mtgo]` and backup values, the model and effort, the
 models offered, and for each key only `key_set` and `key_source` (`env`,
 `keyring`, `file` or `null`), never the key. `key_source` comes from
-`ai/llm/config.py::key_source()` and `metagame/config.py::key_source()`, the
+`claude_config.py::key_source()` and `metagame/config.py::key_source()`, the
 same resolution `load()` runs; `cli.py` writes through `secrets.py` but never
 decides which key is in force.
 
 The coach reads the same `[claude]` table plus an optional `[claude.coach]`
-table layered on top of it, resolved by `ai/llm/config.py::load_coach()`:
+table layered on top of it, resolved by `claude_config.py::load_coach()`:
 
 ```toml
 [claude.coach]
@@ -235,7 +239,7 @@ schedule, never a background worker:
 | `POST /api/matches/{id}/report/narrative` | `ai/review/narrative.py`'s existing `full_prompt` — this game's turn-by-turn shape and the report's findings, no raw hand or graveyard | `match_narrative` |
 | `POST /api/guide/{key}/narrative` | `ai/guide/narrative.py`'s existing `full_prompt` — the player's 75 and the field's top archetypes' consensus staples, both with oracle text | `deck_narrative` **and** `matchup_brief` (every matchup plan the guide covers) |
 | `POST /api/review/leaks/narrative` | `ai/review/leaks_narrative.py`'s existing `full_prompt` — one bullet per recurring pattern with its win-rate interval | `leaks_narrative` |
-| `POST /api/coach/narrative` | `ai/coach/narrative.py`'s `full_prompt` — cross-deck win rates and recurring patterns over every completed constructed match, worked example losses, a curated reading list, and the previous report's own progress metrics; every field is a rate, a pattern label, or a reading id — no opponent name, user id, local path, or deck GUID, with the one documented exception of an example game's own `match_id` (`docs/coach.md`). Also takes an optional JSON body, `{"model": "..."}`, from the Coach page's model dropdown — one of `ai/llm/client.py::REPORT_MODELS`, else a 422 naming the allowed ids; left out, the call uses the configured coach model exactly as before the dropdown existed. | `coach_report` (a new row every time — a coach report is history, never overwritten) |
+| `POST /api/coach/narrative` | `ai/coach/narrative.py`'s `full_prompt` — cross-deck win rates and recurring patterns over every completed constructed match, worked example losses, a curated reading list, and the previous report's own progress metrics; every field is a rate, a pattern label, or a reading id — no opponent name, user id, local path, or deck GUID, with the one documented exception of an example game's own `match_id` (`docs/coach.md`). Also takes an optional JSON body, `{"model": "..."}`, from the Coach page's model dropdown — one of `claude_config.py::REPORT_MODELS`, else a 422 naming the allowed ids; left out, the call uses the configured coach model exactly as before the dropdown existed. | `coach_report` (a new row every time — a coach report is history, never overwritten) |
 | `POST /api/guide/{key}/rcq/narrative` | `ai/guide/rcq_prompt.py`'s `rcq_prompt` — the exact 75 the user pasted, with oracle text, the list's diff against the field's consensus, the expected archetypes the user picked (corpus keys, each with consensus and oracle text), the field's shares since the format reset and over the last 14 days, and every event of the last 7 days (date, name, tier, players, top-8 archetypes). The body is `{decklist, expected[], own?}`; no opponent name, handle or local path. 503 with no credential, 502 on an `LLMError` | `rcq_guide` (a new row every time — each is the record of one event's preparation) |
 
 All five routes sit behind `api/guard.py`, which refuses a POST from a

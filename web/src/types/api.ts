@@ -1015,7 +1015,7 @@ export interface paths {
          * Llm Status
          * @description Whether a Claude credential is resolved right now, and which
          *     model would be used — never the key itself
-         *     (``sensei_top.ai.llm.config``). The dashboard reads this to
+         *     (``sensei_top.claude_config``). The dashboard reads this to
          *     decide whether a narrative surface offers a generate button or
          *     falls back to the copy-prompt path (``docs/llm.md``). No database
          *     connection needed: this is purely local config, not derived data.
@@ -1496,8 +1496,8 @@ export interface paths {
          * @description Write a fresh coach report with Claude and store it as a new row —
          *     never an upsert, since "Since your last report" reads the previous
          *     row's own ``metrics_json`` (``ai/coach/store.py``). The model comes from
-         *     the Coach tab's dropdown (``body.model``, one of ``llm_client.
-         *     REPORT_MODELS``) when given, else the configured coach model
+         *     the Coach tab's dropdown (``body.model``, one of
+         *     ``REPORT_MODELS``) when given, else the configured coach model
          *     (``load_coach()``'s own ``[claude.coach]`` override or the base
          *     ``[claude]`` model). Mirrors ``narrative_post``'s exact order: a bad
          *     model id first (422, before touching config or building anything),
@@ -1713,7 +1713,7 @@ export interface components {
         };
         /**
          * CoachModelOption
-         * @description One choice in the Coach tab's model dropdown — ``llm.client.
+         * @description One choice in the Coach tab's model dropdown — ``claude_config.
          *     REPORT_MODELS`` plus its own price, resolved server-side so the
          *     dashboard never has to know the pricing table.
          */

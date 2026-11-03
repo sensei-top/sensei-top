@@ -17,7 +17,7 @@ pipeline's privacy guarantee is inherited, not re-implemented.
 
 Credential: an opt-in, unmetered API key (AGENTS.md non-negotiable 5's
 standard for free downloads, not the metered-call rule) resolved by
-``metagame/config.py``, a sibling to ``llm/config.py`` rather than an
+``metagame/config.py``, a sibling to ``claude_config.py`` rather than an
 extension of it. With no key configured, :func:`refresh_topdeck` makes no
 request and returns ``not_configured``. Attribution: TopDeck's terms require
 a visible credit and link back to TopDeck.gg wherever this data is shown;

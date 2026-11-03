@@ -33,13 +33,13 @@ import polib
 import pytest
 from fastapi import FastAPI
 
+from sensei_top import claude_config as llm_config
 from sensei_top import i18n
 from sensei_top.ai.brief import narrative as brief_narrative
 from sensei_top.ai.coach import evidence as coach_evidence
 from sensei_top.ai.coach import narrative as coach_narrative
 from sensei_top.ai.guide import narrative as guide_narrative
 from sensei_top.ai.guide import rcq_prompt as rcq_prompt_module
-from sensei_top.ai.llm import config as llm_config
 from sensei_top.ai.review import leaks_narrative, narrative
 from sensei_top.ai.routes import guide as guide_ai_routes
 from sensei_top.ai.routes import leaks as leaks_routes

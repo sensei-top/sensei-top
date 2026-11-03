@@ -4,7 +4,7 @@ routes that resolve their credential through ``llm_config.load()``: the match
 report, the leak finder, the deck guide and the RCQ guide (the coach's, the
 fifth, resolves ``load_coach()``).
 
-No test here ever makes a network call: ``llm/config.py`` is exercised
+No test here ever makes a network call: ``claude_config.py`` is exercised
 against real env vars and a scratch config file (never a real key),
 ``llm/client.py`` against a fake ``anthropic.Anthropic`` that never opens a
 socket, and the API routes against monkeypatched ``llm_config.load`` /
@@ -26,12 +26,11 @@ import anthropic
 import httpx2
 import pytest
 
+from sensei_top import claude_config as llm_config_module
 from sensei_top import cli as cli_module
 from sensei_top import config as config_module
 from sensei_top.ai.llm import client as llm_client_module
-from sensei_top.ai.llm import config as llm_config_module
 from sensei_top.ai.llm.client import (
-    REPORT_MODELS,
     Citation,
     LLMError,
     price_per_mtok,
@@ -40,9 +39,9 @@ from sensei_top.ai.llm.client import (
     write_prose,
     write_report,
 )
-from sensei_top.ai.llm.config import LLMConfig, load
 from sensei_top.ai.review.narrative_store import context_hash
 from sensei_top.api import create_app
+from sensei_top.claude_config import REPORT_MODELS, LLMConfig, load
 from sensei_top.db import open_database
 from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file
@@ -51,7 +50,7 @@ FIXTURE = Path(__file__).parent / "fixtures" / "match_session.log"
 MATCH_WIN = "fa7a4d16-afb7-4094-bae2-111092fc71d2"
 
 
-# --- llm/config.py: credential resolution -------------------------------
+# --- claude_config.py: credential resolution -------------------------------
 
 
 def _write_config(
@@ -821,7 +820,7 @@ def test_write_report_refusal_still_raises_llm_error(monkeypatch):
         )
 
 
-# --- llm/config.py: load_coach() ------------------------------------------
+# --- claude_config.py: load_coach() ------------------------------------------
 
 
 def test_load_coach_applies_overrides_while_load_is_unchanged(monkeypatch, tmp_path):

@@ -15,11 +15,11 @@ from pathlib import Path
 
 import pytest
 
+from sensei_top import claude_config as llm_config_module
 from sensei_top.ai.llm import client as llm_client_module
-from sensei_top.ai.llm import config as llm_config_module
 from sensei_top.ai.llm.client import Completion
-from sensei_top.ai.llm.config import LLMConfig
 from sensei_top.api.app import create_app
+from sensei_top.claude_config import LLMConfig
 from sensei_top.db import open_database
 from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file

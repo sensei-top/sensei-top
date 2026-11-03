@@ -8,7 +8,7 @@ stored guide), adapted for what makes this one different (a plain history
 INSERT rather than a single overwritten slot, a credential resolved through
 ``load_coach()`` rather than ``load()``, and a ``write_report`` call that
 can carry both web citations and reading-list ids). No network call is ever
-made here: ``llm.config.load_coach`` and ``llm.client.write_report`` are
+made here: ``claude_config.load_coach`` and ``llm.client.write_report`` are
 monkeypatched throughout, the same objects ``ai/routes/coach.py`` imports
 under, so a patch made through those module references is visible to the
 route.
@@ -24,13 +24,13 @@ from __future__ import annotations
 
 import pytest
 
+from sensei_top import claude_config as llm_config_module
 from sensei_top.ai.coach.canon import CANON
 from sensei_top.ai.coach.store import write_coach_report
 from sensei_top.ai.llm import client as llm_client_module
-from sensei_top.ai.llm import config as llm_config_module
 from sensei_top.ai.llm.client import Citation, Completion, LLMError
-from sensei_top.ai.llm.config import LLMConfig
 from sensei_top.api import create_app
+from sensei_top.claude_config import LLMConfig
 from sensei_top.db import open_database
 
 
@@ -231,12 +231,12 @@ def test_coach_get_lists_report_models_with_prices(monkeypatch, empty_client):
         llm_config_module, "load_coach", lambda: LLMConfig(api_key="k", model="claude-sonnet-5")
     )
     body = empty_client.get("/api/coach").json()
-    assert [m["id"] for m in body["models"]] == list(llm_client_module.REPORT_MODELS)
+    assert [m["id"] for m in body["models"]] == list(llm_config_module.REPORT_MODELS)
     for option in body["models"]:
         price = llm_client_module._PRICES[option["id"]]
         assert option["input_per_mtok"] == pytest.approx(price[0])
         assert option["output_per_mtok"] == pytest.approx(price[1])
-        assert option["label"] == llm_client_module.REPORT_MODELS[option["id"]]
+        assert option["label"] == llm_config_module.REPORT_MODELS[option["id"]]
     assert body["default_model"] == "claude-sonnet-5"
 
 
@@ -246,7 +246,7 @@ def test_coach_get_default_model_is_none_without_a_credential(monkeypatch, empty
     assert body["default_model"] is None
     # The dropdown's own options are still listed -- they don't depend on a
     # credential existing, only the ability to pick one once there is one.
-    assert [m["id"] for m in body["models"]] == list(llm_client_module.REPORT_MODELS)
+    assert [m["id"] for m in body["models"]] == list(llm_config_module.REPORT_MODELS)
 
 
 # --- POST /api/coach/narrative: the model dropdown's override --------------
@@ -309,7 +309,7 @@ def test_post_with_a_disallowed_model_gives_422_and_never_calls_write_report(
 
     resp = client.post("/api/coach/narrative", json={"model": bad_model})
     assert resp.status_code == 422
-    for allowed in llm_client_module.REPORT_MODELS:
+    for allowed in llm_config_module.REPORT_MODELS:
         assert allowed in resp.json()["detail"]
 
 

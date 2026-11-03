@@ -43,10 +43,10 @@ If you find yourself importing the projector from the reader, the design has
 been violated. `live.py` exists precisely so neither has to know the other.
 
 **Core never imports `ai/`.** `lint-imports` holds the contract in
-`pyproject.toml`; its `ignore_imports` names the edges still to cut. Core
-reaches `sensei_top.ai` through one door, opened only when
-`importlib.util.find_spec("sensei_top.ai")` finds the package and an
-`importlib.import_module`, which `lint-imports` does not count as an import:
+`pyproject.toml`, with no exception. Core reaches `sensei_top.ai` through one
+door, opened only when `importlib.util.find_spec("sensei_top.ai")` finds the
+package and an `importlib.import_module`, which `lint-imports` does not count
+as an import:
 
 - `api/app.py::create_app` mounts `ai.routers()` after core's routers and
   before the dashboard's catch-all, and keeps `ai.providers()` on

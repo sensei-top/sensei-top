@@ -1,6 +1,8 @@
-"""Where the Claude credential comes from — the only question this module
-answers, and the only place a metered credential is resolved (AGENTS.md
-non-negotiable #5). See docs/llm.md, "Credential resolution".
+"""Where the Claude credential, model and effort come from, and the models
+the coach offers (``REPORT_MODELS``): the only place a metered credential is
+resolved (AGENTS.md non-negotiable #5). It lives in core so ``config --json``
+can report all of it with ``ai/`` absent; it resolves, it never calls. See
+docs/llm.md, "Credential resolution".
 
 Resolution order, first match wins:
 
@@ -181,3 +183,22 @@ def _load_coach_overrides() -> tuple[str | None, str | None, bool | None] | None
         web_search = None
 
     return (model, effort, web_search)
+
+
+# The models the coach's dashboard dropdown may ask ``write_report`` to use
+# (``ai/routes/coach.py``'s ``POST .../narrative``), in the order the
+# dropdown lists them, with display labels. Each one is priced
+# (``ai/llm/client.py``'s ``_PRICES``), gets the dynamic-filtering search tool
+# (``_DYNAMIC_FILTERING_MODELS`` there), and accepts what ``write_report``
+# always sends: ``thinking={"type": "adaptive"}`` plus an explicit
+# ``output_config.effort``. Haiku 4.5 is priced but deliberately excluded
+# here — it rejects adaptive thinking and an explicit effort outright, so it
+# can't take a coach call regardless of price. Opus 5.5's own default effort
+# is ``medium``, but that default never applies: every call sends effort
+# explicitly.
+REPORT_MODELS: dict[str, str] = {
+    "claude-opus-5": "Opus 5",
+    "claude-opus-5-5": "Opus 5.5",
+    "claude-fable-5-1": "Fable 5.1",
+    "claude-sonnet-5": "Sonnet 5",
+}

@@ -11,7 +11,7 @@ resolves its credential through ``load_coach()`` rather than ``load()``.
 What *is* shared: ``no_credential_detail()``, ``run_authored_write`` and the
 paste helpers (``check_pasted_length``, ``read_pasted_prose``). ``POST``
 takes an optional body picking the model from the Coach page's dropdown (one
-of ``llm_client.REPORT_MODELS``); left out, it writes with the configured
+of ``REPORT_MODELS``); left out, it writes with the configured
 coach model. ``PUT`` on the same path stores an answer pasted into the card
 instead, as a new row like any other report, and calls no model.
 
@@ -31,6 +31,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from sensei_top import claude_config as llm_config
 from sensei_top.ai.answers import PASTED_AUTHOR, coach_for
 from sensei_top.ai.coach.canon import ALLOWED_DOMAINS, CANON
 from sensei_top.ai.coach.evidence import (
@@ -53,7 +54,6 @@ from sensei_top.ai.coach.store import (
     write_coach_report,
 )
 from sensei_top.ai.llm import client as llm_client
-from sensei_top.ai.llm import config as llm_config
 from sensei_top.ai.routes.narrative import (
     check_pasted_length,
     no_credential_detail,
@@ -80,6 +80,7 @@ from sensei_top.api.models.coach import (
 from sensei_top.api.models.common import PastedAnswerIn
 from sensei_top.api.models.metagame import FormatName
 from sensei_top.api.sql import _shared_report_cache, default_format
+from sensei_top.claude_config import REPORT_MODELS
 from sensei_top.i18n import _
 from sensei_top.review.leaks import MIN_SAMPLE
 
@@ -303,7 +304,7 @@ def coach(request: Request, conn: Conn, fmt: CoachFormatParam = None) -> CoachRe
         default_model=cfg.model if cfg is not None else None,
         models=[
             _model_option_out(model_id, label)
-            for model_id, label in llm_client.REPORT_MODELS.items()
+            for model_id, label in REPORT_MODELS.items()
         ],
     )
 
@@ -356,8 +357,8 @@ def generate_coach_narrative(
     """Write a fresh coach report with Claude and store it as a new row —
     never an upsert, since "Since your last report" reads the previous
     row's own ``metrics_json`` (``ai/coach/store.py``). The model comes from
-    the Coach tab's dropdown (``body.model``, one of ``llm_client.
-    REPORT_MODELS``) when given, else the configured coach model
+    the Coach tab's dropdown (``body.model``, one of
+    ``REPORT_MODELS``) when given, else the configured coach model
     (``load_coach()``'s own ``[claude.coach]`` override or the base
     ``[claude]`` model). Mirrors ``narrative_post``'s exact order: a bad
     model id first (422, before touching config or building anything),
@@ -365,11 +366,11 @@ def generate_coach_narrative(
     failure), then the write. The report is for ``fmt`` (the ``format``
     query parameter, else ``default_format``), stored with it.
     """
-    if body is not None and body.model is not None and body.model not in llm_client.REPORT_MODELS:
+    if body is not None and body.model is not None and body.model not in REPORT_MODELS:
         raise HTTPException(
             status_code=422,
             detail=_("model must be one of {models}").format(
-                models=", ".join(llm_client.REPORT_MODELS),
+                models=", ".join(REPORT_MODELS),
             ),
         )
 
