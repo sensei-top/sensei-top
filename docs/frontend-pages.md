@@ -40,7 +40,11 @@ apart, and neither is asked for before `/api/formats` answers.
 
 Home never asks for `/api/coach`, `/api/coach/narrative` or a match's
 report (`/api/matches/{id}/report`). The coach on Home is `CoachPointer`,
-two sentences and a button to `/coach`.
+two sentences and a button to `/coach`. With AI features off the pointer is
+not drawn and the field card takes its row (`FieldAndCoach`, three columns
+instead of two). The pattern card stays: it is a core read from
+`/api/review/leaks`, and only its "See every pattern" button, which opens
+`/coach`, goes.
 
 A request on its way holds its card's place with a `Skeleton`. One that
 failed says so in the card that needed it (`ErrorNote`), and the rest of
@@ -502,6 +506,11 @@ games, never in an event's, and Settings' "Advice during a game" hides it
 everywhere (`docs/current-match.md`,
 "The event rule (`table/queues.py`)"). Under 48rem the page scrolls: the
 strip takes two lines and cuts none of its facts.
+
+With AI features off, between games `SideboardPlanCard` skips the written
+plan, the closest plan and the prompt, and the alternatives card is not
+drawn. This deck's past boarding stands alone when it has any; when it has
+none, the card says "You haven't boarded in this matchup yet."
 
 Each fact is shown once on this page. The status strip alone carries the
 game, the turn, play or draw, the record, the opponent's deck with its
@@ -997,14 +1006,25 @@ not drawn at all. In order:
 | `guide-the-list` | The list | `components/guide/ListCard.tsx` | always |
 | `guide-the-field` | The field | `components/guide/FieldCard.tsx` | always |
 | `guide-sideboard-plans` | Sideboard plans | `components/guide/WrittenCards.tsx` | the written guide has a plan or a problem |
-| `guide-matchup-coverage` | Matchup coverage | `components/MatchupCoverageCard.tsx` | always |
+| `guide-matchup-coverage` | Matchup coverage; "Archetypes to prepare for" with AI features off | `components/MatchupCoverageCard.tsx` | always |
 | `guide-between-rounds` | Between rounds | `components/guide/WrittenCards.tsx` | the written guide has a checklist item |
-| `guide-write` | Write and export | `ai/guide/WriteAndExport.tsx` | always |
+| `guide-write` | Write and export | `ai/guide/WriteAndExport.tsx` | AI features on |
+
+The section nav's label for the coverage card follows the card's own title
+(`guideSections`'s `write`): "Matchup coverage" with AI features on,
+"Archetypes to prepare for" with them off.
 
 Right after Scope, and only once the narrative read has settled, a deck
 with no written guide gets one `Callout`, "No written guide yet", saying
 what the three written sections will hold and linking to Write and
-export (`NoWrittenGuide`, in `WrittenCards.tsx`).
+export (`NoWrittenGuide`, in `WrittenCards.tsx`). With AI features off
+there is no Write and export to link to, so the callout is not drawn.
+
+With AI features off, a stored guide still draws. Its line under the
+author drops the model (`shownAuthor`, `lib/written.ts`): "Written on
+Sep 18."; the RCQ result's "Pasted in…" is unchanged. The stale
+callout's "Write it again" link to Write and export is drawn only with
+AI features on.
 
 **Scope** is four `StatTile`s (record, tournament lists read,
 rules-text coverage, the field's window), the format-reset sentence
@@ -1074,22 +1094,27 @@ covers is said once, at the top of the card, in a `warn` `Callout`. The
 plan's body, `PlanBody`, is exported: a pairing's stored brief draws it
 too.
 
-**Matchup coverage** (`MatchupCoverageCard.tsx`) is always drawn,
-written guide or not: three `StatTile`s (matches covered, field covered,
-left to write); then, when any archetype lacks a brief or has an
-out-of-date one, a "Write every missing brief" button that fetches the
-prompt for all of them only when pressed and shows it in place with
-`CopyPromptBody`; then a `DataTable` (Archetype,
-Brief, Field) whose archetype cell links to that pairing
-(`pairingAddress`) and reads the row's label, or `<label> · <archetype>`
+**Matchup coverage** (`MatchupCoverageCard.tsx`) is always drawn, written guide
+or not. With AI features off it is a field-only version titled "Archetypes to
+prepare for" (`matchups.coverage.fieldTitle`), with its own subtitle, "The
+archetypes you have met, most met first, then the most played ones you have not,
+with each one's share of tournament decks. Each opens its matchup."
+(`fieldSubtitle`) and its own no-format message (`fieldFormatUnknown`): the
+archetype list and the Field column stay, and the Brief column, the brief tiles
+and the write button go. With them on: three `StatTile`s (matches covered, field
+covered, left to write); then, when any archetype lacks a brief or has an
+out-of-date one, a "Write every missing brief" button that fetches the prompt
+for all of them only when pressed and shows it in place with `CopyPromptBody`;
+then a `DataTable` (Archetype, Brief, Field) whose archetype cell links to that
+pairing (`pairingAddress`) and reads the row's label, or `<label> · <archetype>`
 when another row of the table has the same label under a different key
-(`coverageName`; the Pairing page's heading and the prompt's notes
-read the same way), whose status is a neutral `Chip`, and whose field
-share is a whole percent or a dash. No rows at all is an `EmptyState`. A
-deck with no format (coverage's `fmt` null) has no rows and no tiles:
-the card is one `EmptyState`, "Nothing to cover yet", with
-`matchups.brief.formatUnknown` as its message, and a prompt for every missing
-brief that answers `format_unknown` says the same in the prompt's place.
+(`coverageName`; the Pairing page's heading and the prompt's notes read the same
+way), whose status is a neutral `Chip`, and whose field share is a whole percent
+or a dash. No rows at all is an `EmptyState`. A deck with no format (coverage's
+`fmt` null) has no rows and no tiles: the card is one `EmptyState`, "Nothing to
+cover yet", with `matchups.brief.formatUnknown` as its message, and a prompt for
+every missing brief that answers `format_unknown` says the same in the prompt's
+place.
 
 **Between rounds** (`BetweenRoundsCard`, in `WrittenCards.tsx`) is the
 written guide's checklist, numbered as written.
@@ -1336,8 +1361,9 @@ and the same reset-aware windowing exist server-side in
 ## Coach
 
 `/coach` and `/coach/:id` are `pages/CoachPage.tsx`, which passes the
-address's raw parameter to `ai/coach/CoachView.tsx` through `useAi()` and
-draws nothing when AI features are off. The view parses it
+address's raw parameter to `ai/coach/CoachView.tsx` through `useAi()`;
+the page redirects to Home when AI features are off (`<Navigate>`; the
+same for `/coach/:id`). The view parses it
 (`ai/coach/coach.ts::reportParam`: no parameter is the latest report, a
 positive integer written in digits is that report, anything else is
 unknown). The page keys the view by the parameter, so moving between

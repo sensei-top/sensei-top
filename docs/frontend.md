@@ -98,6 +98,9 @@ posts and links, so it stays responsive (`docs/frontend-site.md`).
   itself; it also closes on a press outside it, on its Close button and on
   any navigation. More reads as current when the page is one of the places
   behind it. A place's item in the bar or the sheet is at least 44 px high.
+- **Coach is a place only with AI features on.** The rail and the bottom bar
+  draw `visiblePlaces(aiOn)` (`shell/places.ts`), which leaves Coach out
+  when they are off; `/coach` redirects Home then.
 
 The current place's item carries `aria-current="page"`. Live carries a
 dot on its icon while a match is in progress, with the words for a screen
@@ -287,49 +290,55 @@ same change.
 ### Settings
 
 `/settings` is `pages/SettingsPage.tsx` over `views/SettingsView.tsx`.
-The page reads four things, `useShell()`, `useLLMStatus()`, the
-density and the Live advice switch, and draws its own Language section, which reads
-`useLanguage()`, first, above the view; the view then draws the
-sections in this order, each an `h2` over its cards, with an id an
-address can name:
+The page reads five things, `useShell()`, `useLLMStatus()`, the density, the
+Live advice switch and `useAiFeatures()`, and draws its own Language section,
+which reads `useLanguage()`, first, above the view; the view then draws the
+sections in this order, each an `h2` over its cards, with an id an address can
+name:
 
 | Section | Id | Component | Drawn when |
 |---|---|---|---|
 | Language | `language` | `settings/LanguageSection.tsx` | always |
 | Sources | `sources` | `settings/SourcesSection.tsx` | a desktop shell |
-| Writing | `writing` | `ai/settings/WritingSection.tsx` | always; with no shell, its `WritingStatus` |
+| Writing | `writing` | `ai/settings/WritingSection.tsx` | AI features on; with no shell, its `WritingStatus` |
 | Backup | `backup` | `settings/BackupSection.tsx` | a desktop shell |
 | App | `app` | `settings/AppSection.tsx` | a desktop shell |
 | Appearance | `appearance` | the page's own | always |
 | Live | `live-settings` | the page's own | always |
+| AI features | `ai-settings` | the page's own | always |
 | About and credits | `credits` | `CreditsView` | always |
 
-Language, Appearance, Live and About and credits are drawn with or
-without a shell. Language is drawn by the page above the view;
-Appearance, Live and About and credits reach the view as its children. Language is a
+Language, Appearance, Live, AI features and About and credits are drawn with or
+without a shell. Language is drawn by the page above the view; Appearance, Live,
+AI features and About and credits reach the view as its children. Language is a
 `Segmented` (System, English, Português (Brasil)) over `i18n.ts`'s
-`useLanguage`. The choice is kept in a shell's `shell.json` (written
-through `app.set({ language })`, and the shell's publish of it wins at
-the next start), else in the browser's own storage; "System" is the
-first English or Portuguese tag among the viewer's languages, English
-when there is none (`i18n.ts`'s `systemLanguage`); `docs/i18n.md`,
-"The language, from setting to sentence", has the same facts beside the
-server's half. Appearance is the density control, a `Segmented` (Comfortable,
-Compact); `docs/design-system.md`'s "Density" says what it changes and
-where the choice is kept. Live is one `Switch`, "Advice during a game",
-on by default and kept in the browser's own storage
-(`shell/liveAdvice.ts`); `docs/current-match.md`,
-"The event rule (`table/queues.py`)", says what it hides and why the
-server never sees it.
+`useLanguage`. The choice is kept in a shell's `shell.json` (written through
+`app.set({ language })`, and the shell's publish of it wins at the next start),
+else in the browser's own storage; "System" is the first English or Portuguese
+tag among the viewer's languages, English when there is none (`i18n.ts`'s
+`systemLanguage`); `docs/i18n.md`, "The language, from setting to sentence", has
+the same facts beside the server's half. Appearance is the density control, a
+`Segmented` (Comfortable, Compact); `docs/design-system.md`'s "Density" says
+what it changes and where the choice is kept. Live is one `Switch`, "Advice
+during a game", on by default and kept in the browser's own storage
+(`shell/liveAdvice.ts`); `docs/current-match.md`, "The event rule
+(`table/queues.py`)", says what it hides and why the server never sees it. With
+AI features off, the switch's description (`settings.liveAdvice.descriptionOff`)
+stops listing the matchup brief, which is hidden then; the switch itself and the
+rest of the sentence are unchanged. AI features is one `SavingSwitch` whose
+value is `useAiFeatures()`'s: in a desktop shell it writes shell.json's
+`aiFeatures` through `app.set`, in a browser it writes `localStorage`. Its
+description says what goes: the coach, written reports and guides, matchup
+briefs and the prompts that write them; nothing already written is deleted.
+Writing is drawn only while it is on.
 
-**In a browser, `/settings` is Language, Writing, Appearance, Live and
-About and credits.** Writing is then one card of sentences from
-`GET /api/llm/status`: a Claude key is set and which model writes, by
-its id as the API gives it; or none is set, and what the app does then
-(the prompt is copied, the answer pasted back). Nothing in it can be
-changed there: the key is set in the config file (`docs/llm.md`). While
-the answer loads the card draws nothing; when it failed, one sentence
-says so.
+**In a browser, `/settings` is Language, Writing, Appearance, Live, AI features
+and About and credits.** Writing is then one card of sentences from `GET
+/api/llm/status`: a Claude key is set and which model writes, by its id as the
+API gives it; or none is set, and what the app does then (the prompt is copied,
+the answer pasted back). Nothing in it can be changed there: the key is set in
+the config file (`docs/llm.md`). While the answer loads the card draws nothing;
+when it failed, one sentence says so.
 
 #### The bridge
 
@@ -544,6 +553,13 @@ Notes the table does not carry:
   meter), `done` or `failed`; leaving the page does not stop the run,
   and coming back shows where it is. `done`'s line is never shown: the
   CLI's last line names the database's full path.
+- **Ready asks one question first: AI features.** It sits above the
+  daily-update switch, two buttons (`AiQuestion`), neither pressed
+  until the person answers. It is asked only when the shell's
+  `aiFeatures` is null at mount, so an install that already decided
+  never sees it, and never in a browser, which has no Welcome. Go to
+  Home waits for a press of one of the two answers, which saves
+  `aiFeatures` through `app.set`.
 - **Ready holds the two preferences**: the update check, where the
   build has an updater, and autostart, where the shell asks. Both are
   preferences, and Ready is where the person stops reading. Ready
@@ -901,8 +917,13 @@ any hook, draws `ai.GenerateCard` and the rest from what it returns, and on
 `null` draws nothing of its AI part: not the card, not the heading over it,
 not a sentence about it. A hook rather than a list of components because a
 page needs the answer as a boolean too, to hide what surrounds a card, and
-because the switch it will read is itself a hook. Until that switch exists
-it never returns `null`. The boundary is a lint rule, under "Checks".
+because the switch it reads is itself a hook. The boundary is a lint
+rule, under "Checks".
+
+The switch is `shell/aiFeatures.ts`'s `useAiFeatures()`, which resolves in
+this order: a context override (`AiFeaturesContext`, for tests and the
+reference page), then the desktop shell's `aiFeatures` (null, undecided,
+reads as off), then `localStorage` in a browser, on by default.
 
 `ai/CopyPromptCard.tsx` has two exports. `CopyPromptBody` is
 everything inside the card (the buttons to copy and to show the prompt, the

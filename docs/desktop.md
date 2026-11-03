@@ -94,7 +94,12 @@ command's stdin, never in its arguments. The shell alone writes
 the window is closed", start with the system, the daily update check,
 diagnostic mode, the language, which clients the user plays (`plays`,
 `arena` and/or `mtgo`; missing means both, so an install from before it
-behaves as before) and whether onboarding is finished. The server never
+behaves as before), whether onboarding is finished and whether the AI
+features show (`aiFeatures`). A missing `aiFeatures` is undecided: the
+page reads it as off and Welcome asks. Once per launch, before the first
+publish, an install with `onboarded: true` and no key is settled to true
+(`settleAiFeatures`), since it never sees Welcome again; any other install
+stays undecided until Welcome or Settings writes it. The server never
 reads it. It is read once at launch and written whole through a temporary
 file and a rename, a key it does not know is carried through every write,
 and a file that is not JSON is moved aside as `shell.json.bad`.
