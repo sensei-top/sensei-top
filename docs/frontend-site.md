@@ -225,7 +225,7 @@ a demo copy (`web/scripts/site-images.mjs`; `--base` and `--out` have no
 default, since the real server's pages hold real match history). It opens
 each view of `SITE_VIEWS` at 1440×900, writes `<name>.png` and, with
 `magick`, `<name>.webp` at quality 85, then renders the language's card to
-`og.png` with the `home.webp` beside it; `--only` picks views by name. It
+`og.png` with the `home.webp` beside it; `--only` picks views by name. A view that carries `focal: { y, height }` (CSS px, with an optional `heightByLocale` where one language's page is taller above the crop's end: Home, the match report, Matchups, Coach) is also shot at a 1008 px viewport tall enough for `y + height`, at 1.5x, clipped to `x: 104, width: 884` and never full-page, and written as `<name>-focal.png` and `.webp`; the landing shows these crops at 1326 px wide, so they read at the page's width. `focalCapture` is the tested pure part. It
 copies nothing into `site/` or `docs/`: each file is looked at, then moved
 by hand. Two copies of the database are made for one set of captures. The
 uncut copy gives every view but Live; the Live capture needs a copy cut

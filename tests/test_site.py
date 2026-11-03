@@ -365,7 +365,11 @@ def test_the_hero_image_is_the_only_eager_one_on_the_landing(url_path):
             )
             assert (img["width"], img["height"]) == drawn.groups(), img["src"]
         else:
-            assert (img["width"], img["height"]) == ("1440", "900"), img["src"]
+            matchups = "786" if url_path.startswith("/pt-br") else "759"
+            focal = {"home": "1185", "match-report": "960", "matchups": matchups, "coach": "945"}
+            name = img["src"].rsplit("/", 1)[1].removesuffix(".webp")
+            expected = ("1326", focal[name]) if name in focal else ("1440", "900")
+            assert (img["width"], img["height"]) == expected, img["src"]
 
 
 @pytest.mark.parametrize("url_path", LANDINGS)
@@ -581,7 +585,8 @@ def test_the_store_listing_is_a_button_a_step_and_a_help_line():
         raw, page = load(url_path)
         assert "STORE_URL" not in raw
         assert "Microsoft Store:" in page.visible_text
-        assert hrefs(page).count(STORE) == 2, url_path
+        # Three button groups and the Store step.
+        assert hrefs(page).count(STORE) == 4, url_path
     for url_path in ("/help/", "/pt-br/help/"):
         _, page = load(url_path)
         assert hrefs(page).count(STORE) == 1, url_path
@@ -725,7 +730,8 @@ def test_the_download_buttons_go_to_the_worker_and_it_runs_only_for_them():
     for url_path in ("/", "/pt-br/"):
         _, page = load(url_path)
         buttons = [a["href"] for a in page.find("a") if "button" in (a.get("class") or "").split()]
-        assert buttons == [STORE, "/download/linux", "/download/windows"], url_path
+        # The hero, under the "download" heading, and before the footer.
+        assert buttons == [STORE, "/download/linux", "/download/windows"] * 3, url_path
         assert not [h for h in hrefs(page) if "/releases" in h], url_path
 
 
@@ -757,7 +763,7 @@ def test_the_static_buttons_keep_windows_first_for_an_unknown_visitor(url_path):
         (STORE, "button primary"),
         ("/download/linux", "button"),
         ("/download/windows", "button quiet"),
-    ], url_path
+    ] * 3, url_path
 
 
 def test_the_stylesheet_puts_the_primary_button_first():

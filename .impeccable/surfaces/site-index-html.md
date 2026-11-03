@@ -14,7 +14,7 @@ Unresolved: the user approves the mock screens (plan S0) before any code under s
 
 THESIS: The product is the pitch: a large, framed recording of the real dashboard directly under the headline. It refuses the old split hero beside a static image, and refuses any metaphor or quirk; convention, executed exactly, is the commitment.
 
-OWN-WORLD: Ground #0b0c14, text #f2f3f8, one pink accent #f4b6e4 used for the primary action, the current chapter and focus only. Inter Variable alone, 600 at display with tight tracking. Pill buttons, 1px cool hairlines, 14 px frames with a soft offset shadow, drawn SVG icons. No cards as page structure, no kickers, no gradient text.
+OWN-WORLD: Ground #0b0c14, text #f2f3f8, one pink accent #f4b6e4 used for the primary action, the current chapter and focus only, plus one low-alpha glow behind the hero and in the frame's shadow, kept by the user's decision as atmosphere (the detector's warning on it is expected). Inter Variable alone, 600 at display with tight tracking. Pill buttons, 1px cool hairlines, 14 px frames with a soft offset shadow, drawn SVG icons. No cards as page structure, no kickers, no gradient text.
 
 STORY: The visitor reads what it is, watches it work, sees each page explained in the video's order, learns what never leaves the machine and what is refused, and downloads.
 
