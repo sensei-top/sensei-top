@@ -297,7 +297,7 @@ address can name:
 |---|---|---|---|
 | Language | `language` | `settings/LanguageSection.tsx` | always |
 | Sources | `sources` | `settings/SourcesSection.tsx` | a desktop shell |
-| Writing | `writing` | `settings/WritingSection.tsx` | always; with no shell, its `WritingStatus` |
+| Writing | `writing` | `ai/settings/WritingSection.tsx` | always; with no shell, its `WritingStatus` |
 | Backup | `backup` | `settings/BackupSection.tsx` | a desktop shell |
 | App | `app` | `settings/AppSection.tsx` | a desktop shell |
 | Appearance | `appearance` | the page's own | always |
@@ -358,10 +358,11 @@ mapping. Four rules hold every section:
   `Switch` each have a read-only form).
 - **No stored secret reaches the page.** `writing.claudeKey` and
   `writing.topdeckKey` say whether a key is set, never the key, and
-  `save()` never carries one. A key's block (`settings/KeyField.tsx`)
-  holds what is typed in its own state, sends it through `setKey` alone,
-  and clears it when the shell answers and on "Cancel". A key is never
-  put in the address, in storage or in a `console` call.
+  `save()` never carries one. A key's block (`settings/KeyField.tsx`;
+  Sources and Writing both draw it) holds what is typed in its own
+  state, sends it through `setKey` alone, and clears it when the shell
+  answers and on "Cancel". A key is never put in the address, in
+  storage or in a `console` call.
 - **Nothing invented reaches the app.** A section is drawn only where
   what it shows comes from something true, and with no shell nothing is
   but Writing's sentences. A backup's date made up in the app would be
@@ -429,16 +430,17 @@ the failed backup's sentences name.
 
 - **Sources.** Arena (the log's path; the date order, a `Select` of
   "Read it from the log", "Month first" and "Day first"), Magic Online
-  (the handle, the folder of game logs, the folder of decks) and, with
-  a shell, Card data: how many cards have rules text, the download as
-  `CardDataProgress` draws it (below, "Welcome"), and "Download card
-  data", or "Download again" once there is any or a run has ended.
-  Under them, where the matches are kept, read-only, with "Open
-  folder". When the shell found the log itself (`arenaLog.found`) the
-  path's hint says so.
-- **Writing**, with a shell. Claude (its key; the model, from the
+  (the handle, the folder of game logs, the folder of decks), TopDeck.gg
+  (its key: a download source, not a metered call, so it is drawn
+  whether or not AI features are on) and, with a shell, Card data: how
+  many cards have rules text, the download as `CardDataProgress` draws
+  it (below, "Welcome"), and "Download card data", or "Download again"
+  once there is any or a run has ended. Under them, where the matches
+  are kept, read-only, with "Open folder". When the shell found the log
+  itself (`arenaLog.found`) the path's hint says so.
+- **Writing**, with a shell. Claude: its key; the model, from the
   shell's `models`; one sentence that a report's cost is measured and
-  shown on the report, with no number) and TopDeck.gg (its key).
+  shown on the report, with no number.
 - **Backup.** The last backup as a sentence, when and how large
   (`sizeOf`, `lib/size.ts`), or a `warn` callout when it failed; the
   folder; how many copies are kept (3, 7, 14 or 30); "Back up now";
@@ -931,7 +933,7 @@ badge or a price, and the button's words do not change with the writer.
 The `POST .../narrative` routes answer 503 with no key configured.
 
 The deck guide's narrative is structured rather than a prose blob, so
-its caller (`WriteAndExport.tsx`) passes no `narrative` and lets
+its caller (`ai/guide/WriteAndExport.tsx`) passes no `narrative` and lets
 `generatedAt` alone say that something is stored (`GenerateCard`'s
 `hasContent`); the match report's summary and the training plan pass
 their prose directly.
@@ -943,9 +945,9 @@ nothing runs past its card, capped at `max-h-64` with its own scroll
 when the `scroll` prop is set (the prompt, the Markdown) and as tall as
 its text otherwise (a command). Copying is `useCopied()`
 (`lib/clipboard.ts`), one hook shared by both cards and by
-`WriteAndExport.tsx`'s Markdown button: whether a copy landed in the
-last two seconds, and the function that makes one. A refused copy stays
-silent; the button's label is the only feedback either way.
+`ai/guide/WriteAndExport.tsx`'s Markdown button: whether a copy landed
+in the last two seconds, and the function that makes one. A refused copy
+stays silent; the button's label is the only feedback either way.
 
 An optional `controls` prop renders a picker in the button row, before
 the "write it" button; the Coach page's model picker (`docs/coach.md`)

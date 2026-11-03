@@ -533,7 +533,7 @@ writing down once and reusing.
 
 ## The live matchup brief
 
-`MatchupBriefCard` (`components/MatchupBriefCard.tsx`), reachable from
+`MatchupBriefCard` (`ai/brief/MatchupBriefCard.tsx`), reachable from
 Current match's disclosure bar rather than rendered inline, is what to play
 around against this match's opponent and a game-2 swap plan — the useful
 half of the deck guide's §6, reachable while a game is actually on the
@@ -930,7 +930,7 @@ as the Matchups row's two columns, by the small-sample rule over games),
 and In tournaments (the field's rate for the archetype in the deck's
 format, over the same window `useFieldRecords` gives Matchups). Below the
 tiles is the matchup brief against this opponent
-(`components/PairingBrief.tsx`, `docs/brief.md`) in one of five states
+(`ai/brief/PairingBrief.tsx`, `docs/brief.md`) in one of five states
 (`briefState`, `lib/pairing.ts`): not named (the key is not an archetype),
 written, with a warning and "Write it again" when the deck's coverage says
 the list or the field moved since; and, with no brief stored, no
@@ -994,7 +994,7 @@ not drawn at all. In order:
 | `guide-sideboard-plans` | Sideboard plans | `components/guide/WrittenCards.tsx` | the written guide has a plan or a problem |
 | `guide-matchup-coverage` | Matchup coverage | `components/MatchupCoverageCard.tsx` | always |
 | `guide-between-rounds` | Between rounds | `components/guide/WrittenCards.tsx` | the written guide has a checklist item |
-| `guide-write` | Write and export | `components/guide/WriteAndExport.tsx` | always |
+| `guide-write` | Write and export | `ai/guide/WriteAndExport.tsx` | always |
 
 Right after Scope, and only once the narrative read has settled, a deck
 with no written guide gets one `Callout`, "No written guide yet", saying
@@ -1024,9 +1024,10 @@ so the card's own title is just "Scope".
   ("Across all of your decks, N patterns", not drawn when there are
   none), each match row naming its deck.
 - the leak finder's cross-deck training plan as an accent
-  `GenerateCard` (`LeaksNarrativeCard`, in `LeakCard.tsx`). It is
-  unscoped, so it reads the same under any deck's guide, and it draws
-  nothing when there is no report yet.
+  `GenerateCard` (`LeaksNarrativeCard`, in
+  `ai/guide/LeaksNarrativeCard.tsx`). It is unscoped, so it reads the same
+  under any deck's guide, and it draws nothing when there is no report
+  yet.
 - when a key card first resolved: a `DataTable` from 48rem, a
   three-column grid a card under it.
 - the board on your own turn: two tables, "Games won" and "Games lost",
@@ -1088,12 +1089,13 @@ brief that answers `format_unknown` says the same in the prompt's place.
 **Between rounds** (`BetweenRoundsCard`, in `WrittenCards.tsx`) is the
 written guide's checklist, numbered as written.
 
-**Write and export** (`NarrativeAndExport`, in `WriteAndExport.tsx`) is
-an accent `GenerateCard` titled "Write the guide" or "Rewrite the
-guide", its `staleNote` "The list has changed since.", beside "Export
-the evidence", a card that fetches `GET /api/guide/{key}/markdown` only
-once opened and shows it in a scrolling `TextBlock` with its own copy
-button and a "Download .md" that saves the same text as a file.
+**Write and export** (`NarrativeAndExport`, in
+`ai/guide/WriteAndExport.tsx`) is an accent `GenerateCard` titled "Write
+the guide" or "Rewrite the guide", its `staleNote` "The list has changed
+since.", beside "Export the evidence", a card that fetches
+`GET /api/guide/{key}/markdown` only once opened and shows it in a
+scrolling `TextBlock` with its own copy button and a "Download .md" that
+saves the same text as a file.
 
 **The way between sections.** `SectionNav.tsx` draws two navs, one
 shown at a time: from 64rem a sticky column at the page's right; under

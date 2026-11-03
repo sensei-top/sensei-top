@@ -3,10 +3,19 @@ import { useState } from 'react'
 import {
   formatParams,
   get,
+  invalidateBriefWrite,
+  invalidateGuideWrite,
   post,
   putPasted,
+  query,
+  type BriefPromptOut,
   type CoachNarrativeResponse,
   type CoachResponse,
+  type GuideMarkdownOut,
+  type GuideNarrativeResponse,
+  type MatchupBriefOut,
+  type MatchupBriefResponse,
+  type NarrativeResponse,
 } from '../api'
 
 /** The coach tab's free, local evidence bundle — population, by-deck/role/
@@ -98,5 +107,119 @@ export const usePasteCoachNarrative = () => {
         queryClient.invalidateQueries({ queryKey: ['coach'] }),
         queryClient.invalidateQueries({ queryKey: ['coach-narrative'] }),
       ]),
+  })
+}
+
+/** The live matchup brief for the match in progress — what to play around
+ *  and the game-2 plan, from `brief/`. Every read here is free and local:
+ *  this route has no generate mutation of its own (unlike the match report
+ *  and the deck guide, `docs/llm.md`), so it always serves whatever was
+ *  imported or filled by a guide plus the prompt to write one from, and
+ *  riding the heartbeat like every other query is correct. */
+export const useCurrentMatchBrief = () =>
+  useQuery(query<MatchupBriefResponse>('current-match-brief', '/api/current-match/brief'))
+
+/** The stored training-plan prose over the leak finder's own ranked output
+ *  (every deck, unscoped — see `ai/review/leaks_store.py`), and always the
+ *  prompt to (re)write it from. Free and local to fetch; an ordinary query
+ *  on the heartbeat like the leak finder itself. */
+export const useLeaksNarrative = () =>
+  useQuery({
+    queryKey: ['leaks-narrative'],
+    queryFn: () => get<NarrativeResponse>('/api/review/leaks/narrative'),
+  })
+
+/** The evidence-only guide document, for copy or save. No narrative call —
+ *  fetched fresh each time the export panel is opened rather than cached
+ *  under the heartbeat, since it is only ever read right before a copy or
+ *  a download. */
+export const useGuideMarkdown = (key: string | undefined, enabled: boolean) =>
+  useQuery({
+    queryKey: ['guide-markdown', key],
+    queryFn: () => get<GuideMarkdownOut>(`/api/guide/${encodeURIComponent(key ?? '')}/markdown`),
+    enabled: enabled && Boolean(key),
+  })
+
+/** Every matchup brief stored for this deck, one per archetype
+ *  (`brief/store.py`). Free and local, so an ordinary query on the
+ *  heartbeat. It carries no stale flag: only coverage's `status` says
+ *  `stale`. */
+export const useGuideBriefs = (key: string | undefined) =>
+  useQuery({
+    queryKey: ['guide-briefs', key],
+    queryFn: () => get<MatchupBriefOut[]>(`/api/guide/${encodeURIComponent(key ?? '')}/briefs`),
+    enabled: Boolean(key),
+  })
+
+/** The single-brief prompt for one archetype, fetched only once its
+ *  pairing's "Build the prompt" or "Write it again" is pressed, so a page
+ *  never builds a prompt up front. */
+export const useGuideBriefPrompt = (
+  key: string | undefined,
+  archetypeKey: string | undefined,
+  enabled: boolean,
+) =>
+  useQuery({
+    queryKey: ['guide-brief-prompt', key, archetypeKey],
+    queryFn: () =>
+      get<BriefPromptOut>(
+        `/api/guide/${encodeURIComponent(key ?? '')}/briefs/${encodeURIComponent(archetypeKey ?? '')}/prompt`,
+      ),
+    enabled: enabled && Boolean(key) && Boolean(archetypeKey),
+  })
+
+/** Write a training plan over the leak finder's own ranked output with
+ *  Claude, and store it. */
+export const useGenerateLeaksNarrative = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => post<NarrativeResponse>('/api/review/leaks/narrative'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leaks-narrative'] })
+    },
+  })
+}
+
+/** Write this deck's guide narrative with Claude, and store it — also fills
+ *  every matchup plan it covers into `matchup_brief`, so it invalidates
+ *  what `invalidateGuideWrite` names, not just this deck's own narrative. */
+export const useGenerateGuideNarrative = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (key: string) =>
+      post<GuideNarrativeResponse>(`/api/guide/${encodeURIComponent(key)}/narrative`),
+    onSuccess: (_data, key) => invalidateGuideWrite(queryClient, key),
+  })
+}
+
+/** A pasted training plan over the leak finder's ranked output. */
+export const usePasteLeaksNarrative = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ answer }: { answer: string }) => putPasted<NarrativeResponse>({ card: 'leaks' }, answer),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leaks-narrative'] }),
+  })
+}
+
+/** A pasted deck guide. Its matchup plans land in `matchup_brief` in the
+ *  same write, so the deck's briefs, its coverage and the live brief are
+ *  invalidated with the narrative. */
+export const usePasteGuideNarrative = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ key, answer }: { key: string; answer: string }) =>
+      putPasted<GuideNarrativeResponse>({ card: 'guide', key }, answer),
+    onSuccess: (_data, { key }) => invalidateGuideWrite(queryClient, key),
+  })
+}
+
+/** A pasted matchup brief for one archetype: the deck's briefs, its
+ *  coverage and the live brief are invalidated. */
+export const usePasteBrief = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ key, archetypeKey, answer }: { key: string; archetypeKey: string; answer: string }) =>
+      putPasted<MatchupBriefOut>({ card: 'brief', key, archetypeKey }, answer),
+    onSuccess: (_data, { key }) => invalidateBriefWrite(queryClient, key),
   })
 }

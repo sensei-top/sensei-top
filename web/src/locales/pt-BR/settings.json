@@ -48,11 +48,11 @@
     "claudeSubtitle": "Com uma chave sua, um relatório é escrito quando você aperta o botão dele, e o que custou é mostrado nele. Sem chave, cada relatório lhe dá seu prompt para copiar.",
     "claudeRemoveBody": "Os relatórios voltam a lhe dar o prompt para copiar. O que já foi escrito fica.",
     "model": "Modelo",
-    "modelHint": "O que cada relatório custou é medido e mostrado no relatório.",
-    "topdeckSubtitle": "Uma chave gratuita do TopDeck.gg adiciona os torneios dele ao meta.",
-    "topdeckRemoveBody": "O meta deixa de receber torneios do TopDeck.gg. O que já está aqui fica."
+    "modelHint": "O que cada relatório custou é medido e mostrado no relatório."
   },
   "sources": {
+    "topdeckSubtitle": "Uma chave gratuita do TopDeck.gg adiciona os torneios dele ao meta.",
+    "topdeckRemoveBody": "O meta deixa de receber torneios do TopDeck.gg. O que já está aqui fica.",
     "dateOrder": {
       "auto": "Ler do log",
       "mdy": "Mês primeiro",

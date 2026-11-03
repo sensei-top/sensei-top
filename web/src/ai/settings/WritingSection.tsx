@@ -1,20 +1,14 @@
 import type { DeepPartial, KeyName, Saved, ShellSettings } from '../../bridge'
 import { useTranslation } from 'react-i18next'
-import { useRestart } from '../../lib/settings'
-import { Card } from '../ui'
-import { KeyField } from './KeyField'
-import { RestartNote, SavingSelect } from './SaveButton'
+import { useRestart, type WritingStatusAnswer } from '../../lib/settings'
+import { Card } from '../../components/ui'
+import { KeyField } from '../../components/settings/KeyField'
+import { RestartNote, SavingSelect } from '../../components/settings/SaveButton'
 
 // Product names, the same in every language.
 const CLAUDE = 'Claude'
-const TOPDECK = 'TopDeck.gg'
 
 type Writing = ShellSettings['writing']
-
-/** What the API says of writing, with no shell: `configured` and the
- *  model's id as it came, `'loading'` while it is asked, `'failed'` when
- *  it did not answer. */
-export type WritingStatusAnswer = { configured: boolean; model: string | null } | 'loading' | 'failed'
 
 /** How reports get written, with no shell: one card of sentences from the
  *  API's answer, whether a Claude key is set and which model writes, or
@@ -48,10 +42,10 @@ export function WritingStatus({ answer }: { answer: WritingStatusAnswer }) {
 }
 
 /** How reports get written, with a shell: the Claude card (its key, then
- *  the model that writes) and the TopDeck.gg card (its key). A key is
- *  never shown, only whether one is set. With no shell the page draws
- *  `WritingStatus` in its place; with a shell and no functions to call,
- *  every value is text and nothing can be changed. */
+ *  the model that writes). A key is never shown, only whether one is
+ *  set. With no shell the page draws `WritingStatus` in its place; with
+ *  a shell and no functions to call, every value is text and nothing
+ *  can be changed. */
 export function WritingSection({
   writing,
   save,
@@ -64,7 +58,6 @@ export function WritingSection({
   return (
     <div className="max-w-3xl space-y-6">
       <ClaudeCard writing={writing} save={save} setKey={setKey} />
-      <TopDeckCard set={writing.topdeckKey} setKey={setKey} />
     </div>
   )
 }
@@ -94,29 +87,6 @@ function ClaudeCard({
           options={writing.models}
           onSave={save && ((model) => watch(save({ model })))}
           hint={t('settings.writing.modelHint')}
-        />
-        <RestartNote show={restart} />
-      </div>
-    </Card>
-  )
-}
-
-function TopDeckCard({
-  set,
-  setKey,
-}: {
-  set: boolean
-  setKey?: (which: KeyName, key: string | null) => Promise<Saved>
-}) {
-  const { t } = useTranslation()
-  const { restart, watch } = useRestart()
-  return (
-    <Card title={TOPDECK} subtitle={t('settings.writing.topdeckSubtitle')}>
-      <div className="space-y-5">
-        <KeyField
-          set={set}
-          onSet={setKey && ((key) => watch(setKey('topdeck', key)))}
-          removeBody={t('settings.writing.topdeckRemoveBody')}
         />
         <RestartNote show={restart} />
       </div>

@@ -6,13 +6,13 @@ import type {
   PastBoardingGameOut,
   PastBoardingOut,
 } from '../api'
-import { usePasteBrief } from '../api'
 import type { TFunction } from '../i18n'
 import { seenOpponentCards } from '../lib/brief'
 import { cardName } from '../lib/cards'
 import { railAlternatives } from '../lib/livePanels'
 import { confidenceLabel } from '../lib/opponent'
-import { BoardPlan, BriefProvenance, PlayAroundList } from './MatchupBriefCard'
+import { BoardPlan, BriefProvenance, PlayAroundList } from '../ai/brief/MatchupBriefCard'
+import { usePasteBrief } from '../ai/hooks'
 import { CopyPromptCard } from '../ai/CopyPromptCard'
 import { formatList, formatPercent } from '../lib/format'
 import { rateAndRecordLine } from '../lib/sample'

@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } from '../api'
+import { useAi } from '../ai/registry'
 import { DeckMatchesCard } from '../components/DeckMatchesCard'
-import { PairingBrief } from '../components/PairingBrief'
 import { VersionSwitcher } from '../components/VersionSwitcher'
 import { BackLink, Button, EmptyState, ErrorNote, Loading, ManaPips, StatTile } from '../components/ui'
 import { coverageName } from '../lib/brief'
@@ -58,6 +58,7 @@ export function PairingView({
   format: string | null
 }) {
   const { t } = useTranslation()
+  const ai = useAi()
   const { deckIds, versions } = useDeckVersions(deckKey, versionIds)
   const matches = useDeckMatches(versionIds)
   const now = useNow()
@@ -153,7 +154,7 @@ export function PairingView({
       </div>
       {switcher}
       {body}
-      <PairingBrief deckKey={deckKey} opponentKey={opponentKey} />
+      {ai && <ai.PairingBrief deckKey={deckKey} opponentKey={opponentKey} />}
       {matchesCard}
     </div>
   )

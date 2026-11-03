@@ -1,12 +1,12 @@
 import { useTranslation } from 'react-i18next'
-import { useCurrentMatchBrief, usePasteBrief } from '../api'
-import type { BoardCardOut, CurrentMatch, MatchupBriefOut, PlanProblemOut, PlayAroundOut } from '../api'
-import type { TFunction } from '../i18n'
-import { ageText, seenOpponentCards } from '../lib/brief'
-import { isPasted } from '../lib/written'
-import { CopyPromptCard } from '../ai/CopyPromptCard'
-import { Card, Chip, EmptyState, Loading, Prose, SectionLabel } from './ui'
-import { formatList, formatPercent, formatRecord } from '../lib/format'
+import { useCurrentMatchBrief, usePasteBrief } from '../hooks'
+import type { BoardCardOut, CurrentMatch, MatchupBriefOut, PlanProblemOut, PlayAroundOut } from '../../api'
+import type { TFunction } from '../../i18n'
+import { ageText, seenOpponentCards } from '../../lib/brief'
+import { isPasted } from '../../lib/written'
+import { CopyPromptCard } from '../CopyPromptCard'
+import { Card, Chip, EmptyState, Loading, Prose, SectionLabel } from '../../components/ui'
+import { formatList, formatPercent, formatRecord } from '../../lib/format'
 
 function recordText(brief: MatchupBriefOut, t: TFunction): string | null {
   if (brief.personal_matches == null || brief.personal_matches === 0) return null

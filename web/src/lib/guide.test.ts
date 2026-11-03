@@ -375,7 +375,7 @@ describe('fieldCaption', () => {
 })
 
 describe('guideSections', () => {
-  const labels = (parts: { written: boolean; plans: boolean; checklist: boolean }) =>
+  const labels = (parts: { written: boolean; plans: boolean; checklist: boolean; write?: boolean }) =>
     guideSections(parts, t).map((s) => s.label)
 
   it('holds nine sections with every written part, in the page order', () => {
@@ -412,6 +412,19 @@ describe('guideSections', () => {
       'The field',
       'Matchup coverage',
       'Write and export',
+    ])
+  })
+
+  it('leaves out Write and export when write is false', () => {
+    expect(labels({ written: true, plans: true, checklist: true, write: false })).toEqual([
+      'Scope',
+      'How it works',
+      'Your play',
+      'The list',
+      'The field',
+      'Sideboard plans',
+      'Matchup coverage',
+      'Between rounds',
     ])
   })
 

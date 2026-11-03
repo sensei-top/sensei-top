@@ -12,13 +12,15 @@ export type GuideSection = { id: string; label: string }
 
 /** What the written guide holds, as the sections read it: `written` a
  *  stored guide; `plans` a stored guide with a plan or a problem;
- *  `checklist` a stored guide with an item between rounds. */
-export type WrittenParts = { written: boolean; plans: boolean; checklist: boolean }
+ *  `checklist` a stored guide with an item between rounds; `write` (true
+ *  when omitted) the Write and export section, which AI features being
+ *  off removes whole. */
+export type WrittenParts = { written: boolean; plans: boolean; checklist: boolean; write?: boolean }
 
 /** The Guide's sections in the page's order. A written section is in the
  *  list only when the guide holds something for it, and a section not in
  *  the list is not drawn. */
-export function guideSections({ written, plans, checklist }: WrittenParts, t: TFunction): GuideSection[] {
+export function guideSections({ written, plans, checklist, write = true }: WrittenParts, t: TFunction): GuideSection[] {
   const sections: GuideSection[] = [{ id: 'guide-scope', label: t('decks.guide.sections.scope') }]
   if (written) sections.push({ id: 'guide-how-it-works', label: t('decks.guide.sections.howItWorks') })
   sections.push(
@@ -29,7 +31,7 @@ export function guideSections({ written, plans, checklist }: WrittenParts, t: TF
   if (plans) sections.push({ id: 'guide-sideboard-plans', label: t('decks.guide.sections.sideboardPlans') })
   sections.push({ id: 'guide-matchup-coverage', label: t('decks.guide.sections.matchupCoverage') })
   if (checklist) sections.push({ id: 'guide-between-rounds', label: t('decks.guide.sections.betweenRounds') })
-  sections.push({ id: 'guide-write', label: t('decks.guide.sections.write') })
+  if (write) sections.push({ id: 'guide-write', label: t('decks.guide.sections.write') })
   return sections
 }
 

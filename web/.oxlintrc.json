@@ -20,12 +20,8 @@
     {
       "files": [
         "src/components/MatchReportPanel.tsx",
-        "src/components/MatchupBriefCard.tsx",
         "src/components/MatchupCoverageCard.tsx",
-        "src/components/PairingBrief.tsx",
         "src/components/SideboardPlanCard.tsx",
-        "src/components/guide/LeakCard.tsx",
-        "src/components/guide/WriteAndExport.tsx",
         "src/views/RcqView.tsx",
         "src/views/SurfacesView.tsx"
       ],

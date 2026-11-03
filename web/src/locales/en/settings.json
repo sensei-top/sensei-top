@@ -48,11 +48,11 @@
     "claudeSubtitle": "With a key of your own, a report is written when you press its button, and what it cost is shown on it. With none, each report gives you its prompt to copy.",
     "claudeRemoveBody": "Reports go back to giving you their prompt to copy. What is already written stays.",
     "model": "Model",
-    "modelHint": "What each report cost is measured and shown on the report.",
-    "topdeckSubtitle": "A free key from TopDeck.gg adds its tournaments to the field.",
-    "topdeckRemoveBody": "The field stops taking tournaments from TopDeck.gg. What is already here stays."
+    "modelHint": "What each report cost is measured and shown on the report."
   },
   "sources": {
+    "topdeckSubtitle": "A free key from TopDeck.gg adds its tournaments to the field.",
+    "topdeckRemoveBody": "The field stops taking tournaments from TopDeck.gg. What is already here stays.",
     "dateOrder": {
       "auto": "Read it from the log",
       "mdy": "Month first",

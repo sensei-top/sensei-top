@@ -1,8 +1,24 @@
 import { CopyPromptBody, CopyPromptCard } from './CopyPromptCard'
 import { GenerateCard } from './GenerateCard'
 import { CoachView } from './coach/CoachView'
+import { MatchupBriefCard } from './brief/MatchupBriefCard'
+import { PairingBrief } from './brief/PairingBrief'
+import { LeaksNarrativeCard } from './guide/LeaksNarrativeCard'
+import { NarrativeAndExport } from './guide/WriteAndExport'
+import { WritingSection, WritingStatus } from './settings/WritingSection'
 
-const SURFACES = { GenerateCard, CopyPromptCard, CopyPromptBody, CoachView } as const
+const SURFACES = {
+  GenerateCard,
+  CopyPromptCard,
+  CopyPromptBody,
+  CoachView,
+  MatchupBriefCard,
+  PairingBrief,
+  LeaksNarrativeCard,
+  NarrativeAndExport,
+  WritingSection,
+  WritingStatus,
+} as const
 
 /** The AI surfaces a page outside `ai/` may draw. */
 export type AiRegistry = typeof SURFACES
