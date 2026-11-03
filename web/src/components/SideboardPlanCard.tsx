@@ -11,9 +11,7 @@ import { seenOpponentCards } from '../lib/brief'
 import { cardName } from '../lib/cards'
 import { railAlternatives } from '../lib/livePanels'
 import { confidenceLabel } from '../lib/opponent'
-import { BoardPlan, BriefProvenance, PlayAroundList } from '../ai/brief/MatchupBriefCard'
-import { usePasteBrief } from '../ai/hooks'
-import { CopyPromptCard } from '../ai/CopyPromptCard'
+import { useAi } from '../ai/registry'
 import { formatList, formatPercent } from '../lib/format'
 import { rateAndRecordLine } from '../lib/sample'
 import { Card, Chip, Disclosure, EmptyState, Prose, SectionLabel } from './ui'
@@ -150,14 +148,15 @@ function postboardLine(intermission: IntermissionOut, t: TFunction): React.React
 }
 
 /** The primary break-phase card: what to board for the next game, from the
- *  best free tier available (S4's precedence) — an exact written plan, the
- *  closest one already written for a different archetype, this deck's own
- *  past boarding against the archetype, or (last) a prompt to write an
- *  exact plan from. Whichever it draws, the first line under the title
+ *  best free tier available — an exact written plan, the closest one
+ *  already written for a different archetype, this deck's own past
+ *  boarding against the archetype, or (last) a prompt to write an exact
+ *  plan from. Whichever it draws, the first line under the title
  *  (`postboardLine`) is this deck's own games 2 and 3 against the
- *  opponent's deck, when it has any. Reuses `MatchupBriefCard`'s extracted
- *  `BoardPlan`/`PlayAroundList`/`BriefProvenance` rather than forking
- *  their rendering. */
+ *  opponent's deck, when it has any. With AI features off, only that line
+ *  and the past boarding (or the empty state) are drawn. Reuses
+ *  `MatchupBriefCard`'s extracted `BoardPlan`/`PlayAroundList`/
+ *  `BriefProvenance` rather than forking their rendering. */
 export function SideboardPlanCard({
   intermission,
   match,
@@ -166,7 +165,7 @@ export function SideboardPlanCard({
   match: CurrentMatch | null
 }) {
   const { t } = useTranslation()
-  const paste = usePasteBrief()
+  const ai = useAi()
   const seen = seenOpponentCards(match)
   const title = headline(intermission, t)
   const postboard = postboardLine(intermission, t)
@@ -180,24 +179,28 @@ export function SideboardPlanCard({
       <PastBoardingList entries={pastBoardingEntries} label={pastBoardingLabel(intermission, t)} />
     ) : null
 
-  if (!intermission.plan && !intermission.prompt) {
+  if (!ai || (!intermission.plan && !intermission.prompt)) {
     // Nothing to show and nothing to write one from: no opponent named yet
     // (a game 1 conceded before a card was seen), no identity for our own
     // deck, or a match whose format is unknown, which is never read live.
-    // Say so rather than render a copy card whose buttons are dead.
+    // Say so rather than render a copy card whose buttons are dead. With
+    // AI features off the plans are not drawn either, so this deck's past
+    // boarding stands alone when it has any.
     return (
       <Card title={title}>
         <div className="space-y-4">
           {postboard}
-          <EmptyState
-            message={
-              intermission.opponent
-                ? t('matchups.sideboard.noPlan')
-                : intermission.fmt === null
-                  ? t('matchups.sideboard.formatUnknownNoPlan')
-                  : t('matchups.sideboard.unclassifiedNoPlan')
-            }
-          />
+          {(ai || !pastBoarding) && (
+            <EmptyState
+              message={
+                intermission.opponent
+                  ? t('matchups.sideboard.noPlan')
+                  : intermission.fmt === null
+                    ? t('matchups.sideboard.formatUnknownNoPlan')
+                    : t('matchups.sideboard.unclassifiedNoPlan')
+              }
+            />
+          )}
           {pastBoarding}
         </div>
       </Card>
@@ -205,24 +208,14 @@ export function SideboardPlanCard({
   }
 
   if (!intermission.plan) {
-    // No exact and no closest plan — the copy-prompt path MatchupBriefCard
-    // already renders for the ordinary in-game brief, mirrored here with the
-    // break's own deck_key/archetype_key.
+    // No exact and no closest plan: the prompt to write one from, as the
+    // ordinary in-game brief offers, with the break's own keys.
     return (
-      <CopyPromptCard
+      <ai.BreakBriefPrompt
         title={title}
-        subtitle={t('matchups.sideboard.noPlanYet')}
         prompt={intermission.prompt}
-        save={
-          intermission.deck_key && intermission.opponent?.archetype_key
-            ? (answer) =>
-                paste.mutateAsync({
-                  key: intermission.deck_key!,
-                  archetypeKey: intermission.opponent!.archetype_key!,
-                  answer,
-                })
-            : undefined
-        }
+        deckKey={intermission.deck_key}
+        archetypeKey={intermission.opponent?.archetype_key}
       >
         {postboard ? (
           <div className="space-y-4">
@@ -232,7 +225,7 @@ export function SideboardPlanCard({
         ) : (
           pastBoarding
         )}
-      </CopyPromptCard>
+      </ai.BreakBriefPrompt>
     )
   }
 
@@ -259,19 +252,19 @@ export function SideboardPlanCard({
             {t('matchups.sideboard.staleMessage')}
           </p>
         )}
-        <BoardPlan
+        <ai.BoardPlan
           boardIn={plan.board_in}
           boardOut={plan.board_out}
           problems={plan.problems}
           size="large"
           heading={t('matchups.sideboard.boarding')}
         />
-        <PlayAroundList playAround={plan.play_around} seen={seen} />
+        <ai.PlayAroundList playAround={plan.play_around} seen={seen} />
         {!isClosest && pastBoarding}
         <Disclosure summary={t('matchups.sideboard.fullWriteup')}>
           <div className="space-y-3">
             <Prose text={plan.prose} />
-            <BriefProvenance brief={plan} />
+            <ai.BriefProvenance brief={plan} />
           </div>
         </Disclosure>
       </div>
@@ -292,9 +285,10 @@ export function SideboardOpponentRail({
   match: CurrentMatch | null
 }) {
   const { t } = useTranslation()
+  const ai = useAi()
   const seen = seenOpponentCards(match)
   const alternatives = railAlternatives(intermission)
-  if (alternatives.length === 0) return null
+  if (!ai || alternatives.length === 0) return null
   return (
     <Card title={t('matchups.sideboard.otherPlans')} elevation={2}>
       <div className="divide-y divide-edge/50">
@@ -308,15 +302,15 @@ export function SideboardOpponentRail({
               })}
             >
               <div className="space-y-3">
-                <BoardPlan
+                <ai.BoardPlan
                   boardIn={alt.brief.board_in}
                   boardOut={alt.brief.board_out}
                   problems={alt.brief.problems}
                   heading={t('matchups.sideboard.boarding')}
                 />
-                <PlayAroundList playAround={alt.brief.play_around} seen={seen} />
+                <ai.PlayAroundList playAround={alt.brief.play_around} seen={seen} />
                 <Prose text={alt.brief.prose} />
-                <BriefProvenance brief={alt.brief} />
+                <ai.BriefProvenance brief={alt.brief} />
               </div>
             </Disclosure>
           </div>

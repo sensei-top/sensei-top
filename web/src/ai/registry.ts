@@ -1,8 +1,10 @@
 import { CopyPromptBody, CopyPromptCard } from './CopyPromptCard'
 import { GenerateCard } from './GenerateCard'
 import { CoachView } from './coach/CoachView'
-import { MatchupBriefCard } from './brief/MatchupBriefCard'
+import { BreakBriefPrompt } from './brief/BreakBriefPrompt'
+import { BoardPlan, BriefProvenance, MatchupBriefCard, PlayAroundList } from './brief/MatchupBriefCard'
 import { PairingBrief } from './brief/PairingBrief'
+import { CoveragePrompt } from './guide/CoveragePrompt'
 import { LeaksNarrativeCard } from './guide/LeaksNarrativeCard'
 import { RcqWrite } from './guide/RcqWrite'
 import { ReportNarrativeCard } from './report/ReportNarrativeCard'
@@ -15,6 +17,11 @@ const SURFACES = {
   CopyPromptBody,
   CoachView,
   MatchupBriefCard,
+  BoardPlan,
+  PlayAroundList,
+  BriefProvenance,
+  BreakBriefPrompt,
+  CoveragePrompt,
   PairingBrief,
   LeaksNarrativeCard,
   RcqWrite,

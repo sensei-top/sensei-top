@@ -15,16 +15,5 @@
         ]
       }
     ]
-  },
-  "overrides": [
-    {
-      "files": [
-        "src/components/MatchupCoverageCard.tsx",
-        "src/components/SideboardPlanCard.tsx"
-      ],
-      "rules": {
-        "no-restricted-imports": "off"
-      }
-    }
-  ]
+  }
 }

@@ -892,20 +892,17 @@ art — are in docs/design-system.md's "Card art".
 ## Writing prose: `GenerateCard` and `CopyPromptCard`
 
 Both cards live in `src/ai/`, the dashboard's AI package, and
-`ai/registry.ts` is the only intended way into it from outside, though the
-files named in the lint rule's override (under "Checks") still import the
-cards directly until each one moves to the registry. The registry is one
-hook, `useAi()`, that returns the AI surfaces a page outside `ai/` may
-draw (the two cards, `CopyPromptBody`, and each AI-only view moved into
-`ai/`, such as `CoachView`; typed `AiRegistry`) or `null` when AI
-features are off. A page calls it once, like any hook, draws
-`ai.GenerateCard` and the rest from what it returns, and on `null` draws
-nothing of its AI part: not the card, not the heading over it, not a
-sentence about it. A hook rather than a list of components
-because a page needs the answer as a boolean too, to hide what surrounds a
-card, and because the switch it will read is itself a hook. Until that
-switch exists it never returns `null`. The boundary is a lint rule, under
-"Checks".
+`ai/registry.ts` is the only way into it from outside, enforced by the lint
+rule under "Checks". The registry is one hook, `useAi()`, that returns the
+AI surfaces a page outside `ai/` may draw (the two cards, `CopyPromptBody`,
+and each AI-only view moved into `ai/`, such as `CoachView`; typed
+`AiRegistry`) or `null` when AI features are off. A page calls it once, like
+any hook, draws `ai.GenerateCard` and the rest from what it returns, and on
+`null` draws nothing of its AI part: not the card, not the heading over it,
+not a sentence about it. A hook rather than a list of components because a
+page needs the answer as a boolean too, to hide what surrounds a card, and
+because the switch it will read is itself a hook. Until that switch exists
+it never returns `null`. The boundary is a lint rule, under "Checks".
 
 `ai/CopyPromptCard.tsx` has two exports. `CopyPromptBody` is
 everything inside the card (the buttons to copy and to show the prompt, the
@@ -1099,12 +1096,10 @@ formatter mismatches in recharts' own types. Fix the type, do not cast it away.
 `no-restricted-imports` fails, as an error, any import of an `ai/` module
 from outside `ai/` other than `ai/registry`. The pattern refuses any
 import path with an `ai` segment, `ai` itself included, so no other folder
-or package subpath named `ai` can be imported. The files that still import
-a card directly are named in an override that turns the rule off for them;
-each leaves that list as it moves to the registry, and the list is meant
-to end empty. `scripts/aiBoundary.test.ts` runs oxlint against probe files
-to prove a forbidden import fails, and fails itself when a listed file no
-longer imports past the registry.
+or package subpath named `ai` can be imported. No file is excepted: the
+rule has no override. `scripts/aiBoundary.test.ts` runs oxlint against
+probe files to prove a forbidden import fails, and fails itself if an
+override that weakens the rule below an error comes back.
 
 ### Tests
 

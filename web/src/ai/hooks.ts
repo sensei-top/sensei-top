@@ -11,6 +11,8 @@ import {
   type BriefPromptOut,
   type CoachNarrativeResponse,
   type CoachResponse,
+  type CoverageOut,
+  type CoveragePromptOut,
   type GuideMarkdownOut,
   type GuideNarrativeResponse,
   type MatchupBriefOut,
@@ -97,6 +99,18 @@ export const useGenerateCoachNarrative = () => {
     },
   })
 }
+
+/* The seven paste mutations. Each stores an answer pasted into its card
+ * (`CopyPromptCard`'s box) and, on success, invalidates the card's own
+ * queries, a stored answer changing no row count the heartbeat reads. Its
+ * `onSuccess` returns the invalidations, so the mutation settles only once
+ * those reads have refetched: the box says "Saving…" until the stored
+ * answer is on the card, and does not empty early inviting a second save
+ * (the coach, leak and RCQ tables keep every row). The response body is never
+ * written into a query: a `PUT` answers with what it stored, and the next
+ * `GET` is what the card should show (the coach's, for one, rebuilds the
+ * prompt the `PUT` returned). A refusal rejects with `ApiError`, whose
+ * message is the server's sentence. */
 
 /** A pasted coach report, for the format the page's reads showed. */
 export const usePasteCoachNarrative = () => {
@@ -295,5 +309,26 @@ export const usePasteRcq = () => {
         queryClient.invalidateQueries({ queryKey: ['rcq-guide', key] }),
         queryClient.invalidateQueries({ queryKey: ['rcq-markdown', key] }),
       ]),
+  })
+}
+
+/** The multi-brief prompt for every missing/stale coverage row — fetched
+ *  only when the "copy one prompt for all" action is clicked. */
+export const useGuideCoveragePrompt = (key: string | undefined, enabled: boolean) =>
+  useQuery({
+    queryKey: ['guide-coverage-prompt', key],
+    queryFn: () =>
+      get<CoveragePromptOut>(`/api/guide/${encodeURIComponent(key ?? '')}/coverage/prompt`),
+    enabled: enabled && Boolean(key),
+  })
+
+/** A pasted answer to the coverage prompt, up to eight briefs at once:
+ *  invalidated as for one brief. */
+export const usePasteCoverage = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ key, answer }: { key: string; answer: string }) =>
+      putPasted<CoverageOut>({ card: 'coverage', key }, answer),
+    onSuccess: (_data, { key }) => invalidateBriefWrite(queryClient, key),
   })
 }

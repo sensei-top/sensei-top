@@ -1,9 +1,7 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useGuideCoverage, useGuideCoveragePrompt, usePasteCoverage } from '../api'
+import { useGuideCoverage } from '../api'
 import {
   coverageName,
-  coveragePromptNotes,
   coverageStatusWord,
   coverageTiles,
   isCoverageGap,
@@ -11,14 +9,15 @@ import {
 import { formatPercent } from '../lib/format'
 import { pairingAddress } from '../lib/pairing'
 import { placeById } from '../shell/places'
-import { CopyPromptBody } from '../ai/CopyPromptCard'
-import { Button, Card, Chip, DataTable, EmptyState, ErrorNote, Loading, StatTile, TextLink } from './ui'
+import { useAi } from '../ai/registry'
+import { Card, Chip, DataTable, EmptyState, ErrorNote, Loading, StatTile, TextLink } from './ui'
 
 /** Which archetypes have a matchup brief (`brief/coverage.py`): every
  *  archetype this deck has met and the field's most played ones, in the
  *  server's order. Three tiles (`coverageTiles`); when a row is missing
- *  or stale, the prompt for every gap at once, fetched only on its press
- *  and drawn in this card with no card of its own; then a row per
+ *  or stale, and AI features are on, the prompt for every gap at once,
+ *  fetched only on its press and drawn in this card with no card of its
+ *  own; then a row per
  *  archetype, its name a link to its pairing, where that brief's own
  *  prompt is, its status a word on a neutral chip and its share of the
  *  field. With no row, an empty state in the card. A failure to load is
@@ -30,9 +29,7 @@ export function MatchupCoverageCard({ guideKey }: { guideKey: string }) {
   const subtitle = t('matchups.coverage.subtitle')
   const formatUnknown = t('matchups.brief.formatUnknown')
   const coverage = useGuideCoverage(guideKey)
-  const [multiOpen, setMultiOpen] = useState(false)
-  const coveragePrompt = useGuideCoveragePrompt(guideKey, multiOpen)
-  const paste = usePasteCoverage()
+  const ai = useAi()
 
   if (coverage.error) return <ErrorNote error={coverage.error} />
   if (coverage.isPending) {
@@ -69,7 +66,6 @@ export function MatchupCoverageCard({ guideKey }: { guideKey: string }) {
   }
 
   const gaps = data.rows.some(isCoverageGap)
-  const multi = coveragePrompt.data
 
   return (
     <Card title={title} subtitle={subtitle}>
@@ -79,39 +75,9 @@ export function MatchupCoverageCard({ guideKey }: { guideKey: string }) {
         ))}
       </div>
 
-      {gaps && (
+      {ai && gaps && (
         <div className="mt-5">
-          {!multiOpen ? (
-            <Button variant="secondary" onClick={() => setMultiOpen(true)}>
-              {t('matchups.coverage.writeAll')}
-            </Button>
-          ) : (
-            <>
-              <p className="text-body text-ink2">{t('matchups.coverage.writeAllHint')}</p>
-              <CopyPromptBody
-                prompt={multi?.status === 'ok' ? multi.prompt : undefined}
-                loading={coveragePrompt.isLoading}
-                error={
-                  coveragePrompt.error?.message ??
-                  (multi?.status === 'format_unknown'
-                    ? formatUnknown
-                    : multi?.status === 'no_consensus'
-                      ? t('matchups.coverage.noneEnough')
-                      : multi?.status === 'nothing_missing'
-                        ? t('matchups.coverage.allWritten')
-                        : undefined)
-                }
-                save={(answer) => paste.mutateAsync({ key: guideKey, answer })}
-              >
-                {multi &&
-                  coveragePromptNotes(multi, data.rows, t).map((note) => (
-                    <p key={note} className="mt-2 text-caption text-muted">
-                      {note}
-                    </p>
-                  ))}
-              </CopyPromptBody>
-            </>
-          )}
+          <ai.CoveragePrompt guideKey={guideKey} rows={data.rows} />
         </div>
       )}
 

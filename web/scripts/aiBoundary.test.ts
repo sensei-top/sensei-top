@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -20,11 +20,17 @@ interface Override {
   rules: Record<string, unknown>
 }
 
+function severity(setting: unknown): unknown {
+  const level = Array.isArray(setting) ? setting[0] : setting
+  return level === 'error' || level === 2 ? 'error' : level
+}
+
 /** The files the config lets import ai/ modules directly: those whose
- *  override turns the boundary rule off. */
+ *  override sets the boundary rule to anything but an error, in either
+ *  the plain or the array form. */
 function exceptions(): string[] {
   const config = JSON.parse(readFileSync(CONFIG, 'utf8')) as { overrides?: Override[] }
-  return (config.overrides ?? []).filter((o) => o.rules[RULE] === 'off').flatMap((o) => o.files)
+  return (config.overrides ?? []).filter((o) => RULE in o.rules && severity(o.rules[RULE]) !== 'error').flatMap((o) => o.files)
 }
 
 let root: string
@@ -81,26 +87,12 @@ describe('the src/ai/ boundary', () => {
     expect(result.findings).toEqual([])
     expect(result.status).toBe(0)
   })
-
-  it.skipIf(exceptions().length === 0)('lets a named exception import an ai/ module directly', () => {
-    const [first] = exceptions()
-    const result = lint(first, '../ai/GenerateCard')
-    expect(result.findings).toEqual([])
-  })
 })
 
 describe('the exceptions to the src/ai/ boundary', () => {
-  // An exception outlives its need silently: once a file reaches ai/ only
-  // through the registry, its line in the config has to go.
-  it('names only files that still import an ai/ module other than the registry', () => {
-    for (const path of exceptions()) {
-      const file = join(WEB, path)
-      expect(existsSync(file), path).toBe(true)
-      const imports = [...readFileSync(file, 'utf8').matchAll(/from '([^']+)'/g)].map((m) => m[1])
-      expect(
-        imports.some((from) => /(^|\/)ai(\/(?!registry$)|$)/.test(from)),
-        path,
-      ).toBe(true)
-    }
+  // The list is empty: every file outside ai/ reaches it through the
+  // registry. A new exception is a design change, not a patch.
+  it('names no file', () => {
+    expect(exceptions()).toEqual([])
   })
 })

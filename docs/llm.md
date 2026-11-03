@@ -403,23 +403,21 @@ measurement, so the Opus 5 and Fable 5.1 rows overstate what they cost now.
 
 ## The fallback
 
-`GET /api/llm/status` reports `{configured: bool, model: str | None}`,
-never the key itself. Each of the five callers reads it and hands
-`GenerateCard` (`web/src/ai/GenerateCard.tsx`, meant to be reached
-through `useAi()` in `web/src/ai/registry.ts`, though the callers named
-in `web/.oxlintrc.json`'s override still import it directly until each
-one moves) a `writer`, who writes the report, from `writerFrom`
-(`web/src/lib/writer.ts`). The
-card builds one body, the same whoever writes: a written note
-(`writtenNote`, `lib/written.ts`: who wrote it, when, what it cost and,
-when the evidence has moved on since, a sentence saying so), then the
-stored prose, or "Nothing written yet." with neither. With no key
-configured nobody writes, and that body becomes `CopyPromptCard`'s
-children, above its "Copy the prompt" button. With one, the key writes,
-and the same body sits above a "Write it with Claude" button ("Rewrite
-with Claude" once something is stored) and a "Show the prompt" toggle.
-While it writes, the button counts the seconds: these calls are slow,
-and a guide at `effort: high` can take minutes.
+`GET /api/llm/status` reports `{configured: bool, model: str | None}`, never
+the key itself. Each of the five callers reads it and hands `GenerateCard`
+(`web/src/ai/GenerateCard.tsx`, reached through `useAi()` in
+`web/src/ai/registry.ts`, the only import of `ai/` the lint rule allows from
+outside it) a `writer`, who writes the report, from `writerFrom`
+(`web/src/lib/writer.ts`). The card builds one body, the same whoever
+writes: a written note (`writtenNote`, `lib/written.ts`: who wrote it, when,
+what it cost and, when the evidence has moved on since, a sentence saying
+so), then the stored prose, or "Nothing written yet." with neither. With no
+key configured nobody writes, and that body becomes `CopyPromptCard`'s
+children, above its "Copy the prompt" button. With one, the key writes, and
+the same body sits above a "Write it with Claude" button ("Rewrite with
+Claude" once something is stored) and a "Show the prompt" toggle. While it
+writes, the button counts the seconds: these calls are slow, and a guide at
+`effort: high` can take minutes.
 
 `Writer` has those two cases, nobody and a key (`docs/frontend.md`,
 "Writing prose: `GenerateCard` and `CopyPromptCard`"). A paid plan's
