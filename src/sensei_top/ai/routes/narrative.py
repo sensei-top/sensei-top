@@ -14,7 +14,7 @@ and its ``POST`` parses a structured answer instead of storing prose; the
 deck guide's also writes a second table (``matchup_brief``) in the same
 transaction. Forcing them through ``NarrativeSpec`` would cost more in
 indirection than it saves, so they share only ``require_credential``'s 503
-and ``run_authored_write``'s transaction. The coach (``api/routes/coach.py``)
+and ``run_authored_write``'s transaction. The coach (``ai/routes/coach.py``)
 resolves its own credential and shares ``no_credential_detail``,
 ``run_authored_write`` and the paste helpers.
 

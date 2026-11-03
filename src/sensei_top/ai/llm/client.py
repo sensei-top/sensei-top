@@ -75,7 +75,7 @@ _DYNAMIC_FILTERING_MODELS = frozenset(
 )
 
 # The models the coach's dashboard dropdown may ask ``write_report`` to use
-# (``api/routes/coach.py``'s ``POST .../narrative``), in the order the
+# (``ai/routes/coach.py``'s ``POST .../narrative``), in the order the
 # dropdown lists them, with display labels. Each one is priced (``_PRICES``),
 # gets the dynamic-filtering search tool (``_DYNAMIC_FILTERING_MODELS``), and
 # accepts what ``write_report`` always sends: ``thinking={"type": "adaptive"}``

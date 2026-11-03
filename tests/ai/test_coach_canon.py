@@ -1,4 +1,4 @@
-"""Tests for coach/canon.py: the reading list's own shape, and that its
+"""Tests for ai/coach/canon.py: the reading list's own shape, and that its
 ``topics`` name things that actually exist elsewhere in this codebase
 (a real ``Finding.code``, or one of this module's own tags) rather than a
 code an analyzer no longer emits.
@@ -15,7 +15,7 @@ import re
 from pathlib import Path
 
 import sensei_top.review as review_pkg
-from sensei_top.coach.canon import (
+from sensei_top.ai.coach.canon import (
     ALLOWED_DOMAINS,
     BROAD_TAGS,
     CANON,

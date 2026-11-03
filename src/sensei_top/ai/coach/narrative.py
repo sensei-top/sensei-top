@@ -1,10 +1,10 @@
-"""The coach report's prompt: every rollup ``coach/evidence.py`` computes,
-the reading list ``coach/canon.py`` offers and the player's previous report,
+"""The coach report's prompt: every rollup ``ai/coach/evidence.py`` computes,
+the reading list ``ai/coach/canon.py`` offers and the player's previous report,
 folded into one prompt. See docs/coach.md, "The prompt and the report".
 
 This module never makes the call itself: only ``sensei_top.ai.llm.client``
 imports ``anthropic`` (AGENTS.md non-negotiable #5). ``build_coach_prompt``
-is the one entry point; ``api/routes/coach.py`` calls it from the GET
+is the one entry point; ``ai/routes/coach.py`` calls it from the GET
 (``CoachPrompt.copied``, which ends with the answer contract), the POST
 (``CoachPrompt.prompt`` through ``llm.write_report``) and the paste PUT.
 
@@ -30,10 +30,8 @@ from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 from sensei_top.ai.answers import answer_format, coach_for, prose_schema
-from sensei_top.ai.review.narrative import UNTRACKED, _wrap_prompt
-from sensei_top.ai.review.narrative_store import context_hash as _context_hash
-from sensei_top.coach.canon import ALLOWED_DOMAINS, CanonEntry, entries_for
-from sensei_top.coach.evidence import (
+from sensei_top.ai.coach.canon import ALLOWED_DOMAINS, CanonEntry, entries_for
+from sensei_top.ai.coach.evidence import (
     CoachEvidence,
     LeakLine,
     build_coach_evidence,
@@ -41,7 +39,9 @@ from sensei_top.coach.evidence import (
     metrics_snapshot,
     progress_since,
 )
-from sensei_top.coach.store import CoachReport, extract_focus_section, latest_coach_report
+from sensei_top.ai.coach.store import CoachReport, extract_focus_section, latest_coach_report
+from sensei_top.ai.review.narrative import UNTRACKED, _wrap_prompt
+from sensei_top.ai.review.narrative_store import context_hash as _context_hash
 from sensei_top.i18n import english
 
 __all__ = [
@@ -216,7 +216,7 @@ def web_sources(prose: str) -> list[dict]:
     Scans only the ``## Sources`` section of ``clean_report(prose)`` and
     takes each line carrying an ``http(s)://`` URL, whatever the section
     labels its subheads. A URL is kept only when its host equals, or is a
-    subdomain of, an entry in ``coach/canon.py::ALLOWED_DOMAINS``; any
+    subdomain of, an entry in ``ai/coach/canon.py::ALLOWED_DOMAINS``; any
     other came from the model's memory, not a search, and is dropped (rule
     4). Dropped URLs are counted and logged once, not per line; a repeated
     URL keeps its first occurrence and is skipped silently. Each item is

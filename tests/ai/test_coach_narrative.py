@@ -1,7 +1,7 @@
-"""Tests for coach/narrative.py — the coach report's prompt assembly.
+"""Tests for ai/coach/narrative.py — the coach report's prompt assembly.
 
 Every ``CoachEvidence`` here is hand-built directly from the dataclasses
-(the same precedent ``tests/test_coach_evidence.py`` established for a piece
+(the same precedent ``tests/ai/test_coach_evidence.py`` established for a piece
 that needs no full log capture), and every expectation is computed from
 those inputs rather than from running ``build_coach_context`` and copying
 its output (rule 8): a rate assertion always compares against
@@ -10,7 +10,7 @@ typed by hand.
 
 The one exception is ``_EXPECTED_SYSTEM_PROMPT`` below: it is a standalone
 transcription of the authored prompt text, with Modern written in where the
-template says ``{fmt}``, not imported from ``coach/narrative.py`` itself
+template says ``{fmt}``, not imported from ``ai/coach/narrative.py`` itself
 (which would make the comparison test nothing but the module agreeing with
 itself).
 """
@@ -22,9 +22,8 @@ import logging
 
 import pytest
 
-from sensei_top.ai.review.narrative import UNTRACKED
-from sensei_top.coach.canon import CANON, entries_for
-from sensei_top.coach.evidence import (
+from sensei_top.ai.coach.canon import CANON, entries_for
+from sensei_top.ai.coach.evidence import (
     CoachEvidence,
     DeckLeaks,
     DeckLine,
@@ -37,7 +36,7 @@ from sensei_top.coach.evidence import (
     TurningBucket,
     format_rate,
 )
-from sensei_top.coach.narrative import (
+from sensei_top.ai.coach.narrative import (
     HEADINGS,
     SYSTEM_PROMPT,
     build_coach_context,
@@ -48,7 +47,8 @@ from sensei_top.coach.narrative import (
     system_prompt,
     web_sources,
 )
-from sensei_top.coach.store import CoachReport, write_coach_report
+from sensei_top.ai.coach.store import CoachReport, write_coach_report
+from sensei_top.ai.review.narrative import UNTRACKED
 from sensei_top.db import open_database
 
 # --- SYSTEM_PROMPT / HEADINGS ------------------------------------------------
@@ -763,7 +763,7 @@ def _insert_match(
     opponent_name="OppPlayerOne",
     opponent_user_id="OPPCLIENTID0001",
 ):
-    """The same minimal shape tests/test_coach_evidence.py's own
+    """The same minimal shape tests/ai/test_coach_evidence.py's own
     ``_insert_match`` uses, trimmed to what this module's privacy check
     needs: a real-looking opponent identity and deck id on every match."""
     conn.execute(

@@ -6,7 +6,7 @@ upserted). ``canon.py`` is the curated reading list a report's prompt may
 cite by id, plus the domain allowlist its web search is restricted to.
 """
 
-from sensei_top.coach.canon import (
+from sensei_top.ai.coach.canon import (
     ALLOWED_DOMAINS,
     BROAD_TAGS,
     CANON,
@@ -15,7 +15,7 @@ from sensei_top.coach.canon import (
     CanonEntry,
     entries_for,
 )
-from sensei_top.coach.evidence import (
+from sensei_top.ai.coach.evidence import (
     CoachEvidence,
     DeckLeaks,
     DeckLine,
@@ -31,7 +31,7 @@ from sensei_top.coach.evidence import (
     metrics_snapshot,
     progress_since,
 )
-from sensei_top.coach.narrative import (
+from sensei_top.ai.coach.narrative import (
     HEADINGS,
     CoachPrompt,
     build_coach_context,
@@ -41,7 +41,7 @@ from sensei_top.coach.narrative import (
     reading_list,
     system_prompt,
 )
-from sensei_top.coach.store import (
+from sensei_top.ai.coach.store import (
     CoachReport,
     context_hash,
     extract_focus_section,

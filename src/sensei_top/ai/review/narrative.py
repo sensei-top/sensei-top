@@ -70,7 +70,7 @@ class NarrativeError(Exception):
 
 SYSTEM_PROMPT_HEADING = "System prompt (paste this above the evidence):"
 
-# Shared with ``coach/narrative.py``, which ends its own context with the
+# Shared with ``ai/coach/narrative.py``, which ends its own context with the
 # same sentence — this reader never sees any of this for any match, so both
 # prompts state it identically rather than each writing their own wording.
 UNTRACKED = (
@@ -83,7 +83,7 @@ UNTRACKED = (
 def _wrap_prompt(system_prompt: str, context: str) -> str:
     """The framing-then-evidence shape: the system prompt, a divider, then
     the evidence. Shared with ``ai/review/leaks_narrative.py`` and
-    ``coach/narrative.py``, each with its own system prompt."""
+    ``ai/coach/narrative.py``, each with its own system prompt."""
     return f"{system_prompt}\n\n---\n\n{context}"
 
 
@@ -120,7 +120,7 @@ def _anchor(f: Finding) -> str:
 
 def finding_line(f: Finding) -> str:
     """One finding, rendered without its caveats — shared with
-    ``coach/evidence.py``'s worked examples (``ExampleGame.finding_lines``)
+    ``ai/coach/evidence.py``'s worked examples (``ExampleGame.finding_lines``)
     so the two never drift out of formatting sync. Caveats stay this
     function's caller's job: the narrative prompt renders them as their own
     indented line right after, but an example game's compact finding list

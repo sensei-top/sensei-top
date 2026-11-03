@@ -524,11 +524,11 @@ def test_the_match_report_prompt_asks_for_prose_and_the_call_does_not(
 def test_the_coach_prompt_asks_for_prose_and_the_call_does_not(
     monkeypatch, tmp_path, make_client,
 ):
+    from sensei_top.ai.coach.store import latest_coach_report
     from sensei_top.ai.llm import client as llm_client_module
     from sensei_top.ai.llm import config as llm_config_module
     from sensei_top.ai.llm.client import Completion
     from sensei_top.ai.llm.config import LLMConfig
-    from sensei_top.coach.store import latest_coach_report
 
     path = tmp_path / "coach.db"
     conn = open_database(path)

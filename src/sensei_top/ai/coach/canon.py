@@ -193,7 +193,7 @@ CANON: tuple[CanonEntry, ...] = (
 CORE_IDS: tuple[int, ...] = (1, 13, 18)
 
 # The topics that are not a ``Finding.code``: the leak finder's two
-# synthetic codes, and the broad tags. ``coach/narrative.py::reading_list``
+# synthetic codes, and the broad tags. ``ai/coach/narrative.py::reading_list``
 # derives every tag but "tilt" from the evidence sections a report has.
 LEAK_CODES = frozenset({"mana_screwed", "mana_flooded"})
 BROAD_TAGS = frozenset({

@@ -950,111 +950,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/coach": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Coach
-         * @description The Coach tab's free half: the cross-deck evidence for its profile
-         *     tables, built for one format, and every report ever written, of every
-         *     format. Always a 200 — a database below the leak finder's own minimum
-         *     sample is an ordinary state for a new install, not a server error
-         *     (``sufficient=False``, ``evidence=None``).
-         */
-        get: operations["coach_api_coach_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/coach/narrative": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Coach Narrative
-         * @description The latest stored report for one format plus that format's current
-         *     prompt, and whether the two have drifted apart. Same three-state
-         *     posture as every other ``GET .../narrative`` route: 'nothing to report
-         *     on yet' and 'nothing written yet' are both ordinary outcomes for an
-         *     opt-in feature. Only a report of the same format is ever the latest
-         *     one here, so another format's report can never read as current.
-         */
-        get: operations["coach_narrative_api_coach_narrative_get"];
-        /**
-         * Paste Coach Narrative
-         * @description Store an answer pasted into the Coach card as a new report for
-         *     ``fmt`` (the ``format`` query parameter, else ``default_format``, as for
-         *     ``GET``) — a new row, never an upsert, like a generated report.
-         *
-         *     Makes no model call. The answer is read through the answer contract
-         *     (``answers.read_answer``, header required): 422 when it is another
-         *     card's or another format's, is not JSON, or carries no prose, and
-         *     nothing is stored; 413 over 256 KB, before anything else; 404 below the
-         *     minimum sample, as for ``POST``. Stored with the context its header
-         *     says it was written for (so one written for older evidence reads as
-         *     stale), the copyable prompt and the metrics snapshot as of now, and the
-         *     reading-list ids the prose cites; the model is the sentinel ``pasted``,
-         *     effort, tokens, web searches and cost ``NULL``. Returns the stored
-         *     report as ``GET`` does, with the prompt it stored (as ``POST`` returns
-         *     the one it sent): the next ``GET``'s prompt names this report as the
-         *     previous one.
-         */
-        put: operations["paste_coach_narrative_api_coach_narrative_put"];
-        /**
-         * Generate Coach Narrative
-         * @description Write a fresh coach report with Claude and store it as a new row —
-         *     never an upsert, since "Since your last report" reads the previous
-         *     row's own ``metrics_json`` (``coach/store.py``). The model comes from
-         *     the Coach tab's dropdown (``body.model``, one of ``llm_client.
-         *     REPORT_MODELS``) when given, else the configured coach model
-         *     (``load_coach()``'s own ``[claude.coach]`` override or the base
-         *     ``[claude]`` model). Mirrors ``narrative_post``'s exact order: a bad
-         *     model id first (422, before touching config or building anything),
-         *     then the credential (503), then evidence (404), then the call (502 on
-         *     failure), then the write. The report is for ``fmt`` (the ``format``
-         *     query parameter, else ``default_format``), stored with it.
-         */
-        post: operations["generate_coach_narrative_api_coach_narrative_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/coach/narrative/{report_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Coach Narrative By Id
-         * @description One past report exactly as it was written — its own stored prompt,
-         *     never a freshly rebuilt one, and ``stale`` is always False: staleness
-         *     only means something for the latest report, since an old report is
-         *     expected to disagree with today's evidence.
-         */
-        get: operations["coach_narrative_by_id_api_coach_narrative__report_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/cards/{grp_id}/image": {
         parameters: {
             query?: never;
@@ -1535,6 +1430,111 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/coach": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Coach
+         * @description The Coach tab's free half: the cross-deck evidence for its profile
+         *     tables, built for one format, and every report ever written, of every
+         *     format. Always a 200 — a database below the leak finder's own minimum
+         *     sample is an ordinary state for a new install, not a server error
+         *     (``sufficient=False``, ``evidence=None``).
+         */
+        get: operations["coach_api_coach_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/coach/narrative": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Coach Narrative
+         * @description The latest stored report for one format plus that format's current
+         *     prompt, and whether the two have drifted apart. Same three-state
+         *     posture as every other ``GET .../narrative`` route: 'nothing to report
+         *     on yet' and 'nothing written yet' are both ordinary outcomes for an
+         *     opt-in feature. Only a report of the same format is ever the latest
+         *     one here, so another format's report can never read as current.
+         */
+        get: operations["coach_narrative_api_coach_narrative_get"];
+        /**
+         * Paste Coach Narrative
+         * @description Store an answer pasted into the Coach card as a new report for
+         *     ``fmt`` (the ``format`` query parameter, else ``default_format``, as for
+         *     ``GET``) — a new row, never an upsert, like a generated report.
+         *
+         *     Makes no model call. The answer is read through the answer contract
+         *     (``answers.read_answer``, header required): 422 when it is another
+         *     card's or another format's, is not JSON, or carries no prose, and
+         *     nothing is stored; 413 over 256 KB, before anything else; 404 below the
+         *     minimum sample, as for ``POST``. Stored with the context its header
+         *     says it was written for (so one written for older evidence reads as
+         *     stale), the copyable prompt and the metrics snapshot as of now, and the
+         *     reading-list ids the prose cites; the model is the sentinel ``pasted``,
+         *     effort, tokens, web searches and cost ``NULL``. Returns the stored
+         *     report as ``GET`` does, with the prompt it stored (as ``POST`` returns
+         *     the one it sent): the next ``GET``'s prompt names this report as the
+         *     previous one.
+         */
+        put: operations["paste_coach_narrative_api_coach_narrative_put"];
+        /**
+         * Generate Coach Narrative
+         * @description Write a fresh coach report with Claude and store it as a new row —
+         *     never an upsert, since "Since your last report" reads the previous
+         *     row's own ``metrics_json`` (``ai/coach/store.py``). The model comes from
+         *     the Coach tab's dropdown (``body.model``, one of ``llm_client.
+         *     REPORT_MODELS``) when given, else the configured coach model
+         *     (``load_coach()``'s own ``[claude.coach]`` override or the base
+         *     ``[claude]`` model). Mirrors ``narrative_post``'s exact order: a bad
+         *     model id first (422, before touching config or building anything),
+         *     then the credential (503), then evidence (404), then the call (502 on
+         *     failure), then the write. The report is for ``fmt`` (the ``format``
+         *     query parameter, else ``default_format``), stored with it.
+         */
+        post: operations["generate_coach_narrative_api_coach_narrative_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/coach/narrative/{report_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Coach Narrative By Id
+         * @description One past report exactly as it was written — its own stored prompt,
+         *     never a freshly rebuilt one, and ``stale`` is always False: staleness
+         *     only means something for the latest report, since an old report is
+         *     expected to disagree with today's evidence.
+         */
+        get: operations["coach_narrative_by_id_api_coach_narrative__report_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1653,9 +1653,9 @@ export interface components {
         };
         /**
          * CoachEvidenceModel
-         * @description Mirrors ``coach.evidence.CoachEvidence``, minus ``source`` (always
+         * @description Mirrors ``ai/coach/evidence.py::CoachEvidence``, minus ``source`` (always
          *     ``"all"`` — there is no source query parameter, see
-         *     ``api/routes/coach.py``), ``format_population`` (the ``gaps`` lines
+         *     ``ai/routes/coach.py``), ``format_population`` (the ``gaps`` lines
          *     already say how many matches each exclusion reason removed), and the
          *     prompt-only ``by_source``, ``examples``, ``decklists`` and
          *     ``format_counts``. ``fmt`` is carried once, as
@@ -1749,7 +1749,7 @@ export interface components {
          *     ``'prompt'`` when there is evidence but nothing stored yet,
          *     ``'no_report'`` when there isn't even enough evidence for a prompt. The
          *     latest-report GET is always a 200; the by-id GET, the POST and the PUT
-         *     have their own error codes (see ``api/routes/coach.py``).
+         *     have their own error codes (see ``ai/routes/coach.py``).
          */
         CoachNarrativeResponse: {
             /**
@@ -1898,7 +1898,7 @@ export interface components {
         /**
          * CoachSource
          * @description One citation a stored report actually used — either a reading-list
-         *     entry (``coach.canon.CANON``) or a web page ``llm.client.write_report``'s
+         *     entry (``ai/coach/canon.py::CANON``) or a web page ``llm.client.write_report``'s
          *     search tool visited.
          */
         CoachSource: {
@@ -4736,7 +4736,7 @@ export interface components {
         };
         /**
          * RateModel
-         * @description One win rate, split out of ``coach.evidence.Rate`` — ``ci`` (a tuple
+         * @description One win rate, split out of ``ai/coach/evidence.py::Rate`` — ``ci`` (a tuple
          *     there) becomes ``ci_low``/``ci_high`` here since a plain 2-tuple gives
          *     the frontend nothing to name each half by.
          */
@@ -6345,173 +6345,6 @@ export interface operations {
             };
         };
     };
-    coach_api_coach_get: {
-        parameters: {
-            query?: {
-                /** @description which format the report is for; omitted, the default /api/formats reports */
-                format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CoachResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    coach_narrative_api_coach_narrative_get: {
-        parameters: {
-            query?: {
-                /** @description which format the report is for; omitted, the default /api/formats reports */
-                format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CoachNarrativeResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    paste_coach_narrative_api_coach_narrative_put: {
-        parameters: {
-            query?: {
-                /** @description which format the report is for; omitted, the default /api/formats reports */
-                format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PastedAnswerIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CoachNarrativeResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    generate_coach_narrative_api_coach_narrative_post: {
-        parameters: {
-            query?: {
-                /** @description which format the report is for; omitted, the default /api/formats reports */
-                format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["CoachGenerateRequest"] | null;
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CoachNarrativeResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    coach_narrative_by_id_api_coach_narrative__report_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                report_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CoachNarrativeResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     card_image_api_cards__grp_id__image_get: {
         parameters: {
             query?: never;
@@ -7196,6 +7029,173 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RcqMarkdownOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    coach_api_coach_get: {
+        parameters: {
+            query?: {
+                /** @description which format the report is for; omitted, the default /api/formats reports */
+                format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    coach_narrative_api_coach_narrative_get: {
+        parameters: {
+            query?: {
+                /** @description which format the report is for; omitted, the default /api/formats reports */
+                format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachNarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paste_coach_narrative_api_coach_narrative_put: {
+        parameters: {
+            query?: {
+                /** @description which format the report is for; omitted, the default /api/formats reports */
+                format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PastedAnswerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachNarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_coach_narrative_api_coach_narrative_post: {
+        parameters: {
+            query?: {
+                /** @description which format the report is for; omitted, the default /api/formats reports */
+                format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CoachGenerateRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachNarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    coach_narrative_by_id_api_coach_narrative__report_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoachNarrativeResponse"];
                 };
             };
             /** @description Validation Error */

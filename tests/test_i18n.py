@@ -35,6 +35,8 @@ from fastapi import FastAPI
 
 from sensei_top import i18n
 from sensei_top.ai.brief import narrative as brief_narrative
+from sensei_top.ai.coach import evidence as coach_evidence
+from sensei_top.ai.coach import narrative as coach_narrative
 from sensei_top.ai.guide import narrative as guide_narrative
 from sensei_top.ai.guide import rcq_prompt as rcq_prompt_module
 from sensei_top.ai.llm import config as llm_config
@@ -51,8 +53,6 @@ from sensei_top.api.routes import guide as guide_routes
 from sensei_top.api.routes import matches as matches_routes
 from sensei_top.api.routes import rcq as rcq_routes
 from sensei_top.api.routes import review as review_routes
-from sensei_top.coach import evidence as coach_evidence
-from sensei_top.coach import narrative as coach_narrative
 from sensei_top.db import open_database
 from sensei_top.guide import rcq as guide_rcq
 from sensei_top.guide.deck import DeckIdentity, list_identities
@@ -911,7 +911,7 @@ def _insert_ladder_match(
     conn, match_id: str, result: str, started_at: str, deck_id: str | None = None,
 ) -> None:
     """The minimal shape the coach's population query reads (as in
-    tests/test_coach_api.py): a ladder event and one game."""
+    tests/ai/test_coach_api.py): a ladder event and one game."""
     conn.execute(
         "INSERT INTO matches (match_id, event_id, deck_id, self_seat, opponent_seat, "
         "opponent_user_id, opponent_name, started_at, ended_at, result, games_won, "

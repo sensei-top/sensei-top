@@ -126,7 +126,7 @@ def field_by_key(
 
     Shared by ``ai/brief/coverage.py::_field_counts`` (a thin adapter that
     keeps only each key's top name and its summed count),
-    ``coach/evidence.py::_build_field`` (which keeps every variant, plus its
+    ``ai/coach/evidence.py::_build_field`` (which keeps every variant, plus its
     own ``TOP_FIELD`` cut and sort) and ``guide/rcq.py::_expected``.
     """
     where, params = field_window(fmt, since)

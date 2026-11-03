@@ -1,4 +1,4 @@
-"""Tests for coach/evidence.py — the population every coach rollup shares,
+"""Tests for ai/coach/evidence.py — the population every coach rollup shares,
 and the first layer of rollups on top of it.
 
 Every population here is built directly against the projected schema
@@ -18,10 +18,10 @@ from types import SimpleNamespace
 
 import pytest
 
-import sensei_top.coach.evidence as evidence_mod
+import sensei_top.ai.coach.evidence as evidence_mod
 from sensei_top.ai.brief.coverage import _field_counts
+from sensei_top.ai.coach.evidence import MIN_SAMPLE, build_coach_evidence
 from sensei_top.archetypes.classify import Verdict
-from sensei_top.coach.evidence import MIN_SAMPLE, build_coach_evidence
 from sensei_top.db import open_database
 from sensei_top.formats import arena_format
 from sensei_top.guide.deck import DeckIdentity
@@ -1196,7 +1196,7 @@ def _snapshot(**overrides) -> MatchSnapshot:
 
 
 def test_role_assignment_finding_carries_a_role_evidence_value():
-    """coach/evidence.py's by_role rollup reads the role_assignment
+    """ai/coach/evidence.py's by_role rollup reads the role_assignment
     finding's own structured Evidence rather than parsing its prose title --
     this pins down that frame.py actually exposes one, and that this
     fixture's own numbers land on a specific role rather than merely one of
@@ -1715,7 +1715,7 @@ def test_build_field_reports_a_gap_when_no_classified_corpus_exists_in_window(co
 
 
 def test_field_counts_and_build_field_agree_per_key(conn):
-    """``ai/brief/coverage.py::_field_counts`` and ``coach/evidence.py::
+    """``ai/brief/coverage.py::_field_counts`` and ``ai/coach/evidence.py::
     _build_field`` both now build their per-key rows from
     ``guide/field.py::field_by_key`` -- pinned here by comparing their
     output over the same seeded window. Every label below is unique to one

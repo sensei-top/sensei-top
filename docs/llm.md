@@ -41,7 +41,7 @@ With no credential configured, none of the five routes may even build a
 client: `tests/test_llm.py::test_no_credential_means_no_client_is_constructed`
 pins it for the match report, the leak finder, the deck guide and the RCQ
 guide, and
-`tests/test_coach_api.py::test_no_credential_means_no_client_is_constructed`
+`tests/ai/test_coach_api.py::test_no_credential_means_no_client_is_constructed`
 for the coach.
 
 ## The standard for the free downloads
@@ -234,7 +234,7 @@ schedule, never a background worker:
 | `POST /api/matches/{id}/report/narrative` | `ai/review/narrative.py`'s existing `full_prompt` — this game's turn-by-turn shape and the report's findings, no raw hand or graveyard | `match_narrative` |
 | `POST /api/guide/{key}/narrative` | `ai/guide/narrative.py`'s existing `full_prompt` — the player's 75 and the field's top archetypes' consensus staples, both with oracle text | `deck_narrative` **and** `matchup_brief` (every matchup plan the guide covers) |
 | `POST /api/review/leaks/narrative` | `ai/review/leaks_narrative.py`'s existing `full_prompt` — one bullet per recurring pattern with its win-rate interval | `leaks_narrative` |
-| `POST /api/coach/narrative` | `coach/narrative.py`'s `full_prompt` — cross-deck win rates and recurring patterns over every completed constructed match, worked example losses, a curated reading list, and the previous report's own progress metrics; every field is a rate, a pattern label, or a reading id — no opponent name, user id, local path, or deck GUID, with the one documented exception of an example game's own `match_id` (`docs/coach.md`). Also takes an optional JSON body, `{"model": "..."}`, from the Coach page's model dropdown — one of `ai/llm/client.py::REPORT_MODELS`, else a 422 naming the allowed ids; left out, the call uses the configured coach model exactly as before the dropdown existed. | `coach_report` (a new row every time — a coach report is history, never overwritten) |
+| `POST /api/coach/narrative` | `ai/coach/narrative.py`'s `full_prompt` — cross-deck win rates and recurring patterns over every completed constructed match, worked example losses, a curated reading list, and the previous report's own progress metrics; every field is a rate, a pattern label, or a reading id — no opponent name, user id, local path, or deck GUID, with the one documented exception of an example game's own `match_id` (`docs/coach.md`). Also takes an optional JSON body, `{"model": "..."}`, from the Coach page's model dropdown — one of `ai/llm/client.py::REPORT_MODELS`, else a 422 naming the allowed ids; left out, the call uses the configured coach model exactly as before the dropdown existed. | `coach_report` (a new row every time — a coach report is history, never overwritten) |
 | `POST /api/guide/{key}/rcq/narrative` | `ai/guide/rcq_prompt.py`'s `rcq_prompt` — the exact 75 the user pasted, with oracle text, the list's diff against the field's consensus, the expected archetypes the user picked (corpus keys, each with consensus and oracle text), the field's shares since the format reset and over the last 14 days, and every event of the last 7 days (date, name, tier, players, top-8 archetypes). The body is `{decklist, expected[], own?}`; no opponent name, handle or local path. 503 with no credential, 502 on an `LLMError` | `rcq_guide` (a new row every time — each is the record of one event's preparation) |
 
 All five routes sit behind `api/guard.py`, which refuses a POST from a
@@ -276,7 +276,7 @@ the build context (`docs/brief.md`).
 
 The coach's call is also the only one that can reach the network *during* the
 call, not just at its start and end: `write_report` (below) hands Claude a
-server-side web-search tool restricted to `coach/canon.py::ALLOWED_DOMAINS`,
+server-side web-search tool restricted to `ai/coach/canon.py::ALLOWED_DOMAINS`,
 a fixed list of magic-strategy and metagame sites. The model decides whether
 to search at all — most of the prompt needs no search — and never sees a
 raw URL outside that list to visit.
@@ -309,7 +309,7 @@ the same way, one route's builder at a time:
 `test_leaks_context_carries_no_local_paths` for the leak finder,
 `test_build_guide_context_carries_no_local_paths` for the deck guide, and
 `test_build_coach_prompt_over_a_projected_database_no_privacy_leak` with
-`tests/test_coach_evidence.py`'s two `test_privacy_*` tests for the coach.
+`tests/ai/test_coach_evidence.py`'s two `test_privacy_*` tests for the coach.
 The RCQ guide's prompt has no such test. These tests are load-bearing
 now in a way they were only decorative before: a bug in one of those
 builders used to produce a prompt a human read before pasting anywhere; now it's a

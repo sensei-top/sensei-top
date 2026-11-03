@@ -153,7 +153,7 @@ FastAPI, built by `create_app(db_path, watcher=None)`.
 
 - **Metric endpoints are thin `SELECT`s over views**, and aggregation a `SELECT`
   can express belongs in the view, not the handler. Endpoints that serve a
-  feature package's own analysis (`review/`, `guide/`, `table/`, `coach/`) call
+  feature package's own analysis (`review/`, `guide/`, `table/`, `ai/coach/`) call
   that package instead and convert its dataclasses — see "Aggregation: views
   versus Python" in [architecture.md](architecture.md).
 - **Pydantic response models are the contract.** They drive the OpenAPI schema,

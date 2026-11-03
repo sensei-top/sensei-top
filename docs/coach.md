@@ -1,6 +1,6 @@
 # The coach
 
-Read this when touching `coach/`, `api/routes/coach.py`, or the Coach page.
+Read this when touching `ai/coach/`, `ai/routes/coach.py`, or the Coach page.
 
 ## What the coach is
 
@@ -32,13 +32,13 @@ nothing else in this project computes:
   example losses the report can point at turn by turn.
 
 Every report is history, not a single row a regenerate overwrites
-(`coach/store.py`) — a new report's "Since your last report" section reads
+(`ai/coach/store.py`) — a new report's "Since your last report" section reads
 the metrics a *previous* report of the same format stored, so writing a new
 one must never erase the one it will be measured against.
 
 Each row names its format in `coach_report.format`
 (`059_coach_report_format.sql`). Every report written before that migration
-was a Standard one, so a NULL there means Standard: `coach/store.py` reads it
+was a Standard one, so a NULL there means Standard: `ai/coach/store.py` reads it
 so, and the old rows are not backfilled, since rule 4 forbids writing an
 answer a row never recorded. `latest_coach_report(conn, fmt)` is the newest
 report of `fmt`, a NULL row counting as Standard; `list_coach_reports` is
@@ -59,7 +59,7 @@ matches or a written report (`lib/coach.ts::coachFormatChoices`); its "Every
 report" list stays the whole history, each row
 naming its format.
 
-`coach/evidence.py::build_coach_evidence` is a pure function of the
+`ai/coach/evidence.py::build_coach_evidence` is a pure function of the
 projected database, like every other analytics package in this project:
 nothing here is persisted itself, and a rebuild costs one request, not a
 migration. It reuses `review/`'s and `guide/`'s own building blocks rather
@@ -86,7 +86,7 @@ never noticed those matches existed.
   because it is a different claim from an excluded event or a Limited queue.
 - **An excluded event.** `DualColorPrecons` (a preconstructed-deck event) —
   not a real ladder result.
-- **A Limited queue.** `coach/evidence.py::_is_limited_event` — an event
+- **A Limited queue.** `ai/coach/evidence.py::_is_limited_event` — an event
   id whose first `_`-separated part is `QuickDraft`, `PremierDraft`,
   `TradDraft`, `CubeDraft` or `PickTwoDraft` — out of scope for a report about deckbuilding and matchup decisions across a player's own 75s.
 
@@ -257,14 +257,14 @@ anything but the database:
 outside this rule — everywhere else, a match id, opponent name, opponent
 user id, or deck GUID would be a privacy leak; `ExampleGame.match_id` exists
 only so the Coach page can link an example back to its match page, and
-`coach/narrative.py` never renders it into a prompt.
+`ai/coach/narrative.py` never renders it into a prompt.
 
 ## The leak line's signed difference
 
 The leak finder's own `Leak.gap` is unsigned — it ranks patterns by how much
 they move the win rate *either* direction, since both a lucky pattern and an
 unlucky one are worth surfacing. A coach report needs the direction too, so
-`coach/narrative.py::_leak_line` recomputes it from the two rendered rates:
+`ai/coach/narrative.py::_leak_line` recomputes it from the two rendered rates:
 `present.rate - absent.rate`, shown as `win rate ±N points with it`.
 Negative means the pattern shows up alongside losing; positive means it
 shows up alongside winning. This sign is derived once, in one place, so a
@@ -273,7 +273,7 @@ which is more damaging.
 
 ## The reading list
 
-`coach/canon.py::CANON` is a checked-in, hand-verified tuple of
+`ai/coach/canon.py::CANON` is a checked-in, hand-verified tuple of
 `CanonEntry`s — Mike Flores, Reid Duke's Level One course, Paulo Vitor Damo
 da Rosa, Frank Karsten's mana-base math, Richard Garfield on variance. It
 exists because a coach that can only quote a player's own numbers back at
@@ -297,7 +297,7 @@ analyzer actually emits (`role_assignment`, `race_behind`,
 codes (`mana_screwed`, `mana_flooded`, `review/leaks.py::mana_flags`), and
 broad tags a report's evidence sections carry
 (`sideboarding`, `mulligans`, `play-draw`, `deckbuilding`, `review`,
-`variance`, `tournament-prep`, `tilt`). `coach/narrative.py::reading_list`
+`variance`, `tournament-prep`, `tilt`). `ai/coach/narrative.py::reading_list`
 collects the codes and tags this report's *own* evidence actually surfaced —
 a leak code that fired, a role that occurred, a mulligan that was taken —
 and `entries_for` returns every entry whose topics intersect that set. Three
@@ -309,7 +309,7 @@ Entries are cited in the prompt, and in a stored report's prose, as `[R<n>]`.
 
 ## The domain allowlist
 
-`coach/canon.py::ALLOWED_DOMAINS` is the set of sites `llm.write_report`'s
+`ai/coach/canon.py::ALLOWED_DOMAINS` is the set of sites `llm.write_report`'s
 server-side web search tool may read — checked 2026-09-18 for live Standard
 metagame or strategy content, the same day the reading list itself was
 verified. It is deliberately **not** every site the reading list cites:
@@ -340,7 +340,7 @@ to search anywhere else can only ever reach one of these nine domains.
 
 ## Progress
 
-`coach/evidence.py::metrics_snapshot(evidence)` records a small, JSON-safe
+`ai/coach/evidence.py::metrics_snapshot(evidence)` records a small, JSON-safe
 dict at generation time — a `"version"` key (`2`), `"fmt"` (the report's
 format), `as_of`, the overall win-loss-rate, and each shown leak's
 code/gap/pattern. `overall` and the leaks are skill sections, so they span
@@ -362,7 +362,7 @@ clear `find_leaks`'s own sample gate. Progress is a skill reading: the new
 matches are every format's, each one's report built under its own format's
 window (a fresh `consensus_window_resolver`). The stored dict it reads is the
 previous report *of the same format* — `build_coach_prompt` picks it with
-`coach/store.py::latest_coach_report(conn, fmt)`, so a Modern report is never
+`ai/coach/store.py::latest_coach_report(conn, fmt)`, so a Modern report is never
 measured against a Standard one's focus areas.
 
 For the two mana-leak codes specifically, the denominator is narrower than
@@ -390,7 +390,7 @@ unreadable and progress can't be measured, per rule 4.
 the report's format name, so the prompt says which records are that
 format's alone and which are habits read across every format, and tells the
 model never to present one as the other. It fixes seven `## ` headings, in
-order (`coach/narrative.py::HEADINGS`), and the Coach page draws one card
+order (`ai/coach/narrative.py::HEADINGS`), and the Coach page draws one card
 per `## ` section (`web/src/lib/markdown.ts::parseReport`): Player profile,
 Since your last report (omitted entirely on a first report), Focus areas,
 Training plan, At the LGS, Format notes, Sources. `build_coach_context`
@@ -418,10 +418,10 @@ stored prose stays verbatim and neither report can be rewritten in place.
   narration and `## Player profile`. The Fable report had nothing there, so
   `parseReport`, which starts a section at a line beginning `## `, never sees
   its first heading: the player profile renders as untitled leading text, with
-  the narration in front of it. `coach/narrative.py::clean_report` fixes this
+  the narration in front of it. `ai/coach/narrative.py::clean_report` fixes this
   at read time — it finds the first occurrence of `## ` followed by a
   `HEADINGS` entry, even glued mid-line as in the Fable shape, and returns the
-  prose from there; `api/routes/coach.py::_report_out` is the one place all
+  prose from there; `ai/routes/coach.py::_report_out` is the one place all
   four routes' prose passes through it, so the fix reaches every route with no
   duplicated logic. Stored prose is still verbatim — the row on disk keeps its
   narration — only what the API returns is trimmed.
@@ -439,15 +439,15 @@ stored prose stays verbatim and neither report can be rewritten in place.
   loop ends — the next real report confirms or refutes the hypothesis
   instead of leaving it a guess (rule 4).
 
-  Until a real citation object shows up, `coach/narrative.py::web_sources`
+  Until a real citation object shows up, `ai/coach/narrative.py::web_sources`
   reads the pages back out of the prose itself: it scans the cleaned
   prose's own `## Sources` section for lines carrying an `http(s)://` URL
   — the reading-list lines above them carry none, so no `"Web sources:"` /
   `"Web:"` label needs recognizing, and both were seen on real reports. A
   URL is kept only when its host equals, or is a subdomain of, an entry in
-  `coach/canon.py::ALLOWED_DOMAINS` — the search tool is restricted to that
+  `ai/coach/canon.py::ALLOWED_DOMAINS` — the search tool is restricted to that
   list, so anything else came from the model's memory, not a citation, and
-  is dropped and counted rather than trusted. `api/routes/coach.py::
+  is dropped and counted rather than trusted. `ai/routes/coach.py::
   _sources_out` appends these after the stored web citations and reading
   ids, skipping any URL already present. `CoachReport.tsx`'s `SourcesBody`
   labels the two groups "Reading list" / "From the web" once both are
@@ -465,7 +465,7 @@ should read stale only when new matches change the evidence, and only then.
 The evidence names its format in its scope block, so a report on one format
 never hashes the same as a report on another.
 
-Every report is a plain `INSERT` (`coach/store.py::write_coach_report`),
+Every report is a plain `INSERT` (`ai/coach/store.py::write_coach_report`),
 never an upsert — a coach report is history, the same way a match itself
 is, not a single current slot the way `match_narrative`/`leaks_narrative`
 are. Each row is written with its format. `list_coach_reports` reads that

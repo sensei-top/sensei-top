@@ -60,7 +60,6 @@ source_modules = [
     "sensei_top.cards",
     "sensei_top.cli",
     "sensei_top.clock",
-    "sensei_top.coach",
     "sensei_top.config",
     "sensei_top.db",
     "sensei_top.diagnostics",
@@ -84,15 +83,6 @@ source_modules = [
 forbidden_modules = ["sensei_top.ai"]
 allow_indirect_imports = true
 ignore_imports = [
-    "sensei_top.api.routes.coach -> sensei_top.ai.answers",
-    "sensei_top.api.routes.coach -> sensei_top.ai.llm.client",
-    "sensei_top.api.routes.coach -> sensei_top.ai.llm.config",
-    "sensei_top.api.routes.coach -> sensei_top.ai.routes.narrative",
     "sensei_top.cli -> sensei_top.ai.llm.client",
     "sensei_top.cli -> sensei_top.ai.llm.config",
-    "sensei_top.coach.evidence -> sensei_top.ai.review.narrative",
-    "sensei_top.coach.narrative -> sensei_top.ai.answers",
-    "sensei_top.coach.narrative -> sensei_top.ai.review.narrative",
-    "sensei_top.coach.narrative -> sensei_top.ai.review.narrative_store",
-    "sensei_top.coach.store -> sensei_top.ai.review.narrative_store",
 ]

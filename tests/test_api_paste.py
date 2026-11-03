@@ -242,7 +242,7 @@ COACH_PATH = "/api/coach/narrative"
 @pytest.fixture
 def coach_client(tmp_path, make_client):
     """Ten completed Standard ladder matches: the leak finder's minimum sample,
-    the floor the coach's prompt is built on (as in tests/test_coach_api.py)."""
+    the floor the coach's prompt is built on (as in tests/ai/test_coach_api.py)."""
     path = tmp_path / "coach.db"
     conn = open_database(path)
     for i in range(10):
@@ -332,7 +332,7 @@ def test_coach_paste_stores_a_report_with_its_cited_readings(coach_client):
 
 def test_coach_paste_is_for_the_format_the_page_asks_for(coach_client):
     # Ten Standard matches clear the skill sample for a Modern report too
-    # (tests/test_coach_api.py), so the Modern page has its own prompt.
+    # (tests/ai/test_coach_api.py), so the Modern page has its own prompt.
     standard = coach_client.get(COACH_PATH).json()["prompt"]
     resp = coach_client.put(
         f"{COACH_PATH}?format=Modern",
@@ -406,7 +406,7 @@ def test_coach_paste_with_too_few_matches_is_404_and_413_comes_first(client):
 
 def test_coach_paste_without_a_format_is_for_the_default_format(coach_client):
     # A Modern match after the ten Standard ones: the latest match's format
-    # is the default (tests/test_coach_api.py).
+    # is the default (tests/ai/test_coach_api.py).
     conn = _db(coach_client)
     conn.execute(
         "INSERT INTO matches (match_id, event_id, deck_id, self_seat, opponent_seat, "

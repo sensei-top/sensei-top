@@ -155,8 +155,8 @@ class TurningBucket:
 class ExampleGame:
     """One worked example game, fully rendered. ``match_id`` is the one match
     id anywhere on ``CoachEvidence``, kept only so the Coach page can link the
-    example to its match: ``coach/narrative.py`` never renders it into a
-    prompt, and ``tests/test_coach_evidence.py``'s privacy tests carve out
+    example to its match: ``ai/coach/narrative.py`` never renders it into a
+    prompt, and ``tests/ai/test_coach_evidence.py``'s privacy tests carve out
     this field alone. ``opponent`` is always the opponent's *deck label*,
     never a player name or handle."""
 
@@ -198,7 +198,7 @@ class FieldLine:
 @dataclass(frozen=True, slots=True)
 class CoachEvidence:
     """The cross-deck report's own evidence base — never persisted itself
-    (``coach/store.py`` persists the *report* written from this, not this).
+    (``ai/coach/store.py`` persists the *report* written from this, not this).
     """
 
     source: str
@@ -1457,7 +1457,7 @@ def format_rate(rate: Rate) -> str:
 
 def metrics_snapshot(evidence: CoachEvidence) -> dict:
     """A compact snapshot of one report's headline numbers, stored
-    (``coach/store.py``) and handed back into ``progress_since`` later. See
+    (``ai/coach/store.py``) and handed back into ``progress_since`` later. See
     docs/coach.md, "Progress".
 
     Every value is a plain ``dict``/``list``/``str``/``int``/``float``/
@@ -1467,7 +1467,7 @@ def metrics_snapshot(evidence: CoachEvidence) -> dict:
 
     Version 2: ``overall`` and ``leaks`` span every format played, and
     ``fmt`` names the report's format. A version 1 snapshot counted Standard
-    alone, so ``coach/narrative.py::build_coach_prompt`` never diffs the two.
+    alone, so ``ai/coach/narrative.py::build_coach_prompt`` never diffs the two.
     """
     return {
         "version": 2,

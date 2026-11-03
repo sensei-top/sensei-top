@@ -34,7 +34,7 @@ over the entire history — every match ever recorded — by re-running one comm
 | `ai/brief/` | One `(deck, archetype)` pairing | Any board state, any game in progress |
 | `table/` | The match in progress, via one replay | Writing anything; any completed match |
 | `metagame/` | Tournament results, evidence tiers | `Player.log`, `reader/`, `projector/` |
-| `coach/` | `review/`, `guide/`, every deck's projected matches | `reader/`, `raw_events`, files |
+| `ai/coach/` | `review/`, `guide/`, every deck's projected matches | `reader/`, `raw_events`, files |
 | `archetypes/` | Revealed cards, archetype definitions, the corpus | `reader/`, `raw_events`, files |
 | `api/routes/`, `api/sql.py` | SQL over views; the feature packages' public API | How anything was produced |
 | `ai/` | Core, freely; the Claude call, the prompts, pasted answers | Nothing core needs: core must run with it deleted |

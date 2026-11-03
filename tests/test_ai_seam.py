@@ -6,8 +6,8 @@ it, and an app built without it carries ``api/providers.py``'s
 A core test: it must pass with ``src/sensei_top/ai/`` deleted, so it never
 imports ``sensei_top.ai`` statically, and the cases that need ``ai/`` skip
 without it. Hiding ``ai/`` is ``find_spec`` answering ``None``; the package
-stays in ``sys.modules`` through core's remaining static edges, which is
-why the build without it still mounts ``CORE_NARRATIVE_ROUTES``.
+stays in ``sys.modules`` through core's remaining static edges. Core mounts
+no ``/narrative`` route at all.
 """
 
 import importlib.util
@@ -22,14 +22,6 @@ from sensei_top.api import create_app
 from sensei_top.api.providers import NO_PROVIDERS, Providers, providers_of
 from sensei_top.cli import build_parser
 from sensei_top.db import open_database
-
-# The ``.../narrative`` routes still mounted by core's own routers
-# (``api/routes/``), not by ``sensei_top.ai.routers``. Pinned so that no new
-# one joins them; every route leaving for ``ai/routes/`` leaves this set.
-CORE_NARRATIVE_ROUTES = {
-    "/api/coach/narrative",
-    "/api/coach/narrative/{report_id}",
-}
 
 
 def _hide_ai(monkeypatch):
@@ -85,9 +77,7 @@ def test_without_ai_the_app_mounts_no_ai_route(hide_ai, build, make_client):
 
     paths = _paths(app)
     assert "/api/llm/status" not in paths
-    assert {p for p in paths if p.endswith("/narrative") or "/narrative/" in p} == (
-        CORE_NARRATIVE_ROUTES
-    )
+    assert not {p for p in paths if p.endswith("/narrative") or "/narrative/" in p}
     assert "/api/guide/{key}/rcq/preview" in paths
     assert not {p for p in paths if p.startswith("/api/guide/{key}/rcq")} - {
         "/api/guide/{key}/rcq/preview"

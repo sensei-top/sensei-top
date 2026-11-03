@@ -1,4 +1,4 @@
-"""Tests for coach/store.py: the coach report's own history, and the
+"""Tests for ai/coach/store.py: the coach report's own history, and the
 progress-review helper that reads a report's prose back apart."""
 
 from __future__ import annotations
@@ -6,7 +6,7 @@ from __future__ import annotations
 import pytest
 
 from sensei_top import db
-from sensei_top.coach.store import (
+from sensei_top.ai.coach.store import (
     extract_focus_section,
     latest_coach_report,
     list_coach_reports,

@@ -24,7 +24,7 @@ your task touches; none is required up front:
 | [docs/review.md](docs/review.md) | What each match-report analyzer measures, the strategy article behind it, and the leak finder | touching `review/` |
 | [docs/guide.md](docs/guide.md) | The deck guide: format-reset detection, the list-vs-consensus diff, the field join, the prompt/import round trip | touching `guide/` or a deck's Guide page |
 | [docs/brief.md](docs/brief.md) | The live matchup brief, and the prompt-out/answer-in round trip that replaced every paid call | touching `ai/brief/` or the matchup-brief card |
-| [docs/coach.md](docs/coach.md) | The coach's scope and exclusions, the skill/format evidence windows, the leak and example-game selection rules, the reading list and web-search allowlist, and progress-since-last-report | touching `coach/`, `api/routes/coach.py`, or the Coach page |
+| [docs/coach.md](docs/coach.md) | The coach's scope and exclusions, the skill/format evidence windows, the leak and example-game selection rules, the reading list and web-search allowlist, and progress-since-last-report | touching `ai/coach/`, `ai/routes/coach.py`, or the Coach page |
 | [docs/current-match.md](docs/current-match.md) | The live replay, the keep guide, the opponent-hand read and the remaining-library panel — the current-match reads, why they replay `raw_events` instead of reading `turns`, and their degradation rules | touching `table/`, `/api/current-match/read`, or the Live page |
 | [docs/llm.md](docs/llm.md) | The opt-in Claude API call: credential resolution, config file, which routes call out and what they send, cost accounting, the no-credential fallback, what the planned hosted report allowance changes | touching `ai/llm/`, a `.../narrative` POST route, or `GenerateCard`; planning anything hosted |
 | [docs/attribution.md](docs/attribution.md) | Every outside source the app downloads from, what it takes from each and on what terms; the Fan Content Policy notice | adding or changing a download source, or writing text that names a third party |
@@ -58,7 +58,7 @@ One line each; the detail is in the doc named, and
 - `src/sensei_top/review/` — the post-game match report, the cross-match leak finder and their prompts — `docs/review.md`.
 - `src/sensei_top/guide/` — the deck guide, built on `review/` rather than duplicating it, and the RCQ guide for one pasted 75 — `docs/guide.md`.
 - `src/sensei_top/ai/brief/` — the live matchup brief, one per `(deck, archetype)`, persisted as an authored artifact; `coverage.py` reads which archetypes still lack one — `docs/brief.md`.
-- `src/sensei_top/coach/` — the dated cross-deck coach report, kept as history; reuses `review/` and `guide/` — `docs/coach.md`.
+- `src/sensei_top/ai/coach/` — the dated cross-deck coach report, kept as history; reuses `review/` and `guide/` — `docs/coach.md`.
 - `src/sensei_top/table/` — the current-match reads: a request-time replay of `raw_events`, never stored. Arena-only. `queues.py` is the event rule: no advice on Live during an event's game — `docs/current-match.md`.
 - `src/sensei_top/archetypes/` — deck-archetype classification from revealed cards: a rule engine (`classify.py`) and a corpus read (`corpus.py`) — `docs/opponent-deck.md`, "Naming the opponent's deck".
 - `src/sensei_top/metagame/` — real tournament results, tiered by evidence quality — `docs/metagame.md`.

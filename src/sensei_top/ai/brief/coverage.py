@@ -54,7 +54,7 @@ def _field_counts(
     in this window's classified field, plus the window's true classified
     total. A thin adapter over ``guide/field.py``'s ``field_by_key`` — the
     one definition of "the field grouped by key" this and
-    ``coach/evidence.py``'s ``_build_field`` share (see ``field_by_key``'s
+    ``ai/coach/evidence.py``'s ``_build_field`` share (see ``field_by_key``'s
     own docstring for the "two keys can share one name" rationale). The
     label is each key's most common name in the window, ``field_by_key``'s
     own first variant."""

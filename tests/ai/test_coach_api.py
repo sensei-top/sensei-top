@@ -1,4 +1,4 @@
-"""Tests for api/routes/coach.py and api/models/coach.py: the coach's own
+"""Tests for ai/routes/coach.py and api/models/coach.py: the coach's own
 free ``GET /api/coach`` and its ``.../narrative`` routes.
 
 Mirrors the credential-gating and stored-report coverage of the other four
@@ -9,13 +9,13 @@ INSERT rather than a single overwritten slot, a credential resolved through
 ``load_coach()`` rather than ``load()``, and a ``write_report`` call that
 can carry both web citations and reading-list ids). No network call is ever
 made here: ``llm.config.load_coach`` and ``llm.client.write_report`` are
-monkeypatched throughout, the same objects ``api/routes/coach.py`` imports
+monkeypatched throughout, the same objects ``ai/routes/coach.py`` imports
 under, so a patch made through those module references is visible to the
 route.
 
 The "sufficient data" fixture builds a synthetic ten-match database
 directly against the projected schema — the same precedent
-tests/test_coach_narrative.py's own ``conn``/``_insert_match`` fixtures set
+tests/ai/test_coach_narrative.py's own ``conn``/``_insert_match`` fixtures set
 for reaching ``MIN_SAMPLE`` without a full log capture (rule 8: expectations
 here are read off what was inserted, never off a first run of the code).
 """
@@ -24,13 +24,13 @@ from __future__ import annotations
 
 import pytest
 
+from sensei_top.ai.coach.canon import CANON
+from sensei_top.ai.coach.store import write_coach_report
 from sensei_top.ai.llm import client as llm_client_module
 from sensei_top.ai.llm import config as llm_config_module
 from sensei_top.ai.llm.client import Citation, Completion, LLMError
 from sensei_top.ai.llm.config import LLMConfig
 from sensei_top.api import create_app
-from sensei_top.coach.canon import CANON
-from sensei_top.coach.store import write_coach_report
 from sensei_top.db import open_database
 
 

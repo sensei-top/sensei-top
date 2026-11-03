@@ -5,7 +5,7 @@ constructed match — ``/api/coach*`` (``docs/coach.md``).
 profile tables, plus every report ever written. The ``.../narrative`` routes
 can't reuse ``narrative_get``/``narrative_post``: those are hardwired to a
 single current row (``write_prose`` plus one stored slot a regenerate
-overwrites), while a coach report is history (``coach/store.py``), and its
+overwrites), while a coach report is history (``ai/coach/store.py``), and its
 ``POST`` calls ``llm.write_report`` — the web-search entry point — and
 resolves its credential through ``load_coach()`` rather than ``load()``.
 What *is* shared: ``no_credential_detail()``, ``run_authored_write`` and the
@@ -32,6 +32,26 @@ from typing import Annotated, Any
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from sensei_top.ai.answers import PASTED_AUTHOR, coach_for
+from sensei_top.ai.coach.canon import ALLOWED_DOMAINS, CANON
+from sensei_top.ai.coach.evidence import (
+    CoachEvidence,
+    DeckLeaks,
+    DeckLine,
+    FieldLine,
+    LeakLine,
+    MatchupLine,
+    Rate,
+    TurningBucket,
+    build_coach_evidence,
+)
+from sensei_top.ai.coach.narrative import build_coach_prompt, cited_ids, clean_report, web_sources
+from sensei_top.ai.coach.store import (
+    CoachReport,
+    latest_coach_report,
+    list_coach_reports,
+    read_coach_report,
+    write_coach_report,
+)
 from sensei_top.ai.llm import client as llm_client
 from sensei_top.ai.llm import config as llm_config
 from sensei_top.ai.routes.narrative import (
@@ -60,26 +80,6 @@ from sensei_top.api.models.coach import (
 from sensei_top.api.models.common import PastedAnswerIn
 from sensei_top.api.models.metagame import FormatName
 from sensei_top.api.sql import _shared_report_cache, default_format
-from sensei_top.coach.canon import ALLOWED_DOMAINS, CANON
-from sensei_top.coach.evidence import (
-    CoachEvidence,
-    DeckLeaks,
-    DeckLine,
-    FieldLine,
-    LeakLine,
-    MatchupLine,
-    Rate,
-    TurningBucket,
-    build_coach_evidence,
-)
-from sensei_top.coach.narrative import build_coach_prompt, cited_ids, clean_report, web_sources
-from sensei_top.coach.store import (
-    CoachReport,
-    latest_coach_report,
-    list_coach_reports,
-    read_coach_report,
-    write_coach_report,
-)
 from sensei_top.i18n import _
 from sensei_top.review.leaks import MIN_SAMPLE
 
@@ -355,7 +355,7 @@ def generate_coach_narrative(
 ) -> CoachNarrativeResponse:
     """Write a fresh coach report with Claude and store it as a new row —
     never an upsert, since "Since your last report" reads the previous
-    row's own ``metrics_json`` (``coach/store.py``). The model comes from
+    row's own ``metrics_json`` (``ai/coach/store.py``). The model comes from
     the Coach tab's dropdown (``body.model``, one of ``llm_client.
     REPORT_MODELS``) when given, else the configured coach model
     (``load_coach()``'s own ``[claude.coach]`` override or the base

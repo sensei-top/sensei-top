@@ -303,7 +303,7 @@ across the whole rerun. A match with no format gets no window and no
 consensus, never another format's. The two `find_leaks` call sites,
 `api/routes/review.py` (the leak finder's GET) and `ai/routes/leaks.py` (its
 narrative prompt), both pass a resolver over `_consensus_window(conn, fmt)`
-rather than leaving it `None`, and `guide/bundle.py` and `coach/evidence.py`
+rather than leaving it `None`, and `guide/bundle.py` and `ai/coach/evidence.py`
 pass `guide/window.py::consensus_window_resolver`, so a leak's own
 `field_matchup_rate` finding, when it fires, never mixes pre- and
 post-reset field data, or one format's field with another's.
@@ -367,7 +367,7 @@ with the request's language added otherwise, so a prompt — always built
 under `english()` — never reuses a report a Portuguese page built) is
 reused instead of rebuilt, so a caller pairing
 two `find_leaks` calls (`guide/bundle.py`) or a caller that already built
-some of these reports itself (`coach/evidence.py`) pays for each match's
+some of these reports itself (`ai/coach/evidence.py`) pays for each match's
 report at most once per request.
 
 ## The narrative (`ai/review/narrative.py`, `ai/review/leaks_narrative.py`)

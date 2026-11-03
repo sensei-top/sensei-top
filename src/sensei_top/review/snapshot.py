@@ -245,7 +245,7 @@ def classify_own_deck(
     The format is ``fmt`` when the caller knows it, already one of
     ``formats.FORMATS``: a match's ``v_match_format.format`` (``build_snapshot``)
     or a deck's format (``guide/deck.py``'s ``identity_format``, which
-    ``guide/field.py``, ``guide/list_diff.py`` and ``coach/evidence.py`` pass).
+    ``guide/field.py``, ``guide/list_diff.py`` and ``ai/coach/evidence.py`` pass).
     Without one, ``decks.format`` is read through ``formats.arena_format``,
     unless the caller passes ``use_deck_format=False``: an MTGO match does, since
     its deck's format is the store's FormatCode, which only pre-fills the pick.
@@ -350,7 +350,7 @@ def build_snapshot(
     it is the pre-reset-inclusive answer, and is only correct when the
     caller knows the corpus cannot cross a reset — no reset detected in
     this format, or no legality data yet to detect one from. A caller that
-    *can* see a reset (``coach/evidence.py``, the API routes under
+    *can* see a reset (``ai/coach/evidence.py``, the API routes under
     ``api/routes/matches.py``) must compute it and pass it here; this module
     never imports ``guide.window`` itself, since ``guide/`` is built on
     ``review/`` and a reverse import would be a package cycle.
@@ -358,7 +358,7 @@ def build_snapshot(
     ``consensus_cache``, when given, memoizes ``build_consensus`` across
     repeated calls within one caller's request, as ``build_consensus`` asks
     of a caller needing it more than once — ``review/leaks.py``'s
-    ``find_leaks`` and ``coach/evidence.py`` rebuild a snapshot per match,
+    ``find_leaks`` and ``ai/coach/evidence.py`` rebuild a snapshot per match,
     and many matches share an opponent archetype. The key is
     ``(opponent_archetype_key, fmt, consensus_since)`` rather than the
     archetype key alone, so two callers sharing one cache dict with
