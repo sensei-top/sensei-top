@@ -13,21 +13,37 @@ Last reviewed: 2026-10-19, for the docs verification: every doc checked
 against the code and against the others, and every row below re-read
 (schema version 63, ~3,360 Python tests).
 
+**Coach and accounts, 2026-11-02.** Supersedes four lines the entries
+below drew: rule 5's "nothing hosted writes for the user", "nothing free
+needs an account", "no telemetry", and the site never saying "AI".
+Planned, not built: a free, optional account with Google sign-in, which
+adds a backup of the match history and error reports, each its own yes,
+and a hosted rules coach that answers rules and card questions with cited
+rule numbers and is never sent a match (`BACKLOG.md`'s BL-100 to BL-102;
+AGENTS.md rules 5 and 6; `docs/llm.md`, "What is hosted, and what it
+receives"). The tracker keeps working fully without an account. The copy
+prompt and the user's own key stay as they are, and an "AI features"
+switch hides them and the coach together. Until the account ships, every
+"no account" claim in the README, the dashboard and the site is true and
+stays as written.
+
 **The roadmap's order, 2026-10-19.** Reordered with the user after the
 tracker research (plan 27). Written guides with any model and macOS move
 to Later; match contributions move to Never, so no match is ever
-collected or shared; the one that leaves the machine is a report the user
-asks for with their own key. The order itself is `ROADMAP.md`'s alone.
+pooled or shared; the one that leaves the machine is a report the user
+asks for with their own key (and, since 2026-11-02, the user's own
+cloud backup, above). The order itself is `ROADMAP.md`'s alone.
 
 **The paid tier, 2026-10-12.** Amends the repositioning below: the licence
-stays AGPL-3.0-only and the tracker stays free with no account, and two
-paid things are planned. The Microsoft Store listing is the same build as
+stays AGPL-3.0-only and the tracker stays free with no account (an
+optional one since 2026-11-02, above), and two paid things are planned. The Microsoft Store listing is the same build as
 the free download, listed free since 2026-10-21 and priced once the
 blockers in `BACKLOG.md`'s BL-070 (its Needs) clear. At around 3,000
 monthly active users, an optional subscription gated by feature, with a
-monthly report allowance inside it written through a hosted proxy, and the
-one account in the project, made at checkout (`AGENTS.md` rule 5,
-`docs/llm.md`, `ROADMAP.md`). `BACKLOG.md`'s BL-070 and BL-006 carry them.
+monthly report allowance inside it written through a hosted proxy, and an
+account made at checkout, which since 2026-11-02 is the free one
+(`AGENTS.md` rule 5, `docs/llm.md`, `ROADMAP.md`). `BACKLOG.md`'s BL-070
+and BL-006 carry them.
 The two third-party questions the repositioning closed because nothing was
 sold are open again, the MTGOFormatData licence now blocks the sale too,
 and so is whether the Fan Content Policy allows either paid thing

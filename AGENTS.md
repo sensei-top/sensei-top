@@ -42,9 +42,9 @@ for the headings, then `Read` with `offset` and `limit` — never a whole doc.
 A fully local Magic: The Gathering analytics tool. It reads the log files
 Arena and MTGO already write — `Player.log` and `Match_GameLog_*.dat`
 respectively — stores raw events verbatim in SQLite, projects them into
-matches/games/turns, and serves a dashboard on loopback. No account, no
-upload, no writes to anything either client owns. (A paid tier with an
-account is planned, never for anything free — rule 5.)
+matches/games/turns, and serves a dashboard on loopback. It needs no
+account, uploads nothing without the user's yes, and writes nothing
+either client owns (rule 5).
 
 ## Repo map
 
@@ -109,10 +109,11 @@ One line each; the detail is in the doc named, and
    row and recomputes from `raw_events`. Never write an incremental path.
 4. **Never synthesize data.** Unknown or missing means `NULL` plus a warning —
    never a guess, never an exception that halts ingestion.
-5. **Metered API calls are opt-in and user-configured — never silent, never
-   automatic.** This project costs nothing to run unless the user configures a
-   Claude credential and presses a button that says so. It is a product
-   decision, not an implementation detail. Four lines do not move:
+5. **No call costs the user money, and nothing of theirs leaves the
+   machine, without their yes.** The tracker costs nothing to run and
+   works fully without an account; it is a product decision, not an
+   implementation detail. A metered call on the user's own Claude
+   credential follows four lines that do not move:
 
    - **No credential, no call.** `llm/config.py` is the only place a metered
      credential is resolved; `llm/client.py` is the only module that imports
@@ -135,8 +136,10 @@ One line each; the detail is in the doc named, and
      foreign `Host` or `Origin` and any non-GET request without the
      dashboard's `X-Tracker-Client` header, pinned by `tests/test_guard.py`.
 
-   The tracker stays free and needs no account; a paid tier is planned, not
-   built. See `docs/llm.md`, "Nothing hosted writes for the user".
+   **The free, optional account** (being built: BL-100 to BL-102) adds
+   cloud history, error reports and the hosted rules coach, each its own yes;
+   no sync payload carries a raw event, handle or chat, and the coach gets no
+   match: `docs/llm.md`, "What is hosted, and what it receives".
 
    **Free downloads are governed by a different standard, not by this rule** —
    the card database, card images, archetype definitions, the tournament
@@ -145,8 +148,8 @@ One line each; the detail is in the doc named, and
    metered call, even though TopDeck.gg's is user-supplied.
 
    Third-party identifiers are not forbidden: an opponent's Arena handle is
-   part of the user's own match history and may be used where it earns its
-   place.
+   part of the user's own match history and may be used on this machine
+   where it earns its place.
 
    Full picture — what each route sends, credential resolution, measured costs,
    and the TopDeck.gg wrinkle: [docs/llm.md](docs/llm.md). Pinned by
@@ -158,19 +161,21 @@ One line each; the detail is in the doc named, and
    own match, with no other source, and it has to outlive the full rebuild
    that erases every derived row), `mtgo_match_pick` (the user's own deck and
    format for an MTGO match, which MTGO's log never names — the same kind of
-   answer, with no other source, kept for the same reason) or one of the
-   authored-prose tables `deck_narrative`,
-   `matchup_brief`, `match_narrative`, `leaks_narrative`, `coach_report` (a
-   generated or imported narrative — never a derivation of projected data,
-   so a rebuild can't recompute it either; `coach_report` is the one that
-   keeps every row rather than one current slot, because each report is
-   measured against the one before it), and `rcq_guide` (a tournament-day guide written for one decklist the user
+   answer, with no other source, kept for the same reason), one of the
+   authored-prose tables `deck_narrative`, `matchup_brief`, `match_narrative`,
+   `leaks_narrative`, `coach_report` (a generated or imported narrative —
+   never a derivation of projected data, so a rebuild can't recompute it
+   either; `coach_report` is the one that keeps every row rather than one
+   current slot, because each report is measured against the one before it),
+   `rcq_guide` (a tournament-day guide written for one decklist the user
    pasted; like `coach_report` it keeps every row, because each one is the
-   record of a specific event's preparation). Nothing on this allowlist is ever read by
-   `project()`.
-   `tests/test_api.py::test_only_authored_artifact_routes_write` asserts the
-   exact set of non-GET routes against this allowlist — an addition to it is
-   a design change, not a patch.
+   record of a specific event's preparation), and, being built (BL-100),
+   `cloud_match` (a match pulled back from the user's own cloud history,
+   stored as received, never derived; a match read from this install's own
+   log always wins over it). Nothing on this allowlist is ever read by
+   `project()`. `tests/test_api.py::test_only_authored_artifact_routes_write`
+   asserts the exact set of non-GET routes against this allowlist — an
+   addition to it is a design change, not a patch.
 7. **Every parsing rule needs a fixture-backed test.** The log format changes
    without notice; tests against real captured logs are the only early warning.
 8. **Derive test expectations from the data, not from the code.** Read the
