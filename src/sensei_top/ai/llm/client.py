@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 
 import anthropic
 
-from sensei_top.llm.config import LLMConfig
+from sensei_top.ai.llm.config import LLMConfig
 
 __all__ = [
     "REPORT_MODELS",

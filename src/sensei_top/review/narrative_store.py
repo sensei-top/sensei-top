@@ -23,8 +23,8 @@ import hashlib
 import sqlite3
 from dataclasses import dataclass
 
+from sensei_top.ai.llm.provenance import AuthoredRecord, upsert_authored
 from sensei_top.clock import now_iso
-from sensei_top.llm.provenance import AuthoredRecord, upsert_authored
 
 __all__ = [
     "MatchNarrative",

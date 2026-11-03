@@ -411,7 +411,7 @@ stored prose stays verbatim and neither report can be rewritten in place.
   report.# MTG Coaching Report — …`. The Fable 5.1 report opens
   `I'll start by gathering the current-format facts for the Format notes
   section.Now the current metagame and the specific archetypes this player
-  faces.## Player profile`. `llm/client.py::write_report` joins text blocks
+  faces.## Player profile`. `ai/llm/client.py::write_report` joins text blocks
   with no separator. That is right inside a cited paragraph, which the API
   splits into several blocks, and wrong between narration and a heading.
   The Opus report survived because an unrequested `#` title sat between its
@@ -433,7 +433,7 @@ stored prose stays verbatim and neither report can be rewritten in place.
   `web_search_result_location` citation came back — unverified hypothesis:
   `web_search_20260209`'s dynamic filtering runs search plus code execution
   server-side, so the text blocks it returns may simply carry no citation
-  objects. `llm/client.py::write_report` now logs a `Counter` of every
+  objects. `ai/llm/client.py::write_report` now logs a `Counter` of every
   content block type seen across the loop, plus how many text blocks
   carried a non-empty `citations` list, in one `log.info` line when the
   loop ends — the next real report confirms or refutes the hypothesis
@@ -487,14 +487,14 @@ roughly 50-60k input tokens, 20-30k output tokens (thinking included), and
 | Fable 5.1 | $10 / $50 | ~$1.8-2.5 — **measured $3.23** (below) | Thinking is always on. |
 | Sonnet 5 | $2 / $10 | ~$0.4-0.5 | The cheaper option if quality holds. |
 
-These four are `llm/client.py::REPORT_MODELS` — the Coach page's model
+These four are `ai/llm/client.py::REPORT_MODELS` — the Coach page's model
 dropdown picks one of them per report, preselected to the `[claude.coach]`
 model or the base `[claude]` model (`load_coach()`'s own resolution); left
 alone, the dropdown sends nothing and the server uses that same configured
 model. `--set-coach-model` sets only that preselected default, not the
 ceiling on what a report can be written with.
 
-`llm/client.py::_PRICES` also prices `claude-haiku-4-5` ($1/$5), but it is
+`ai/llm/client.py::_PRICES` also prices `claude-haiku-4-5` ($1/$5), but it is
 not offered in the dropdown or `REPORT_MODELS`: it rejects the adaptive
 thinking and explicit effort `write_report` always sends, so it can't take
 a coach call regardless of price. It remains available as a `--set-coach-model`

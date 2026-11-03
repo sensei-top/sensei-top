@@ -852,38 +852,38 @@ msgstr ""
 msgid "T9+"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 #, python-brace-format
 msgid "The answer could not be read: {detail}"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "The answer has its \"for\" line but no \"answer\" object after it."
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid ""
 "The answer has no \"for\" line, so there is no telling where it belongs. "
 "Copy the prompt here again and paste the new answer."
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "The answer has no text in it."
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid ""
 "The answer is longer than any answer here needs to be. Check that only the "
 "answer was pasted."
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid ""
 "The answer is not a JSON object. Paste the whole answer, from its first `{{`"
 " to its last `}}`."
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid ""
 "The answer's \"context\" line was changed. It has to be copied back exactly "
 "as the prompt gave it."
@@ -1028,18 +1028,18 @@ msgid ""
 " convert into damage, on either side, is a card losing this particular race."
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid ""
 "This answer has no \"for\" line, so it was read as one saved before answers "
 "carried it."
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 #, python-brace-format
 msgid "This answer is for {card} of {subject}. Paste it there."
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 #, python-brace-format
 msgid "This answer is for {card}, not this one. Paste it there."
 msgstr ""
@@ -1456,7 +1456,7 @@ msgstr ""
 msgid "Your turn at the low point"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "a coach report"
 msgstr ""
 
@@ -1464,19 +1464,19 @@ msgstr ""
 msgid "a decisive swing"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "a deck guide"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "a match report"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "a matchup brief"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "a matchup coverage"
 msgstr ""
 
@@ -1488,7 +1488,7 @@ msgstr ""
 msgid "a small swing"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "an RCQ guide"
 msgstr ""
 
@@ -1496,19 +1496,19 @@ msgstr ""
 msgid "an unidentified opponent"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "another deck"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "another deck or opponent"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "another format"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "another match"
 msgstr ""
 
@@ -1628,7 +1628,7 @@ msgstr[1] ""
 msgid "players"
 msgstr ""
 
-#: sensei_top/answers.py
+#: sensei_top/ai/answers.py
 msgid "the training plan"
 msgstr ""
 

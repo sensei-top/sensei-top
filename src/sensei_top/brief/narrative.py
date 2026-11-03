@@ -49,7 +49,7 @@ import sqlite3
 from collections import Counter
 from dataclasses import dataclass
 
-from sensei_top.answers import brief_for, coverage_for
+from sensei_top.ai.answers import brief_for, coverage_for
 from sensei_top.brief.store import PlayAround, Staple, list_hash
 from sensei_top.guide.deck import DeckIdentity, identity_format
 from sensei_top.guide.field import _classified_deck_total, field_window, personal_rate

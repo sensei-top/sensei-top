@@ -104,8 +104,8 @@ class _Session(logging.Filter):
 
 class _Level(logging.Filter):
     """Holds a handler to ``floor`` and above, and lets through the INFO lines
-    of ``sensei_top.llm`` and its submodules (trap 8). The prefix rather than
-    ``sensei_top.llm.client`` covers a later module under ``llm/`` without a
+    of ``sensei_top.ai.llm`` and its submodules (trap 8). The prefix rather than
+    ``sensei_top.ai.llm.client`` covers a later module under ``llm/`` without a
     second edit; ``sensei_top.llmx`` is not under it.
     """
 
@@ -117,7 +117,7 @@ class _Level(logging.Filter):
         if record.levelno >= self.floor:
             return True
         return record.levelno >= logging.INFO and (
-            record.name == "sensei_top.llm" or record.name.startswith("sensei_top.llm.")
+            record.name == "sensei_top.ai.llm" or record.name.startswith("sensei_top.ai.llm.")
         )
 
 

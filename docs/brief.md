@@ -46,7 +46,7 @@ generates a standalone brief on its own. The round trip:
 3. Paste the answer into the card's box and save it
    (`PUT /api/guide/{key}/briefs/{archetype_key}`), or from a terminal
    `sensei-top brief --deck KEY --archetype KEY --import FILE`. Either
-   way it is read through `answers.py::read_answer`, whose
+   way it is read through `ai/answers.py::read_answer`, whose
    `for: brief:{deck key}:{archetype key}` line must name this deck and
    opponent, then validated against your real 75 and stored.
 

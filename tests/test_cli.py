@@ -837,8 +837,8 @@ def test_config_json_round_trips_every_setter(tmp_path, monkeypatch, capsys, mem
     )
     body = _config_json(tmp_path, capsys)
 
+    from sensei_top.ai.llm.client import REPORT_MODELS
     from sensei_top.config import config_path
-    from sensei_top.llm.client import REPORT_MODELS
 
     assert body == {
         "config_path": str(config_path()),
@@ -959,7 +959,7 @@ def test_an_empty_key_is_refused_rather_than_cleared(tmp_path, monkeypatch, memo
 
 
 def test_set_key_goes_to_the_keyring_and_takes_the_file_copy_out(tmp_path, memory_keyring):
-    from sensei_top.llm import config as llm_config
+    from sensei_top.ai.llm import config as llm_config
 
     cli_module._write_llm_config(api_key="old-file-key", model="claude-sonnet-5", effort=None)
     cli_module._write_topdeck_config(api_key="old-topdeck-key")

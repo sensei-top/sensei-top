@@ -374,7 +374,7 @@ report at most once per request.
 
 Two separate prompts to write coaching prose from — the coaching layer over
 the report, not a summary of it. Neither module makes the call itself —
-only `sensei_top.llm.client` imports `anthropic` (AGENTS.md non-negotiable
+only `sensei_top.ai.llm.client` imports `anthropic` (AGENTS.md non-negotiable
 #5, `docs/llm.md`); both stay pure functions of already-projected data —
 but both have a one-click path as well as the copy-paste one:
 
@@ -391,7 +391,7 @@ but both have a one-click path as well as the copy-paste one:
   `leaks_narrative` (a single row; the leak finder here is unscoped) for the
   leaks route — when a credential is configured. 503 otherwise.
 - `PUT .../narrative` stores an answer pasted into the card, read
-  through `answers.py` (its `for` line must name this match, or the
+  through `ai/answers.py` (its `for` line must name this match, or the
   training plan), in the same table, with the author `pasted` and no
   cost. It calls no model (`docs/llm.md`, "Saving a pasted answer").
 

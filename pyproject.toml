@@ -18,6 +18,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "httpx2>=2.10.0",
+    "import-linter>=2.15",
     "pyinstaller>=6.22.3",
     "pytest>=8.0",
     "ruff>=0.6",
@@ -42,3 +43,72 @@ extend-select = ["PLW1514"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.importlinter]
+root_package = "sensei_top"
+
+[[tool.importlinter.contracts]]
+name = "Core never imports sensei_top.ai"
+type = "forbidden"
+source_modules = [
+    "sensei_top.api",
+    "sensei_top.archetypes",
+    "sensei_top.arena_config",
+    "sensei_top.arena_install",
+    "sensei_top.backup",
+    "sensei_top.brief",
+    "sensei_top.card_images",
+    "sensei_top.cards",
+    "sensei_top.cli",
+    "sensei_top.clock",
+    "sensei_top.coach",
+    "sensei_top.config",
+    "sensei_top.db",
+    "sensei_top.diagnostics",
+    "sensei_top.doctor",
+    "sensei_top.formats",
+    "sensei_top.guide",
+    "sensei_top.i18n",
+    "sensei_top.live",
+    "sensei_top.logs",
+    "sensei_top.metagame",
+    "sensei_top.mtgo",
+    "sensei_top.procs",
+    "sensei_top.projector",
+    "sensei_top.reader",
+    "sensei_top.review",
+    "sensei_top.secrets",
+    "sensei_top.steam",
+    "sensei_top.table",
+    "sensei_top.wine",
+]
+forbidden_modules = ["sensei_top.ai"]
+allow_indirect_imports = true
+ignore_imports = [
+    "sensei_top.api.routes.coach -> sensei_top.ai.answers",
+    "sensei_top.api.routes.coach -> sensei_top.ai.llm.client",
+    "sensei_top.api.routes.coach -> sensei_top.ai.llm.config",
+    "sensei_top.api.routes.guide -> sensei_top.ai.answers",
+    "sensei_top.api.routes.guide -> sensei_top.ai.llm.client",
+    "sensei_top.api.routes.matches -> sensei_top.ai.answers",
+    "sensei_top.api.routes.meta -> sensei_top.ai.llm.config",
+    "sensei_top.api.routes.narrative -> sensei_top.ai.answers",
+    "sensei_top.api.routes.narrative -> sensei_top.ai.llm.client",
+    "sensei_top.api.routes.narrative -> sensei_top.ai.llm.config",
+    "sensei_top.api.routes.rcq -> sensei_top.ai.answers",
+    "sensei_top.api.routes.rcq -> sensei_top.ai.llm.client",
+    "sensei_top.api.routes.review -> sensei_top.ai.answers",
+    "sensei_top.brief.narrative -> sensei_top.ai.answers",
+    "sensei_top.brief.store -> sensei_top.ai.llm.provenance",
+    "sensei_top.cli -> sensei_top.ai.answers",
+    "sensei_top.cli -> sensei_top.ai.llm.client",
+    "sensei_top.cli -> sensei_top.ai.llm.config",
+    "sensei_top.coach.narrative -> sensei_top.ai.answers",
+    "sensei_top.guide.authored -> sensei_top.ai.llm.provenance",
+    "sensei_top.guide.narrative -> sensei_top.ai.answers",
+    "sensei_top.guide.rcq -> sensei_top.ai.answers",
+    "sensei_top.review.leaks_narrative -> sensei_top.ai.answers",
+    "sensei_top.review.leaks_store -> sensei_top.ai.llm.provenance",
+    "sensei_top.review.narrative -> sensei_top.ai.answers",
+    "sensei_top.review.narrative_store -> sensei_top.ai.llm.provenance",
+]

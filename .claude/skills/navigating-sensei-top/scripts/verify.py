@@ -11,7 +11,7 @@ line and writes the untruncated log to a temp file for follow-up.
     uv run python .claude/skills/navigating-sensei-top/scripts/verify.py
     uv run python .claude/skills/navigating-sensei-top/scripts/verify.py --full   # + build, drift
 
-Runs, in order: `uv run ruff check .`, `uv run pytest -q`, `cd web && pnpm
+Runs, in order: `uv run ruff check .`, `uv run lint-imports`, `uv run pytest -q`, `cd web && pnpm
 lint`, `pnpm test`. `pnpm build` only under --full — it writes src/sensei_top/web_dist/ and
 tsconfig.tsbuildinfo, so it's opt-in rather than run reflexively.
 
@@ -102,6 +102,7 @@ def main() -> None:
     # (name, command, cwd, message printed after the output of a failure)
     checks: list[tuple[str, list[str], Path, str | None]] = [
         ("ruff", ["uv", "run", "ruff", "check", "."], root, None),
+        ("lint-imports", ["uv", "run", "lint-imports"], root, None),
         ("pytest", ["uv", "run", "pytest", "-q"], root, None),
         ("pnpm lint", ["pnpm", "lint"], web, None),
         ("pnpm test", ["pnpm", "test"], web, None),

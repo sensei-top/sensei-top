@@ -11,7 +11,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from sensei_top.answers import PASTED_AUTHOR, rcq_for
+from sensei_top.ai.answers import PASTED_AUTHOR, rcq_for
+from sensei_top.ai.llm import client as llm_client
 from sensei_top.api.convert import _list_diff_out
 from sensei_top.api.deps import Conn, WritableConn
 from sensei_top.api.models.common import BoardCardOut, PlanProblemOut
@@ -52,7 +53,6 @@ from sensei_top.guide.rcq import (
 from sensei_top.guide.rcq_authored import StoredRcq, latest_rcq, write_rcq
 from sensei_top.guide.rcq_markdown import render_rcq
 from sensei_top.i18n import _, english
-from sensei_top.llm import client as llm_client
 
 router = APIRouter()
 

@@ -37,7 +37,7 @@ def _no_claude_calls(monkeypatch):
     def _forbidden(*args, **kwargs):
         pytest.fail("a test in test_guard.py tried to call the Claude API")
 
-    monkeypatch.setattr("sensei_top.llm.client._run", _forbidden)
+    monkeypatch.setattr("sensei_top.ai.llm.client._run", _forbidden)
 
 
 @pytest.fixture

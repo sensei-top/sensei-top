@@ -342,7 +342,7 @@ way `test_parse_event_never_retains_a_player_name` does for the fbettega side.
 **Credential, deliberately not the metered kind.** TopDeck's key is free and
 rate-limited (~100 requests/minute), not billed — it exists for attribution
 and abuse prevention, not cost. AGENTS.md non-negotiable #5 says so
-explicitly: `llm/config.py` is the only place a *metered*
+explicitly: `ai/llm/config.py` is the only place a *metered*
 credential is resolved, and TopDeck's key is resolved by its own sibling,
 `metagame/config.py` (`TOPDECK_API_KEY` env var, else the system keyring
 (service `sensei-top`), else a `[topdeck]` table in the same

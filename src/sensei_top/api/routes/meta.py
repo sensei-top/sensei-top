@@ -12,13 +12,13 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 
+from sensei_top.ai.llm import config as llm_config
 from sensei_top.api.deps import Conn
 from sensei_top.api.models.common import Deck, Health, LiveStatus, LLMStatus
 from sensei_top.api.models.metagame import FormatEntry, FormatMatchCounts, FormatsOut
 from sensei_top.api.sql import _rows, default_format
 from sensei_top.formats import FORMATS
 from sensei_top.live import resolve_arena_log
-from sensei_top.llm import config as llm_config
 
 router = APIRouter()
 
@@ -36,7 +36,7 @@ def health(request: Request, conn: Conn) -> Health:
 def llm_status() -> LLMStatus:
     """Whether a Claude credential is resolved right now, and which
     model would be used — never the key itself
-    (``sensei_top.llm.config``). The dashboard reads this to
+    (``sensei_top.ai.llm.config``). The dashboard reads this to
     decide whether a narrative surface offers a generate button or
     falls back to the copy-prompt path (``docs/llm.md``). No database
     connection needed: this is purely local config, not derived data.

@@ -41,6 +41,7 @@ jobs:
           cache-dependency-path: web/pnpm-lock.yaml
       - run: uv sync --locked
       - run: uv run ruff check .
+      - run: uv run lint-imports
       - run: uv run pytest -q
       - run: pnpm install --frozen-lockfile
         working-directory: web

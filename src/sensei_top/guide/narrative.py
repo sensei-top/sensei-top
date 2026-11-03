@@ -2,7 +2,7 @@
 See docs/guide.md, "`narrative.py` — the prompt, and the shape of the
 answer".
 
-This module itself never makes a call: only ``sensei_top.llm.client``
+This module itself never makes a call: only ``sensei_top.ai.llm.client``
 imports ``anthropic`` (AGENTS.md non-negotiable #5). Every round trip
 shares this module's context, prompt, schema and parser:
 ``POST /api/guide/{key}/narrative`` sends ``full_prompt`` via
@@ -40,7 +40,7 @@ from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from sensei_top.answers import answer_format, guide_for
+from sensei_top.ai.answers import answer_format, guide_for
 from sensei_top.guide.bundle import DeckGuide
 from sensei_top.guide.field import archetype_key_by_name, faced_archetypes
 from sensei_top.guide.list_diff import ListDiff

@@ -1,10 +1,10 @@
 """The match report's coaching prompt — built here, sent from
-``sensei_top.llm`` only when the user has opted in. How the prompt is
+``sensei_top.ai.llm`` only when the user has opted in. How the prompt is
 served, sent and stored: ``docs/review.md``, "The narrative
 (`review/narrative.py`, `review/leaks_narrative.py`)".
 
 **This module never makes the call itself.** The only module that imports
-``anthropic`` is ``sensei_top.llm.client`` (AGENTS.md non-negotiable #5);
+``anthropic`` is ``sensei_top.ai.llm.client`` (AGENTS.md non-negotiable #5);
 this one stays a pure function of already-projected data, assembling an
 honest, complete, inspectable prompt:
 
@@ -32,7 +32,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sensei_top.answers import answer_format, prose_schema
+from sensei_top.ai.answers import answer_format, prose_schema
 from sensei_top.i18n import english
 from sensei_top.review.findings import Finding, MatchReport
 from sensei_top.review.snapshot import MatchSnapshot
@@ -64,7 +64,7 @@ SYSTEM_PROMPT = (
 class NarrativeError(Exception):
     """A narrative could not be built or parsed — malformed input, never a
     network failure (that's ``llm.LLMError``, raised by
-    ``sensei_top.llm.client`` and mapped to a 502 by the generate routes).
+    ``sensei_top.ai.llm.client`` and mapped to a 502 by the generate routes).
     Every caller of this one fails soft on it."""
 
 

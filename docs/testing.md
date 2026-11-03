@@ -149,10 +149,13 @@ minute counts twice), so each job carries
 and a push there shows a run whose jobs are skipped. The public repository,
 `sensei-top/sensei-top`, runs every trigger, since its minutes are unmetered.
 
-- **Linux:** `ruff check .`, `pytest -q`, then in `web/` `pnpm lint`, `test`
-  and `build`, then the drift check: `pnpm gen:types` followed by
-  `git diff --exit-code`, which fails if the tracked `web/src/types/api.ts` no
-  longer matches the API (`openapi.json` is a gitignored intermediate).
+- **Linux:** `ruff check .`, then `lint-imports`, which holds the contract
+  that core never imports `sensei_top.ai` (`[tool.importlinter]` in
+  `pyproject.toml`; its `ignore_imports` lists the edges not yet cut), then
+  `pytest -q`, then in `web/` `pnpm lint`, `test` and `build`, then the drift
+  check: `pnpm gen:types` followed by `git diff --exit-code`, which fails if
+  the tracked `web/src/types/api.ts` no longer matches the API
+  (`openapi.json` is a gitignored intermediate).
 - **Windows:** `pytest -q` only. No test reads the built dashboard
   (`test_dashboard.py` writes its own `web_dist`), so neither pnpm nor a
   build is needed there. `.gitattributes` marks `tests/fixtures/**` as `-text`

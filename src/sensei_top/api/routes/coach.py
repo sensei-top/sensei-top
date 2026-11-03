@@ -31,7 +31,9 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from sensei_top.answers import PASTED_AUTHOR, coach_for
+from sensei_top.ai.answers import PASTED_AUTHOR, coach_for
+from sensei_top.ai.llm import client as llm_client
+from sensei_top.ai.llm import config as llm_config
 from sensei_top.api.deps import Conn, WritableConn
 from sensei_top.api.models.coach import (
     CoachEvidenceModel,
@@ -79,8 +81,6 @@ from sensei_top.coach.store import (
     write_coach_report,
 )
 from sensei_top.i18n import _
-from sensei_top.llm import client as llm_client
-from sensei_top.llm import config as llm_config
 from sensei_top.review.leaks import MIN_SAMPLE
 
 router = APIRouter()

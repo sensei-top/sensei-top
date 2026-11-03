@@ -29,7 +29,7 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from sensei_top.answers import rcq_for
+from sensei_top.ai.answers import rcq_for
 from sensei_top.archetypes.classify import (
     Verdict,
     card_colors_by_name,

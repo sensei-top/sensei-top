@@ -29,13 +29,9 @@ import pytest
 
 from sensei_top import cli as cli_module
 from sensei_top import config as config_module
-from sensei_top.api import create_app
-from sensei_top.api.routes import matches as matches_routes
-from sensei_top.api.routes import review as review_routes
-from sensei_top.db import open_database
-from sensei_top.llm import client as llm_client_module
-from sensei_top.llm import config as llm_config_module
-from sensei_top.llm.client import (
+from sensei_top.ai.llm import client as llm_client_module
+from sensei_top.ai.llm import config as llm_config_module
+from sensei_top.ai.llm.client import (
     REPORT_MODELS,
     Citation,
     Completion,
@@ -46,7 +42,11 @@ from sensei_top.llm.client import (
     write_prose,
     write_report,
 )
-from sensei_top.llm.config import LLMConfig, load
+from sensei_top.ai.llm.config import LLMConfig, load
+from sensei_top.api import create_app
+from sensei_top.api.routes import matches as matches_routes
+from sensei_top.api.routes import review as review_routes
+from sensei_top.db import open_database
 from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file
 from sensei_top.review.narrative_store import context_hash

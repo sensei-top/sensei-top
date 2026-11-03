@@ -32,7 +32,7 @@ export interface paths {
          * Llm Status
          * @description Whether a Claude credential is resolved right now, and which
          *     model would be used — never the key itself
-         *     (``sensei_top.llm.config``). The dashboard reads this to
+         *     (``sensei_top.ai.llm.config``). The dashboard reads this to
          *     decide whether a narrative surface offers a generate button or
          *     falls back to the copy-prompt path (``docs/llm.md``). No database
          *     connection needed: this is purely local config, not derived data.

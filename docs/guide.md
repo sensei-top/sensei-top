@@ -257,7 +257,7 @@ rather than something polled.
 
 ### `narrative.py` — the prompt, and the shape of the answer
 
-**No call is made from here** — only `sensei_top.llm.client` imports
+**No call is made from here** — only `sensei_top.ai.llm.client` imports
 `anthropic` (AGENTS.md non-negotiable #5, `docs/llm.md`). `build_guide_context`
 assembles the evidence, `full_prompt` wraps it with the framing and the
 answer schema, and `guide_narrative_from_json` reads a written answer back —
@@ -271,7 +271,7 @@ the one parser both round trips converge on:
   The Guide page's prompt → an assistant → its answer pasted into the
   card and saved (`PUT /api/guide/{key}/narrative`), or from a terminal
   `guide --deck KEY --prompt` → `guide --deck KEY --import FILE`. Both
-  read the answer through `answers.py::read_answer`, which checks its
+  read the answer through `ai/answers.py::read_answer`, which checks its
   `for: guide:{key}` line and unwraps its `answer` object, before
   `guide_narrative_from_json`. The stored `list_hash` is the answer's
   `context`, the hash of the 75 the prompt was built from, so a guide

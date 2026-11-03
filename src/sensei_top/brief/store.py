@@ -16,9 +16,9 @@ import json
 import sqlite3
 from dataclasses import dataclass
 
+from sensei_top.ai.llm.provenance import upsert_authored
 from sensei_top.guide.narrative import BoardCard
 from sensei_top.guide.plans import PlanProblem
-from sensei_top.llm.provenance import upsert_authored
 
 
 @dataclass(frozen=True, slots=True)

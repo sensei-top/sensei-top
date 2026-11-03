@@ -2,7 +2,7 @@
 already-computed MatchReport plus its MatchSnapshot, and the framing
 ``full_prompt`` wraps it with.
 
-The module makes no call itself (``sensei_top.llm`` does — see
+The module makes no call itself (``sensei_top.ai.llm`` does — see
 ``tests/test_llm.py`` for the credential-gating and fake-completion coverage
 around the actual call), so there is nothing here to fake an SDK response
 for.

@@ -95,4 +95,4 @@ def test_the_module_imports_nothing_from_llm():
     import sensei_top.secrets as mod
 
     source = Path(mod.__file__).read_text(encoding="utf-8")
-    assert "sensei_top.llm" not in source.replace("llm/config.py", "")
+    assert "sensei_top.ai.llm" not in source.replace("llm/config.py", "")

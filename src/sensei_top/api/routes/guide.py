@@ -10,7 +10,8 @@ import sqlite3
 
 from fastapi import APIRouter, HTTPException, Request
 
-from sensei_top.answers import PASTED_AUTHOR, brief_for, coverage_for, guide_for
+from sensei_top.ai.answers import PASTED_AUTHOR, brief_for, coverage_for, guide_for
+from sensei_top.ai.llm import client as llm_client
 from sensei_top.api.convert import (
     _coverage_out,
     _deck_guide_out,
@@ -44,7 +45,6 @@ from sensei_top.guide.bundle import DeckGuide, build_deck_guide
 from sensei_top.guide.deck import identity_format, list_identities, resolve
 from sensei_top.guide.markdown import render as render_guide_markdown
 from sensei_top.i18n import _, english
-from sensei_top.llm import client as llm_client
 
 router = APIRouter()
 

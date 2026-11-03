@@ -2,7 +2,7 @@
 the reading list ``coach/canon.py`` offers and the player's previous report,
 folded into one prompt. See docs/coach.md, "The prompt and the report".
 
-This module never makes the call itself: only ``sensei_top.llm.client``
+This module never makes the call itself: only ``sensei_top.ai.llm.client``
 imports ``anthropic`` (AGENTS.md non-negotiable #5). ``build_coach_prompt``
 is the one entry point; ``api/routes/coach.py`` calls it from the GET
 (``CoachPrompt.copied``, which ends with the answer contract), the POST
@@ -29,7 +29,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
-from sensei_top.answers import answer_format, coach_for, prose_schema
+from sensei_top.ai.answers import answer_format, coach_for, prose_schema
 from sensei_top.coach.canon import ALLOWED_DOMAINS, CanonEntry, entries_for
 from sensei_top.coach.evidence import (
     CoachEvidence,

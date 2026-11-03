@@ -80,7 +80,7 @@ from sensei_top.reader.mtgo_decks import ingest_deck_dir
 from sensei_top.reader.segmenter import DATE_ORDERS
 
 if TYPE_CHECKING:
-    from sensei_top.answers import Answer
+    from sensei_top.ai.answers import Answer
     from sensei_top.metagame.auto import RefreshState
     from sensei_top.metagame.source import RefreshResult
 
@@ -931,7 +931,7 @@ def _key_source(which: str) -> str | None:
     """Where the key in force comes from, asked of the one module that
     resolves it (AGENTS.md non-negotiable #5 for the Claude key)."""
     if which == "claude":
-        from sensei_top.llm import config as llm_config
+        from sensei_top.ai.llm import config as llm_config
 
         return llm_config.key_source()
     from sensei_top.metagame import config as topdeck_config
@@ -1063,11 +1063,11 @@ def _config_json(db_path: Path) -> dict[str, object]:
     ``keyring``, ``file`` or ``null``). Other values are the file's own,
     with the built-in default where one exists; the backup folder and count
     are resolved against ``--db``, as the summary resolves them."""
+    from sensei_top.ai.llm import client as llm_client
+    from sensei_top.ai.llm.config import DEFAULT_EFFORT, DEFAULT_MODEL
     from sensei_top.arena_config import load_date_order
     from sensei_top.backup import resolve as resolve_backup_config
     from sensei_top.config import config_path
-    from sensei_top.llm import client as llm_client
-    from sensei_top.llm.config import DEFAULT_EFFORT, DEFAULT_MODEL
 
     tables = _read_config_tables()
 
@@ -1138,8 +1138,8 @@ def cmd_config(args) -> None:
     the backup destination and retention count. A flag for one never touches
     another's table (``_read_config_tables``).
     """
+    from sensei_top.ai.llm import config as llm_config
     from sensei_top.config import config_path
-    from sensei_top.llm import config as llm_config
     from sensei_top.metagame import config as topdeck_config
 
     coach_web_search = {"on": True, "off": False}.get(args.coach_web_search)
@@ -1532,7 +1532,7 @@ def _read_import(path: str, expected_for: str) -> Answer:
     dashboard's paste box uses (``answers.read_answer``), except that an
     answer with no header — one saved before prompts asked for it — is read
     whole, with a warning. Exits with the reason when it cannot be read."""
-    from sensei_top.answers import AnswerError, headerless_warning, read_answer
+    from sensei_top.ai.answers import AnswerError, headerless_warning, read_answer
 
     raw = Path(path).read_text(encoding="utf-8")
     try:
@@ -1582,7 +1582,7 @@ def cmd_guide(args) -> None:
         return
 
     if args.import_file:
-        from sensei_top.answers import guide_for
+        from sensei_top.ai.answers import guide_for
         from sensei_top.brief.from_guide import store_guide_matchups
         from sensei_top.brief.store import corpus_commit, list_hash
         from sensei_top.guide.authored import write_narrative
@@ -1655,7 +1655,7 @@ def cmd_rcq(args) -> None:
         return
 
     if args.import_file:
-        from sensei_top.answers import rcq_for
+        from sensei_top.ai.answers import rcq_for
 
         answer = _read_import(args.import_file, rcq_for(evidence.guide.provenance.deck.key))
         try:
@@ -1742,7 +1742,7 @@ def cmd_brief(args) -> None:
         return
 
     if args.import_file:
-        from sensei_top.answers import brief_for
+        from sensei_top.ai.answers import brief_for
         from sensei_top.brief.importer import import_brief
         from sensei_top.brief.narrative import NarrativeError
 
@@ -1804,7 +1804,7 @@ def cmd_brief_missing(conn, identity, args) -> None:
         return
 
     if args.import_file:
-        from sensei_top.answers import coverage_for
+        from sensei_top.ai.answers import coverage_for
         from sensei_top.brief.importer import import_briefs
         from sensei_top.brief.narrative import NarrativeError
 

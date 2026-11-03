@@ -34,6 +34,7 @@ import pytest
 from fastapi import FastAPI
 
 from sensei_top import i18n
+from sensei_top.ai.llm import config as llm_config
 from sensei_top.api import create_app
 from sensei_top.api.app import RequestLanguage
 from sensei_top.api.convert import _list_diff_out
@@ -50,7 +51,6 @@ from sensei_top.guide import narrative as guide_narrative
 from sensei_top.guide import rcq as guide_rcq
 from sensei_top.guide.deck import DeckIdentity, list_identities
 from sensei_top.guide.list_diff import DuplicateNames, ListDiff
-from sensei_top.llm import config as llm_config
 from sensei_top.metagame.tiers import TIER_WORDS, TIERS, tier_words
 from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file

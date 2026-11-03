@@ -9,7 +9,7 @@ from collections.abc import Callable
 
 from fastapi import APIRouter, HTTPException, Request
 
-from sensei_top.answers import LEAKS_FOR, PASTED_AUTHOR
+from sensei_top.ai.answers import LEAKS_FOR, PASTED_AUTHOR
 from sensei_top.api.convert import _leak_out
 from sensei_top.api.deps import Conn, DeckFilter, SourceFilter, WritableConn
 from sensei_top.api.models.common import NarrativeResponse, PastedAnswerIn

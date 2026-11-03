@@ -13,7 +13,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from sensei_top.answers import PASTED_AUTHOR, match_for
+from sensei_top.ai.answers import PASTED_AUTHOR, match_for
 from sensei_top.api.convert import _finding_out, _summary_out
 from sensei_top.api.deps import Conn, DeckFilter, SourceFilter, WritableConn
 from sensei_top.api.models.common import NarrativeResponse, PastedAnswerIn
