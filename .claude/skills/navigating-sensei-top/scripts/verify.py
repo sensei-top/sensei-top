@@ -11,7 +11,7 @@ line and writes the untruncated log to a temp file for follow-up.
     uv run python .claude/skills/navigating-sensei-top/scripts/verify.py
     uv run python .claude/skills/navigating-sensei-top/scripts/verify.py --full   # + build, drift
 
-Runs, in order: `uv run ruff check .`, `uv run pytest -q`, `cd web && pnpm
+Runs, in order: `uv run ruff check .`, `uv run lint-imports`, `uv run pytest -q`, `cd web && pnpm
 lint`, `pnpm test`. `pnpm build` only under --full — it writes src/sensei_top/web_dist/ and
 tsconfig.tsbuildinfo, so it's opt-in rather than run reflexively.
 
@@ -21,12 +21,18 @@ diff --exit-code -- web/src/types/api.ts` from the repo root. A stale committed
 api.ts fails here the way it fails CI's web job. web/openapi.json is gitignored,
 so the diff covers api.ts only.
 
+`--core` instead runs CI's core-only job: it copies the tracked plus untracked,
+non-ignored files to a temp directory without src/sensei_top/ai/ and tests/ai/,
+runs `pytest -q` there, and removes the copy. The working tree is never touched.
+
 Exits non-zero if any command fails.
 """
 
 from __future__ import annotations
 
 import argparse
+import os
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -81,6 +87,52 @@ def _bounded(raw: str) -> tuple[str, bool]:
     return "\n".join(out_lines), truncated_lines or more > 0
 
 
+def _core_only(root: Path) -> bool:
+    """Run pytest on a copy of the tree with ai/ deleted; always clean up."""
+    work = Path(tempfile.mkdtemp(prefix="verify-core-"))
+    log_dir = Path(tempfile.mkdtemp(prefix="verify-"))
+    try:
+        files = subprocess.run(
+            ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+            cwd=root, capture_output=True, text=True, check=True,
+        ).stdout.split("\0")
+        for rel in filter(None, files):
+            if rel.startswith(("src/sensei_top/ai/", "tests/ai/")):
+                continue
+            src = root / rel
+            if not src.is_file():
+                continue
+            dest = work / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dest, follow_symlinks=False)
+        # Git-backed checks still run in the copy (privacy_scan, check_backlog,
+        # check_prose, through their tests) and need a repository to list.
+        subprocess.run(["git", "init", "-q"], cwd=work, check=True)
+        subprocess.run(["git", "add", "-A"], cwd=work, check=True)
+        # --no-sync: the copy has no .venv of its own; the project's runs it.
+        # --project keeps uv from resolving the copy's lockfile.
+        env_cmd = ["uv", "run", "--project", str(root), "--no-sync", "pytest", "-q"]
+        proc = subprocess.run(
+            [*env_cmd, "--rootdir", str(work), "-p", "no:cacheprovider",
+             "tests", "--ignore=tests/ai"],
+            cwd=work, capture_output=True, text=True,
+            env={**os.environ, "PYTHONPATH": str(work / "src")},
+        )
+        raw = (proc.stdout or "") + (proc.stderr or "")
+        ok = proc.returncode == 0
+        log_path = log_dir / "pytest_core_only.log"
+        log_path.write_text(raw)
+        print(f"{'PASS' if ok else 'FAIL'}  pytest (core only, ai/ absent)")
+        if not ok:
+            shown, was_truncated = _bounded(raw)
+            print(shown)
+            if was_truncated:
+                print(f"  (full output: {log_path})")
+        return ok
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -94,14 +146,22 @@ def main() -> None:
             "web/openapi.json is gitignored, so only api.ts is diffed)"
         ),
     )
+    parser.add_argument(
+        "--core",
+        action="store_true",
+        help="run only pytest on a temp copy of the tree without ai/ (CI's core-only job)",
+    )
     args = parser.parse_args()
 
     root = _repo_root()
+    if args.core:
+        raise SystemExit(0 if _core_only(root) else 1)
     web = root / "web"
 
     # (name, command, cwd, message printed after the output of a failure)
     checks: list[tuple[str, list[str], Path, str | None]] = [
         ("ruff", ["uv", "run", "ruff", "check", "."], root, None),
+        ("lint-imports", ["uv", "run", "lint-imports"], root, None),
         ("pytest", ["uv", "run", "pytest", "-q"], root, None),
         ("pnpm lint", ["pnpm", "lint"], web, None),
         ("pnpm test", ["pnpm", "test"], web, None),

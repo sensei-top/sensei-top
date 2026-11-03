@@ -315,7 +315,7 @@ def mulligan_split(
 
     The one definition of "kept seven vs. mulliganed" that ``mulligan_record``
     below (scoped to one deck identity's ``deck_ids``) and
-    ``coach/evidence.py::_build_mulligans`` (scoped to a report's own match
+    ``ai/coach/evidence.py::_build_mulligans`` (scoped to a report's own match
     population) both call rather than repeat."""
     rows = conn.execute(
         f"""

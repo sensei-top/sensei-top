@@ -2,6 +2,7 @@ import { Fragment, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGuide, useGuideNarrative } from '../api'
+import { useAi } from '../ai/registry'
 import { ErrorNote, Loading } from '../components/ui'
 import { MatchupCoverageCard } from '../components/MatchupCoverageCard'
 import { ScopeCard } from '../components/guide/ScopeCard'
@@ -14,7 +15,6 @@ import {
   NoWrittenGuide,
   SideboardPlansCard,
 } from '../components/guide/WrittenCards'
-import { NarrativeAndExport } from '../components/guide/WriteAndExport'
 import { SectionNav } from '../components/guide/SectionNav'
 import { guideSections } from '../lib/guide'
 import { useScrollSpy } from '../lib/scrollSpy'
@@ -43,17 +43,16 @@ const SECTION_CLASS =
  *  drawn by `components/guide/`, in the order of `guideSections`, and a
  *  section not in that list is not drawn.
  *
- *  The written sections come from whatever was generated or imported
- *  for this deck. `NarrativeAndExport` offers to write it with Claude
- *  when a credential is configured (`docs/llm.md`), and
- *  otherwise takes an answer pasted into the card (or, in a browser with
- *  no desktop shell, `sensei-top guide --deck KEY --import FILE`). Both land in
- *  the same query, an ordinary one on the heartbeat, so an import from
- *  the terminal shows on the page within a few seconds. While that query
- *  is pending neither a written section nor the callout that says there
- *  is none is drawn. */
+ *  The written sections come from whatever was generated or pasted for
+ *  this deck. `NarrativeAndExport` offers to write it with Claude when a
+ *  credential is configured (`docs/llm.md`), and otherwise takes an
+ *  answer pasted into the card. Either write refetches the narrative
+ *  query before it resolves, so the page shows it at once. While that
+ *  query is pending neither a written section nor the callout that says
+ *  there is none is drawn. */
 export function GuideView({ deckKey }: { deckKey: string }) {
   const { t } = useTranslation()
+  const ai = useAi()
   const guide = useGuide(deckKey)
   const narrativeResponse = useGuideNarrative(deckKey)
   const response = narrativeResponse.data
@@ -62,9 +61,9 @@ export function GuideView({ deckKey }: { deckKey: string }) {
   const written = narrative != null
   const plans = narrative != null && (narrative.matchups.length > 0 || narrative.problems.length > 0)
   const checklist = narrative != null && narrative.checklist.length > 0
-  // Memoized on the three booleans, so the scroll spy subscribes again
+  // Memoized on the three booleans and the AI registry, so the scroll spy subscribes again
   // only when a section comes or goes.
-  const sections = useMemo(() => guideSections({ written, plans, checklist }, t), [written, plans, checklist, t])
+  const sections = useMemo(() => guideSections({ written, plans, checklist, write: ai !== null }, t), [written, plans, checklist, ai, t])
   const sectionIds = useMemo(() => sections.map((section) => section.id), [sections])
 
   // Called unconditionally, ahead of every early return below (hooks rule).
@@ -86,7 +85,7 @@ export function GuideView({ deckKey }: { deckKey: string }) {
     'guide-sideboard-plans': narrative && <SideboardPlansCard guide={narrative} />,
     'guide-matchup-coverage': <MatchupCoverageCard guideKey={deckKey} />,
     'guide-between-rounds': narrative && <BetweenRoundsCard guide={narrative} />,
-    'guide-write': <NarrativeAndExport guideKey={deckKey} response={response} />,
+    'guide-write': ai && <ai.NarrativeAndExport guideKey={deckKey} response={response} />,
   }
 
   return (
@@ -105,7 +104,7 @@ export function GuideView({ deckKey }: { deckKey: string }) {
             <div id={section.id} tabIndex={-1} className={SECTION_CLASS}>
               {content[section.id]}
             </div>
-            {section.id === 'guide-scope' && response != null && !written && <NoWrittenGuide />}
+            {section.id === 'guide-scope' && ai !== null && response != null && !written && <NoWrittenGuide />}
           </Fragment>
         ))}
       </div>

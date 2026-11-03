@@ -68,6 +68,12 @@
     "updatesLabel": "Check for a new version once a day",
     "autostartLabel": "Start Sensei Top when you log in",
     "autostartDescription": "It records your games without you opening it.",
-    "tour": "A tour of the dashboard"
+    "tour": "A tour of the dashboard",
+    "ai": {
+      "heading": "AI features",
+      "body": "Sensei Top can write match reports, deck guides, matchup briefs and a coach's report, with your own Claude key or by giving you a prompt to paste into a chat. You can change this later in Settings.",
+      "on": "Turn them on",
+      "off": "Leave them off"
+    }
   }
 }

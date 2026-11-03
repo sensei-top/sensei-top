@@ -1,6 +1,6 @@
 # The opt-in Claude API call
 
-Read this when touching `llm/`, a `.../narrative` POST route, or
+Read this when touching `ai/llm/`, a `.../narrative` POST route, or
 `GenerateCard`, or when planning anything hosted. It explains the one
 exception AGENTS.md non-negotiable #5 carves out for a metered call,
 exactly what does and does not cross the loopback boundary because of it,
@@ -20,7 +20,7 @@ default someone may tune.
 Before this feature existed, "this app cannot spend money" was a *structural*
 fact — there was no HTTP client for Anthropic in the runtime dependency set at
 all. It is now a *configuration* fact: no key, no call. That is a genuinely
-weaker guarantee, and the three things that keep it honest are `llm/config.py`
+weaker guarantee, and the three things that keep it honest are `claude_config.py`
 returning `None`, every caller checking for it, and the tests named at the
 bottom of this section.
 
@@ -38,10 +38,10 @@ once built, are separate yeses with rules of their own ("What is hosted,
 and what it receives", below).
 
 With no credential configured, none of the five routes may even build a
-client: `tests/test_llm.py::test_no_credential_means_no_client_is_constructed`
+client: `tests/ai/test_llm.py::test_no_credential_means_no_client_is_constructed`
 pins it for the match report, the leak finder, the deck guide and the RCQ
 guide, and
-`tests/test_coach_api.py::test_no_credential_means_no_client_is_constructed`
+`tests/ai/test_coach_api.py::test_no_credential_means_no_client_is_constructed`
 for the coach.
 
 ## The standard for the free downloads
@@ -62,7 +62,7 @@ metered-call rule. Their standard:
 a user-supplied credential. It is still not a metered call — the key exists for
 rate-limiting and attribution, never billing — so it is configured the same way
 (`sensei-top config --set-topdeck-key`, or a `TOPDECK_API_KEY` env var,
-resolved by `metagame/config.py`, a *sibling* to `llm/config.py` rather than an
+resolved by `metagame/config.py`, a *sibling* to `claude_config.py` rather than an
 extension of it) while staying governed by the free-download standard above.
 With no key configured the corpus refresh simply skips that source, no
 different from any other unreachable download. See `docs/metagame.md`.
@@ -110,7 +110,7 @@ stay free, and neither needs an account. What follows from that:
   five routes can call Anthropic, any OpenAI-compatible endpoint, or a
   local model (Ollama, LM Studio) on the machine. Three consequences are
   decided with it: "the only module that imports `anthropic`" becomes "the
-  only package that talks to a model" (`llm/`), with one adapter per
+  only package that talks to a model" (`ai/llm/`), with one adapter per
   protocol; every stored narrative carries the model id that wrote it, and
   the dashboard shows it, because a report from a small local model is
   not the report the prompt was tuned for; and the coach's web search,
@@ -131,23 +131,27 @@ along with what pins it down.
 
 ## Credential resolution
 
-`src/sensei_top/llm/config.py` is the only place a *metered, billing*
-credential is read — the Claude API key. The free, rate-limited TopDeck.gg
-credential is resolved by its own sibling module, `metagame/config.py`, under
-the free-download standard above rather than this rule.
+`src/sensei_top/claude_config.py` is the only place a *metered, billing*
+credential is read — the Claude API key. It lives in core, not in `ai/`,
+because `config --show` and `config --json` report the credential, the
+model and the models offered whether or not `ai/` is installed; it imports
+only `secrets.py` and `config.py`, and nothing in it can make a call. The
+free, rate-limited TopDeck.gg credential is resolved by its own sibling
+module, `metagame/config.py`, under the free-download standard above rather
+than this rule.
 
 Order, first match wins:
 
 1. `ANTHROPIC_API_KEY` environment variable.
 2. The system keyring (Windows Credential Manager, Secret Service on Linux),
    service `sensei-top`, username `claude`, read through `secrets.py`. That
-   module is a generic, fail-soft store and imports nothing from `llm/`; this
-   module stays the only place the credential is *resolved*. The `fail` and
-   `null` keyring backends count as "no backend" (silently skipped); a backend
-   that exists but errors logs a WARNING (never the value) and resolution
-   moves on to the file.
+   module is a generic, fail-soft store and imports nothing that resolves a
+   credential; `claude_config.py` stays the only place the credential is
+   *resolved*. The `fail` and `null` keyring backends count as "no backend"
+   (silently skipped); a backend that exists but errors logs a WARNING (never
+   the value) and resolution moves on to the file.
 3. `~/.config/sensei-top/config.toml` (`$XDG_CONFIG_HOME` if set), or on
-   Windows `%APPDATA%\sensei-top\config.toml` (`llm/config.py::config_path`;
+   Windows `%APPDATA%\sensei-top\config.toml` (`config.py::config_path`;
    a file left at the old `~/.config` path is still read there, with a
    warning to move it, until the `%APPDATA%` one exists), a `[claude]`
    table:
@@ -189,12 +193,12 @@ and exits non-zero, since either choice would change which key is in force.
 shell: the `[arena]`, `[mtgo]` and backup values, the model and effort, the
 models offered, and for each key only `key_set` and `key_source` (`env`,
 `keyring`, `file` or `null`), never the key. `key_source` comes from
-`llm/config.py::key_source()` and `metagame/config.py::key_source()`, the
+`claude_config.py::key_source()` and `metagame/config.py::key_source()`, the
 same resolution `load()` runs; `cli.py` writes through `secrets.py` but never
 decides which key is in force.
 
 The coach reads the same `[claude]` table plus an optional `[claude.coach]`
-table layered on top of it, resolved by `llm/config.py::load_coach()`:
+table layered on top of it, resolved by `claude_config.py::load_coach()`:
 
 ```toml
 [claude.coach]
@@ -207,9 +211,10 @@ Any key left out of `[claude.coach]` falls back to `[claude]`'s own value
 (or the built-in default), and `load_coach()` returns `None` under the exact
 same missing-credential rule as `load()` — the coach is not a separate
 credential, only an optional override of model, effort, and whether it may
-search at all. Written by `sensei-top config --set-coach-model`,
-`--set-coach-effort`, and `--coach-web-search on|off`; `config --show` prints
-the resolved coach override alongside the base model/effort when one is set.
+search at all. No command writes this table; it is edited by hand.
+`config --show` prints the resolved coach override alongside the base
+model/effort when one is set, and the Coach page's model dropdown preselects
+its `model`.
 
 The TopDeck.gg key follows the same order (`TOPDECK_API_KEY`, keyring username
 `topdeck`, `[topdeck]` in the file) in `metagame/config.py`.
@@ -225,22 +230,31 @@ degrades the one surface that needs it, not the whole app.
 
 ## What calls out, and what it sends
 
-Only `src/sensei_top/llm/client.py` imports `anthropic`, and only these
+Only `src/sensei_top/ai/llm/client.py` imports `anthropic`, and only these
 five routes ever construct a client — each fired by a button press, never a
 schedule, never a background worker:
 
 | Route | Sends | Writes |
 |---|---|---|
-| `POST /api/matches/{id}/report/narrative` | `review/narrative.py`'s existing `full_prompt` — this game's turn-by-turn shape and the report's findings, no raw hand or graveyard | `match_narrative` |
-| `POST /api/guide/{key}/narrative` | `guide/narrative.py`'s existing `full_prompt` — the player's 75 and the field's top archetypes' consensus staples, both with oracle text | `deck_narrative` **and** `matchup_brief` (every matchup plan the guide covers) |
-| `POST /api/review/leaks/narrative` | `review/leaks_narrative.py`'s existing `full_prompt` — one bullet per recurring pattern with its win-rate interval | `leaks_narrative` |
-| `POST /api/coach/narrative` | `coach/narrative.py`'s `full_prompt` — cross-deck win rates and recurring patterns over every completed constructed match, worked example losses, a curated reading list, and the previous report's own progress metrics; every field is a rate, a pattern label, or a reading id — no opponent name, user id, local path, or deck GUID, with the one documented exception of an example game's own `match_id` (`docs/coach.md`). Also takes an optional JSON body, `{"model": "..."}`, from the Coach page's model dropdown — one of `llm/client.py::REPORT_MODELS`, else a 422 naming the allowed ids; left out, the call uses the configured coach model exactly as before the dropdown existed. | `coach_report` (a new row every time — a coach report is history, never overwritten) |
-| `POST /api/guide/{key}/rcq/narrative` | `guide/rcq.py`'s `rcq_prompt` — the exact 75 the user pasted, with oracle text, the list's diff against the field's consensus, the expected archetypes the user picked (corpus keys, each with consensus and oracle text), the field's shares since the format reset and over the last 14 days, and every event of the last 7 days (date, name, tier, players, top-8 archetypes). The body is `{decklist, expected[], own?}`; no opponent name, handle or local path. 503 with no credential, 502 on an `LLMError` | `rcq_guide` (a new row every time — each is the record of one event's preparation) |
+| `POST /api/matches/{id}/report/narrative` | `ai/review/narrative.py`'s existing `full_prompt` — this game's turn-by-turn shape and the report's findings, no raw hand or graveyard | `match_narrative` |
+| `POST /api/guide/{key}/narrative` | `ai/guide/narrative.py`'s existing `full_prompt` — the player's 75 and the field's top archetypes' consensus staples, both with oracle text | `deck_narrative` **and** `matchup_brief` (every matchup plan the guide covers) |
+| `POST /api/review/leaks/narrative` | `ai/review/leaks_narrative.py`'s existing `full_prompt` — one bullet per recurring pattern with its win-rate interval | `leaks_narrative` |
+| `POST /api/coach/narrative` | `ai/coach/narrative.py`'s `full_prompt` — cross-deck win rates and recurring patterns over every completed constructed match, worked example losses, a curated reading list, and the previous report's own progress metrics; every field is a rate, a pattern label, or a reading id — no opponent name, user id, local path, or deck GUID, with the one documented exception of an example game's own `match_id` (`docs/coach.md`). Also takes an optional JSON body, `{"model": "..."}`, from the Coach page's model dropdown — one of `claude_config.py::REPORT_MODELS`, else a 422 naming the allowed ids; left out, the call uses the configured coach model exactly as before the dropdown existed. | `coach_report` (a new row every time — a coach report is history, never overwritten) |
+| `POST /api/guide/{key}/rcq/narrative` | `ai/guide/rcq_prompt.py`'s `rcq_prompt` — the exact 75 the user pasted, with oracle text, the list's diff against the field's consensus, the expected archetypes the user picked (corpus keys, each with consensus and oracle text), the field's shares since the format reset and over the last 14 days, and every event of the last 7 days (date, name, tier, players, top-8 archetypes). The body is `{decklist, expected[], own?}`; no opponent name, handle or local path. 503 with no credential, 502 on an `LLMError` | `rcq_guide` (a new row every time — each is the record of one event's preparation) |
 
 All five routes sit behind `api/guard.py`, which refuses a POST from a
 foreign `Origin` or without the dashboard's `X-Tracker-Client` header before
 it reaches the route, so another page open in your browser cannot trigger a
 metered call.
+
+`GET /api/llm/status`, which tells the dashboard whether to offer a generate
+button ("The fallback"), is `ai/routes/status.py`, mounted only when `ai/` is
+installed (`docs/architecture.md`, "Who may know what"); without it the
+path is the API's JSON 404. The plumbing the five routes and the paste
+routes share — the 503 with no credential, the authored-write transaction and
+the paste refusals — is `ai/routes/narrative.py`. The routes themselves are
+still in their features' `api/routes/` modules while the move into
+`ai/routes/` is under way.
 
 ### Saving a pasted answer
 
@@ -251,7 +265,7 @@ card that offers a prompt: `PUT /api/matches/{match_id}/report/narrative`,
 `PUT /api/guide/{key}/briefs/{archetype_key}`,
 `PUT /api/guide/{key}/coverage` and `PUT /api/guide/{key}/rcq/narrative`.
 None constructs a client or sends anything anywhere. Each reads the
-answer through `answers.py::read_answer`, the parser the CLI importers
+answer through `ai/answers.py::read_answer`, the parser the CLI importers
 use, and writes the table its generate route or importer writes
 (non-negotiable #6's allowlist; `test_only_authored_artifact_routes_write`
 pins all seven). The answer's `for` line must name this card: an answer
@@ -262,20 +276,20 @@ is looked up (413). A pasted answer is stored with the author `pasted`
 and no cost or token counts, which stay `NULL` ("Model, effort, and
 cost", below); the dashboard says "Pasted in." where it would name a
 model. The stored prompt is the copied prompt rebuilt at save time,
-except on the brief and coverage routes, which store what
-`brief --import` stores, the build context (`docs/brief.md`).
+except on the brief and coverage routes, which store
+the build context (`docs/brief.md`).
 
 The coach's call is also the only one that can reach the network *during* the
 call, not just at its start and end: `write_report` (below) hands Claude a
-server-side web-search tool restricted to `coach/canon.py::ALLOWED_DOMAINS`,
+server-side web-search tool restricted to `ai/coach/canon.py::ALLOWED_DOMAINS`,
 a fixed list of magic-strategy and metagame sites. The model decides whether
 to search at all — most of the prompt needs no search — and never sees a
 raw URL outside that list to visit.
 
 Each call also logs at `INFO` level — the model and effort before the call,
 then input/output tokens, cost, and elapsed time once it completes (or a
-`WARNING` if it fails). `llm/client.py` sets its own logger's level
-explicitly, and `logs.py` lets the `INFO` lines of any `sensei_top.llm`
+`WARNING` if it fails). `ai/llm/client.py` sets its own logger's level
+explicitly, and `logs.py` lets the `INFO` lines of any `sensei_top.ai.llm`
 logger through to both the console and the log file at the default levels,
 so a user watching `serve` sees what a button press spent (rule 5, "never
 silent"). Every other logger's `INFO` stays out.
@@ -288,19 +302,19 @@ call's whole prompt, which is the user's own match data, written to
 
 **A generate call sends the copied prompt without its last section.**
 The prompt a card offers to copy ends with the answer contract
-(`answers.py::answer_format`): a `for` line naming the card, a
+(`ai/answers.py::answer_format`): a `for` line naming the card, a
 `context` hash of what the prompt was built from, and the JSON shape to
 answer in, one `{"prose": ...}` object for the prose cards. A generate
 call sends the prompt without that contract (`full_prompt`, the coach's
 `CoachPrompt.prompt`), because its reply is stored whole or read through
 the tool's own schema. The evidence is the same text either way, tested
 the same way, one route's builder at a time:
-`test_narrative_prompt_carries_no_local_paths` (`tests/test_api.py`,
-`tests/test_narrative.py`) for the match report,
+`test_narrative_prompt_carries_no_local_paths` (`tests/ai/test_match_report_routes.py`,
+`tests/ai/test_narrative.py`) for the match report,
 `test_leaks_context_carries_no_local_paths` for the leak finder,
 `test_build_guide_context_carries_no_local_paths` for the deck guide, and
 `test_build_coach_prompt_over_a_projected_database_no_privacy_leak` with
-`tests/test_coach_evidence.py`'s two `test_privacy_*` tests for the coach.
+`tests/ai/test_coach_evidence.py`'s two `test_privacy_*` tests for the coach.
 The RCQ guide's prompt has no such test. These tests are load-bearing
 now in a way they were only decorative before: a bug in one of those
 builders used to produce a prompt a human read before pasting anywhere; now it's a
@@ -309,8 +323,8 @@ prompt the API sends.
 The matchup brief (`GET /api/current-match/brief`) deliberately has **no**
 generate button — it stays `CopyPromptCard`-only. It still gets filled
 automatically for any archetype the deck guide covers, because generating the
-guide writes into `matchup_brief` the same way `guide --import` already does
-via `brief/from_guide.py`.
+guide writes into `matchup_brief` the same way a pasted guide already does
+via `ai/brief/from_guide.py`.
 
 ## Model, effort, and cost
 
@@ -320,15 +334,15 @@ Default `claude-opus-5-5`, `thinking: {"type": "adaptive"}`,
 requests structured output (`output_config.format`) against the existing
 `_GUIDE_TOOL["input_schema"]` schema, so the generate path returns the exact
 JSON shape `guide_narrative_from_json` already parses — one validation path,
-not two. The RCQ guide does the same with `guide/rcq.py`'s
+not two. The RCQ guide does the same with `ai/guide/rcq_prompt.py`'s
 `_RCQ_TOOL["input_schema"]` and `rcq_from_json`.
 
 Every generated artifact records `model`, `input_tokens`, `output_tokens`, and
 `cost_usd` computed from the response's own `usage` block against a small
-priced-models table in `llm/client.py` (`_PRICES`): `claude-opus-5` ($5/$25
+priced-models table in `ai/llm/client.py` (`_PRICES`): `claude-opus-5` ($5/$25
 per MTok in/out), `claude-opus-5-5` ($4/$20), `claude-fable-5-1` ($10/$50),
 `claude-sonnet-5` ($2/$10), and `claude-haiku-4-5` ($1/$5) — five priced
-models, a `--set-model`/`--set-coach-model` override may name any of them.
+models, a `--set-model` or `[claude.coach]` `model` override may name any of them.
 The coach's own dropdown offers only four of the five (`REPORT_MODELS`,
 above) — every priced model but Haiku 4.5, which rejects the adaptive
 thinking and explicit effort `write_report` always sends. An unrecognized
@@ -372,14 +386,14 @@ asynchronously, in up to a day. A report that arrives while the user waits
 on the page is the product, so no route uses it.
 
 Measured per-call costs, from real runs at `effort: high` against the
-fixture-backed scratch database used in `tests/test_llm.py`:
+fixture-backed scratch database used in `tests/ai/test_llm.py`:
 
 | Feature | Measured cost | Notes |
 |---|---|---|
 | Match report (the `"Coach's summary"` card) | $0.098 | A real 2-game match. The card predates the Coach tab and is unrelated to it — one match, not a cross-deck report |
 | Deck guide | $0.066 | Against the fixture's 2-match deck with **no card oracle text loaded** (`sensei-top cards --scryfall` never run on this scratch DB) — a real deck's guide, with oracle text for its own 75 and the field's top archetypes, will cost more; re-measure against a real `$MTGA_LOG` before trusting this number for planning |
 | Leak narrative | not yet measured | the fixture has only 2 matches — `leaks.MIN_SAMPLE` (10) can never clear on either side of any comparison, so there was nothing to generate a training plan from |
-| Coach report | $0.8482 | Before prompt caching. Opus 5 over a real 245-match database, 2026-09-20: 110,718 input / 9,384 output tokens and 6 web searches (6 × $0.01 = $0.06 of that total). Measured against `$MTGA_LOG`, not the fixture, which can't reach `MIN_SAMPLE` (10) constructed matches. **The prompt is only ~10k tokens**; the billed input is it re-sent on every `pause_turn` continuation, so searches drive this cost, not history size — `--coach-web-search off` takes it to a few cents. See `docs/coach.md` |
+| Coach report | $0.8482 | Before prompt caching. Opus 5 over a real 245-match database, 2026-09-20: 110,718 input / 9,384 output tokens and 6 web searches (6 × $0.01 = $0.06 of that total). Measured against `$MTGA_LOG`, not the fixture, which can't reach `MIN_SAMPLE` (10) constructed matches. **The prompt is only ~10k tokens**; the billed input is it re-sent on every `pause_turn` continuation, so searches drive this cost, not history size — `web_search = false` under `[claude.coach]` takes it to a few cents. See `docs/coach.md` |
 | Coach report, Fable 5.1 | $3.2292 | Before prompt caching. Picked from the Coach tab's model dropdown, 2026-09-22, over 249 matches at `effort: high`: 238,886 input / 15,206 output tokens and 8 web searches ($0.08). About 3.8× the Opus 5 run: 2× from the per-token price, the rest from 2.2× the billed input through the same `pause_turn` re-sends. Not a controlled comparison — it was the second report, so its prompt also carried the first. See `docs/coach.md` |
 | Coach report, Opus 5.5, cached | $0.5998 | With prompt caching, 2026-10-07, Standard over 360 Standard matches (633 Constructed): 20 uncached input, 42,645 cache-write and 256,003 cache-read tokens (a 298,668-token prompt across the loop), 12,763 output tokens and 8 web searches ($0.08). Uncached, the same counts would have cost about $1.53. The last uncached Opus 5.5 report, 2026-10-02, with the same 8 searches, cost $1.7522 (345,874 input / 14,437 output). Not a controlled comparison: that one predates the per-format report, so its prompt differs |
 
@@ -389,20 +403,21 @@ measurement, so the Opus 5 and Fable 5.1 rows overstate what they cost now.
 
 ## The fallback
 
-`GET /api/llm/status` reports `{configured: bool, model: str | None}`,
-never the key itself. Each of the five callers reads it and hands
-`GenerateCard` (`web/src/components/GenerateCard.tsx`) a `writer`, who
-writes the report, from `writerFrom` (`web/src/lib/writer.ts`). The
-card builds one body, the same whoever writes: a written note
-(`writtenNote`, `lib/written.ts`: who wrote it, when, what it cost and,
-when the evidence has moved on since, a sentence saying so), then the
-stored prose, or "Nothing written yet." with neither. With no key
-configured nobody writes, and that body becomes `CopyPromptCard`'s
-children, above its "Copy the prompt" button. With one, the key writes,
-and the same body sits above a "Write it with Claude" button ("Rewrite
-with Claude" once something is stored) and a "Show the prompt" toggle.
-While it writes, the button counts the seconds: these calls are slow,
-and a guide at `effort: high` can take minutes.
+`GET /api/llm/status` reports `{configured: bool, model: str | None}`, never
+the key itself. Each of the five callers reads it and hands `GenerateCard`
+(`web/src/ai/GenerateCard.tsx`, reached through `useAi()` in
+`web/src/ai/registry.ts`, the only import of `ai/` the lint rule allows from
+outside it) a `writer`, who writes the report, from `writerFrom`
+(`web/src/lib/writer.ts`). The card builds one body, the same whoever
+writes: a written note (`writtenNote`, `lib/written.ts`: who wrote it, when,
+what it cost and, when the evidence has moved on since, a sentence saying
+so), then the stored prose, or "Nothing written yet." with neither. With no
+key configured nobody writes, and that body becomes `CopyPromptCard`'s
+children, above its "Copy the prompt" button. With one, the key writes, and
+the same body sits above a "Write it with Claude" button ("Rewrite with
+Claude" once something is stored) and a "Show the prompt" toggle. While it
+writes, the button counts the seconds: these calls are slow, and a guide at
+`effort: high` can take minutes.
 
 `Writer` has those two cases, nobody and a key (`docs/frontend.md`,
 "Writing prose: `GenerateCard` and `CopyPromptCard`"). A paid plan's

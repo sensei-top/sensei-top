@@ -1,7 +1,6 @@
 """Diagnostics, the deck picker and the format list: whether the
-reader/watcher/database are alive, whether a Claude credential is
-configured, every deck with enough context to pick one out of a list, and
-every format with what the app holds for it.
+reader/watcher/database are alive, every deck with enough context to pick
+one out of a list, and every format with what the app holds for it.
 """
 
 from __future__ import annotations
@@ -13,12 +12,11 @@ from typing import Any
 from fastapi import APIRouter, Request
 
 from sensei_top.api.deps import Conn
-from sensei_top.api.models.common import Deck, Health, LiveStatus, LLMStatus
+from sensei_top.api.models.common import Deck, Health, LiveStatus
 from sensei_top.api.models.metagame import FormatEntry, FormatMatchCounts, FormatsOut
 from sensei_top.api.sql import _rows, default_format
 from sensei_top.formats import FORMATS
 from sensei_top.live import resolve_arena_log
-from sensei_top.llm import config as llm_config
 
 router = APIRouter()
 
@@ -30,19 +28,6 @@ def health(request: Request, conn: Conn) -> Health:
         for table in ("decks", "matches", "games", "turns")
     }
     return Health(status="ok", database=str(request.app.state.database), **counts)
-
-
-@router.get("/api/llm/status", response_model=LLMStatus, tags=["meta"])
-def llm_status() -> LLMStatus:
-    """Whether a Claude credential is resolved right now, and which
-    model would be used — never the key itself
-    (``sensei_top.llm.config``). The dashboard reads this to
-    decide whether a narrative surface offers a generate button or
-    falls back to the copy-prompt path (``docs/llm.md``). No database
-    connection needed: this is purely local config, not derived data.
-    """
-    cfg = llm_config.load()
-    return LLMStatus(configured=cfg is not None, model=cfg.model if cfg else None)
 
 
 def _with_home_as_tilde(path: Path) -> str:

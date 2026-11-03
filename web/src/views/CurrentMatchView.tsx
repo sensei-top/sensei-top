@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { useCurrentMatch, useCurrentMatchRead, useLive } from '../api'
 import type { CurrentMatch, IntermissionOut, OpeningHandOut } from '../api'
+import { useAi } from '../ai/registry'
 import { KeepGuideCard } from '../components/KeepGuideCard'
 import { LibraryCard } from '../components/LibraryCard'
-import { MatchupBriefCard } from '../components/MatchupBriefCard'
 import { OpeningHandCard } from '../components/OpeningHandCard'
 import { OpponentHandCard } from '../components/OpponentHandCard'
 import { OpponentRead, PickDeckButton } from '../components/OpponentRead'
@@ -201,14 +201,15 @@ function MatchStatusStrip({
  *  here it sits beside the game it is for. */
 function DisclosureBar({ match, advice }: { match: CurrentMatch; advice: boolean }) {
   const { t } = useTranslation()
+  const ai = useAi()
   // The brief's play-arounds are advice: off during an event's game, or
   // when the user turned advice off.
-  if (!advice) return null
+  if (!advice || ai === null) return null
   return (
     <div className="flex shrink-0 flex-wrap gap-4 border-t border-edge pt-2 text-caption">
       <Disclosure summary={t('live.bar.brief')}>
         <div className="max-h-[55vh] w-[min(28rem,90vw)] overflow-y-auto">
-          <MatchupBriefCard match={match} />
+          <ai.MatchupBriefCard match={match} />
         </div>
       </Disclosure>
     </div>

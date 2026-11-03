@@ -72,7 +72,7 @@ class DeckGuide:
     ``own_unclassified`` is the one a caller may need to act on: this deck's
     own list has a format but could not be classified against the field's
     archetype definitions, so there is no list diff, and ``gaps[0]`` is the
-    note saying so. ``guide/rcq.py`` drops that note by this flag, never by
+    note saying so. ``ai/guide/rcq_prompt.py`` drops that note by this flag, never by
     matching its sentence, which is in whatever language the build ran in."""
 
     provenance: Provenance

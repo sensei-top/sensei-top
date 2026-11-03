@@ -68,6 +68,12 @@
     "updatesLabel": "Verificar uma vez por dia se há uma nova versão",
     "autostartLabel": "Abrir o Sensei Top ao entrar no computador",
     "autostartDescription": "Ele registra seus jogos sem você precisar abri-lo.",
-    "tour": "Um tour pelo dashboard"
+    "tour": "Um tour pelo dashboard",
+    "ai": {
+      "heading": "Recursos de IA",
+      "body": "O Sensei Top pode escrever relatórios de partida, guias de deck, briefings de matchup e um relatório do treinador, com sua própria chave do Claude ou lhe dando um prompt para colar em um chat. Você pode mudar isso depois em Configurações.",
+      "on": "Ligar",
+      "off": "Deixar desligados"
+    }
   }
 }

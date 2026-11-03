@@ -9,7 +9,7 @@ until its database, backup slots and config directory carry the new ones.
 
 **The old names are arguments**, never literals in this file, so no old
 spelling enters a tracked file. The new names come from the package itself
-(``llm.config.config_path()``, ``cli.DEFAULT_DB``, ``backup.config``'s
+(``config.config_path()``, ``cli.DEFAULT_DB``, ``backup.config``'s
 ``default_dir`` and ``slot_path``), so this script cannot disagree with the
 product about where anything lives. ``DEFAULT_DB`` is relative to the working
 directory, exactly as in the product, and every path is printed absolute so a
@@ -77,7 +77,7 @@ from urllib.parse import quote
 
 from sensei_top.backup.config import BACKUP_DIR_ENV, BackupConfig, default_dir, slot_path
 from sensei_top.cli import DEFAULT_DB
-from sensei_top.llm.config import config_path
+from sensei_top.config import config_path
 
 SIDE_SUFFIXES = ("-wal", "-shm")
 BUSY_TIMEOUT_S = 2.0

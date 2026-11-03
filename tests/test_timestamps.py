@@ -9,8 +9,8 @@ string it returns is checked for the suffix.
 import re
 from datetime import UTC, datetime
 
+from sensei_top.clock import now_iso
 from sensei_top.db import open_database
-from sensei_top.llm.provenance import now_iso
 from sensei_top.metagame import source, topdeck
 from sensei_top.metagame.holds import apply_outcome, read_hold
 from sensei_top.metagame.source import Answer, AnswerKind
@@ -18,7 +18,7 @@ from sensei_top.metagame.source import Answer, AnswerKind
 UTC_STAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$")
 
 
-def test_provenance_now_iso_ends_in_z():
+def test_clock_now_iso_ends_in_z():
     assert UTC_STAMP.match(now_iso())
 
 

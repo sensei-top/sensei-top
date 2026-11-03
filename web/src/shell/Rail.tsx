@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { BrandGlyph } from '../components/ui'
 import { useMatchInProgress } from '../lib/liveMatch'
-import { placeLabel, PLACES, PRODUCT_NAME, type Place } from './places'
+import { useAiFeatures } from './aiFeatures'
+import { placeLabel, PRODUCT_NAME, visiblePlaces, type Place } from './places'
 
 /** A place's icon, with the live dot when something is happening there
  *  right now (only ever Live). Never colour alone: the dot is
@@ -33,6 +34,7 @@ export function PlaceIcon({ place, live, current }: { place: Place; live: boolea
 export function Rail({ current }: { current: Place | null }) {
   const { t } = useTranslation()
   const matchInProgress = useMatchInProgress()
+  const [aiOn] = useAiFeatures()
   const isLive = (place: Place) => place.id === 'live' && matchInProgress
   return (
     <nav
@@ -46,7 +48,7 @@ export function Rail({ current }: { current: Place | null }) {
       >
         <BrandGlyph size={28} />
       </Link>
-      {PLACES.map((place) => {
+      {visiblePlaces(aiOn).map((place) => {
         const isCurrent = current?.id === place.id
         return (
           <Link

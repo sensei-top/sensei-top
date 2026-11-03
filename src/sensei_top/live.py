@@ -36,8 +36,8 @@ from pathlib import Path
 
 from sensei_top import arena_config, procs
 from sensei_top.archetypes import classify_matches
+from sensei_top.clock import now_iso as _now
 from sensei_top.db import connect, open_database
-from sensei_top.llm.provenance import now_iso as _now
 from sensei_top.projector import PROJECTOR_VERSION
 from sensei_top.projector.matches import has_match_boundary, project
 from sensei_top.projector.mtgo.parse import last_game_decided

@@ -72,7 +72,7 @@ def _classified_deck_total(conn: sqlite3.Connection, where: str, params: list) -
     truncated top_n sum. Its four callers, ``_shares_for_window``,
     ``field_by_key``, ``build_field`` (the pre-reset denominator
     ``share_before_reset`` divides by) and
-    ``brief/narrative.py::_archetype_share``, share it rather than repeating
+    ``ai/brief/narrative.py::_archetype_share``, share it rather than repeating
     it, since each guards against the exact same truncated-denominator bug.
     The callers' *count* queries stay separate — ``_shares_for_window``
     groups by archetype name up to ``top_n`` for display, ``field_by_key``
@@ -94,7 +94,7 @@ def field_window(fmt: str, since: str | None) -> tuple[str, list]:
     >= ?`` once a window start exists — assumes the caller's query aliases
     ``meta_event`` as ``e``. The definition of "the field's window" used by
     ``_shares_for_window``, ``field_by_key`` (and so every caller of it) and
-    ``build_field`` here, and ``brief/narrative.py::_archetype_share``.
+    ``build_field`` here, and ``ai/brief/narrative.py::_archetype_share``.
     ``guide/window.py::structural_change`` writes the same post-reset clause
     out by hand, since this module imports ``guide/window.py`` and the
     reverse import would be a cycle.
@@ -124,9 +124,9 @@ def field_by_key(
     (``_classified_deck_total``), the shared denominator every caller's
     share divides by.
 
-    Shared by ``brief/coverage.py::_field_counts`` (a thin adapter that
+    Shared by ``ai/brief/coverage.py::_field_counts`` (a thin adapter that
     keeps only each key's top name and its summed count),
-    ``coach/evidence.py::_build_field`` (which keeps every variant, plus its
+    ``ai/coach/evidence.py::_build_field`` (which keeps every variant, plus its
     own ``TOP_FIELD`` cut and sort) and ``guide/rcq.py::_expected``.
     """
     where, params = field_window(fmt, since)
@@ -178,7 +178,7 @@ def _personal_rate_rows(
     archetype_name`` (the classifier's own verdict, the same vocabulary
     ``structural_change``'s dict is keyed on). ``personal_rate`` below is the
     single-archetype read of this same result, for a caller that only wants
-    one number (``brief/narrative.py``) rather than every archetype this
+    one number (``ai/brief/narrative.py``) rather than every archetype this
     deck has played against.
     """
     if not deck_ids:
@@ -200,7 +200,7 @@ def _personal_rate_rows(
 
 def archetype_key_by_name(conn: sqlite3.Connection) -> dict[str, str]:
     """The corpus display name -> ``archetype_key`` lookup the guide prompt
-    and ``brief/from_guide.py`` share, so a matchup plan named in one is
+    and ``ai/brief/from_guide.py`` share, so a matchup plan named in one is
     filed under the same key by the other.
 
     A name is not unique to a key, so each name maps to the key with the
@@ -232,8 +232,8 @@ def faced_archetypes(
     this deck has actually played against — win/loss decisions only, and
     only matches started on or after ``since`` when one is given (``None`` is
     full history). The one definition of "faced" shared by the guide's
-    most-faced matchup list (``guide/narrative.py``, windowed) and brief
-    coverage (``brief/coverage.py``, full history).
+    most-faced matchup list (``ai/guide/narrative.py``, windowed) and brief
+    coverage (``ai/brief/coverage.py``, full history).
 
     Grouped on ``v_match_opponent``'s raw ``archetype_key``, never its display
     name, so a row needs no further lookup to know which consensus or brief

@@ -93,8 +93,9 @@ def test_life_totals_at_decisive_final_turn(db):
   `conftest.py`'s `make_client` fixture wraps one with a loopback `Host` and
   the dashboard's own `X-Tracker-Client` header already set, so it looks like
   the real frontend to the guard and a test can go back to being about the
-  route, not the guard. `test_guard.py` is the one module that builds bare
-  clients on purpose, to control exactly which headers are present.
+  route, not the guard. `test_guard.py` and `ai/test_guard_ai.py` are the
+  only modules that build bare clients on purpose, to control exactly which
+  headers are present.
 - **Synthetic minimal inputs** for edge cases the real log cannot easily show
   (brace counting, escaped quotes, rollback on a bad migration).
 - **`tmp_path` always.** A test must never touch `data/sensei-top.db`.
@@ -140,7 +141,7 @@ mid-mulligan cut of the fixture (`FIXTURE_BYTES[:222]`) must project to an
 
 ## CI
 
-`.github/workflows/ci.yml` runs two jobs on pull requests into `develop` or
+`.github/workflows/ci.yml` runs three jobs on pull requests into `develop` or
 `main`, by hand (`workflow_dispatch`), and on pushes to `develop` and `main`.
 Two repositories hold this file. The private one never spends minutes on a
 push: its Actions minutes are metered (2,000 a month on Free, and a Windows
@@ -149,10 +150,28 @@ minute counts twice), so each job carries
 and a push there shows a run whose jobs are skipped. The public repository,
 `sensei-top/sensei-top`, runs every trigger, since its minutes are unmetered.
 
-- **Linux:** `ruff check .`, `pytest -q`, then in `web/` `pnpm lint`, `test`
-  and `build`, then the drift check: `pnpm gen:types` followed by
-  `git diff --exit-code`, which fails if the tracked `web/src/types/api.ts` no
-  longer matches the API (`openapi.json` is a gitignored intermediate).
+- **Linux:** `ruff check .`, then `lint-imports`, which holds the contract
+  that core never imports `sensei_top.ai` (`[tool.importlinter]` in
+  `pyproject.toml`, no import exempted), then `pytest -q`, then in `web/`
+  `pnpm lint`, `test` and `build`, then the drift check: `pnpm gen:types`
+  followed by `git diff --exit-code`, which fails if the tracked
+  `web/src/types/api.ts` no longer matches the API (`openapi.json` is a
+  gitignored intermediate).
+- **Core only (Linux):** the proof that core runs without `ai/`. The job
+  deletes `src/sensei_top/ai/` from the runner's checkout, then runs
+  `pytest -q tests --ignore=tests/ai`. Two checks skip themselves there, since
+  they describe the whole tree: the docs' names (`test_doc_refs.py`) and the
+  `.pot` (`test_i18n.py`). It does not run `ruff` (the Linux job
+  already did, over the whole tree) or `lint-imports` (the contract names the
+  package, which is no longer there; the Linux job holds it). AI tests live
+  in `tests/ai/`, the one exception to a flat `tests/`; a mixed file is split
+  by test, and `test_only_authored_artifact_routes_write` sits there with the
+  full route set while a core twin asserts that core alone mounts no
+  authored-write route but the two picks. Locally,
+  `verify.py --core` copies the tree to a temporary directory without
+  `src/sensei_top/ai/` and `tests/ai/` and runs the same pytest there; it
+  never deletes from the working tree, and removes the copy afterwards (a
+  full pytest run writes about 550 MB).
 - **Windows:** `pytest -q` only. No test reads the built dashboard
   (`test_dashboard.py` writes its own `web_dist`), so neither pnpm nor a
   build is needed there. `.gitattributes` marks `tests/fixtures/**` as `-text`

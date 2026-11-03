@@ -23,10 +23,10 @@ your task touches; none is required up front:
 | [docs/metagame.md](docs/metagame.md) | The evidence tiers, complete- vs. partial-decklist classification, corpus fetch policy | touching `metagame/` or the personal/field matchup join |
 | [docs/review.md](docs/review.md) | What each match-report analyzer measures, the strategy article behind it, and the leak finder | touching `review/` |
 | [docs/guide.md](docs/guide.md) | The deck guide: format-reset detection, the list-vs-consensus diff, the field join, the prompt/import round trip | touching `guide/` or a deck's Guide page |
-| [docs/brief.md](docs/brief.md) | The live matchup brief, and the prompt-out/answer-in round trip that replaced every paid call | touching `brief/` or the matchup-brief card |
-| [docs/coach.md](docs/coach.md) | The coach's scope and exclusions, the skill/format evidence windows, the leak and example-game selection rules, the reading list and web-search allowlist, and progress-since-last-report | touching `coach/`, `api/routes/coach.py`, or the Coach page |
+| [docs/brief.md](docs/brief.md) | The live matchup brief, and the prompt-out/answer-in round trip that replaced every paid call | touching `ai/brief/` or the matchup-brief card |
+| [docs/coach.md](docs/coach.md) | The coach's scope and exclusions, the skill/format evidence windows, the leak and example-game selection rules, the reading list and web-search allowlist, and progress-since-last-report | touching `ai/coach/`, `ai/routes/coach.py`, or the Coach page |
 | [docs/current-match.md](docs/current-match.md) | The live replay, the keep guide, the opponent-hand read and the remaining-library panel — the current-match reads, why they replay `raw_events` instead of reading `turns`, and their degradation rules | touching `table/`, `/api/current-match/read`, or the Live page |
-| [docs/llm.md](docs/llm.md) | The opt-in Claude API call: credential resolution, config file, which routes call out and what they send, cost accounting, the no-credential fallback, what the planned hosted report allowance changes | touching `llm/`, a `.../narrative` POST route, or `GenerateCard`; planning anything hosted |
+| [docs/llm.md](docs/llm.md) | The opt-in Claude API call: credential resolution, config file, which routes call out and what they send, cost accounting, the no-credential fallback, what the planned hosted report allowance changes | touching `ai/llm/`, a `.../narrative` POST route, or `GenerateCard`; planning anything hosted |
 | [docs/attribution.md](docs/attribution.md) | Every outside source the app downloads from, what it takes from each and on what terms; the Fan Content Policy notice | adding or changing a download source, or writing text that names a third party |
 | [docs/status.md](docs/status.md) | Where the project stands: what works today, what is limited on purpose and why, and the data the real database still carries | judging whether something is a gap or a decision |
 | [BACKLOG.md](BACKLOG.md) | The known debt and deferred work, one `BL-NNN` item each, labelled by type, priority, status and area; how to add and close an item | starting a new feature, deciding what to pick up next, or knowingly leaving something behind |
@@ -57,8 +57,8 @@ One line each; the detail is in the doc named, and
 - `src/sensei_top/api/` — FastAPI app (`app.py`, `routes/`, `models/`), read-only except the authored-artifact routes (non-negotiable #6); `guard.py` refuses foreign requests; `dashboard.py` serves `src/sensei_top/web_dist` and answers a page's address with `index.html` — `docs/frontend.md`, "Ports".
 - `src/sensei_top/review/` — the post-game match report, the cross-match leak finder and their prompts — `docs/review.md`.
 - `src/sensei_top/guide/` — the deck guide, built on `review/` rather than duplicating it, and the RCQ guide for one pasted 75 — `docs/guide.md`.
-- `src/sensei_top/brief/` — the live matchup brief, one per `(deck, archetype)`, persisted as an authored artifact; `coverage.py` reads which archetypes still lack one — `docs/brief.md`.
-- `src/sensei_top/coach/` — the dated cross-deck coach report, kept as history; reuses `review/` and `guide/` — `docs/coach.md`.
+- `src/sensei_top/ai/brief/` — the live matchup brief, one per `(deck, archetype)`, persisted as an authored artifact; `coverage.py` reads which archetypes still lack one — `docs/brief.md`.
+- `src/sensei_top/ai/coach/` — the dated cross-deck coach report, kept as history; reuses `review/` and `guide/` — `docs/coach.md`.
 - `src/sensei_top/table/` — the current-match reads: a request-time replay of `raw_events`, never stored. Arena-only. `queues.py` is the event rule: no advice on Live during an event's game — `docs/current-match.md`.
 - `src/sensei_top/archetypes/` — deck-archetype classification from revealed cards: a rule engine (`classify.py`) and a corpus read (`corpus.py`) — `docs/opponent-deck.md`, "Naming the opponent's deck".
 - `src/sensei_top/metagame/` — real tournament results, tiered by evidence quality — `docs/metagame.md`.
@@ -66,7 +66,7 @@ One line each; the detail is in the doc named, and
 - `src/sensei_top/cli.py` — every subcommand (`uv run sensei-top --help` lists them). `serve` refuses any `--host` that isn't loopback (non-negotiable #5). The watcher's flags and how it stores each MTGO game once the game ends are in `docs/architecture.md`, "Live mode's two cadences".
 - `src/sensei_top/cards.py`, `card_images.py` — card database and image cache.
 - `src/sensei_top/i18n.py`, `locale/` — the API's prose in the request's language (`gettext`, `Accept-Language`), every prompt in English; `locale/sensei_top.pot` is generated by `scripts/i18n_extract.py`. The dashboard's catalogues are `web/src/locales/` — `docs/i18n.md`.
-- `src/sensei_top/llm/` — the opt-in Claude call; `config.py` resolves the credential, `client.py` is the only `anthropic` import — `docs/llm.md`.
+- `src/sensei_top/ai/` — every AI feature, which core never imports (`lint-imports`, no exceptions): `llm/client.py` is the opt-in Claude call and the only `anthropic` import; `answers.py` parses a pasted answer. The credential, model and `REPORT_MODELS` are core's `claude_config.py`, so `config --json` reports them with `ai/` absent — `docs/llm.md`.
 - `src/sensei_top/mtgo/config.py` — the user's MTGO handle and log directory, fail-soft; the directory is never guessed.
 - `src/sensei_top/steam.py`, `wine.py` — Steam libraries and every other Wine prefix (Lutris, Heroic, Bottles, `~/.wine`); filesystem only — `docs/architecture.md`, "Finding the clients' files".
 - `src/sensei_top/arena_install.py`, `mtgo/discover.py` — where Arena is installed (from the log's first line) and which folder MTGO writes now (Windows, a suggestion only) — `docs/architecture.md`, "Finding the clients' files".
@@ -115,8 +115,8 @@ One line each; the detail is in the doc named, and
    implementation detail. A metered call on the user's own Claude
    credential follows four lines that do not move:
 
-   - **No credential, no call.** `llm/config.py` is the only place a metered
-     credential is resolved; `llm/client.py` is the only module that imports
+   - **No credential, no call.** `claude_config.py` is the only place a metered
+     credential is resolved; `ai/llm/client.py` is the only module that imports
      `anthropic`. Unconfigured, every generate route 503s and the dashboard
      falls back to `CopyPromptCard` — no difference from before the feature.
    - **Every call is a button press, never a schedule.** Only the five
@@ -153,7 +153,7 @@ One line each; the detail is in the doc named, and
 
    Full picture — what each route sends, credential resolution, measured costs,
    and the TopDeck.gg wrinkle: [docs/llm.md](docs/llm.md). Pinned by
-   `tests/test_llm.py::test_no_credential_means_no_client_is_constructed`.
+   `tests/ai/test_llm.py::test_no_credential_means_no_client_is_constructed`.
 6. **The API writes only authored-artifact tables, never anything the
    projector rebuilds.** Every connection opens `PRAGMA query_only=ON` except
    the small allowlist of routes that write one of: `opponent_deck_override`
@@ -173,9 +173,9 @@ One line each; the detail is in the doc named, and
    `cloud_match` (a match pulled back from the user's own cloud history,
    stored as received, never derived; a match read from this install's own
    log always wins over it). Nothing on this allowlist is ever read by
-   `project()`. `tests/test_api.py::test_only_authored_artifact_routes_write`
-   asserts the exact set of non-GET routes against this allowlist — an
-   addition to it is a design change, not a patch.
+   `project()`. `tests/ai/test_write_allowlist.py` pins this allowlist route
+   by route, and `tests/test_api.py` that core alone mounts only the picks'
+   — an addition to either is a design change, not a patch.
 7. **Every parsing rule needs a fixture-backed test.** The log format changes
    without notice; tests against real captured logs are the only early warning.
 8. **Derive test expectations from the data, not from the code.** Read the

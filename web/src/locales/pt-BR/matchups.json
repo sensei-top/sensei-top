@@ -116,6 +116,9 @@
   "coverage": {
     "title": "Cobertura de matchups",
     "subtitle": "Quais arquétipos têm um briefing: os que você enfrentou, os mais enfrentados primeiro, depois os mais jogados que você ainda não enfrentou. Cada um abre seu matchup, onde está o briefing.",
+    "fieldTitle": "Para quais arquétipos se preparar",
+    "fieldSubtitle": "Os arquétipos que você enfrentou, os mais enfrentados primeiro, depois os mais jogados que você ainda não enfrentou, com a fatia de cada um nos decks de torneio. Cada um abre seu matchup.",
+    "fieldFormatUnknown": "Nenhum formato de torneio é conhecido para este deck, então não há resultados de torneios com que compará-lo. No MTGO, você pode defini-lo confirmando o formato de uma das partidas dele.",
     "nothingTitle": "Nada para cobrir ainda",
     "nothingMessage": "Quando você enfrentar um arquétipo nomeado, ou resultados de torneios forem baixados, ele é listado aqui.",
     "writeAll": "Escrever todos os briefings que faltam",
@@ -217,6 +220,7 @@
     "noPlan": "Nenhum plano escrito para este matchup, e nada de onde escrever um.",
     "formatUnknownNoPlan": "Nenhum formato de torneio é conhecido para esta partida, então o deck do oponente não pode ser nomeado pelos cards vistos, e não há plano para mostrar.",
     "unclassifiedNoPlan": "Oponente ainda não identificado — nenhum plano para mostrar até que um card seja visto.",
+    "notBoardedYet": "Você ainda não fez trocas de sideboard neste matchup.",
     "noPlanYet": "Nenhum plano escrito para este matchup ainda.",
     "closest": "Nenhum plano escrito para {{label}} — plano escrito mais próximo: {{closest}}",
     "stale": "Desatualizado",

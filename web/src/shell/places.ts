@@ -42,6 +42,11 @@ export function placeLabel(place: Place, t: TFunction): string {
   return labels[place.id]
 }
 
+/** The places shown: the Coach is left out with AI features off. */
+export function visiblePlaces(aiOn: boolean): readonly Place[] {
+  return aiOn ? PLACES : PLACES.filter((place) => place.id !== 'coach')
+}
+
 /** The bottom bar's four places; every other one is behind its More. */
 export const BAR_PLACES: readonly PlaceId[] = ['home', 'live', 'matches', 'decks']
 

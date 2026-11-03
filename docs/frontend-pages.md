@@ -40,7 +40,11 @@ apart, and neither is asked for before `/api/formats` answers.
 
 Home never asks for `/api/coach`, `/api/coach/narrative` or a match's
 report (`/api/matches/{id}/report`). The coach on Home is `CoachPointer`,
-two sentences and a button to `/coach`.
+two sentences and a button to `/coach`. With AI features off the pointer is
+not drawn and the field card takes its row (`FieldAndCoach`, three columns
+instead of two). The pattern card stays: it is a core read from
+`/api/review/leaks`, and only its "See every pattern" button, which opens
+`/coach`, goes.
 
 A request on its way holds its card's place with a `Skeleton`. One that
 failed says so in the card that needed it (`ErrorNote`), and the rest of
@@ -503,6 +507,11 @@ everywhere (`docs/current-match.md`,
 "The event rule (`table/queues.py`)"). Under 48rem the page scrolls: the
 strip takes two lines and cuts none of its facts.
 
+With AI features off, between games `SideboardPlanCard` skips the written
+plan, the closest plan and the prompt, and the alternatives card is not
+drawn. This deck's past boarding stands alone when it has any; when it has
+none, the card says "You haven't boarded in this matchup yet."
+
 Each fact is shown once on this page. The status strip alone carries the
 game, the turn, play or draw, the record, the opponent's deck with its
 confidence, the cards seen and the pick button; `OpponentRead` holds the
@@ -533,7 +542,7 @@ writing down once and reusing.
 
 ## The live matchup brief
 
-`MatchupBriefCard` (`components/MatchupBriefCard.tsx`), reachable from
+`MatchupBriefCard` (`ai/brief/MatchupBriefCard.tsx`), reachable from
 Current match's disclosure bar rather than rendered inline, is what to play
 around against this match's opponent and a game-2 swap plan — the useful
 half of the deck guide's §6, reachable while a game is actually on the
@@ -541,14 +550,14 @@ clock. See `docs/brief.md` for the design.
 
 A brief is written once per `(deck, archetype)` and reused in every future
 match against that archetype, so the common case is that one is already
-stored — either from an import, or as a side effect of generating a deck
+stored — either from a pasted answer, or as a side effect of generating a deck
 guide (`docs/llm.md`) — and this renders instantly off the heartbeat. When
-none is, `CopyPromptCard` offers the text to write one from and the exact
-`sensei-top brief --import` command line to save the answer.
+none is, `CopyPromptCard` offers the text to write one from and the box to
+paste the answer into.
 Deliberately no generate button here, unlike the match report and the deck
 guide: generating the guide already fills this cache for every matchup it
 covers, so a second button on this card would mostly duplicate a call the
-guide already made (`brief/narrative.py`'s own docstring).
+guide already made (`ai/brief/narrative.py`'s own docstring).
 
 Each status gets a distinct, honest answer rather than one generic empty
 state: `no_match` renders nothing (`CurrentMatchView`'s own empty state
@@ -744,8 +753,10 @@ stood out" heads the narrow one (`GapsLead`). The cards are one grid's
 children at every width, so a card keeps its state when the window
 crosses 64rem. With no gaps either, the report is one column.
 
-`ReportNarrativeCard` starts closed behind a "Show the coach's summary"
-button, since building the prompt means building the whole report's
+`ReportNarrativeCard` (`ai/report/ReportNarrativeCard.tsx`, drawn by
+`MatchReportPanel` through `useAi()`, so with AI off the report has no
+such card) starts closed behind a "Show the coach's summary" button,
+since building the prompt means building the whole report's
 context, which is not worth doing each time a match is opened. Open, it
 is a `GenerateCard` that carries the game's turn-by-turn shape beside
 the findings, and never a raw hand or graveyard. Unlike the guide it has
@@ -930,7 +941,7 @@ as the Matchups row's two columns, by the small-sample rule over games),
 and In tournaments (the field's rate for the archetype in the deck's
 format, over the same window `useFieldRecords` gives Matchups). Below the
 tiles is the matchup brief against this opponent
-(`components/PairingBrief.tsx`, `docs/brief.md`) in one of five states
+(`ai/brief/PairingBrief.tsx`, `docs/brief.md`) in one of five states
 (`briefState`, `lib/pairing.ts`): not named (the key is not an archetype),
 written, with a warning and "Write it again" when the deck's coverage says
 the list or the field moved since; and, with no brief stored, no
@@ -952,7 +963,9 @@ layout's fourth tab ("RCQ"), beside the Guide; like the Guide it reads the
 deck whole and drops `?version=`. `/decks/:id/guide/rcq`, its address in
 1.0.x, is `RcqRedirect`: it replaces itself with the tab and keeps the
 search and hash. It hands the deck key to `RcqView` (`views/RcqView.tsx`, parts
-in `components/rcq/`; pure helpers in `lib/rcq.ts`). Inputs card: the
+in `components/rcq/`; pure helpers in `lib/rcq.ts`); the write-and-paste
+card is `RcqWrite` (`ai/guide/RcqWrite.tsx`), drawn through `useAi()`,
+while the preview and the stored guide are core. Inputs card: the
 pasted 75 (prefilled with the deck's list, editable), the expected
 archetypes as chips from `/api/metagame/presence` over the last 14 days
 of the deck's format (`CHIP_WINDOW_DAYS`; the format is the guide's
@@ -965,9 +978,10 @@ expected archetypes stored from before are left out of the preview's key
 (`RcqView.tsx`), so they reach neither the preview nor the guide's
 request. Then the preview (counts, warnings, freshness per source; with
 no format, one line in place of the expected archetypes, the freshness
-and the recent events), `GenerateCard` with the prompt behind its
-toggle, and the latest stored guide with "Copy as Markdown" and
-"Download .md" (`docs/guide.md`, "The RCQ guide").
+and the recent events), `RcqWrite`'s `GenerateCard` with the prompt
+behind its toggle (not drawn with AI off), and the latest stored guide
+with "Copy as Markdown" and "Download .md" (`docs/guide.md`, "The RCQ
+guide").
 
 ## The Deck guide tab
 
@@ -992,14 +1006,25 @@ not drawn at all. In order:
 | `guide-the-list` | The list | `components/guide/ListCard.tsx` | always |
 | `guide-the-field` | The field | `components/guide/FieldCard.tsx` | always |
 | `guide-sideboard-plans` | Sideboard plans | `components/guide/WrittenCards.tsx` | the written guide has a plan or a problem |
-| `guide-matchup-coverage` | Matchup coverage | `components/MatchupCoverageCard.tsx` | always |
+| `guide-matchup-coverage` | Matchup coverage; "Archetypes to prepare for" with AI features off | `components/MatchupCoverageCard.tsx` | always |
 | `guide-between-rounds` | Between rounds | `components/guide/WrittenCards.tsx` | the written guide has a checklist item |
-| `guide-write` | Write and export | `components/guide/WriteAndExport.tsx` | always |
+| `guide-write` | Write and export | `ai/guide/WriteAndExport.tsx` | AI features on |
+
+The section nav's label for the coverage card follows the card's own title
+(`guideSections`'s `write`): "Matchup coverage" with AI features on,
+"Archetypes to prepare for" with them off.
 
 Right after Scope, and only once the narrative read has settled, a deck
 with no written guide gets one `Callout`, "No written guide yet", saying
 what the three written sections will hold and linking to Write and
-export (`NoWrittenGuide`, in `WrittenCards.tsx`).
+export (`NoWrittenGuide`, in `WrittenCards.tsx`). With AI features off
+there is no Write and export to link to, so the callout is not drawn.
+
+With AI features off, a stored guide still draws. Its line under the
+author drops the model (`shownAuthor`, `lib/written.ts`): "Written on
+Sep 18."; the RCQ result's "Pasted in…" is unchanged. The stale
+callout's "Write it again" link to Write and export is drawn only with
+AI features on.
 
 **Scope** is four `StatTile`s (record, tournament lists read,
 rules-text coverage, the field's window), the format-reset sentence
@@ -1024,9 +1049,10 @@ so the card's own title is just "Scope".
   ("Across all of your decks, N patterns", not drawn when there are
   none), each match row naming its deck.
 - the leak finder's cross-deck training plan as an accent
-  `GenerateCard` (`LeaksNarrativeCard`, in `LeakCard.tsx`). It is
-  unscoped, so it reads the same under any deck's guide, and it draws
-  nothing when there is no report yet.
+  `GenerateCard` (`LeaksNarrativeCard`, in
+  `ai/guide/LeaksNarrativeCard.tsx`). It is unscoped, so it reads the same
+  under any deck's guide, and it draws nothing when there is no report
+  yet.
 - when a key card first resolved: a `DataTable` from 48rem, a
   three-column grid a card under it.
 - the board on your own turn: two tables, "Games won" and "Games lost",
@@ -1068,32 +1094,38 @@ covers is said once, at the top of the card, in a `warn` `Callout`. The
 plan's body, `PlanBody`, is exported: a pairing's stored brief draws it
 too.
 
-**Matchup coverage** (`MatchupCoverageCard.tsx`) is always drawn,
-written guide or not: three `StatTile`s (matches covered, field covered,
-left to write); then, when any archetype lacks a brief or has an
-out-of-date one, a "Write every missing brief" button that fetches the
-prompt for all of them only when pressed and shows it in place with
-`CopyPromptBody` and the import command; then a `DataTable` (Archetype,
-Brief, Field) whose archetype cell links to that pairing
-(`pairingAddress`) and reads the row's label, or `<label> · <archetype>`
+**Matchup coverage** (`MatchupCoverageCard.tsx`) is always drawn, written guide
+or not. With AI features off it is a field-only version titled "Archetypes to
+prepare for" (`matchups.coverage.fieldTitle`), with its own subtitle, "The
+archetypes you have met, most met first, then the most played ones you have not,
+with each one's share of tournament decks. Each opens its matchup."
+(`fieldSubtitle`) and its own no-format message (`fieldFormatUnknown`): the
+archetype list and the Field column stay, and the Brief column, the brief tiles
+and the write button go. With them on: three `StatTile`s (matches covered, field
+covered, left to write); then, when any archetype lacks a brief or has an
+out-of-date one, a "Write every missing brief" button that fetches the prompt
+for all of them only when pressed and shows it in place with `CopyPromptBody`;
+then a `DataTable` (Archetype, Brief, Field) whose archetype cell links to that
+pairing (`pairingAddress`) and reads the row's label, or `<label> · <archetype>`
 when another row of the table has the same label under a different key
-(`coverageName`; the Pairing page's heading and the prompt's notes
-read the same way), whose status is a neutral `Chip`, and whose field
-share is a whole percent or a dash. No rows at all is an `EmptyState`. A
-deck with no format (coverage's `fmt` null) has no rows and no tiles:
-the card is one `EmptyState`, "Nothing to cover yet", with
-`matchups.brief.formatUnknown` as its message, and a prompt for every missing
-brief that answers `format_unknown` says the same in the prompt's place.
+(`coverageName`; the Pairing page's heading and the prompt's notes read the same
+way), whose status is a neutral `Chip`, and whose field share is a whole percent
+or a dash. No rows at all is an `EmptyState`. A deck with no format (coverage's
+`fmt` null) has no rows and no tiles: the card is one `EmptyState`, "Nothing to
+cover yet", with `matchups.brief.formatUnknown` as its message, and a prompt for
+every missing brief that answers `format_unknown` says the same in the prompt's
+place.
 
 **Between rounds** (`BetweenRoundsCard`, in `WrittenCards.tsx`) is the
 written guide's checklist, numbered as written.
 
-**Write and export** (`NarrativeAndExport`, in `WriteAndExport.tsx`) is
-an accent `GenerateCard` titled "Write the guide" or "Rewrite the
-guide", its `staleNote` "The list has changed since.", beside "Export
-the evidence", a card that fetches `GET /api/guide/{key}/markdown` only
-once opened and shows it in a scrolling `TextBlock` with its own copy
-button and a "Download .md" that saves the same text as a file.
+**Write and export** (`NarrativeAndExport`, in
+`ai/guide/WriteAndExport.tsx`) is an accent `GenerateCard` titled "Write
+the guide" or "Rewrite the guide", its `staleNote` "The list has changed
+since.", beside "Export the evidence", a card that fetches
+`GET /api/guide/{key}/markdown` only once opened and shows it in a
+scrolling `TextBlock` with its own copy button and a "Download .md" that
+saves the same text as a file.
 
 **The way between sections.** `SectionNav.tsx` draws two navs, one
 shown at a time: from 64rem a sticky column at the page's right; under
@@ -1323,18 +1355,20 @@ windows the field's win rate to `{ since: format_reset_start }` once a
 reset is detected, else a fixed 365 days; `/field` is where a narrower
 or explicit window belongs. The same guard, the same per-format field
 and the same reset-aware windowing exist server-side in
-`api/routes/matches.py`'s `_field_context`, which feeds
-`review/narrative.py`'s optional `FieldContext` the same way.
+`ai/routes/match_report.py`'s `_field_context`, which feeds
+`ai/review/narrative.py`'s optional `FieldContext` the same way.
 
 ## Coach
 
-`/coach` and `/coach/:id` are `pages/CoachPage.tsx`, which reads the
-address's parameter (`lib/coach.ts::reportParam`: no parameter is the
-latest report, a positive integer written in digits is that report,
-anything else is unknown), and `views/CoachView.tsx`. The page is keyed
-by the parameter, so moving between reports starts the model picker
-fresh. What the coach measures and what it leaves out is
-`docs/coach.md`; this section is what the page draws.
+`/coach` and `/coach/:id` are `pages/CoachPage.tsx`, which passes the
+address's raw parameter to `ai/coach/CoachView.tsx` through `useAi()`;
+the page redirects to Home when AI features are off (`<Navigate>`; the
+same for `/coach/:id`). The view parses it
+(`ai/coach/coach.ts::reportParam`: no parameter is the latest report, a
+positive integer written in digits is that report, anything else is
+unknown). The page keys the view by the parameter, so moving between
+reports starts the model picker fresh. What the coach measures and what it
+leaves out is `docs/coach.md`; this section is what the page draws.
 
 `/coach` is one format's page, and reads `?format=` as Field does
 (`docs/frontend.md`, "Filters are in the address"): `useCoachFormat` gives the address's
@@ -1358,17 +1392,17 @@ the API's default.
    ("Modern report of Sep 22"; `reportTitle`, and a report stored with no
    format is a Standard report, `reportFormat`) with a byline in one
    caption line (the model, what it cost, how many times it searched the
-   web), both drawn by `ReportDocument` in `views/CoachView.tsx`; then one
-   card per `## ` section of the prose (`components/CoachReport.tsx`). A citation in the prose (`[R4]`) is a
-   link to its article, opened in a new tab. The last card is the
-   sources, the reading-list entries and then the web pages, each a
+   web), both drawn by `ReportDocument` in `ai/coach/CoachView.tsx`; then one
+   card per `## ` section of the prose (`ai/coach/CoachReport.tsx`). A
+   citation in the prose (`[R4]`) is a link to its article, opened in a new
+   tab. The last card is the sources, the reading-list entries and then the web pages, each a
    `TextLink`.
 4. **The writing card** (`GenerateCard`), after the report because it is
    the action and the report is what the page is for. Its subtitle names
    the format whose news Claude searches for. Its picker lists the
    models by name alone; a caption says what the viewer's last report
    with the chosen model cost, when there is one.
-5. **Your numbers** (`components/coach/Profile.tsx`), the evidence the
+5. **Your numbers** (`ai/coach/cards/Profile.tsx`), the evidence the
    report is written from, drawn only when the coach has enough
    matches. Below.
 6. **Every report**, whenever a stored report is not the one on the page
@@ -1395,7 +1429,7 @@ the page waits for its own.
 
 ### Your numbers
 
-Every rate on the page is written by `lib/coach.ts::rateWords`, which
+Every rate on the page is written by `ai/coach/coach.ts::rateWords`, which
 turns the API's rate into three strings: the record, wins then losses
 ("174–211", `formatRecord`), the percent ("45%") and the range
 ("40%–50%", each end a whole percent). A rate the API marks `anecdotal`,
@@ -1412,7 +1446,7 @@ on the page. A range is written with word joiners round its dash
 break it in two. The coach's matches and games are wins and losses only,
 so a record's losses are the rate's `n` less its wins.
 
-The cards, in order, are in `components/coach/`:
+The cards, in order, are in `ai/coach/cards/`:
 
 1. **Six tiles** (`Profile`, `overallTiles`): matches, games, game 1,
    post-board, on the play, on the draw. Two to a row under 48rem,

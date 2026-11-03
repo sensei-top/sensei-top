@@ -130,6 +130,7 @@ describe('config --json to ShellSettings', () => {
       plays: ['arena', 'mtgo'],
       update: { state: 'idle' },
       onboarded: false,
+      aiFeatures: null,
       askAutostart: false,
       canAutostart: false,
       windowsStore: false,
@@ -219,6 +220,13 @@ describe('doctor --json for onboarding (S15)', () => {
     const info = { version: '1', platform: 'linux', update: { state: 'idle' } as const, ...NO_APP_EXTRAS };
     expect(toAppSettings({ onboarded: true }, info).onboarded).toBe(true);
     expect(toAppSettings({}, info).onboarded).toBe(false);
+  });
+
+  it('reads aiFeatures from shell.json, null while undecided', () => {
+    const info = { version: '1', platform: 'linux', update: { state: 'idle' } as const, ...NO_APP_EXTRAS };
+    expect(toAppSettings({ aiFeatures: true }, info).aiFeatures).toBe(true);
+    expect(toAppSettings({ aiFeatures: false }, info).aiFeatures).toBe(false);
+    expect(toAppSettings({ onboarded: true }, info).aiFeatures).toBeNull();
   });
 });
 
@@ -894,6 +902,27 @@ describe('the service', () => {
       configFails.on = true;
       expect(await service.restoreFrom('/b/backup')).toEqual({ ok: true });
       expect(cardCalls(calls)).toBe(0);
+    });
+  });
+
+  describe('aiFeatures (plan 40D)', () => {
+    it('is written by a change, published, and needs no restart', async () => {
+      const { service, stored, events, changes } = harness();
+      await service.refresh();
+      expect(service.current?.app.aiFeatures).toBeNull();
+      expect(await service.setApp({ aiFeatures: false })).toEqual({ ok: true });
+      expect(stored.aiFeatures).toBe(false);
+      expect(changes.at(-1)?.app.aiFeatures).toBe(false);
+      expect(await service.setApp({ aiFeatures: true })).toEqual({ ok: true });
+      expect(stored.aiFeatures).toBe(true);
+      expect(events).not.toContain('stop');
+    });
+
+    it('never stores a value that is not a boolean', () => {
+      const current = toAppSettings({}, { version: '1', platform: 'linux', update: { state: 'idle' }, ...NO_APP_EXTRAS });
+      const fromThePage = { aiFeatures: null } as unknown as Parameters<typeof planAppChange>[1];
+      expect(planAppChange(current, fromThePage)).toEqual({ patch: {}, restart: false });
+      expect(planAppChange(current, { aiFeatures: false })).toEqual({ patch: { aiFeatures: false }, restart: false });
     });
   });
 

@@ -7,6 +7,7 @@
     "app": "Aplicativo",
     "appearance": "Aparência",
     "live": "Ao vivo",
+    "ai": "Recursos de IA",
     "credits": "Sobre e créditos"
   },
   "language": {
@@ -23,7 +24,12 @@
   },
   "liveAdvice": {
     "label": "Conselhos durante o jogo",
-    "description": "O guia de mão inicial, o que o oponente pode estar segurando e o briefing do matchup, em jogos casuais e na ranqueada. Eventos nunca os mostram, e o plano de sideboard entre os jogos aparece de qualquer jeito."
+    "description": "O guia de mão inicial, o que o oponente pode estar segurando e o briefing do matchup, em jogos casuais e na ranqueada. Eventos nunca os mostram, e o plano de sideboard entre os jogos aparece de qualquer jeito.",
+    "descriptionOff": "O guia de mão inicial e o que o oponente pode estar segurando, em jogos casuais e na ranqueada. Eventos nunca os mostram, e o plano de sideboard entre os jogos aparece de qualquer jeito."
+  },
+  "ai": {
+    "label": "Recursos de IA",
+    "description": "O treinador, os relatórios e guias escritos, os briefings de matchup e os prompts que os escrevem. Com eles desligados, o aplicativo mostra só o que lê dos seus jogos e dos resultados de torneios. Nada do que já foi escrito é apagado."
   },
   "saveFailed": "Não foi salvo. Tente de novo.",
   "restartNeeded": "Isso passa a valer na próxima vez que o aplicativo abrir.",
@@ -48,11 +54,11 @@
     "claudeSubtitle": "Com uma chave sua, um relatório é escrito quando você aperta o botão dele, e o que custou é mostrado nele. Sem chave, cada relatório lhe dá seu prompt para copiar.",
     "claudeRemoveBody": "Os relatórios voltam a lhe dar o prompt para copiar. O que já foi escrito fica.",
     "model": "Modelo",
-    "modelHint": "O que cada relatório custou é medido e mostrado no relatório.",
-    "topdeckSubtitle": "Uma chave gratuita do TopDeck.gg adiciona os torneios dele ao meta.",
-    "topdeckRemoveBody": "O meta deixa de receber torneios do TopDeck.gg. O que já está aqui fica."
+    "modelHint": "O que cada relatório custou é medido e mostrado no relatório."
   },
   "sources": {
+    "topdeckSubtitle": "Uma chave gratuita do TopDeck.gg adiciona os torneios dele ao meta.",
+    "topdeckRemoveBody": "O meta deixa de receber torneios do TopDeck.gg. O que já está aqui fica.",
     "dateOrder": {
       "auto": "Ler do log",
       "mdy": "Mês primeiro",

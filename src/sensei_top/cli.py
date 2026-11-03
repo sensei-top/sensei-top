@@ -15,12 +15,6 @@
     sensei-top archetypes                            download deck archetype definitions
     sensei-top meta [--reclassify]                   tournament results for the Field page
     sensei-top guide [--deck KEY] [--markdown PATH]  one deck's guide (omit --deck to list)
-    sensei-top guide --deck KEY --prompt             text to write the narrative from
-    sensei-top guide --deck KEY --import FILE        store a written narrative
-    sensei-top brief --deck KEY --archetype KEY --prompt | --import FILE
-                                                      one matchup brief (omit --deck to list)
-    sensei-top rcq --deck KEY --decklist FILE --prompt | --import FILE
-                                                      the RCQ guide for the exact 75 you register
     sensei-top config --set-key KEY                  opt in to Claude-generated narratives
     sensei-top config --set-key -                    the same, reading the key from stdin
     sensei-top config --clear-key                    remove the key
@@ -80,7 +74,6 @@ from sensei_top.reader.mtgo_decks import ingest_deck_dir
 from sensei_top.reader.segmenter import DATE_ORDERS
 
 if TYPE_CHECKING:
-    from sensei_top.answers import Answer
     from sensei_top.metagame.auto import RefreshState
     from sensei_top.metagame.source import RefreshResult
 
@@ -732,7 +725,7 @@ def _read_config_tables() -> dict[str, dict[str, object]]:
     """
     import tomllib
 
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     def _table(raw: dict) -> dict[str, object]:
         result: dict[str, object] = {}
@@ -761,7 +754,7 @@ def _write_config_tables(tables: dict[str, dict[str, object]]) -> None:
     sub-table (e.g. ``[claude.coach]``) and real TOML booleans.
     Hand-written TOML, not a library: the value set stays small enough that
     a ``tomli-w`` dependency buys nothing here."""
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     def _escaped(value: str) -> str:
         return value.replace("\\", "\\\\").replace('"', '\\"')
@@ -816,16 +809,13 @@ def _write_llm_config(
     api_key: str | None,
     model: str | None,
     effort: str | None,
-    coach_model: str | None = None,
-    coach_effort: str | None = None,
-    coach_web_search: bool | None = None,
 ) -> None:
-    """Merge the given fields into the existing ``[claude]`` table (if any)
-    and its ``[claude.coach]`` sub-table, leaving every other table
-    untouched. ``None`` leaves a field as it is and an empty
-    string removes it (``_merge``). The key need not be in this file for the
-    other fields to be written: it may live in the keyring or the
-    environment, or be set later."""
+    """Merge the given fields into the existing ``[claude]`` table (if any),
+    carrying its ``[claude.coach]`` sub-table through unchanged (no command
+    writes it) and leaving every other table untouched. ``None`` leaves a
+    field as it is and an empty string removes it (``_merge``). The key need
+    not be in this file for the other fields to be written: it may live in
+    the keyring or the environment, or be set later."""
     tables = _read_config_tables()
     claude = dict(tables.get("claude", {}))
     coach = claude.pop("coach", None)
@@ -834,10 +824,6 @@ def _write_llm_config(
     _merge(claude, "api_key", api_key)
     _merge(claude, "model", model)
     _merge(claude, "effort", effort)
-    _merge(coach, "model", coach_model)
-    _merge(coach, "effort", coach_effort)
-    if coach_web_search is not None:
-        coach["web_search"] = bool(coach_web_search)
     if coach:
         claude["coach"] = coach
 
@@ -931,9 +917,9 @@ def _key_source(which: str) -> str | None:
     """Where the key in force comes from, asked of the one module that
     resolves it (AGENTS.md non-negotiable #5 for the Claude key)."""
     if which == "claude":
-        from sensei_top.llm import config as llm_config
+        from sensei_top import claude_config
 
-        return llm_config.key_source()
+        return claude_config.key_source()
     from sensei_top.metagame import config as topdeck_config
 
     return topdeck_config.key_source()
@@ -942,7 +928,7 @@ def _key_source(which: str) -> str | None:
 def _source_label(which: str) -> str:
     """``config``'s summary names where a key came from."""
     from sensei_top import secrets
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     source = _key_source(which)
     if source == "env":
@@ -975,7 +961,7 @@ def _store_key(which: str, key: str) -> None:
     """The system keyring when it takes the key, and then the file's copy is
     removed; else the file (chmod 600), saying why."""
     from sensei_top import secrets
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     name, table, env = _KEYS[which]
     if secrets.set(which, key):
@@ -1020,7 +1006,7 @@ def _move_keys_to_keyring() -> None:
     holds a different key keeps it, and the file's copy stays where it is,
     since overwriting would change which key is in force."""
     from sensei_top import secrets
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     path = config_path()
     backend = secrets.backend_name()
@@ -1065,8 +1051,8 @@ def _config_json(db_path: Path) -> dict[str, object]:
     are resolved against ``--db``, as the summary resolves them."""
     from sensei_top.arena_config import load_date_order
     from sensei_top.backup import resolve as resolve_backup_config
-    from sensei_top.llm import client as llm_client
-    from sensei_top.llm.config import DEFAULT_EFFORT, DEFAULT_MODEL, config_path
+    from sensei_top.claude_config import DEFAULT_EFFORT, DEFAULT_MODEL, REPORT_MODELS
+    from sensei_top.config import config_path
 
     tables = _read_config_tables()
 
@@ -1095,7 +1081,7 @@ def _config_json(db_path: Path) -> dict[str, object]:
         "topdeck": {"key_set": topdeck_source is not None, "key_source": topdeck_source},
         "models": [
             {"value": model_id, "label": label}
-            for model_id, label in llm_client.REPORT_MODELS.items()
+            for model_id, label in REPORT_MODELS.items()
         ],
     }
 
@@ -1107,7 +1093,7 @@ def _mode_600() -> str:
 
 
 def _written(what: str, value: str) -> None:
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     if value == "":
         print(f"{what} cleared in {config_path()}.")
@@ -1137,16 +1123,11 @@ def cmd_config(args) -> None:
     the backup destination and retention count. A flag for one never touches
     another's table (``_read_config_tables``).
     """
-    from sensei_top.llm import config as llm_config
+    from sensei_top import claude_config as llm_config
+    from sensei_top.config import config_path
     from sensei_top.metagame import config as topdeck_config
 
-    coach_web_search = {"on": True, "off": False}.get(args.coach_web_search)
-    llm_fields = (
-        args.set_model,
-        args.set_effort,
-        args.set_coach_model,
-        args.set_coach_effort,
-    )
+    llm_fields = (args.set_model, args.set_effort)
     writes = any(
         value is not None
         for value in (
@@ -1159,7 +1140,6 @@ def cmd_config(args) -> None:
             args.set_backup_keep,
             args.set_arena_log,
             args.set_date_order,
-            coach_web_search,
             *llm_fields,
         )
     ) or (args.clear_key or args.clear_topdeck_key or args.move_keys_to_keyring)
@@ -1226,18 +1206,15 @@ def cmd_config(args) -> None:
 
     if args.set_backup_dir is not None or args.set_backup_keep is not None:
         _write_backup_config(directory=args.set_backup_dir, keep=args.set_backup_keep)
-        print(f"Backup settings written to {llm_config.config_path()}{_mode_600()}.")
+        print(f"Backup settings written to {config_path()}{_mode_600()}.")
 
-    if any(value is not None for value in llm_fields) or coach_web_search is not None:
+    if any(value is not None for value in llm_fields):
         _write_llm_config(
             api_key=None,
             model=args.set_model,
             effort=args.set_effort,
-            coach_model=args.set_coach_model,
-            coach_effort=args.set_coach_effort,
-            coach_web_search=coach_web_search,
         )
-        print(f"Config written to {llm_config.config_path()}{_mode_600()}.")
+        print(f"Config written to {config_path()}{_mode_600()}.")
 
     if writes and not args.show:
         return
@@ -1286,7 +1263,7 @@ def cmd_config(args) -> None:
         print("  Run 'sensei-top config --set-mtgo-handle YOURHANDLE', or export MTGO_HANDLE.")
     else:
         env_set = os.environ.get("MTGO_HANDLE")
-        source = "$MTGO_HANDLE" if env_set else str(llm_config.config_path())
+        source = "$MTGO_HANDLE" if env_set else str(config_path())
         print(f"MTGO handle source: {source}")
         print(f"  Handle: {mtgo_handle}")
 
@@ -1525,26 +1502,6 @@ def cmd_report(args) -> None:
     print()
 
 
-def _read_import(path: str, expected_for: str) -> Answer:
-    """An ``--import FILE`` answer, read through the same contract the
-    dashboard's paste box uses (``answers.read_answer``), except that an
-    answer with no header — one saved before prompts asked for it — is read
-    whole, with a warning. Exits with the reason when it cannot be read."""
-    from sensei_top.answers import AnswerError, headerless_warning, read_answer
-
-    raw = Path(path).read_text(encoding="utf-8")
-    try:
-        answer = read_answer(raw, expected_for, require_header=False)
-    except AnswerError as exc:
-        sys.exit(f"Could not read {path}: {exc}")
-    if answer.headerless:
-        warning = headerless_warning()
-        # Not the file's path: a log line never carries a local path.
-        logging.getLogger(__name__).warning("import: %s", warning)
-        print(warning, file=sys.stderr)
-    return answer
-
-
 def cmd_guide(args) -> None:
     from sensei_top.guide.bundle import build_deck_guide
     from sensei_top.guide.deck import list_identities
@@ -1568,269 +1525,16 @@ def cmd_guide(args) -> None:
     if guide is None:
         sys.exit(f"No deck found for key {args.deck!r}. Run `guide` with no --deck to list keys.")
 
-    # --prompt prints the text to hand an assistant, and stops: the
-    # no-credential path, answered with --import. See docs/guide.md, "CLI".
-    if args.prompt:
-        from sensei_top.guide.narrative import full_prompt
-
-        text = full_prompt(guide, conn=conn)
-        if text is None:
-            sys.exit("Nothing to write about for this deck yet (no recorded matches).")
-        print(text)
-        return
-
-    if args.import_file:
-        from sensei_top.answers import guide_for
-        from sensei_top.brief.from_guide import store_guide_matchups
-        from sensei_top.brief.store import corpus_commit, list_hash
-        from sensei_top.guide.authored import write_narrative
-        from sensei_top.guide.narrative import (
-            NarrativeError,
-            full_prompt,
-            guide_narrative_from_json,
-        )
-
-        identity = guide.provenance.deck
-        answer = _read_import(args.import_file, guide_for(identity.key))
-        try:
-            narrative = guide_narrative_from_json(answer.body, guide)
-        except NarrativeError as exc:
-            sys.exit(f"Could not read {args.import_file}: {exc}")
-
-        write_narrative(
-            conn, identity.key, narrative,
-            # The 75 the answer says it was written for, so one written for
-            # an older list reads as stale.
-            list_hash=(
-                answer.context if answer.context is not None
-                else list_hash(identity.current_cards)
-            ),
-            prompt=full_prompt(guide, conn=conn) or "",
-            author=args.author,
-            corpus_commit=corpus_commit(conn),
-        )
-        written = store_guide_matchups(
-            conn, guide, narrative, model=args.author, list_hash=answer.context,
-        )
-        conn.commit()
-        print(f"Imported the guide for {identity.name or identity.key}.")
-        print(f"  {written} matchup brief(s) stored — these also drive the Live page.")
-        if narrative.problems:
-            print("  Sideboard plan problems (recorded, not repaired):")
-            for problem in narrative.problems:
-                print(f"    [{problem.archetype}] {problem.message}")
-        return
-
-    # Default: the evidence document, plus whatever narrative was imported.
-    from sensei_top.guide.authored import narrative_for
+    # The evidence document only; the stored narrative is the dashboard's.
     from sensei_top.guide.markdown import render
 
-    stored = narrative_for(conn, guide.provenance.deck.key)
-    narrative = stored[1] if stored is not None else None
-    markdown = render(guide, narrative)
+    markdown = render(guide)
 
     if args.markdown:
         Path(args.markdown).write_text(markdown, encoding="utf-8")
         print(f"Guide written to {args.markdown}")
     else:
         print(markdown)
-
-
-def cmd_rcq(args) -> None:
-    from sensei_top.guide.rcq import NarrativeError, build_rcq, rcq_from_json, rcq_prompt
-    from sensei_top.guide.rcq_authored import write_rcq
-
-    conn = _open(args)
-    text = Path(args.decklist).read_text(encoding="utf-8")
-    expected = [k.strip() for k in (args.expect or "").split(",") if k.strip()]
-    evidence = build_rcq(conn, args.deck, text, expected, args.own)
-    if evidence is None:
-        sys.exit(f"No deck found for key {args.deck!r}. Run `guide` with no --deck to list keys.")
-
-    prompt = rcq_prompt(evidence, conn=conn)
-    if args.prompt:
-        print(prompt)
-        return
-
-    if args.import_file:
-        from sensei_top.answers import rcq_for
-
-        answer = _read_import(args.import_file, rcq_for(evidence.guide.provenance.deck.key))
-        try:
-            narrative = rcq_from_json(answer.body, evidence)
-        except NarrativeError as exc:
-            sys.exit(f"Could not read {args.import_file}: {exc}")
-        for note in narrative.flex_notes:
-            if note.role not in ("core", "flex", "risk"):
-                sys.exit(
-                    f"Could not read {args.import_file}: flex note role {note.role!r} "
-                    "is not core, flex or risk"
-                )
-        newest = [f.newest_event for f in evidence.freshness if f.newest_event]
-        write_rcq(
-            conn, args.deck, narrative,
-            model=args.author, decklist_text=text, expected=list(evidence.expected_keys),
-            own_archetype_key=args.own, prompt=prompt,
-            corpus_latest_event=max(newest) if newest else None,
-            written_for=answer.context,
-        )
-        conn.commit()
-        print(f"Imported the RCQ guide for {args.deck}.")
-        for problem in narrative.problems:
-            print(f"  [{problem.archetype}] {problem.message}")
-        return
-
-    sys.exit("Pass --prompt to print the prompt, or --import FILE to store an answer.")
-
-
-def cmd_brief(args) -> None:
-    from sensei_top.brief.store import briefs_for_deck, corpus_commit
-    from sensei_top.guide.deck import list_identities, resolve
-
-    conn = _open(args)
-
-    if not args.deck:
-        current_commit = corpus_commit(conn)
-        found_any = False
-        for identity in list_identities(conn):
-            for brief in briefs_for_deck(conn, identity.key):
-                found_any = True
-                stale = (
-                    " (stale — corpus has moved)"
-                    if brief.corpus_commit != current_commit else ""
-                )
-                print(
-                    f"  {brief.deck_key:<40} {brief.archetype_key:<24} "
-                    f"{brief.generated_at} [{brief.source}]{stale}"
-                )
-        if not found_any:
-            print("No matchup briefs stored yet.")
-            print("Write one with:  sensei-top guide --deck KEY --prompt   (then --import)")
-        return
-
-    if args.archetype and args.missing:
-        sys.exit("--archetype and --missing are mutually exclusive.")
-
-    if not args.archetype and not args.missing:
-        sys.exit("--archetype is required with --deck (or pass --missing).")
-
-    identity = resolve(conn, args.deck)
-    if identity is None:
-        sys.exit(f"No deck found for key {args.deck!r}. Run `guide` with no --deck to list keys.")
-
-    from sensei_top.guide.deck import identity_format
-
-    if identity_format(conn, identity) is None:
-        sys.exit(
-            "This deck's format is unknown, so there is no field to write a brief from. "
-            "On MTGO, confirm the format on one of its matches, then run this again."
-        )
-
-    if args.missing:
-        cmd_brief_missing(conn, identity, args)
-        return
-
-    if args.prompt:
-        from sensei_top.brief.narrative import full_prompt
-
-        built = full_prompt(conn, identity, args.archetype, args.archetype)
-        if built is None:
-            sys.exit(f"No field consensus for archetype {args.archetype!r} yet.")
-        print(built[0])
-        return
-
-    if args.import_file:
-        from sensei_top.answers import brief_for
-        from sensei_top.brief.importer import import_brief
-        from sensei_top.brief.narrative import NarrativeError
-
-        answer = _read_import(args.import_file, brief_for(identity.key, args.archetype))
-        try:
-            brief = import_brief(
-                conn, identity, args.archetype, args.archetype, answer.body,
-                author=args.author, written_for=answer.context,
-            )
-        except NarrativeError as exc:
-            sys.exit(f"Could not read {args.import_file}: {exc}")
-        except LookupError as exc:
-            sys.exit(str(exc))
-        conn.commit()
-        print(f"Brief stored for {identity.name or identity.key} vs {args.archetype}.")
-        if brief.problems:
-            print("Sideboard plan problems (recorded, not repaired):")
-            for problem in brief.problems:
-                print(f"  [{problem.archetype}] {problem.message}")
-        return
-
-    sys.exit("Pass --prompt to get the text to write from, or --import FILE to store an answer.")
-
-
-def cmd_brief_missing(conn, identity, args) -> None:
-    """The ``--missing`` half of ``brief``: every archetype
-    ``brief/coverage.py`` marks ``missing``/``stale`` for this deck, in the
-    same order its own ``Coverage.rows`` are already sorted (times faced
-    desc, then field share desc, then key) — so the multi-prompt and the
-    dashboard's own coverage table always name gaps in the same order.
-    """
-    from sensei_top.brief.coverage import build_coverage
-
-    coverage = build_coverage(conn, identity)
-    gap_rows = [row for row in coverage.rows if row.status in ("missing", "stale")]
-    archetypes = [(row.archetype_key, row.label) for row in gap_rows]
-    labels = {row.archetype_key: row.label for row in gap_rows}
-
-    if args.prompt:
-        from sensei_top.brief.narrative import full_multi_prompt
-
-        if not archetypes:
-            print("Nothing missing or stale — every coverage row already has a fresh brief.")
-            return
-        built = full_multi_prompt(conn, identity, archetypes)
-        if built is None:
-            sys.exit("No field consensus for any missing/stale archetype yet.")
-        print(built.prompt)
-        if built.no_consensus:
-            print(
-                f"No field consensus (skipped): {', '.join(built.no_consensus)}",
-                file=sys.stderr,
-            )
-        if built.deferred:
-            print(
-                f"Deferred past this prompt's limit: {', '.join(built.deferred)}",
-                file=sys.stderr,
-            )
-        return
-
-    if args.import_file:
-        from sensei_top.answers import coverage_for
-        from sensei_top.brief.importer import import_briefs
-        from sensei_top.brief.narrative import NarrativeError
-
-        answer = _read_import(args.import_file, coverage_for(identity.key))
-        try:
-            stored, skipped = import_briefs(
-                conn, identity, answer.body, author=args.author, labels=labels,
-                written_for=answer.context,
-            )
-        except NarrativeError as exc:
-            sys.exit(f"Could not read {args.import_file}: {exc}")
-        conn.commit()
-        print(f"{len(stored)} brief(s) stored for {identity.name or identity.key}.")
-        for brief in stored:
-            if brief.problems:
-                print(
-                    f"Sideboard plan problems for {brief.archetype_key} "
-                    "(recorded, not repaired):"
-                )
-                for problem in brief.problems:
-                    print(f"  [{problem.archetype}] {problem.message}")
-        if skipped:
-            print("Skipped (no field consensus):", file=sys.stderr)
-            for key, message in skipped:
-                print(f"  {key}: {message}", file=sys.stderr)
-        return
-
-    sys.exit("Pass --prompt to get the text to write from, or --import FILE to store an answer.")
 
 
 def _start_archetype_refresh(db_path: Path) -> None:
@@ -2505,71 +2209,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_guide.add_argument(
         "--markdown", default=None, help="write the guide to this file instead of stdout"
     )
-    p_guide.add_argument(
-        "--prompt", action="store_true",
-        help="print the text to write the narrative from, and stop (makes no network call)",
-    )
-    p_guide.add_argument(
-        "--import", dest="import_file", default=None, metavar="FILE",
-        help="store a written narrative (JSON); also fills every matchup brief it covers",
-    )
-    p_guide.add_argument(
-        "--author", default="hand-written",
-        help="recorded beside an imported narrative (default: hand-written)",
-    )
     p_guide.set_defaults(func=cmd_guide)
-
-    p_rcq = sub.add_parser(
-        "rcq", help="RCQ guide: the prompt for the exact 75 you register (makes no call)"
-    )
-    p_rcq.add_argument("--deck", required=True, help="a deck key from `guide`'s listing")
-    p_rcq.add_argument("--decklist", required=True, metavar="FILE", help="the 75, as pasted")
-    p_rcq.add_argument(
-        "--expect", default=None, metavar="K1,K2",
-        help="comma-separated archetype keys you expect at the store",
-    )
-    p_rcq.add_argument("--own", default=None, help="your own archetype key, if you must pick it")
-    p_rcq.add_argument("--prompt", action="store_true", help="print the prompt, and stop")
-    p_rcq.add_argument(
-        "--import", dest="import_file", default=None, metavar="FILE",
-        help="store a written answer (JSON)",
-    )
-    p_rcq.add_argument(
-        "--author", default="hand-written",
-        help="recorded beside an imported guide (default: hand-written)",
-    )
-    p_rcq.set_defaults(func=cmd_rcq)
-
-    p_brief = sub.add_parser(
-        "brief", help="matchup briefs: what to play around, stored per (deck, archetype)"
-    )
-    p_brief.add_argument(
-        "--deck", default=None,
-        help="a deck key (omit, with no other flags, to list cached briefs)",
-    )
-    p_brief.add_argument(
-        "--archetype", default=None, help="an archetype key from the metagame corpus"
-    )
-    p_brief.add_argument(
-        "--missing", action="store_true",
-        help=(
-            "every missing/stale archetype this deck's coverage report names, instead of one "
-            "--archetype (brief/coverage.py); errors if combined with --archetype"
-        ),
-    )
-    p_brief.add_argument(
-        "--prompt", action="store_true",
-        help="print the text to write this brief from, and stop (makes no network call)",
-    )
-    p_brief.add_argument(
-        "--import", dest="import_file", default=None, metavar="FILE",
-        help="store a written brief (JSON)",
-    )
-    p_brief.add_argument(
-        "--author", default="hand-written",
-        help="recorded beside an imported brief (default: hand-written)",
-    )
-    p_brief.set_defaults(func=cmd_brief)
 
     p_serve = sub.add_parser("serve", help="run the local dashboard + JSON API")
     # Loopback by default and on purpose (AGENTS.md non-negotiable #5).
@@ -2787,23 +2427,6 @@ def build_parser() -> argparse.ArgumentParser:
     p_config.add_argument(
         "--set-backup-keep", type=_positive_int_or_empty, default=None, metavar="N",
         help="how many backup slots to retain (default: 1)",
-    )
-    # Coach-only overrides: written to a separate [claude.coach] table,
-    # never touching the [claude] defaults the other four POST .../narrative
-    # routes use via load().
-    p_config.add_argument(
-        "--set-coach-model", default=None, metavar="ID",
-        help="the coach report's default model, which the Coach tab's model picker "
-        "preselects, e.g. claude-fable-5-1",
-    )
-    p_config.add_argument(
-        "--set-coach-effort", default=None, metavar="LEVEL",
-        choices=["low", "medium", "high", "xhigh", "max", ""],
-        help="effort override for the coach report only: low | medium | high | xhigh | max",
-    )
-    p_config.add_argument(
-        "--coach-web-search", default=None, choices=["on", "off"],
-        help="enable or disable the coach's web search tool (default: on)",
     )
     p_config.set_defaults(func=cmd_config)
 

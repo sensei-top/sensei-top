@@ -6,7 +6,7 @@
  */
 import { useState } from 'react'
 import type { DeepPartial, Saved, Shell, ShellSettings } from '../bridge'
-import type { WritingStatusAnswer } from '../components/settings/WritingSection'
+import type { WritingStatusAnswer } from './settings'
 
 export type SampleId =
   | 'no-shell'

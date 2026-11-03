@@ -1,5 +1,5 @@
 """Walking the tier ranking down to one quoted matchup number, for the live
-brief's field-record line (``brief/narrative.py``) and the match report's
+brief's field-record line (``ai/brief/narrative.py``) and the match report's
 (``review/snapshot.py``, read by ``review/analyzers/baseline.py``). See
 docs/metagame.md, "The evidence tiers".
 

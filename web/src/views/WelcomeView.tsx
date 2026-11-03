@@ -10,7 +10,7 @@ import { FolderField, PressButton, RestartNote, SaveButton, SavingSwitch } from 
 import { Button, Card, Disclosure, Field, Segmented, TextLink } from '../components/ui'
 import { useLanguage, type TFunction } from '../i18n'
 import { failureOf, settle, useRestart, useTextSave } from '../lib/settings'
-import { neighbour, stepHref, stepNumber, stepsFor, type Plays, type WelcomeStep } from '../lib/welcome'
+import { answerWaits, neighbour, stepHref, stepNumber, stepsFor, type Plays, type WelcomeStep } from '../lib/welcome'
 
 type Sources = ShellSettings['sources']
 
@@ -51,6 +51,10 @@ export function WelcomeView({
 }) {
   const { t } = useTranslation()
   const finish = useFailure()
+  // Asked when the run begins, and kept asked once answered, so the pressed
+  // button stays on show; an install that already has a value is never asked.
+  const [asked] = useState(app.aiFeatures === null)
+  const [picked, setPicked] = useState<boolean | null>(null)
   const steps = stepsFor(app.plays, step)
   const previous = neighbour(step, -1, steps)
   const next = neighbour(step, 1, steps)
@@ -71,7 +75,9 @@ export function WelcomeView({
         {step === 'plays' && <PlaysStep plays={app.plays} set={actions.set} />}
         {step === 'arena' && <ArenaStep sources={sources} recheck={actions.recheck} />}
         {step === 'mtgo' && <MtgoStep sources={sources} save={actions.save} pickFolder={actions.pickFolder} />}
-        {step === 'done' && <DoneStep app={app} actions={actions} />}
+        {step === 'done' && (
+          <DoneStep app={app} actions={actions} asked={asked} picked={picked} onPicked={setPicked} />
+        )}
         {(previous || next || step === 'done') && (
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
@@ -91,6 +97,7 @@ export function WelcomeView({
                   label={t('welcome.frame.goHome')}
                   workingLabel={t('welcome.frame.finishing')}
                   doneLabel={null}
+                  disabled={answerWaits(asked, app.aiFeatures, picked)}
                   onPress={async () => {
                     const ok = await finish.press(actions.finishOnboarding)()
                     if (ok) onFinished()
@@ -229,21 +236,14 @@ function PlaysStep({ plays, set }: { plays: Plays; set: WelcomeActions['set'] })
           {tiles.map(({ choice, label }) => {
             const pressed = choice === current
             return (
-              <button
+              <ChoiceTile
                 key={choice}
-                type="button"
-                aria-pressed={pressed}
+                pressed={pressed}
                 disabled={saving !== null}
+                label={label}
+                className="min-h-[64px] px-4 py-3"
                 onClick={() => void choose(choice)}
-                className={`flex min-h-[64px] items-center justify-center gap-2 rounded-control border px-4 py-3 text-body font-medium transition-chrome disabled:opacity-60 ${
-                  pressed
-                    ? 'border-accent bg-surface3 text-ink'
-                    : 'border-edge bg-surface2 text-ink2 hover:border-edge-strong hover:text-ink'
-                }`}
-              >
-                {pressed && <Check size={16} strokeWidth={2.25} aria-hidden className="shrink-0 text-accent" />}
-                {label}
-              </button>
+              />
             )
           })}
         </div>
@@ -361,12 +361,25 @@ function MtgoStep({
  *  the update check where the build has an updater, autostart where the
  *  shell asks. The tour link (`welcome.done.tour`) is not drawn: the
  *  dashboard has no address for the site's help pages to build it from. */
-function DoneStep({ app, actions }: { app: AppSettings; actions: WelcomeActions }) {
+function DoneStep({
+  app,
+  actions,
+  asked,
+  picked,
+  onPicked,
+}: {
+  app: AppSettings
+  actions: WelcomeActions
+  asked: boolean
+  picked: boolean | null
+  onPicked: (on: boolean) => void
+}) {
   const { t } = useTranslation()
   return (
     <div className="space-y-5">
       <p className="text-body text-ink2">{t('welcome.done.body')}</p>
       <CardDataProgress state={app.firstData} count={app.rulesText} retry={actions.firstData} />
+      {asked && <AiQuestion value={app.aiFeatures ?? picked} set={actions.set} onPicked={onPicked} />}
       {app.update.state !== 'unavailable' && (
         <SavingSwitch
           label={t('welcome.done.updatesLabel')}
@@ -383,5 +396,85 @@ function DoneStep({ app, actions }: { app: AppSettings; actions: WelcomeActions 
         />
       )}
     </div>
+  )
+}
+
+/** Two buttons, neither pressed until the person answers; Go to Home waits
+ *  for one. A press that fails says why and leaves the question open. */
+function AiQuestion({
+  value,
+  set,
+  onPicked,
+}: {
+  value: boolean | null
+  set: WelcomeActions['set']
+  onPicked: (on: boolean) => void
+}) {
+  const { t } = useTranslation()
+  const { failure, press } = useFailure()
+  const [saving, setSaving] = useState(false)
+  const choose = async (on: boolean) => {
+    setSaving(true)
+    const ok = await press(() => set({ aiFeatures: on }))()
+    setSaving(false)
+    if (ok) onPicked(on)
+  }
+  const options = [
+    { on: true, label: t('welcome.done.ai.on') },
+    { on: false, label: t('welcome.done.ai.off') },
+  ]
+  return (
+    <div className="space-y-2">
+      <h3 className="text-body font-medium text-ink">{t('welcome.done.ai.heading')}</h3>
+      <p className="text-body text-ink2">{t('welcome.done.ai.body')}</p>
+      <div className="flex flex-wrap gap-3">
+        {options.map(({ on, label }) => {
+          const pressed = value === on
+          return (
+            <ChoiceTile
+              key={String(on)}
+              pressed={pressed}
+              disabled={saving}
+              label={label}
+              className="min-h-[44px] px-4 py-2"
+              onClick={() => void choose(on)}
+            />
+          )
+        })}
+      </div>
+      <Failure text={failure} />
+    </div>
+  )
+}
+
+/** A button of a choice: the one pressed has a check and the accent border. */
+function ChoiceTile({
+  pressed,
+  disabled,
+  label,
+  className,
+  onClick,
+}: {
+  pressed: boolean
+  disabled: boolean
+  label: string
+  className: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      disabled={disabled}
+      onClick={onClick}
+      className={`flex items-center justify-center gap-2 rounded-control border text-body font-medium transition-chrome disabled:opacity-60 ${className} ${
+        pressed
+          ? 'border-accent bg-surface3 text-ink'
+          : 'border-edge bg-surface2 text-ink2 hover:border-edge-strong hover:text-ink'
+      }`}
+    >
+      {pressed && <Check size={16} strokeWidth={2.25} aria-hidden className="shrink-0 text-accent" />}
+      {label}
+    </button>
   )
 }

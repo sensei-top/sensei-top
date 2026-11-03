@@ -3,7 +3,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Logger } from './log';
-import { mergePrefs, parseShellJson, ShellStore } from './store';
+import { mergePrefs, parseShellJson, settleAiFeatures, ShellStore } from './store';
 
 function recorder(): { log: Logger; lines: string[] } {
   const lines: string[] = [];
@@ -22,6 +22,7 @@ describe('parsing shell.json', () => {
         checkForUpdates: true,
         diagnostic: false,
         onboarded: true,
+        aiFeatures: false,
       }),
     );
     expect(dropped).toEqual([]);
@@ -33,14 +34,15 @@ describe('parsing shell.json', () => {
       checkForUpdates: true,
       diagnostic: false,
       onboarded: true,
+      aiFeatures: false,
     });
   });
 
   it('drops a value of the wrong type and keeps the rest', () => {
     const { prefs, dropped } = parseShellJson(
-      JSON.stringify({ port: '41234', onboarded: 'yes', bounds: { width: -1, height: 800 }, autostart: true }),
+      JSON.stringify({ port: '41234', onboarded: 'yes', bounds: { width: -1, height: 800 }, autostart: true, aiFeatures: null }),
     );
-    expect(dropped.sort()).toEqual(['bounds', 'onboarded', 'port']);
+    expect(dropped.sort()).toEqual(['aiFeatures', 'bounds', 'onboarded', 'port']);
     expect(prefs).toEqual({ autostart: true });
   });
 
@@ -178,5 +180,64 @@ describe('the store on disk', () => {
     expect(store.update({ port: 41234 })).toBe(false);
     expect(store.get()).toEqual({ port: 41234 });
     expect(lines).toHaveLength(2);
+  });
+});
+
+describe('deciding aiFeatures once (plan 40D, DD6)', () => {
+  let dir: string;
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'shell-store-'));
+  });
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+  const onDisk = () => JSON.parse(fs.readFileSync(path.join(dir, 'shell.json'), 'utf8')) as Record<string, unknown>;
+
+  it('writes true when onboarding was already finished', () => {
+    fs.writeFileSync(path.join(dir, 'shell.json'), '{"onboarded": true}');
+    expect(settleAiFeatures(ShellStore.load(dir))).toBe(true);
+    expect(onDisk()).toEqual({ onboarded: true, aiFeatures: true });
+  });
+
+  it('leaves an install that is not onboarded undecided, a database beside it or not', () => {
+    fs.writeFileSync(path.join(dir, 'shell.json'), '{"onboarded": false}');
+    fs.writeFileSync(path.join(dir, 'sensei-top.db'), '');
+    expect(settleAiFeatures(ShellStore.load(dir))).toBeUndefined();
+    expect(onDisk()).toEqual({ onboarded: false });
+  });
+
+  it('leaves a fresh install undecided, and writes nothing', () => {
+    const { log, lines } = recorder();
+    const store = ShellStore.load(dir);
+    expect(settleAiFeatures(store, log)).toBeUndefined();
+    expect(store.get()).toEqual({});
+    expect(fs.existsSync(path.join(dir, 'shell.json'))).toBe(false);
+    expect(lines).toHaveLength(1);
+  });
+
+  it('never decides a value that is there again', () => {
+    fs.writeFileSync(path.join(dir, 'shell.json'), '{"onboarded": true, "aiFeatures": false}');
+    const before = fs.readFileSync(path.join(dir, 'shell.json'), 'utf8');
+    expect(settleAiFeatures(ShellStore.load(dir))).toBe(false);
+    expect(fs.readFileSync(path.join(dir, 'shell.json'), 'utf8')).toBe(before);
+  });
+
+  it('a set persists to the next launch', () => {
+    const store = ShellStore.load(dir);
+    expect(settleAiFeatures(store)).toBeUndefined();
+    expect(store.update({ aiFeatures: false, onboarded: true })).toBe(true);
+    expect(settleAiFeatures(ShellStore.load(dir))).toBe(false);
+    expect(onDisk()).toEqual({ aiFeatures: false, onboarded: true });
+  });
+
+  it('is decided in main.ts before the settings are first read and published', () => {
+    const source = fs.readFileSync(path.join(__dirname, 'main.ts'), 'utf8');
+    expect(source.split('settleAiFeatures(').length - 1).toBe(1);
+    const decided = source.indexOf('settleAiFeatures(store');
+    expect(decided).toBeGreaterThan(-1);
+    for (const later of ['new SettingsService(', 'settings.refresh()']) {
+      const at = source.indexOf(later);
+      expect(at, later).toBeGreaterThan(decided);
+    }
   });
 });

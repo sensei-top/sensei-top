@@ -669,7 +669,7 @@ def test_hermetic_run_without_no_local_suppresses_config_loader_warnings(
     tmp_path, monkeypatch, caplog
 ):
     """Without --no-local, the automatic local sources run for real --
-    including sensei_top.llm.config's own loader, which logs a warning
+    including sensei_top.claude_config's own loader, which logs a warning
     naming this machine's absolute config path when a config file exists but
     has no [claude] table. That warning must never reach this process's own
     stderr, since the path it names sits under the real home directory
@@ -696,7 +696,7 @@ def test_hermetic_run_without_no_local_suppresses_config_loader_warnings(
 
     monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg_config))
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    from sensei_top.llm import config as llm_config
+    from sensei_top import claude_config as llm_config
 
     with caplog.at_level(logging.WARNING):
         assert llm_config.load() is None

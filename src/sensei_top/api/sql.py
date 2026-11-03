@@ -14,6 +14,7 @@ from typing import Any
 
 from fastapi import Request
 
+from sensei_top.api.providers import providers_of
 from sensei_top.archetypes.corpus import CorpusPrior, build_prior
 from sensei_top.guide.window import format_resets, window_start
 from sensei_top.projector.live_state import LiveState
@@ -170,7 +171,7 @@ def match_format(conn: sqlite3.Connection, match_id: str) -> str | None:
 
 def _consensus_window(conn: sqlite3.Connection, fmt: str | None) -> str | None:
     """The format-reset window to pass as ``build_consensus``'s own
-    ``since``, computed the same way ``coach/evidence.py::build_coach_evidence``
+    ``since``, computed the same way ``ai/coach/evidence.py::build_coach_evidence``
     does: the latest reset of ``fmt``, as its ``window_start``, or ``None``
     when no reset has been detected (there isn't one yet, or no legality
     data exists to detect one from) or ``fmt`` is ``None`` (a match no
@@ -180,11 +181,11 @@ def _consensus_window(conn: sqlite3.Connection, fmt: str | None) -> str | None:
     ``api/routes/matches.py``) must call this and pass the result through
     rather than defaulting ``consensus_since`` to ``None`` themselves —
     ``review/snapshot.py::build_snapshot``'s docstring explains why ``None``
-    is not a neutral default. This repeats ``coach/evidence.py``'s own
+    is not a neutral default. This repeats ``ai/coach/evidence.py``'s own
     ``format_resets``/``window_start`` call rather than sharing it: ``review/``
     cannot import ``guide.window`` (a package cycle, ``review/snapshot.py``'s
     docstring), and this layer has no access to the value
-    ``coach/evidence.py`` computes. Both query ``guide/window.py``'s
+    ``ai/coach/evidence.py`` computes. Both query ``guide/window.py``'s
     ``format_resets``, the one source of truth.
     """
     if fmt is None:
@@ -417,6 +418,7 @@ def _cached_break_read(
         cache.clear()  # the key changed; nothing older stays valid anyway
         cache[cache_key] = build_break_read(
             conn, match_id, deck_id, live_state, caches=classify_caches, names=names,
+            briefs=providers_of(request.app).break_briefs,
         )
     return cache[cache_key]
 
@@ -598,17 +600,17 @@ def _shared_report_cache(
     request: Request, conn: sqlite3.Connection
 ) -> ReportCache:
     """The cross-request ``MatchReport`` cache that every ``find_leaks`` call
-    (``api/routes/review.py``), ``build_deck_guide`` (``guide/bundle.py``,
+    (``api/routes/review.py``, ``ai/routes/leaks.py``), ``build_deck_guide`` (``guide/bundle.py``,
     via ``api/routes/guide.py``; via ``guide/rcq.py::build_rcq`` from
-    ``api/routes/rcq.py``; and directly from
-    ``api/routes/rcq.py::rcq_markdown``) and ``build_coach_evidence``
-    (``coach/evidence.py``, via ``api/routes/coach.py``) share, keyed by
+    ``api/routes/rcq.py`` and ``ai/routes/rcq.py``; and directly from
+    ``ai/routes/rcq.py::rcq_markdown``) and ``build_coach_evidence``
+    (``ai/coach/evidence.py``, via ``ai/routes/coach.py``) share, keyed by
     ``_report_inputs_token``. A ``MatchReport`` depends only on the database
     and ``consensus_since``
     (``review/leaks.py::find_leaks``'s own docstring) — and on the language
     its findings were written in, which is why its key
     (``review/leaks.py::report_cache_key``, read inside ``find_leaks`` and
-    ``coach/evidence.py``, never here) carries the language: a page loaded
+    ``ai/coach/evidence.py``, never here) carries the language: a page loaded
     in Portuguese and a prompt, always English, share this dict without
     sharing a report. So it is safe to reuse across requests and across
     these callers as long as the token has not moved: the first request

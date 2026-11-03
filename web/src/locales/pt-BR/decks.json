@@ -95,7 +95,7 @@
   "written": {
     "byOn": "Escrito em {{day}} por {{author}}.",
     "by": "Escrito por {{author}}.",
-    "on": "Escrito em {{day}}, sem autor registrado.",
+    "on": "Escrito em {{day}}.",
     "pastedOn": "Colado em {{day}}.",
     "pasted": "Colado.",
     "cost": "Custou {{cost}}.",
@@ -112,6 +112,7 @@
       "theField": "O meta",
       "sideboardPlans": "Planos de sideboard",
       "matchupCoverage": "Cobertura de matchups",
+      "matchupCoverageField": "Para quais arquétipos se preparar",
       "betweenRounds": "Entre rodadas",
       "write": "Escrever e exportar"
     },

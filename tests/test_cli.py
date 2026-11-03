@@ -458,35 +458,6 @@ def test_meta_names_a_missing_topdeck_key_only_when_asked_for_topdeck(
         assert topdeck_lines == []
 
 
-def test_brief_for_a_deck_with_no_format_exits_before_building_a_prompt(tmp_path):
-    from sensei_top.db import open_database
-
-    db_path = tmp_path / "t.db"
-    conn = open_database(db_path)
-    conn.execute(
-        "INSERT INTO decks (deck_id, name, format, cards_json, first_seen, last_seen) "
-        "VALUES ('d1', 'My Deck', 'Draft', '{}', 't', 't')"
-    )
-    conn.execute(
-        "INSERT INTO matches (match_id, event_id, deck_id, self_seat, opponent_seat, "
-        "opponent_user_id, opponent_name, started_at, ended_at, result, games_won, "
-        "games_lost, completed_reason, format) VALUES ('m1', 'e', 'd1', 1, 2, 'u', 'n', "
-        "'2026-09-28T12:00:00', '2026-09-28T12:00:00', 'win', 2, 0, 'concede', NULL)"
-    )
-    conn.commit()
-    conn.close()
-
-    args = cli_module.build_parser().parse_args(
-        ["--db", str(db_path), "brief", "--deck", "deck:d1", "--archetype", "x", "--prompt"]
-    )
-    with pytest.raises(SystemExit) as exc:
-        cli_module.cmd_brief(args)
-    assert exc.value.code == (
-        "This deck's format is unknown, so there is no field to write a brief from. "
-        "On MTGO, confirm the format on one of its matches, then run this again."
-    )
-
-
 # --- console encoding --------------------------------------------------------
 
 
@@ -798,7 +769,7 @@ def _config_json(tmp_path: Path, capsys) -> dict:
 
 
 def _config_file() -> str:
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     path = config_path()
     return path.read_text(encoding="utf-8") if path.exists() else ""
@@ -837,8 +808,8 @@ def test_config_json_round_trips_every_setter(tmp_path, monkeypatch, capsys, mem
     )
     body = _config_json(tmp_path, capsys)
 
-    from sensei_top.llm.client import REPORT_MODELS
-    from sensei_top.llm.config import config_path
+    from sensei_top.claude_config import REPORT_MODELS
+    from sensei_top.config import config_path
 
     assert body == {
         "config_path": str(config_path()),
@@ -959,7 +930,7 @@ def test_an_empty_key_is_refused_rather_than_cleared(tmp_path, monkeypatch, memo
 
 
 def test_set_key_goes_to_the_keyring_and_takes_the_file_copy_out(tmp_path, memory_keyring):
-    from sensei_top.llm import config as llm_config
+    from sensei_top import claude_config as llm_config
 
     cli_module._write_llm_config(api_key="old-file-key", model="claude-sonnet-5", effort=None)
     cli_module._write_topdeck_config(api_key="old-topdeck-key")
@@ -1007,7 +978,7 @@ def test_key_source_reports_env_over_keyring_over_file(tmp_path, monkeypatch, ca
 
 
 def test_the_summary_names_the_keyring_not_the_file(tmp_path, capsys, memory_keyring):
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     cli_module._write_mtgo_config(handle="Player1")  # so the file exists
     memory_keyring[("sensei-top", "claude")] = CLAUDE_KEY
@@ -1082,6 +1053,16 @@ def test_move_keys_to_keyring_with_no_keyring_leaves_the_file_alone(tmp_path):
         _config(tmp_path, "--move-keys-to-keyring")
     assert "No system keyring was found" in str(exc_info.value)
     assert 'api_key = "file-key"' in _config_file()
+
+
+@pytest.mark.parametrize(
+    "flag", ["--set-coach-model", "--set-coach-effort", "--coach-web-search"]
+)
+def test_config_rejects_the_removed_coach_flags(flag, capsys):
+    parser = cli_module.build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(["config", flag, "x"])
+    assert "unrecognized arguments" in capsys.readouterr().err
 
 
 def test_config_json_refuses_a_setter_beside_it(tmp_path):
@@ -1232,3 +1213,13 @@ def test_help_description_names_every_registered_subcommand():
         name for name in subparsers.choices if f"sensei-top {name}" not in parser.description
     ]
     assert missing == []
+
+
+def test_guide_has_no_prompt_import_or_author_flag(capsys):
+    with pytest.raises(SystemExit):
+        cli_module.build_parser().parse_args(["guide", "--help"])
+    help_text = capsys.readouterr().out
+
+    assert "--markdown" in help_text
+    for flag in ("--prompt", "--import", "--author"):
+        assert flag not in help_text

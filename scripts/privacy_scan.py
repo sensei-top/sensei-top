@@ -374,7 +374,7 @@ def _terms_from_git_account(repo: Path) -> list[Term]:
 
 
 def _terms_from_claude_key() -> list[Term]:
-    from sensei_top.llm.config import load
+    from sensei_top.claude_config import load
 
     config = load()
     if config is None or not config.api_key:
@@ -425,7 +425,7 @@ def _terms_from_privacy_terms_file() -> list[Term]:
     """``privacy-terms.tsv`` beside the config file the MTGO, Claude and
     TopDeck loaders read, resolved the same way; absent, nothing. Its errors
     name the file by that bare name, never by its path."""
-    from sensei_top.llm.config import config_path
+    from sensei_top.config import config_path
 
     path = config_path().with_name(_PRIVACY_TERMS_FILE)
     if not path.exists():

@@ -28,17 +28,44 @@ over the entire history — every match ever recorded — by re-running one comm
 | `projector/matches.py` | Match/game lifecycle, deck identity | Files, offsets, polling |
 | `projector/game_state.py` | Board state accumulation | Files, offsets, polling |
 | `live.py` | Orchestration only — runs one then the other | Parsing details of either |
+| `config.py`, `clock.py` | Where the config file lives; the time now, as ISO text | What any feature keeps in that file; any credential |
 | `review/` | Projected data, `cards`, the corpus | `reader/`, `raw_events`, files |
 | `guide/` | `review/`, `metagame/`, one deck's identity | `reader/`, `raw_events`, files |
-| `brief/` | One `(deck, archetype)` pairing | Any board state, any game in progress |
+| `ai/brief/` | One `(deck, archetype)` pairing | Any board state, any game in progress |
 | `table/` | The match in progress, via one replay | Writing anything; any completed match |
 | `metagame/` | Tournament results, evidence tiers | `Player.log`, `reader/`, `projector/` |
-| `coach/` | `review/`, `guide/`, every deck's projected matches | `reader/`, `raw_events`, files |
+| `ai/coach/` | `review/`, `guide/`, every deck's projected matches | `reader/`, `raw_events`, files |
 | `archetypes/` | Revealed cards, archetype definitions, the corpus | `reader/`, `raw_events`, files |
 | `api/routes/`, `api/sql.py` | SQL over views; the feature packages' public API | How anything was produced |
+| `ai/` | Core, freely; the Claude call, the prompts, pasted answers | Nothing core needs: core must run with it deleted |
 
 If you find yourself importing the projector from the reader, the design has
 been violated. `live.py` exists precisely so neither has to know the other.
+
+**Core never imports `ai/`.** `lint-imports` holds the contract in
+`pyproject.toml`, with no exception. Core reaches `sensei_top.ai` through one
+door, opened only when `importlib.util.find_spec("sensei_top.ai")` finds the
+package and an `importlib.import_module`, which `lint-imports` does not count
+as an import:
+
+- `api/app.py::create_app` mounts `ai.routers()` after core's routers and
+  before the dashboard's catch-all, and keeps `ai.providers()` on
+  `app.state`.
+
+The CLI has no such door: the AI features have no command, and core's
+`config` keeps `--set-key`, `--clear-key`, `--set-model`, `--set-effort`,
+`--json` and `--show`, which the desktop Settings use. They work without
+`ai/` because the credential resolver is core's `claude_config.py` (with
+`REPORT_MODELS`), not `ai/llm/`; only `ai/llm/client.py` imports `anthropic`.
+
+A core read that shows AI data, without computing it, takes that half from
+`api/providers.py`: `Providers` has one optional field per seam, typed by a
+Protocol declared beside the read, and `providers_of(app)` gives the
+read whatever `ai.providers()` filled. Without `ai/` every field is `None` and
+the read shows its core half. Providers are kept per app rather than
+registered at import, so a test can build the app with `find_spec` hidden in a
+process that has already imported `ai/`; `tests/test_ai_seam.py` builds it
+both ways.
 
 The seven feature packages below the pipeline share one rule the pipeline rows
 do not: **they are pure functions of an already-projected database.** None of
@@ -58,7 +85,7 @@ Three exceptions, all deliberate and all documented at the site:
   `GameStateTracker` — the *same* tracker `project()` drives — so this is one
   parser with two drivers, never a second encoding of Arena semantics. See
   [current-match.md](current-match.md).
-- **`brief/` and the narrative stores persist their output.** An authored
+- **`ai/brief/` and the narrative stores persist their output.** An authored
   narrative is not a derivation, so a rebuild cannot recompute it. See rule 6
   in AGENTS.md and the table ownership section below.
 - **`archetypes/` and `metagame/` write what they download, and
@@ -560,7 +587,7 @@ platform and the database, never the arguments: `config --set-key` carries
 a credential on argv. The file takes `WARNING` and up, `DEBUG` with
 `--verbose`; the console keeps `ERROR`, `WARNING` with `--verbose`; each
 handler filters on its own level. Both also take the `INFO` lines of the
-`sensei_top.llm` loggers, the cost of each generate call (`docs/llm.md`).
+`sensei_top.ai.llm` loggers, the cost of each generate call (`docs/llm.md`).
 It rotates at 2 MB and keeps five old
 files. Logging never stops a command: a file that cannot be opened is one
 console warning, and the command runs on.
@@ -635,7 +662,7 @@ of a log, never a client's data, and where nothing is found it answers
   `steam.py`'s library glob, which covers Steam alone. Reading one line is
   not log semantics, so the module sits outside `reader/` and never touches
   `raw_events`.
-- **The config file** (`llm/config.py::config_path`):
+- **The config file** (`config.py::config_path`):
   `~/.config/sensei-top/config.toml` on Linux and macOS,
   `%APPDATA%\sensei-top\config.toml` on Windows, and `$XDG_CONFIG_HOME` on
   every platform when it is set. On Windows, when only the old `~/.config`
@@ -834,7 +861,7 @@ What is legitimately Python, and why each one is:
 | Hypergeometric PMF | `table/keep.py::_hypergeometric_pmf` | Needs `math.comb` over a loop |
 | Draw-odds complement | `table/hand_read.py` | Sequential product over a variable-length draw |
 | Medians and curve shapes | `guide/play.py` | SQLite has no median; the windowing is per-deck |
-| Field share, windowed to a format reset | `guide/field.py`, `brief/narrative.py` | The window start is computed from a detected ban date, not a literal |
+| Field share, windowed to a format reset | `guide/field.py`, `ai/brief/narrative.py` | The window start is computed from a detected ban date, not a literal |
 | Position index | `review/position.py` | A fixed-weight formula over four inputs, deliberately transparent and unfitted |
 
 The test for which side something belongs on is not "is it maths" but **"could
@@ -1074,7 +1101,7 @@ an MTGO match's rank is null (migration `046_rank_winrate_arena_only.sql`).
 
 **Sideboarding** (`migrations/024_game_decks.sql`) is the deck actually held
 for one game, from `ClientMessageType_SubmitDeckResp` — the boarding
-decision as played, not `brief/`'s authored plan for what *should* be
+decision as played, not `ai/brief/`'s authored plan for what *should* be
 boarded. The event carries no `matchID` and no `gameNumber` of its own
 (confirmed by tracing a real capture, not assumed), so
 `Projector._handle_submit_deck` parks it and the very next

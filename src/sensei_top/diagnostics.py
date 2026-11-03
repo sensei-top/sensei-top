@@ -36,7 +36,7 @@ from pathlib import Path
 
 from sensei_top import doctor, logs
 from sensei_top.arena_config import resolve_log
-from sensei_top.llm.config import config_path
+from sensei_top.config import config_path
 
 SECRET_KEY = "api_key"
 

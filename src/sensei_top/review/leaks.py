@@ -20,7 +20,7 @@ from sensei_top.i18n import ENGLISH, _, current_language
 from sensei_top.review.findings import MatchReport
 from sensei_top.review.match_report import build_match_report
 
-# A shared ``MatchReport`` cache (``report_cache`` below, ``coach/evidence.py``,
+# A shared ``MatchReport`` cache (``report_cache`` below, ``ai/coach/evidence.py``,
 # ``api/sql.py::_shared_report_cache``) and its key — see ``report_cache_key``.
 ReportCacheKey = tuple[str, str | None] | tuple[str, str | None, str]
 ReportCache = dict[ReportCacheKey, MatchReport | None]
@@ -171,7 +171,7 @@ def mana_flags(conn, match_id: str) -> tuple[bool | None, bool | None]:
     """One match's own ``(screwed, flooded)`` flags — the per-match body
     ``_mana_leaks`` rolls up into a population-wide rate, and the one place
     the rule lives: no analyzer emits either as a ``Finding.code``, and
-    ``coach/evidence.py`` calls this for a leak's rate before and after a
+    ``ai/coach/evidence.py`` calls this for a leak's rate before and after a
     date rather than re-deriving it.
 
     Either flag is ``None`` — unknown, never ``False`` — when its own match
@@ -350,7 +350,7 @@ def find_leaks(
       (``guide.window`` would be a package cycle), so the caller supplies
       the resolver: ``api/routes/review.py::_leaks_consensus_window`` from
       the Leaks routes, ``guide/window.py::consensus_window_resolver`` from
-      ``guide/bundle.py`` and ``coach/evidence.py``.
+      ``guide/bundle.py`` and ``ai/coach/evidence.py``.
     - ``consensus_since`` is one window for every match, whatever its
       format. No caller passes it.
 
@@ -358,7 +358,7 @@ def find_leaks(
     correct when the caller knows no corpus it reads can cross a reset.
 
     ``match_ids`` scopes to an exact set of matches instead of deriving one
-    from ``deck_ids``/``since``: ``coach/evidence.py``'s own population, or
+    from ``deck_ids``/``since``: ``ai/coach/evidence.py``'s own population, or
     one kept deck's subset of it, which no deck/date filter can express
     (``docs/coach.md``, "Scope"). Composable with the other three scope
     arguments (every non-``None`` one becomes an additional ``AND`` clause);
@@ -386,7 +386,7 @@ def find_leaks(
     on this function's own scoping (``deck_ids``/``since``/``source``), so
     the same dict stays valid across a scoped and an unscoped call, across a
     per-format and a single-window caller, or across a caller that already
-    built some of these reports itself (``coach/evidence.py`` builds its
+    built some of these reports itself (``ai/coach/evidence.py`` builds its
     population's own reports, under the same resolver, before calling this).
     A report built under one window, or in another language, is never handed
     to a caller asking under another, because both are in the key.

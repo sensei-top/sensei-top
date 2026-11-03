@@ -1,0 +1,475 @@
+"""The paste routes: ``PUT`` on the RCQ guide, the match report, the
+training plan and the coach (the prose cards) stores a pasted answer, and
+never calls a model. The brief and coverage cards' are in
+``tests/ai/test_brief_routes.py``.
+
+The headers the answers carry are read off the copied prompt the matching
+``GET`` serves, the way an assistant copies them back; every other
+expectation is read off the answer the test writes."""
+
+from __future__ import annotations
+
+import json
+import re
+import sqlite3
+from datetime import date, timedelta
+from pathlib import Path
+
+import pytest
+
+from sensei_top.ai.llm import client as llm_client_module
+from sensei_top.api.app import create_app
+from sensei_top.db import open_database
+from sensei_top.projector.matches import project
+from sensei_top.reader.ingest import ingest_file
+
+FIXTURE = Path(__file__).parent.parent / "fixtures" / "match_session.log"
+PASTED_LIST = "Deck\n4 Alpha Card\n56 Mountain\n\nSideboard\n2 Beta Card\n"
+ARCHETYPE = "mardu_discard"
+CONTRACT = "Answer with exactly one JSON object"
+OLDER = "0" * 64
+
+
+@pytest.fixture(autouse=True)
+def no_model_call(monkeypatch):
+    """A paste route never reaches a model: any call fails the test."""
+    def boom(*a, **k):
+        raise AssertionError("a PUT must not call a model")
+
+    for name in ("write_json", "write_prose", "write_report"):
+        if hasattr(llm_client_module, name):
+            monkeypatch.setattr(llm_client_module, name, boom)
+
+
+@pytest.fixture
+def client(tmp_path, make_client):
+    db_path = tmp_path / "api.db"
+    conn = open_database(db_path)
+    ingest_file(conn, FIXTURE, locale_hint="mdy")
+    project(conn)
+    recent = (date.today() - timedelta(days=3)).isoformat()
+    conn.execute(
+        "INSERT INTO cards (grp_id, name, mana_cost, type_line, oracle_text) "
+        "VALUES (900001, 'Marauding Mako', '{1}', 'Creature', 'Text.')"
+    )
+    for i in range(6):
+        conn.execute(
+            "INSERT INTO meta_event (event_id, path, blob_sha, source, name, event_date, "
+            "format, tier) VALUES (?, 'p', 's', 'mtgo', 'e', ?, 'Standard', 'B')",
+            (f"e{i}", recent),
+        )
+        conn.execute(
+            "INSERT INTO meta_deck (event_id, deck_ord, mainboard_json, sideboard_json, "
+            "wins, losses) VALUES (?, 0, ?, '[]', 5, 0)",
+            (f"e{i}", json.dumps([{"count": 4, "name": "Marauding Mako"}])),
+        )
+        conn.execute(
+            "INSERT INTO meta_deck_archetype (event_id, deck_ord, archetype_key, "
+            "archetype_name, label, method, classified_at) "
+            "VALUES (?, 0, ?, 'Mardu Discard', 'Mardu Discard', 'archetype', 'now')",
+            (f"e{i}", ARCHETYPE),
+        )
+    conn.commit()
+    conn.close()
+    with make_client(create_app(db_path)) as c:
+        yield c
+
+
+@pytest.fixture
+def key(client):
+    return client.get("/api/guide/decks").json()[0]["key"]
+
+
+def _db(client):
+    conn = sqlite3.connect(client.app.state.database)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _count(client, table):
+    conn = _db(client)
+    try:
+        return conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+    finally:
+        conn.close()
+
+
+def _header(prompt: str) -> dict:
+    """The header lines at the end of a copied prompt, as an assistant
+    copies them back."""
+    out = {}
+    for name in ("for", "context"):
+        m = re.search(rf'^  "{name}": ("[^"]*"),?$', prompt, re.MULTILINE)
+        if m:
+            out[name] = json.loads(m.group(1))
+    return out
+
+
+def _answer(prompt: str, body: dict, **header) -> str:
+    return json.dumps({**_header(prompt), **header, "answer": body})
+
+
+_RCQ = {
+    "game_plan": "Be the beatdown.",
+    "expected_field": "Mostly red.",
+    "matchups": [{
+        "archetype": "Some Deck", "prose": "Race.", "play_draw": "Play first.",
+        "board_in": [{"card": "Beta Card", "n": 1}], "board_out": [],
+    }],
+    "flex_notes": [{"card": "Alpha Card", "role": "core", "why": "It is the plan."}],
+    "checklist": ["Sideboard"],
+}
+
+
+def _rcq_prompt(client, key):
+    return client.get(
+        f"/api/guide/{key}/rcq/preview", params={"decklist": PASTED_LIST},
+    ).json()["prompt"]
+
+
+def _rcq_body(prompt, body=None, **kw):
+    return {
+        "answer": _answer(prompt, _RCQ if body is None else body),
+        "decklist": PASTED_LIST, "expected": [], **kw,
+    }
+
+
+# --- the RCQ guide -------------------------------------------------------------
+
+
+def test_rcq_paste_stores_a_row_and_serves_it_as_the_latest(client, key):
+    prompt = _rcq_prompt(client, key)
+    assert set(_header(prompt)) == {"for", "context"}  # the list it is written for
+
+    resp = client.put(f"/api/guide/{key}/rcq/narrative", json=_rcq_body(prompt))
+    assert resp.status_code == 200
+    out = resp.json()
+    assert out["status"] == "ok"
+    assert out["model"] == "pasted"
+    assert out["cost_usd"] is None
+    assert out["decklist_text"] == PASTED_LIST
+    assert out["guide"]["game_plan"] == "Be the beatdown."
+    assert out["answered_for_another_list"] is False
+    assert client.get(f"/api/guide/{key}/rcq").json() == out
+
+    conn = _db(client)
+    row = conn.execute("SELECT * FROM rcq_guide").fetchone()
+    conn.close()
+    assert row["model"] == "pasted"
+    assert row["input_tokens"] is None and row["output_tokens"] is None
+    assert CONTRACT in row["prompt"]
+
+    again = client.put(f"/api/guide/{key}/rcq/narrative", json=_rcq_body(prompt)).json()
+    assert again["id"] > out["id"]
+    assert _count(client, "rcq_guide") == 2
+
+
+def test_an_rcq_answer_saved_after_the_list_changed_says_so(client, key):
+    """Copied for one list, saved with the box edited since:
+    stored against the edited list, as before, and now marked as written for
+    another one, which the page says. The same cards retyped are the same
+    list."""
+    prompt = _rcq_prompt(client, key)
+    edited = PASTED_LIST.replace("2 Beta Card", "3 Beta Card")
+    out = client.put(
+        f"/api/guide/{key}/rcq/narrative", json=_rcq_body(prompt, decklist=edited),
+    ).json()
+    assert out["decklist_text"] == edited
+    assert out["answered_for_another_list"] is True
+    assert client.get(f"/api/guide/{key}/rcq").json()["answered_for_another_list"] is True
+
+    retyped = "Deck\n56 Mountain\n4 Alpha Card\n\nSideboard\n2  Beta Card\n\n"
+    out = client.put(
+        f"/api/guide/{key}/rcq/narrative", json=_rcq_body(prompt, decklist=retyped),
+    ).json()
+    assert out["answered_for_another_list"] is False
+
+
+def test_an_rcq_answer_from_an_older_prompt_is_stored_with_its_list_unknown(client, key):
+    """An answer copied before the RCQ prompt carried a context has only its
+    ``for``: stored, never refused, its list unknown rather than guessed."""
+    prompt = _rcq_prompt(client, key)
+    answer = json.dumps({"for": f"rcq:{key}", "answer": _RCQ})
+    out = client.put(
+        f"/api/guide/{key}/rcq/narrative", json={**_rcq_body(prompt), "answer": answer},
+    ).json()
+    assert out["status"] == "ok"
+    assert out["answered_for_another_list"] is False
+    conn = _db(client)
+    assert conn.execute("SELECT written_for FROM rcq_guide").fetchone()[0] is None
+    conn.close()
+
+
+@pytest.mark.parametrize("make", [
+    pytest.param(lambda p: _answer(p, {"game_plan": "x"}), id="body-missing-fields"),
+    pytest.param(lambda p: _answer(p, _RCQ, **{"for": "guide:x"}), id="another-card"),
+    pytest.param(lambda p: _answer(p, _RCQ, **{"for": "rcq:other"}), id="another-deck"),
+    pytest.param(lambda p: json.dumps(_RCQ), id="headerless"),
+    pytest.param(
+        lambda p: _answer(p, {**_RCQ, "flex_notes": [
+            {"card": "Alpha Card", "role": "mystery", "why": "x"}]}),
+        id="unknown-flex-role",
+    ),
+])
+def test_rcq_paste_that_does_not_read_is_422_and_stores_nothing(client, key, make):
+    prompt = _rcq_prompt(client, key)
+    body = {**_rcq_body(prompt), "answer": make(prompt)}
+    resp = client.put(f"/api/guide/{key}/rcq/narrative", json=body)
+    assert resp.status_code == 422
+    assert _count(client, "rcq_guide") == 0
+
+
+def test_rcq_paste_404_and_413(client, key):
+    body = {"answer": "{}", "decklist": PASTED_LIST}
+    assert client.put("/api/guide/nope/rcq/narrative", json=body).status_code == 404
+    body["answer"] = "x" * (256 * 1024 + 1)
+    assert client.put(f"/api/guide/{key}/rcq/narrative", json=body).status_code == 413
+
+
+# --- the prose cards: training plan, coach (the match report's: tests/ai/) --------
+
+EMPTY_PROSE = "The answer has no text in it."
+BIG = {"answer": "x" * (256 * 1024 + 1)}
+
+
+def _prose(text):
+    return {"prose": text}
+
+
+COACH_PATH = "/api/coach/narrative"
+
+
+@pytest.fixture
+def coach_client(tmp_path, make_client):
+    """Ten completed Standard ladder matches: the leak finder's minimum sample,
+    the floor the coach's prompt is built on (as in tests/ai/test_coach_api.py)."""
+    path = tmp_path / "coach.db"
+    conn = open_database(path)
+    for i in range(10):
+        started = f"2026-0{1 + i % 9}-0{1 + i % 9}T00:00:00"
+        result = "win" if i % 2 == 0 else "loss"
+        conn.execute(
+            "INSERT INTO matches (match_id, event_id, deck_id, self_seat, opponent_seat, "
+            "opponent_user_id, opponent_name, started_at, ended_at, result, games_won, "
+            "games_lost, completed_reason, source, format) VALUES (?, 'Traditional_Ladder', "
+            "NULL, 1, 2, 'OPPCLIENTID0001', 'OppPlayerOne', ?, ?, ?, 1, 0, 'r', 'arena', "
+            "'Standard')",
+            (f"m{i}", started, started, result),
+        )
+        conn.execute(
+            "INSERT INTO games (match_id, game_number, on_play, result, result_reason, "
+            "turn_count, self_mulligans, opp_mulligans) VALUES (?, 1, 1, ?, NULL, 6, 0, 0)",
+            (f"m{i}", result),
+        )
+    conn.commit()
+    conn.close()
+    with make_client(create_app(path)) as c:
+        yield c
+
+
+def _offered_readings(prompt: str) -> list[str]:
+    """The reading-list labels the prompt offers, one ``[R<n>] ...`` line each."""
+    return re.findall(r"^\[(R\d+)\] ", prompt, re.MULTILINE)
+
+
+def test_coach_paste_stores_a_report_with_its_cited_readings(coach_client):
+    before = coach_client.get(COACH_PATH).json()
+    assert before["status"] == "prompt"
+    assert before["format"] == "Standard"
+    prompt = before["prompt"]
+    header = _header(prompt)
+    assert header["for"] == "coach:Standard"
+    offered = _offered_readings(prompt)
+    assert offered
+    cited = offered[0]
+    never_offered = f"R{max(int(r[1:]) for r in offered) + 1000}"
+    focus = "Mulligan seven-landers on the draw."
+    text = f"## Focus areas\n{focus} [{cited}] [{never_offered}]"
+
+    resp = coach_client.put(COACH_PATH, json={"answer": _answer(prompt, _prose(text))})
+    assert resp.status_code == 200
+    out = resp.json()
+    assert out["status"] == "ok"
+    assert out["format"] == "Standard"
+    assert out["narrative"] == text
+    assert out["model"] == "pasted"
+    for field in ("effort", "cost_usd", "input_tokens", "output_tokens",
+                  "web_search_requests"):
+        assert out[field] is None
+    assert out["stale"] is False
+    assert [s["label"] for s in out["sources"] if s["kind"] == "reading"] == [cited]
+    # The PUT answers with the prompt it stored, as the POST answers with the
+    # one it sent; the next GET's prompt lists this report as the previous one.
+    assert out["prompt"] == prompt
+    after = coach_client.get(COACH_PATH).json()
+    assert {k: v for k, v in after.items() if k != "prompt"} == {
+        k: v for k, v in out.items() if k != "prompt"
+    }
+    # The stored metrics are a snapshot the next report measures progress
+    # against: the next prompt quotes this report's focus areas and compares.
+    assert focus in after["prompt"]
+    assert "progress can't be measured" not in after["prompt"]
+
+    conn = _db(coach_client)
+    row = conn.execute("SELECT * FROM coach_report").fetchone()
+    conn.close()
+    assert row["format"] == "Standard"
+    assert row["model"] == "pasted"
+    assert row["context_hash"] == header["context"]
+    assert json.loads(row["sources_json"]) == [cited]
+    assert json.loads(row["metrics_json"])  # the snapshot at paste time
+    assert row["prompt"] == prompt
+    assert CONTRACT in row["prompt"]
+
+    # A second paste is a second report: history, never an upsert.
+    again = coach_client.get(COACH_PATH).json()["prompt"]
+    resp2 = coach_client.put(
+        COACH_PATH, json={"answer": _answer(again, _prose("## Focus areas\nAgain."))},
+    )
+    assert resp2.json()["id"] > out["id"]
+    assert _count(coach_client, "coach_report") == 2
+
+
+def test_coach_paste_is_for_the_format_the_page_asks_for(coach_client):
+    # Ten Standard matches clear the skill sample for a Modern report too
+    # (tests/ai/test_coach_api.py), so the Modern page has its own prompt.
+    standard = coach_client.get(COACH_PATH).json()["prompt"]
+    resp = coach_client.put(
+        f"{COACH_PATH}?format=Modern",
+        json={"answer": _answer(standard, _prose("## Focus areas\nx"))},
+    )
+    assert resp.status_code == 422
+    assert resp.json()["detail"] == (
+        "This answer is for a coach report of another format. Paste it there."
+    )
+    assert _count(coach_client, "coach_report") == 0
+
+    modern = coach_client.get(f"{COACH_PATH}?format=Modern").json()["prompt"]
+    assert _header(modern)["for"] == "coach:Modern"
+    resp = coach_client.put(
+        f"{COACH_PATH}?format=Modern",
+        json={"answer": _answer(modern, _prose("## Focus areas\nx"))},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["format"] == "Modern"
+    conn = _db(coach_client)
+    assert conn.execute("SELECT format FROM coach_report").fetchone()[0] == "Modern"
+    conn.close()
+    assert coach_client.get(COACH_PATH).json()["status"] == "prompt"
+
+
+def test_coach_paste_written_for_older_evidence_is_stored_stale(coach_client):
+    prompt = coach_client.get(COACH_PATH).json()["prompt"]
+    resp = coach_client.put(
+        COACH_PATH, json={"answer": _answer(prompt, _prose("## Focus areas\nx"), context=OLDER)},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["stale"] is True
+    assert coach_client.get(COACH_PATH).json()["stale"] is True
+    conn = _db(coach_client)
+    assert conn.execute("SELECT context_hash FROM coach_report").fetchone()[0] == OLDER
+    conn.close()
+
+
+@pytest.mark.parametrize("make", [
+    pytest.param(lambda p: json.dumps(_prose("## Focus areas\nx")), id="headerless"),
+    pytest.param(lambda p: _answer(p, _prose("x"), **{"for": "leaks"}), id="another-card"),
+    pytest.param(
+        lambda p: _answer(p, _prose("x"), **{"for": "coach:Modern"}), id="another-format",
+    ),
+    pytest.param(lambda p: _answer(p, _prose("\n\n")), id="empty-prose"),
+])
+def test_coach_paste_that_does_not_read_is_422_and_stores_nothing(coach_client, make):
+    prompt = coach_client.get(COACH_PATH).json()["prompt"]
+    resp = coach_client.put(COACH_PATH, json={"answer": make(prompt)})
+    assert resp.status_code == 422
+    assert _count(coach_client, "coach_report") == 0
+
+
+def test_coach_paste_with_empty_prose_says_so_in_pt_br(coach_client):
+    prompt = coach_client.get(COACH_PATH).json()["prompt"]
+    resp = coach_client.put(
+        COACH_PATH, json={"answer": _answer(prompt, _prose(""))},
+        headers={"Accept-Language": "pt-BR"},
+    )
+    assert resp.status_code == 422
+    assert resp.json()["detail"] == "A resposta não tem nenhum texto."
+
+
+def test_coach_paste_with_too_few_matches_is_404_and_413_comes_first(client):
+    # The fixture's one match is below the coach's minimum sample.
+    assert client.get(COACH_PATH).json()["status"] == "no_report"
+    assert client.put(COACH_PATH, json={"answer": "{}"}).status_code == 404
+    assert client.put(COACH_PATH, json=BIG).status_code == 413
+    assert _count(client, "coach_report") == 0
+
+
+def test_coach_paste_without_a_format_is_for_the_default_format(coach_client):
+    # A Modern match after the ten Standard ones: the latest match's format
+    # is the default (tests/ai/test_coach_api.py).
+    conn = _db(coach_client)
+    conn.execute(
+        "INSERT INTO matches (match_id, event_id, deck_id, self_seat, opponent_seat, "
+        "opponent_user_id, opponent_name, started_at, ended_at, result, games_won, "
+        "games_lost, completed_reason, source, format) VALUES ('modern1', "
+        "'Traditional_Ladder', NULL, 1, 2, 'OPPCLIENTID0001', 'OppPlayerOne', "
+        "'2026-09-20T00:00:00', '2026-09-20T00:00:00', 'win', 1, 0, 'r', 'arena', 'Modern')"
+    )
+    conn.execute(
+        "INSERT INTO games (match_id, game_number, on_play, result, result_reason, "
+        "turn_count, self_mulligans, opp_mulligans) VALUES ('modern1', 1, 1, 'win', NULL, "
+        "6, 0, 0)"
+    )
+    conn.commit()
+    conn.close()
+
+    before = coach_client.get(COACH_PATH).json()
+    assert before["format"] == "Modern"
+    assert _header(before["prompt"])["for"] == "coach:Modern"
+    resp = coach_client.put(
+        COACH_PATH, json={"answer": _answer(before["prompt"], _prose("## Focus areas\nx"))},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["format"] == "Modern"
+    conn = _db(coach_client)
+    assert conn.execute("SELECT format FROM coach_report").fetchone()[0] == "Modern"
+    conn.close()
+
+
+def test_coach_paste_over_256_kb_is_413_before_anything_else(coach_client):
+    assert coach_client.put(COACH_PATH, json=BIG).status_code == 413
+    assert coach_client.put(f"{COACH_PATH}?format=Modern", json=BIG).status_code == 413
+    assert _count(coach_client, "coach_report") == 0
+
+
+# --- the guard -----------------------------------------------------------------
+
+PASTE_ROUTES = [
+    "/api/guide/k/narrative",
+    "/api/guide/k/rcq/narrative",
+    f"/api/guide/k/briefs/{ARCHETYPE}",
+    "/api/guide/k/coverage",
+    "/api/matches/m/report/narrative",
+    "/api/review/leaks/narrative",
+    "/api/coach/narrative",
+]
+
+
+@pytest.mark.parametrize("path", PASTE_ROUTES)
+def test_guard_refuses_a_paste_without_the_header_or_from_a_foreign_origin(
+    tmp_path, path
+):
+    from fastapi.testclient import TestClient
+
+    from sensei_top.api.guard import CLIENT_HEADER
+
+    db_path = tmp_path / "g.db"
+    open_database(db_path).close()
+    with TestClient(create_app(db_path), base_url="http://127.0.0.1:8000") as bare:
+        missing = bare.put(path, json={"answer": "{}", "decklist": ""})
+        foreign = bare.put(
+            path, json={"answer": "{}", "decklist": ""},
+            headers={CLIENT_HEADER: "dashboard", "Origin": "https://example.org"},
+        )
+    assert missing.status_code == 403
+    assert foreign.status_code == 403

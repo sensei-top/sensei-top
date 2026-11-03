@@ -4,6 +4,7 @@ Kept deliberately small: fixtures that only one module needs stay in that
 module, per docs/testing.md.
 """
 
+import importlib.util
 import logging
 from pathlib import Path
 
@@ -33,7 +34,7 @@ def _no_ambient_config(monkeypatch, tmp_path):
       deck folder.
     - ``api/guard.py`` lets a request carrying the dashboard's header through
       to the four metered ``.../narrative`` handlers, which resolve a Claude
-      credential from the environment or that same file (``llm/config.py``).
+      credential from the environment or that same file (``claude_config.py``).
       A real credential on the developer's machine must never turn a test's
       "no credential configured" path into a configured one — a configured
       one is a paid call.
@@ -52,7 +53,7 @@ def _no_ambient_config(monkeypatch, tmp_path):
       empty, never-created temp folders too.
 
     Pointing ``XDG_CONFIG_HOME`` at an empty, never-created temp directory
-    (``llm/config.py::config_path()`` honours it) makes every one of those
+    (``config.py::config_path()`` honours it) makes every one of those
     lookups miss cleanly, the same way a fresh install would. A test body
     that explicitly wants one of these still wins: it sets its own value
     with its own ``monkeypatch`` call after this fixture's already ran
@@ -148,6 +149,45 @@ def make_client():
         return TestClient(app, base_url="http://127.0.0.1:8000", headers=headers, **kwargs)
 
     return _make
+
+
+@pytest.fixture
+def no_claude_calls(monkeypatch):
+    """A test that pokes at the metered routes must fail loudly, not place a
+    real, billed call, if ``_no_ambient_config``'s isolation ever regresses.
+    ``ai/llm/client.py::_run`` is the one place every Claude call goes
+    through. Does nothing when ``ai/`` is absent."""
+    if importlib.util.find_spec("sensei_top.ai") is None:
+        return
+
+    def _forbidden(*args, **kwargs):
+        pytest.fail("a test tried to call the Claude API")
+
+    monkeypatch.setattr("sensei_top.ai.llm.client._run", _forbidden)
+
+
+@pytest.fixture
+def hider(monkeypatch):
+    """Returns the function that hides ``sensei_top.ai`` from core's
+    ``find_spec`` check: the package stays in ``sys.modules`` when other tests
+    in the run imported it (core has no static edge to it), so only the
+    seam's own lookup answers ``None``."""
+    real = importlib.util.find_spec
+
+    def find_spec(name, package=None):
+        if name == "sensei_top.ai" or name.startswith("sensei_top.ai."):
+            return None
+        return real(name, package)
+
+    def hide():
+        monkeypatch.setattr(importlib.util, "find_spec", find_spec)
+
+    return hide
+
+
+@pytest.fixture
+def hide_ai(hider):
+    hider()
 
 
 @pytest.fixture

@@ -9,8 +9,8 @@ Two of these carry the design's honesty rules:
   low-confidence ``Finding``; it is the absence of one, said out loud, kept
   in its own list so silence is never mistaken for "nothing was wrong".
 * ``Evidence.key`` and ``Finding.code`` are stable identifiers, not prose.
-  ``summary.py`` and ``coach/evidence.py`` match specific codes and look
-  evidence up by ``key``, and ``coach/evidence.py::progress_since`` compares
+  ``summary.py`` and ``ai/coach/evidence.py`` match specific codes and look
+  evidence up by ``key``, and ``ai/coach/evidence.py::progress_since`` compares
   against leak codes stored in an earlier coach report, so a renamed code
   silently reads as "not observed in any new match".
 """
