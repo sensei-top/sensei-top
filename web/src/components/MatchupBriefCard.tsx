@@ -45,7 +45,7 @@ export function PlayAroundList({
 }
 
 /** The IN/OUT sideboard plan plus any `PlanProblemOut` caught by
- *  `guide.plans.validate_plans`, shown inline rather than hidden. Shared
+ *  `ai.guide.plans.validate_plans`, shown inline rather than hidden. Shared
  *  between MatchupBriefCard's own disclosure card (`size="compact"`, the
  *  default — this component's rendering there is unchanged) and
  *  SideboardPlanCard's break-phase plan (`size="large"`), which needs the

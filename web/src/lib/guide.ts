@@ -56,7 +56,7 @@ export function rowScrollTarget({ rowWidth, scrollWidth, pendingLeft, linkLeft, 
   return Math.min(Math.max(centred, 0), Math.max(scrollWidth - rowWidth, 0))
 }
 
-/** The problems `guide/plans.py` found in the plan against `archetype`,
+/** The problems `ai/guide/plans.py` found in the plan against `archetype`,
  *  in the server's order. */
 export function ownedProblems(problems: PlanProblemOut[], archetype: string): PlanProblemOut[] {
   return problems.filter((problem) => problem.archetype === archetype)

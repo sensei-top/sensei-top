@@ -37,6 +37,7 @@ from sensei_top import i18n
 from sensei_top.ai.guide import narrative as guide_narrative
 from sensei_top.ai.llm import config as llm_config
 from sensei_top.ai.review import leaks_narrative, narrative
+from sensei_top.ai.routes import guide as guide_ai_routes
 from sensei_top.ai.routes import leaks as leaks_routes
 from sensei_top.ai.routes import match_report as match_report_routes
 from sensei_top.api import create_app
@@ -1048,6 +1049,7 @@ def test_the_guide_and_rcq_prompts_build_their_evidence_in_english(
         seen.append(i18n._(PROBE))
 
     monkeypatch.setattr(guide_routes, "build_deck_guide", recording)
+    monkeypatch.setattr(guide_ai_routes, "build_deck_guide", recording)
     monkeypatch.setattr(rcq_routes, "build_rcq", recording)
     pt = {"Accept-Language": "pt-BR"}
     assert client.get("/api/guide/k", headers=pt).status_code == 404

@@ -1,6 +1,6 @@
-"""The seven paste routes: ``PUT`` on the deck guide, one matchup brief, the
-coverage card and the RCQ guide (the cards with a CLI importer), and on the
-match report, the training plan and the coach (the prose cards) stores a
+"""The paste routes: ``PUT`` on one matchup brief, the coverage card and the
+RCQ guide (the cards with a CLI importer), and on the match report, the
+training plan and the coach (the prose cards) stores a
 pasted answer, and never calls a model.
 
 The headers the answers carry are read off the copied prompt the matching
@@ -108,16 +108,6 @@ def _answer(prompt: str, body: dict, **header) -> str:
     return json.dumps({**_header(prompt), **header, "answer": body})
 
 
-_GUIDE = {
-    "engine": "Cheap spells trigger prowess.",
-    "fix": "Deploy earlier.",
-    "card_notes": [],
-    "matchups": [{
-        "archetype": "Mardu Discard", "prose": "Board in sweepers.",
-        "board_in": [], "board_out": [],
-    }],
-    "checklist": ["Am I racing?"],
-}
 _BRIEF = {
     "prose": "They race you; trade early.",
     "play_around": [{"card": "Marauding Mako", "why": "grows on every discard"}],
@@ -133,10 +123,6 @@ _RCQ = {
     "flex_notes": [{"card": "Alpha Card", "role": "core", "why": "It is the plan."}],
     "checklist": ["Sideboard"],
 }
-
-
-def _guide_prompt(client, key):
-    return client.get(f"/api/guide/{key}/narrative").json()["prompt"]
 
 
 def _brief_prompt(client, key):
@@ -158,108 +144,6 @@ def _rcq_body(prompt, body=None, **kw):
         "answer": _answer(prompt, _RCQ if body is None else body),
         "decklist": PASTED_LIST, "expected": [], **kw,
     }
-
-
-# --- the deck guide -------------------------------------------------------
-
-
-def test_guide_paste_stores_what_the_cli_import_stores(client, key):
-    prompt = _guide_prompt(client, key)
-    header = _header(prompt)
-    assert header["for"] == f"guide:{key}"
-
-    resp = client.put(
-        f"/api/guide/{key}/narrative", json={"answer": _answer(prompt, _GUIDE)},
-    )
-    assert resp.status_code == 200
-    out = resp.json()
-    assert out["status"] == "ok"
-    assert out["guide"]["engine"] == "Cheap spells trigger prowess."
-    assert out["author"] == "pasted"
-    assert out["cost_usd"] is None
-    assert out["stale"] is False
-    # The same body the GET serves afterwards.
-    assert client.get(f"/api/guide/{key}/narrative").json() == out
-
-    conn = _db(client)
-    row = conn.execute("SELECT * FROM deck_narrative WHERE deck_key = ?", (key,)).fetchone()
-    assert row["author"] == "pasted"
-    assert row["list_hash"] == header["context"]
-    assert row["input_tokens"] is None and row["output_tokens"] is None
-    assert row["cost_usd"] is None
-    # The prompt column holds the copied prompt, answer contract included.
-    assert CONTRACT in row["prompt"]
-    brief = conn.execute(
-        "SELECT model, list_hash FROM matchup_brief WHERE deck_key = ?", (key,)
-    ).fetchall()
-    assert [(b["model"], b["list_hash"]) for b in brief] == [("pasted", header["context"])]
-    conn.close()
-
-
-def test_guide_paste_unwraps_a_fence_and_surrounding_text(client, key):
-    prompt = _guide_prompt(client, key)
-    text = "Here you go:\n```json\n" + _answer(prompt, _GUIDE) + "\n```\nHope that helps."
-    assert client.put(f"/api/guide/{key}/narrative", json={"answer": text}).status_code == 200
-
-
-def test_guide_paste_written_for_an_older_list_is_stored_stale(client, key):
-    prompt = _guide_prompt(client, key)
-    older = "0" * 64
-    resp = client.put(
-        f"/api/guide/{key}/narrative",
-        json={"answer": _answer(prompt, _GUIDE, context=older)},
-    )
-    assert resp.status_code == 200
-    assert resp.json()["stale"] is True
-    conn = _db(client)
-    stored = conn.execute("SELECT list_hash FROM deck_narrative").fetchone()[0]
-    briefs = [r[0] for r in conn.execute("SELECT list_hash FROM matchup_brief")]
-    conn.close()
-    assert stored == older
-    assert briefs and set(briefs) == {older}
-
-
-@pytest.mark.parametrize("make", [
-    pytest.param(lambda p: "not json at all", id="not-json"),
-    pytest.param(lambda p: json.dumps(_GUIDE), id="headerless"),
-    pytest.param(lambda p: _answer(p, _GUIDE, context="edited"), id="edited-context"),
-    pytest.param(lambda p: _answer(p, {"engine": "x"}), id="body-missing-fields"),
-    pytest.param(lambda p: _answer(p, _GUIDE, **{"for": "match:abc"}), id="another-card"),
-    pytest.param(lambda p: _answer(p, _GUIDE, **{"for": "guide:other"}), id="another-deck"),
-])
-def test_guide_paste_that_does_not_read_is_422_and_stores_nothing(client, key, make):
-    prompt = _guide_prompt(client, key)
-    resp = client.put(f"/api/guide/{key}/narrative", json={"answer": make(prompt)})
-    assert resp.status_code == 422
-    assert resp.json()["detail"]
-    assert _count(client, "deck_narrative") == 0
-    assert _count(client, "matchup_brief") == 0
-
-
-def test_guide_paste_names_the_card_a_wrong_answer_belongs_to(client, key):
-    prompt = _guide_prompt(client, key)
-    resp = client.put(
-        f"/api/guide/{key}/narrative",
-        json={"answer": _answer(prompt, _GUIDE, **{"for": "match:abc"})},
-    )
-    assert resp.status_code == 422
-    assert "a match report" in resp.json()["detail"]
-
-
-def test_guide_paste_for_an_unknown_deck_is_404(client):
-    resp = client.put("/api/guide/nope/narrative", json={"answer": "{}"})
-    assert resp.status_code == 404
-
-
-def test_guide_paste_over_256_kb_is_413_before_anything_else(client, key):
-    resp = client.put(
-        f"/api/guide/{key}/narrative", json={"answer": "x" * (256 * 1024 + 1)},
-    )
-    assert resp.status_code == 413
-    assert client.put(
-        "/api/guide/nope/narrative", json={"answer": "x" * (256 * 1024 + 1)},
-    ).status_code == 413
-    assert _count(client, "deck_narrative") == 0
 
 
 # --- one matchup brief ------------------------------------------------------

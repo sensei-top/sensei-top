@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import sqlite3
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -34,7 +33,6 @@ from sensei_top.ai.llm import config as llm_config_module
 from sensei_top.ai.llm.client import (
     REPORT_MODELS,
     Citation,
-    Completion,
     LLMError,
     price_per_mtok,
     strict_schema,
@@ -1428,84 +1426,6 @@ def test_no_credential_means_no_client_is_constructed(monkeypatch, client, guide
         resp = client.post(path, json={"decklist": "4 Island", "expected": []})
         assert resp.status_code == 503
         assert "config --set-key" in resp.json()["detail"]
-
-
-def test_generate_guide_narrative_converges_with_the_hand_import_parser(
-    monkeypatch, client, guide_key
-):
-    """The whole reason the generate path is safe: a ``write_json`` payload
-    shaped like ``_GUIDE_TOOL``'s schema must parse through the exact same
-    ``guide_narrative_from_json`` the paste route uses, and land in both
-    ``deck_narrative`` and ``matchup_brief`` — proving the generate path and
-    the paste path converge on one validator, not two."""
-    conn = sqlite3.connect(client.app.state.database)
-    conn.execute(
-        "INSERT INTO meta_event (event_id, path, blob_sha, source, name, event_date, "
-        "format, tier) VALUES ('e', 'p', 's', 'mtgo', 'e', '2026-08-15', 'Standard', 'B')"
-    )
-    conn.execute(
-        "INSERT INTO meta_deck (event_id, deck_ord, mainboard_json, sideboard_json, wins, "
-        "losses) VALUES ('e', 0, '[]', '[]', 5, 0)"
-    )
-    conn.execute(
-        "INSERT INTO meta_deck_archetype (event_id, deck_ord, archetype_key, archetype_name, "
-        "label, method, classified_at) VALUES ('e', 0, 'boros_convoke', 'Boros Convoke', "
-        "'Boros Convoke', 'archetype', 'now')"
-    )
-    conn.commit()
-    conn.close()
-
-    monkeypatch.setattr(llm_config_module, "load", lambda: LLMConfig(api_key="k"))
-    payload = {
-        "engine": "Cheap spells trigger prowess.",
-        "fix": "Deploy earlier.",
-        "card_notes": [],
-        "matchups": [{
-            "archetype": "Boros Convoke", "prose": "Board in sweepers.",
-            "board_in": [], "board_out": [],
-        }],
-        "checklist": ["Am I racing?"],
-    }
-    prompts = []
-
-    def fake(prompt, schema, *, cfg, label):
-        prompts.append(prompt)
-        return Completion(
-            text=json.dumps(payload), model="claude-opus-5",
-            input_tokens=2000, output_tokens=1500, cost_usd=0.0475,
-        )
-
-    monkeypatch.setattr(llm_client_module, "write_json", fake)
-
-    resp = client.post(f"/api/guide/{guide_key}/narrative")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["status"] == "ok"
-    # The generate path keeps its own prompt; the answer contract ends only
-    # the copied one the GET serves.
-    assert "Answer as a single JSON object matching this schema" in prompts[0]
-    assert "Answer with exactly one JSON object" not in prompts[0]
-    copied = client.get(f"/api/guide/{guide_key}/narrative").json()["prompt"]
-    assert "Answer with exactly one JSON object" in copied
-    assert "Answer as a single JSON object matching this schema" not in copied
-    assert body["guide"]["engine"] == "Cheap spells trigger prowess."
-    assert body["cost_usd"] == pytest.approx(0.0475)
-
-    conn = sqlite3.connect(client.app.state.database)
-    conn.row_factory = sqlite3.Row
-    narrative_row = conn.execute(
-        "SELECT * FROM deck_narrative WHERE deck_key = ?", (guide_key,)
-    ).fetchone()
-    assert narrative_row is not None
-    assert narrative_row["cost_usd"] == pytest.approx(0.0475)
-
-    brief_row = conn.execute(
-        "SELECT * FROM matchup_brief WHERE deck_key = ? AND archetype_key = 'boros_convoke'",
-        (guide_key,),
-    ).fetchone()
-    assert brief_row is not None
-    assert brief_row["prose"] == "Board in sweepers."
-    conn.close()
 
 
 # --- config_path() on Windows ------------------------------------------------

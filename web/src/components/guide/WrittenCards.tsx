@@ -128,7 +128,7 @@ function PlanCard({ plan, problems }: { plan: MatchupPlanOut; problems: string[]
 }
 
 /** The written guide's plan against each archetype, in its own order. A
- *  problem whose archetype has no plan (`guide/plans.py`'s `(sideboard)`
+ *  problem whose archetype has no plan (`ai/guide/plans.py`'s `(sideboard)`
  *  check, or a plan the guide does not hold) is said once, at the top. */
 export function SideboardPlansCard({ guide }: { guide: GuideNarrativeOut }) {
   const { t } = useTranslation()

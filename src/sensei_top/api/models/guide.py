@@ -181,20 +181,19 @@ class GuideNarrativeResponse(BaseModel):
 
     status: str = Field(description="ok | prompt | no_report")
     guide: GuideNarrativeOut | None = Field(
-        None, description="the stored narrative, once generated, pasted or imported for this deck"
+        None, description="the stored narrative, once generated or pasted for this deck"
     )
     prompt: str | None = Field(
         None,
         description="the full text to write the narrative from — pass it to POST on this "
         "same path to generate it with Claude, or into an assistant you already pay for and "
-        "PUT the answer back on this same path, or import it with "
-        "`sensei-top guide --deck KEY --import FILE`",
+        "PUT the answer back on this same path",
     )
     authored_at: str | None = Field(None, description="when the stored narrative was written")
     author: str | None = Field(None, description="who or what wrote it — a model id, or free text")
     cost_usd: float | None = Field(
         None,
-        description="measured cost of the call that wrote it; null for a pasted or imported "
+        description="measured cost of the call that wrote it; null for a pasted "
         "answer, and for a model with no price on file",
     )
     stale: bool = Field(False, description="the 75 has changed since this was written")

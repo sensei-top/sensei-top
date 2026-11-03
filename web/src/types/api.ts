@@ -934,68 +934,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/guide/{key}/narrative": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Guide Narrative Route
-         * @description The deck's stored narrative, and always the prompt to (re)write it
-         *     from.
-         *
-         *     ``status`` is ``'ok'`` when a narrative has been generated (``POST``
-         *     on this same path), pasted (``PUT`` on this same path) or imported
-         *     (``sensei-top guide --deck KEY --import FILE``) for this deck, and
-         *     ``'prompt'`` when none has —
-         *     either way ``prompt`` carries the text to write one from, so the tab
-         *     can offer "write it" and "rewrite it" with the same affordance.
-         *
-         *     ``stale`` compares the stored ``list_hash`` against the deck's
-         *     current 75: a narrative written for a different 75 names cards the
-         *     deck may no longer hold, which is worth flagging loudly rather than
-         *     rendering as current.
-         */
-        get: operations["guide_narrative_route_api_guide__key__narrative_get"];
-        /**
-         * Paste Guide Narrative
-         * @description Store an answer pasted into the deck guide's card — the dashboard's
-         *     way into what ``sensei-top guide --deck KEY --import FILE`` stores.
-         *
-         *     Makes no model call. The answer is read through the answer contract
-         *     (``answers.read_answer``, header required): 422 when it is another
-         *     card's or another deck's, is not JSON, or does not parse as a guide, and
-         *     nothing is stored; 413 over 256 KB. It is stored with the 75 its
-         *     ``context`` says it was written for, so one written for an older list
-         *     reads as stale; the author is the sentinel ``pasted``, tokens and cost
-         *     ``NULL``. Every matchup plan lands in ``matchup_brief`` in the same
-         *     transaction, as for the CLI. Returns what ``GET`` on this path returns.
-         */
-        put: operations["paste_guide_narrative_api_guide__key__narrative_put"];
-        /**
-         * Generate Guide Narrative
-         * @description Write this deck's guide narrative with Claude, and store it.
-         *
-         *     Sends the same ``full_prompt`` the copy-prompt path serves, minus the
-         *     answer contract that ends a copied prompt (``answers.answer_format``):
-         *     the answer is requested via structured outputs against
-         *     ``_GUIDE_TOOL``'s own schema instead — the same shape ``sensei-top guide
-         *     --import`` already parses (``guide_narrative_from_json``), so the
-         *     generate path and the hand-import path converge on one validator.
-         *     Also fills every matchup plan the guide covers into
-         *     ``matchup_brief``, exactly like the CLI import
-         *     (``brief/from_guide.py``) — this is the whole reason the live
-         *     matchup brief needs no generate button of its own.
-         */
-        post: operations["generate_guide_narrative_api_guide__key__narrative_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/guide/{key}/markdown": {
         parameters: {
             query?: never;
@@ -1537,6 +1475,65 @@ export interface paths {
          *     per-match generate route.
          */
         post: operations["generate_leaks_narrative_api_review_leaks_narrative_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guide/{key}/narrative": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Guide Narrative Route
+         * @description The deck's stored narrative, and always the prompt to (re)write it
+         *     from.
+         *
+         *     ``status`` is ``'ok'`` when a narrative has been generated (``POST``
+         *     on this same path) or pasted (``PUT`` on this same path) for this
+         *     deck, and ``'prompt'`` when none has —
+         *     either way ``prompt`` carries the text to write one from, so the tab
+         *     can offer "write it" and "rewrite it" with the same affordance.
+         *
+         *     ``stale`` compares the stored ``list_hash`` against the deck's
+         *     current 75: a narrative written for a different 75 names cards the
+         *     deck may no longer hold, which is worth flagging loudly rather than
+         *     rendering as current.
+         */
+        get: operations["guide_narrative_route_api_guide__key__narrative_get"];
+        /**
+         * Paste Guide Narrative
+         * @description Store an answer pasted into the deck guide's card — the dashboard's
+         *     way to store a narrative written elsewhere.
+         *
+         *     Makes no model call. The answer is read through the answer contract
+         *     (``answers.read_answer``, header required): 422 when it is another
+         *     card's or another deck's, is not JSON, or does not parse as a guide, and
+         *     nothing is stored; 413 over 256 KB. It is stored with the 75 its
+         *     ``context`` says it was written for, so one written for an older list
+         *     reads as stale; the author is the sentinel ``pasted``, tokens and cost
+         *     ``NULL``. Every matchup plan lands in ``matchup_brief`` in the same
+         *     transaction as the narrative. Returns what ``GET`` on this path returns.
+         */
+        put: operations["paste_guide_narrative_api_guide__key__narrative_put"];
+        /**
+         * Generate Guide Narrative
+         * @description Write this deck's guide narrative with Claude, and store it.
+         *
+         *     Sends the same ``full_prompt`` the copy-prompt path serves, minus the
+         *     answer contract that ends a copied prompt (``answers.answer_format``):
+         *     the answer is requested via structured outputs against
+         *     ``_GUIDE_TOOL``'s own schema instead, parsed by
+         *     ``guide_narrative_from_json`` — the validator the paste path uses too.
+         *     Also fills every matchup plan the guide covers into
+         *     ``matchup_brief`` (``brief/from_guide.py``) — this is the whole reason
+         *     the live matchup brief needs no generate button of its own.
+         */
+        post: operations["generate_guide_narrative_api_guide__key__narrative_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2509,11 +2506,11 @@ export interface components {
              * @description ok | prompt | no_report
              */
             status: string;
-            /** @description the stored narrative, once generated, pasted or imported for this deck */
+            /** @description the stored narrative, once generated or pasted for this deck */
             guide?: components["schemas"]["GuideNarrativeOut"] | null;
             /**
              * Prompt
-             * @description the full text to write the narrative from — pass it to POST on this same path to generate it with Claude, or into an assistant you already pay for and PUT the answer back on this same path, or import it with `sensei-top guide --deck KEY --import FILE`
+             * @description the full text to write the narrative from — pass it to POST on this same path to generate it with Claude, or into an assistant you already pay for and PUT the answer back on this same path
              */
             prompt?: string | null;
             /**
@@ -2528,7 +2525,7 @@ export interface components {
             author?: string | null;
             /**
              * Cost Usd
-             * @description measured cost of the call that wrote it; null for a pasted or imported answer, and for a model with no price on file
+             * @description measured cost of the call that wrote it; null for a pasted answer, and for a model with no price on file
              */
             cost_usd?: number | null;
             /**
@@ -3451,7 +3448,7 @@ export interface components {
             staples: components["schemas"]["StapleOut"][];
             /**
              * Problems
-             * @description sideboard plan problems caught by guide.plans.validate_plans, never repaired
+             * @description sideboard plan problems caught by ai.guide.plans.validate_plans, never repaired
              */
             problems: components["schemas"]["PlanProblemOut"][];
             /** Model */
@@ -6309,103 +6306,6 @@ export interface operations {
             };
         };
     };
-    guide_narrative_route_api_guide__key__narrative_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                key: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GuideNarrativeResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    paste_guide_narrative_api_guide__key__narrative_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                key: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PastedAnswerIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GuideNarrativeResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    generate_guide_narrative_api_guide__key__narrative_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                key: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GuideNarrativeResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     guide_markdown_api_guide__key__markdown_get: {
         parameters: {
             query?: never;
@@ -7215,6 +7115,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NarrativeResponse"];
+                };
+            };
+        };
+    };
+    guide_narrative_route_api_guide__key__narrative_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideNarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paste_guide_narrative_api_guide__key__narrative_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PastedAnswerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideNarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_guide_narrative_api_guide__key__narrative_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuideNarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
