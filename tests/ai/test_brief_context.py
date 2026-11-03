@@ -1,4 +1,4 @@
-"""Tests for brief/narrative.py's build_brief_context: what gets sent, and
+"""Tests for ai/brief/narrative.py's build_brief_context: what gets sent, and
 — the property the whole feature depends on — what never does.
 """
 
@@ -8,7 +8,7 @@ import json
 
 import pytest
 
-from sensei_top.brief.narrative import (
+from sensei_top.ai.brief.narrative import (
     NarrativeError,
     briefs_from_json,
     build_brief_context,

@@ -336,7 +336,7 @@ def _pre_refactor_build_guide_context(guide: DeckGuide, *, conn) -> str | None:
             for key, (name, n) in faced_archetypes(
                 conn, guide.provenance.deck.deck_ids, since=since,
             ).items()
-            # key_by_name.get(name) == key: brief/from_guide.py stores each
+            # key_by_name.get(name) == key: ai/brief/from_guide.py stores each
             # plan under key_by_name[plan.archetype], so a name that maps to
             # another key would file this matchup's plan under the wrong one.
             if n >= MIN_TIMES_FACED and key not in shown_keys and key != own_key

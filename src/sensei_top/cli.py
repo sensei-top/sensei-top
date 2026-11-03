@@ -15,8 +15,6 @@
     sensei-top archetypes                            download deck archetype definitions
     sensei-top meta [--reclassify]                   tournament results for the Field page
     sensei-top guide [--deck KEY] [--markdown PATH]  one deck's guide (omit --deck to list)
-    sensei-top brief --deck KEY --archetype KEY --prompt | --import FILE
-                                                      one matchup brief (omit --deck to list)
     sensei-top config --set-key KEY                  opt in to Claude-generated narratives
     sensei-top config --set-key -                    the same, reading the key from stdin
     sensei-top config --clear-key                    remove the key
@@ -76,7 +74,6 @@ from sensei_top.reader.mtgo_decks import ingest_deck_dir
 from sensei_top.reader.segmenter import DATE_ORDERS
 
 if TYPE_CHECKING:
-    from sensei_top.ai.answers import Answer
     from sensei_top.metagame.auto import RefreshState
     from sensei_top.metagame.source import RefreshResult
 
@@ -1523,26 +1520,6 @@ def cmd_report(args) -> None:
     print()
 
 
-def _read_import(path: str, expected_for: str) -> Answer:
-    """An ``--import FILE`` answer, read through the same contract the
-    dashboard's paste box uses (``answers.read_answer``), except that an
-    answer with no header — one saved before prompts asked for it — is read
-    whole, with a warning. Exits with the reason when it cannot be read."""
-    from sensei_top.ai.answers import AnswerError, headerless_warning, read_answer
-
-    raw = Path(path).read_text(encoding="utf-8")
-    try:
-        answer = read_answer(raw, expected_for, require_header=False)
-    except AnswerError as exc:
-        sys.exit(f"Could not read {path}: {exc}")
-    if answer.headerless:
-        warning = headerless_warning()
-        # Not the file's path: a log line never carries a local path.
-        logging.getLogger(__name__).warning("import: %s", warning)
-        print(warning, file=sys.stderr)
-    return answer
-
-
 def cmd_guide(args) -> None:
     from sensei_top.guide.bundle import build_deck_guide
     from sensei_top.guide.deck import list_identities
@@ -1576,156 +1553,6 @@ def cmd_guide(args) -> None:
         print(f"Guide written to {args.markdown}")
     else:
         print(markdown)
-
-
-def cmd_brief(args) -> None:
-    from sensei_top.brief.store import briefs_for_deck, corpus_commit
-    from sensei_top.guide.deck import list_identities, resolve
-
-    conn = _open(args)
-
-    if not args.deck:
-        current_commit = corpus_commit(conn)
-        found_any = False
-        for identity in list_identities(conn):
-            for brief in briefs_for_deck(conn, identity.key):
-                found_any = True
-                stale = (
-                    " (stale — corpus has moved)"
-                    if brief.corpus_commit != current_commit else ""
-                )
-                print(
-                    f"  {brief.deck_key:<40} {brief.archetype_key:<24} "
-                    f"{brief.generated_at} [{brief.source}]{stale}"
-                )
-        if not found_any:
-            print("No matchup briefs stored yet.")
-            print("Write one from the deck's Guide page in the dashboard.")
-        return
-
-    if args.archetype and args.missing:
-        sys.exit("--archetype and --missing are mutually exclusive.")
-
-    if not args.archetype and not args.missing:
-        sys.exit("--archetype is required with --deck (or pass --missing).")
-
-    identity = resolve(conn, args.deck)
-    if identity is None:
-        sys.exit(f"No deck found for key {args.deck!r}. Run `guide` with no --deck to list keys.")
-
-    from sensei_top.guide.deck import identity_format
-
-    if identity_format(conn, identity) is None:
-        sys.exit(
-            "This deck's format is unknown, so there is no field to write a brief from. "
-            "On MTGO, confirm the format on one of its matches, then run this again."
-        )
-
-    if args.missing:
-        cmd_brief_missing(conn, identity, args)
-        return
-
-    if args.prompt:
-        from sensei_top.brief.narrative import full_prompt
-
-        built = full_prompt(conn, identity, args.archetype, args.archetype)
-        if built is None:
-            sys.exit(f"No field consensus for archetype {args.archetype!r} yet.")
-        print(built[0])
-        return
-
-    if args.import_file:
-        from sensei_top.ai.answers import brief_for
-        from sensei_top.brief.importer import import_brief
-        from sensei_top.brief.narrative import NarrativeError
-
-        answer = _read_import(args.import_file, brief_for(identity.key, args.archetype))
-        try:
-            brief = import_brief(
-                conn, identity, args.archetype, args.archetype, answer.body,
-                author=args.author, written_for=answer.context,
-            )
-        except NarrativeError as exc:
-            sys.exit(f"Could not read {args.import_file}: {exc}")
-        except LookupError as exc:
-            sys.exit(str(exc))
-        conn.commit()
-        print(f"Brief stored for {identity.name or identity.key} vs {args.archetype}.")
-        if brief.problems:
-            print("Sideboard plan problems (recorded, not repaired):")
-            for problem in brief.problems:
-                print(f"  [{problem.archetype}] {problem.message}")
-        return
-
-    sys.exit("Pass --prompt to get the text to write from, or --import FILE to store an answer.")
-
-
-def cmd_brief_missing(conn, identity, args) -> None:
-    """The ``--missing`` half of ``brief``: every archetype
-    ``brief/coverage.py`` marks ``missing``/``stale`` for this deck, in the
-    same order its own ``Coverage.rows`` are already sorted (times faced
-    desc, then field share desc, then key) — so the multi-prompt and the
-    dashboard's own coverage table always name gaps in the same order.
-    """
-    from sensei_top.brief.coverage import build_coverage
-
-    coverage = build_coverage(conn, identity)
-    gap_rows = [row for row in coverage.rows if row.status in ("missing", "stale")]
-    archetypes = [(row.archetype_key, row.label) for row in gap_rows]
-    labels = {row.archetype_key: row.label for row in gap_rows}
-
-    if args.prompt:
-        from sensei_top.brief.narrative import full_multi_prompt
-
-        if not archetypes:
-            print("Nothing missing or stale — every coverage row already has a fresh brief.")
-            return
-        built = full_multi_prompt(conn, identity, archetypes)
-        if built is None:
-            sys.exit("No field consensus for any missing/stale archetype yet.")
-        print(built.prompt)
-        if built.no_consensus:
-            print(
-                f"No field consensus (skipped): {', '.join(built.no_consensus)}",
-                file=sys.stderr,
-            )
-        if built.deferred:
-            print(
-                f"Deferred past this prompt's limit: {', '.join(built.deferred)}",
-                file=sys.stderr,
-            )
-        return
-
-    if args.import_file:
-        from sensei_top.ai.answers import coverage_for
-        from sensei_top.brief.importer import import_briefs
-        from sensei_top.brief.narrative import NarrativeError
-
-        answer = _read_import(args.import_file, coverage_for(identity.key))
-        try:
-            stored, skipped = import_briefs(
-                conn, identity, answer.body, author=args.author, labels=labels,
-                written_for=answer.context,
-            )
-        except NarrativeError as exc:
-            sys.exit(f"Could not read {args.import_file}: {exc}")
-        conn.commit()
-        print(f"{len(stored)} brief(s) stored for {identity.name or identity.key}.")
-        for brief in stored:
-            if brief.problems:
-                print(
-                    f"Sideboard plan problems for {brief.archetype_key} "
-                    "(recorded, not repaired):"
-                )
-                for problem in brief.problems:
-                    print(f"  [{problem.archetype}] {problem.message}")
-        if skipped:
-            print("Skipped (no field consensus):", file=sys.stderr)
-            for key, message in skipped:
-                print(f"  {key}: {message}", file=sys.stderr)
-        return
-
-    sys.exit("Pass --prompt to get the text to write from, or --import FILE to store an answer.")
 
 
 def _start_archetype_refresh(db_path: Path) -> None:
@@ -2401,37 +2228,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--markdown", default=None, help="write the guide to this file instead of stdout"
     )
     p_guide.set_defaults(func=cmd_guide)
-
-    p_brief = sub.add_parser(
-        "brief", help="matchup briefs: what to play around, stored per (deck, archetype)"
-    )
-    p_brief.add_argument(
-        "--deck", default=None,
-        help="a deck key (omit, with no other flags, to list cached briefs)",
-    )
-    p_brief.add_argument(
-        "--archetype", default=None, help="an archetype key from the metagame corpus"
-    )
-    p_brief.add_argument(
-        "--missing", action="store_true",
-        help=(
-            "every missing/stale archetype this deck's coverage report names, instead of one "
-            "--archetype (brief/coverage.py); errors if combined with --archetype"
-        ),
-    )
-    p_brief.add_argument(
-        "--prompt", action="store_true",
-        help="print the text to write this brief from, and stop (makes no network call)",
-    )
-    p_brief.add_argument(
-        "--import", dest="import_file", default=None, metavar="FILE",
-        help="store a written brief (JSON)",
-    )
-    p_brief.add_argument(
-        "--author", default="hand-written",
-        help="recorded beside an imported brief (default: hand-written)",
-    )
-    p_brief.set_defaults(func=cmd_brief)
 
     p_serve = sub.add_parser("serve", help="run the local dashboard + JSON API")
     # Loopback by default and on purpose (AGENTS.md non-negotiable #5).

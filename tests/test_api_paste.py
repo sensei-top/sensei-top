@@ -1,7 +1,7 @@
-"""The paste routes: ``PUT`` on one matchup brief, the coverage card and the
-RCQ guide (the cards with a CLI importer), and on the match report, the
-training plan and the coach (the prose cards) stores a
-pasted answer, and never calls a model.
+"""The paste routes: ``PUT`` on the RCQ guide, the match report, the
+training plan and the coach (the prose cards) stores a pasted answer, and
+never calls a model. The brief and coverage cards' are in
+``tests/ai/test_brief_routes.py``.
 
 The headers the answers carry are read off the copied prompt the matching
 ``GET`` serves, the way an assistant copies them back; every other
@@ -27,6 +27,7 @@ FIXTURE = Path(__file__).parent / "fixtures" / "match_session.log"
 PASTED_LIST = "Deck\n4 Alpha Card\n56 Mountain\n\nSideboard\n2 Beta Card\n"
 ARCHETYPE = "mardu_discard"
 CONTRACT = "Answer with exactly one JSON object"
+OLDER = "0" * 64
 
 
 @pytest.fixture(autouse=True)
@@ -108,11 +109,6 @@ def _answer(prompt: str, body: dict, **header) -> str:
     return json.dumps({**_header(prompt), **header, "answer": body})
 
 
-_BRIEF = {
-    "prose": "They race you; trade early.",
-    "play_around": [{"card": "Marauding Mako", "why": "grows on every discard"}],
-    "board_in": [], "board_out": [],
-}
 _RCQ = {
     "game_plan": "Be the beatdown.",
     "expected_field": "Mostly red.",
@@ -123,14 +119,6 @@ _RCQ = {
     "flex_notes": [{"card": "Alpha Card", "role": "core", "why": "It is the plan."}],
     "checklist": ["Sideboard"],
 }
-
-
-def _brief_prompt(client, key):
-    return client.get(f"/api/guide/{key}/briefs/{ARCHETYPE}/prompt").json()["prompt"]
-
-
-def _coverage_prompt(client, key):
-    return client.get(f"/api/guide/{key}/coverage/prompt").json()["prompt"]
 
 
 def _rcq_prompt(client, key):
@@ -144,266 +132,6 @@ def _rcq_body(prompt, body=None, **kw):
         "answer": _answer(prompt, _RCQ if body is None else body),
         "decklist": PASTED_LIST, "expected": [], **kw,
     }
-
-
-# --- one matchup brief ------------------------------------------------------
-
-
-def test_brief_paste_stores_with_the_context_it_was_written_for(client, key):
-    prompt = _brief_prompt(client, key)
-    header = _header(prompt)
-    assert header["for"] == f"brief:{key}:{ARCHETYPE}"
-
-    resp = client.put(
-        f"/api/guide/{key}/briefs/{ARCHETYPE}", json={"answer": _answer(prompt, _BRIEF)},
-    )
-    assert resp.status_code == 200
-    out = resp.json()
-    assert out["prose"] == "They race you; trade early."
-    assert out["model"] == "pasted"
-    assert out["archetype_key"] == ARCHETYPE
-    assert client.get(f"/api/guide/{key}/briefs").json() == [out]
-    conn = _db(client)
-    assert conn.execute("SELECT list_hash FROM matchup_brief").fetchone()[0] == header["context"]
-    conn.close()
-
-
-def test_brief_paste_records_an_unbalanced_plan_rather_than_refusing_it(client, key):
-    prompt = _brief_prompt(client, key)
-    body = {**_BRIEF, "board_in": [{"card": "Card The Deck Lacks", "n": 2}]}
-    resp = client.put(
-        f"/api/guide/{key}/briefs/{ARCHETYPE}", json={"answer": _answer(prompt, body)},
-    )
-    assert resp.status_code == 200
-    assert resp.json()["problems"]
-
-
-@pytest.mark.parametrize("make", [
-    pytest.param(lambda p: _answer(p, {"play_around": []}), id="body-missing-prose"),
-    pytest.param(lambda p: _answer(p, _BRIEF, **{"for": "coverage:x"}), id="another-card"),
-    pytest.param(
-        lambda p: _answer(p, _BRIEF, **{"for": "brief:other:other"}), id="another-brief",
-    ),
-    pytest.param(lambda p: json.dumps(_BRIEF), id="headerless"),
-])
-def test_brief_paste_that_does_not_read_is_422_and_stores_nothing(client, key, make):
-    prompt = _brief_prompt(client, key)
-    resp = client.put(
-        f"/api/guide/{key}/briefs/{ARCHETYPE}", json={"answer": make(prompt)},
-    )
-    assert resp.status_code == 422
-    assert _count(client, "matchup_brief") == 0
-
-
-def test_brief_paste_for_an_archetype_with_no_consensus_is_409(client, key):
-    prompt = _brief_prompt(client, key)
-    resp = client.put(
-        f"/api/guide/{key}/briefs/nobody",
-        json={"answer": _answer(prompt, _BRIEF, **{"for": f"brief:{key}:nobody"})},
-    )
-    assert resp.status_code == 409
-    assert resp.json()["detail"] == (
-        "The field has no consensus list for nobody yet, so there is nothing to "
-        "anchor a brief to."
-    )
-    assert _count(client, "matchup_brief") == 0
-
-
-def test_brief_paste_for_a_deck_with_no_format_is_409(client, key):
-    prompt = _brief_prompt(client, key)
-    conn = _db(client)
-    conn.execute("UPDATE decks SET format = 'Draft'")
-    conn.execute("UPDATE matches SET format = NULL")
-    conn.commit()
-    conn.close()
-    resp = client.put(
-        f"/api/guide/{key}/briefs/{ARCHETYPE}", json={"answer": _answer(prompt, _BRIEF)},
-    )
-    assert resp.status_code == 409
-    assert resp.json()["detail"] == (
-        "This deck's format is not known yet, so there is no field to anchor a brief to."
-    )
-    assert _count(client, "matchup_brief") == 0
-
-
-def test_brief_paste_for_an_unknown_deck_is_404(client):
-    resp = client.put(f"/api/guide/nope/briefs/{ARCHETYPE}", json={"answer": "{}"})
-    assert resp.status_code == 404
-
-
-OLDER = "0" * 64
-
-
-def test_brief_paste_written_for_an_older_list_is_stored_with_that_hash_and_reads_stale(
-    client, key,
-):
-    prompt = _brief_prompt(client, key)
-    resp = client.put(
-        f"/api/guide/{key}/briefs/{ARCHETYPE}",
-        json={"answer": _answer(prompt, _BRIEF, context=OLDER)},
-    )
-    assert resp.status_code == 200
-    conn = _db(client)
-    assert conn.execute("SELECT list_hash FROM matchup_brief").fetchone()[0] == OLDER
-    conn.close()
-    rows = client.get(f"/api/guide/{key}/coverage").json()["rows"]
-    assert {r["archetype_key"]: r["status"] for r in rows}[ARCHETYPE] == "stale"
-
-
-def test_coverage_paste_written_for_an_older_list_is_stored_with_that_hash_and_reads_stale(
-    client, key,
-):
-    prompt = _coverage_prompt(client, key)
-    body = {"briefs": [{"archetype_key": ARCHETYPE, **_BRIEF}]}
-    resp = client.put(
-        f"/api/guide/{key}/coverage", json={"answer": _answer(prompt, body, context=OLDER)},
-    )
-    assert resp.status_code == 200
-    conn = _db(client)
-    assert conn.execute("SELECT list_hash FROM matchup_brief").fetchone()[0] == OLDER
-    conn.close()
-    rows = client.get(f"/api/guide/{key}/coverage").json()["rows"]
-    assert {r["archetype_key"]: r["status"] for r in rows}[ARCHETYPE] == "stale"
-
-
-# --- coverage ----------------------------------------------------------------
-
-
-def test_coverage_paste_stores_every_brief_and_returns_the_coverage(client, key):
-    prompt = _coverage_prompt(client, key)
-    assert _header(prompt)["for"] == f"coverage:{key}"
-    body = {"briefs": [{"archetype_key": ARCHETYPE, **_BRIEF}]}
-
-    resp = client.put(f"/api/guide/{key}/coverage", json={"answer": _answer(prompt, body)})
-    assert resp.status_code == 200
-    out = resp.json()
-    assert out == client.get(f"/api/guide/{key}/coverage").json()
-    assert {r["archetype_key"]: r["status"] for r in out["rows"]}[ARCHETYPE] == "ok"
-    conn = _db(client)
-    row = conn.execute("SELECT model, list_hash FROM matchup_brief").fetchone()
-    conn.close()
-    assert (row["model"], row["list_hash"]) == ("pasted", _header(prompt)["context"])
-
-
-@pytest.mark.parametrize("body", [
-    pytest.param({"briefs": []}, id="empty"),
-    pytest.param({"briefs": [{"archetype_key": ARCHETYPE}]}, id="item-missing-prose"),
-    pytest.param(
-        {"briefs": [{"archetype_key": ARCHETYPE, **_BRIEF}] * 2}, id="same-key-twice",
-    ),
-])
-def test_coverage_paste_that_does_not_read_is_422_and_stores_nothing(client, key, body):
-    prompt = _coverage_prompt(client, key)
-    resp = client.put(f"/api/guide/{key}/coverage", json={"answer": _answer(prompt, body)})
-    assert resp.status_code == 422
-    assert _count(client, "matchup_brief") == 0
-
-
-def test_coverage_paste_of_a_card_that_is_not_coverage_is_422(client, key):
-    prompt = _coverage_prompt(client, key)
-    body = {"briefs": [{"archetype_key": ARCHETYPE, **_BRIEF}]}
-    resp = client.put(
-        f"/api/guide/{key}/coverage",
-        json={"answer": _answer(prompt, body, **{"for": f"guide:{key}"})},
-    )
-    assert resp.status_code == 422
-    assert "a deck guide" in resp.json()["detail"]
-
-
-def test_coverage_paste_with_no_consensus_for_any_item_is_409(client, key):
-    prompt = _coverage_prompt(client, key)
-    body = {"briefs": [{"archetype_key": "nobody", **_BRIEF}]}
-    resp = client.put(f"/api/guide/{key}/coverage", json={"answer": _answer(prompt, body)})
-    assert resp.status_code == 409
-    assert resp.json()["detail"] == (
-        "The field has no consensus list yet for any archetype in this answer, "
-        "so none of its briefs could be stored."
-    )
-    assert _count(client, "matchup_brief") == 0
-
-
-def test_coverage_paste_stores_the_briefs_with_a_consensus_and_skips_the_rest(client, key):
-    prompt = _coverage_prompt(client, key)
-    body = {"briefs": [
-        {"archetype_key": ARCHETYPE, **_BRIEF},
-        {"archetype_key": "nobody", **_BRIEF},
-    ]}
-    resp = client.put(f"/api/guide/{key}/coverage", json={"answer": _answer(prompt, body)})
-    assert resp.status_code == 200
-    assert {r["archetype_key"]: r["status"] for r in resp.json()["rows"]}[ARCHETYPE] == "ok"
-    assert _count(client, "matchup_brief") == 1
-
-
-def test_brief_paste_409_names_the_archetype_by_its_label(client, key):
-    prompt = _brief_prompt(client, key)
-    conn = _db(client)
-    conn.execute(
-        "INSERT INTO meta_event (event_id, path, blob_sha, source, name, event_date, "
-        "format, tier) VALUES ('thin', 'p', 's', 'mtgo', 'e', ?, 'Standard', 'B')",
-        ((date.today() - timedelta(days=3)).isoformat(),),
-    )
-    conn.execute(
-        "INSERT INTO meta_deck (event_id, deck_ord, mainboard_json, sideboard_json, "
-        "wins, losses) VALUES ('thin', 0, '[]', '[]', 5, 0)"
-    )
-    conn.execute(
-        "INSERT INTO meta_deck_archetype (event_id, deck_ord, archetype_key, "
-        "archetype_name, label, method, classified_at) "
-        "VALUES ('thin', 0, 'izzet_prowess', 'Izzet Prowess', 'Izzet Prowess', "
-        "'archetype', 'now')"
-    )
-    conn.commit()
-    conn.close()
-    resp = client.put(
-        f"/api/guide/{key}/briefs/izzet_prowess",
-        json={"answer": _answer(prompt, _BRIEF, **{"for": f"brief:{key}:izzet_prowess"})},
-    )
-    assert resp.status_code == 409
-    assert "Izzet Prowess" in resp.json()["detail"]
-    assert "izzet_prowess" not in resp.json()["detail"]
-    assert _count(client, "matchup_brief") == 0
-
-
-def _no_format(client):
-    conn = _db(client)
-    conn.execute("UPDATE decks SET format = 'Draft'")
-    conn.execute("UPDATE matches SET format = NULL")
-    conn.commit()
-    conn.close()
-
-
-def test_coverage_paste_for_a_deck_with_no_format_is_409(client, key):
-    prompt = _coverage_prompt(client, key)
-    _no_format(client)
-    body = {"briefs": [{"archetype_key": ARCHETYPE, **_BRIEF}]}
-    resp = client.put(f"/api/guide/{key}/coverage", json={"answer": _answer(prompt, body)})
-    assert resp.status_code == 409
-    assert resp.json()["detail"].startswith("This deck's format is not known yet")
-    assert _count(client, "matchup_brief") == 0
-
-
-def test_the_409s_follow_the_requests_language(client, key):
-    prompt = _brief_prompt(client, key)
-    _no_format(client)
-    resp = client.put(
-        f"/api/guide/{key}/briefs/{ARCHETYPE}",
-        json={"answer": _answer(prompt, _BRIEF)},
-        headers={"Accept-Language": "pt-BR"},
-    )
-    assert resp.status_code == 409
-    assert resp.json()["detail"] == (
-        "O formato deste deck ainda não é conhecido, então não há meta em que "
-        "ancorar um briefing."
-    )
-
-
-def test_a_paste_over_256_kb_is_413_on_the_brief_and_coverage_routes(client, key):
-    big = {"answer": "x" * (256 * 1024 + 1)}
-    assert client.put(f"/api/guide/{key}/briefs/{ARCHETYPE}", json=big).status_code == 413
-    assert client.put("/api/guide/nope/briefs/x", json=big).status_code == 413
-    assert client.put(f"/api/guide/{key}/coverage", json=big).status_code == 413
-    assert client.put("/api/guide/nope/coverage", json=big).status_code == 413
-    assert _count(client, "matchup_brief") == 0
 
 
 # --- the RCQ guide -------------------------------------------------------------

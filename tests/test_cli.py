@@ -458,35 +458,6 @@ def test_meta_names_a_missing_topdeck_key_only_when_asked_for_topdeck(
         assert topdeck_lines == []
 
 
-def test_brief_for_a_deck_with_no_format_exits_before_building_a_prompt(tmp_path):
-    from sensei_top.db import open_database
-
-    db_path = tmp_path / "t.db"
-    conn = open_database(db_path)
-    conn.execute(
-        "INSERT INTO decks (deck_id, name, format, cards_json, first_seen, last_seen) "
-        "VALUES ('d1', 'My Deck', 'Draft', '{}', 't', 't')"
-    )
-    conn.execute(
-        "INSERT INTO matches (match_id, event_id, deck_id, self_seat, opponent_seat, "
-        "opponent_user_id, opponent_name, started_at, ended_at, result, games_won, "
-        "games_lost, completed_reason, format) VALUES ('m1', 'e', 'd1', 1, 2, 'u', 'n', "
-        "'2026-09-28T12:00:00', '2026-09-28T12:00:00', 'win', 2, 0, 'concede', NULL)"
-    )
-    conn.commit()
-    conn.close()
-
-    args = cli_module.build_parser().parse_args(
-        ["--db", str(db_path), "brief", "--deck", "deck:d1", "--archetype", "x", "--prompt"]
-    )
-    with pytest.raises(SystemExit) as exc:
-        cli_module.cmd_brief(args)
-    assert exc.value.code == (
-        "This deck's format is unknown, so there is no field to write a brief from. "
-        "On MTGO, confirm the format on one of its matches, then run this again."
-    )
-
-
 # --- console encoding --------------------------------------------------------
 
 

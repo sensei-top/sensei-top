@@ -126,37 +126,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/current-match/brief": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Current Match Brief
-         * @description The stored matchup brief for the match in progress, and the prompt
-         *     to write one from — except an ``ok`` with no format, which has none (a
-         *     prompt needs a format to name its corpus). See ``brief/__init__.py`` and
-         *     ``docs/brief.md``.
-         *
-         *     Deliberately has no generate route of its own, unlike the match
-         *     report and the deck guide (``docs/llm.md``): a brief is pasted into its
-         *     card (``PUT /api/guide/{key}/briefs/{archetype_key}``) or the coverage
-         *     card (``PUT /api/guide/{key}/coverage``), written by ``sensei-top brief
-         *     --import``, or — far more often — filled as a side effect of
-         *     generating, pasting or importing a full deck guide
-         *     (``POST``/``PUT /api/guide/{key}/narrative``, ``brief/from_guide.py``).
-         */
-        get: operations["current_match_brief_api_current_match_brief_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/current-match/read": {
         parameters: {
             query?: never;
@@ -959,158 +928,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/guide/{key}/briefs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Guide Briefs
-         * @description Every live matchup brief cached for this deck — see
-         *     ``brief/__init__.py``. Empty rather than 404 for a deck key that
-         *     resolves to nothing here: the guide route is the one that owns
-         *     "no such deck", and a brief list is naturally empty for a deck
-         *     that has never faced a classified opponent yet.
-         */
-        get: operations["guide_briefs_api_guide__key__briefs_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/guide/{key}/coverage": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Guide Coverage
-         * @description How well this deck's cached matchup briefs cover the archetypes it
-         *     actually faces and the field's own top archetypes — see
-         *     ``brief/coverage.py``. 404 mirrors the other guide routes: a key that
-         *     resolves to nothing is a missing resource.
-         */
-        get: operations["guide_coverage_api_guide__key__coverage_get"];
-        /**
-         * Paste Coverage
-         * @description Store the answer pasted into the matchup-coverage card — every brief
-         *     in it, what ``sensei-top brief --deck KEY --missing --import FILE``
-         *     stores. Makes no model call. Returns what ``GET`` on this path returns.
-         *
-         *     422 and 413 as for one brief; the batch is all-or-nothing on its JSON.
-         *     An archetype with no field consensus is skipped, as on the CLI, and the
-         *     row stays ``no_consensus``; 409 only when nothing could be stored
-         *     because no item had a field consensus; 409 as well for a deck with no
-         *     format.
-         */
-        put: operations["paste_coverage_api_guide__key__coverage_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/guide/{key}/briefs/{archetype_key}/prompt": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Guide Brief Prompt
-         * @description The single-brief prompt for one archetype — the same text
-         *     ``sensei-top brief --deck KEY --archetype KEY --prompt`` prints,
-         *     fetched only when the coverage card's own "copy prompt" action is
-         *     clicked rather than for every row up front. ``status`` is
-         *     ``'format_unknown'`` when the deck has no format (checked first), and
-         *     ``'no_consensus'`` rather than an error code when the archetype has no
-         *     field consensus yet — an ordinary outcome for a young corpus, same
-         *     posture as ``MatchupBriefResponse``; the deck key is what 404s here,
-         *     not the archetype.
-         */
-        get: operations["guide_brief_prompt_api_guide__key__briefs__archetype_key__prompt_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/guide/{key}/coverage/prompt": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Guide Coverage Prompt
-         * @description The multi-brief prompt for every archetype this deck's coverage
-         *     marks ``missing``/``stale`` — the same text
-         *     ``sensei-top brief --deck KEY --missing --prompt`` prints, built in
-         *     coverage order (times faced desc, then field share desc, then key) so
-         *     the busiest gaps are never the ones ``MULTI_BRIEF_MAX`` defers. A
-         *     separate path from ``/briefs/{archetype_key}/prompt`` (not nested
-         *     under it) so an archetype key can never collide with the literal
-         *     ``coverage`` segment.
-         *
-         *     ``status`` is ``'format_unknown'`` when the deck has no format (checked
-         *     first: there is no field, so nothing to be missing or lack consensus),
-         *     ``'nothing_missing'`` when every row is already ``ok``,
-         *     and ``'no_consensus'`` when ``full_multi_prompt`` found consensus for
-         *     none of the missing/stale archetypes (it returns ``None`` rather than
-         *     naming which ones in that all-or-nothing case, so every missing/stale
-         *     key is reported under ``no_consensus`` here rather than guessing —
-         *     the same coarse message ``brief --missing --prompt`` itself gives).
-         */
-        get: operations["guide_coverage_prompt_api_guide__key__coverage_prompt_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/guide/{key}/briefs/{archetype_key}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Paste Brief
-         * @description Store an answer pasted into one matchup brief's card — what
-         *     ``sensei-top brief --deck KEY --archetype KEY --import FILE`` stores.
-         *     Makes no model call.
-         *
-         *     Same refusals as the guide's: 422 for another card's or an unreadable
-         *     answer (nothing stored), 413 over 256 KB. 409 where the CLI stops with a
-         *     ``LookupError``: the deck has no format, or the archetype has no field
-         *     consensus to anchor the brief to (a keyed sentence for each). A sideboard
-         *     plan that does not balance is stored with the problem recorded, as on the CLI. Stored with the
-         *     ``context`` hash the answer carries and the sentinel author ``pasted``.
-         */
-        put: operations["paste_brief_api_guide__key__briefs__archetype_key__put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/guide/{key}/rcq/preview": {
         parameters: {
             query?: never;
@@ -1454,10 +1271,187 @@ export interface paths {
          *     ``_GUIDE_TOOL``'s own schema instead, parsed by
          *     ``guide_narrative_from_json`` — the validator the paste path uses too.
          *     Also fills every matchup plan the guide covers into
-         *     ``matchup_brief`` (``brief/from_guide.py``) — this is the whole reason
+         *     ``matchup_brief`` (``ai/brief/from_guide.py``) — this is the whole reason
          *     the live matchup brief needs no generate button of its own.
          */
         post: operations["generate_guide_narrative_api_guide__key__narrative_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guide/{key}/briefs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Guide Briefs
+         * @description Every live matchup brief cached for this deck — see
+         *     ``ai/brief/__init__.py``. Empty rather than 404 for a deck key that
+         *     resolves to nothing here: the guide route is the one that owns
+         *     "no such deck", and a brief list is naturally empty for a deck
+         *     that has never faced a classified opponent yet.
+         */
+        get: operations["guide_briefs_api_guide__key__briefs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guide/{key}/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Guide Coverage
+         * @description How well this deck's cached matchup briefs cover the archetypes it
+         *     actually faces and the field's own top archetypes — see
+         *     ``ai/brief/coverage.py``. 404 mirrors the other guide routes: a key that
+         *     resolves to nothing is a missing resource.
+         */
+        get: operations["guide_coverage_api_guide__key__coverage_get"];
+        /**
+         * Paste Coverage
+         * @description Store the answer pasted into the matchup-coverage card — every brief
+         *     in it. Makes no model call. Returns what ``GET`` on this path returns.
+         *
+         *     422 and 413 as for one brief; the batch is all-or-nothing on its JSON.
+         *     An archetype with no field consensus is skipped, and the
+         *     row stays ``no_consensus``; 409 only when nothing could be stored
+         *     because no item had a field consensus; 409 as well for a deck with no
+         *     format.
+         */
+        put: operations["paste_coverage_api_guide__key__coverage_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guide/{key}/briefs/{archetype_key}/prompt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Guide Brief Prompt
+         * @description The single-brief prompt for one archetype, fetched only when the
+         *     coverage card's own "copy prompt" action is clicked rather than for
+         *     every row up front. ``status`` is
+         *     ``'format_unknown'`` when the deck has no format (checked first), and
+         *     ``'no_consensus'`` rather than an error code when the archetype has no
+         *     field consensus yet — an ordinary outcome for a young corpus, same
+         *     posture as ``MatchupBriefResponse``; the deck key is what 404s here,
+         *     not the archetype.
+         */
+        get: operations["guide_brief_prompt_api_guide__key__briefs__archetype_key__prompt_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guide/{key}/coverage/prompt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Guide Coverage Prompt
+         * @description The multi-brief prompt for every archetype this deck's coverage
+         *     marks ``missing``/``stale``, built in
+         *     coverage order (times faced desc, then field share desc, then key) so
+         *     the busiest gaps are never the ones ``MULTI_BRIEF_MAX`` defers. A
+         *     separate path from ``/briefs/{archetype_key}/prompt`` (not nested
+         *     under it) so an archetype key can never collide with the literal
+         *     ``coverage`` segment.
+         *
+         *     ``status`` is ``'format_unknown'`` when the deck has no format (checked
+         *     first: there is no field, so nothing to be missing or lack consensus),
+         *     ``'nothing_missing'`` when every row is already ``ok``,
+         *     and ``'no_consensus'`` when ``full_multi_prompt`` found consensus for
+         *     none of the missing/stale archetypes (it returns ``None`` rather than
+         *     naming which ones in that all-or-nothing case, so every missing/stale
+         *     key is reported under ``no_consensus`` here rather than guessing).
+         */
+        get: operations["guide_coverage_prompt_api_guide__key__coverage_prompt_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guide/{key}/briefs/{archetype_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Paste Brief
+         * @description Store an answer pasted into one matchup brief's card. Makes no model
+         *     call.
+         *
+         *     Same refusals as the guide's: 422 for another card's or an unreadable
+         *     answer (nothing stored), 413 over 256 KB. 409 when
+         *     the deck has no format, or the archetype has no field
+         *     consensus to anchor the brief to (a keyed sentence for each). A sideboard
+         *     plan that does not balance is stored with the problem recorded. Stored with the
+         *     ``context`` hash the answer carries and the sentinel author ``pasted``.
+         */
+        put: operations["paste_brief_api_guide__key__briefs__archetype_key__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/current-match/brief": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current Match Brief
+         * @description The stored matchup brief for the match in progress, and the prompt
+         *     to write one from — except an ``ok`` with no format, which has none (a
+         *     prompt needs a format to name its corpus). See ``ai/brief/__init__.py`` and
+         *     ``docs/brief.md``.
+         *
+         *     Deliberately has no generate route of its own, unlike the match
+         *     report and the deck guide (``docs/llm.md``): a brief is pasted into its
+         *     card (``PUT /api/guide/{key}/briefs/{archetype_key}``) or the coverage
+         *     card (``PUT /api/guide/{key}/coverage``), or — far more often — filled as a side effect of
+         *     generating, pasting or importing a full deck guide
+         *     (``POST``/``PUT /api/guide/{key}/narrative``, ``ai/brief/from_guide.py``).
+         */
+        get: operations["current_match_brief_api_current_match_brief_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1606,11 +1600,10 @@ export interface components {
         };
         /**
          * BriefPromptOut
-         * @description The single-brief prompt for one archetype, fetched on demand — the
-         *     same text ``sensei-top brief --deck KEY --archetype KEY --prompt``
-         *     prints. A 200 for any known deck; an unknown deck key is a 404. No
-         *     field consensus is an ordinary outcome for a corpus that hasn't
-         *     classified that archetype yet, not a server error.
+         * @description The single-brief prompt for one archetype, fetched on demand. A 200 for any
+         *     known deck; an unknown deck key is a 404. No field consensus is an
+         *     ordinary outcome for a corpus that hasn't classified that archetype
+         *     yet, not a server error.
          */
         BriefPromptOut: {
             /**
@@ -1958,9 +1951,8 @@ export interface components {
         };
         /**
          * CoveragePromptOut
-         * @description The multi-brief prompt for every ``missing``/``stale`` coverage row —
-         *     the same text ``sensei-top brief --deck KEY --missing --prompt``
-         *     prints. A 200 for any known deck; an unknown deck key is a 404.
+         * @description The multi-brief prompt for every ``missing``/``stale`` coverage row.
+         *     A 200 for any known deck; an unknown deck key is a 404.
          *     Nothing missing, or no field consensus for any missing/stale
          *     archetype, are both ordinary outcomes.
          */
@@ -1993,7 +1985,7 @@ export interface components {
         };
         /**
          * CoverageRowOut
-         * @description One archetype worth having a brief for — see ``brief/coverage.py``.
+         * @description One archetype worth having a brief for — see ``ai/brief/coverage.py``.
          */
         CoverageRowOut: {
             /** Archetype Key */
@@ -3478,7 +3470,7 @@ export interface components {
             status: string;
             /**
              * Deck Key
-             * @description this match's deck identity — the {key} of PUT /api/guide/{key}/briefs/{archetype_key}, and the --deck of `brief --import`
+             * @description this match's deck identity — the {key} of PUT /api/guide/{key}/briefs/{archetype_key}
              */
             deck_key?: string | null;
             /**
@@ -3490,7 +3482,7 @@ export interface components {
             brief?: components["schemas"]["MatchupBriefOut"] | null;
             /**
              * Prompt
-             * @description the full text to write this brief from — copy it into an assistant you already pay for, then PUT the answer to /api/guide/{deck_key}/briefs/{archetype_key} or `sensei-top brief --deck KEY --archetype KEY --import FILE` it
+             * @description the full text to write this brief from — copy it into an assistant you already pay for, then PUT the answer to /api/guide/{deck_key}/briefs/{archetype_key}
              */
             prompt?: string | null;
             /**
@@ -5410,26 +5402,6 @@ export interface operations {
             };
         };
     };
-    current_match_brief_api_current_match_brief_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MatchupBriefResponse"];
-                };
-            };
-        };
-    };
     current_match_read_api_current_match_read_get: {
         parameters: {
             query?: never;
@@ -6338,202 +6310,6 @@ export interface operations {
             };
         };
     };
-    guide_briefs_api_guide__key__briefs_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                key: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MatchupBriefOut"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    guide_coverage_api_guide__key__coverage_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                key: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CoverageOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    paste_coverage_api_guide__key__coverage_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                key: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PastedAnswerIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CoverageOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    guide_brief_prompt_api_guide__key__briefs__archetype_key__prompt_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                key: string;
-                archetype_key: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BriefPromptOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    guide_coverage_prompt_api_guide__key__coverage_prompt_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                key: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CoveragePromptOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    paste_brief_api_guide__key__briefs__archetype_key__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                key: string;
-                archetype_key: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PastedAnswerIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MatchupBriefOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     rcq_preview_api_guide__key__rcq_preview_get: {
         parameters: {
             query?: {
@@ -7081,6 +6857,222 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    guide_briefs_api_guide__key__briefs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchupBriefOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    guide_coverage_api_guide__key__coverage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paste_coverage_api_guide__key__coverage_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PastedAnswerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    guide_brief_prompt_api_guide__key__briefs__archetype_key__prompt_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+                archetype_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BriefPromptOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    guide_coverage_prompt_api_guide__key__coverage_prompt_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoveragePromptOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    paste_brief_api_guide__key__briefs__archetype_key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+                archetype_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PastedAnswerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchupBriefOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    current_match_brief_api_current_match_brief_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchupBriefResponse"];
                 };
             };
         };

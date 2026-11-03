@@ -917,14 +917,14 @@ msgid ""
 "definitions are kept per format."
 msgstr ""
 
-#: sensei_top/api/routes/guide.py
+#: sensei_top/ai/routes/brief.py
 #, python-brace-format
 msgid ""
 "The field has no consensus list for {archetype} yet, so there is nothing to "
 "anchor a brief to."
 msgstr ""
 
-#: sensei_top/api/routes/guide.py
+#: sensei_top/ai/routes/brief.py
 msgid ""
 "The field has no consensus list yet for any archetype in this answer, so "
 "none of its briefs could be stored."
@@ -1070,7 +1070,7 @@ msgstr[1] ""
 msgid "This deck's average"
 msgstr ""
 
-#: sensei_top/api/routes/guide.py
+#: sensei_top/ai/routes/brief.py
 msgid ""
 "This deck's format is not known yet, so there is no field to anchor a brief "
 "to."

@@ -6,17 +6,16 @@ from two decklists and the field — never a game.
 **No call is made from here, and — unlike the match report and the deck
 guide (``docs/llm.md``) — this feature has no generate button at all.**
 ``build_brief_context`` assembles the evidence and ``full_prompt`` wraps it
-with the framing; ``sensei-top brief --deck KEY --archetype KEY --prompt``
-prints it (a pairing's page and the Live page offer the same text), any
-assistant writes the answer, and ``--import FILE`` or the brief card's
+with the framing; a pairing's page and the Live page offer it, any
+assistant writes the answer, and the brief card's
 ``PUT`` reads it back into ``matchup_brief``, where the Live page picks it
 up. A generated, pasted or imported deck guide fills the same table for
-every matchup it covers (``brief/from_guide.py``). See docs/brief.md,
+every matchup it covers (``ai/brief/from_guide.py``). See docs/brief.md,
 "Prompt out, answer in — this feature has no generate button".
 
 **A brief is a function of ``(deck, archetype)``, never of a game.** No
 board state, no turn, no life total, no hand, no match id ever appears in
-the prompt this module builds — ``tests/test_brief_context.py`` pins that.
+the prompt this module builds — ``tests/ai/test_brief_context.py`` pins that.
 It is why one authored brief is reusable across every future match against
 that archetype, and why the objection that retired the mid-match advisor
 does not apply (docs/brief.md, "Why this question is worth writing down
@@ -37,7 +36,7 @@ contract (``answers.py``); ``full_multi_prompt`` sends the same per-matchup
 sections for several archetypes at once.
 
 **What comes back**: the JSON object ``_BRIEF_TOOL``'s schema describes.
-``brief_from_json`` parses it; ``brief/importer.py`` validates the plan
+``brief_from_json`` parses it; ``ai/brief/importer.py`` validates the plan
 against the real 75 via ``ai.guide.plans.validate_plans`` before it is ever
 stored.
 """
@@ -50,6 +49,7 @@ from collections import Counter
 from dataclasses import dataclass
 
 from sensei_top.ai.answers import brief_for, coverage_for
+from sensei_top.ai.brief.store import PlayAround, Staple, list_hash
 from sensei_top.ai.guide.narrative import (
     BoardCard,
     _oracle_text_block,
@@ -57,7 +57,6 @@ from sensei_top.ai.guide.narrative import (
     _wrap_json_prompt,
 )
 from sensei_top.ai.review.narrative import NarrativeError
-from sensei_top.brief.store import PlayAround, Staple, list_hash
 from sensei_top.guide.deck import DeckIdentity, identity_format
 from sensei_top.guide.field import _classified_deck_total, field_window, personal_rate
 from sensei_top.guide.window import format_resets, legality_known, window_start
@@ -470,7 +469,7 @@ def full_multi_prompt(
     ``None`` when not one archetype has a consensus to write from.
 
     Each section is built by the same ``_opponent_section`` the single-brief
-    prompt uses, and ``brief/importer.py`` stores each answer through the
+    prompt uses, and ``ai/brief/importer.py`` stores each answer through the
     single-brief path — so a brief written from this prompt is stored with
     exactly the context and facts a one-at-a-time import would have given
     it. ``None`` too when the deck's format is unknown."""

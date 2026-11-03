@@ -34,6 +34,7 @@ import pytest
 from fastapi import FastAPI
 
 from sensei_top import i18n
+from sensei_top.ai.brief import narrative as brief_narrative
 from sensei_top.ai.guide import narrative as guide_narrative
 from sensei_top.ai.guide import rcq_prompt as rcq_prompt_module
 from sensei_top.ai.llm import config as llm_config
@@ -50,7 +51,6 @@ from sensei_top.api.routes import guide as guide_routes
 from sensei_top.api.routes import matches as matches_routes
 from sensei_top.api.routes import rcq as rcq_routes
 from sensei_top.api.routes import review as review_routes
-from sensei_top.brief import narrative as brief_narrative
 from sensei_top.coach import evidence as coach_evidence
 from sensei_top.coach import narrative as coach_narrative
 from sensei_top.db import open_database

@@ -8,9 +8,9 @@ far, without waiting on ``project()``, finds the stored matchup brief for
 that archetype (or the closest one already written for this deck), and
 surfaces what was actually boarded the last time this deck faced it.
 Nothing here writes anything: it runs inside a GET on a ``query_only``
-connection (AGENTS.md non-negotiable #6). A brief is authored by
-``sensei-top brief --import``, the sideboard-plan card's paste box (the PUT
-``api/routes/guide.py::paste_brief``) or the guide's own narrative, never
+connection (AGENTS.md non-negotiable #6). A brief is authored by the
+sideboard-plan card's paste box (the PUT
+``ai/routes/brief.py::paste_brief``) or the guide's own narrative, never
 by this module, which builds the brief prompt without ever sending it to a
 model (non-negotiable #5).
 """
@@ -22,6 +22,8 @@ import sqlite3
 from collections import Counter
 from dataclasses import dataclass
 
+from sensei_top.ai.brief.narrative import full_prompt
+from sensei_top.ai.brief.store import Brief, is_stale, list_hash, read_brief
 from sensei_top.archetypes.classify import (
     Candidate,
     card_colors_by_name,
@@ -31,8 +33,6 @@ from sensei_top.archetypes.classify import (
     rank_candidates,
 )
 from sensei_top.archetypes.corpus import CorpusPrior, build_prior
-from sensei_top.brief.narrative import full_prompt
-from sensei_top.brief.store import Brief, is_stale, list_hash, read_brief
 from sensei_top.formats import arena_format
 from sensei_top.guide.deck import DeckIdentity, list_identities
 from sensei_top.projector.live_state import LiveState

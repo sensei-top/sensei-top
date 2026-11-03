@@ -228,7 +228,7 @@ class MatchupBriefResponse(BaseModel):
     deck_key: str | None = Field(
         None,
         description="this match's deck identity — the {key} of PUT "
-        "/api/guide/{key}/briefs/{archetype_key}, and the --deck of `brief --import`",
+        "/api/guide/{key}/briefs/{archetype_key}",
     )
     archetype_key: str | None = Field(None, description="the opponent's archetype key")
     brief: MatchupBriefOut | None = Field(
@@ -237,8 +237,7 @@ class MatchupBriefResponse(BaseModel):
     prompt: str | None = Field(
         None,
         description="the full text to write this brief from — copy it into an assistant you "
-        "already pay for, then PUT the answer to /api/guide/{deck_key}/briefs/{archetype_key} "
-        "or `sensei-top brief --deck KEY --archetype KEY --import FILE` it",
+        "already pay for, then PUT the answer to /api/guide/{deck_key}/briefs/{archetype_key}",
     )
     stale: bool = Field(
         False, description="the corpus or this deck's 75 has moved since this brief was written"

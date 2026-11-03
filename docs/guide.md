@@ -96,7 +96,7 @@ ever imported from Arena has `'banned'` for nothing and detects no reset no
 matter how plainly the corpus shows one. `legality_known(conn, fmt)` is what
 separates that from the real "nothing is banned" answer, and every caller of
 `format_resets` must branch on it — `bundle.py`'s gaps and
-`brief/narrative.py`'s `_window_note` both do. Reporting the two the same
+`ai/brief/narrative.py`'s `_window_note` both do. Reporting the two the same
 way is not a cosmetic difference: it once pooled a Standard corpus across a
 ban and opened a guide prompt with a 20.7% field share for an archetype that
 had already dropped to 9%.
@@ -298,11 +298,11 @@ actually meets on the ladder are often a different list. `build_guide_context`
 adds up to `MOST_FACED_ARCHETYPES` (5) more: any archetype not already
 covered by the top-6 pass, faced at least `MIN_TIMES_FACED` (3) times since
 the guide's own reset window opened (`guide.field.faced_archetypes`, the
-same "faced" definition `brief/coverage.py`'s own faced counts delegate to,
+same "faced" definition `ai/brief/coverage.py`'s own faced counts delegate to,
 so the guide's most-faced list and brief coverage never disagree about what
 counts as a match against an archetype), sorted by times-faced descending.
 Every added archetype also gets its own `matchup_brief` written
-(`brief/from_guide.py` stores one per plan), so this is also what widens
+(`ai/brief/from_guide.py` stores one per plan), so this is also what widens
 which matchups the Live page's break card already has a plan for —
 see `docs/brief.md`. Oracle text is de-duplicated globally across every
 section, including the player's own 75: a staple that recurs across
@@ -320,7 +320,7 @@ of 6.
 
 **Resolving an archetype's display name back to its corpus key is a
 majority vote, not `SELECT DISTINCT`.** `guide.field.archetype_key_by_name`
-is the one name→key lookup this prompt and `brief/from_guide.py` both use,
+is the one name→key lookup this prompt and `ai/brief/from_guide.py` both use,
 so a plan named in one is filed under the same key by the other. A display
 name is not unique to a key — the corpus files 290 "Dimir Midrange" decks
 under `UBMidrange` and 2 under `BxMidrange` — and the function it replaced (`SELECT DISTINCT`, last row wins)
@@ -376,7 +376,7 @@ exact set of writing routes.
 | `GET /api/guide/{key}/markdown` | the evidence-only exported document |
 | `GET /api/guide/{key}/briefs` | every matchup brief cached for this deck |
 | `PUT /api/guide/{key}/briefs/{archetype_key}` | stores one pasted brief, with no model call |
-| `GET /api/guide/{key}/coverage` | how much of the field this deck's cached briefs cover (`brief/coverage.py`'s `Coverage`) |
+| `GET /api/guide/{key}/coverage` | how much of the field this deck's cached briefs cover (`ai/brief/coverage.py`'s `Coverage`) |
 | `PUT /api/guide/{key}/coverage` | stores every brief in a pasted multi-brief answer, with no model call |
 | `GET /api/guide/{key}/briefs/{archetype_key}/prompt` | the single-brief prompt for one archetype, fetched on demand |
 | `GET /api/guide/{key}/coverage/prompt` | the multi-brief prompt for every `missing`/`stale` coverage row |

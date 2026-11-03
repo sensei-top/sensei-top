@@ -6,15 +6,13 @@ the button-pressed one AGENTS.md non-negotiable #5 permits.
 
 The ways in, all landing in ``matchup_brief``:
 
-* ``import_brief`` — one matchup, from ``brief/narrative.py``'s
-  ``full_prompt``: ``sensei-top brief --deck KEY --archetype KEY --import
-  FILE``, or an answer pasted into a brief card, on the Live page or a
+* ``import_brief`` — one matchup, from ``ai/brief/narrative.py``'s
+  ``full_prompt``: an answer pasted into a brief card, on the Live page or a
   pairing's page (``PUT /api/guide/{key}/briefs/{archetype_key}``).
-* ``import_briefs`` — several, from ``full_multi_prompt``: ``brief --deck
-  KEY --missing --import FILE``, or the answer pasted into the coverage
+* ``import_briefs`` — several, from ``full_multi_prompt``: the answer pasted into the coverage
   card (``PUT /api/guide/{key}/coverage``).
 * Not this module: every matchup a deck-guide narrative covers, via
-  ``brief/from_guide.py`` — the ordinary path; per-matchup imports are for
+  ``ai/brief/from_guide.py`` — the ordinary path; per-matchup imports are for
   filling a gap the guide missed.
 
 See docs/brief.md, "Prompt out, answer in — this feature has no generate button".
@@ -26,11 +24,11 @@ import sqlite3
 from collections import Counter
 from dataclasses import dataclass
 
+from sensei_top.ai.brief import narrative as brief_narrative
+from sensei_top.ai.brief import store
+from sensei_top.ai.brief.store import Brief
 from sensei_top.ai.guide.narrative import BoardCard
 from sensei_top.ai.guide.plans import validate_plans
-from sensei_top.brief import narrative as brief_narrative
-from sensei_top.brief import store
-from sensei_top.brief.store import Brief
 from sensei_top.clock import now_iso
 from sensei_top.guide.deck import DeckIdentity, identity_format
 
@@ -96,7 +94,7 @@ def import_briefs(
     """Store every brief in a ``full_multi_prompt`` answer, one
     ``import_brief`` call per item so each stored row gets exactly the
     context and facts a one-at-a-time import would have given it
-    (``brief/narrative.py``'s own docstring on ``full_multi_prompt``).
+    (``ai/brief/narrative.py``'s own docstring on ``full_multi_prompt``).
 
     ``briefs_from_json`` is all-or-nothing on the JSON itself: a malformed
     item or a duplicate ``archetype_key`` raises ``NarrativeError`` before
@@ -109,7 +107,7 @@ def import_briefs(
     archetype has a field to anchor to. Returns ``(stored, skipped)``.
 
     ``labels`` supplies the display label for each archetype key (typically
-    ``brief/coverage.py``'s own rows) — falls back to the bare key when a
+    ``ai/brief/coverage.py``'s own rows) — falls back to the bare key when a
     label is not given, the same fallback ``import_brief`` itself already
     tolerates for a single import. ``written_for`` is as ``import_brief``'s,
     for every item.
@@ -146,7 +144,7 @@ def import_brief(
 ) -> Brief:
     """Parse, validate and store one authored brief.
 
-    Raises ``NarrativeError`` (from ``brief/narrative.py``) on malformed
+    Raises ``NarrativeError`` (from ``ai/brief/narrative.py``) on malformed
     input, and ``LookupError`` when the deck's format is unknown (no field to
     anchor to) or the archetype has no field consensus to anchor the brief's
     own stored numbers to. A sideboard plan that does not

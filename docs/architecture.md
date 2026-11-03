@@ -31,7 +31,7 @@ over the entire history — every match ever recorded — by re-running one comm
 | `config.py`, `clock.py` | Where the config file lives; the time now, as ISO text | What any feature keeps in that file; any credential |
 | `review/` | Projected data, `cards`, the corpus | `reader/`, `raw_events`, files |
 | `guide/` | `review/`, `metagame/`, one deck's identity | `reader/`, `raw_events`, files |
-| `brief/` | One `(deck, archetype)` pairing | Any board state, any game in progress |
+| `ai/brief/` | One `(deck, archetype)` pairing | Any board state, any game in progress |
 | `table/` | The match in progress, via one replay | Writing anything; any completed match |
 | `metagame/` | Tournament results, evidence tiers | `Player.log`, `reader/`, `projector/` |
 | `coach/` | `review/`, `guide/`, every deck's projected matches | `reader/`, `raw_events`, files |
@@ -79,7 +79,7 @@ Three exceptions, all deliberate and all documented at the site:
   `GameStateTracker` — the *same* tracker `project()` drives — so this is one
   parser with two drivers, never a second encoding of Arena semantics. See
   [current-match.md](current-match.md).
-- **`brief/` and the narrative stores persist their output.** An authored
+- **`ai/brief/` and the narrative stores persist their output.** An authored
   narrative is not a derivation, so a rebuild cannot recompute it. See rule 6
   in AGENTS.md and the table ownership section below.
 - **`archetypes/` and `metagame/` write what they download, and
@@ -855,7 +855,7 @@ What is legitimately Python, and why each one is:
 | Hypergeometric PMF | `table/keep.py::_hypergeometric_pmf` | Needs `math.comb` over a loop |
 | Draw-odds complement | `table/hand_read.py` | Sequential product over a variable-length draw |
 | Medians and curve shapes | `guide/play.py` | SQLite has no median; the windowing is per-deck |
-| Field share, windowed to a format reset | `guide/field.py`, `brief/narrative.py` | The window start is computed from a detected ban date, not a literal |
+| Field share, windowed to a format reset | `guide/field.py`, `ai/brief/narrative.py` | The window start is computed from a detected ban date, not a literal |
 | Position index | `review/position.py` | A fixed-weight formula over four inputs, deliberately transparent and unfitted |
 
 The test for which side something belongs on is not "is it maths" but **"could
@@ -1095,7 +1095,7 @@ an MTGO match's rank is null (migration `046_rank_winrate_arena_only.sql`).
 
 **Sideboarding** (`migrations/024_game_decks.sql`) is the deck actually held
 for one game, from `ClientMessageType_SubmitDeckResp` — the boarding
-decision as played, not `brief/`'s authored plan for what *should* be
+decision as played, not `ai/brief/`'s authored plan for what *should* be
 boarded. The event carries no `matchID` and no `gameNumber` of its own
 (confirmed by tracing a real capture, not assumed), so
 `Projector._handle_submit_deck` parks it and the very next

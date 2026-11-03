@@ -271,8 +271,8 @@ is looked up (413). A pasted answer is stored with the author `pasted`
 and no cost or token counts, which stay `NULL` ("Model, effort, and
 cost", below); the dashboard says "Pasted in." where it would name a
 model. The stored prompt is the copied prompt rebuilt at save time,
-except on the brief and coverage routes, which store what
-`brief --import` stores, the build context (`docs/brief.md`).
+except on the brief and coverage routes, which store
+the build context (`docs/brief.md`).
 
 The coach's call is also the only one that can reach the network *during* the
 call, not just at its start and end: `write_report` (below) hands Claude a
@@ -319,7 +319,7 @@ The matchup brief (`GET /api/current-match/brief`) deliberately has **no**
 generate button — it stays `CopyPromptCard`-only. It still gets filled
 automatically for any archetype the deck guide covers, because generating the
 guide writes into `matchup_brief` the same way a pasted guide already does
-via `brief/from_guide.py`.
+via `ai/brief/from_guide.py`.
 
 ## Model, effort, and cost
 

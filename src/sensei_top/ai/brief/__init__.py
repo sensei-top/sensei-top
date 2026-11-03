@@ -12,8 +12,8 @@ back as current. See docs/brief.md, "Why a brief is persisted".
 
 **A brief is a function of two decklists and the field, never of a game.**
 No board state, no turn, no life total, no match id ever appears in a
-prompt this package builds — ``brief/narrative.py``'s module docstring, and
-``tests/test_brief_context.py`` pins it. That is what makes it cacheable per
+prompt this package builds — ``ai/brief/narrative.py``'s module docstring, and
+``tests/ai/test_brief_context.py`` pins it. That is what makes it cacheable per
 ``(deck, archetype)`` rather than per match.
 
 Modules, in dependency order:
@@ -32,7 +32,7 @@ Modules, in dependency order:
 
 from __future__ import annotations
 
-from sensei_top.brief.store import (
+from sensei_top.ai.brief.store import (
     Brief,
     PlayAround,
     Staple,

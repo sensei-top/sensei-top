@@ -2,7 +2,7 @@
 that stores nothing and writes no brief, only says which briefs are worth
 writing next. ``build_coverage``'s docstring holds the row and status
 contract. See docs/brief.md,
-"`brief/coverage.py` — which of the field this deck's briefs actually cover".
+"`ai/brief/coverage.py` — which of the field this deck's briefs actually cover".
 """
 
 from __future__ import annotations
@@ -10,8 +10,8 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 
-from sensei_top.brief.narrative import _current_window_start
-from sensei_top.brief.store import is_stale, list_hash, read_brief
+from sensei_top.ai.brief.narrative import _current_window_start
+from sensei_top.ai.brief.store import is_stale, list_hash, read_brief
 from sensei_top.guide.deck import DeckIdentity, identity_format
 from sensei_top.guide.field import faced_archetypes, field_by_key
 from sensei_top.review.consensus import build_consensus

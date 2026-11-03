@@ -599,9 +599,9 @@ owns the cache key (see Wiring, below).
 **Frontend.** `SideboardPlanCard` renders the headline ("Lost game 1
 (concede)"), the plan itself (`BoardPlan`/`PlayAroundList`, reused from
 `MatchupBriefCard` rather than forked), past boarding, and — when there is
-no plan at all — a `CopyPromptCard` carrying the prompt and two ways back
-for the answer: its paste box, which saves through the PUT
-`api/routes/guide.py::paste_brief`, and the exact `brief --import` command.
+no plan at all — a `CopyPromptCard` carrying the prompt and a box to paste
+the answer back into, which saves through the PUT
+`ai/routes/brief.py::paste_brief`.
 With neither a plan nor a prompt it says why instead: a match whose `fmt`
 is `null` gets its own sentence ("No tournament format is known for this
 match, so the opponent's deck can't be named from the cards seen, and there

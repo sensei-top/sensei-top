@@ -8,6 +8,8 @@ import sqlite3
 from fastapi import APIRouter, HTTPException, Request
 
 from sensei_top.ai.answers import PASTED_AUTHOR, guide_for
+from sensei_top.ai.brief.from_guide import store_guide_matchups
+from sensei_top.ai.brief.store import corpus_commit, list_hash
 from sensei_top.ai.guide import narrative as guide_narrative
 from sensei_top.ai.guide.authored import narrative_for, write_narrative
 from sensei_top.ai.guide.narrative import (
@@ -29,8 +31,6 @@ from sensei_top.api.models.common import PastedAnswerIn
 from sensei_top.api.models.guide import GuideNarrativeResponse
 from sensei_top.api.routes.guide import _no_deck
 from sensei_top.api.sql import _shared_report_cache
-from sensei_top.brief.from_guide import store_guide_matchups
-from sensei_top.brief.store import corpus_commit, list_hash
 from sensei_top.guide.bundle import DeckGuide, build_deck_guide
 from sensei_top.i18n import _, english
 
@@ -119,7 +119,7 @@ def generate_guide_narrative(
     ``_GUIDE_TOOL``'s own schema instead, parsed by
     ``guide_narrative_from_json`` — the validator the paste path uses too.
     Also fills every matchup plan the guide covers into
-    ``matchup_brief`` (``brief/from_guide.py``) — this is the whole reason
+    ``matchup_brief`` (``ai/brief/from_guide.py``) — this is the whole reason
     the live matchup brief needs no generate button of its own.
     """
     deck_guide, prompt = _guide_and_prompt(request, conn, key, answer_contract=False)

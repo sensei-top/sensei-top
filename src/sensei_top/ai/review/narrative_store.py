@@ -10,7 +10,7 @@ beside it so a reader can always check the two against each other.
 brief: a SHA-256 of the prompt context string itself, so any change to the
 evidence — a new finding, an updated field record — is caught without a
 per-feature hashing rule. It is reported, never acted on: nothing here
-regenerates itself, same posture ``brief/store.py::is_stale`` documents.
+regenerates itself, same posture ``ai/brief/store.py::is_stale`` documents.
 
 ``ai/review/leaks_store.py`` is the same pattern for the leak finder's own
 narrative, and imports ``context_hash`` from here rather than duplicating it

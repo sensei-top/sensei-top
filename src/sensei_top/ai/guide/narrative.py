@@ -64,7 +64,7 @@ TOP_ARCHETYPES_FOR_ORACLE_TEXT = 6
 # ones this deck actually meets on the ladder are often different. Up to
 # MOST_FACED_ARCHETYPES more, each faced at least MIN_TIMES_FACED times in
 # the guide's window, so every guide also writes the briefs the Live page
-# most often needs (brief/from_guide.py stores one per matchup plan).
+# most often needs (ai/brief/from_guide.py stores one per matchup plan).
 MOST_FACED_ARCHETYPES = 5
 MIN_TIMES_FACED = 3
 
@@ -290,7 +290,7 @@ def _opponent_sections(
             for key, (name, n) in faced_archetypes(
                 conn, guide.provenance.deck.deck_ids, since=since,
             ).items()
-            # key_by_name.get(name) == key: brief/from_guide.py stores each
+            # key_by_name.get(name) == key: ai/brief/from_guide.py stores each
             # plan under key_by_name[plan.archetype], so a name that maps to
             # another key would file this matchup's plan under the wrong one.
             if n >= MIN_TIMES_FACED and key not in shown_keys and key != own_key
@@ -393,7 +393,7 @@ def _wrap_json_prompt(
     answer_for: str | None = None, written_for: str | None = None,
 ) -> str:
     """The shape every JSON-schema-flavoured ``full_prompt`` in this project
-    uses. Shared with ``brief/narrative.py`` and ``ai/guide/rcq_prompt.py`` — the same
+    uses. Shared with ``ai/brief/narrative.py`` and ``ai/guide/rcq_prompt.py`` — the same
     idiom, a different ``SYSTEM_PROMPT`` and tool schema.
 
     With ``answer_for`` (a copied prompt): framing, ``---``, evidence,
@@ -417,7 +417,7 @@ def _wrap_json_prompt(
 def _parse_json_object(raw: str | dict) -> dict:
     """The str -> json -> dict ladder every JSON-schema-flavoured narrative
     parser in this project starts with, raising ``NarrativeError`` rather
-    than a raw ``json`` exception. Shared with ``brief/narrative.py`` and
+    than a raw ``json`` exception. Shared with ``ai/brief/narrative.py`` and
     ``ai/guide/rcq_prompt.py``."""
     if isinstance(raw, str):
         try:
@@ -441,8 +441,8 @@ def full_prompt(guide: DeckGuide, *, conn, answer_contract: bool = True) -> str 
         return None
     if not answer_contract:
         return _wrap_json_prompt(SYSTEM_PROMPT, _GUIDE_TOOL["input_schema"], context)
-    # Imported here: brief/store.py imports this module.
-    from sensei_top.brief.store import list_hash
+    # Imported here: ai/brief/store.py imports this module.
+    from sensei_top.ai.brief.store import list_hash
 
     deck = guide.provenance.deck
     return _wrap_json_prompt(

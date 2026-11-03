@@ -48,11 +48,11 @@ from pathlib import Path
 
 import pytest
 
+from sensei_top.ai.brief.store import Brief, write_brief
 from sensei_top.api.convert import _intermission_out
 from sensei_top.api.models.current_match import PostboardRecordOut
 from sensei_top.api.sql import _cached_break_read
 from sensei_top.archetypes.corpus import MIN_CORPUS_DECKS
-from sensei_top.brief.store import Brief, write_brief
 from sensei_top.db import open_database
 from sensei_top.guide.deck import list_identities
 from sensei_top.projector.live_state import Intermission, LiveState, replay_live_state

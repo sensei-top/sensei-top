@@ -772,7 +772,7 @@ against — and every route below calls it rather than re-running
   no field win rate at all.
 - `review/snapshot.py::build_snapshot`'s `field_matchup` (surfaced by
   `review/analyzers/baseline.py` in the match report) and
-  `brief/narrative.py`'s "Field record for this pairing" line both
+  `ai/brief/narrative.py`'s "Field record for this pairing" line both
   read one format's field — the match report the match's format, the brief
   the deck's — windowed to that format's latest reset rather than the whole
   corpus. Each passes its format to `metagame/matchup.py::ranked_field_matchup

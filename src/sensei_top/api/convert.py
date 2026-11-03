@@ -9,6 +9,9 @@ rather than one flat, easy-to-scan translation layer.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import Protocol
+
 from sensei_top.api.models.common import (
     BoardCardOut,
     LeakOut,
@@ -41,8 +44,6 @@ from sensei_top.api.models.guide import (
     ArchetypeShareOut,
     CardNoteOut,
     CardVerdictOut,
-    CoverageOut,
-    CoverageRowOut,
     DeckGuideOut,
     DeckIdentityOut,
     DeckPerformanceOut,
@@ -63,8 +64,6 @@ from sensei_top.api.models.matches import (
     SummaryGameLine,
     SummaryGapGroup,
 )
-from sensei_top.brief.coverage import Coverage
-from sensei_top.brief.store import Brief
 from sensei_top.guide.list_diff import duplicate_warning
 from sensei_top.review.findings import Finding
 from sensei_top.review.summary import Beat, GameLine, GapGroup, MatchSummary
@@ -81,7 +80,76 @@ from sensei_top.table.keep import KeepGuide
 from sensei_top.table.opening_hand import OpeningHandCard, OpeningHandRead
 
 
-def _matchup_brief_out(brief: Brief) -> MatchupBriefOut:
+class _PlayAround(Protocol):
+    @property
+    def card(self) -> str: ...
+    @property
+    def why(self) -> str: ...
+
+
+class _BoardCard(Protocol):
+    @property
+    def card(self) -> str: ...
+    @property
+    def n(self) -> int: ...
+
+
+class _Staple(Protocol):
+    @property
+    def name(self) -> str: ...
+    @property
+    def copies(self) -> float: ...
+    @property
+    def share(self) -> float: ...
+
+
+class _Problem(Protocol):
+    @property
+    def archetype(self) -> str: ...
+    @property
+    def message(self) -> str: ...
+
+
+class _StoredBrief(Protocol):
+    """The fields of a stored matchup brief this converter reads; core names no `ai` type."""
+
+    @property
+    def deck_key(self) -> str: ...
+    @property
+    def archetype_key(self) -> str: ...
+    @property
+    def archetype_label(self) -> str | None: ...
+    @property
+    def archetype_share(self) -> float | None: ...
+    @property
+    def personal_matches(self) -> int | None: ...
+    @property
+    def personal_wins(self) -> int | None: ...
+    @property
+    def personal_losses(self) -> int | None: ...
+    @property
+    def prose(self) -> str: ...
+    @property
+    def play_around(self) -> Sequence[_PlayAround]: ...
+    @property
+    def board_in(self) -> Sequence[_BoardCard]: ...
+    @property
+    def board_out(self) -> Sequence[_BoardCard]: ...
+    @property
+    def staples(self) -> Sequence[_Staple]: ...
+    @property
+    def problems(self) -> Sequence[_Problem]: ...
+    @property
+    def model(self) -> str: ...
+    @property
+    def generated_at(self) -> str: ...
+    @property
+    def corpus_commit(self) -> str | None: ...
+    @property
+    def source(self) -> str: ...
+
+
+def _matchup_brief_out(brief: _StoredBrief) -> MatchupBriefOut:
     return MatchupBriefOut(
         deck_key=brief.deck_key,
         archetype_key=brief.archetype_key,
@@ -100,23 +168,6 @@ def _matchup_brief_out(brief: Brief) -> MatchupBriefOut:
         generated_at=brief.generated_at,
         corpus_commit=brief.corpus_commit,
         source=brief.source,
-    )
-
-
-def _coverage_out(coverage: Coverage) -> CoverageOut:
-    return CoverageOut(
-        fmt=coverage.fmt,
-        rows=[
-            CoverageRowOut(
-                archetype_key=row.archetype_key, label=row.label, times_faced=row.times_faced,
-                field_share=row.field_share, status=row.status,
-            )
-            for row in coverage.rows
-        ],
-        matches_covered=coverage.matches_covered,
-        matches_covered_numerator=coverage.matches_covered_numerator,
-        matches_covered_denominator=coverage.matches_covered_denominator,
-        field_covered=coverage.field_covered,
     )
 
 

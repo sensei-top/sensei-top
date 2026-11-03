@@ -1,4 +1,4 @@
-"""Tests for brief/from_guide.py: backfilling the brief cache from a
+"""Tests for ai/brief/from_guide.py: backfilling the brief cache from a
 generated deck guide's own matchup plans.
 """
 
@@ -6,10 +6,10 @@ from __future__ import annotations
 
 import pytest
 
+from sensei_top.ai.brief import store
+from sensei_top.ai.brief.from_guide import store_guide_matchups
 from sensei_top.ai.guide.narrative import BoardCard, GuideNarrative, MatchupPlan
 from sensei_top.ai.guide.plans import PlanProblem
-from sensei_top.brief import store
-from sensei_top.brief.from_guide import store_guide_matchups
 from sensei_top.db import open_database
 from sensei_top.guide.bundle import DeckGuide, PlayEvidence, Provenance
 from sensei_top.guide.deck import DeckIdentity

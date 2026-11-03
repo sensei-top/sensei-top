@@ -541,14 +541,14 @@ clock. See `docs/brief.md` for the design.
 
 A brief is written once per `(deck, archetype)` and reused in every future
 match against that archetype, so the common case is that one is already
-stored — either from an import, or as a side effect of generating a deck
+stored — either from a pasted answer, or as a side effect of generating a deck
 guide (`docs/llm.md`) — and this renders instantly off the heartbeat. When
 none is, `CopyPromptCard` offers the text to write one from and the box to
 paste the answer into.
 Deliberately no generate button here, unlike the match report and the deck
 guide: generating the guide already fills this cache for every matchup it
 covers, so a second button on this card would mostly duplicate a call the
-guide already made (`brief/narrative.py`'s own docstring).
+guide already made (`ai/brief/narrative.py`'s own docstring).
 
 Each status gets a distinct, honest answer rather than one generic empty
 state: `no_match` renders nothing (`CurrentMatchView`'s own empty state

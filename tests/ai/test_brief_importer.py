@@ -1,4 +1,4 @@
-"""Tests for brief/importer.py and ai/guide/authored.py: storing an authored
+"""Tests for ai/brief/importer.py and ai/guide/authored.py: storing an authored
 brief or guide narrative, which both keep regardless of whether a
 Claude credential is configured (AGENTS.md non-negotiable #5,
 `docs/llm.md`).
@@ -11,12 +11,12 @@ from dataclasses import replace
 
 import pytest
 
+from sensei_top.ai.brief import store
+from sensei_top.ai.brief.importer import import_brief, import_briefs
+from sensei_top.ai.brief.narrative import NarrativeError
 from sensei_top.ai.guide.authored import narrative_for, read_narrative, write_narrative
 from sensei_top.ai.guide.narrative import BoardCard, CardNote, GuideNarrative, MatchupPlan
 from sensei_top.ai.guide.plans import PlanProblem
-from sensei_top.brief import store
-from sensei_top.brief.importer import import_brief, import_briefs
-from sensei_top.brief.narrative import NarrativeError
 from sensei_top.db import open_database
 from sensei_top.guide.deck import DeckIdentity
 

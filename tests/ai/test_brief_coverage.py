@@ -1,4 +1,4 @@
-"""Tests for brief/coverage.py's build_coverage: which archetypes are worth
+"""Tests for ai/brief/coverage.py's build_coverage: which archetypes are worth
 a brief, and how well the ones this deck already has actually cover them.
 """
 
@@ -8,8 +8,8 @@ import json
 
 import pytest
 
-from sensei_top.brief.coverage import build_coverage
-from sensei_top.brief.store import Brief, list_hash, write_brief
+from sensei_top.ai.brief.coverage import build_coverage
+from sensei_top.ai.brief.store import Brief, list_hash, write_brief
 from sensei_top.db import open_database
 from sensei_top.guide.deck import DeckIdentity
 

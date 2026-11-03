@@ -1,13 +1,11 @@
-"""Tests for brief/store.py: the authored-brief cache, and the two things
+"""Tests for ai/brief/store.py: the authored-brief cache, and the two things
 that make a stored brief stale."""
 
 from __future__ import annotations
 
 import pytest
 
-from sensei_top.ai.guide.narrative import BoardCard
-from sensei_top.ai.guide.plans import PlanProblem
-from sensei_top.brief.store import (
+from sensei_top.ai.brief.store import (
     Brief,
     PlayAround,
     Staple,
@@ -16,6 +14,8 @@ from sensei_top.brief.store import (
     read_brief,
     write_brief,
 )
+from sensei_top.ai.guide.narrative import BoardCard
+from sensei_top.ai.guide.plans import PlanProblem
 from sensei_top.db import open_database
 
 

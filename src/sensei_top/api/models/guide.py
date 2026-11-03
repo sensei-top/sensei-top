@@ -205,7 +205,7 @@ class GuideMarkdownOut(BaseModel):
 
 
 class CoverageRowOut(BaseModel):
-    """One archetype worth having a brief for — see ``brief/coverage.py``."""
+    """One archetype worth having a brief for — see ``ai/brief/coverage.py``."""
 
     archetype_key: str
     label: str | None
@@ -236,11 +236,10 @@ class CoverageOut(BaseModel):
 
 
 class BriefPromptOut(BaseModel):
-    """The single-brief prompt for one archetype, fetched on demand — the
-    same text ``sensei-top brief --deck KEY --archetype KEY --prompt``
-    prints. A 200 for any known deck; an unknown deck key is a 404. No
-    field consensus is an ordinary outcome for a corpus that hasn't
-    classified that archetype yet, not a server error."""
+    """The single-brief prompt for one archetype, fetched on demand. A 200 for any
+    known deck; an unknown deck key is a 404. No field consensus is an
+    ordinary outcome for a corpus that hasn't classified that archetype
+    yet, not a server error."""
 
     status: str = Field(description="ok | no_consensus | format_unknown")
     archetype_key: str
@@ -248,9 +247,8 @@ class BriefPromptOut(BaseModel):
 
 
 class CoveragePromptOut(BaseModel):
-    """The multi-brief prompt for every ``missing``/``stale`` coverage row —
-    the same text ``sensei-top brief --deck KEY --missing --prompt``
-    prints. A 200 for any known deck; an unknown deck key is a 404.
+    """The multi-brief prompt for every ``missing``/``stale`` coverage row.
+    A 200 for any known deck; an unknown deck key is a 404.
     Nothing missing, or no field consensus for any missing/stale
     archetype, are both ordinary outcomes."""
 

@@ -3,7 +3,7 @@
 ``guide/__init__.py``'s rule 2 says nothing in this package is ever
 persisted, because everything else here is a *derivation* of the current
 database that a rebuild could silently invalidate. Authored prose is the
-stated exception, for the same reason ``brief/`` may persist: it is not
+stated exception, for the same reason ``ai/brief/`` may persist: it is not
 derived from anything, it is written, and it is stamped with the 75
 (``list_hash``) and corpus snapshot (``corpus_commit``) it was written about
 so a reader can always tell whether it still describes the deck in front of
@@ -11,7 +11,7 @@ them.
 
 One import fills two tables: the deck-level half (engine, fix, card notes,
 checklist) lands here in ``deck_narrative``, and every matchup plan lands in
-``matchup_brief`` via ``brief/from_guide.py`` — so writing one guide also
+``matchup_brief`` via ``ai/brief/from_guide.py`` — so writing one guide also
 lights up the live matchup brief on the Live page.
 """
 
@@ -136,7 +136,7 @@ def narrative_for(
     ``matchups`` read back out of ``matchup_brief``, the one place a matchup
     plan lives.
     """
-    from sensei_top.brief.store import briefs_for_deck
+    from sensei_top.ai.brief.store import briefs_for_deck
 
     stored = read_narrative(conn, deck_key)
     if stored is None:

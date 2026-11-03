@@ -14,7 +14,6 @@ from pathlib import Path
 
 import pytest
 
-from sensei_top import cli
 from sensei_top.ai.answers import (
     Answer,
     AnswerError,
@@ -30,11 +29,11 @@ from sensei_top.ai.answers import (
     rcq_for,
     read_answer,
 )
+from sensei_top.ai.brief.narrative import _BRIEF_TOOL, _MULTI_BRIEF_TOOL
+from sensei_top.ai.brief.store import list_hash
 from sensei_top.ai.guide.narrative import _GUIDE_TOOL
 from sensei_top.ai.guide.rcq_prompt import _RCQ_TOOL, rcq_context
 from sensei_top.api.app import create_app
-from sensei_top.brief.narrative import _BRIEF_TOOL, _MULTI_BRIEF_TOOL
-from sensei_top.brief.store import list_hash
 from sensei_top.db import open_database
 from sensei_top.guide.deck import list_identities
 from sensei_top.guide.decklist import parse_decklist
@@ -43,7 +42,6 @@ from sensei_top.reader.ingest import ingest_file
 
 FIXTURE = Path(__file__).parent / "fixtures" / "match_session.log"
 HASH = "0123456789abcdef" * 4
-OTHER_HASH = "fedcba9876543210" * 4
 BODY = {"engine": "Cantrips are your mana.", "fix": "Deploy earlier."}
 SCHEMA = {"type": "object", "properties": {"engine": {"type": "string"}}}
 
@@ -459,62 +457,6 @@ def test_the_schema_is_said_once_in_a_copied_prompt(client, identity):
     prompt = client.get(f"/api/guide/{identity.key}/narrative").json()["prompt"]
     assert "Answer as a single JSON object matching this schema" not in prompt
     assert prompt.count("Answer with exactly one JSON object") == 1
-
-
-# --- the CLI imports ---------------------------------------------------------
-
-
-def _guide_answer(matchups: list | None = None) -> dict:
-    return {"engine": "Cantrips are your mana.", "fix": "Deploy earlier.",
-            "card_notes": [], "matchups": matchups or [], "checklist": []}
-
-
-def test_a_brief_import_for_another_archetype_is_refused(db_path, identity, tmp_path):
-    answer = tmp_path / "answer.json"
-    body = {"prose": "Trade early.", "play_around": [], "board_in": [], "board_out": []}
-    answer.write_text(json.dumps(_headed(brief_for(identity.key, "izzet_control"), body)))
-    with pytest.raises(SystemExit) as exc:
-        cli.main([
-            "--db", str(db_path), "brief", "--deck", identity.key,
-            "--archetype", "mardu_discard", "--import", str(answer),
-        ])
-    assert str(exc.value).endswith(
-        "This answer is for a matchup brief of another deck or opponent. Paste it there."
-    )
-    conn = sqlite3.connect(db_path)
-    assert conn.execute("SELECT COUNT(*) FROM matchup_brief").fetchone()[0] == 0
-    conn.close()
-
-
-def test_a_headed_brief_import_stores_its_context(db_path, identity, tmp_path):
-    answer = tmp_path / "answer.json"
-    body = {"prose": "Trade early.", "play_around": [], "board_in": [], "board_out": []}
-    answer.write_text(
-        json.dumps(_headed(brief_for(identity.key, "mardu_discard"), body, context=OTHER_HASH))
-    )
-    cli.main([
-        "--db", str(db_path), "brief", "--deck", identity.key,
-        "--archetype", "mardu_discard", "--import", str(answer),
-    ])
-    conn = sqlite3.connect(db_path)
-    rows = conn.execute("SELECT archetype_key, list_hash FROM matchup_brief").fetchall()
-    conn.close()
-    assert rows == [("mardu_discard", OTHER_HASH)]
-
-
-def test_a_coverage_import_reads_the_coverage_header(db_path, identity, tmp_path):
-    answer = tmp_path / "answer.json"
-    item = {"archetype_key": "mardu_discard", "prose": "Trade early.",
-            "play_around": [], "board_in": [], "board_out": []}
-    answer.write_text(json.dumps(_headed(coverage_for(identity.key), {"briefs": [item]})))
-    cli.main([
-        "--db", str(db_path), "brief", "--deck", identity.key,
-        "--missing", "--import", str(answer),
-    ])
-    conn = sqlite3.connect(db_path)
-    rows = conn.execute("SELECT archetype_key, list_hash FROM matchup_brief").fetchall()
-    conn.close()
-    assert rows == [("mardu_discard", HASH)]
 
 
 # --- the prose cards: the copied prompt asks for {"prose": ...}, the call does not

@@ -470,7 +470,7 @@ def build_keep_guide(
     # The identity's deck_ids are the grain for the mulligan table and the cost line
     # alike (guide_play.mulligan_record below): a list edit mints a new deck_id, and
     # the identity (the stable Arena GUID) keeps the history. The identity lookup is
-    # the same one api/routes/current_match.py::_brief_response makes.
+    # the same one ai/routes/brief.py::_brief_response makes.
     identity = next((i for i in list_identities(conn) if deck_id in i.deck_ids), None)
     grain_ids = tuple(identity.deck_ids) if identity is not None else (deck_id,)
     mulligan_rows = conn.execute(
