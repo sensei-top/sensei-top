@@ -723,8 +723,10 @@ def test_the_download_buttons_go_to_the_worker_and_it_runs_only_for_them():
         "/linux/",
         "/mtgo/",
         "/pt-br/",
+        "/video/*",
     ]
-    assert set(first) == {"/download/*", *portuguese_redirects(), "/pt-br/"}
+    # `/video/*` stays: static assets ignore Range (`worker/range.mjs`).
+    assert set(first) == {"/download/*", *portuguese_redirects(), "/pt-br/", "/video/*"}
     assert config["assets"]["binding"] == "ASSETS"
     assert config["observability"] == {"enabled": False}
     for url_path in ("/", "/pt-br/"):

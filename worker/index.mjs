@@ -6,6 +6,7 @@
 import { download } from './download.mjs'
 import { language } from './language.mjs'
 import { platform } from './platform.mjs'
+import { range } from './range.mjs'
 import { suggest } from './suggest.mjs'
 
 export default {
@@ -23,6 +24,7 @@ export default {
       headers.delete('If-Modified-Since')
       return suggest(await env.ASSETS.fetch(new Request(request, { headers })), os)
     }
+    if (pathname.startsWith('/video/')) return range(request, await env.ASSETS.fetch(request))
     return env.ASSETS.fetch(request)
   },
 }

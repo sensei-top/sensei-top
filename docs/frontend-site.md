@@ -186,6 +186,13 @@ drops the asset's `ETag` and `Last-Modified`, because those name the static
 page, not the one sent. The privacy pages name this read, so a new signal
 goes there first. Under `wrangler dev`, `curl -A '<User-Agent>'` shows each
 system's page.
+The same script answers byte ranges on `/video/*` (`worker/range.mjs`),
+because static assets ignore `Range` and reply with the whole file and a 200:
+Safari refuses a video without a 206, and the chapter strip seeks. It buffers
+the file, which the 5 MB cap on the videos allows, and slices it; a missing or
+malformed `Range`, several ranges or an `If-Range` that is not exactly the
+asset's `ETag` get the whole file, an unsatisfiable range a 416, and a status
+other than 200 passes through. Every other header of the asset is kept.
 The Worker answers on `senseitop.com`, with `www` redirecting there, and on
 the account's `workers.dev` address. It was meant to be a Pages project
 (plan 9, D2); the dashboard's git flow now creates a Worker, and a static
