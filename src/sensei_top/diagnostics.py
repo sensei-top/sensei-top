@@ -13,9 +13,8 @@ What goes in, and what never does:
 - ``row_counts.json``: one row count per table of the database, read through
   a ``?mode=ro`` connection. The database itself never goes in.
 - ``logs/``: the app's own log files beside the database, and the desktop
-  shell's with ``--shell-log``, as written except for the player names the
-  MTGO warnings of 0.7.0 and earlier carried, which are masked
-  (``_LEGACY_MTGO``). A log keeps those lines until it rotates them away.
+  shell's with ``--shell-log``, through ``scrub.scrub_text`` with the names
+  ``known_names`` finds.
 - ``Player.log``: only with ``--with-player-log``. It names the user's
   opponents and decks, so the shell's dialog asks first.
 
@@ -34,40 +33,15 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from sensei_top import doctor, logs
+from sensei_top import doctor, logs, scrub
 from sensei_top.arena_config import resolve_log
 from sensei_top.config import config_path
+from sensei_top.mtgo.config import load_handle
 
 SECRET_KEY = "api_key"
 
-MASK = "<masked>"
-
-# The MTGO warnings 0.7.0 and earlier wrote with a player's handle in them, or
-# a transcript line that names one. They are written without since
-# (projector/mtgo/parse.py, ParsedMatch.warnings), and none of these shapes
-# matches a line written since. `[^\r\n]` rather than `.`: a log written on
-# Windows ends its lines with `\r\n`.
-_LEGACY_MTGO: tuple[tuple[re.Pattern[str], str], ...] = (
-    (re.compile(r"(card event handle ).*?( matches neither )"), rf"\g<1>{MASK}\g<2>"),
-    (
-        re.compile(
-            r"(configured handle ).*?( does not resolve to exactly one opponent among )"
-            r"[^\r\n]*?( for match )"
-        ),
-        rf"\g<1>{MASK}\g<2>{MASK}\g<3>",
-    ),
-    (re.compile(r"(unrecognised (?:mulligan count|hand size) in )[^\r\n]*"), rf"\g<1>{MASK}"),
-    (
-        re.compile(
-            r"(mulligan count mismatch for ).*?"
-            r"(: 'mulligans to' implied \d+, 'begins the game' implied \d+ )[^\r\n]*"
-        ),
-        rf"\g<1>{MASK}\g<2>({MASK})",
-    ),
-    (re.compile(r"(no preceding start block )\(['\"][^\r\n]*"), rf"\g<1>({MASK})"),
-    (re.compile(r"(card event before any game started: )['\"][^\r\n]*"), rf"\g<1>{MASK}"),
-)
-
+MASK = scrub.MASK
+LOG_TAIL_MAX_LINES = 2000
 
 @dataclass(frozen=True)
 class Entry:
@@ -91,26 +65,74 @@ def _file(name: str, path: Path) -> Entry | None:
         return None
 
 
-def mask_legacy_mtgo(data: bytes) -> bytes:
-    """``data``, a log file's bytes, with the player names ``_LEGACY_MTGO``
-    finds masked. Every other byte comes back as it was, undecodable ones
-    included."""
-    if b"[mtgo]" not in data:
-        return data
-    lines = data.decode("utf-8", "surrogateescape").splitlines(keepends=True)
-    for i, line in enumerate(lines):
-        if "[mtgo]" in line:
-            for pattern, replacement in _LEGACY_MTGO:
-                line = pattern.sub(replacement, line)
-            lines[i] = line
-    return "".join(lines).encode("utf-8", "surrogateescape")
+def _scrubbed(data: bytes, names: list[str]) -> bytes:
+    """``data`` through ``scrub_text``; undecodable bytes come back as they
+    were."""
+    text = data.decode("utf-8", "surrogateescape")
+    return scrub.scrub_text(text, names).encode("utf-8", "surrogateescape")
 
 
-def _log(name: str, path: Path) -> Entry | None:
+def _log(name: str, path: Path, names: list[str]) -> Entry | None:
     try:
-        return _bytes(name, mask_legacy_mtgo(path.read_bytes()))
+        return _bytes(name, _scrubbed(path.read_bytes(), names))
     except OSError:
         return None
+
+
+def known_names(db_path: Path) -> list[str]:
+    """Every name the user's data holds that a bundle must not carry: the
+    configured MTGO handle, the Arena screen name and user id of the user's
+    own sign-ins, and every opponent's name and id. Read through a
+    ``?mode=ro`` connection; a missing database or table adds nothing."""
+    found: list[str] = []
+    handle = load_handle()  # fail-soft by contract
+    if handle:
+        found.append(handle)
+    if not db_path.exists():
+        return found
+    try:
+        conn = sqlite3.connect(db_path.absolute().as_uri() + "?mode=ro", uri=True)
+    except sqlite3.Error:
+        return found
+    try:
+        queries = (
+            "SELECT opponent_name, opponent_user_id FROM matches",
+            "SELECT json_extract(payload, '$.authenticateResponse.screenName'), "
+            "json_extract(payload, '$.authenticateResponse.clientId') FROM raw_events "
+            "WHERE label = 'AuthenticateResponse' AND json_valid(payload)",
+        )
+        for query in queries:
+            try:
+                for row in conn.execute(query):
+                    found += [v for v in row if isinstance(v, str) and v]
+            except sqlite3.Error:
+                continue
+    finally:
+        conn.close()
+    return sorted(set(found))
+
+
+def log_tail(db_path: Path, lines: int, names: list[str]) -> str:
+    """The last ``lines`` lines of the app's log, scrubbed, reading the
+    rotated files (``.1`` is the newest backup) as far back as it takes.
+    Empty when there is no log."""
+    current = logs.log_path(db_path.resolve())
+    files = [current] + [
+        current.with_name(f"{current.name}.{i}") for i in range(1, logs.BACKUP_COUNT + 1)
+    ]
+    tail: list[str] = []  # newest line first
+    for path in files:
+        try:
+            data = path.read_bytes()
+        except OSError:
+            continue
+        chunk = data.decode("utf-8", "surrogateescape").splitlines()
+        tail.extend(reversed(chunk))
+        if len(tail) >= lines:
+            break
+    newest_last = list(reversed(tail[:lines]))
+    text = scrub.scrub_text("\n".join(newest_last), names)
+    return text.encode("utf-8", "surrogateescape").decode("utf-8", "replace")
 
 
 def _strip_keys(value: object) -> object:
@@ -206,23 +228,24 @@ def entries(
 ) -> list[Entry]:
     """Everything that would go in the zip, in the order it is written."""
     found: list[Entry | None] = []
+    names = known_names(db_path)
     report = json.dumps(doctor.report(db_path), indent=2, ensure_ascii=False)
-    found.append(_bytes("doctor.json", logs.home_as_tilde(report).encode("utf-8")))
+    found.append(_bytes("doctor.json", scrub.scrub_text(report, names).encode("utf-8")))
     config = secret_free_config(config_path())
     if config is not None:
-        found.append(_bytes("config.toml", logs.home_as_tilde(config).encode("utf-8")))
+        found.append(_bytes("config.toml", scrub.scrub_text(config, names).encode("utf-8")))
     counts = row_counts(db_path)
     if counts is not None:
         found.append(_bytes("row_counts.json", json.dumps(counts, indent=2).encode("utf-8")))
     log_file = logs.log_path(db_path.resolve())
     if log_file.parent.is_dir():
         found += [
-            _log(f"logs/{p.name}", p)
+            _log(f"logs/{p.name}", p, names)
             for p in sorted(log_file.parent.glob(f"{logs.LOG_NAME}*"))
             if p.is_file()
         ]
     if shell_log is not None:
-        found.append(_log("logs/shell.log", shell_log))
+        found.append(_log("logs/shell.log", shell_log, names))
     if with_player_log:
         player, _source = resolve_log()
         if player is not None:

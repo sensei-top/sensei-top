@@ -269,13 +269,27 @@ to a bug report"; the desktop shell drives both.
   [--with-player-log] [--list]`** (`diagnostics.py`). The zip holds
   `doctor.json`, `config.toml` with every `api_key` and `[mtgo] handle` removed (rebuilt
   from the parsed tables, never by text substitution), `row_counts.json`, the app's
-  log files and, on request, the shell's log and `Player.log`. Paths inside
-  it are written with `~` for the home directory, as `logs.py` writes them.
-  No log line names a player: the MTGO projector's warnings carry counts,
-  game numbers and card names instead (`ParsedMatch.warnings`), and the ones
-  0.7.0 and earlier wrote with a handle in them are masked as the logs are
-  copied in (`_LEGACY_MTGO`), since a log keeps them until it rotates.
+  log files and, on request, the shell's log and `Player.log`.
+  Every text member goes through `scrub.scrub_text` (`scrub.py`): the home
+  directory becomes `~`, a profile folder (Windows, Wine's `Z:\home`, UNC,
+  `/media`) `<user>`, emails `<email>`, bearer and JWT tokens, `sk-ant-` and key-shaped values `<token>`, Arena user
+  IDs `<id>`, and every name `known_names` finds (the configured MTGO handle,
+  the user's own Arena screen name and id from the stored sign-ins, every
+  opponent's name and id) `<name>`; a name with a `#NNNNN` suffix also
+  scrubs its bare part. A name under three characters is not
+  substituted, or one short handle would shred a log. No log line names a
+  player: the MTGO projector's warnings carry counts, game numbers and card
+  names instead (`ParsedMatch.warnings`), and the ones 0.7.0 and earlier wrote
+  with a handle in them are masked by the same pass (`_LEGACY_MTGO`), since a
+  log keeps them until it rotates. The rules are pinned by
+  `tests/fixtures/scrub_vectors.json`, which the shell's own scrubber will
+  read too, once it exists. `Player.log`, when asked for, is copied as written.
   The database never goes in. `--list` prints each entry and its size and
   writes nothing; an existing `--out` file is refused.
 
-Pinned by `tests/test_doctor.py`.
+- **`GET /api/diagnostics/log-tail?lines=500`** (`api/routes/meta.py`,
+  `diagnostics.log_tail`). The last `lines` lines (1 to 2000) of the app's log
+  as plain text, read across the rotated files and scrubbed as above; empty
+  with no log. Read-only.
+
+Pinned by `tests/test_doctor.py` and `tests/test_scrub.py`.

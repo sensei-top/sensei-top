@@ -76,6 +76,7 @@ source_modules = [
     "sensei_top.projector",
     "sensei_top.reader",
     "sensei_top.review",
+    "sensei_top.scrub",
     "sensei_top.secrets",
     "sensei_top.steam",
     "sensei_top.sync",

@@ -7,10 +7,12 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
+from fastapi.responses import PlainTextResponse
 
+from sensei_top import diagnostics
 from sensei_top.api.deps import Conn
 from sensei_top.api.models.common import Deck, Health, LiveStatus
 from sensei_top.api.models.metagame import FormatEntry, FormatMatchCounts, FormatsOut
@@ -28,6 +30,20 @@ def health(request: Request, conn: Conn) -> Health:
         for table in ("decks", "matches", "games", "turns")
     }
     return Health(status="ok", database=str(request.app.state.database), **counts)
+
+
+@router.get("/api/diagnostics/log-tail", response_class=PlainTextResponse, tags=["meta"])
+def log_tail(
+    request: Request,
+    lines: Annotated[int, Query(ge=1, le=diagnostics.LOG_TAIL_MAX_LINES)] = 500,
+) -> PlainTextResponse:
+    """The last ``lines`` lines of the app's log across its rotated files,
+    through ``scrub.scrub_text`` with every name the database and config
+    hold. Plain text; an empty body when there is no log. Reads the files,
+    never writes."""
+    database: Path = request.app.state.database
+    names = diagnostics.known_names(database)
+    return PlainTextResponse(diagnostics.log_tail(database, lines, names))
 
 
 def _with_home_as_tilde(path: Path) -> str:

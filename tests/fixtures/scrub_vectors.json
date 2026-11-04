@@ -1,0 +1,149 @@
+{
+  "_comment": "Synthetic identifiers only. Read by tests/test_scrub.py; the desktop shell's scrubber tests will read it too, once it exists. Each vector: input, names, expected.",
+  "vectors": [
+    {
+      "name": "windows profile folder, backslashes",
+      "input": "open C:\\Users\\zorblax\\AppData\\Local\\app\\x.log failed",
+      "names": [],
+      "expected": "open C:\\Users\\<user>\\AppData\\Local\\app\\x.log failed"
+    },
+    {
+      "name": "windows profile folder, doubled backslashes as repr writes them",
+      "input": "PermissionError: 'C:\\\\Users\\\\zorblax\\\\x.db'",
+      "names": [],
+      "expected": "PermissionError: 'C:\\\\Users\\\\<user>\\\\x.db'"
+    },
+    {
+      "name": "windows profile folder, forward slashes and lower-case drive",
+      "input": "c:/Users/zorblax/Documents",
+      "names": [],
+      "expected": "c:/Users/<user>/Documents"
+    },
+    {
+      "name": "profile folder with a space",
+      "input": "C:\\Users\\Zorb Lax\\AppData\\x",
+      "names": [],
+      "expected": "C:\\Users\\<user>\\AppData\\x"
+    },
+    {
+      "name": "profile folder at the end of a sentence keeps the words after it",
+      "input": "failed for C:\\Users\\zorblax because of a bug",
+      "names": [],
+      "expected": "failed for C:\\Users\\<user> because of a bug"
+    },
+    {
+      "name": "wine home",
+      "input": "Z:\\home\\zorblax\\.wine\\x",
+      "names": [],
+      "expected": "Z:\\home\\<user>\\.wine\\x"
+    },
+    {
+      "name": "run media",
+      "input": "/run/media/zorblax/DISK/x.log",
+      "names": [],
+      "expected": "/run/media/<user>/DISK/x.log"
+    },
+    {
+      "name": "media",
+      "input": "/media/zorblax/DISK/x.log",
+      "names": [],
+      "expected": "/media/<user>/DISK/x.log"
+    },
+    {
+      "name": "unc share",
+      "input": "\\\\fileserver\\Users\\zorblax\\x",
+      "names": [],
+      "expected": "\\\\fileserver\\Users\\<user>\\x"
+    },
+    {
+      "name": "documents and settings",
+      "input": "C:\\Documents and Settings\\zorblax\\Desktop",
+      "names": [],
+      "expected": "C:\\Documents and Settings\\<user>\\Desktop"
+    },
+    {
+      "name": "a name with a numeric suffix also scrubs its bare form",
+      "input": "Quuxling#12345 and Quuxling and Quuxling#99999",
+      "names": ["Quuxling#12345"],
+      "expected": "<name> and <name> and <name>#99999"
+    },
+    {
+      "name": "a marker is not a name",
+      "input": "mail a@example.invalid",
+      "names": ["email"],
+      "expected": "mail <email>"
+    },
+    {
+      "name": "email",
+      "input": "contact zorblax.test+tag@example.invalid now",
+      "names": [],
+      "expected": "contact <email> now"
+    },
+    {
+      "name": "bearer token",
+      "input": "Authorization: Bearer abc123.DEF_456-xyz",
+      "names": [],
+      "expected": "Authorization: Bearer <token>"
+    },
+    {
+      "name": "jwt",
+      "input": "session eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0In0.c2lnbmF0dXJl end",
+      "names": [],
+      "expected": "session <token> end"
+    },
+    {
+      "name": "anthropic key",
+      "input": "key sk-ant-api03-FAKEFAKEFAKEFAKE1234 used",
+      "names": [],
+      "expected": "key <token> used"
+    },
+    {
+      "name": "key=value form",
+      "input": "api_key = \"FAKE-VALUE-123\" and password: hunter2",
+      "names": [],
+      "expected": "api_key = \"<token>\" and password: <token>"
+    },
+    {
+      "name": "arena user id",
+      "input": "userId ABCDEFGH12345678IJKLMNOP90 joined",
+      "names": [],
+      "expected": "userId <id> joined"
+    },
+    {
+      "name": "a 26-letter upper-case word with no digit is left alone",
+      "input": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+      "names": [],
+      "expected": "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    },
+    {
+      "name": "legacy mtgo warning",
+      "input": "WARNING [mtgo] card event handle Zorblax matches neither side",
+      "names": [],
+      "expected": "WARNING [mtgo] card event handle <masked> matches neither side"
+    },
+    {
+      "name": "known names, whole word and any case",
+      "input": "opponent Quuxling#12345 played; QUUXLING#12345 again; Quuxlings stays",
+      "names": ["Quuxling#12345"],
+      "expected": "opponent <name> played; <name> again; Quuxlings stays"
+    },
+    {
+      "name": "longest name first",
+      "input": "Frobnitz Prime beat Frobnitz",
+      "names": ["Frobnitz", "Frobnitz Prime"],
+      "expected": "<name> beat <name>"
+    },
+    {
+      "name": "a name shorter than three characters is not substituted",
+      "input": "Al said hi to Albert",
+      "names": ["Al", ""],
+      "expected": "Al said hi to Albert"
+    },
+    {
+      "name": "nothing to scrub",
+      "input": "2026-01-01T00:00:00.000Z abcd1234 INFO sensei_top: started",
+      "names": [],
+      "expected": "2026-01-01T00:00:00.000Z abcd1234 INFO sensei_top: started"
+    }
+  ]
+}
