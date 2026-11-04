@@ -66,5 +66,104 @@
       "declineFailed": "A conta não foi apagada, e nada foi alterado. Tente de novo.",
       "signOutFailed": "Você não saiu da conta. Tente de novo."
     }
+  },
+  "settings": {
+    "title": "Conta",
+    "unavailable": "Esta versão do Sensei Top não tem conta.",
+    "signedOut": "Uma conta é gratuita e opcional. O Sensei Top funciona do mesmo jeito sem ela. Com ela, você pode fazer backup do seu histórico de partidas, levá-lo para outro PC e escolher se envia relatórios de erro.",
+    "noPassword": "Não há senha do Sensei Top: você entra com o Google ou com o Discord.",
+    "signInGoogle": "Entrar com o Google",
+    "signInDiscord": "Entrar com o Discord",
+    "waiting": "Termine de entrar no seu navegador. O Sensei Top espera até 5 minutos.",
+    "waitingAgain": "Clicar de novo num botão de entrar recomeça do início.",
+    "signInFailed": "O login não terminou. Tente de novo.",
+    "signedInAs": "Conectado como {{email}}, pelo {{provider}}.",
+    "signedInWith": "Conectado pelo {{provider}}.",
+    "unanswered": "Você ainda não respondeu às perguntas da sua conta. Até responder, nada é enviado para backup nem como relatório de erro.",
+    "answerNow": "Responder agora",
+    "unknown": "Não foi possível ler as suas escolhas na sua conta. O Sensei Top tenta de novo no próximo backup.",
+    "backup": {
+      "label": "Fazer backup do meu histórico de partidas",
+      "description": "Envia um resumo de cada partida, para o seu histórico sobreviver a uma reinstalação e chegar aos seus outros PCs. Fica guardado no Brasil até você apagá-lo."
+    },
+    "errors": {
+      "label": "Enviar relatórios de erro",
+      "description": "Envia um relatório ao Sentry, nos Estados Unidos, quando algo dá errado. Guardado por 30 dias. Relatar um problema funciona de qualquer jeito."
+    },
+    "coach": {
+      "label": "Guardar meu histórico do treinador",
+      "description": "Salva as suas perguntas ao treinador de regras e as respostas dele, para você poder relê-las. O treinador chega numa versão futura."
+    },
+    "turningOff": "Desligar uma escolha a interrompe dali em diante. Para remover o que já foi enviado, use Apagar histórico na nuvem.",
+    "sync": {
+      "off": "O backup está desligado. O seu histórico de partidas fica só neste PC.",
+      "none": "Nenhum backup feito ainda.",
+      "running": "Fazendo backup…",
+      "done_one": "{{count}} partida deste PC no backup. Último backup {{when}}.",
+      "done_other": "{{count}} partidas deste PC no backup. Último backup {{when}}.",
+      "doneUndated_one": "{{count}} partida deste PC no backup.",
+      "doneUndated_other": "{{count}} partidas deste PC no backup.",
+      "error": {
+        "cloud": "O último backup parou porque não foi possível falar com a sua conta. O Sensei Top tenta de novo quando a próxima partida terminar.",
+        "localApi": "O último backup parou porque o Sensei Top não conseguiu ler as partidas deste PC. Ele tenta de novo quando a próxima partida terminar.",
+        "disk": "O último backup parou porque o Sensei Top não conseguiu salvar o registro do backup neste PC. Ele tenta de novo quando a próxima partida terminar."
+      }
+    },
+    "export": {
+      "button": "Exportar meus dados na nuvem",
+      "description": "Salva tudo o que há na sua conta num arquivo JSON, onde você escolher.",
+      "saved": "Os seus dados na nuvem foram salvos.",
+      "failed": "A exportação não terminou. Tente de novo."
+    },
+    "history": {
+      "button": "Apagar histórico na nuvem",
+      "description": "Apaga as partidas salvas na sua conta e desliga o backup. As partidas deste PC continuam.",
+      "done_one": "{{count}} partida apagada do seu histórico na nuvem. O backup está desligado.",
+      "done_other": "{{count}} partidas apagadas do seu histórico na nuvem. O backup está desligado.",
+      "removed": "Elas são removidas de vez depois de 30 dias, quando os seus outros PCs já tiverem sabido disso."
+    },
+    "deleteAccount": {
+      "button": "Apagar conta",
+      "description": "Apaga a sua conta e tudo o que há nela. As partidas deste PC continuam."
+    },
+    "signOut": {
+      "button": "Sair da conta",
+      "description": "O backup para neste PC até você entrar de novo. As suas partidas continuam."
+    },
+    "persistence": {
+      "noKeyring": "Este sistema não tem um chaveiro, então o Sensei Top não guarda o seu login, e você vai entrar de novo cada vez que abrir o aplicativo. O backup só roda enquanto você está conectado.",
+      "keyringHint": "Com um chaveiro configurado (como o GNOME Keyring ou o KWallet), o aplicativo guarda o seu login, criptografado.",
+      "noEncryption": "Este sistema não consegue criptografar o seu login, então o Sensei Top não o guarda, e você vai entrar de novo cada vez que abrir o aplicativo. O backup só roda enquanto você está conectado."
+    }
+  },
+  "dialog": {
+    "cancel": "Cancelar",
+    "working": "Aguarde"
+  },
+  "deleteHistory": {
+    "title": "Apagar seu histórico na nuvem?",
+    "body1": "Isso apaga todas as partidas salvas na sua conta. As partidas deste PC continuam onde estão.",
+    "body2": "O backup também é desligado, então nada é enviado de novo até você religá-lo. Se religar, todas as partidas deste PC são enviadas outra vez.",
+    "body3": "Não é possível desfazer.",
+    "confirm": "Apagar histórico na nuvem",
+    "failed": {
+      "historyOn": "O seu histórico na nuvem não foi apagado, e nada mudou. Tente de novo.",
+      "historyOff": "Seu histórico na nuvem não foi apagado. O backup está desligado, então nada mais é enviado. Tente de novo."
+    }
+  },
+  "deleteAccount": {
+    "title": "Apagar sua conta?",
+    "body1": "Isso apaga a sua conta do Sensei Top e tudo o que há nela: o seu perfil e as suas escolhas, os PCs ligados a ela e todas as partidas salvas nela. Ela sai do nosso banco de dados na hora.",
+    "body2": "As partidas deste PC continuam onde estão. Os jogos que você enviou para Ajudar a montar as estatísticas também: nada neles diz que são seus, então não há como encontrá-los para apagar. Os relatórios de erro já enviados ficam no Sentry até serem apagados, 30 dias depois do envio.",
+    "body3": "Você vai sair da conta neste PC. Ajudar a montar as estatísticas continua como você deixou, porque não precisa de conta.",
+    "body4": "Não é possível desfazer.",
+    "confirm": "Apagar conta",
+    "failed": "A sua conta não foi apagada, e nada mudou. Tente de novo.",
+    "done": "A sua conta foi apagada."
+  },
+  "errorsDialog": {
+    "title": "Enviar relatórios de erro para os Estados Unidos?",
+    "withdraw": "Você pode revogar isso a qualquer momento, desligando os relatórios de erro.",
+    "confirm": "Concordar e enviar relatórios"
   }
 }
