@@ -163,6 +163,7 @@ function harness(start: AccountStatus = signedIn(USER), rows: Record<string, Pro
     },
     async updateProfile(userId, patch) {
       if (fail.write) throw new Error('403');
+      calls.push('updateProfile');
       updates.push({ userId, patch });
       rows[userId] = { ...rows[userId]!, ...patch };
     },
@@ -171,6 +172,7 @@ function harness(start: AccountStatus = signedIn(USER), rows: Record<string, Pro
       return { profile: rows[USER] ?? null, matches: [] };
     },
     async deleteCloudHistory() {
+      calls.push('deleteHistory');
       if (fail.deleteHistory) throw new Error('500');
       return extra.cloud ? extra.cloud.deleteHistory() : 3;
     },
@@ -477,11 +479,15 @@ describe('the rights actions', () => {
     expect(await h.account.exportData()).toEqual({ ok: false, error: 'failed' });
   });
 
-  it('deletes the cloud history and turns the backup off, the other answers kept', async () => {
+
+  it('turns the backup off before it deletes the history', async () => {
     const h = harness();
     await h.account.start();
     h.calls.length = 0;
     expect(await h.account.deleteCloudHistory()).toEqual({ ok: true, deleted: 3 });
+    expect(h.calls.indexOf('updateProfile')).toBeGreaterThanOrEqual(0);
+    expect(h.calls.indexOf('updateProfile')).toBeLessThan(h.calls.indexOf('deleteHistory'));
+    expect(h.calls.indexOf('deleteHistory')).toBeLessThan(h.calls.indexOf('clear'));
     expect(h.updates).toEqual([
       {
         userId: USER,
@@ -490,32 +496,42 @@ describe('the rights actions', () => {
     ]);
     // The same error-reports answer: `ReportsLink` restarts nothing for it.
     expect(h.applies.at(-1)).toEqual({ consent: true });
-    expect(h.calls.indexOf('clear')).toBeGreaterThan(h.calls.indexOf('apply'));
-    expect(h.calls.at(-1)).toBe('changed');
     expect(h.account.syncEnabled()).toBe(false);
+    expect(h.calls.at(-1)).toBe('changed');
   });
 
-  it('changes nothing when the cloud refuses to delete the history', async () => {
-    const h = harness();
-    await h.account.start();
-    const before = h.account.details().profile;
-    h.calls.length = 0;
-    h.fail.deleteHistory = true;
-    expect(await h.account.deleteCloudHistory()).toEqual({ ok: false, error: 'failed' });
-    expect(h.updates).toEqual([]);
-    expect(h.calls).toEqual([]);
-    expect(h.account.details().profile).toEqual(before);
-    expect(h.account.syncEnabled()).toBe(true);
-  });
-
-  it('keeps the sync state when the backup cannot be turned off after the delete', async () => {
+  it('deletes nothing and answers failed when the backup cannot be turned off', async () => {
     const h = harness();
     await h.account.start();
     h.calls.length = 0;
     h.fail.write = true;
-    expect(await h.account.deleteCloudHistory()).toEqual({ ok: true, deleted: 3 });
+    expect(await h.account.deleteCloudHistory()).toEqual({ ok: false, error: 'failed' });
+    expect(h.calls).not.toContain('deleteHistory');
     expect(h.calls).not.toContain('clear');
     expect(h.account.syncEnabled()).toBe(true);
+  });
+
+  it('deletes nothing and answers failed when the profile cannot be read', async () => {
+    const h = harness();
+    h.fail.read = true;
+    await h.account.start();
+    h.calls.length = 0;
+    expect(await h.account.deleteCloudHistory()).toEqual({ ok: false, error: 'failed' });
+    expect(h.calls).not.toContain('deleteHistory');
+    expect(h.updates).toEqual([]);
+  });
+
+  it('leaves the backup off, and tells the page, when the delete fails after it', async () => {
+    const h = harness();
+    await h.account.start();
+    h.calls.length = 0;
+    h.fail.deleteHistory = true;
+    expect(await h.account.deleteCloudHistory()).toEqual({ ok: false, error: 'failed' });
+    expect(h.updates.map((u) => u.patch.consent_sync)).toEqual([false]);
+    expect(h.rows[USER]!.consent_sync).toBe(false);
+    expect(h.account.syncEnabled()).toBe(false);
+    expect(h.calls).not.toContain('clear');
+    expect(h.calls.at(-1)).toBe('changed');
   });
 
   it('clears the sync state for an account whose backup was already off', async () => {
@@ -585,10 +601,10 @@ describe('the rights actions', () => {
     expect(h.account.syncEnabled()).toBe(false);
   });
 
-  it('lifts the hold when the delete fails', async () => {
+  it('lifts the hold when the backup cannot be turned off', async () => {
     const h = harness();
     await h.account.start();
-    h.fail.deleteHistory = true;
+    h.fail.write = true;
     const deleting = h.account.deleteCloudHistory();
     expect(h.account.syncEnabled()).toBe(false);
     expect(await deleting).toEqual({ ok: false, error: 'failed' });

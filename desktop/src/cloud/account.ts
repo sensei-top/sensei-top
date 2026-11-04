@@ -387,14 +387,15 @@ export class CloudAccount {
     }
   }
 
-  /** Trap: the backup is held off and any run let finish before the
-   *  delete, or a batch uploaded after it stays in the cloud. Trap: the
-   *  backup is turned off before the sync state is cleared; the
-   *  other way round, a run in between would upload every match again. When
-   *  the profile write fails the state is kept, so nothing goes up at once;
-   *  but the backup is still on, so the next app start's pull finds the
-   *  deleted rows and uploads every match again. The reply is still `ok`
-   *  (the history is gone), and the page shows the backup still on. */
+  /** Trap: the sync is held off and any run let finish before anything
+   *  else, or a batch uploaded after the delete stays in the cloud. Trap: the
+   *  backup is turned off before the delete, not after: the cloud refuses a
+   *  write to the history while it is off, so another install's push cannot
+   *  land between the delete and the switch and bring rows back. Trap: the
+   *  delete comes before the sync state is cleared; the other way round, a
+   *  run in between would upload every match again. When the profile cannot
+   *  be read or written nothing is deleted. When the delete fails the backup
+   *  stays off, which is what was asked, and the page is told. */
   async deleteCloudHistory(): Promise<AccountReply> {
     const user = this.user();
     if (user === null) return { ok: false, error: 'signedOut' };
@@ -410,18 +411,14 @@ export class CloudAccount {
   private async deleteHeldOff(user: string): Promise<AccountReply> {
     const generation = this.generation;
     await this.deps.sync.idle();
-    let deleted: number;
-    try {
-      deleted = await this.deps.db.deleteCloudHistory();
-    } catch (error) {
-      this.log.warn('account: the cloud history could not be deleted', { error: String(error) });
-      return { ok: false, error: 'failed' };
-    }
-    this.log.info('account: cloud history deleted', { matches: deleted });
     let current = this.profile;
     if (current.state === 'unknown') {
       const row = await this.readProfile(user);
       current = row === undefined ? current : toState(row);
+    }
+    if (current.state === 'unknown') {
+      this.log.warn('account: the profile could not be read; the cloud history is left as it was');
+      return { ok: false, error: 'failed' };
     }
     if (current.state === 'read' && current.consentSync) {
       const off = await this.writeProfile(
@@ -436,14 +433,19 @@ export class CloudAccount {
         generation,
       );
       if (!off.ok) {
-        this.log.warn('account: the backup could not be turned off after the delete');
-        this.deps.changed();
-        return { ok: true, deleted };
+        this.log.warn('account: the backup could not be turned off; the cloud history is left as it was');
+        return { ok: false, error: 'failed' };
       }
-    } else if (current.state === 'unknown') {
-      this.log.warn('account: the profile could not be read after the delete; the backup is left as it was');
-      return { ok: true, deleted };
     }
+    let deleted: number;
+    try {
+      deleted = await this.deps.db.deleteCloudHistory();
+    } catch (error) {
+      this.log.warn('account: the cloud history could not be deleted', { error: String(error) });
+      this.deps.changed();
+      return { ok: false, error: 'failed' };
+    }
+    this.log.info('account: cloud history deleted', { matches: deleted });
     await this.deps.sync.clear();
     this.deps.changed();
     return { ok: true, deleted };
