@@ -389,6 +389,10 @@ describe('small readers', () => {
     expect(uses('status', 'accountStatus')).toBe(true);
     expect(uses('signIn', 'accountSignIn')).toBe(true);
     expect(uses('signOut', 'accountSignOut')).toBe(true);
+    expect(uses('setProfile', 'accountSetProfile')).toBe(true);
+    expect(uses('exportData', 'accountExport')).toBe(true);
+    expect(uses('deleteCloudHistory', 'accountDeleteHistory')).toBe(true);
+    expect(uses('deleteAccount', 'accountDelete')).toBe(true);
     expect(uses('reportError', 'reportError')).toBe(true);
     expect(uses('reportProblem', 'reportProblem')).toBe(true);
   });

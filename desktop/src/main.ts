@@ -4,7 +4,8 @@
 // `tray.ts` (D14), `log.ts` (D17), `store.ts` (shell.json, D2), `settings.ts`
 // (the bridge's settings and its IPC contract, S9; `preload.ts` is its page side),
 // `updater.ts` (S14, D24), `i18n.ts` (the shell's own text, plan 18 D8).
-// Onboarding's three actions (S15) are answered by `settings.ts`.
+// Onboarding's three actions (S15) are answered by `settings.ts`. The account's
+// backup and actions (plan 40b S12) are `cloud/sync.ts` and `cloud/account.ts`.
 //
 // - One instance (F7): a second launch shows the first one's window, and
 //   retries the server if it had given up.
@@ -27,10 +28,12 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { cloudConfig } from './cloud/config';
-import { CloudAuth } from './cloud/auth';
+import { CloudAccount, restoredUser, supabaseAccountDb, type AccountReply } from './cloud/account';
+import { CloudAuth, type AccountStatus } from './cloud/auth';
 import { fetchLogTail, sendProblemReport } from './cloud/report';
-import { ErrorReporter, sentryFactory } from './cloud/sentry';
+import { ErrorReporter, sentryFactory, systemOs } from './cloud/sentry';
 import { SessionStore } from './cloud/sessionStore';
+import { CloudSync, localSyncApi, MatchEndWatch, stateFile, supabaseSyncDb } from './cloud/sync';
 import { applyAutostart, applyFirstRun, startMode } from './autostart';
 import { setLanguage, setSystemTags, t } from './i18n';
 import { logPath, newSessionId, ShellLog } from './log';
@@ -51,8 +54,8 @@ import {
 } from './settings';
 import type { ReportOutcome } from './cloud/report';
 import { DB_NAME, resolveDataDir, serverCommand, ServerController, type ServerState } from './server';
-import { settleAiFeatures, ShellStore } from './store';
-import { StatusTray, type UpdateMenu } from './tray';
+import { ensureInstallId, settleAiFeatures, ShellStore } from './store';
+import { StatusTray, type LiveSnapshot, type UpdateMenu } from './tray';
 import { updaterAvailability, UpdateService, type UpdateStatus } from './updater';
 import { appMenuTemplate, MainWindow } from './window';
 
@@ -87,6 +90,10 @@ try {
 } catch {
   // the log says why below, and the server's start fails visibly
 }
+
+/** How long the first spawn of the server waits for a stored session to be read. */
+const RESTORE_WAIT_MS = 3000;
+const matchEnd = new MatchEndWatch();
 
 const session = newSessionId();
 const shellLog = new ShellLog(logPath(dataDir), { session, echo: !packaged });
@@ -250,6 +257,7 @@ function run(): void {
       window?.showError(shellLog.scrub(logPath(dataDir)), block);
       return false;
     }
+    serverSpawned = true;
     server.start();
     return true;
   };
@@ -286,9 +294,10 @@ function run(): void {
     }
   };
 
-  // DB4: no Supabase project in this build, no CloudAuth and no network.
-  // Made once Electron is ready (`safeStorage` is not usable before).
+  // DB4: no Supabase project in this build, no CloudAuth, no backup and no
+  // network. Made once Electron is ready (`safeStorage` is not usable before).
   let auth: CloudAuth | null = null;
+  let cloudAccount: CloudAccount | null = null;
   const account = new AccountApi(
     () => auth,
     store,
@@ -296,6 +305,7 @@ function run(): void {
     () => t('auth.error.failed'),
     () => t('auth.error.signOutFailed'),
     shellLog.child('shell.account'),
+    () => cloudAccount?.details() ?? null,
   );
 
   const settings: SettingsService = new SettingsService({
@@ -358,11 +368,14 @@ function run(): void {
   // DB8: consent and the signed-in user reach the server as environment at
   // spawn, so a change of either restarts it. The account module calls
   // `reports.setConsent` and `reports.setUser`.
+  // Before the server's first spawn its environment is read at that spawn, so
+  // a change then needs no restart (the restored user, set below).
+  let serverSpawned = false;
   const reports: ReportsLink = new ReportsLink(
     store,
     errors,
     cloudConfig.sentryDsnDesktop,
-    () => settings.restartFor('error-report settings changed'),
+    () => (serverSpawned ? settings.restartFor('error-report settings changed') : Promise.resolve()),
     sentryLog,
   );
 
@@ -454,6 +467,12 @@ function run(): void {
   handle(CHANNELS.accountStatus, () => ({ available: false }) as const, () => account.state());
   handle(CHANNELS.accountSignIn, () => ({ ok: false, error: 'auth.error.failed', message: t('ipc.refused') }) as const, (provider: unknown) => account.signIn(provider));
   handle(CHANNELS.accountSignOut, refusedSaved, () => account.signOut());
+  const refusedAccount = (): AccountReply => ({ ok: false, error: 'unavailable' });
+  const noAccount = (): Promise<AccountReply> => Promise.resolve(refusedAccount());
+  handle(CHANNELS.accountSetProfile, refusedAccount, (change: unknown) => cloudAccount?.setProfile(change) ?? noAccount());
+  handle(CHANNELS.accountExport, refusedAccount, () => cloudAccount?.exportData() ?? noAccount());
+  handle(CHANNELS.accountDeleteHistory, refusedAccount, () => cloudAccount?.deleteCloudHistory() ?? noAccount());
+  handle(CHANNELS.accountDelete, refusedAccount, () => cloudAccount?.deleteAccount() ?? noAccount());
   // DB9: dropped without consent; the answer says whether it was captured.
   handle(CHANNELS.reportError, () => false, (payload: unknown) => errors.captureRendererError(payload));
   handle(CHANNELS.reportProblem, (): ReportOutcome => 'failed', (payload: unknown) => {
@@ -522,6 +541,7 @@ function run(): void {
   });
   app.on('will-quit', () => {
     updates?.dispose();
+    cloudAccount?.dispose();
     void auth?.dispose();
     tray?.destroy();
     tray = null;
@@ -529,7 +549,7 @@ function run(): void {
     shellLog.close();
   });
 
-  void app.whenReady().then(() => {
+  void app.whenReady().then(async () => {
     log.info('displays', screen.getAllDisplays().map((display) => ({
       id: display.id,
       bounds: display.bounds,
@@ -545,6 +565,7 @@ function run(): void {
       (error: unknown) => log.warn('gpu info unavailable', { error: String(error) }),
     );
 
+    let restoredAccount: Promise<AccountStatus> | null = null;
     if (cloudConfig.supabase) {
       const cloud = new CloudAuth({
         supabase: cloudConfig.supabase,
@@ -560,7 +581,46 @@ function run(): void {
       });
       auth = cloud;
       cloud.onChange(() => settings.accountChanged());
-      void cloud.ready().then(() => settings.accountChanged());
+      const restored = cloud.ready().then((status) => {
+        settings.accountChanged();
+        return status;
+      });
+
+      const userData = app.getPath('userData');
+      const osInfo = systemOs();
+      let accountRef: CloudAccount | null = null;
+      const sync = new CloudSync({
+        db: supabaseSyncDb(cloud.client),
+        local: localSyncApi((url, init) => fetch(url, init), server, shellLog.child('shell.sync')),
+        file: stateFile(userData),
+        currentUser: () => (cloud.status().signedIn ? cloud.status().userId : null),
+        enabled: () => accountRef?.syncEnabled() ?? false,
+        installId: () => ensureInstallId(store, randomUUID),
+        appVersion: app.getVersion(),
+        os: `${osInfo.name} ${osInfo.version}`,
+        now: () => new Date(),
+        onStatus: () => settings.accountChanged(),
+        log: shellLog.child('shell.sync'),
+      });
+      accountRef = new CloudAccount({
+        auth: cloud,
+        db: supabaseAccountDb(cloud.client),
+        sync,
+        reports,
+        saveJson: async (defaultName, text) => {
+          const options: electron.SaveDialogOptions = { defaultPath: defaultName, filters: [{ name: 'JSON', extensions: ['json'] }] };
+          const target = window ? await dialog.showSaveDialog(window.win, options) : await dialog.showSaveDialog(options);
+          if (target.canceled || !target.filePath) return false;
+          await fs.promises.writeFile(target.filePath, text, { encoding: 'utf8', mode: 0o600 });
+          return true;
+        },
+        now: () => new Date(),
+        changed: () => settings.accountChanged(),
+        restored,
+        log: shellLog.child('shell.account'),
+      });
+      cloudAccount = accountRef;
+      restoredAccount = restored;
     }
 
     Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate(packaged)));
@@ -591,7 +651,21 @@ function run(): void {
           if (image.isEmpty()) log.warn('tray icon missing', { name });
           return image;
         },
-        fetch: (input, init) => fetch(input, init),
+        // DB6: the tray's `/api/live` answers also tell the backup a match ended.
+        fetch: async (input, init) => {
+          const response = await fetch(input, init);
+          if (cloudAccount) {
+            void response
+              .clone()
+              .json()
+              .then(
+                (live: unknown) => matchEnd.note(response.ok ? (live as LiveSnapshot) : null, Date.now()),
+                () => false,
+              )
+              .then((ended) => (ended ? cloudAccount?.matchEnded() : undefined));
+          }
+          return response;
+        },
       },
       {
         open: () => window?.open(),
@@ -657,6 +731,8 @@ function run(): void {
           if (!firstDataChecked) {
             firstDataChecked = true;
             void settings.startFirstDataIfMissing();
+            // The app start's backup run needs the local API.
+            void cloudAccount?.start();
           }
         });
       }
@@ -665,6 +741,15 @@ function run(): void {
       else if (state.kind === 'starting' && previous === 'failed') window?.showLoading();
       previous = state.kind;
     });
+    // The restored user reaches the server's first spawn, so no restart
+    // follows it; a session slower to read than this is set by the account
+    // module's start instead, at the cost of one restart.
+    // Neither a failed session read nor a failed reports update may keep the
+    // server from starting.
+    if (restoredAccount) {
+      const user = await restoredUser(restoredAccount, RESTORE_WAIT_MS, shellLog.child('shell.account'));
+      if (user) await reports.setUser(user).catch((error: unknown) => log.warn('the restored user could not reach the error reports', { error: String(error) }));
+    }
     startUnlessBlocked();
   });
 }

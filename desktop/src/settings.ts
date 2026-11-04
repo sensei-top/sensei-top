@@ -33,6 +33,10 @@
 //   account sends the settings again like an update does. A build with no
 //   Supabase project has no `CloudAuth`: the state is `{ available: false }`
 //   and sign-in refuses. The first successful sign-in writes `installId`.
+//   A signed-in state also carries `AccountDetails` (the profile and the
+//   backup's status, `cloud/account.ts`), and a change of either sends the
+//   settings again. The profile write, export and the two deletes answer
+//   through `cloud/account.ts` with an `AccountError` code, not text.
 //
 // `bridge.ts` in the dashboard is the other half of the contract. The types
 // are repeated here because `desktop/` cannot import from `web/`.
@@ -40,6 +44,7 @@
 // Electron-free: vitest imports it directly. The main process hands in what
 // needs Electron (the server, dialogs, the window) as `SettingsDeps`.
 
+import type { AccountDetails } from './cloud/account';
 import { PROVIDERS, type AccountStatus, type CloudAuth, type Provider, type SignInError } from './cloud/auth';
 import { t } from './i18n';
 import type { Logger } from './log';
@@ -174,6 +179,10 @@ export const CHANNELS = {
   accountStatus: 'sensei-top:account-status',
   accountSignIn: 'sensei-top:account-sign-in',
   accountSignOut: 'sensei-top:account-sign-out',
+  accountSetProfile: 'sensei-top:account-set-profile',
+  accountExport: 'sensei-top:account-export',
+  accountDeleteHistory: 'sensei-top:account-delete-history',
+  accountDelete: 'sensei-top:account-delete',
   reportError: 'sensei-top:report-error',
   reportProblem: 'sensei-top:report-problem',
   /** Main to page: the tray's "Report a problem" was chosen. */
@@ -181,8 +190,9 @@ export const CHANNELS = {
   changed: 'sensei-top:changed',
 } as const;
 
-/** The account as the page sees it. */
-export type AccountState = { available: false } | ({ available: true } & AccountStatus);
+/** The account as the page sees it. `AccountDetails` is there once the
+ *  account module runs (a build with a Supabase project, Electron ready). */
+export type AccountState = { available: false } | ({ available: true } & AccountStatus & Partial<AccountDetails>);
 
 export type AccountSignInReply =
   | { ok: true; account: AccountStatus }
@@ -202,11 +212,16 @@ export class AccountApi {
     private readonly unavailableMessage: () => string,
     private readonly signOutFailedMessage: () => string,
     private readonly log: Logger = silent,
+    /** The profile and the backup's status; `null` while no account module runs. */
+    private readonly details: () => AccountDetails | null = () => null,
   ) {}
 
   state(): AccountState {
     const auth = this.getAuth();
-    return auth ? { available: true, ...auth.status() } : { available: false };
+    if (!auth) return { available: false };
+    const status = auth.status();
+    const details = status.signedIn ? this.details() : null;
+    return details ? { available: true, ...status, ...details } : { available: true, ...status };
   }
 
   async signIn(provider: unknown): Promise<AccountSignInReply> {
@@ -271,17 +286,25 @@ export class ReportsLink {
   /** Caches the consent and applies it at once; restarts the server only
    *  when its environment changed. */
   async setConsent(on: boolean): Promise<void> {
-    const before = this.env();
-    if (!this.store.update({ consentErrors: on })) this.log.warn('the error-reports choice could not be written');
-    await this.reporter.setConsent(on);
-    await this.restartIfChanged(before);
+    await this.apply({ consent: on });
   }
 
   /** The signed-in account's ID, `null` signed out. */
   async setUser(userId: string | null): Promise<void> {
+    await this.apply({ user: userId });
+  }
+
+  /** `setUser` and `setConsent` for what `change` holds, with one restart at most. */
+  async apply(change: { consent?: boolean; user?: string | null }): Promise<void> {
     const before = this.env();
-    this.user = userId?.trim() || null;
-    this.reporter.setUser(this.user);
+    if (change.user !== undefined) {
+      this.user = change.user?.trim() || null;
+      this.reporter.setUser(this.user);
+    }
+    if (change.consent !== undefined) {
+      if (!this.store.update({ consentErrors: change.consent })) this.log.warn('the error-reports choice could not be written');
+      await this.reporter.setConsent(change.consent);
+    }
     await this.restartIfChanged(before);
   }
 
