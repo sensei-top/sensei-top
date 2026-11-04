@@ -326,6 +326,7 @@ function run(): void {
     askAutostart: asksAutostart(process.platform, onWindowsStore, canStartWithSystem),
     canAutostart: canStartWithSystem,
     windowsStore: onWindowsStore,
+    canContribute: Boolean(cloudConfig.supabase),
     newestBackup: (dir) => {
       try {
         const stat = fs.statSync(path.join(dir, `${DB_NAME}.backup`));

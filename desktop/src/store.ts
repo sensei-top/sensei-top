@@ -61,6 +61,8 @@ export interface ShellPrefs {
   consentErrors?: boolean;
   /** Plan 40b S13: the answer to "help build the stats"; absent or `null` means not asked, which sends nothing. */
   contribute?: Contribute | null;
+  /** Plan 40b S15: the one-time "Help build the stats" page was shown; absent means not yet. */
+  contribAsked?: boolean;
 }
 
 /** The yes to contributed games and what it was given to. */
@@ -92,7 +94,7 @@ export function parseContribute(value: unknown): Contribute | undefined {
 /** What is on disk: the known keys plus whatever else was there. */
 export type ShellJson = ShellPrefs & Record<string, unknown>;
 
-const BOOLEAN_KEYS = ['keepRunningOnClose', 'autostart', 'checkForUpdates', 'diagnostic', 'onboarded', 'aiFeatures', 'consentErrors'] as const;
+const BOOLEAN_KEYS = ['keepRunningOnClose', 'autostart', 'checkForUpdates', 'diagnostic', 'onboarded', 'aiFeatures', 'consentErrors', 'contribAsked'] as const;
 
 function isInt(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value);

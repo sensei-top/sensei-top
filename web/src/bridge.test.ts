@@ -24,6 +24,8 @@ function settings(version: string, model = 'm'): BridgeSettings {
       update: { state: 'idle' },
       onboarded: true,
       aiFeatures: true,
+      canContribute: false,
+      contribAsked: false,
       contribute: null,
       account: { available: false },
       askAutostart: false,

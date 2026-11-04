@@ -62,6 +62,8 @@ const SAMPLE_APP: AppSettings = {
   update: { state: 'ready', version: '0.0.1-sample' },
   onboarded: true,
   aiFeatures: true,
+  canContribute: false,
+  contribAsked: false,
   contribute: null,
   account: { available: false },
   askAutostart: false,

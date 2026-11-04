@@ -210,6 +210,10 @@ export type AppSettings = {
   /** Whether AI features are on. `null`: undecided, a fresh install that
    *  `/welcome` will ask; it reads as off. */
   aiFeatures: boolean | null
+  /** Whether this build can upload contributed games; read-only. False hides the question, the one-time page and the Settings card. */
+  canContribute: boolean
+  /** Whether the one-time "Help build the stats" page was shown; set it to true through `app.set`; only `true` is stored. */
+  contribAsked: boolean
   /** The stored "Help build the stats" answer; `null` while unanswered, which sends nothing. */
   contribute: Contribute | null
   /** The account; a change arrives with the rest of the settings. */
@@ -237,7 +241,7 @@ export type AppSettings = {
 /** What the page can change of `AppSettings`. */
 export type AppChange = Partial<
   Pick<AppSettings, 'startWithSystem' | 'keepRunningOnClose' | 'checkForUpdates' | 'diagnostic' | 'language' | 'plays'>
-> & { aiFeatures?: boolean }
+> & { aiFeatures?: boolean; contribAsked?: true }
 
 /** The shell's actions. `exportDiagnostics` answers `{ ok: true }` when the
  *  viewer cancels the shell's dialog too, so `ok` never means "exported". */

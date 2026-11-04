@@ -53,6 +53,8 @@ function shellWith(
         update: { state: 'idle' },
         onboarded: true,
         aiFeatures,
+        canContribute: false,
+        contribAsked: false,
         contribute: null,
         account: { available: false },
         askAutostart: false,

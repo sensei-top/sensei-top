@@ -53,7 +53,7 @@ const DOCTOR = {
   mtgo: { discovered: null },
   cards: { arena_ids: 10, rules_text: 5 },
 };
-const NO_APP_EXTRAS = { askAutostart: false, canAutostart: false, windowsStore: false, rulesText: null, firstData: { state: 'idle' }, account: { available: false } } as const;
+const NO_APP_EXTRAS = { askAutostart: false, canAutostart: false, windowsStore: false, rulesText: null, firstData: { state: 'idle' }, account: { available: false }, canContribute: false } as const;
 
 describe('config --json to ShellSettings', () => {
   it('carries mtgo.deck_dir into sources.mtgoDeckDir, null when unset', () => {
@@ -135,6 +135,8 @@ describe('config --json to ShellSettings', () => {
       update: { state: 'idle' },
       onboarded: false,
       aiFeatures: null,
+      canContribute: false,
+      contribAsked: false,
       contribute: null,
       account: { available: false },
       askAutostart: false,
@@ -150,7 +152,7 @@ describe('config --json to ShellSettings', () => {
   });
 
   it('carries askAutostart and canAutostart through as given', () => {
-    const base = { version: '1', platform: 'win32', update: { state: 'idle' } as const, rulesText: null, firstData: { state: 'idle' }, account: { available: false } } as const;
+    const base = { version: '1', platform: 'win32', update: { state: 'idle' } as const, rulesText: null, firstData: { state: 'idle' }, account: { available: false }, canContribute: false } as const;
     const installer = toAppSettings({}, { ...base, askAutostart: false, canAutostart: true, windowsStore: false });
     expect(installer.askAutostart).toBe(false);
     expect(installer.canAutostart).toBe(true);
@@ -462,7 +464,7 @@ const BUSY = 'A backup started 2m ago (pid 123) is still running; nothing to do.
 
 type Cards = { lines: string[]; fail?: RunError; finish?: Promise<void> };
 
-function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?: string; slot?: { at: string; bytes: number } | null; open?: string | Error; storeFails?: boolean; cards?: Cards; doctor?: () => string; configFails?: { on: boolean }; restoreHold?: Promise<void>; appFlags?: { canAutostart: boolean; windowsStore: boolean } } = {}) {
+function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?: string; slot?: { at: string; bytes: number } | null; open?: string | Error; storeFails?: boolean; cards?: Cards; doctor?: () => string; configFails?: { on: boolean }; restoreHold?: Promise<void>; canContribute?: boolean; appFlags?: { canAutostart: boolean; windowsStore: boolean } } = {}) {
   const backupOutput = extra.backupOutput ?? '  Backup:    2,048 bytes, verified\n';
   const calls: Array<{ args: readonly string[]; stdin?: string }> = [];
   const events: string[] = [];
@@ -535,6 +537,7 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
     askAutostart: true,
     canAutostart: extra.appFlags?.canAutostart ?? true,
     windowsStore: extra.appFlags?.windowsStore ?? false,
+    canContribute: extra.canContribute ?? false,
     applyAutostart: (on) => void autostarts.push(on),
     countBackups: () => 1,
     newestBackup: () => extra.slot ?? null,
@@ -974,6 +977,40 @@ describe('the service', () => {
       const fromThePage = { aiFeatures: null } as unknown as Parameters<typeof planAppChange>[1];
       expect(planAppChange(current, fromThePage)).toEqual({ patch: {}, restart: false });
       expect(planAppChange(current, { aiFeatures: false })).toEqual({ patch: { aiFeatures: false }, restart: false });
+    });
+  });
+
+  describe('contribAsked (plan 40b S15)', () => {
+    it('reads false when missing, is written by a change, published, and needs no restart', async () => {
+      const { service, stored, events, changes } = harness();
+      await service.refresh();
+      expect(service.current?.app.contribAsked).toBe(false);
+      expect(await service.setApp({ contribAsked: true })).toEqual({ ok: true });
+      expect(stored.contribAsked).toBe(true);
+      expect(changes.at(-1)?.app.contribAsked).toBe(true);
+      expect(events).not.toContain('stop');
+    });
+
+    it('forwards canContribute from the deps to the page', async () => {
+      const on = harness({}, { canContribute: true });
+      await on.service.refresh();
+      expect(on.service.current?.app.canContribute).toBe(true);
+      const off = harness();
+      await off.service.refresh();
+      expect(off.service.current?.app.canContribute).toBe(false);
+    });
+
+    it('stores only true: false gives an empty patch', () => {
+      const current = toAppSettings({}, { version: '1', platform: 'linux', update: { state: 'idle' }, ...NO_APP_EXTRAS });
+      expect(planAppChange(current, { contribAsked: false } as unknown as Parameters<typeof planAppChange>[1])).toEqual({ patch: {}, restart: false });
+    });
+
+    it('is not stored when it is not a boolean', () => {
+      const current = toAppSettings({}, { version: '1', platform: 'linux', update: { state: 'idle' }, ...NO_APP_EXTRAS });
+      const fromThePage = { contribAsked: 'yes' } as unknown as Parameters<typeof planAppChange>[1];
+      expect(planAppChange(current, fromThePage)).toEqual({ patch: {}, restart: false });
+      expect(planAppChange(current, { contribAsked: true })).toEqual({ patch: { contribAsked: true }, restart: false });
+      expect(toAppSettings({ contribAsked: true }, { version: '1', platform: 'linux', update: { state: 'idle' }, ...NO_APP_EXTRAS }).contribAsked).toBe(true);
     });
   });
 

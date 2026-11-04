@@ -133,6 +133,10 @@ export type AppSettings = {
   onboarded: boolean;
   /** shell.json's `aiFeatures` (plan 40D); `null` while undecided, which the page reads as off. */
   aiFeatures: boolean | null;
+  /** Whether this build can upload contributed games: the same condition as `main.ts` building the `Contributor` (a Supabase project in the build). Read-only for the page. */
+  canContribute: boolean;
+  /** shell.json's `contribAsked`: the one-time "Help build the stats" page was shown; a missing key reads false. */
+  contribAsked: boolean;
   /** shell.json's `contribute` (plan 40b S13); `null` while unanswered. */
   contribute: Contribute | null;
   /** The account (plan 40b S10); `{ available: false }` in a build with no Supabase project. */
@@ -154,6 +158,8 @@ export type AppSettings = {
 export type AppChange = Partial<Pick<AppSettings, 'startWithSystem' | 'keepRunningOnClose' | 'checkForUpdates' | 'diagnostic' | 'language' | 'plays'>> & {
   /** Never `null`: once chosen, the switch is not undecided again. */
   aiFeatures?: boolean;
+  /** Only `true`: the page was shown, and nothing un-asks it. */
+  contribAsked?: true;
 };
 
 /** What `window.senseiTopShell.initial` holds, and what a change sends. */
@@ -489,6 +495,7 @@ export function toAppSettings(
     rulesText: number | null;
     firstData: FirstData;
     account: AccountState;
+    canContribute: boolean;
   },
 ): AppSettings {
   return {
@@ -501,6 +508,8 @@ export function toAppSettings(
     update: info.update,
     onboarded: prefs.onboarded ?? false,
     aiFeatures: prefs.aiFeatures ?? null,
+    canContribute: info.canContribute,
+    contribAsked: prefs.contribAsked === true,
     contribute: prefs.contribute ?? null,
     account: info.account,
     askAutostart: info.askAutostart,
@@ -614,6 +623,7 @@ export function planAppChange(
   if (change.plays !== undefined) patch.plays = change.plays;
   // A `null` stored would be dropped at the next launch and decided again.
   if (typeof change.aiFeatures === 'boolean') patch.aiFeatures = change.aiFeatures;
+  if (change.contribAsked === true) patch.contribAsked = true;
   return { patch, restart: change.diagnostic !== undefined && change.diagnostic !== current.diagnostic };
 }
 
@@ -755,6 +765,8 @@ export interface SettingsDeps {
   canAutostart: boolean;
   /** `process.windowsStore === true`. */
   windowsStore: boolean;
+  /** Whether the build has a Supabase project, which `main.ts` builds the `Contributor` on. */
+  canContribute: boolean;
   /** How many backups the folder holds. */
   countBackups(dir: string): number;
   /** The newest `<db>.backup` slot in `dir`: its modification time (ISO) and size. */
@@ -855,6 +867,7 @@ export class SettingsService {
       rulesText: this.doctor?.rulesText ?? null,
       firstData: this.firstDataState,
       account: this.deps.account(),
+      canContribute: this.deps.canContribute,
     });
   }
 

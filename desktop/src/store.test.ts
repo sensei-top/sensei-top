@@ -46,6 +46,11 @@ describe('parsing shell.json', () => {
     expect(parseShellJson(JSON.stringify({ contribute: true }))).toEqual({ prefs: {}, dropped: ['contribute'] });
   });
 
+  it('keeps contribAsked when it is a boolean and drops anything else', () => {
+    expect(parseShellJson(JSON.stringify({ contribAsked: true }))).toEqual({ prefs: { contribAsked: true }, dropped: [] });
+    expect(parseShellJson(JSON.stringify({ contribAsked: 'yes' }))).toEqual({ prefs: {}, dropped: ['contribAsked'] });
+  });
+
   it('keeps consentErrors when it is a boolean and drops anything else', () => {
     expect(parseShellJson(JSON.stringify({ consentErrors: true }))).toEqual({ prefs: { consentErrors: true }, dropped: [] });
     expect(parseShellJson(JSON.stringify({ consentErrors: 'yes' }))).toEqual({ prefs: {}, dropped: ['consentErrors'] });
