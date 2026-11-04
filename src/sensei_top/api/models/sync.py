@@ -1,6 +1,7 @@
-"""The cloud-backup payloads — ``/api/sync/payloads``. Read by the desktop
-shell's main process, which uploads them; every field is one the privacy
-policy lists for cloud backup.
+"""The cloud backup's wire models: the payloads ``GET /api/sync/payloads``
+serves the desktop shell's main process, which uploads them (every field is
+one the privacy policy lists for cloud backup), and the cloud rows it hands
+back to ``PUT /api/sync/pulled``.
 
 These drive the OpenAPI schema, which openapi-typescript turns into the
 frontend's types — so field names here are the frontend's contract.
@@ -8,9 +9,9 @@ frontend's types — so field names here are the frontend's contract.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import AwareDatetime, BaseModel, Field
 
 from sensei_top.api.models.metagame import FormatName
 
@@ -78,3 +79,37 @@ class SyncPayload(BaseModel):
         "whitespace); a changed digest is a payload to push again"
     )
     payload: SyncMatchPayload
+
+
+class SyncPulledMatch(BaseModel):
+    """One row of the user's cloud backup, as the shell's main process pulled
+    it."""
+
+    match_id: str = Field(min_length=1, description="Arena's or MTGO's own id for the match")
+    source: Literal["arena", "mtgo"]
+    played_at: AwareDatetime | None = Field(None, description="the cloud row's played_at")
+    payload: dict[str, Any] = Field(
+        description="the payload as the cloud holds it; stored as received, never checked "
+        "against this install's schema"
+    )
+    schema_version: int = Field(ge=1)
+    updated_at: AwareDatetime = Field(description="when the cloud row last changed")
+    deleted_at: AwareDatetime | None = Field(
+        None, description="set when the user deleted the match from their backup"
+    )
+
+
+class SyncPulledIn(BaseModel):
+    """One batch of pulled rows, written in one transaction, in order."""
+
+    items: list[SyncPulledMatch] = Field(max_length=1000)
+
+
+class SyncPulledWritten(BaseModel):
+    stored: int = Field(description="restored matches written to this install")
+    removed: int = Field(description="restored matches deleted, the cloud having deleted them")
+    local: int = Field(
+        description="rows for a match this install read from its own log, never stored: "
+        "only their picks are considered"
+    )
+    picks: int = Field(description="local picks replaced by a newer pulled one")

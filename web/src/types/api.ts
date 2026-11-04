@@ -1027,6 +1027,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sync/pulled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Sync Pulled
+         * @description Store a batch of rows pulled from the user's cloud backup, in order,
+         *     in one transaction.
+         *
+         *     - A row with ``deleted_at`` deletes that match's ``cloud_match`` row, if
+         *       any. A match read from this install's own log is never deleted.
+         *     - A row for a match in ``matches`` is never stored: the local match wins.
+         *       Each of its pulled picks replaces the local one only when strictly
+         *       newer by ``updated_at`` (equal keeps the local one), and keeps the
+         *       pulled ``updated_at``. A missing pulled pick never clears a local one.
+         *     - An MTGO pick names its deck by board, not id: it applies only when
+         *       exactly one local MTGO deck file has that resolved maindeck, and only
+         *       to an MTGO match.
+         *     - A pick that cannot be read or applied is skipped with a warning; the
+         *       rest of the batch is written.
+         *     - Any other row is upserted into ``cloud_match``.
+         */
+        put: operations["sync_pulled_api_sync_pulled_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/llm/status": {
         parameters: {
             query?: never;
@@ -5343,6 +5377,79 @@ export interface components {
             /** @description the user's pick of their own MTGO deck and format; the deck itself is the payload's deck */
             mtgo: components["schemas"]["SyncMtgoPick"] | null;
         };
+        /**
+         * SyncPulledIn
+         * @description One batch of pulled rows, written in one transaction, in order.
+         */
+        SyncPulledIn: {
+            /** Items */
+            items: components["schemas"]["SyncPulledMatch"][];
+        };
+        /**
+         * SyncPulledMatch
+         * @description One row of the user's cloud backup, as the shell's main process pulled
+         *     it.
+         */
+        SyncPulledMatch: {
+            /**
+             * Match Id
+             * @description Arena's or MTGO's own id for the match
+             */
+            match_id: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "arena" | "mtgo";
+            /**
+             * Played At
+             * @description the cloud row's played_at
+             */
+            played_at?: string | null;
+            /**
+             * Payload
+             * @description the payload as the cloud holds it; stored as received, never checked against this install's schema
+             */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Schema Version */
+            schema_version: number;
+            /**
+             * Updated At
+             * Format: date-time
+             * @description when the cloud row last changed
+             */
+            updated_at: string;
+            /**
+             * Deleted At
+             * @description set when the user deleted the match from their backup
+             */
+            deleted_at?: string | null;
+        };
+        /** SyncPulledWritten */
+        SyncPulledWritten: {
+            /**
+             * Stored
+             * @description restored matches written to this install
+             */
+            stored: number;
+            /**
+             * Removed
+             * @description restored matches deleted, the cloud having deleted them
+             */
+            removed: number;
+            /**
+             * Local
+             * @description rows for a match this install read from its own log, never stored: only their picks are considered
+             */
+            local: number;
+            /**
+             * Picks
+             * @description local picks replaced by a newer pulled one
+             */
+            picks: number;
+        };
         /** TurnCurve */
         TurnCurve: {
             /**
@@ -6594,6 +6701,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncPayload"][];
+                };
+            };
+        };
+    };
+    sync_pulled_api_sync_pulled_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncPulledIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncPulledWritten"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
