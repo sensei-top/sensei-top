@@ -59,6 +59,34 @@ export interface ShellPrefs {
   installId?: string;
   /** Plan 40b S11: the yes to error reports, cached from the profile (the account module sets it); absent means off. */
   consentErrors?: boolean;
+  /** Plan 40b S13: the answer to "help build the stats"; absent or `null` means not asked, which sends nothing. */
+  contribute?: Contribute | null;
+}
+
+/** The yes to contributed games and what it was given to. */
+export interface Contribute {
+  yes: boolean;
+  /** The privacy policy's version the answer was given under. */
+  policyVersion: string;
+  answeredAt: string;
+  ageConfirmed: boolean;
+}
+
+/** `value` as a `Contribute`, or `undefined` when any field is the wrong type. */
+export function parseContribute(value: unknown): Contribute | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  const raw = value as Record<string, unknown>;
+  if (
+    typeof raw.yes !== 'boolean' ||
+    typeof raw.policyVersion !== 'string' ||
+    raw.policyVersion === '' ||
+    typeof raw.answeredAt !== 'string' ||
+    raw.answeredAt === '' ||
+    typeof raw.ageConfirmed !== 'boolean'
+  ) {
+    return undefined;
+  }
+  return { yes: raw.yes, policyVersion: raw.policyVersion, answeredAt: raw.answeredAt, ageConfirmed: raw.ageConfirmed };
 }
 
 /** What is on disk: the known keys plus whatever else was there. */
@@ -115,6 +143,14 @@ export function parseShellJson(text: string): { prefs: ShellJson; dropped: strin
   if ('installId' in prefs && !(typeof prefs.installId === 'string' && prefs.installId !== '')) {
     delete prefs.installId;
     dropped.push('installId');
+  }
+  if ('contribute' in prefs && prefs.contribute !== null) {
+    const contribute = parseContribute(prefs.contribute);
+    if (contribute) prefs.contribute = contribute;
+    else {
+      delete prefs.contribute;
+      dropped.push('contribute');
+    }
   }
   if ('language' in prefs && !(LANGUAGE_CHOICES as readonly unknown[]).includes(prefs.language)) {
     delete prefs.language;

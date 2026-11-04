@@ -33,6 +33,7 @@ import { CloudAuth, type AccountStatus } from './cloud/auth';
 import { fetchLogTail, sendProblemReport } from './cloud/report';
 import { ErrorReporter, sentryFactory, systemOs } from './cloud/sentry';
 import { SessionStore } from './cloud/sessionStore';
+import { anonContribSender, contribAnswer, contributedFile, Contributor, localContribApi } from './cloud/contrib';
 import { CloudSync, localSyncApi, MatchEndWatch, stateFile, supabaseSyncDb } from './cloud/sync';
 import { applyAutostart, applyFirstRun, startMode } from './autostart';
 import { setLanguage, setSystemTags, t } from './i18n';
@@ -298,6 +299,7 @@ function run(): void {
   // network. Made once Electron is ready (`safeStorage` is not usable before).
   let auth: CloudAuth | null = null;
   let cloudAccount: CloudAccount | null = null;
+  let contributor: Contributor | null = null;
   const account = new AccountApi(
     () => auth,
     store,
@@ -487,6 +489,15 @@ function run(): void {
       log: sentryLog,
     });
   });
+  // S13: the answer is stored whether or not this build can upload; off stops a running upload at once.
+  handle(CHANNELS.contribSet, refusedSaved, (input: unknown): Saved => {
+    const answer = contribAnswer(input, new Date());
+    if (!answer) return { ok: false, error: t('settings.notSaved') };
+    if (!store.update({ contribute: answer })) return { ok: false, error: t('settings.notSaved') };
+    if (answer.yes) void contributor?.run();
+    else contributor?.stop();
+    return { ok: true };
+  });
   handle(CHANNELS.appFinishOnboarding, refusedSaved, () => settings.finishOnboarding());
   handle(CHANNELS.appShowDataFolder, refusedSaved, () => settings.showDataFolder());
   handle(CHANNELS.appShowLogs, refusedSaved, (): Saved => {
@@ -542,6 +553,7 @@ function run(): void {
   app.on('will-quit', () => {
     updates?.dispose();
     cloudAccount?.dispose();
+    contributor?.stop();
     void auth?.dispose();
     tray?.destroy();
     tray = null;
@@ -623,6 +635,18 @@ function run(): void {
       restoredAccount = restored;
     }
 
+    // DB14: uploads come from here alone, and only in a build with a project (DB4).
+    if (cloudConfig.supabase) {
+      contributor = new Contributor({
+        local: localContribApi((url, init) => fetch(url, init), server),
+        send: anonContribSender(cloudConfig.supabase, (url, init) => electron.net.fetch(url, init)),
+        file: contributedFile(app.getPath('userData')),
+        answer: () => store.get().contribute,
+        makeId: randomUUID,
+        log: shellLog.child('shell.contrib'),
+      });
+    }
+
     Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate(packaged)));
     window = new MainWindow(
       {
@@ -654,7 +678,7 @@ function run(): void {
         // DB6: the tray's `/api/live` answers also tell the backup a match ended.
         fetch: async (input, init) => {
           const response = await fetch(input, init);
-          if (cloudAccount) {
+          if (cloudAccount || contributor) {
             void response
               .clone()
               .json()
@@ -662,7 +686,11 @@ function run(): void {
                 (live: unknown) => matchEnd.note(response.ok ? (live as LiveSnapshot) : null, Date.now()),
                 () => false,
               )
-              .then((ended) => (ended ? cloudAccount?.matchEnded() : undefined));
+              .then((ended) => {
+                if (!ended) return;
+                void cloudAccount?.matchEnded();
+                void contributor?.run();
+              });
           }
           return response;
         },
@@ -733,6 +761,7 @@ function run(): void {
             void settings.startFirstDataIfMissing();
             // The app start's backup run needs the local API.
             void cloudAccount?.start();
+            void contributor?.run();
           }
         });
       }

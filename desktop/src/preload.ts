@@ -49,6 +49,7 @@ const CHANNEL = {
   accountExport: 'sensei-top:account-export',
   accountDeleteHistory: 'sensei-top:account-delete-history',
   accountDelete: 'sensei-top:account-delete',
+  contribSet: 'sensei-top:contrib-set',
   reportError: 'sensei-top:report-error',
   reportProblem: 'sensei-top:report-problem',
   reportProblemRequested: 'sensei-top:report-problem-requested',
@@ -89,6 +90,8 @@ if (location.protocol === 'http:') {
       deleteCloudHistory: (): Promise<AccountReply> => ipcRenderer.invoke(CHANNEL.accountDeleteHistory),
       deleteAccount: (): Promise<AccountReply> => ipcRenderer.invoke(CHANNEL.accountDelete),
     },
+    /** Plan 40b S13: the answer to "help build the stats"; off stops any upload at once. */
+    contribSet: (answer: { yes: boolean; policyVersion: string; ageConfirmed: boolean }): Promise<Saved> => ipcRenderer.invoke(CHANNEL.contribSet, answer),
     reportError: (error: { name: string; message: string; stack: string | null }): Promise<boolean> => ipcRenderer.invoke(CHANNEL.reportError, error),
     reportProblem: (report: { text: string; attachLog: boolean }): Promise<ReportOutcome> => ipcRenderer.invoke(CHANNEL.reportProblem, report),
     /** Calls `listener` when the tray's "Report a problem" was chosen; returns a function that stops it. */

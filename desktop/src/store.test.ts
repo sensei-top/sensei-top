@@ -38,6 +38,14 @@ describe('parsing shell.json', () => {
     });
   });
 
+  it('keeps a well-formed contribute answer, keeps null, and drops anything else', () => {
+    const answer = { yes: true, policyVersion: '2026-11-01', answeredAt: '2026-11-02T00:00:00.000Z', ageConfirmed: true };
+    expect(parseShellJson(JSON.stringify({ contribute: answer }))).toEqual({ prefs: { contribute: answer }, dropped: [] });
+    expect(parseShellJson(JSON.stringify({ contribute: null }))).toEqual({ prefs: { contribute: null }, dropped: [] });
+    expect(parseShellJson(JSON.stringify({ contribute: { ...answer, yes: 'yes' } }))).toEqual({ prefs: {}, dropped: ['contribute'] });
+    expect(parseShellJson(JSON.stringify({ contribute: true }))).toEqual({ prefs: {}, dropped: ['contribute'] });
+  });
+
   it('keeps consentErrors when it is a boolean and drops anything else', () => {
     expect(parseShellJson(JSON.stringify({ consentErrors: true }))).toEqual({ prefs: { consentErrors: true }, dropped: [] });
     expect(parseShellJson(JSON.stringify({ consentErrors: 'yes' }))).toEqual({ prefs: {}, dropped: ['consentErrors'] });
