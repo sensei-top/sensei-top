@@ -62,6 +62,7 @@ source_modules = [
     "sensei_top.claude_config",
     "sensei_top.clock",
     "sensei_top.config",
+    "sensei_top.contrib",
     "sensei_top.db",
     "sensei_top.diagnostics",
     "sensei_top.doctor",

@@ -1089,6 +1089,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/contrib/games": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Contrib Games
+         * @description The key, ``match_id:game_number``, of every finished game, oldest
+         *     match first; the caller keeps which ones it has sent.
+         */
+        get: operations["contrib_games_api_contrib_games_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/contrib/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Contrib Records
+         * @description One record per key that names a finished game, in the order asked;
+         *     any other key is left out of the answer, so the caller sends nothing for
+         *     it.
+         */
+        get: operations["contrib_records_api_contrib_records_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/llm/status": {
         parameters: {
             query?: never;
@@ -2009,6 +2052,159 @@ export interface components {
              * @description web citations only
              */
             cited_text?: string | null;
+        };
+        /** ContribArchetype */
+        ContribArchetype: {
+            /**
+             * Key
+             * @description the archetype definition's key
+             */
+            key?: string | null;
+            /**
+             * Label
+             * @description the name the app gave the deck
+             */
+            label: string;
+        };
+        /** ContribArchetypes */
+        ContribArchetypes: {
+            self?: components["schemas"]["ContribArchetype"] | null;
+            opp?: components["schemas"]["ContribArchetype"] | null;
+        };
+        /** ContribDeck */
+        ContribDeck: {
+            /**
+             * Main
+             * @description [card name, copies], by name
+             */
+            main: [
+                string,
+                number
+            ][];
+            /**
+             * Side
+             * @description [card name, copies], by name
+             */
+            side: [
+                string,
+                number
+            ][];
+        };
+        /** ContribLife */
+        ContribLife: {
+            /** Self */
+            self?: number | null;
+            /** Opp */
+            opp?: number | null;
+        };
+        /** ContribRecord */
+        ContribRecord: {
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: 1;
+            /**
+             * Client
+             * @enum {string}
+             */
+            client: "arena" | "mtgo";
+            /** Format */
+            format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            /**
+             * Event
+             * @description the event's class, never Arena's raw id
+             */
+            event?: ("ranked" | "play" | "limited" | "event") | null;
+            /** Best Of */
+            best_of?: number | null;
+            /**
+             * Week
+             * @description ISO year and week, e.g. 2026-W33
+             */
+            week?: string | null;
+            /**
+             * Rank
+             * @description Arena's rank class, never the step
+             */
+            rank?: string | null;
+            /**
+             * Game
+             * @description which game of the match
+             */
+            game: number;
+            /** On Play */
+            on_play?: boolean | null;
+            /** Mulligans */
+            mulligans?: number | null;
+            /**
+             * Kept Hand
+             * @description [card name, copies] on offer at our keep, the cards then put on the bottom included
+             */
+            kept_hand?: [
+                string,
+                number
+            ][] | null;
+            /** @description the deck this game was played with */
+            deck?: components["schemas"]["ContribDeck"] | null;
+            /** Turns */
+            turns: components["schemas"]["ContribTurn"][];
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "win" | "loss" | "draw";
+            /** Turn Count */
+            turn_count?: number | null;
+            archetypes?: components["schemas"]["ContribArchetypes"] | null;
+            /**
+             * Policy Version
+             * @description as the caller sent it
+             */
+            policy_version: string;
+        };
+        /** ContribRecordItem */
+        ContribRecordItem: {
+            /**
+             * Key
+             * @description the game's key, as asked; never part of the record sent
+             */
+            key: string;
+            record: components["schemas"]["ContribRecord"];
+        };
+        /**
+         * ContribSides
+         * @description One turn's cards, by the seat that played them; a side is absent when
+         *     a card of its own had no name.
+         */
+        ContribSides: {
+            /**
+             * Self
+             * @description card names, in order
+             */
+            self?: string[] | null;
+            /**
+             * Opp
+             * @description card names, in order
+             */
+            opp?: string[] | null;
+        };
+        /** ContribTurn */
+        ContribTurn: {
+            /**
+             * N
+             * @description the turn's number, both players' turns counted
+             */
+            n: number;
+            /**
+             * Drawn
+             * @description the cards we drew; Arena only
+             */
+            drawn?: string[] | null;
+            /** @description lands played and spells cast */
+            played?: components["schemas"]["ContribSides"] | null;
+            /** @description Arena only */
+            life?: components["schemas"]["ContribLife"] | null;
         };
         /** CoverageOut */
         CoverageOut: {
@@ -6796,6 +6992,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncPulledWritten"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    contrib_games_api_contrib_games_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+        };
+    };
+    contrib_records_api_contrib_records_get: {
+        parameters: {
+            query: {
+                keys: string[];
+                policy_version: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContribRecordItem"][];
                 };
             };
             /** @description Validation Error */

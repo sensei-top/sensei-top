@@ -53,6 +53,7 @@ from sensei_top.api.guard import LoopbackGuard
 from sensei_top.api.providers import NO_PROVIDERS
 from sensei_top.api.routes import (
     cards,
+    contrib,
     current_match,
     guide,
     matches,
@@ -181,6 +182,7 @@ def create_app(db_path: str | Path, watcher: object | None = None) -> FastAPI:
     app.include_router(rcq.router)
     app.include_router(cards.router)
     app.include_router(sync.router)
+    app.include_router(contrib.router)
     app.state.providers = NO_PROVIDERS
     # Never a static import: lint-imports reads only import statements, and
     # core must start with ai/ deleted (docs/architecture.md, "Who may know what").
