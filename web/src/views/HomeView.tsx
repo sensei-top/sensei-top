@@ -91,8 +91,10 @@ export function HomeView({
   // exactly the limit recorded, the list is every match. The heartbeat
   // counts every source, as the list does; without it, a full list is
   // taken as cut short.
+  // The heartbeat counts local matches only, so restored rows are not counted.
+  const localCount = rows?.filter((match) => !match.restored).length ?? 0
   const listFull =
-    (rows?.length ?? 0) >= HOME_MATCH_LIMIT && (live.data == null || live.data.matches > (rows?.length ?? 0))
+    (rows?.length ?? 0) >= HOME_MATCH_LIMIT && (live.data == null || live.data.matches > localCount)
 
   const counted = useMemo(() => {
     if (!rows) return null

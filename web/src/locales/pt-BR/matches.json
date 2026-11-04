@@ -59,7 +59,8 @@
   "row": {
     "resultScore": "{{result}} {{score}}",
     "unrecognizedDeck": "Deck não reconhecido",
-    "showed": "mostrou {{card}}"
+    "showed": "mostrou {{card}}",
+    "restored": "Restaurada"
   },
   "summary": {
     "matchesWon": "Partidas",

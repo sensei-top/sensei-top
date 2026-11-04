@@ -354,6 +354,19 @@ words and the rank. From 48rem up a row is a grid (when, result, the
 opponent's deck, the viewer's deck, event and rank); under that it
 stacks.
 
+**A restored match** (`Match.restored`) is one pulled back from the
+user's cloud history that this install has no log of (`cloud_match`, read
+through `v_cloud_match`, migration 073). Its row is a plain element with a
+"Restored" chip beside the result and links nowhere: it has no report,
+replay or turns, and `/api/matches/{id}` 404s for it. What the cloud does
+not carry is null, never guessed: the end time, the rank, the opponent's
+colours and the best-of-three split. A local match with the same id always
+hides the restored one. Restored matches count in the match-level
+win-rate views (`v_deck_winrate`, `v_deck_identity_winrate`,
+`v_matchup_winrate`), under a `deck_key` of `cloud:` and the deck's name
+with no `deck_id`; the game-level views and the deck pages stay
+local-only, and a deck filter leaves restored rows out.
+
 **The event in words** is `eventLabel` (`lib/events.ts`). The names
 known are written out in a table. Any other id is respelled and never
 looked up: the trailing date goes, underscores become spaces, and a set

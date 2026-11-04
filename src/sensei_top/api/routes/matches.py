@@ -539,7 +539,10 @@ def matches(
     limit: Annotated[int, Query(ge=1, le=500)] = 50,
     source: SourceFilter = "arena",
 ) -> list[dict[str, Any]]:
-    sql = f"""
+    """The newest matches: this install's own, then the restored ones
+    (``v_cloud_match``) with the columns the cloud does not carry null. A
+    ``deck_id`` filter leaves the restored ones out, since none has one."""
+    local = f"""
         SELECT m.match_id, m.source, m.event_id, md.deck_id, d.name AS deck_name,
                m.opponent_name, m.started_at, m.ended_at, m.result, m.games_won, m.games_lost,
                {_BO3_SPLIT_COLUMNS}
@@ -551,26 +554,50 @@ def matches(
                (SELECT r.constructed_level FROM rank_snapshot r
                  WHERE m.source = 'arena' AND r.observed_at <= m.started_at
                  ORDER BY r.observed_at DESC LIMIT 1) AS rank_level,
-               f.format
+               f.format,
+               0 AS restored
           FROM matches m
           JOIN v_match_deck md ON md.match_id = m.match_id
           LEFT JOIN v_match_format f ON f.match_id = m.match_id
           LEFT JOIN decks d ON d.deck_id = md.deck_id
           LEFT JOIN v_match_opponent o ON o.match_id = m.match_id
     """
-    clauses: list[str] = []
+    restored = """
+        SELECT c.match_id, c.source, c.event_id, c.deck_id, c.deck_name,
+               NULL, c.started_at, NULL, c.result, c.games_won, c.games_lost,
+               c.best_of, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+               c.opponent_label, c.opponent_key, c.opponent_source,
+               c.opponent_confidence, c.opponent_cards_seen, c.opponent_colors,
+               NULL, NULL, c.format, c.restored
+          FROM v_cloud_match c
+    """
+    local_clauses: list[str] = []
+    restored_clauses: list[str] = []
     params: list[Any] = []
+    restored_params: list[Any] = []
     if deck_id:
-        clauses.append("md.deck_id = ?")
+        local_clauses.append("md.deck_id = ?")
         params.append(deck_id)
+        restored_clauses.append("0")
     if source != "all":
-        clauses.append("m.source = ?")
+        local_clauses.append("m.source = ?")
         params.append(source)
-    if clauses:
-        sql += " WHERE " + " AND ".join(clauses)
-    sql += " ORDER BY COALESCE(m.started_at, '') DESC LIMIT ?"
-    params.append(limit)
-    return _rows(conn, sql, tuple(params))
+        restored_clauses.append("c.source = ?")
+        restored_params.append(source)
+    if local_clauses:
+        local += " WHERE " + " AND ".join(local_clauses)
+    if restored_clauses:
+        restored += " WHERE " + " AND ".join(restored_clauses)
+    # Each branch is cut to the limit before the union, so the correlated
+    # selects of the local one never run over the whole history.
+    sql = f"""
+        SELECT * FROM (
+            SELECT * FROM ({local} ORDER BY COALESCE(m.started_at, '') DESC LIMIT ?)
+            UNION ALL
+            SELECT * FROM ({restored} ORDER BY COALESCE(c.started_at, '') DESC LIMIT ?)
+        ) ORDER BY COALESCE(started_at, '') DESC LIMIT ?
+    """
+    return _rows(conn, sql, (*params, limit, *restored_params, limit, limit))
 
 
 @router.get("/api/matches/{match_id}", response_model=MatchDetail, tags=["matches"])

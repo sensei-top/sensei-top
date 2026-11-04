@@ -844,6 +844,15 @@ adds one row with a null `deck_key` for every match no deck was recorded
 for, which takes in every MTGO match the user has not picked a deck for
 (with `source=mtgo` or `all`; the default is `arena`).
 
+Migration `073_cloud_match_views.sql` adds `v_cloud_match`, the restored
+matches (`cloud_match`, minus any `match_id` that `matches` has) read into
+the match list's columns, and UNIONs it into `v_deck_winrate`,
+`v_deck_identity_winrate` and `v_matchup_winrate`. The cloud names a deck
+by its name only, so a restored match has a null `deck_id`: it counts under
+`deck_key` `cloud:<name>` (`versions` 0 in `/api/metrics/winrate`) and
+joins `v_matchup_winrate`'s null-`deck_id` rows. The game-level views
+(play/draw, game length, turn curves) and the deck summary stay local-only.
+
 The line, stated as a rule:
 
 > **Aggregation a `SELECT` can express belongs in a view. Statistics it cannot

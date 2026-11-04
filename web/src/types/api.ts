@@ -21,6 +21,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/diagnostics/log-tail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Log Tail
+         * @description The last ``lines`` lines of the app's log across its rotated files,
+         *     through ``scrub.scrub_text`` with every name the database and config
+         *     hold. Plain text; an empty body when there is no log. Reads the files,
+         *     never writes.
+         */
+        get: operations["log_tail_api_diagnostics_log_tail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/live": {
         parameters: {
             query?: never;
@@ -667,7 +690,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Matches */
+        /**
+         * Matches
+         * @description The newest matches: this install's own, then the restored ones
+         *     (``v_cloud_match``) with the columns the cloud does not carry null. A
+         *     ``deck_id`` filter leaves the restored ones out, since none has one.
+         */
         get: operations["matches_api_matches_get"];
         put?: never;
         post?: never;
@@ -2370,7 +2398,7 @@ export interface components {
         DeckWinrate: {
             /**
              * Deck Key
-             * @description 'guid:<arena_deck_id>', or 'deck:<hash>' when Arena never named one; null on the one row that counts every match with no deck recorded, which for an MTGO match is one the user has not picked a deck for
+             * @description 'guid:<arena_deck_id>', or 'deck:<hash>' when Arena never named one, or 'cloud:<name>' for matches restored from the user's cloud history, which name a deck but have no local one; null on the one row that counts every match with no deck recorded, which for an MTGO match is one the user has not picked a deck for
              */
             deck_key: string | null;
             /** Arena Deck Id */
@@ -2379,7 +2407,7 @@ export interface components {
             deck_name?: string | null;
             /**
              * Versions
-             * @description distinct maindeck content hashes rolled into this deck; 0 on the row of matches with no deck
+             * @description distinct maindeck content hashes rolled into this deck; 0 on the row of matches with no deck and on a 'cloud:' row
              */
             versions: number;
             /** Matches Completed */
@@ -3241,6 +3269,12 @@ export interface components {
              * @description the match's format (v_match_format); null when it is unknown or not a tracked format
              */
             format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            /**
+             * Restored
+             * @description true for a match pulled back from the user's cloud history (cloud_match) that this install has no log of: it has no report, replay or turns, and the columns the cloud does not carry (ended_at, rank, opponent_colors, the best-of-three split) are null
+             * @default false
+             */
+            restored: boolean;
         };
         /**
          * MatchDetail
@@ -3350,6 +3384,12 @@ export interface components {
              * @description the match's format (v_match_format); null when it is unknown or not a tracked format
              */
             format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            /**
+             * Restored
+             * @description true for a match pulled back from the user's cloud history (cloud_match) that this install has no log of: it has no report, replay or turns, and the columns the cloud does not carry (ended_at, rank, opponent_colors, the best-of-three split) are null
+             * @default false
+             */
+            restored: boolean;
             /**
              * Self Seat
              * @description Arena's systemSeatNumber for us; a turn is ours when active_seat matches
@@ -5596,6 +5636,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    log_tail_api_diagnostics_log_tail_get: {
+        parameters: {
+            query?: {
+                lines?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
