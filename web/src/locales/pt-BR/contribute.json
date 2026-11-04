@@ -1,0 +1,26 @@
+{
+  "heading": "Ajudar a montar as estatísticas",
+  "disclosure": {
+    "noAccount": "Não precisa de conta, e a sua resposta fica neste PC.",
+    "what": "Dizer sim envia os seus jogos para um acervo privado, do qual são feitas as estatísticas do próprio Sensei Top. Isso vale para os jogos que já estão no seu histórico e para os que você jogar daqui em diante. Antes de um jogo sair deste PC, tudo o que identifica você ou o seu oponente é removido, e ele é enviado sem o seu login.",
+    "where": "O acervo fica guardado no Brasil, sem ligação com nenhuma conta.",
+    "final": "Nada num jogo enviado diz quem o enviou. Depois de enviado, ele não pode ser mostrado a você, copiado nem apagado, nem mesmo se você apagar a sua conta.",
+    "stop": "Você pode desligar isso a qualquer momento em Configurações, e nada mais é enviado depois disso."
+  },
+  "age": {
+    "label": "Tenho 13 anos ou mais. Se tenho menos de 18, um dos meus pais ou o meu responsável deixou que eu envie os meus jogos.",
+    "small": "Este PC guarda que você confirmou isso, e quando."
+  },
+  "answer": {
+    "yes": "Enviar meus jogos",
+    "no": "Não enviar"
+  },
+  "hint": {
+    "age": "Para enviar os seus jogos, confirme antes a sua idade, acima.",
+    "waitsWelcome": "Responda cada pergunta acima para ir para o Início."
+  },
+  "failure": {
+    "notSaved": "A sua resposta não foi salva, e nenhum jogo é enviado. Tente de novo.",
+    "stillSending": "A sua resposta não foi salva, então os seus jogos continuam sendo enviados. Tente de novo."
+  }
+}

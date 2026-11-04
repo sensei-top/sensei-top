@@ -1,14 +1,15 @@
-import { Check } from 'lucide-react'
 import { useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import type { AppChange, AppSettings, DeepPartial, Saved, ShellSettings } from '../bridge'
+import { ChoiceTile, ContributeQuestion } from '../components/ContributeQuestion'
 import { CardDataProgress } from '../components/onboarding/CardDataProgress'
 import { DetailedLogsGuide } from '../components/onboarding/DetailedLogsGuide'
 import { RestoreButton } from '../components/settings/BackupSection'
 import { FolderField, PressButton, RestartNote, SaveButton, SavingSwitch } from '../components/settings/SaveButton'
 import { Button, Card, Disclosure, Field, Segmented, TextLink } from '../components/ui'
 import { useLanguage, type TFunction } from '../i18n'
+import { contribAskedOnWelcome, contribWaits } from '../lib/contribute'
 import { failureOf, settle, useRestart, useTextSave } from '../lib/settings'
 import { answerWaits, neighbour, stepHref, stepNumber, stepsFor, type Plays, type WelcomeStep } from '../lib/welcome'
 
@@ -55,6 +56,9 @@ export function WelcomeView({
   // button stays on show; an install that already has a value is never asked.
   const [asked] = useState(app.aiFeatures === null)
   const [picked, setPicked] = useState<boolean | null>(null)
+  // The same for "Help build the stats"; a build that cannot upload never asks.
+  const [contribPutToUser] = useState(contribAskedOnWelcome(app.canContribute, app.contribute))
+  const [contribPicked, setContribPicked] = useState<boolean | null>(null)
   const steps = stepsFor(app.plays, step)
   const previous = neighbour(step, -1, steps)
   const next = neighbour(step, 1, steps)
@@ -76,7 +80,13 @@ export function WelcomeView({
         {step === 'arena' && <ArenaStep sources={sources} recheck={actions.recheck} />}
         {step === 'mtgo' && <MtgoStep sources={sources} save={actions.save} pickFolder={actions.pickFolder} />}
         {step === 'done' && (
-          <DoneStep app={app} actions={actions} asked={asked} picked={picked} onPicked={setPicked} />
+          <DoneStep app={app} actions={actions} asked={asked}
+            picked={picked}
+            onPicked={setPicked}
+            contribAskedOnWelcome={contribPutToUser}
+            contribPicked={contribPicked}
+            onContribPicked={setContribPicked}
+          />
         )}
         {(previous || next || step === 'done') && (
           <div className="space-y-1.5">
@@ -97,7 +107,10 @@ export function WelcomeView({
                   label={t('welcome.frame.goHome')}
                   workingLabel={t('welcome.frame.finishing')}
                   doneLabel={null}
-                  disabled={answerWaits(asked, app.aiFeatures, picked)}
+                  disabled={
+                    answerWaits(asked, app.aiFeatures, picked) ||
+                    contribWaits(contribPutToUser, app.contribute, contribPicked)
+                  }
                   onPress={async () => {
                     const ok = await finish.press(actions.finishOnboarding)()
                     if (ok) onFinished()
@@ -367,12 +380,18 @@ function DoneStep({
   asked,
   picked,
   onPicked,
+  contribAskedOnWelcome: contribPutToUser,
+  contribPicked,
+  onContribPicked,
 }: {
   app: AppSettings
   actions: WelcomeActions
   asked: boolean
   picked: boolean | null
   onPicked: (on: boolean) => void
+  contribAskedOnWelcome: boolean
+  contribPicked: boolean | null
+  onContribPicked: (yes: boolean) => void
 }) {
   const { t } = useTranslation()
   return (
@@ -380,6 +399,16 @@ function DoneStep({
       <p className="text-body text-ink2">{t('welcome.done.body')}</p>
       <CardDataProgress state={app.firstData} count={app.rulesText} retry={actions.firstData} />
       {asked && <AiQuestion value={app.aiFeatures ?? picked} set={actions.set} onPicked={onPicked} />}
+      {contribPutToUser && (
+        <ContributeQuestion
+          stored={app.contribute}
+          picked={contribPicked}
+          waiting={
+            answerWaits(asked, app.aiFeatures, picked) || contribWaits(contribPutToUser, app.contribute, contribPicked)
+          }
+          onPicked={onContribPicked}
+        />
+      )}
       {app.update.state !== 'unavailable' && (
         <SavingSwitch
           label={t('welcome.done.updatesLabel')}
@@ -444,37 +473,5 @@ function AiQuestion({
       </div>
       <Failure text={failure} />
     </div>
-  )
-}
-
-/** A button of a choice: the one pressed has a check and the accent border. */
-function ChoiceTile({
-  pressed,
-  disabled,
-  label,
-  className,
-  onClick,
-}: {
-  pressed: boolean
-  disabled: boolean
-  label: string
-  className: string
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      disabled={disabled}
-      onClick={onClick}
-      className={`flex items-center justify-center gap-2 rounded-control border text-body font-medium transition-chrome disabled:opacity-60 ${className} ${
-        pressed
-          ? 'border-accent bg-surface3 text-ink'
-          : 'border-edge bg-surface2 text-ink2 hover:border-edge-strong hover:text-ink'
-      }`}
-    >
-      {pressed && <Check size={16} strokeWidth={2.25} aria-hidden className="shrink-0 text-accent" />}
-      {label}
-    </button>
   )
 }

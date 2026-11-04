@@ -8,7 +8,9 @@ import { NotFoundPage } from './NotFoundPage'
  *  address (`?step=`) so the reload after a restore lands back on it. Which
  *  steps show is the shell's `plays`, read by the view from the app
  *  settings. Only a desktop shell has anything to set up, so with no shell
- *  the address is no page. The one caller of `useShell()` here. */
+ *  the address is no page. It reads `useShell()` and hands its actions to
+ *  the welcome views as props; only `ContributeQuestion` reads it as well,
+ *  for `contribSet`. */
 export function WelcomePage() {
   const shell = useShell()
   const [params] = useSearchParams()

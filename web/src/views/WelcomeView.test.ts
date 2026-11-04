@@ -481,3 +481,48 @@ describe('the AI features question', () => {
     expect(render('start', { app: app({ aiFeatures: null }) }).text).not.toContain(question)
   })
 })
+
+describe('the Help build the stats question', () => {
+  const body = 'Saying yes sends your games to a private pool that Sensei Top\'s own stats are built from.'
+  const home = (html: string) => {
+    const at = html.indexOf('>Go to Home<')
+    return html.slice(html.lastIndexOf('<button', at), at)
+  }
+
+  it('sits after the AI question on the Done step, nothing pressed, the age box unticked', () => {
+    const { text, html } = render('done', { app: app({ aiFeatures: null, canContribute: true }) })
+    expect(text).toContain('Help build the stats')
+    expect(text).toContain(body)
+    expect(text).toContain("I'm 13 or older.")
+    expect(text).toContain('This PC keeps that you confirmed this, and when.')
+    expect(html).toContain('>Send my games<')
+    expect(html).toContain('>Don&#x27;t send<')
+    expect(html.match(/aria-pressed="true"/g)).toBeNull()
+    expect(html).not.toContain('checked=""')
+    expect(html.indexOf('Leave them off')).toBeLessThan(html.indexOf('Help build the stats'))
+    expect(html.indexOf('Help build the stats')).toBeLessThan(html.indexOf('Check for a new version once a day'))
+  })
+
+  it('makes Go to Home wait and says so', () => {
+    const { text, html } = render('done', { app: app({ canContribute: true }) })
+    expect(home(html)).toContain('disabled=""')
+    expect(text).toContain('Answer each question above to go to Home.')
+  })
+
+  it('is hidden without canContribute, and Go to Home is free', () => {
+    const { text, html } = render('done', { app: app({ canContribute: false }) })
+    expect(text).not.toContain(body)
+    expect(home(html)).not.toContain('disabled=""')
+  })
+
+  it('is not asked of an install that already answered', () => {
+    const contribute = { yes: false, policyVersion: '2026-11-03', answeredAt: '2026-11-04T00:00:00Z', ageConfirmed: false }
+    const { text, html } = render('done', { app: app({ canContribute: true, contribute }) })
+    expect(text).not.toContain(body)
+    expect(home(html)).not.toContain('disabled=""')
+  })
+
+  it('is on no other step', () => {
+    expect(render('start', { app: app({ canContribute: true }) }).text).not.toContain(body)
+  })
+})
