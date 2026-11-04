@@ -44,5 +44,13 @@
   },
   "settings": {
     "description": "Sends us one report each time you press it, with or without an account, whether or not error reports are on."
+  },
+  "error": {
+    "title": "Something went wrong",
+    "body": "This page stopped working. Reload it to carry on. Sensei Top keeps recording your matches meanwhile.",
+    "reload": "Reload",
+    "sent": "A report of this error was sent automatically, because Send error reports is on.",
+    "notSent": "This error wasn't sent. To tell us about it, use Report a problem.",
+    "pending": "This error is sent automatically only if Send error reports is on."
   }
 }

@@ -44,5 +44,13 @@
   },
   "settings": {
     "description": "Envia um relatório a cada clique, com ou sem conta, com os relatórios de erro ligados ou não."
+  },
+  "error": {
+    "title": "Algo deu errado",
+    "body": "Esta página parou de funcionar. Recarregue para continuar. Enquanto isso, o Sensei Top continua registrando as suas partidas.",
+    "reload": "Recarregar",
+    "sent": "Um relatório deste erro foi enviado automaticamente, porque Enviar relatórios de erro está ligado.",
+    "notSent": "Este erro não foi enviado. Para nos contar sobre ele, use Relatar um problema.",
+    "pending": "Este erro só é enviado automaticamente se Enviar relatórios de erro estiver ligado."
   }
 }
