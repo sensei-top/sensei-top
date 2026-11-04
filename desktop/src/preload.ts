@@ -17,7 +17,7 @@
 // `settings.test.ts` checks they match `CHANNELS`. Types are erased.
 
 import { contextBridge, ipcRenderer } from 'electron';
-import type { AppChange, BridgeSettings, DeepPartial, KeyName, Saved, ShellSettings } from './settings';
+import type { AccountSignInReply, AccountState, AppChange, BridgeSettings, DeepPartial, KeyName, Saved, ShellSettings } from './settings';
 
 const CHANNEL = {
   initial: 'sensei-top:initial',
@@ -36,6 +36,9 @@ const CHANNEL = {
   appRecheck: 'sensei-top:app-recheck',
   appFirstData: 'sensei-top:app-first-data',
   appFinishOnboarding: 'sensei-top:app-finish-onboarding',
+  accountStatus: 'sensei-top:account-status',
+  accountSignIn: 'sensei-top:account-sign-in',
+  accountSignOut: 'sensei-top:account-sign-out',
   changed: 'sensei-top:changed',
 } as const;
 
@@ -63,6 +66,11 @@ if (location.protocol === 'http:') {
       recheck: (): Promise<Saved> => ipcRenderer.invoke(CHANNEL.appRecheck),
       firstData: (): Promise<Saved> => ipcRenderer.invoke(CHANNEL.appFirstData),
       finishOnboarding: (): Promise<Saved> => ipcRenderer.invoke(CHANNEL.appFinishOnboarding),
+    },
+    account: {
+      status: (): Promise<AccountState> => ipcRenderer.invoke(CHANNEL.accountStatus),
+      signIn: (provider: 'google' | 'discord'): Promise<AccountSignInReply> => ipcRenderer.invoke(CHANNEL.accountSignIn, provider),
+      signOut: (): Promise<Saved> => ipcRenderer.invoke(CHANNEL.accountSignOut),
     },
     /** Calls `listener` with the new settings after any change; returns a function that stops it. */
     onChange: (listener: (settings: BridgeSettings) => void): (() => void) => {

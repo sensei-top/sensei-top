@@ -241,3 +241,14 @@ describe('deciding aiFeatures once (plan 40D, DD6)', () => {
     }
   });
 });
+
+describe('installId', () => {
+  it('keeps a non-empty string and drops an empty one or a number', () => {
+    expect(parseShellJson('{"installId":"abc"}')).toEqual({ prefs: { installId: 'abc' }, dropped: [] });
+    for (const bad of ['""', '42']) {
+      const { prefs, dropped } = parseShellJson(`{"installId":${bad}}`);
+      expect(prefs.installId).toBeUndefined();
+      expect(dropped).toEqual(['installId']);
+    }
+  });
+});

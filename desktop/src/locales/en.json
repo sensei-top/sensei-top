@@ -60,5 +60,6 @@
   "auth.error.cancelled": "Sign-in was cancelled.",
   "auth.error.timeout": "Sign-in timed out after 5 minutes. Try again.",
   "auth.error.noPort": "Sign-in needs one of the ports {ports} on this computer, and all of them are in use. Close the program using them and try again.",
-  "auth.error.failed": "Sign-in didn't finish. Try again."
+  "auth.error.failed": "Sign-in didn't finish. Try again.",
+  "auth.error.signOutFailed": "Sign-out didn't finish. Try again."
 }

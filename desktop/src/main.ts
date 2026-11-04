@@ -22,13 +22,18 @@
 //   install-on-quit is still armed.
 
 import * as electron from 'electron';
+import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { cloudConfig } from './cloud/config';
+import { CloudAuth } from './cloud/auth';
+import { SessionStore } from './cloud/sessionStore';
 import { applyAutostart, applyFirstRun, startMode } from './autostart';
 import { setLanguage, setSystemTags, t } from './i18n';
 import { logPath, newSessionId, ShellLog } from './log';
 import {
+  AccountApi,
   asksAutostart,
   canAutostart,
   CHANNELS,
@@ -261,6 +266,18 @@ function run(): void {
     }
   };
 
+  // DB4: no Supabase project in this build, no CloudAuth and no network.
+  // Made once Electron is ready (`safeStorage` is not usable before).
+  let auth: CloudAuth | null = null;
+  const account = new AccountApi(
+    () => auth,
+    store,
+    randomUUID,
+    () => t('auth.error.failed'),
+    () => t('auth.error.signOutFailed'),
+    shellLog.child('shell.account'),
+  );
+
   const settings = new SettingsService({
     run: (args, options) => server.run(args, options),
     stopServer: () => server.stop(),
@@ -310,6 +327,7 @@ function run(): void {
       liveWindow()?.win.webContents.send(CHANNELS.changed, next);
     },
     updateStatus,
+    account: () => account.state(),
     setUpdateChecks: (on) => {
       updates?.setEnabled(on);
       tray?.setUpdate(updateMenu());
@@ -402,6 +420,9 @@ function run(): void {
   handle(CHANNELS.appExportDiagnostics, refusedSaved, () => exportDiagnostics());
   handle(CHANNELS.appRecheck, refusedSaved, () => settings.recheck());
   handle(CHANNELS.appFirstData, refusedSaved, () => settings.firstData());
+  handle(CHANNELS.accountStatus, () => ({ available: false }) as const, () => account.state());
+  handle(CHANNELS.accountSignIn, () => ({ ok: false, error: 'auth.error.failed', message: t('ipc.refused') }) as const, (provider: unknown) => account.signIn(provider));
+  handle(CHANNELS.accountSignOut, refusedSaved, () => account.signOut());
   handle(CHANNELS.appFinishOnboarding, refusedSaved, () => settings.finishOnboarding());
   handle(CHANNELS.appShowDataFolder, refusedSaved, () => settings.showDataFolder());
   handle(CHANNELS.appShowLogs, refusedSaved, (): Saved => {
@@ -454,6 +475,7 @@ function run(): void {
   });
   app.on('will-quit', () => {
     updates?.dispose();
+    void auth?.dispose();
     tray?.destroy();
     tray = null;
     log.info('quit');
@@ -475,6 +497,24 @@ function run(): void {
       },
       (error: unknown) => log.warn('gpu info unavailable', { error: String(error) }),
     );
+
+    if (cloudConfig.supabase) {
+      const cloud = new CloudAuth({
+        supabase: cloudConfig.supabase,
+        fetch: (input, init) => electron.net.fetch(input as string, init),
+        storage: new SessionStore({
+          dir: app.getPath('userData'),
+          safeStorage: electron.safeStorage,
+          platform: process.platform,
+          log: shellLog.child('shell.session'),
+        }),
+        openExternal: (url) => shell.openExternal(url),
+        log: shellLog.child('shell.auth'),
+      });
+      auth = cloud;
+      cloud.onChange(() => settings.accountChanged());
+      void cloud.ready().then(() => settings.accountChanged());
+    }
 
     Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate(packaged)));
     window = new MainWindow(

@@ -60,5 +60,6 @@
   "auth.error.cancelled": "O login foi cancelado.",
   "auth.error.timeout": "O login expirou depois de 5 minutos. Tente de novo.",
   "auth.error.noPort": "O login precisa de uma das portas {ports} deste computador, e todas estão em uso. Feche o programa que as usa e tente de novo.",
-  "auth.error.failed": "O login não terminou. Tente de novo."
+  "auth.error.failed": "O login não terminou. Tente de novo.",
+  "auth.error.signOutFailed": "A saída da conta não terminou. Tente de novo."
 }

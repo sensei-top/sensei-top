@@ -28,16 +28,23 @@
 //   into `progress` and forwarding the other lines as `line`;
 //   `finishOnboarding` writes `onboarded`.
 //
+// - **Account** (plan 40b S10). `app.account` is `AccountApi.state()`; the
+//   three account channels answer through `AccountApi`, and a change of the
+//   account sends the settings again like an update does. A build with no
+//   Supabase project has no `CloudAuth`: the state is `{ available: false }`
+//   and sign-in refuses. The first successful sign-in writes `installId`.
+//
 // `bridge.ts` in the dashboard is the other half of the contract. The types
 // are repeated here because `desktop/` cannot import from `web/`.
 //
 // Electron-free: vitest imports it directly. The main process hands in what
 // needs Electron (the server, dialogs, the window) as `SettingsDeps`.
 
+import { PROVIDERS, type AccountStatus, type CloudAuth, type Provider, type SignInError } from './cloud/auth';
 import { t } from './i18n';
 import type { Logger } from './log';
 import { silent } from './log';
-import type { LanguageChoice, Play, ShellJson } from './store';
+import { ensureInstallId, type LanguageChoice, type Play, type ShellJson } from './store';
 import type { UpdateStatus } from './updater';
 
 export type DetailedLogs = 'enabled' | 'disabled' | 'unknown';
@@ -120,6 +127,8 @@ export type AppSettings = {
   onboarded: boolean;
   /** shell.json's `aiFeatures` (plan 40D); `null` while undecided, which the page reads as off. */
   aiFeatures: boolean | null;
+  /** The account (plan 40b S10); `{ available: false }` in a build with no Supabase project. */
+  account: AccountState;
   /** Whether onboarding's last step asks about starting with the system (D25). */
   askAutostart: boolean;
   /** Whether this copy can start with the system at all; the page hides the toggle when not. */
@@ -161,8 +170,64 @@ export const CHANNELS = {
   appRecheck: 'sensei-top:app-recheck',
   appFirstData: 'sensei-top:app-first-data',
   appFinishOnboarding: 'sensei-top:app-finish-onboarding',
+  accountStatus: 'sensei-top:account-status',
+  accountSignIn: 'sensei-top:account-sign-in',
+  accountSignOut: 'sensei-top:account-sign-out',
   changed: 'sensei-top:changed',
 } as const;
+
+/** The account as the page sees it. */
+export type AccountState = { available: false } | ({ available: true } & AccountStatus);
+
+export type AccountSignInReply =
+  | { ok: true; account: AccountStatus }
+  | { ok: false; error: SignInError; message: string };
+
+/** The part of `CloudAuth` the page's calls use. */
+export type AuthLike = Pick<CloudAuth, 'status' | 'signIn' | 'signOut'>;
+
+/** The account calls the page can make. `getAuth()` is `null` in a build with no
+ *  Supabase project (DB4): the state is unavailable and sign-in refuses
+ *  before anything is built or sent. */
+export class AccountApi {
+  constructor(
+    private readonly getAuth: () => AuthLike | null,
+    private readonly store: Parameters<typeof ensureInstallId>[0],
+    private readonly makeId: () => string,
+    private readonly unavailableMessage: () => string,
+    private readonly signOutFailedMessage: () => string,
+    private readonly log: Logger = silent,
+  ) {}
+
+  state(): AccountState {
+    const auth = this.getAuth();
+    return auth ? { available: true, ...auth.status() } : { available: false };
+  }
+
+  async signIn(provider: unknown): Promise<AccountSignInReply> {
+    const auth = this.getAuth();
+    if (!auth || !(PROVIDERS as readonly unknown[]).includes(provider)) {
+      return { ok: false, error: 'auth.error.failed', message: this.unavailableMessage() };
+    }
+    const result = await auth.signIn(provider as Provider);
+    if (result.ok && ensureInstallId(this.store, this.makeId) === null) {
+      this.log.warn('the install ID could not be written');
+    }
+    return result;
+  }
+
+  async signOut(): Promise<Saved> {
+    const auth = this.getAuth();
+    if (!auth) return { ok: false, error: this.signOutFailedMessage() };
+    try {
+      await auth.signOut();
+      return { ok: true };
+    } catch (error) {
+      this.log.warn('signing out failed', { error: String(error) });
+      return { ok: false, error: this.signOutFailedMessage() };
+    }
+  }
+}
 
 // ---- reading -------------------------------------------------------------
 
@@ -334,6 +399,7 @@ export function toAppSettings(
     windowsStore: boolean;
     rulesText: number | null;
     firstData: FirstData;
+    account: AccountState;
   },
 ): AppSettings {
   return {
@@ -346,6 +412,7 @@ export function toAppSettings(
     update: info.update,
     onboarded: prefs.onboarded ?? false,
     aiFeatures: prefs.aiFeatures ?? null,
+    account: info.account,
     askAutostart: info.askAutostart,
     canAutostart: info.canAutostart,
     windowsStore: info.windowsStore,
@@ -609,6 +676,8 @@ export interface SettingsDeps {
   setLanguage?(choice: LanguageChoice): void;
   /** Where the shell's own update stands now. */
   updateStatus(): UpdateStatus;
+  /** The account as it stands now (`AccountApi.state`). */
+  account(): AccountState;
   /** The "Check for updates" switch changed: the updater follows it. */
   setUpdateChecks?(on: boolean): void;
   pickFolder(): Promise<string | null>;
@@ -695,7 +764,13 @@ export class SettingsService {
       windowsStore: this.deps.windowsStore,
       rulesText: this.doctor?.rulesText ?? null,
       firstData: this.firstDataState,
+      account: this.deps.account(),
     });
+  }
+
+  /** The account changed: same contract as `updateChanged`. */
+  accountChanged(): void {
+    this.updateChanged();
   }
 
   /** The update status changed: the page gets the settings it has with the

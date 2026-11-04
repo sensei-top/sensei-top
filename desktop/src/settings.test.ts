@@ -18,6 +18,8 @@ import {
   planChange as planChangeOn,
   restoreLeftovers,
   restoreLeftoversMessage,
+  AccountApi,
+  type AccountState,
   SettingsService,
   toAppSettings,
   toShellSettings,
@@ -49,7 +51,7 @@ const DOCTOR = {
   mtgo: { discovered: null },
   cards: { arena_ids: 10, rules_text: 5 },
 };
-const NO_APP_EXTRAS = { askAutostart: false, canAutostart: false, windowsStore: false, rulesText: null, firstData: { state: 'idle' } } as const;
+const NO_APP_EXTRAS = { askAutostart: false, canAutostart: false, windowsStore: false, rulesText: null, firstData: { state: 'idle' }, account: { available: false } } as const;
 
 describe('config --json to ShellSettings', () => {
   it('carries mtgo.deck_dir into sources.mtgoDeckDir, null when unset', () => {
@@ -131,6 +133,7 @@ describe('config --json to ShellSettings', () => {
       update: { state: 'idle' },
       onboarded: false,
       aiFeatures: null,
+      account: { available: false },
       askAutostart: false,
       canAutostart: false,
       windowsStore: false,
@@ -144,7 +147,7 @@ describe('config --json to ShellSettings', () => {
   });
 
   it('carries askAutostart and canAutostart through as given', () => {
-    const base = { version: '1', platform: 'win32', update: { state: 'idle' } as const, rulesText: null, firstData: { state: 'idle' } } as const;
+    const base = { version: '1', platform: 'win32', update: { state: 'idle' } as const, rulesText: null, firstData: { state: 'idle' }, account: { available: false } } as const;
     const installer = toAppSettings({}, { ...base, askAutostart: false, canAutostart: true, windowsStore: false });
     expect(installer.askAutostart).toBe(false);
     expect(installer.canAutostart).toBe(true);
@@ -381,6 +384,9 @@ describe('small readers', () => {
     expect(uses('recheck', 'appRecheck')).toBe(true);
     expect(uses('firstData', 'appFirstData')).toBe(true);
     expect(uses('finishOnboarding', 'appFinishOnboarding')).toBe(true);
+    expect(uses('status', 'accountStatus')).toBe(true);
+    expect(uses('signIn', 'accountSignIn')).toBe(true);
+    expect(uses('signOut', 'accountSignOut')).toBe(true);
   });
 });
 
@@ -450,6 +456,7 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
   const autostarts: boolean[] = [];
   let cardsActive = 0;
   const overlap = { restoreDuringCards: false };
+  const accountState: { value: AccountState } = { value: { available: false } };
   const updates: { status: UpdateStatus; switched: boolean[] } = { status: { state: 'idle' }, switched: [] };
   let rules = 5;
   const late: Array<() => void> = [];
@@ -520,6 +527,7 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
     openDataFolder: () => (extra.open instanceof Error ? Promise.reject(extra.open) : Promise.resolve(extra.open ?? '')),
     changed: (settings) => changes.push(settings),
     updateStatus: () => updates.status,
+    account: () => accountState.value,
     setUpdateChecks: (on) => void updates.switched.push(on),
     log: {
       debug: () => {},
@@ -528,7 +536,7 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
       error: () => {},
     },
   };
-  return { service: new SettingsService(deps), languages, late, calls, events, stored, changes, warnings, infos, overlap, updates, autostarts };
+  return { service: new SettingsService(deps), languages, late, calls, events, stored, changes, warnings, infos, overlap, updates, autostarts, accountState };
 }
 
 describe('the service', () => {
@@ -674,6 +682,18 @@ describe('the service', () => {
     expect(changes[0]?.sources.dataDir).toBe('/data');
     expect(service.current?.app.update).toEqual({ state: 'ready', version: '0.6.1' });
     expect(calls).toHaveLength(reads);
+  });
+
+  it('sends the settings again when the account changes, and nothing before the first read', async () => {
+    const { service, accountState, changes } = harness();
+    service.accountChanged();
+    expect(changes).toHaveLength(0);
+    await service.refresh();
+    const status = { signedIn: true, userId: 'u1', email: 'a@b.c', provider: 'google', persistence: { kept: true } } as const;
+    accountState.value = { available: true, ...status };
+    service.accountChanged();
+    expect(changes).toHaveLength(1);
+    expect(changes.at(-1)?.app.account).toEqual({ available: true, ...status });
   });
 
   it('hands the update switch to the updater, and nothing else', async () => {
@@ -1074,5 +1094,62 @@ describe('the service', () => {
       release();
       await download;
     });
+  });
+});
+
+describe('the account calls (plan 40b S10)', () => {
+  const persistence = { kept: true } as const;
+  const signedOut = { signedIn: false, userId: null, email: null, provider: null, persistence } as const;
+  const signedIn = { signedIn: true, userId: 'u1', email: 'a@b.c', provider: 'google', persistence } as const;
+  const fakeStore = () => {
+    let prefs: ShellJson = {};
+    return {
+      get: () => prefs,
+      update: (patch: Partial<ShellJson>) => {
+        prefs = { ...prefs, ...patch };
+        return true;
+      },
+    };
+  };
+  const api = (auth: unknown, store = fakeStore()) => {
+    let n = 0;
+    return { store, api: new AccountApi(() => auth as never, store, () => `id-${++n}`, () => 'unavailable', () => 'signout-failed') };
+  };
+
+  it('answers unavailable and refuses to sign in when the build has no project', async () => {
+    const store = fakeStore();
+    const account = new AccountApi(() => null, store, () => 'x', () => 'unavailable', () => 'signout-failed');
+    expect(account.state()).toEqual({ available: false });
+    expect(await account.signIn('google')).toMatchObject({ ok: false, message: 'unavailable' });
+    expect(await account.signOut()).toEqual({ ok: false, error: 'signout-failed' });
+    expect(store.get().installId).toBeUndefined();
+  });
+
+  it('carries the persistence reason through the status', () => {
+    const status = { ...signedOut, persistence: { kept: false, reason: 'noKeyring' } } as const;
+    const { api: account } = api({ status: () => status });
+    expect(account.state()).toEqual({ available: true, ...status });
+  });
+
+  it('writes the install ID at the first successful sign-in and never replaces it', async () => {
+    const { api: account, store } = api({ status: () => signedOut, signIn: async () => ({ ok: true, account: signedIn }) });
+    await account.signIn('google');
+    expect(store.get().installId).toBe('id-1');
+    await account.signIn('discord');
+    expect(store.get().installId).toBe('id-1');
+  });
+
+  it('writes no install ID when the sign-in fails or the provider is unknown', async () => {
+    const failing = api({ status: () => signedOut, signIn: async () => ({ ok: false, error: 'auth.error.cancelled', message: 'm' }) });
+    expect(await failing.api.signIn('google')).toMatchObject({ ok: false });
+    expect(await failing.api.signIn('github')).toMatchObject({ ok: false, message: 'unavailable' });
+    expect(failing.store.get().installId).toBeUndefined();
+  });
+
+  it('signs out through the auth', async () => {
+    let out = 0;
+    const { api: account } = api({ status: () => signedOut, signOut: async () => void out++ });
+    expect(await account.signOut()).toEqual({ ok: true });
+    expect(out).toBe(1);
   });
 });

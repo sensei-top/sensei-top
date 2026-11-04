@@ -89,6 +89,41 @@ export type FirstData =
 /** The language the shell is read in: the system's, or one chosen. */
 export type LanguageChoice = 'system' | 'en' | 'pt-BR'
 
+/** Why a session does not outlive the launch: no system keyring (Linux), or
+ *  no encryption at all. */
+export type AccountPersistence = { kept: true } | { kept: false; reason: 'noKeyring' | 'noEncryption' }
+
+export type AccountStatus = {
+  signedIn: boolean
+  userId: string | null
+  email: string | null
+  /** The provider the session was signed in with, as Supabase names it. */
+  provider: string | null
+  persistence: AccountPersistence
+}
+
+/** `available: false`: this build has no account (no Supabase project). */
+export type AccountState = { available: false } | ({ available: true } & AccountStatus)
+
+export type AccountProvider = 'google' | 'discord'
+
+export type SignInError =
+  | 'auth.error.unverifiedEmail'
+  | 'auth.error.cancelled'
+  | 'auth.error.timeout'
+  | 'auth.error.noPort'
+  | 'auth.error.failed'
+
+/** `message` is in the shell's language, ready to show. */
+export type SignInReply = { ok: true; account: AccountStatus } | { ok: false; error: SignInError; message: string }
+
+/** The account calls; resolves once the sign-in ended (up to five minutes). */
+export type AccountActions = {
+  status(): Promise<AccountState>
+  signIn(provider: AccountProvider): Promise<SignInReply>
+  signOut(): Promise<Saved>
+}
+
 /** The shell's own preferences, which the server never reads. `platform` is
  *  Node's `process.platform`; `keepRunningOnClose` is Linux only. */
 export type AppSettings = {
@@ -102,6 +137,8 @@ export type AppSettings = {
   /** Whether AI features are on. `null`: undecided, a fresh install that
    *  `/welcome` will ask; it reads as off. */
   aiFeatures: boolean | null
+  /** The account; a change arrives with the rest of the settings. */
+  account: AccountState
   /** Whether onboarding's last step asks about starting with the system. */
   askAutostart: boolean
   /** Whether this copy can start at login: not the Linux tarball. */
@@ -148,7 +185,7 @@ export type BridgeSettings = ShellSettings & { app: AppSettings }
 
 /** The shell's own part. Absent where the shell offers none (the reference
  *  page's sample shells), and the page then draws no App section. */
-export type ShellApp = { settings: AppSettings } & AppActions
+export type ShellApp = { settings: AppSettings } & AppActions & { account: AccountActions }
 
 export type Shell = {
   settings: ShellSettings
@@ -169,6 +206,7 @@ export type RawShell = Omit<Shell, 'settings' | 'app'> & {
   /** Read once by the preload script; `null` when the shell could not read them. */
   initial: BridgeSettings | null
   app: AppActions
+  account: AccountActions
   /** Calls `listener` after any change; returns a function that stops it. */
   onChange(listener: (settings: BridgeSettings) => void): () => void
 }
@@ -176,10 +214,10 @@ export type RawShell = Omit<Shell, 'settings' | 'app'> & {
 /** The settings a shell holds as the page's `Shell`. */
 export function shellFrom(raw: RawShell, settings: BridgeSettings): Shell {
   const { app, ...rest } = settings
-  const { initial: _initial, app: actions, onChange: _onChange, ...functions } = raw
+  const { initial: _initial, app: actions, account, onChange: _onChange, ...functions } = raw
   void _initial
   void _onChange
-  return { ...functions, settings: rest, app: { settings: app, ...actions } }
+  return { ...functions, settings: rest, app: { settings: app, ...actions, account } }
 }
 
 /** One shell's settings held for `useSyncExternalStore`: `null` until the

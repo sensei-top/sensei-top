@@ -55,6 +55,8 @@ export interface ShellPrefs {
   /** Plan 40D: whether the page shows its AI features; absent means undecided
    *  (`settleAiFeatures`), which the page reads as off. The server never reads it. */
   aiFeatures?: boolean;
+  /** Plan 40b S10: a random UUID made at the first successful sign-in; never replaced. */
+  installId?: string;
 }
 
 /** What is on disk: the known keys plus whatever else was there. */
@@ -108,6 +110,10 @@ export function parseShellJson(text: string): { prefs: ShellJson; dropped: strin
       dropped.push(key);
     }
   }
+  if ('installId' in prefs && !(typeof prefs.installId === 'string' && prefs.installId !== '')) {
+    delete prefs.installId;
+    dropped.push('installId');
+  }
   if ('language' in prefs && !(LANGUAGE_CHOICES as readonly unknown[]).includes(prefs.language)) {
     delete prefs.language;
     dropped.push('language');
@@ -153,6 +159,19 @@ export function settleAiFeatures(
   store.update({ aiFeatures: true });
   log.info('aiFeatures on: onboarding was already finished');
   return true;
+}
+
+/** The install ID, made with `make` and written the first time it is asked
+ *  for, never replaced afterwards. `null` when the write failed (the next
+ *  call tries again). */
+export function ensureInstallId(
+  store: { get(): Readonly<ShellJson>; update(patch: Partial<ShellJson>): boolean },
+  make: () => string,
+): string | null {
+  const existing = store.get().installId;
+  if (typeof existing === 'string' && existing !== '') return existing;
+  const id = make();
+  return store.update({ installId: id }) ? id : null;
 }
 
 /** Writes `data` to `file` through a temporary file beside it. */

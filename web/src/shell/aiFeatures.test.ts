@@ -53,6 +53,7 @@ function shellWith(
         update: { state: 'idle' },
         onboarded: true,
         aiFeatures,
+        account: { available: false },
         askAutostart: false,
         canAutostart: true,
         windowsStore: false,
@@ -68,6 +69,11 @@ function shellWith(
     pickFile: () => Promise.resolve(null),
     backUpNow: never,
     restoreFrom: never,
+    account: {
+      status: () => Promise.resolve({ available: false } as const),
+      signIn: () => Promise.resolve({ ok: false, error: 'auth.error.failed', message: '' } as const),
+      signOut: never,
+    },
     app: {
       set,
       checkForUpdates: never,
