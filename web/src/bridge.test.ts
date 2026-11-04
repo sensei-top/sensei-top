@@ -24,6 +24,7 @@ function settings(version: string, model = 'm'): BridgeSettings {
       update: { state: 'idle' },
       onboarded: true,
       aiFeatures: true,
+      contribute: null,
       account: { available: false },
       askAutostart: false,
       canAutostart: true,
@@ -46,6 +47,7 @@ function fake(initial: BridgeSettings | null) {
     pickFile: () => Promise.resolve(null),
     backUpNow: never,
     restoreFrom: never,
+    contribSet: never,
     app: {
       set: never,
       checkForUpdates: never,
@@ -61,6 +63,10 @@ function fake(initial: BridgeSettings | null) {
       status: () => Promise.resolve({ available: false } as const),
       signIn: () => Promise.resolve({ ok: false, error: 'auth.error.failed', message: '' } as const),
       signOut: never,
+      setProfile: never,
+      exportData: never,
+      deleteCloudHistory: never,
+      deleteAccount: never,
     },
     onChange: (listener: (s: BridgeSettings) => void) => {
       listeners.add(listener)

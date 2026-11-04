@@ -163,6 +163,7 @@ export function useSampleShell(sample: SampleId): Shell | null {
         }
         return saved
       }),
+    contribSet: () => afterAWhile(answer),
     pickFolder: () => Promise.resolve(CHOSEN_FOLDER),
     pickFile: () => Promise.resolve(CHOSEN_FILE),
     backUpNow: () =>

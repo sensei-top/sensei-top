@@ -102,8 +102,42 @@ export type AccountStatus = {
   persistence: AccountPersistence
 }
 
+/** The account's profile, as the shell reads it from the cloud. `unknown`: it
+ *  could not be read (do not ask the consent questions again); `none`: no
+ *  answers given yet. */
+export type ProfileState =
+  | { state: 'unknown' }
+  | { state: 'none' }
+  | {
+      state: 'read'
+      ageConfirmedAt: string
+      consentSync: boolean
+      consentErrors: boolean
+      consentCoachHistory: boolean
+      /** The privacy policy's version the answers were given under. */
+      consentVersion: string
+      consentedAt: string
+    }
+
+/** `localApi`: the local server did not answer; `cloud`: the account's
+ *  project did not; `disk`: the sync state could not be written. */
+export type SyncError = 'localApi' | 'cloud' | 'disk'
+
+/** What the page is shown of the cloud backup. */
+export type SyncStatus = {
+  running: boolean
+  lastSyncAt: string | null
+  /** Matches this install has backed up for the signed-in account. */
+  backedUp: number
+  /** Why the last run stopped; `null` after one that finished. */
+  lastError: SyncError | null
+}
+
+/** What a signed-in account adds once the shell's account module runs. */
+export type AccountDetails = { profile: ProfileState; sync: SyncStatus }
+
 /** `available: false`: this build has no account (no Supabase project). */
-export type AccountState = { available: false } | ({ available: true } & AccountStatus)
+export type AccountState = { available: false } | ({ available: true } & AccountStatus & Partial<AccountDetails>)
 
 export type AccountProvider = 'google' | 'discord'
 
@@ -117,12 +151,51 @@ export type SignInError =
 /** `message` is in the shell's language, ready to show. */
 export type SignInReply = { ok: true; account: AccountStatus } | { ok: false; error: SignInError; message: string }
 
+/** `unavailable`: no account in this build. `signedOut`: the action needs a
+ *  sign-in. `invalid`: malformed input. `ageNotConfirmed`: a first profile
+ *  needs the age confirmation. `failed`: the cloud or the disk refused it. */
+export type AccountError = 'unavailable' | 'signedOut' | 'invalid' | 'ageNotConfirmed' | 'failed'
+
+/** An account action's answer. `cancelled`: the export's save dialog was
+ *  closed. `deleted`: how many rows a delete removed. */
+export type AccountReply = { ok: true; cancelled?: boolean; deleted?: number } | { ok: false; error: AccountError }
+
+/** The consent screen's answers. */
+export type ProfileChange = {
+  consentSync: boolean
+  consentErrors: boolean
+  consentCoachHistory: boolean
+  /** The privacy policy's version the answers were given under. */
+  policyVersion: string
+  /** Required by the first write, ignored after it. */
+  ageConfirmed?: boolean
+}
+
 /** The account calls; resolves once the sign-in ended (up to five minutes). */
 export type AccountActions = {
   status(): Promise<AccountState>
   signIn(provider: AccountProvider): Promise<SignInReply>
   signOut(): Promise<Saved>
+  setProfile(change: ProfileChange): Promise<AccountReply>
+  /** Opens the shell's save dialog; `cancelled` when it is closed. */
+  exportData(): Promise<AccountReply>
+  /** Also turns the backup off, and a failed delete leaves it off. */
+  deleteCloudHistory(): Promise<AccountReply>
+  /** Needs a signed-in user, not a profile. */
+  deleteAccount(): Promise<AccountReply>
 }
+
+/** The stored answer to "Help build the stats", and what it was given to. */
+export type Contribute = {
+  yes: boolean
+  /** The privacy policy's version the answer was given under. */
+  policyVersion: string
+  answeredAt: string
+  ageConfirmed: boolean
+}
+
+/** What the page sends with "Help build the stats"; `off` stops any upload at once. */
+export type ContribAnswer = { yes: boolean; policyVersion: string; ageConfirmed: boolean }
 
 /** The shell's own preferences, which the server never reads. `platform` is
  *  Node's `process.platform`; `keepRunningOnClose` is Linux only. */
@@ -137,6 +210,8 @@ export type AppSettings = {
   /** Whether AI features are on. `null`: undecided, a fresh install that
    *  `/welcome` will ask; it reads as off. */
   aiFeatures: boolean | null
+  /** The stored "Help build the stats" answer; `null` while unanswered, which sends nothing. */
+  contribute: Contribute | null
   /** The account; a change arrives with the rest of the settings. */
   account: AccountState
   /** Whether onboarding's last step asks about starting with the system. */
@@ -216,6 +291,8 @@ export type Shell = Partial<ShellReports> & {
   backUpNow(): Promise<Saved>
   /** Takes effect the next time the app starts. */
   restoreFrom(path: string): Promise<Saved>
+  /** The answer to "Help build the stats"; a yes needs `ageConfirmed: true`. */
+  contribSet(answer: ContribAnswer): Promise<Saved>
 }
 
 /** `window.senseiTopShell`, as the preload script exposes it. */

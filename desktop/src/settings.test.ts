@@ -135,6 +135,7 @@ describe('config --json to ShellSettings', () => {
       update: { state: 'idle' },
       onboarded: false,
       aiFeatures: null,
+      contribute: null,
       account: { available: false },
       askAutostart: false,
       canAutostart: false,
@@ -232,6 +233,15 @@ describe('doctor --json for onboarding (S15)', () => {
     expect(toAppSettings({ aiFeatures: true }, info).aiFeatures).toBe(true);
     expect(toAppSettings({ aiFeatures: false }, info).aiFeatures).toBe(false);
     expect(toAppSettings({ onboarded: true }, info).aiFeatures).toBeNull();
+  });
+
+  it('publishes the stored contribute answer, null while unanswered', () => {
+    const info = { version: '1', platform: 'linux', update: { state: 'idle' } as const, ...NO_APP_EXTRAS };
+    const answer = { yes: true, policyVersion: '2026-11-03', answeredAt: '2026-11-04T10:00:00.000Z', ageConfirmed: true };
+    expect(toAppSettings({ contribute: answer }, info).contribute).toEqual(answer);
+    expect(toAppSettings({ contribute: { ...answer, yes: false } }, info).contribute?.yes).toBe(false);
+    expect(toAppSettings({ contribute: null }, info).contribute).toBeNull();
+    expect(toAppSettings({}, info).contribute).toBeNull();
   });
 });
 
@@ -702,6 +712,19 @@ describe('the service', () => {
     service.accountChanged();
     expect(changes).toHaveLength(1);
     expect(changes.at(-1)?.app.account).toEqual({ available: true, ...status });
+  });
+
+  it('sends the settings again with the stored contribute answer, and nothing before the first read', async () => {
+    const { service, stored, changes } = harness();
+    service.contributeChanged();
+    expect(changes).toHaveLength(0);
+    await service.refresh();
+    expect(service.current?.app.contribute).toBeNull();
+    const answer = { yes: true, policyVersion: '2026-11-03', answeredAt: '2026-11-04T10:00:00.000Z', ageConfirmed: true };
+    stored.contribute = answer;
+    service.contributeChanged();
+    expect(changes).toHaveLength(1);
+    expect(changes.at(-1)?.app.contribute).toEqual(answer);
   });
 
   it('hands the update switch to the updater, and nothing else', async () => {

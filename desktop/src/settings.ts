@@ -50,7 +50,7 @@ import { t } from './i18n';
 import type { Logger } from './log';
 import { silent } from './log';
 import { localApiSentryEnv, type ErrorReporter } from './cloud/sentry';
-import { ensureInstallId, type LanguageChoice, type Play, type ShellJson } from './store';
+import { ensureInstallId, type Contribute, type LanguageChoice, type Play, type ShellJson } from './store';
 import type { UpdateStatus } from './updater';
 
 export type DetailedLogs = 'enabled' | 'disabled' | 'unknown';
@@ -133,6 +133,8 @@ export type AppSettings = {
   onboarded: boolean;
   /** shell.json's `aiFeatures` (plan 40D); `null` while undecided, which the page reads as off. */
   aiFeatures: boolean | null;
+  /** shell.json's `contribute` (plan 40b S13); `null` while unanswered. */
+  contribute: Contribute | null;
   /** The account (plan 40b S10); `{ available: false }` in a build with no Supabase project. */
   account: AccountState;
   /** Whether onboarding's last step asks about starting with the system (D25). */
@@ -499,6 +501,7 @@ export function toAppSettings(
     update: info.update,
     onboarded: prefs.onboarded ?? false,
     aiFeatures: prefs.aiFeatures ?? null,
+    contribute: prefs.contribute ?? null,
     account: info.account,
     askAutostart: info.askAutostart,
     canAutostart: info.canAutostart,
@@ -853,6 +856,11 @@ export class SettingsService {
       firstData: this.firstDataState,
       account: this.deps.account(),
     });
+  }
+
+  /** The stored "Help build the stats" answer changed: same contract as `updateChanged`. */
+  contributeChanged(): void {
+    this.updateChanged();
   }
 
   /** The account changed: same contract as `updateChanged`. */

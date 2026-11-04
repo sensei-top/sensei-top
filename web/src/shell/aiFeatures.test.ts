@@ -53,6 +53,7 @@ function shellWith(
         update: { state: 'idle' },
         onboarded: true,
         aiFeatures,
+        contribute: null,
         account: { available: false },
         askAutostart: false,
         canAutostart: true,
@@ -69,10 +70,15 @@ function shellWith(
     pickFile: () => Promise.resolve(null),
     backUpNow: never,
     restoreFrom: never,
+    contribSet: never,
     account: {
       status: () => Promise.resolve({ available: false } as const),
       signIn: () => Promise.resolve({ ok: false, error: 'auth.error.failed', message: '' } as const),
       signOut: never,
+      setProfile: never,
+      exportData: never,
+      deleteCloudHistory: never,
+      deleteAccount: never,
     },
     app: {
       set,

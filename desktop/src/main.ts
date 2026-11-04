@@ -496,6 +496,7 @@ function run(): void {
     if (!store.update({ contribute: answer })) return { ok: false, error: t('settings.notSaved') };
     if (answer.yes) void contributor?.run();
     else contributor?.stop();
+    settings.contributeChanged();
     return { ok: true };
   });
   handle(CHANNELS.appFinishOnboarding, refusedSaved, () => settings.finishOnboarding());

@@ -62,6 +62,7 @@ const SAMPLE_APP: AppSettings = {
   update: { state: 'ready', version: '0.0.1-sample' },
   onboarded: true,
   aiFeatures: true,
+  contribute: null,
   account: { available: false },
   askAutostart: false,
   canAutostart: true,
@@ -110,6 +111,10 @@ function useSampleApp(sample: SampleId): NonNullable<Shell['app']> {
       status: () => Promise.resolve({ available: false }),
       signIn: () => Promise.resolve({ ok: false, error: 'auth.error.failed', message: 'Not available on the reference page.' }),
       signOut: () => answer({ ok: true }),
+      setProfile: () => Promise.resolve({ ok: true }),
+      exportData: () => Promise.resolve({ ok: true, cancelled: true }),
+      deleteCloudHistory: () => Promise.resolve({ ok: true, deleted: 0 }),
+      deleteAccount: () => Promise.resolve({ ok: true }),
     },
   }
 }

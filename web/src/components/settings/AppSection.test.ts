@@ -18,6 +18,7 @@ function app(change: Partial<AppSettings> = {}): AppSettings {
     update: { state: 'idle' },
     onboarded: true,
     aiFeatures: true,
+    contribute: null,
     account: { available: false },
     askAutostart: false,
     canAutostart: true,
