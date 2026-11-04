@@ -23,6 +23,8 @@ build/
 desktop/release/
 # The desktop shell's dependencies (desktop/dist/ is covered by dist/ above).
 desktop/node_modules/
+# The cloud settings scripts/build-config.mjs writes from the build environment.
+desktop/src/cloud/build-config.ts
 .claude/handoffs/
 # Per-user Claude Code settings; the shared skill under .claude/skills/ stays tracked.
 .claude/settings.local.json
