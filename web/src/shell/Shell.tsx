@@ -1,10 +1,12 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, Outlet, ScrollRestoration, useLocation, useMatches } from 'react-router'
+import { Link, Outlet, ScrollRestoration, useLocation, useMatches, useNavigate } from 'react-router'
 import { useLive } from '../api'
 import { useShell } from '../bridge'
 import { BrandGlyph, Callout, TextLink } from '../components/ui'
+import { ACCOUNT_WELCOME_PATH, needsConsent } from '../lib/accountWelcome'
+import { POLICY_VERSION } from '../lib/policy'
 import { BottomBar } from './BottomBar'
 import { LiveStatus } from './LiveStatus'
 import { documentTitle, layoutName, placeAt, PRODUCT_NAME, type RouteHandle } from './places'
@@ -58,7 +60,15 @@ export function Shell() {
   const { pathname } = useLocation()
   const matches = useMatches()
   const handle = matches[matches.length - 1]?.handle as RouteHandle | undefined
-  const hasShell = useShell() !== null
+  const shell = useShell()
+  const hasShell = shell !== null
+  const navigate = useNavigate()
+  // A signed-in user with no profile, or answers given under an older
+  // policy, is asked first; the consent screen itself is never redirected.
+  const consentDue = needsConsent(shell?.app?.settings, POLICY_VERSION)
+  useEffect(() => {
+    if (consentDue && pathname !== ACCOUNT_WELCOME_PATH) void navigate(ACCOUNT_WELCOME_PATH, { replace: true })
+  }, [consentDue, pathname, navigate])
   const notFound = matches.some((match) => (match.handle as RouteHandle | undefined)?.notFound)
   const place = notFound ? null : placeAt(pathname)
   const { name, title } = layoutName(place, handle, hasShell, t)

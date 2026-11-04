@@ -12,7 +12,8 @@
   "notFound": "No such page",
   "titles": {
     "mtgoPicks": "Pick MTGO decks",
-    "welcome": "Welcome"
+    "welcome": "Welcome",
+    "accountWelcome": "Choose what your account does"
   },
   "homeLink": "{{product}}, home",
   "skipLink": "Skip to the page",

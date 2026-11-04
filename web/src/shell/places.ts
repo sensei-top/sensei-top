@@ -81,13 +81,14 @@ export function documentTitle(place: Place | null, t: TFunction, title: string |
 }
 
 /** An address that is no place in the rail but has a name of its own. */
-export type RouteTitle = 'mtgoPicks' | 'welcome'
+export type RouteTitle = 'mtgoPicks' | 'welcome' | 'accountWelcome'
 
 /** The name of an address that is no place, "Welcome". */
 export function routeTitle(title: RouteTitle, t: TFunction): string {
   const titles: Record<RouteTitle, string> = {
     mtgoPicks: t('shell.titles.mtgoPicks'),
     welcome: t('shell.titles.welcome'),
+    accountWelcome: t('shell.titles.accountWelcome'),
   }
   return titles[title]
 }
