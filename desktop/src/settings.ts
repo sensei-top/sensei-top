@@ -44,6 +44,7 @@ import { PROVIDERS, type AccountStatus, type CloudAuth, type Provider, type Sign
 import { t } from './i18n';
 import type { Logger } from './log';
 import { silent } from './log';
+import { localApiSentryEnv, type ErrorReporter } from './cloud/sentry';
 import { ensureInstallId, type LanguageChoice, type Play, type ShellJson } from './store';
 import type { UpdateStatus } from './updater';
 
@@ -173,6 +174,10 @@ export const CHANNELS = {
   accountStatus: 'sensei-top:account-status',
   accountSignIn: 'sensei-top:account-sign-in',
   accountSignOut: 'sensei-top:account-sign-out',
+  reportError: 'sensei-top:report-error',
+  reportProblem: 'sensei-top:report-problem',
+  /** Main to page: the tray's "Report a problem" was chosen. */
+  reportProblemRequested: 'sensei-top:report-problem-requested',
   changed: 'sensei-top:changed',
 } as const;
 
@@ -226,6 +231,64 @@ export class AccountApi {
       this.log.warn('signing out failed', { error: String(error) });
       return { ok: false, error: this.signOutFailedMessage() };
     }
+  }
+}
+
+/** The error-reports consent and the signed-in user, kept in step with the
+ *  main process's reporter and the server's environment. The consent is read
+ *  from `shell.json` (default off); the account module sets it and the user. */
+export class ReportsLink {
+  private user: string | null = null;
+
+  constructor(
+    private readonly store: Parameters<typeof ensureInstallId>[0],
+    private readonly reporter: Pick<ErrorReporter, 'setConsent' | 'setUser'>,
+    private readonly dsn: string | null,
+    /** Restarts the server so it reads the new environment. */
+    private readonly restartServer: () => Promise<void>,
+    private readonly log: Logger = silent,
+  ) {}
+
+  get consent(): boolean {
+    return this.store.get().consentErrors === true;
+  }
+
+  get userId(): string | null {
+    return this.user;
+  }
+
+  /** The three variables the server is spawned with. */
+  env(): Record<string, string> {
+    return localApiSentryEnv(this.dsn, this.consent, this.user);
+  }
+
+  /** Starts the reporter for a consent already cached; call once Electron is ready. */
+  async start(): Promise<void> {
+    this.reporter.setUser(this.user);
+    await this.reporter.setConsent(this.consent);
+  }
+
+  /** Caches the consent and applies it at once; restarts the server only
+   *  when its environment changed. */
+  async setConsent(on: boolean): Promise<void> {
+    const before = this.env();
+    if (!this.store.update({ consentErrors: on })) this.log.warn('the error-reports choice could not be written');
+    await this.reporter.setConsent(on);
+    await this.restartIfChanged(before);
+  }
+
+  /** The signed-in account's ID, `null` signed out. */
+  async setUser(userId: string | null): Promise<void> {
+    const before = this.env();
+    this.user = userId?.trim() || null;
+    this.reporter.setUser(this.user);
+    await this.restartIfChanged(before);
+  }
+
+  private async restartIfChanged(before: Record<string, string>): Promise<void> {
+    const after = this.env();
+    if (Object.keys(after).every((key) => after[key] === before[key])) return;
+    await this.restartServer();
   }
 }
 
@@ -791,6 +854,11 @@ export class SettingsService {
   private async publish(): Promise<void> {
     const settings = await this.refresh();
     if (settings) this.deps.changed(settings);
+  }
+
+  /** Restarts the server after the queued work, for a change of its environment. */
+  restartFor(reason: string): Promise<void> {
+    return this.serial(() => this.restartServer(reason));
   }
 
   private async restartServer(reason: string): Promise<void> {

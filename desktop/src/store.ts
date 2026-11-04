@@ -57,12 +57,14 @@ export interface ShellPrefs {
   aiFeatures?: boolean;
   /** Plan 40b S10: a random UUID made at the first successful sign-in; never replaced. */
   installId?: string;
+  /** Plan 40b S11: the yes to error reports, cached from the profile (the account module sets it); absent means off. */
+  consentErrors?: boolean;
 }
 
 /** What is on disk: the known keys plus whatever else was there. */
 export type ShellJson = ShellPrefs & Record<string, unknown>;
 
-const BOOLEAN_KEYS = ['keepRunningOnClose', 'autostart', 'checkForUpdates', 'diagnostic', 'onboarded', 'aiFeatures'] as const;
+const BOOLEAN_KEYS = ['keepRunningOnClose', 'autostart', 'checkForUpdates', 'diagnostic', 'onboarded', 'aiFeatures', 'consentErrors'] as const;
 
 function isInt(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value);

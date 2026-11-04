@@ -11,6 +11,7 @@ import '@fontsource-variable/bricolage-grotesque/wght.css'
 import '@fontsource-variable/hanken-grotesk/wght.css'
 import '@fontsource-variable/hanken-grotesk/wght-italic.css'
 import './index.css'
+import { readShellGlobal } from './bridge'
 // The translation layer starts before anything renders: the language is
 // chosen and i18next is ready when this import returns.
 import { onLanguageChange } from './i18n'
@@ -35,6 +36,25 @@ const client = new QueryClient({
 // no prose: resetting it would lose the projection revision Shell.tsx
 // compares, and the next beat would invalidate everything a second time.
 onLanguageChange(() => void client.resetQueries({ predicate: (q) => q.queryKey[0] !== 'live' }))
+
+// Inside the desktop shell the page's uncaught errors go to the shell, which
+// drops them unless the user said yes to error reports. A plain browser has
+// no bridge and does nothing.
+function forwardErrors(): void {
+  const report = readShellGlobal()?.reportError
+  if (!report) return
+  const send = (value: unknown): void => {
+    const error = value instanceof Error ? value : null
+    void report({
+      name: error?.name ?? 'Error',
+      message: error ? error.message : typeof value === 'string' ? value : 'Non-error value rejected',
+      stack: error?.stack ?? null,
+    }).catch(() => {})
+  }
+  window.addEventListener('error', (event) => send(event.error ?? event.message))
+  window.addEventListener('unhandledrejection', (event) => send(event.reason))
+}
+forwardErrors()
 
 // Every place is an address (routes.tsx). The router only picks the page;
 // TanStack Query above it stays the only data layer.

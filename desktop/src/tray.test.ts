@@ -81,13 +81,14 @@ describe('the menu', () => {
     restartToUpdate: () => {},
     showLogs: () => {},
     exportDiagnostics: () => {},
+    reportProblem: () => {},
     quit: () => {},
   };
 
   it('opens with the state, then the items in order', () => {
     const items = menuTemplate('watching', actions);
     expect(items.map((item) => item.label ?? item.type)).toEqual([
-      'Watching', 'separator', 'Open', 'Settings', 'Check for updates', 'Show logs', 'Export diagnostics', 'separator', 'Quit',
+      'Watching', 'separator', 'Open', 'Settings', 'Check for updates', 'Show logs', 'Export diagnostics', 'Report a problem', 'separator', 'Quit',
     ]);
     expect(items[0]!.enabled).toBe(false);
   });
@@ -95,8 +96,8 @@ describe('the menu', () => {
   it('leaves Check for updates disabled without the updater, and Settings until the dashboard is up', () => {
     const enabled = (state: Parameters<typeof menuTemplate>[0]) =>
       Object.fromEntries(menuTemplate(state, actions).filter((item) => item.label).map((item) => [item.label, item.enabled !== false]));
-    expect(enabled('watching')).toMatchObject({ Open: true, Settings: true, 'Check for updates': false, 'Show logs': true, 'Export diagnostics': true, Quit: true });
-    expect(enabled('starting')).toMatchObject({ Open: true, Settings: false, 'Show logs': true, Quit: true });
+    expect(enabled('watching')).toMatchObject({ Open: true, Settings: true, 'Check for updates': false, 'Show logs': true, 'Export diagnostics': true, 'Report a problem': true, Quit: true });
+    expect(enabled('starting')).toMatchObject({ Open: true, Settings: false, 'Report a problem': false, 'Show logs': true, Quit: true });
     expect(enabled('failed').Settings).toBe(false);
     expect(enabled('stopped').Settings).toBe(true);
   });
@@ -192,6 +193,7 @@ function makeTray() {
       restartToUpdate: () => {},
       showLogs: () => {},
       exportDiagnostics: () => {},
+      reportProblem: () => {},
       quit: () => {},
     },
     silentLog,

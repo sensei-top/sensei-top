@@ -12,6 +12,7 @@
   "tray.menu.checkForUpdates": "Check for updates",
   "tray.menu.showLogs": "Show logs",
   "tray.menu.exportDiagnostics": "Export diagnostics",
+  "tray.menu.reportProblem": "Report a problem",
   "tray.menu.restartToUpdate": "Restart to update",
   "tray.menu.quit": "Quit",
   "menu.edit": "Edit",

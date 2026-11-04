@@ -28,6 +28,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { cloudConfig } from './cloud/config';
 import { CloudAuth } from './cloud/auth';
+import { fetchLogTail, sendProblemReport } from './cloud/report';
+import { ErrorReporter, sentryFactory } from './cloud/sentry';
 import { SessionStore } from './cloud/sessionStore';
 import { applyAutostart, applyFirstRun, startMode } from './autostart';
 import { setLanguage, setSystemTags, t } from './i18n';
@@ -41,11 +43,13 @@ import {
   formatListing,
   restoreLeftovers,
   restoreLeftoversMessage,
+  ReportsLink,
   SettingsService,
   trustedSender,
   type BridgeSettings,
   type Saved,
 } from './settings';
+import type { ReportOutcome } from './cloud/report';
 import { DB_NAME, resolveDataDir, serverCommand, ServerController, type ServerState } from './server';
 import { settleAiFeatures, ShellStore } from './store';
 import { StatusTray, type UpdateMenu } from './tray';
@@ -152,12 +156,28 @@ function run(): void {
   setSystemTags(() => app.getPreferredSystemLanguages());
   setLanguage(store.get().language ?? 'system');
 
-  const server = new ServerController({
+  // S11: the SDK is loaded when a client is first made, never on a build or a
+  // launch that sends nothing (importing it reads `electron.app`).
+  const sentryLog = shellLog.child('shell.reports');
+  const reportFactory: ReturnType<typeof sentryFactory> = (options) =>
+    sentryFactory(require('@sentry/electron/main') as typeof import('@sentry/electron/main'))(options);
+  // No route exposes the player's names, so the shell scrubs by rule alone.
+  const reportNames = (): string[] => [];
+  const errors = new ErrorReporter({
+    dsn: cloudConfig.sentryDsnDesktop,
+    release: app.getVersion(),
+    factory: reportFactory,
+    names: reportNames,
+    log: sentryLog,
+  });
+
+  const server: ServerController = new ServerController({
     command,
     dataDir,
     session,
     env: process.env,
     verbose: () => Boolean(store.get().diagnostic),
+    serveEnv: () => reports.env(),
     rememberedPort: () => store.get().port,
     rememberPort: (port) => {
       store.update({ port });
@@ -278,7 +298,7 @@ function run(): void {
     shellLog.child('shell.account'),
   );
 
-  const settings = new SettingsService({
+  const settings: SettingsService = new SettingsService({
     run: (args, options) => server.run(args, options),
     stopServer: () => server.stop(),
     startServer: () => {
@@ -334,6 +354,17 @@ function run(): void {
     },
     log: shellLog.child('shell.settings'),
   });
+
+  // DB8: consent and the signed-in user reach the server as environment at
+  // spawn, so a change of either restarts it. The account module calls
+  // `reports.setConsent` and `reports.setUser`.
+  const reports: ReportsLink = new ReportsLink(
+    store,
+    errors,
+    cloudConfig.sentryDsnDesktop,
+    () => settings.restartFor('error-report settings changed'),
+    sentryLog,
+  );
 
   // A status change rebuilds the tray menu and sends the page its settings.
   const onUpdateStatus = (): void => {
@@ -423,6 +454,20 @@ function run(): void {
   handle(CHANNELS.accountStatus, () => ({ available: false }) as const, () => account.state());
   handle(CHANNELS.accountSignIn, () => ({ ok: false, error: 'auth.error.failed', message: t('ipc.refused') }) as const, (provider: unknown) => account.signIn(provider));
   handle(CHANNELS.accountSignOut, refusedSaved, () => account.signOut());
+  // DB9: dropped without consent; the answer says whether it was captured.
+  handle(CHANNELS.reportError, () => false, (payload: unknown) => errors.captureRendererError(payload));
+  handle(CHANNELS.reportProblem, (): ReportOutcome => 'failed', (payload: unknown) => {
+    const port = server.port;
+    return sendProblemReport(payload, {
+      dsn: cloudConfig.sentryDsnDesktop,
+      release: app.getVersion(),
+      factory: reportFactory,
+      userId: reports.userId,
+      logTail: () => (port === null ? Promise.resolve(null) : fetchLogTail((url, init) => fetch(url, init), port)),
+      names: reportNames,
+      log: sentryLog,
+    });
+  });
   handle(CHANNELS.appFinishOnboarding, refusedSaved, () => settings.finishOnboarding());
   handle(CHANNELS.appShowDataFolder, refusedSaved, () => settings.showDataFolder());
   handle(CHANNELS.appShowLogs, refusedSaved, (): Saved => {
@@ -441,9 +486,11 @@ function run(): void {
   }
   process.on('uncaughtExceptionMonitor', (error) => {
     log.error('uncaught exception in the main process', { error });
+    errors.captureException(error);
   });
   process.on('unhandledRejection', (reason) => {
     log.error('unhandled rejection in the main process', { reason: String(reason) });
+    errors.captureException(reason);
   });
 
   app.on('second-instance', () => {
@@ -468,7 +515,7 @@ function run(): void {
     }
     stopping = true;
     log.info('quitting: stopping the server');
-    void server.stop().finally(() => {
+    void Promise.allSettled([server.stop(), errors.shutdown()]).then(() => {
       readyToQuit = true;
       app.quit();
     });
@@ -564,6 +611,11 @@ function run(): void {
             if (!result.ok) void dialog.showErrorBox(t('diagnostics.title'), result.error);
           });
         },
+        // The dialog is the page's: show the window and tell it.
+        reportProblem: () => {
+          window?.open();
+          liveWindow()?.win.webContents.send(CHANNELS.reportProblemRequested);
+        },
         showLogs: () => {
           void shell.openPath(path.join(dataDir, 'logs')).then((error) => {
             if (error) log.warn('could not open the log folder', { error });
@@ -589,6 +641,9 @@ function run(): void {
       }
       tray.setUpdate(updateMenu());
     }
+
+    // Before the server starts: a cached yes makes its client now.
+    void reports.start();
 
     // The first page load reads the settings synchronously, so they come first.
     const settingsLoaded = settings.refresh();

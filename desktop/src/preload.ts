@@ -4,6 +4,8 @@
 // cache so the first render already has the settings (`null` when they could
 // not be read).
 //
+// `reportError`, `reportProblem` and `onReportProblem` are S11's (DB9, DB15).
+//
 // `app` also carries onboarding's three actions (S15): `recheck`, `firstData`
 // and `finishOnboarding`.
 //
@@ -17,6 +19,7 @@
 // `settings.test.ts` checks they match `CHANNELS`. Types are erased.
 
 import { contextBridge, ipcRenderer } from 'electron';
+import type { ReportOutcome } from './cloud/report';
 import type { AccountSignInReply, AccountState, AppChange, BridgeSettings, DeepPartial, KeyName, Saved, ShellSettings } from './settings';
 
 const CHANNEL = {
@@ -39,6 +42,9 @@ const CHANNEL = {
   accountStatus: 'sensei-top:account-status',
   accountSignIn: 'sensei-top:account-sign-in',
   accountSignOut: 'sensei-top:account-sign-out',
+  reportError: 'sensei-top:report-error',
+  reportProblem: 'sensei-top:report-problem',
+  reportProblemRequested: 'sensei-top:report-problem-requested',
   changed: 'sensei-top:changed',
 } as const;
 
@@ -71,6 +77,16 @@ if (location.protocol === 'http:') {
       status: (): Promise<AccountState> => ipcRenderer.invoke(CHANNEL.accountStatus),
       signIn: (provider: 'google' | 'discord'): Promise<AccountSignInReply> => ipcRenderer.invoke(CHANNEL.accountSignIn, provider),
       signOut: (): Promise<Saved> => ipcRenderer.invoke(CHANNEL.accountSignOut),
+    },
+    reportError: (error: { name: string; message: string; stack: string | null }): Promise<boolean> => ipcRenderer.invoke(CHANNEL.reportError, error),
+    reportProblem: (report: { text: string; attachLog: boolean }): Promise<ReportOutcome> => ipcRenderer.invoke(CHANNEL.reportProblem, report),
+    /** Calls `listener` when the tray's "Report a problem" was chosen; returns a function that stops it. */
+    onReportProblem: (listener: () => void): (() => void) => {
+      const handler = () => listener();
+      ipcRenderer.on(CHANNEL.reportProblemRequested, handler);
+      return () => {
+        ipcRenderer.removeListener(CHANNEL.reportProblemRequested, handler);
+      };
     },
     /** Calls `listener` with the new settings after any change; returns a function that stops it. */
     onChange: (listener: (settings: BridgeSettings) => void): (() => void) => {

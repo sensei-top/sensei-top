@@ -353,6 +353,22 @@ describe('the server controller', () => {
     expect(h.server.port).toBe(41234);
   });
 
+  it('gives the serve child the extra environment, read at each start', async () => {
+    let value = '0';
+    const h = harness({ serveEnv: () => ({ SENSEI_TOP_SENTRY_CONSENT: value }) });
+    h.server.start();
+    const first = await h.nextChild();
+    expect((first.options.env as NodeJS.ProcessEnv).SENSEI_TOP_SENTRY_CONSENT).toBe('0');
+    expect((first.options.env as NodeJS.ProcessEnv).SENSEI_TOP_SESSION).toBe('abcd1234');
+    first.ready(41234);
+    await h.reach('ready');
+    await h.server.stop();
+    value = '1';
+    h.server.start();
+    const second = await h.nextChild();
+    expect((second.options.env as NodeJS.ProcessEnv).SENSEI_TOP_SENTRY_CONSENT).toBe('1');
+  });
+
   it('asks for the remembered port again, and holds stdin open while it runs', async () => {
     const h = harness({ remembered: 41234 });
     h.server.start();
@@ -641,6 +657,16 @@ describe('running another subcommand', () => {
     // Only the subcommand's name is logged: never an argument or stdin.
     expect(h.lines.join('\n')).not.toContain('sk-not-a-real-key');
     expect(h.lines.join('\n')).not.toContain('--set-key');
+  });
+
+  it('keeps the serve-only environment out of one-shot commands', async () => {
+    const h = harness({ serveEnv: () => ({ SENSEI_TOP_SENTRY_DSN: 'https://k@h.invalid/1', SENSEI_TOP_SENTRY_CONSENT: '1', SENSEI_TOP_SENTRY_USER: 'u' }) });
+    await h.server.run(['doctor', '--json']);
+    const env = h.children[0]!.options.env as NodeJS.ProcessEnv;
+    expect(env.SENSEI_TOP_SESSION).toBe('abcd1234');
+    expect('SENSEI_TOP_SENTRY_DSN' in env).toBe(false);
+    expect('SENSEI_TOP_SENTRY_CONSENT' in env).toBe(false);
+    expect('SENSEI_TOP_SENTRY_USER' in env).toBe(false);
   });
 
   it('closes stdin at once when there is nothing to write', async () => {

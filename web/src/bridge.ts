@@ -187,7 +187,24 @@ export type BridgeSettings = ShellSettings & { app: AppSettings }
  *  page's sample shells), and the page then draws no App section. */
 export type ShellApp = { settings: AppSettings } & AppActions & { account: AccountActions }
 
-export type Shell = {
+/** A renderer error as the page hands it to the shell (the shell drops it
+ *  unless the user said yes to error reports). */
+export type RendererErrorReport = { name: string; message: string; stack: string | null }
+
+/** What `reportProblem` answers; the shell names the outcome, the page words it. */
+export type ReportOutcome = 'sent' | 'sent-without-log' | 'unavailable' | 'invalid' | 'failed'
+
+/** The error-report calls. Absent from a shell that has none. */
+export type ShellReports = {
+  /** `true` when the shell captured it. */
+  reportError(error: RendererErrorReport): Promise<boolean>
+  /** Sends one report whatever the error-reports choice; the caller has asked the transfer consent. */
+  reportProblem(report: { text: string; attachLog: boolean }): Promise<ReportOutcome>
+  /** Calls `listener` when the shell's tray asked for the report dialog; returns a function that stops it. */
+  onReportProblem(listener: () => void): () => void
+}
+
+export type Shell = Partial<ShellReports> & {
   settings: ShellSettings
   app?: ShellApp
   /** Never carries a key: a key is set by `setKey` alone. */
@@ -202,7 +219,7 @@ export type Shell = {
 }
 
 /** `window.senseiTopShell`, as the preload script exposes it. */
-export type RawShell = Omit<Shell, 'settings' | 'app'> & {
+export type RawShell = Omit<Shell, 'settings' | 'app' | keyof ShellReports> & Partial<ShellReports> & {
   /** Read once by the preload script; `null` when the shell could not read them. */
   initial: BridgeSettings | null
   app: AppActions

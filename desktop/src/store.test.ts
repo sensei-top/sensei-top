@@ -38,6 +38,11 @@ describe('parsing shell.json', () => {
     });
   });
 
+  it('keeps consentErrors when it is a boolean and drops anything else', () => {
+    expect(parseShellJson(JSON.stringify({ consentErrors: true }))).toEqual({ prefs: { consentErrors: true }, dropped: [] });
+    expect(parseShellJson(JSON.stringify({ consentErrors: 'yes' }))).toEqual({ prefs: {}, dropped: ['consentErrors'] });
+  });
+
   it('drops a value of the wrong type and keeps the rest', () => {
     const { prefs, dropped } = parseShellJson(
       JSON.stringify({ port: '41234', onboarded: 'yes', bounds: { width: -1, height: 800 }, autostart: true, aiFeatures: null }),

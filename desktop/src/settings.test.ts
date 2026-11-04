@@ -20,6 +20,7 @@ import {
   restoreLeftoversMessage,
   AccountApi,
   type AccountState,
+  ReportsLink,
   SettingsService,
   toAppSettings,
   toShellSettings,
@@ -28,6 +29,7 @@ import {
   type FirstData,
   type SettingsDeps,
 } from './settings';
+import { ErrorReporter, type SentryClient, type SentryFactory } from './cloud/sentry';
 import type { ShellJson } from './store';
 import type { UpdateStatus } from './updater';
 
@@ -387,6 +389,8 @@ describe('small readers', () => {
     expect(uses('status', 'accountStatus')).toBe(true);
     expect(uses('signIn', 'accountSignIn')).toBe(true);
     expect(uses('signOut', 'accountSignOut')).toBe(true);
+    expect(uses('reportError', 'reportError')).toBe(true);
+    expect(uses('reportProblem', 'reportProblem')).toBe(true);
   });
 });
 
@@ -1151,5 +1155,89 @@ describe('the account calls (plan 40b S10)', () => {
     const { api: account } = api({ status: () => signedOut, signOut: async () => void out++ });
     expect(await account.signOut()).toEqual({ ok: true });
     expect(out).toBe(1);
+  });
+});
+
+describe('the error-reports link (S11, DB8)', () => {
+  const DSN = 'https://public@sentry.example.invalid/1';
+  const USER = '00000000-0000-4000-8000-000000000001';
+
+  function setup(dsn: string | null, consentErrors?: boolean) {
+    let prefs: ShellJson = consentErrors === undefined ? {} : { consentErrors };
+    const store = {
+      get: () => prefs,
+      update: (patch: Partial<ShellJson>) => {
+        prefs = { ...prefs, ...patch };
+        return true;
+      },
+    };
+    const made: string[] = [];
+    const closed: string[] = [];
+    const factory: SentryFactory = (options) => {
+      made.push(options.dsn);
+      const client: SentryClient = {
+        captureException: () => 'id',
+        captureFeedback: () => 'id',
+        close: async () => {
+          closed.push(options.dsn);
+          return true;
+        },
+      };
+      return client;
+    };
+    const reporter = new ErrorReporter({ dsn, release: '1.0.0', factory, os: { name: 'Linux', version: '1' }, home: null });
+    let restarts = 0;
+    const link = new ReportsLink(store, reporter, dsn, async () => void restarts++);
+    return { link, reporter, made, closed, restarts: () => restarts, prefs: () => prefs };
+  }
+
+  it('is off by default: no client, blank environment', async () => {
+    const h = setup(DSN);
+    await h.link.start();
+    expect(h.link.consent).toBe(false);
+    expect(h.reporter.active).toBe(false);
+    expect(h.made).toEqual([]);
+    expect(h.link.env()).toEqual({ SENSEI_TOP_SENTRY_DSN: '', SENSEI_TOP_SENTRY_CONSENT: '0', SENSEI_TOP_SENTRY_USER: '' });
+  });
+
+  it('starts a client at launch for a cached yes', async () => {
+    const h = setup(DSN, true);
+    await h.link.start();
+    expect(h.reporter.active).toBe(true);
+    expect(h.made).toEqual([DSN]);
+  });
+
+  it('turning consent on creates the client and restarts the server; off closes it and restarts again', async () => {
+    const h = setup(DSN);
+    await h.link.setConsent(true);
+    expect(h.prefs().consentErrors).toBe(true);
+    expect(h.made).toEqual([DSN]);
+    expect(h.restarts()).toBe(1);
+    expect(h.link.env().SENSEI_TOP_SENTRY_DSN).toBe(DSN);
+    await h.link.setConsent(false);
+    expect(h.closed).toEqual([DSN]);
+    expect(h.reporter.active).toBe(false);
+    expect(h.restarts()).toBe(2);
+  });
+
+  it('restarts for a change of user only while consent is on', async () => {
+    const h = setup(DSN);
+    await h.link.setUser(USER);
+    expect(h.restarts()).toBe(0);
+    await h.link.setConsent(true);
+    expect(h.restarts()).toBe(1);
+    await h.link.setUser(null);
+    expect(h.restarts()).toBe(2);
+    await h.link.setUser(USER);
+    expect(h.link.env().SENSEI_TOP_SENTRY_USER).toBe(USER);
+    expect(h.restarts()).toBe(3);
+  });
+
+  it('makes no client and restarts nothing in a build with no DSN', async () => {
+    const h = setup(null);
+    await h.link.setConsent(true);
+    expect(h.made).toEqual([]);
+    expect(h.reporter.active).toBe(false);
+    expect(h.restarts()).toBe(0);
   });
 });
