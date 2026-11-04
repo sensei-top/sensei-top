@@ -1,0 +1,154 @@
+import { describe, expect, it, vi } from 'vitest'
+import type { ReportOutcome } from '../bridge'
+import {
+  blockerOf,
+  COUNTER_FROM,
+  outcomeKey,
+  REPORT_LIMIT,
+  sendControls,
+  sendReport,
+  signedInOf,
+  startingText,
+  wasSent,
+  type ReportDraft,
+} from './reportProblem'
+
+const draft = (change: Partial<ReportDraft> = {}): ReportDraft => ({ text: 'It broke', attachLog: false, agreed: true, ...change })
+
+describe('what keeps Send report disabled', () => {
+  it('names the first that applies, in the order of the hints', () => {
+    expect(blockerOf({ text: '  \n', agreed: false })).toBe('noText')
+    expect(blockerOf({ text: 'x'.repeat(REPORT_LIMIT + 1), agreed: false })).toBe('tooLong')
+    expect(blockerOf({ text: 'It broke', agreed: false })).toBe('notAgreed')
+    expect(blockerOf({ text: 'It broke', agreed: true })).toBeNull()
+  })
+
+  it('allows exactly the limit', () => {
+    expect(blockerOf({ text: 'x'.repeat(REPORT_LIMIT), agreed: true })).toBeNull()
+    expect(COUNTER_FROM).toBeLessThan(REPORT_LIMIT)
+  })
+})
+
+describe('the field of a dialog opened from an error', () => {
+  const said = (message: string) => `The page said: ${message}`
+  it('starts with the message as one line, and a line break to write under', () => {
+    expect(startingText('Boom\n  at x', said)).toBe('The page said: Boom at x\n')
+  })
+  it('starts empty with no message', () => {
+    expect(startingText(null, said)).toBe('')
+    expect(startingText('  ', said)).toBe('')
+  })
+  it('cuts a very long message', () => {
+    expect(startingText('a'.repeat(5000), said).length).toBeLessThan(600)
+  })
+})
+
+describe('sending a report', () => {
+  it('sends the trimmed text and the log choice through the bridge call', async () => {
+    const call = vi.fn(async (): Promise<ReportOutcome> => 'sent')
+    expect(await sendReport(call, draft({ text: '  It broke \n', attachLog: true }))).toBe('sent')
+    expect(call).toHaveBeenCalledExactlyOnceWith({ text: 'It broke', attachLog: true })
+  })
+
+  it('calls nothing for a draft the dialog would have blocked', async () => {
+    const call = vi.fn(async (): Promise<ReportOutcome> => 'sent')
+    expect(await sendReport(call, draft({ agreed: false }))).toBe('invalid')
+    expect(await sendReport(call, draft({ text: '' }))).toBe('invalid')
+    expect(call).not.toHaveBeenCalled()
+  })
+
+  it('reads a call that throws, or a word it does not know, as failed', async () => {
+    expect(await sendReport(async () => { throw new Error('gone') }, draft())).toBe('failed')
+    expect(await sendReport((async () => 'weird') as never, draft())).toBe('failed')
+  })
+
+  it('passes each outcome the shell names', async () => {
+    for (const outcome of ['sent', 'sent-without-log', 'unavailable', 'invalid', 'failed'] as const) {
+      expect(await sendReport(async () => outcome, draft())).toBe(outcome)
+    }
+  })
+
+  it('is unavailable with no shell call', async () => {
+    expect(await sendReport(undefined, draft())).toBe('unavailable')
+  })
+})
+
+describe('the outcomes', () => {
+  it('replace the form only when the report went', () => {
+    expect(wasSent('sent')).toBe(true)
+    expect(wasSent('sent-without-log')).toBe(true)
+    for (const outcome of ['unavailable', 'invalid', 'failed'] as const) expect(wasSent(outcome)).toBe(false)
+  })
+  it('each have a catalogue line', () => {
+    expect(outcomeKey('sent-without-log')).toBe('report.dialog.result.sentWithoutLog')
+    expect(outcomeKey('failed')).toBe('report.dialog.result.failed')
+  })
+})
+
+describe('whether the report carries an account ID', () => {
+  it('only when the account is available and signed in', () => {
+    expect(signedInOf(undefined)).toBe(false)
+    expect(signedInOf({ available: false })).toBe(false)
+    expect(signedInOf({ available: true, signedIn: false, userId: null, email: null, provider: null, persistence: { kept: true } })).toBe(false)
+    expect(signedInOf({ available: true, signedIn: true, userId: 'u', email: null, provider: null, persistence: { kept: true } })).toBe(true)
+  })
+})
+
+describe('the Send button', () => {
+  function run(outcome: ReportOutcome | 'throws', dismissWhileSending: boolean) {
+    const log: string[] = []
+    const dismissed = { current: false }
+    let busy = false
+    let shown: ReportOutcome | null = 'failed'
+    const seen: boolean[] = []
+    const reopen = vi.fn()
+    const { send } = sendControls({
+      call: async () => {
+        seen.push(busy, shown === null)
+        if (dismissWhileSending) dismissed.current = true
+        if (outcome === 'throws') throw new Error('gone')
+        return outcome
+      },
+      draft: () => draft(),
+      dismissed,
+      setBusy: (b) => {
+        busy = b
+        log.push(`busy:${b}`)
+      },
+      setOutcome: (o) => {
+        shown = o
+      },
+      reopen,
+    })
+    return { send, reopen, log, seen, shown: () => shown, busy: () => busy }
+  }
+
+  it('is busy during the send, with the previous outcome cleared, and idle after', async () => {
+    const r = run('sent', false)
+    await r.send()
+    expect(r.seen).toEqual([true, true])
+    expect(r.busy()).toBe(false)
+    expect(r.shown()).toBe('sent')
+  })
+
+  it('reopens a dismissed dialog after a failed send', async () => {
+    const r = run('failed', true)
+    await r.send()
+    expect(r.reopen).toHaveBeenCalledTimes(1)
+    const t = run('throws', true)
+    await t.send()
+    expect(t.reopen).toHaveBeenCalledTimes(1)
+    expect(t.shown()).toBe('failed')
+  })
+
+  it('does not reopen after a failure the dialog was still open for, or after a success', async () => {
+    const open = run('failed', false)
+    await open.send()
+    expect(open.reopen).not.toHaveBeenCalled()
+    for (const dismissedToo of [true, false]) {
+      const r = run('sent-without-log', dismissedToo)
+      await r.send()
+      expect(r.reopen).not.toHaveBeenCalled()
+    }
+  })
+})

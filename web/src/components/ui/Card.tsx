@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { Skeleton } from './Skeleton'
 import { useTranslation } from 'react-i18next'
+import { useReportProblem } from '../../lib/reportProblem'
+import { Button } from './Button'
 
 /** The one raised surface. `elevation={2}` is a block nested inside another
  *  Card: the fill steps up, and it takes neither border nor shadow. Each
@@ -107,10 +109,16 @@ export function Loading() {
 
 export function ErrorNote({ error }: { error: Error }) {
   const { t } = useTranslation()
+  const report = useReportProblem()
   return (
     <div className="rounded-card border border-edge bg-surface px-5 py-6 text-body shadow-lift">
       <p className="font-medium text-ink">{t('common.loadError')}</p>
       <p className="mt-1 text-ink2">{error.message}</p>
+      {report && (
+        <Button variant="quiet" className="mt-2 min-h-[44px]" onClick={() => report.open(error.message)}>
+          {t('report.open')}
+        </Button>
+      )}
     </div>
   )
 }
