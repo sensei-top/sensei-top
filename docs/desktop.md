@@ -329,6 +329,8 @@ blank, or a URL that is not http(s), is absent. With no Supabase project
 the dashboard draws no Account section and the shell makes no upload; with
 no DSN, no error report. A build from source never reaches the production
 project unless its builder supplies the variables.
+The release job (`desktop.yml`) reads the four from the public
+repository's Actions secrets of the same names.
 
 **Every outbound call from main goes through Electron's `net.fetch`**,
 which uses Chromium's network stack and the system proxy. It is passed to
