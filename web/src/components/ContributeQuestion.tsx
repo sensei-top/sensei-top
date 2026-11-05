@@ -59,11 +59,17 @@ export function ContributeQuestion({
   picked,
   waiting,
   onPicked,
+  waitingHint,
+  showHeading = true,
 }: {
   stored: Contribute | null
   picked: boolean | null
   waiting: boolean
   onPicked: (yes: boolean) => void
+  /** The hint shown while `waiting`; Welcome's by default. */
+  waitingHint?: string
+  /** Whether the question draws its own heading. */
+  showHeading?: boolean
 }) {
   const { t } = useTranslation()
   const shell = useShell()
@@ -92,7 +98,7 @@ export function ContributeQuestion({
   const box = ageBox(age, saved, saving !== null)
   return (
     <div className="space-y-3">
-      <h3 className="text-body font-medium text-ink">{t('contribute.heading')}</h3>
+      {showHeading && <h3 className="text-body font-medium text-ink">{t('contribute.heading')}</h3>}
       <ContributeDisclosure />
       <ContributeAge checked={box.checked} disabled={box.disabled} onChange={setAge} />
       <div className="flex flex-wrap gap-3">
@@ -109,7 +115,9 @@ export function ContributeQuestion({
           )
         })}
       </div>
-      {hint && <p className="text-caption text-muted">{t(`contribute.hint.${hint}`)}</p>}
+      {hint && (
+        <p className="text-caption text-muted">{hint === 'age' ? t('contribute.hint.age') : waitingHint ?? t('contribute.hint.waitsWelcome')}</p>
+      )}
       {failure && (
         <p role="alert" className="break-words text-caption text-loss">
           {failure}

@@ -22,5 +22,29 @@
   "failure": {
     "notSaved": "A sua resposta não foi salva, e nenhum jogo é enviado. Tente de novo.",
     "stillSending": "A sua resposta não foi salva, então os seus jogos continuam sendo enviados. Tente de novo."
+  },
+  "page": {
+    "lead": "Esta versão do Sensei Top faz uma pergunta nova, uma vez só. Até você responder, nenhum jogo é enviado.",
+    "hintAnswer": "Responda a pergunta para ir para o Início.",
+    "later": "Decidir depois",
+    "laterNote": "Nenhum jogo é enviado. Você pode responder quando quiser em Configurações, em Ajudar a montar as estatísticas."
+  },
+  "settings": {
+    "description": "Envia os seus jogos, sem nada que identifique você ou o seu oponente, para o acervo do qual são feitas as estatísticas do Sensei Top. Um jogo enviado não pode ser apagado.",
+    "state": {
+      "on": "Ligado desde {{date}}.",
+      "off": "Desligado desde {{date}}.",
+      "unanswered": "Ainda sem resposta, então nenhum jogo é enviado.",
+      "turnedOn": "Ligado. Os jogos que você jogou enquanto estava desligado também são enviados, e depois cada jogo novo.",
+      "turnedOff": "Desligado. Nenhum jogo a mais é enviado deste PC, nem mesmo um que ainda estava esperando. Os jogos já enviados continuam no acervo."
+    },
+    "failure": {
+      "turnOn": "Ajudar a montar as estatísticas não foi ligado, e nenhum jogo é enviado. Tente de novo.",
+      "turnOff": "Ajudar a montar as estatísticas não foi desligado, então continua ligado. Tente de novo."
+    },
+    "dialog": {
+      "title": "Enviar os seus jogos para ajudar a montar as estatísticas?",
+      "hint": "Para enviar os seus jogos, confirme a sua idade."
+    }
   }
 }

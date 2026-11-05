@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Outlet, ScrollRestoration, useLocation, useMatches, useNavigate } from 'react-router'
 import { useLive } from '../api'
@@ -7,6 +7,7 @@ import { useShell } from '../bridge'
 import { ReportProblemDialog } from '../components/ReportProblemDialog'
 import { BrandGlyph, Callout, TextLink } from '../components/ui'
 import { ACCOUNT_WELCOME_PATH, needsConsent } from '../lib/accountWelcome'
+import { CONTRIBUTE_KEEPS, CONTRIBUTE_PATH, contribPageDue } from '../lib/contribute'
 import { POLICY_VERSION } from '../lib/policy'
 import { ReportProblemContext, signedInOf, type ReportOpener } from '../lib/reportProblem'
 import { BottomBar } from './BottomBar'
@@ -71,6 +72,17 @@ export function Shell() {
   useEffect(() => {
     if (consentDue && pathname !== ACCOUNT_WELCOME_PATH) void navigate(ACCOUNT_WELCOME_PATH, { replace: true })
   }, [consentDue, pathname, navigate])
+  // The one-time "Help build the stats" page: at most once per page load, so
+  // a failed write of `contribAsked` followed by Decide later cannot bring
+  // the person back to it.
+  const contribDue = contribPageDue(shell?.app?.settings, consentDue)
+  const contribSent = useRef(false)
+  useEffect(() => {
+    if (!contribDue || contribSent.current) return
+    if ((CONTRIBUTE_KEEPS as readonly string[]).includes(pathname)) return
+    contribSent.current = true
+    void navigate(CONTRIBUTE_PATH, { replace: true })
+  }, [contribDue, pathname, navigate])
   // The report dialog: one for the shell, remounted (`key`) per opening so
   // each starts with an empty draft. Only a shell that sends reports has it.
   const reportProblem = shell?.reportProblem

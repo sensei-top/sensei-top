@@ -22,5 +22,29 @@
   "failure": {
     "notSaved": "Your answer wasn't saved, and no game is sent. Try again.",
     "stillSending": "Your answer wasn't saved, so your games are still being sent. Try again."
+  },
+  "page": {
+    "lead": "This version of Sensei Top asks you one new question, once. Until you answer, no game is sent.",
+    "hintAnswer": "Answer the question to go to Home.",
+    "later": "Decide later",
+    "laterNote": "No game is sent. You can answer at any time in Settings, under Help build the stats."
+  },
+  "settings": {
+    "description": "Sends your games, without anything that names you or your opponent, to the pool Sensei Top's stats are built from. A sent game can't be deleted.",
+    "state": {
+      "on": "On since {{date}}.",
+      "off": "Off since {{date}}.",
+      "unanswered": "Not answered yet, so no game is sent.",
+      "turnedOn": "Turned on. The games you played while it was off are sent too, then each new one.",
+      "turnedOff": "Turned off. No more games are sent from this PC, not even one still waiting to go. Games already sent stay in the pool."
+    },
+    "failure": {
+      "turnOn": "Help build the stats wasn't turned on, and no game is sent. Try again.",
+      "turnOff": "Help build the stats wasn't turned off, so it's still on. Try again."
+    },
+    "dialog": {
+      "title": "Send your games to help build the stats?",
+      "hint": "To send your games, confirm your age."
+    }
   }
 }

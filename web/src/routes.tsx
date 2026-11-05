@@ -1,5 +1,6 @@
 import type { RouteObject } from 'react-router'
 import { AccountWelcomePage } from './pages/AccountWelcomePage'
+import { ContributePage } from './pages/ContributePage'
 import { CoachPage } from './pages/CoachPage'
 import { DecksPage } from './pages/DecksPage'
 import { DeckLayout } from './pages/DeckLayout'
@@ -86,6 +87,13 @@ export const routes: RouteObject[] = [
             path: 'account/welcome',
             Component: AccountWelcomePage,
             handle: { title: 'accountWelcome', needsShell: true } satisfies RouteHandle,
+          },
+          // Not a place in the rail: the shell opens it once, for an install that
+          // has not answered "Help build the stats". Its name is the question's.
+          {
+            path: 'contribute',
+            Component: ContributePage,
+            handle: { title: 'contribute', needsShell: true } satisfies RouteHandle,
           },
           // The shell reads this handle: no place is current, and its name is
           // "No such page".

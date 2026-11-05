@@ -4,6 +4,7 @@ import type { Shell } from '../bridge'
 import { AccountSection } from '../components/settings/AccountSection'
 import { AppSection } from '../components/settings/AppSection'
 import { BackupSection } from '../components/settings/BackupSection'
+import { ContributeSection } from '../components/settings/ContributeSection'
 import { SourcesSection } from '../components/settings/SourcesSection'
 import { useAi } from '../ai/registry'
 import type { WritingStatusAnswer } from '../lib/settings'
@@ -86,6 +87,11 @@ export function SettingsView({
       {shell?.app?.settings.account.available && (
         <SettingsSection id="account" title={t('account.settings.title')}>
           <AccountSection state={shell.app.settings.account} actions={shell.app.account} />
+        </SettingsSection>
+      )}
+      {shell?.app?.settings.canContribute && (
+        <SettingsSection id="contribute" title={t('contribute.heading')}>
+          <ContributeSection shell={shell} />
         </SettingsSection>
       )}
       {children}

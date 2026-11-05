@@ -4,6 +4,13 @@ import {
   answerFor,
   ageBox,
   contribAskedOnWelcome,
+  contribPageDue,
+  dialogNeeded,
+  settingsFailureKey,
+  stateKey,
+  submitAnswer,
+  turnOffAnswer,
+  turnOnAnswer,
   contribWaits,
   failureKey,
   hintFor,
@@ -136,5 +143,75 @@ describe('pressing an answer', () => {
     const refused = () => Promise.resolve({ ok: false, error: '' } as const)
     const result = await pressAnswer(false, true, stored(), true, 'v', refused, t)
     expect(result).toMatchObject({ kind: 'failed', key: 'stillSending' })
+  })
+})
+
+describe('the one-time page', () => {
+  const account = (change: object) => ({ available: true, signedIn: true, ...change }) as never
+  const app = {
+    canContribute: true,
+    contribAsked: false,
+    contribute: null,
+    onboarded: true,
+    account: account({ signedIn: false }),
+  }
+  it('is due once: an onboarded install that can upload, with nothing asked or stored', () => {
+    expect(contribPageDue(app, false)).toBe(true)
+  })
+  it('waits for a signed-in account whose profile is absent or unknown', () => {
+    expect(contribPageDue({ ...app, account: account({}) }, false)).toBe(false)
+    expect(contribPageDue({ ...app, account: account({ profile: { state: 'unknown' } }) }, false)).toBe(false)
+  })
+  it('is due for a signed-in account whose profile is read', () => {
+    expect(contribPageDue({ ...app, account: account({ profile: { state: 'read' } }) }, false)).toBe(true)
+  })
+  it('is not due during onboarding, during consent, after it was asked or answered, or when the build cannot upload', () => {
+    expect(contribPageDue({ ...app, onboarded: false }, false)).toBe(false)
+    expect(contribPageDue(app, true)).toBe(false)
+    expect(contribPageDue({ ...app, contribAsked: true }, false)).toBe(false)
+    expect(contribPageDue({ ...app, contribute: stored({ yes: false }) }, false)).toBe(false)
+    expect(contribPageDue({ ...app, canContribute: false }, false)).toBe(false)
+    expect(contribPageDue(undefined, false)).toBe(false)
+  })
+})
+
+describe('the Settings switch', () => {
+  it('needs the dialog for nothing stored, no age confirmation or an older policy', () => {
+    expect(dialogNeeded(null, '2026-11-03')).toBe(true)
+    expect(dialogNeeded(stored({ ageConfirmed: false, policyVersion: '2026-11-03' }), '2026-11-03')).toBe(true)
+    expect(dialogNeeded(stored({ policyVersion: '2026-10-01' }), '2026-11-03')).toBe(true)
+  })
+  it('skips the dialog for an age-confirmed answer under the current or a newer policy', () => {
+    expect(dialogNeeded(stored({ yes: false, policyVersion: '2026-11-03' }), '2026-11-03')).toBe(false)
+    expect(dialogNeeded(stored({ policyVersion: '2026-12-01' }), '2026-11-03')).toBe(false)
+  })
+  it('turns on with the age confirmed and the current version', () => {
+    expect(turnOnAnswer('v')).toEqual({ yes: true, policyVersion: 'v', ageConfirmed: true })
+  })
+  it('turns off keeping the stored age confirmation and version, the current one when nothing is stored', () => {
+    expect(turnOffAnswer(stored({ ageConfirmed: false }), 'v')).toEqual({
+      yes: false,
+      policyVersion: '2026-10-01',
+      ageConfirmed: false,
+    })
+    expect(turnOffAnswer(null, 'v')).toEqual({ yes: false, policyVersion: 'v', ageConfirmed: false })
+  })
+  it('picks the state line: this visit first, else the stored answer', () => {
+    expect(stateKey(stored(), 'on')).toBe('turnedOn')
+    expect(stateKey(stored(), 'off')).toBe('turnedOff')
+    expect(stateKey(null, null)).toBe('unanswered')
+    expect(stateKey(stored(), null)).toBe('on')
+    expect(stateKey(stored({ yes: false }), null)).toBe('off')
+  })
+  it('names the failure line by the turn that failed', () => {
+    expect(settingsFailureKey(true)).toBe('turnOn')
+    expect(settingsFailureKey(false)).toBe('turnOff')
+  })
+  it('reads a refused or rejected save as not saved, never a throw', async () => {
+    const answer = turnOnAnswer('v')
+    expect(await submitAnswer(answer, async () => ({ ok: true }), t)).toBe(true)
+    expect(await submitAnswer(answer, async () => ({ ok: false, error: 'no' }), t)).toBe(false)
+    expect(await submitAnswer(answer, () => Promise.reject(new Error('x')), t)).toBe(false)
+    expect(await submitAnswer(answer, undefined, t)).toBe(false)
   })
 })
