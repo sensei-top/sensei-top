@@ -437,9 +437,10 @@ not overlooked. The licence was AGPL from 2026-09-27, proprietary "for now"
 from 2026-10-01, and AGPL again from 2026-10-07; no copy was published in
 between, so no user ever held the proprietary notice.
 
-Since 2026-11-02 this project plans hosted services, reached through a
-free, optional account; none is built yet (`BACKLOG.md`, BL-100 to
-BL-102). The decision supersedes what this section used to say: that
+Since 2026-11-02 this project has hosted services, reached through a
+free, optional account: the account, cloud history, error reports and
+contributed games are built; the rules coach is not (`BACKLOG.md`, BL-100
+to BL-103). The decision supersedes what this section used to say: that
 nothing hosted writes for the user, that nothing free needs an account,
 and that nothing reports back. The tracker keeps working fully without
 the account. What each part receives:
@@ -461,6 +462,19 @@ the account. What each part receives:
   match pulled onto another install is stored as received, and a match
   that install read from its own log wins over it (AGENTS.md rule 6).
   Only the two picks can conflict, and the newer one wins.
+- **Contributed games** (the same Supabase project, in a schema the API
+  does not expose), when "Help build the stats" is on in Settings. It is
+  not one of the account's choices: it works the same with or without an
+  account, the yes stays on the PC, and a game is sent without the
+  sign-in. One record per finished game, filed under a random code made on
+  the machine: the deck, each turn's plays, the result, the week and the
+  archetype each deck was named, and, on Arena only, the rank class, the
+  opening hand kept and each turn's draws and life totals.
+  Never the match id, a handle, a deck's name, a time finer than the week,
+  or a raw event. A record is built by the local API
+  (`docs/architecture.md`, "Contributed games") and sent by the shell.
+  Nothing links the code to a person, so a sent game cannot be shown back,
+  copied or deleted, not even by deleting the account.
 - **Error reports** (Sentry), when "Send error reports" is on, or one at a
   time through Report a problem: crashes and errors, scrubbed by the same
   code that redacts the diagnostics bundle (profile paths, emails, tokens,

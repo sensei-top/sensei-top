@@ -303,6 +303,8 @@ name:
 | Writing | `writing` | `ai/settings/WritingSection.tsx` | AI features on; with no shell, its `WritingStatus` |
 | Backup | `backup` | `settings/BackupSection.tsx` | a desktop shell |
 | App | `app` | `settings/AppSection.tsx` | a desktop shell |
+| Account | `account` | `settings/AccountSection.tsx` | a desktop shell whose build has an account (`account.available`) |
+| Help build the stats | `contribute` | `settings/ContributeSection.tsx` | a desktop shell whose build can upload (`canContribute`) |
 | Appearance | `appearance` | the page's own | always |
 | Live | `live-settings` | the page's own | always |
 | AI features | `ai-settings` | the page's own | always |
@@ -463,9 +465,35 @@ the failed backup's sentences name.
   where the copy cannot update itself; "Restart to update" once one has
   downloaded; "Diagnostic mode";
   "Show logs" and "Export diagnostics", with one caption that says what
-  the export holds and that matches are never in it; last, the sentence
+  the export holds and that matches are never in it; "Report a problem",
+  where the shell sends reports (below); last, the sentence
   naming the welcome steps and "Go through them again", a link to
   `/welcome`.
+
+- **Account**, in a build that has an account (`docs/desktop.md`, "Account
+  and sync"). Signed out, "Sign in with Google" and "Sign in with Discord";
+  signed in, the email, three choices as `SavingSwitch`es (cloud backup, error
+  reports, coach history), the backup's status, Export, "Delete my cloud
+  history", "Delete my account" and Sign out. Each delete and the error
+  reports' transfer consent sit behind a `Dialog` with the safe button
+  focused and a destructive one that names the action. A note says when the
+  session is not kept (no system keyring) and why. The section reads
+  `app.settings.account` and calls `app.account`; a delete's own publication
+  of the new state does not redraw it while the call runs. A save never
+  records a policy version older than the profile's. The wording of each
+  answer is in `docs/frontend-pages.md`, "The account's pages".
+- **Help build the stats**, in a build that can upload: one switch, outside
+  Account, with a state line. A turn-on opens a dialog (what is sent, that
+  past games are included, that a sent game cannot be deleted, the age rule)
+  only when nothing is stored, the stored yes lacks the age confirmation or
+  it was given under an older `POLICY_VERSION`; a turn-off keeps the stored
+  age confirmation and version.
+- **Report a problem** is a button in App and on every `ErrorNote` and on the
+  error screen, in a shell that sends reports. It opens
+  `components/ReportProblemDialog.tsx`: the text, "attach the last 500 lines
+  of the log", and the transfer consent line, which every press asks. It
+  sends through the bridge's `reportProblem` only, and works signed out. The
+  shell mounts one dialog (`useReportProblem()`), remounted per opening.
 
 The Overlay section went with the pivot. An Arena overlay is planned again
 (`BACKLOG.md`'s BL-098), and it gets its section back when one is built.
@@ -560,6 +588,14 @@ Notes the table does not carry:
   never sees it, and never in a browser, which has no Welcome. Go to
   Home waits for a press of one of the two answers, which saves
   `aiFeatures` through `app.set`.
+- **Ready asks a second question: Help build the stats**, set apart under
+  the AI features one, only when the build can upload (`canContribute`) and
+  no answer is stored when the run begins (`contribAskedOnWelcome`). Go to
+  Home waits for it as it does for the AI question. It states that past
+  games are included, that a sent game cannot be deleted and the age rule,
+  with a confirmation a yes needs. An install that was onboarded before this
+  question existed sees it once, as `/contribute` (`docs/frontend-pages.md`,
+  "The account's pages").
 - **Ready holds the two preferences**: the update check, where the
   build has an updater, and autostart, where the shell asks. Both are
   preferences, and Ready is where the person stops reading. Ready

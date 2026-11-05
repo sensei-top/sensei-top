@@ -1,5 +1,5 @@
 """One cloud-backup payload per match, built from the projected tables and the
-two picks; ``GET /api/sync/payloads`` serves them.
+two picks; ``GET /api/sync/payloads`` serves them (docs/architecture.md, "Cloud sync").
 
 Contract:
 

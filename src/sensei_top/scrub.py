@@ -4,8 +4,9 @@ commands".
 
 ``scrub_text`` is pure and takes the names it must remove from the caller;
 it reads no database and no config. Its test vectors
-(``tests/fixtures/scrub_vectors.json``) are to be shared with the desktop
-shell's own scrubber, once it exists, so a rule changes in both places or in neither.
+(``tests/fixtures/scrub_vectors.json``) are also run by the desktop shell's
+scrubber (``desktop/src/cloud/scrub.test.ts``), so a rule changes in both
+places or in neither.
 
 Traps:
 

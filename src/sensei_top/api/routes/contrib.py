@@ -1,6 +1,6 @@
-"""The contributed games' two routes, both read-only, neither calling
-anything outside the machine: the desktop shell's main process sends what
-they return.
+"""The contributed games' two routes (docs/architecture.md, "Contributed
+games"), both read-only, neither calling anything outside the machine: the
+desktop shell's main process sends what they return.
 """
 
 from __future__ import annotations

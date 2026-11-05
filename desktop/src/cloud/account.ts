@@ -20,7 +20,8 @@
 //   false (the other answers as they were) and the sync state is cleared,
 //   so turning the backup on again uploads every match. On another install
 //   the pull that turning it on runs sees the deleted rows and drops their
-//   digests, to the same effect (`sync.ts`). A failed delete changes nothing.
+//   digests, to the same effect (`sync.ts`). A failed delete leaves the
+//   backup off and the sync state as it was.
 // - **Delete my account.** The cloud deletes the account first; only then is
 //   the sync state removed and the session signed out. A failed delete
 //   changes nothing here.

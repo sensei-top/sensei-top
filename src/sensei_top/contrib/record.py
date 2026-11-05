@@ -1,7 +1,7 @@
 """One contributed-game record per finished game, built at request time from
 the projected tables and, for the opening hand, a replay of ``raw_events``;
 never stored. ``GET /api/contrib/games`` and ``GET /api/contrib/records``
-serve them.
+serve them (docs/architecture.md, "Contributed games").
 
 Contract:
 

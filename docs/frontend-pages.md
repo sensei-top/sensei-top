@@ -1,6 +1,6 @@
 # Frontend: the pages
 
-The dashboard page by page: Home, Matches and a match's views, the current-match reads, the opponent-deck read, the MTGO picks, the match report, Decks, the RCQ page, the Deck guide, Field and Coach. Cut from [docs/frontend.md](frontend.md), which keeps the rules every page follows.
+The dashboard page by page: Home, Matches and a match's views, the current-match reads, the opponent-deck read, the MTGO picks, the match report, Decks, the account's pages, the RCQ page, the Deck guide, Field and Coach. Cut from [docs/frontend.md](frontend.md), which keeps the rules every page follows.
 
 ## Home
 
@@ -776,6 +776,60 @@ the findings, and never a raw hand or graveyard. Unlike the guide it has
 no command-line importer: a match review is read once, about a game
 already played, so a stored narrative comes only from the generate
 button (`docs/review.md`).
+
+## The account's pages
+
+Shell-level screens, all in the desktop shell and none in a browser. The
+shell's half is `docs/desktop.md`, "Account and sync", "Error reports" and
+"Contributed games".
+
+**The consent screen** (`/account/welcome`, `pages/AccountWelcomePage.tsx`,
+title `accountWelcome`, a child of the layout like `/welcome`). The layout
+sends a signed-in user there (`needsConsent`) when the account's profile is
+`none`, or is `read` with a `consentVersion` that is missing or older than
+`POLICY_VERSION` (`lib/policy.ts`, the privacy policy's date); never when the
+build has no account, nobody is signed in, the profile could not be read, or
+the answers were given under a newer version than this install knows (asking
+again would write the older one back). The screen is never redirected from
+itself. Its kind is fixed when it opens, since the shell publishes the
+profile before `setProfile` replies: *first* asks the age confirmation and
+the three choices (cloud backup, error reports, coach history), none
+pre-ticked, and Continue waits on the age and an answer to each; *returning*
+(a policy change) pre-selects the earlier answers and shows the policy-change
+sentence only when `account.policyChanges.<version>` exists. Choosing Send
+for error reports needs the transfer consent box ticked, and the two together
+are the only way `consentErrors` is written true. On a first sign-in, while
+no "Help build the stats" answer is stored, that question appears set apart,
+and the age box covers it. "Don't create an account" deletes the just-made
+account. A profile other than `none` or `read` goes Home.
+
+**The one-time question** (`/contribute`, `pages/ContributePage.tsx`, title
+`contribute.heading`). It is due (`contribPageDue`) only when the build can
+upload, onboarding is finished, nothing is stored, the page was never shown,
+the consent screen is not due, and a signed-in account's profile has been
+read (a missing or `unknown` one waits, so the one ask is never spent before
+the consent check). The layout redirects to it at most once per page load,
+and never from `/welcome`, `/account/welcome` or itself. Mounting it sets
+`contribAsked`, so Decide later, closing the window and Go to Home all mean
+it does not show again; Settings still asks. A failed write only means it may
+show again at the next launch.
+
+**Settings → Account and its dialogs.** `docs/frontend.md`, "Settings", says
+what the section holds. The three dialogs are Delete my cloud history (says
+that every backed-up match is deleted, this PC's matches stay, the backup
+turns off, turning it on uploads everything again, and that it cannot be
+undone; Cancel is focused; a failure line depends on whether the switch is
+off), Delete my account, and the error-reports transfer consent. The delete
+IPC is not called until the confirm button is pressed.
+
+**The error screen** (`pages/ErrorPage.tsx`) is the `ErrorBoundary` of every
+route in `routes.tsx`, the layout's too, so it can render where the layout is
+not mounted and mounts its own report dialog. It says something went wrong,
+offers Reload and, in a shell that sends reports, Report a problem, and says
+whether the error was sent already (only with error reports on; it is
+reported once per thrown object, since a boundary's catch does not reach
+`window`). Errors that do reach `window` are forwarded by
+`lib/errorReports.ts`'s `forwardErrors`.
 
 ## Decks
 

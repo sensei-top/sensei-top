@@ -1,6 +1,6 @@
-"""The cloud backup's two routes. ``GET /api/sync/payloads`` is read-only and
-calls nothing outside the machine: the desktop shell's main process uploads
-what it returns.
+"""The cloud backup's two routes (docs/architecture.md, "Cloud sync").
+``GET /api/sync/payloads`` is read-only and calls nothing outside the
+machine: the desktop shell's main process uploads what it returns.
 ``PUT /api/sync/pulled`` is the one sync route on rule 6's allowlist: it
 writes ``cloud_match`` and, for a match this install read from its own log,
 the user's two picks.

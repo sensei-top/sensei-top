@@ -571,6 +571,109 @@ The restored copy sits at whatever `schema_version` it recorded; `project`
 applies anything newer, and forward-only migrations mean a backup can be
 restored into the same or a newer version of this code — never an older one.
 
+## Cloud sync
+
+The local API's half of the free account's cloud history: it builds what
+is backed up and stores what is pulled back. It holds no login and calls
+nothing outside the machine; Electron's main process does the pushing and
+pulling (`desktop.md`, "Account and sync"). An install run from source or
+from the command line has no shell, so it has no sync.
+
+**Pushing: `GET /api/sync/payloads`** (`sync/payloads.py`, read-only).
+One payload per match, built from the projected tables and the user's two
+picks, every match on every call, oldest first, as `{match_id, source,
+played_at, digest, payload}`. The digest is the SHA-256 of the payload's
+canonical JSON, and it is the only change signal: the shell keeps
+`match_id -> digest` for what it last pushed and pushes what differs. That
+catches a re-projection or a pick that `updated_at` alone would miss, which
+is why the route has no `?since=`. An Arena match is always included; an
+MTGO match only once the user has picked its deck. A card with no name is
+left out and counted in `unknown_cards`, never guessed. A payload carries
+no handle, user id, opponent name, raw event or path; the keys are the
+ones the privacy policy lists for cloud backup, and a new key is a policy
+change first (`sync/payloads.py`'s docstring has the full contract).
+
+**Pulling: `PUT /api/sync/pulled`** (writable; rule 6's allowlist). The
+shell sends a batch of rows pulled from the cloud, and the route writes
+them in one transaction, in order, and is idempotent: the shell's pulls
+start five minutes before its cursor so a commit that landed late is not
+missed, so the same row arrives twice and must change nothing the second
+time.
+
+- A row for a match **not** in `matches` is upserted into `cloud_match`
+  (migration 072), stored as received: no foreign key, never read by
+  `project()`, and never derived from anything. A row with `deleted_at`
+  removes that `cloud_match` row.
+- A row for a match **in** `matches` is never stored: **a match read from
+  this install's own log always wins.** Only its two picks (the opponent's
+  deck, and for an MTGO match the deck and format) may cross, and each
+  replaces the local one only when strictly newer by `updated_at`; equal
+  keeps the local one, a missing pulled pick never clears a local one. An
+  MTGO pick names its deck by board and applies only when exactly one local
+  deck file has that maindeck. This is the one place a pulled row changes
+  a table the user's own matches use (`opponent_deck_override`,
+  `mtgo_match_pick`).
+- A pick that cannot be read or applied is skipped with a warning; the
+  rest of the batch is written.
+
+**Restored matches in the reads.** Migration 073 adds `v_cloud_match`, the
+one place a cloud payload becomes the match list's columns (`restored = 1`,
+hidden when `matches` has the same id; what the payload lacks stays `NULL`,
+rule 4). The match list route, and the match-level win-rate views
+`v_deck_winrate`, `v_deck_identity_winrate` and `v_matchup_winrate`, UNION
+it, so a restored match counts under a `deck_key` of `cloud:` and the
+deck's name. Everything keyed on a local `deck_id` stays local-only: the
+game-level views (play/draw, game length), turn curves, the deck summary
+and deck pages for a deck known only from the cloud. A restored row links
+to no report, replay or turns, since it has none.
+
+## Contributed games
+
+The local API's half of "Contributed games" (`desktop.md`, "Contributed
+games"): the records a user who said yes may send to the shared pool of
+games. Like sync it holds no consent and sends nothing; the shell decides
+which games are new, asks for their records and uploads them.
+
+`GET /api/contrib/games` lists the key of every finished game
+(`match_id:game_number`). `GET /api/contrib/records?keys=...` (at most 50)
+returns one record per key, built at request time by `contrib/record.py`
+and never stored. The key is the caller's handle and is not part of the
+record; the random code a record is sent under is also made by the shell,
+so this server never holds it.
+
+A record (`schema_version: 1`) carries the client, format, the event as a
+fixed class, best-of, the ISO week of the start, the Arena rank class in
+force at the time, the game number, who was on the play, mulligans, the
+opening hand kept (replayed from `raw_events`, as `table/opening_hand.py`
+does), the main deck and sideboard as names and counts, per turn what was
+drawn and played and each side's life, the result, the turn count, the
+archetype each deck was named, and the `policy_version` the caller passes.
+
+- **The event class**, never Arena's raw event id, since ids carry dates:
+  `ranked` (`Ladder`, `Traditional_Ladder`), `play` (`Play`,
+  `Traditional_Play`, `Constructed_BestOf3`), `limited` (any id containing
+  `Draft` or `Sealed`), `event` (every other id). `AIBotMatch`,
+  `DirectGame` and no event omit the field.
+- **The player's own archetype** is classified at build time by the same
+  rule engine as the opponent's (`archetypes/classify.py`, from the deck's
+  full list), and never stored; `NULL` becomes an omitted key when no rule
+  matches. Without it the published field would always be empty.
+- **Omitted, not guessed** (rule 4): a field the log never recorded is
+  left out, never `null`. A card with no name, neither in `cards` nor in an
+  MTGO transcript, is not guessed: the deck list, kept hand or one side's
+  turn that holds it is omitted whole, since a list with a hole would read
+  as complete.
+- **Never in a record**: the match id, any handle or user id, the deck's
+  name or id, any time finer than the week, and any raw event's text.
+
+Two modules support the shell's reports, not the games. `scrub.py` takes
+identifiers out of text (the home directory, emails, tokens and the names
+the caller passes), shared by the diagnostics bundle (`desktop.md`,
+"Support commands") and error reports. `telemetry.py` sends the local API's
+own errors to Sentry, only when the shell has set the consent variable at
+spawn, scrubbed through `scrub.py` first; its request URLs are the route
+template, never a path's ids (`desktop.md`, "Error reports").
+
 ## The log file
 
 Every launch appends to `<db dir>/logs/sensei-top.log` (`logs.py`), so a
@@ -893,7 +996,8 @@ Each table has one owner, and confusing their lifecycles is how data gets destro
 | Metagame classifier | `meta_deck_archetype` | Deleted and recomputed by every `classify_meta_decks()`, same reasoning as `opponent_archetype` |
 | Corpus fetchers | `meta_fetch_hold` | Written only by the mtgo.com and TopDeck fetchers: a refusal, a 429 or a 503 writes the source's row, and a completed run deletes it. `project()` never reads it, and a rebuild leaves it alone |
 | Bookkeeping | `projection_state`, `backup_state` | Updated in place, by the watcher and by `backup/` respectively; never deleted — `project()` never touches them |
-| The user | `opponent_deck_override`, `mtgo_match_pick` | Never deleted — their own pick for their own match: the opponent's deck for either client, and the user's own deck and format for an MTGO match, which MTGO's log never names |
+| The user | `opponent_deck_override`, `mtgo_match_pick` | Never deleted — their own pick for their own match: the opponent's deck for either client, and the user's own deck and format for an MTGO match, which MTGO's log never names. A newer pick pulled from the user's cloud history can replace a local one ("Cloud sync") |
+| Cloud history | `cloud_match` | Written only by `PUT /api/sync/pulled` ("Cloud sync"); `project()` never reads or deletes it, and a row is hidden, not removed, once the match is read from this install's own log |
 | Authored prose | `deck_narrative`, `matchup_brief`, `match_narrative`, `leaks_narrative`, `coach_report`, `rcq_guide` | Never deleted by `project()` — written, not derived, so a rebuild could not recompute them |
 
 `meta_event` (downloaded reference) gained three read dates in
