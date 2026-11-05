@@ -160,7 +160,12 @@ def _event() -> dict:
             ]
         },
         "breadcrumbs": {"values": [{"message": f"wrote to {PLANTED_EMAIL}"}]},
-        "request": {"url": "http://127.0.0.1:8000/api/x?who=Wibblesnoot", "method": "GET"},
+        "transaction": "/api/x/{who}",
+        "transaction_info": {"source": "route"},
+        "request": {
+            "url": "http://127.0.0.1:8000/api/x/Wibblesnoot?who=Wibblesnoot",
+            "method": "GET",
+        },
     }
 
 
@@ -177,7 +182,7 @@ def test_before_send_scrubs_a_planted_path_email_and_name():
     assert out["logentry"]["params"] == [SCRUBBED_PATH]
     assert out["logentry"]["formatted"] == f"could not open {SCRUBBED_PATH}"
     assert out["breadcrumbs"]["values"][0]["message"] == "wrote to <email>"
-    assert out["request"]["url"] == "http://127.0.0.1:8000/api/x?who=<name>"
+    assert out["request"]["url"] == "/api/x/{who}"
 
 
 def test_before_send_sends_the_account_id_alone_and_no_hostname():
@@ -271,3 +276,75 @@ def test_a_failing_request_leaves_without_headers_cookies_or_query(tmp_path, mon
     for key in ("headers", "cookies", "query_string", "env"):
         assert not request.get(key), key
     assert "Wibblesnoot" not in json.dumps(events[0], default=str)
+
+
+def _request_events(tmp_path, monkeypatch, paths):
+    monkeypatch.setenv("MTGO_HANDLE", "Wibblesnoot")
+    env = {telemetry.DSN_ENV: FAKE_DSN, telemetry.CONSENT_ENV: "1"}
+    recorder = Recorder()
+    sentry_sdk.init(transport=recorder, **telemetry.options(tmp_path / "absent.db", env))
+
+    app = FastAPI()
+
+    @app.get("/api/matches/{match_id}")
+    def match(match_id: str) -> None:
+        raise RuntimeError("the route failed")
+
+    @app.get("/api/guide/{key}")
+    def guide(key: str) -> None:
+        raise RuntimeError("the route failed")
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        for path in paths:
+            client.get(path)
+    sentry_sdk.flush()
+    return [e.get_event() for e in recorder.envelopes if e.get_event() is not None]
+
+
+def test_a_failing_request_carries_the_route_template_not_the_ids(tmp_path, monkeypatch):
+    events = _request_events(
+        tmp_path, monkeypatch, ["/api/matches/m-4711", "/api/guide/guid:9021?x=1"]
+    )
+    assert len(events) == 2
+    by_url = {e["request"]["url"]: e for e in events}
+    assert set(by_url) == {"/api/matches/{match_id}", "/api/guide/{key}"}
+    for url, event in by_url.items():
+        assert event["transaction"] == url
+        assert "query_string" not in event["request"]
+        dumped = json.dumps(event, default=str)
+        for planted in ("m-4711", "9021", "x=1"):
+            assert planted not in dumped
+
+
+def test_an_unmatched_path_sends_no_path_at_all(tmp_path, monkeypatch):
+    monkeypatch.setenv("MTGO_HANDLE", "Wibblesnoot")
+    env = {telemetry.DSN_ENV: FAKE_DSN, telemetry.CONSENT_ENV: "1"}
+    recorder = Recorder()
+    sentry_sdk.init(transport=recorder, **telemetry.options(tmp_path / "absent.db", env))
+
+    class RaisesBeforeRouting:
+        def __init__(self, app) -> None:
+            self.app = app
+
+        async def __call__(self, scope, receive, send) -> None:
+            if scope["type"] != "http":
+                await self.app(scope, receive, send)
+                return
+            raise RuntimeError("failed before any route matched")
+
+    app = FastAPI()
+    app.add_middleware(RaisesBeforeRouting)
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.get("/api/matches/m-4711?x=1")
+    assert response.status_code == 500
+    sentry_sdk.flush()
+
+    events = [e.get_event() for e in recorder.envelopes if e.get_event() is not None]
+    assert len(events) == 1
+    event = events[0]
+    assert "url" not in event.get("request", {})
+    assert "transaction" not in event
+    assert "transaction_info" not in event
+    dumped = json.dumps(event, default=str)
+    assert "m-4711" not in dumped
+    assert "x=1" not in dumped

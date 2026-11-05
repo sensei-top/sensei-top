@@ -11,6 +11,9 @@ Contracts:
   ``scrub.scrub_text`` with the names ``diagnostics.known_names`` finds at
   that moment, then sets ``user`` to the account's ID alone (or drops it)
   and removes ``server_name``.
+- A request's ``url`` and the event's ``transaction`` are the matched route's
+  template (``/api/matches/{match_id}``), never the concrete path, and the
+  query string is dropped; a request no route matched carries neither.
 
 Traps:
 
@@ -95,6 +98,30 @@ def _scrubbed(value: Any, names: list[str]) -> Any:
     return value
 
 
+def _route_template_only(event: Event) -> None:
+    """Replace the request's concrete URL with the matched route's template.
+
+    The Starlette and FastAPI integrations set ``transaction`` to the route's
+    template with source ``route`` when a route matched; otherwise it is the
+    raw path (source ``url``) or a placeholder, which is dropped with the URL.
+    """
+    template = None
+    transaction = event.get("transaction")
+    source = (event.get("transaction_info") or {}).get("source")
+    if isinstance(transaction, str) and source == "route" and transaction.startswith("/"):
+        template = transaction
+    if template is None:
+        event.pop("transaction", None)
+        event.pop("transaction_info", None)
+    request = event.get("request")
+    if isinstance(request, dict):
+        request.pop("query_string", None)
+        if template is None:
+            request.pop("url", None)
+        else:
+            request["url"] = template
+
+
 def make_before_send(
     user_id: str | None, names: Callable[[], Iterable[str]]
 ) -> Callable[[Event, dict[str, Any]], Event]:
@@ -103,6 +130,7 @@ def make_before_send(
 
     def before_send(event: Event, hint: dict[str, Any]) -> Event:
         known = list(names())
+        _route_template_only(event)
         cleaned: Event = _scrubbed(event, known)
         cleaned.pop("server_name", None)
         if user_id:
