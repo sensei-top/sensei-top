@@ -138,7 +138,7 @@
     "theirExile": "Exílio do oponente",
     "active": "Ativo",
     "life": "de vida",
-    "unattributed": "O Arena nunca disse qual assento era o seu nesta sessão, então os dois lados não podem ser distinguidos. Os cards foram registrados; de quem eram, não.",
+    "unattributed": "O Arena nunca disse qual assento era seu nesta sessão, então os dois lados não podem ser distinguidos. Os cards foram registrados; de quem eram, não.",
     "legendNew": "Novo: entrou no campo de batalha neste turno.",
     "legendDrawn": "Comprado: você o comprou neste turno."
   },
@@ -160,7 +160,7 @@
     "gapsSubtitle": "Não é prova de que algo deu errado, só de que este leitor não conseguiu dizer.",
     "showOther_one": "Mostrar a outra",
     "showOther_other": "Mostrar as outras {{n}}",
-    "lineNote": "A linha é a sua posição, turno a turno: vida, mesa, mão e mana pesadas em um só número. Acima de zero você está na frente.",
+    "lineNote": "A linha é sua posição, turno a turno: vida, mesa, mão e mana pesadas em um só número. Acima de zero você está na frente.",
     "dotNote": "O ponto é a maior virada do jogo.",
     "showNumbers": "Mostrar os números",
     "game": "Jogo",

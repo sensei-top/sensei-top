@@ -3,7 +3,7 @@
   "dialog": {
     "title": "Relatar um problema",
     "intro": "Conte o que deu errado. Cada clique em Enviar relatório envia um relatório, com ou sem conta, com os relatórios de erro ligados ou não.",
-    "holds": "O relatório traz o que você escrever, a versão do aplicativo e o seu sistema.",
+    "holds": "O relatório traz o que você escrever, a versão do aplicativo e seu sistema.",
     "signedIn": "Você está conectado, então ele é ligado à sua conta por um ID interno, nunca pelo seu e-mail.",
     "signedOut": "Você não está conectado, então ele não carrega nenhum ID de conta.",
     "kept": "O Sentry o guarda por 30 dias.",
@@ -16,13 +16,13 @@
     },
     "log": {
       "label": "Anexar as últimas 500 linhas do log do aplicativo",
-      "scrubbed": "É o log do próprio Sensei Top, nunca os logs do Arena ou do MTGO. O seu nome de usuário nos caminhos de arquivo, endereços de e-mail, chaves e tokens, IDs de conta do Arena, nomes do Magic Online e nomes de oponentes são removidos antes do envio.",
+      "scrubbed": "É o log do próprio Sensei Top, nunca os logs do Arena ou do MTGO. Seu nome de usuário nos caminhos de arquivo, endereços de e-mail, chaves e tokens, IDs de conta do Arena, nomes do Magic Online e nomes de oponentes são removidos antes do envio.",
       "remains": "Ele ainda pode citar cards, decks e arquivos, e quando as coisas aconteceram. Com o Modo de diagnóstico ligado, ele traz muito mais, inclusive o texto inteiro de qualquer prompt enviado ao Claude."
     },
     "transfer": {
       "title": "Enviado para os Estados Unidos",
-      "where": "O Sentry guarda os relatórios de erro nos Estados Unidos, então eles saem do Brasil. Os Estados Unidos não têm uma lei de proteção de dados como a LGPD. As autoridades de lá podem conseguir acessar os relatórios com base na lei dos Estados Unidos, e pode ser mais difícil para você fazer valer os seus direitos lá.",
-      "ip": "O Sentry não guarda o seu endereço IP, mas antes deduz dele uma localização aproximada.",
+      "where": "O Sentry guarda os relatórios de erro nos Estados Unidos, então eles saem do Brasil. Os Estados Unidos não têm uma lei de proteção de dados como a LGPD. As autoridades de lá podem conseguir acessar os relatórios com base na lei dos Estados Unidos, e pode ser mais difícil para você fazer valer seus direitos lá.",
+      "ip": "O Sentry não guarda seu endereço IP, mas antes deduz dele uma localização aproximada.",
       "agree": "Concordo que este relatório seja enviado ao Sentry, nos Estados Unidos.",
       "decline": "Se você não concordar, o relatório não é enviado. Isso é perguntado de novo a cada relatório."
     },
@@ -35,11 +35,11 @@
     "cancel": "Cancelar",
     "close": "Fechar",
     "result": {
-      "sent": "O seu relatório foi enviado. Obrigado.",
-      "sentWithoutLog": "O seu relatório foi enviado, mas sem o log: o Sensei Top não conseguiu lê-lo.",
+      "sent": "Seu relatório foi enviado. Obrigado.",
+      "sentWithoutLog": "Seu relatório foi enviado, mas sem o log: o Sensei Top não conseguiu lê-lo.",
       "unavailable": "Esta versão do Sensei Top não envia relatórios. Você pode escrever para contact@senseitop.com.",
       "invalid": "O relatório não pôde ser enviado. Escreva o que deu errado, em até 4.000 caracteres, e tente de novo.",
-      "failed": "O seu relatório não pôde ser enviado. O seu texto continua aqui, então tente de novo daqui a pouco."
+      "failed": "Seu relatório não pôde ser enviado. Seu texto continua aqui, então tente de novo daqui a pouco."
     }
   },
   "settings": {
@@ -47,7 +47,7 @@
   },
   "error": {
     "title": "Algo deu errado",
-    "body": "Esta página parou de funcionar. Recarregue para continuar. Enquanto isso, o Sensei Top continua registrando as suas partidas.",
+    "body": "Esta página parou de funcionar. Recarregue para continuar. Enquanto isso, o Sensei Top continua registrando suas partidas.",
     "reload": "Recarregar",
     "sent": "Um relatório deste erro foi enviado automaticamente, porque Enviar relatórios de erro está ligado.",
     "notSent": "Este erro não foi enviado. Para nos contar sobre ele, use Relatar um problema.",

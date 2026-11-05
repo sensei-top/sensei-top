@@ -13,7 +13,7 @@
   "titles": {
     "mtgoPicks": "Escolher decks do MTGO",
     "welcome": "Boas-vindas",
-    "accountWelcome": "Escolha o que a sua conta faz"
+    "accountWelcome": "Escolha o que sua conta faz"
   },
   "homeLink": "{{product}}, início",
   "skipLink": "Pular para a página",

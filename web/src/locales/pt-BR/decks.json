@@ -199,7 +199,7 @@
       },
       "noResults": {
         "title": "Nenhum resultado de torneio ainda",
-        "message": "Esta página mostra o que está sendo jogado em torneios e o seu histórico contra cada deck. Ela se preenche quando os resultados de torneios são baixados, o que esta versão faz só pela linha de comando."
+        "message": "Esta página mostra o que está sendo jogado em torneios e seu histórico contra cada deck. Ela se preenche quando os resultados de torneios são baixados, o que esta versão faz só pela linha de comando."
       },
       "ownDetail_one": "{{wins}}–{{losses}} sobre {{n}} lista",
       "ownDetail_other": "{{wins}}–{{losses}} sobre {{n}} listas",
@@ -254,7 +254,7 @@
     "write": {
       "rewrite": "Reescrever o guia",
       "write": "Escrever o guia",
-      "subtitle": "Como o deck funciona, a correção para o seu padrão mais caro, uma nota sobre cada card, um plano de sideboard contra cada um dos arquétipos mais jogados e um checklist entre rodadas.",
+      "subtitle": "Como o deck funciona, a correção para seu padrão mais caro, uma nota sobre cada card, um plano de sideboard contra cada um dos arquétipos mais jogados e um checklist entre rodadas.",
       "staleNote": "A lista mudou desde então.",
       "noMatch": "Nenhuma partida com este deck foi registrada ainda, então não há sobre o que escrever."
     },

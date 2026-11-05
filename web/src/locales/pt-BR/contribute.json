@@ -1,10 +1,10 @@
 {
   "heading": "Ajudar a montar as estatísticas",
   "disclosure": {
-    "noAccount": "Não precisa de conta, e a sua resposta fica neste PC.",
-    "what": "Dizer sim envia os seus jogos para um acervo privado, do qual são feitas as estatísticas do próprio Sensei Top. Isso vale para os jogos que já estão no seu histórico e para os que você jogar daqui em diante. Antes de um jogo sair deste PC, tudo o que identifica você ou o seu oponente é removido, e ele é enviado sem o seu login.",
+    "noAccount": "Não precisa de conta, e sua resposta fica neste PC.",
+    "what": "Dizer sim envia seus jogos para um acervo privado, do qual são feitas as estatísticas do próprio Sensei Top. Isso vale para os jogos que já estão no seu histórico e para os que você jogar daqui em diante. Antes de um jogo sair deste PC, tudo o que identifica você ou seu oponente é removido, e ele é enviado sem seu login.",
     "where": "O acervo fica guardado no Brasil, sem ligação com nenhuma conta.",
-    "final": "Nada num jogo enviado diz quem o enviou. Depois de enviado, ele não pode ser mostrado a você, copiado nem apagado, nem mesmo se você apagar a sua conta.",
+    "final": "Nada num jogo enviado diz quem o enviou. Depois de enviado, ele não pode ser mostrado a você, copiado nem apagado, nem mesmo se você apagar sua conta.",
     "stop": "Você pode desligar isso a qualquer momento em Configurações, e nada mais é enviado depois disso."
   },
   "age": {
@@ -16,12 +16,12 @@
     "no": "Não enviar"
   },
   "hint": {
-    "age": "Para enviar os seus jogos, confirme antes a sua idade, acima.",
+    "age": "Para enviar seus jogos, confirme antes sua idade, acima.",
     "waitsWelcome": "Responda cada pergunta acima para ir para o Início."
   },
   "failure": {
-    "notSaved": "A sua resposta não foi salva, e nenhum jogo é enviado. Tente de novo.",
-    "stillSending": "A sua resposta não foi salva, então os seus jogos continuam sendo enviados. Tente de novo."
+    "notSaved": "Sua resposta não foi salva, e nenhum jogo é enviado. Tente de novo.",
+    "stillSending": "Sua resposta não foi salva, então seus jogos continuam sendo enviados. Tente de novo."
   },
   "page": {
     "lead": "Esta versão do Sensei Top faz uma pergunta nova, uma vez só. Até você responder, nenhum jogo é enviado.",
@@ -30,7 +30,7 @@
     "laterNote": "Nenhum jogo é enviado. Você pode responder quando quiser em Configurações, em Ajudar a montar as estatísticas."
   },
   "settings": {
-    "description": "Envia os seus jogos, sem nada que identifique você ou o seu oponente, para o acervo do qual são feitas as estatísticas do Sensei Top. Um jogo enviado não pode ser apagado.",
+    "description": "Envia seus jogos, sem nada que identifique você ou seu oponente, para o acervo do qual são feitas as estatísticas do Sensei Top. Um jogo enviado não pode ser apagado.",
     "state": {
       "on": "Ligado desde {{date}}.",
       "off": "Desligado desde {{date}}.",
@@ -43,8 +43,8 @@
       "turnOff": "Ajudar a montar as estatísticas não foi desligado, então continua ligado. Tente de novo."
     },
     "dialog": {
-      "title": "Enviar os seus jogos para ajudar a montar as estatísticas?",
-      "hint": "Para enviar os seus jogos, confirme a sua idade."
+      "title": "Enviar seus jogos para ajudar a montar as estatísticas?",
+      "hint": "Para enviar seus jogos, confirme sua idade."
     }
   }
 }

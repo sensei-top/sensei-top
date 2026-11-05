@@ -18,14 +18,14 @@
     "label": "Idioma"
   },
   "start": {
-    "promise": "Seu histórico de partidas e análises dos seus jogos, a partir dos logs que o Arena e o Magic Online já escrevem. Nada sobre os seus jogos sai deste computador.",
+    "promise": "Seu histórico de partidas e análises dos seus jogos, a partir dos logs que o Arena e o Magic Online já escrevem. Nada sobre seus jogos sai deste computador.",
     "restoreTitle": "Já usou o Sensei Top antes?",
     "restore": "Restaurar um backup"
   },
   "intro": {
     "wizardsNotice": "Sensei Top é um conteúdo de fã não oficial permitido sob a política de conteúdo de fãs. Não aprovado/apoiado pela Wizards. Porções do material usado são propriedade da Wizards of the Coast. ©Wizards of the Coast LLC.",
     "leavesTitle": "O que sai deste computador",
-    "downloads": "Downloads de dados de referência: dados e imagens de cards do Scryfall, definições de arquétipos do MTGOFormatData, resultados de torneios do MTG_decklistcache e do mtgo.com para os formatos que você acompanha, e do TopDeck.gg só se você adicionar sua própria chave. Nada sobre os seus jogos é enviado.",
+    "downloads": "Downloads de dados de referência: dados e imagens de cards do Scryfall, definições de arquétipos do MTGOFormatData, resultados de torneios do MTG_decklistcache e do mtgo.com para os formatos que você acompanha, e do TopDeck.gg só se você adicionar sua própria chave. Nada sobre seus jogos é enviado.",
     "updatesUnavailable": "Esta cópia não verifica sozinha se há novas versões.",
     "dailyCheck": "Uma verificação diária de nova versão do aplicativo.",
     "claude": "Escrita com o Claude, só se você adicionar sua própria chave do Claude e apertar um botão que diz que escreve. Sem chave, o aplicativo lhe dá um prompt para copiar em um chat.",
