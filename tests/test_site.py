@@ -605,7 +605,7 @@ def test_the_policy_pages_carry_the_date_they_changed():
     for url_path in POLICY_PAGES:
         phrase = "Last changed" if PAGES[url_path][1] == "en" else "Última alteração:"
         _, page = load(url_path)
-        assert f"{phrase} 2026-11-03" in page.paragraphs, url_path
+        assert f"{phrase} 2026-11-05" in page.paragraphs, url_path
 
 
 def test_the_privacy_pages_name_every_request_the_app_makes():
@@ -620,6 +620,8 @@ def test_the_privacy_pages_name_every_request_the_app_makes():
             "TopDeck.gg",
             "GitHub",
             "Cloudflare Web Analytics",
+            "Supabase",
+            "Sentry",
         ):
             assert name in text, (url_path, name)
 
