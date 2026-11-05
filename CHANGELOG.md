@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A free, optional account, in Settings under "Account": sign in with
+  Google or Discord, in your browser. With it you can back up your match
+  history to the cloud and bring it to another computer, where a match
+  that computer has no log of shows on Matches as "Restored"; save
+  everything in your account as one JSON file; and delete your cloud
+  history or the whole account. The first sign-in asks about each use
+  separately, with nothing chosen for you. Sensei Top works the same
+  without an account. The account, error reports, Report a problem and
+  "Help build the stats" are in the desktop app only, never in a run from
+  source.
+- Error reports, a separate yes on the account: when something goes wrong,
+  the app sends a report to Sentry, with names, keys and file paths
+  removed first.
+- "Report a problem", in the tray, in Settings under "App", on an error
+  message and on the screen shown when a page stops working: each press
+  sends one report, with or without an account, and can attach the last
+  500 lines of the app's own log. It asks before every report.
+- "Help build the stats", a yes of its own that needs no account: it sends
+  your games, with everything that names you or your opponent removed, to
+  the private pool Sensei Top's own stats are built from. The last welcome
+  step asks; an install already set up asks once, and Settings turns it on
+  or off at any time.
+- A page that stops working now says so, with Reload and "Report a
+  problem", and the app keeps recording meanwhile.
+
+### Changed
+
+- The [privacy policy](https://senseitop.com/privacy/) and the
+  [terms of use](https://senseitop.com/terms/) now describe the account,
+  error reports, Report a problem and contributed games, dated 2026-11-05.
+- The help pages on [senseitop.com](https://senseitop.com/help/) explain
+  the account, "Help build the stats" and Report a problem.
+
 ## [1.3.0] - 2026-11-03
 
 ### Added

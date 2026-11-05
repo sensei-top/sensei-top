@@ -443,9 +443,9 @@ client (`ROADMAP.md`, "Never"), and the event rule (`table/queues.py`).
 
 type: feat · priority: P1 · status: in-progress · area: desktop api web site legal
 
-A free, optional account (Google sign-in through Supabase Auth) that adds
-cloud history and error reports, each a separate yes on one consent screen
-with nothing pre-ticked (decided 2026-11-02; AGENTS.md rules 5 and 6;
+A free, optional account (Google or Discord sign-in through Supabase
+Auth) that adds cloud history and error reports, each a separate yes on
+one consent screen with nothing pre-ticked (decided 2026-11-02; AGENTS.md rules 5 and 6;
 `docs/llm.md`, "What is hosted, and what it receives"). Electron's main
 process holds the session and syncs; the local API builds the payloads
 and stores pulled matches in a new `cloud_match` table; Sentry in the
@@ -454,15 +454,9 @@ Account with export and delete; a restored marker in the match list.
 MTGO matches sync once their deck is picked. Notes and tags are not
 built, and installs run from source get no sync.
 
-**Why deferred:** Waits on setup only the user can do: the domain, the
-Supabase project and its region, the Google OAuth consent screen (about a
-week to approve), the Sentry projects, and the privacy policy and terms
-the consent screen links to.
-
-**Needs:** Its plan (`~/.claude/plans/release-40-coach-and-accounts.md`,
-sub-plan B, an outline). Supabase's CLI and Docker on the development
-machine, the user's call. The rewrite of every statement `docs/llm.md`
-lists as false once the account ships, in the same build.
+**Why deferred:** Built on `feature/accounts-sync`, with the privacy
+policy and terms it links to live. It waits on the final verification
+against the hosted Supabase project and on the Windows VM.
 
 ### BL-101 · The rules coach
 
@@ -524,11 +518,9 @@ anonymous `security definer` function that nobody can read back from; the
 shell remembers which games it sent in its own `userData`, so no migration
 and no change to rule 6 (decided 2026-11-03).
 
-**Why deferred:** Being built with the account (BL-100), on
-`feature/accounts-sync`.
-
-**Needs:** Sub-plan B of `~/.claude/plans/release-40-coach-and-accounts.md`
-(`release-40b-accounts-sync.md`, S3, S7, S13, S15).
+**Why deferred:** Built with the account (BL-100) on
+`feature/accounts-sync`. It waits on the same final verification, against
+the hosted Supabase project and on the Windows VM.
 
 ### BL-104 · Deleting an inactive account
 
