@@ -173,3 +173,12 @@ def test_a_local_match_with_the_same_id_hides_the_restored_one(local_and_cloud):
 def test_a_hidden_restored_match_is_not_counted_either(local_and_cloud):
     rows = local_and_cloud.get("/api/metrics/matchups").json()
     assert all(r["opponent_key"] != "archetype:izzet-prowess" for r in rows)
+
+
+def test_the_heartbeat_counts_restored_matches_apart_from_local_ones(cloud_only):
+    live = cloud_only.get("/api/live").json()
+    assert (live["matches"], live["restored_matches"]) == (0, 2)
+
+
+def test_the_heartbeat_does_not_count_a_hidden_restored_match(local_and_cloud):
+    assert local_and_cloud.get("/api/live").json()["restored_matches"] == 0

@@ -3345,6 +3345,12 @@ export interface components {
             events: number;
             /** Matches */
             matches: number;
+            /**
+             * Restored Matches
+             * @description matches restored from the user's cloud history that this install's own log does not hold (v_cloud_match); not counted in matches
+             * @default 0
+             */
+            restored_matches: number;
             /** Games */
             games: number;
             /** Turns */
