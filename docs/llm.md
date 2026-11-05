@@ -509,21 +509,28 @@ call out in rule 5's sense, and neither ever sees a match. A diagnostics
 bundle exists only as a file the user makes and sends by hand, redacted
 before it is written.
 
-These statements are true of the app as it ships today and become false
-in the build that ships the account, so they are rewritten in that build
-and not before: "no account, no upload" in the README and the dashboard's
-footer (`docs/frontend.md` quotes it); the third and fourth promises in
-`SECURITY.md`, that nothing calls a paid API without a configured key and
-that no match data leaves the machine except the prompt of a report the
-user asked for; the first item of the "What never leaves your machine"
-card and the item about collecting or sharing matches in the "What is not
-planned" card, on the site's home page in both languages
-(`site/index.html`, `site/pt-br/index.html`); the privacy pages, which
-name every request the app makes and gain Supabase, Sentry and the coach
-API (`tests/test_site.py` pins them); the paragraph on the only
-measurement in `docs/status.md`, "What works today"; and the claim under
+These statements were true of the app before the account and became
+false in the build that shipped it, so they were rewritten in that build:
+"no account, no upload" in the README; the fourth promise in
+`SECURITY.md`, that no match data leaves the machine except the prompt of
+a report the user asked for; the first item of the "What never leaves
+your machine" card (now "What leaves your machine, and when") and the
+items about collecting or sharing matches and about an account for
+anything free in the "What is not planned" card, on the site's home page
+in both languages (`site/index.html`, `site/pt-br/index.html`); the
+matching item on the Untapped comparison page, in both languages
+(`site/untapped/`, `site/pt-br/untapped/`); and the paragraph on the
+only measurement in `docs/status.md`, "What works today". The privacy
+and terms pages went first, in a site hotfix live before the beta: they
+name every request the app makes and gained Supabase and Sentry
+(`tests/test_site.py` pins them). The dashboard's
+footer, "No account needed" (`docs/frontend.md` quotes it), stayed as it
+was: it is still true. Each "no account" claim became one shared
+sentence, word for word everywhere: "Sensei Top works fully without an
+account. A free, optional account adds cloud backup of your match history
+and error reports." The build that ships the rules coach adds the coach
+to that sentence where a page may name it, adds the coach API to the
+privacy pages, and revisits the third promise in `SECURITY.md`, that
+nothing calls a paid API without a configured key, and the claim under
 "What calls out, and what it sends" that per-route tests cover what
-leaves the machine. Each "no account" claim becomes one shared sentence,
-word for word everywhere: "Sensei Top works fully without an account. A
-free, optional account adds cloud backup of your match history, error
-reports, and the AI rules coach."
+leaves the machine.

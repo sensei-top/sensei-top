@@ -23,14 +23,18 @@ rule numbers and is never sent a match (`BACKLOG.md`'s BL-100 to BL-102;
 AGENTS.md rules 5 and 6; `docs/llm.md`, "What is hosted, and what it
 receives"). The tracker keeps working fully without an account. The copy
 prompt and the user's own key stay as they are, and an "AI features"
-switch hides them and the coach together. Until the account ships, every
-"no account" claim in the README, the dashboard and the site is true and
-stays as written.
+switch hides them and the coach together. Since the account shipped, the
+"no account" claims in the README and the site read "Sensei Top works
+fully without an account. A free, optional account adds cloud backup of
+your match history and error reports." (`docs/llm.md`); the dashboard's
+footer, "No account needed", is still true and stays.
 
 **The roadmap's order, 2026-10-19.** Reordered with the user after the
 tracker research (plan 27). Written guides with any model and macOS move
 to Later; match contributions move to Never, so no match is ever
-pooled or shared; the one that leaves the machine is a report the user
+pooled or shared (reversed 2026-11-02, plan 40: contributing your games
+is an opt-in of its own, anonymous, with or without an account); the one
+that leaves the machine is a report the user
 asks for with their own key (and, since 2026-11-02, the user's own
 cloud backup, above). The order itself is `ROADMAP.md`'s alone.
 
@@ -90,7 +94,8 @@ non-negotiable #5). `serve` refuses to bind anything but loopback, and
 dashboard's own header, so another page open in the browser can't use the
 API either (`tests/test_guard.py`).
 
-The only measurement the no-account decision leaves is built: the daily
+Besides the error reports and contributed games, which only the user's
+yes sends (the privacy policy), the measurements are these: the daily
 version check reads the latest GitHub release's `latest.yml`, which the
 release job publishes with the installer (`docs/testing.md`, "CI"); the
 site (`site/`, `docs/frontend-site.md`, "The site") counts its page views with

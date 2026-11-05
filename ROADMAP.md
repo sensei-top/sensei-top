@@ -139,14 +139,14 @@ These are decisions, not gaps. Each one was considered and refused.
 - **Reading the memory of, injecting into or automating either client.**
   The tracker reads the log files Arena and MTGO already write, with
   Arena's own Detailed Logs setting on, and nothing else.
-- **Pooling or sharing your matches.** Not by default, and not as an
-  opt-in: your match history is never contributed to us for analysis or
-  to a shared dataset, and nobody else ever sees it. Two things leave your
-  computer, each only when you ask: a report you generate with your own
-  key, which sends that match to the model you configured, and, with the
-  account, a backup of your match summaries that only you can read. The
-  matchup numbers from outside your own games come from published
-  tournament results.
+- **Pooling or sharing your matches without your yes.** Your match
+  history is never pooled or shared by default. Two things leave your
+  computer only when you turn them on: a backup of your match summaries
+  that only you can read, with the free account, and, with or without
+  one, your games contributed to the stats, stripped of everything that
+  names you or your opponent. A report you generate with your own key
+  sends that match to the model you configured. The matchup numbers from
+  outside your own games come from published tournament results.
 - **Draft.** The draft assistant was removed in October 2026 and is not
   coming back in this project.
 - **Mobile.** iOS makes log reading impossible and Android impractical.
