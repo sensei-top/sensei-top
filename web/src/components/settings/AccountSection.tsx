@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router'
 import type { AccountActions, AccountProvider, AccountReply, AccountState, ProfileState, Saved } from '../../bridge'
 import { ACCOUNT_WELCOME_PATH } from '../../lib/accountWelcome'
 import { failureOf } from '../../lib/settings'
-import { ago, useNow } from '../../lib/time'
+import { ago, formatCount, useNow } from '../../lib/time'
 import { Button, Card } from '../ui'
 import { DeleteAccountDialog, DeleteHistoryDialog, ErrorsDialog } from './AccountDialogs'
 import {
@@ -224,6 +224,7 @@ export function AccountSection({ state, actions }: { state: AccountState; action
                     <p className="text-caption text-muted">
                       {t(line.key, {
                         count: line.count,
+                        n: line.count == null ? undefined : formatCount(line.count),
                         when: line.when ? ago(view.sync?.lastSyncAt, now) : undefined,
                       })}
                     </p>
@@ -289,7 +290,7 @@ export function AccountSection({ state, actions }: { state: AccountState; action
               <p className="text-caption text-muted">{t('account.settings.history.description')}</p>
               {historyResult !== null && (
                 <p className="text-caption text-ink2">
-                  {t('account.settings.history.done', { count: historyResult })}{' '}
+                  {t('account.settings.history.done', { count: historyResult, n: formatCount(historyResult) })}{' '}
                   {t('account.settings.history.removed')}
                 </p>
               )}

@@ -99,10 +99,10 @@
       "off": "Backup is off. Your match history stays only on this PC.",
       "none": "Not backed up yet.",
       "running": "Backing up…",
-      "done_one": "{{count}} match backed up from this PC. Last backup {{when}}.",
-      "done_other": "{{count}} matches backed up from this PC. Last backup {{when}}.",
-      "doneUndated_one": "{{count}} match backed up from this PC.",
-      "doneUndated_other": "{{count}} matches backed up from this PC.",
+      "done_one": "{{n}} match backed up from this PC. Last backup {{when}}.",
+      "done_other": "{{n}} matches backed up from this PC. Last backup {{when}}.",
+      "doneUndated_one": "{{n}} match backed up from this PC.",
+      "doneUndated_other": "{{n}} matches backed up from this PC.",
       "error": {
         "cloud": "The last backup stopped because your account couldn't be reached. Sensei Top tries again when the next match ends.",
         "localApi": "The last backup stopped because Sensei Top couldn't read the matches on this PC. It tries again when the next match ends.",
@@ -118,8 +118,8 @@
     "history": {
       "button": "Delete cloud history",
       "description": "Deletes the matches backed up to your account and turns backup off. The matches on this PC stay.",
-      "done_one": "{{count}} match deleted from your cloud history. Backup is off.",
-      "done_other": "{{count}} matches deleted from your cloud history. Backup is off.",
+      "done_one": "{{n}} match deleted from your cloud history. Backup is off.",
+      "done_other": "{{n}} matches deleted from your cloud history. Backup is off.",
       "removed": "They're removed for good after 30 days, once your other PCs have caught up."
     },
     "deleteAccount": {

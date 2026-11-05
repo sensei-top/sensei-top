@@ -99,10 +99,10 @@
       "off": "O backup está desligado. O seu histórico de partidas fica só neste PC.",
       "none": "Nenhum backup feito ainda.",
       "running": "Fazendo backup…",
-      "done_one": "{{count}} partida deste PC no backup. Último backup {{when}}.",
-      "done_other": "{{count}} partidas deste PC no backup. Último backup {{when}}.",
-      "doneUndated_one": "{{count}} partida deste PC no backup.",
-      "doneUndated_other": "{{count}} partidas deste PC no backup.",
+      "done_one": "{{n}} partida deste PC no backup. Último backup {{when}}.",
+      "done_other": "{{n}} partidas deste PC no backup. Último backup {{when}}.",
+      "doneUndated_one": "{{n}} partida deste PC no backup.",
+      "doneUndated_other": "{{n}} partidas deste PC no backup.",
       "error": {
         "cloud": "O último backup parou porque não foi possível falar com a sua conta. O Sensei Top tenta de novo quando a próxima partida terminar.",
         "localApi": "O último backup parou porque o Sensei Top não conseguiu ler as partidas deste PC. Ele tenta de novo quando a próxima partida terminar.",
@@ -118,8 +118,8 @@
     "history": {
       "button": "Apagar histórico na nuvem",
       "description": "Apaga as partidas salvas na sua conta e desliga o backup. As partidas deste PC continuam.",
-      "done_one": "{{count}} partida apagada do seu histórico na nuvem. O backup está desligado.",
-      "done_other": "{{count}} partidas apagadas do seu histórico na nuvem. O backup está desligado.",
+      "done_one": "{{n}} partida apagada do seu histórico na nuvem. O backup está desligado.",
+      "done_other": "{{n}} partidas apagadas do seu histórico na nuvem. O backup está desligado.",
       "removed": "Elas são removidas de vez depois de 30 dias, quando os seus outros PCs já tiverem sabido disso."
     },
     "deleteAccount": {
