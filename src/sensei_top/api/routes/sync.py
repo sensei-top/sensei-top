@@ -79,7 +79,11 @@ def sync_pulled(body: SyncPulledIn, conn: WritableConn) -> dict[str, int]:
     """
     counts = {"stored": 0, "removed": 0, "local": 0, "picks": 0}
     deck_mains: dict[str, list[tuple[str, int]]] | None = None
-    conn.execute("BEGIN")
+    # IMMEDIATE takes the write lock before the first read. A plain BEGIN
+    # reads ``matches`` under a snapshot, and a rebuild committing under it
+    # makes the first write fail at once, busy_timeout or not: the first
+    # pull after sign-in meets the watcher's first rebuild.
+    conn.execute("BEGIN IMMEDIATE")
     try:
         for row in body.items:
             if row.deleted_at is not None:

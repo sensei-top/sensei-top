@@ -292,3 +292,30 @@ def test_a_newer_mtgo_pick_whose_deck_is_not_here_is_skipped(client, db_path, ca
         (MTGO_MATCH,),
     ) == [(sample, "Pioneer", "2026-10-01T10:00:00Z")]
     assert "MTGO pick names 0 local decks" in caplog.text
+
+
+# --- a rebuild committing mid-pull ------------------------------------------
+
+
+def test_a_pull_racing_a_rebuild_waits_for_it_rather_than_failing(client, db_path):
+    """2026-11-06, beta: the first pull after sign-in met the watcher's first
+    rebuild and was answered 503 within 130 ms, far inside the writable
+    connection's 60 s wait. A transaction that reads ``matches`` before it
+    writes holds a snapshot; once the rebuild commits under it, SQLite
+    refuses the write at once instead of waiting. Here the rebuild holds the
+    write lock with a change made when the pull starts, and commits a
+    second later."""
+    import threading
+
+    rebuild = sqlite3.connect(db_path, isolation_level=None, check_same_thread=False)
+    rebuild.execute("BEGIN IMMEDIATE")
+    rebuild.execute("DELETE FROM turns")
+    commit = threading.Timer(1.0, lambda: rebuild.execute("COMMIT"))
+    commit.start()
+    try:
+        response = client.put("/api/sync/pulled", json={"items": [_row(CLOUD_ONLY, _payload())]})
+    finally:
+        commit.join()
+        rebuild.close()
+    assert response.status_code == 200, response.text
+    assert _query(db_path, "SELECT match_id FROM cloud_match") == [(CLOUD_ONLY,)]
