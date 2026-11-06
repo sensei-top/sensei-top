@@ -18,9 +18,10 @@ Each item has an ID heading, then one label line with four keys:
 - `type`: `feat`, `fix`, `perf`, `refactor`, `docs` or `chore`, the
   Conventional Commits words, so an item's type is the type of the commit
   that closes it.
-- `priority`: `P1` is on `ROADMAP.md`'s Now or Next, or puts a wrong number
-  in front of the user; `P2` is to do when its area is next touched; `P3`
-  waits on evidence or is optional.
+- `priority`: `P1` is taken first, in the order `ROADMAP.md` gives, or
+  puts a wrong number in front of the user; `P2` comes after every `P1`,
+  in the same order; `P3` waits until `P1` and `P2` are done, or on
+  evidence, or is optional.
 - `status`: `ready`, `needs-decision`, `needs-data` (a capture or a fixture
   is missing, rule 7), `blocked` (on a person or a party outside the code)
   or `in-progress`.
@@ -75,9 +76,9 @@ never fetched.
 
 ### BL-002 · A CSV export and a definition on every column
 
-type: feat · priority: P1 · status: ready · area: api web i18n
+type: feat · priority: P3 · status: ready · area: api web i18n
 
-Next 4. A CSV export of the user's own matches, games and per-deck numbers
+A CSV export of the user's own matches, games and per-deck numbers
 (an unknown value is an empty cell, never 0); a one-line definition on each
 table column; and the help tour below, with an entry that cites Arena's own
 article on Detailed Logs for community tools and says the app reads only the
@@ -91,9 +92,9 @@ other trackers charge for.
 
 ### BL-003 · The help pages' tour of the dashboard
 
-type: feat · priority: P1 · status: needs-decision · area: site i18n
+type: feat · priority: P2 · status: needs-decision · area: site i18n
 
-Next 4, with the export above: the help pages' tour of the dashboard
+The help pages' tour of the dashboard
 (`site/help/`): what each page shows, in both languages, linked from the
 welcome steps' last step, Ready. The first cut (2026-10-13) covers
 installing, the first run, Magic Online, troubleshooting and the problem
@@ -117,11 +118,12 @@ drawn.
 
 type: feat · priority: P1 · status: ready · area: projector guide web
 
-Next 3. Per-card win rates from the user's own games: in the opening hand,
+Per-card win rates from the user's own games: in the opening hand,
 drawn and cast, with n beside every rate. Today `key_card_timing`
 (`docs/guide.md`) covers maindeck cards with 3 or more copies only.
 
-**Why deferred:** Next in order. An undone cast no longer counts (plan 29).
+**Why deferred:** Behind the `P1` items ordered before it. An undone cast
+no longer counts (plan 29).
 
 **Needs:** The user's own opening hand and draws per game, computed in the
 rebuild with NULL where the hand is unknown (rules 3 and 4); fixture tests
@@ -131,7 +133,7 @@ rebuild with NULL where the hand is unknown (rules 3 and 4); fixture tests
 
 type: feat · priority: P1 · status: blocked · area: guide archetypes web
 
-Sideboard help without a model (decided 2026-10-07; `ROADMAP.md`'s Next 2):
+Sideboard help without a model (decided 2026-10-07):
 candidate ins by a card-role rule over the 75 (answers, threats, hate by the
 opponent's archetype), and a link to a sideboard guide for the pairing from
 the Skill Issue Magic guide index. No generated outs. The user's own
@@ -183,8 +185,8 @@ brief, coverage and sideboard-plan cards get a generate route with it.
 
 **Why deferred:** The repositioning made the user's own credential the only
 writing path, and "any model" was the research's second-most-asked thing
-after "no account". Moved from Next to Later on 2026-10-19: the 2026-10-19
-tracker research found no demand either way. Not started.
+after "no account". Moved out of the roadmap's order on 2026-10-19: the
+2026-10-19 tracker research found no demand either way. Not started.
 
 **Needs:** Its plan (`~/.claude/plans/release-16-provider-adapter.md`,
 outline). One adapter per protocol under `ai/llm/`, `claude_config.py` widened,
@@ -201,7 +203,7 @@ to it since the repository went public; notarization when donations cover
 the Apple fee.
 
 **Why deferred:** Linux and Windows ship first (decided 2026-10-07); moved
-from Next to Later on 2026-10-19, behind wider Linux discovery.
+out of the roadmap's order on 2026-10-19, behind wider Linux discovery.
 
 **Needs:** A plan of its own: plan 6, now done, left macOS out of scope.
 
@@ -258,13 +260,13 @@ part of the 2026-10-01 pivot; Alchemy and Brawl stay out.
 
 **Needs:** What plan 13 built per format (legality, archetype rules, corpus
 prior, consensus, field), and a corpus source for formats that have no MTGO
-events. `ROADMAP.md` keeps them in Later (2026-10-19).
+events. Out of the roadmap's order since 2026-10-19.
 
 ### BL-013 · MTGO on the Live page
 
 type: feat · priority: P1 · status: ready · area: table api web mtgo
 
-Next 5. MTGO on the Live page: the opponent's revealed cards during a game (MTGO
+MTGO on the Live page: the opponent's revealed cards during a game (MTGO
 appends to the game log every 1–8 s mid-game, median 2.3 s, and never
 rewrites what it wrote) and the between-games plan (see `docs/status.md`,
 "Limited on purpose").
@@ -343,8 +345,8 @@ Caution cards: the cards to watch for from the opponent's leading candidate
 deck, with rules text on expand. The brief and the sideboard plan cover part
 of it.
 
-**Why deferred:** Seen in the tracker research (2026-10-19); in
-`ROADMAP.md`'s Later.
+**Why deferred:** Seen in the tracker research (2026-10-19); out
+of the roadmap's order.
 
 **Needs:** Its own design: where it sits on Live (and whether it is advice
 under `table/queues.py`'s rule), and its source (the candidate's consensus
@@ -357,8 +359,8 @@ type: feat · priority: P3 · status: needs-decision · area: web api
 Finding history faster: date presets (7, 30, 90 days, a custom range), a
 search, matches grouped by day, league runs with their trophies.
 
-**Why deferred:** Seen in the tracker research (2026-10-19); in
-`ROADMAP.md`'s Later.
+**Why deferred:** Seen in the tracker research (2026-10-19); out
+of the roadmap's order.
 
 **Needs:** A check of what the Matches page and Home's session block already
 do, then a design per piece; league runs need the log's event records read.
@@ -427,12 +429,13 @@ threshold for screw that a fixture can pin.
 
 type: feat · priority: P1 · status: needs-decision · area: desktop web table
 
-Next 2. An overlay for Arena only: the Live page's reads in a window of the
+An overlay for Arena only: the Live page's reads in a window of the
 tracker's own, on top of the game. MTGO does not get one.
 
 **Why deferred:** The user reversed "no overlay" on 2026-11-02 and put it first
-in `ROADMAP.md`'s Next the same day; it is second since the account and the
-rules coach (BL-100, BL-101) went first. Not started: it has no design yet.
+in the roadmap's order the same day; the account, the rules coach and the
+work after them (BL-100 to BL-106, BL-004) have gone ahead of it since. Not
+started: it has no design yet.
 
 **Needs:** Its own design: which reads it carries, how a window stays over the
 game on Windows and on Linux under Wine or Proton, and how Arena's fullscreen
@@ -573,7 +576,8 @@ or named from the old format, and field and guide reads built on results
 from before the set. Nobody has checked which of these recovers on its
 own, and when. Added as urgent by the user (2026-11-06).
 
-**Why deferred:** It isn't deferred. Added 2026-11-06, not started.
+**Why deferred:** Taken right after the 1.3.0 release (decided 2026-11-06).
+Not started.
 
 **Needs:** The set's name and its release dates on Arena and MTGO, and
 whether a rotation or a ban comes with it; a `Player.log` captured after
