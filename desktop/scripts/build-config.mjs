@@ -20,11 +20,36 @@ const VARIABLES = {
 
 const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'cloud', 'build-config.ts');
 
+// The Supabase URL is the project's bare address: the auth and data paths
+// are added to it. A copied API URL (`…/rest/v1/`) still parses, so the
+// build would ship an app whose sign-in reaches the data API and fails. It
+// is refused before anything is written; the message names the variable
+// and the part that is wrong, never the value.
+function supabaseUrlProblem(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    return 'is not a URL';
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return 'is not an http(s) address';
+  if (url.pathname !== '/') return 'has a path; give the bare project address, e.g. https://<ref>.supabase.co';
+  if (url.search !== '' || url.hash !== '') return 'has a query or a fragment';
+  return null;
+}
+
 const fields = [];
 const found = [];
 for (const [field, variable] of Object.entries(VARIABLES)) {
   const value = (process.env[variable] ?? '').trim();
   if (value === '') continue;
+  if (field === 'supabaseUrl') {
+    const problem = supabaseUrlProblem(value);
+    if (problem) {
+      console.error(`build-config: ${variable} ${problem}`);
+      process.exit(1);
+    }
+  }
   fields.push(`  ${field}: ${JSON.stringify(value)},`);
   found.push(variable);
 }
