@@ -81,6 +81,7 @@ function shellWith(
       exportData: never,
       deleteCloudHistory: never,
       deleteAccount: never,
+      readProfileAgain: never,
     },
     app: {
       set,

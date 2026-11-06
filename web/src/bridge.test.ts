@@ -69,6 +69,7 @@ function fake(initial: BridgeSettings | null) {
       exportData: never,
       deleteCloudHistory: never,
       deleteAccount: never,
+      readProfileAgain: never,
     },
     onChange: (listener: (s: BridgeSettings) => void) => {
       listeners.add(listener)

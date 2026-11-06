@@ -191,6 +191,7 @@ export const CHANNELS = {
   accountExport: 'sensei-top:account-export',
   accountDeleteHistory: 'sensei-top:account-delete-history',
   accountDelete: 'sensei-top:account-delete',
+  accountReadProfile: 'sensei-top:account-read-profile',
   contribSet: 'sensei-top:contrib-set',
   reportError: 'sensei-top:report-error',
   reportProblem: 'sensei-top:report-problem',

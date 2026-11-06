@@ -7,6 +7,8 @@
 // `reportError`, `reportProblem` and `onReportProblem` are S11's (DB9, DB15).
 // `account.setProfile`, `exportData`, `deleteCloudHistory` and `deleteAccount`
 // are plan 40b S12's.
+// `account.readProfileAgain` is Settings' Try again under a profile that
+// could not be read.
 //
 // `app` also carries onboarding's three actions (S15): `recheck`, `firstData`
 // and `finishOnboarding`.
@@ -49,6 +51,7 @@ const CHANNEL = {
   accountExport: 'sensei-top:account-export',
   accountDeleteHistory: 'sensei-top:account-delete-history',
   accountDelete: 'sensei-top:account-delete',
+  accountReadProfile: 'sensei-top:account-read-profile',
   contribSet: 'sensei-top:contrib-set',
   reportError: 'sensei-top:report-error',
   reportProblem: 'sensei-top:report-problem',
@@ -89,6 +92,7 @@ if (location.protocol === 'http:') {
       exportData: (): Promise<AccountReply> => ipcRenderer.invoke(CHANNEL.accountExport),
       deleteCloudHistory: (): Promise<AccountReply> => ipcRenderer.invoke(CHANNEL.accountDeleteHistory),
       deleteAccount: (): Promise<AccountReply> => ipcRenderer.invoke(CHANNEL.accountDelete),
+      readProfileAgain: (): Promise<AccountReply> => ipcRenderer.invoke(CHANNEL.accountReadProfile),
     },
     /** Plan 40b S13: the answer to "help build the stats"; off stops any upload at once. */
     contribSet: (answer: { yes: boolean; policyVersion: string; ageConfirmed: boolean }): Promise<Saved> => ipcRenderer.invoke(CHANNEL.contribSet, answer),

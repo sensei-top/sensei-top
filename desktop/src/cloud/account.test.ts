@@ -328,6 +328,28 @@ describe('following the account', () => {
     expect(h.calls.filter((c) => c.startsWith('readProfile'))).toHaveLength(3);
   });
 
+  it("reads a profile it could not read again on the page's Try again, and says whether it could", async () => {
+    const h = harness();
+    h.fail.read = true;
+    await h.account.start();
+    expect(await h.account.readProfileAgain()).toEqual({ ok: false, error: 'failed' });
+    expect(h.account.details().profile).toEqual({ state: 'unknown' });
+    expect(h.runs).toEqual([]);
+
+    h.fail.read = false;
+    expect(await h.account.readProfileAgain()).toEqual({ ok: true });
+    expect(h.account.details().profile.state).toBe('read');
+    expect(h.applies.at(-1)).toEqual({ consent: true });
+    expect(h.runs).toEqual([{ userId: USER, pull: 'always' }]);
+  });
+
+  it('answers signedOut to a Try again with no one signed in', async () => {
+    const h = harness(signedOut);
+    await h.account.start();
+    expect(await h.account.readProfileAgain()).toEqual({ ok: false, error: 'signedOut' });
+    expect(h.calls.filter((c) => c.startsWith('readProfile'))).toHaveLength(0);
+  });
+
   it('reads the profile at every match end, and pushes nothing once it says no', async () => {
     const h = harness();
     await h.account.start();

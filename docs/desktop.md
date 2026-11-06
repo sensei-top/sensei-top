@@ -404,7 +404,8 @@ session signed out.
 
 A reply to the page carries a code, never text; the page words it. A
 profile that could not be read is `unknown`, not `none`, so a failed request
-never asks the consent questions again. `consented_at` and
+never asks the consent questions again; it is read again when a match ends,
+or when Settings' Try again calls `readProfileAgain`. `consented_at` and
 `age_confirmed_at` are this machine's time, and the age confirmation is
 written once, by the first profile write.
 

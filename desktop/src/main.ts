@@ -476,6 +476,7 @@ function run(): void {
   handle(CHANNELS.accountExport, refusedAccount, () => cloudAccount?.exportData() ?? noAccount());
   handle(CHANNELS.accountDeleteHistory, refusedAccount, () => cloudAccount?.deleteCloudHistory() ?? noAccount());
   handle(CHANNELS.accountDelete, refusedAccount, () => cloudAccount?.deleteAccount() ?? noAccount());
+  handle(CHANNELS.accountReadProfile, refusedAccount, () => cloudAccount?.readProfileAgain() ?? noAccount());
   // DB9: dropped without consent; the answer says whether it was captured.
   handle(CHANNELS.reportError, () => false, (payload: unknown) => errors.captureRendererError(payload));
   handle(CHANNELS.reportProblem, (): ReportOutcome => 'failed', (payload: unknown) => {

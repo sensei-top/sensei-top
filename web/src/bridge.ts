@@ -183,6 +183,8 @@ export type AccountActions = {
   deleteCloudHistory(): Promise<AccountReply>
   /** Needs a signed-in user, not a profile. */
   deleteAccount(): Promise<AccountReply>
+  /** Reads a profile that could not be read again; `ok` once it is read. */
+  readProfileAgain(): Promise<AccountReply>
 }
 
 /** The stored answer to "Help build the stats", and what it was given to. */

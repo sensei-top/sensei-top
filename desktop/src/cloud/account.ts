@@ -301,20 +301,40 @@ export class CloudAccount {
    *  time: another install may have turned the backup off. No push when it
    *  cannot be read. */
   async matchEnded(): Promise<void> {
+    const backup = await this.reread();
+    if (backup) await backup();
+  }
+
+  /** The page's Try again under a profile that could not be read: the read a
+   *  match's end makes, answered once the profile is read. A backup it starts
+   *  runs on after the answer. */
+  async readProfileAgain(): Promise<AccountReply> {
+    if (this.user() === null) return { ok: false, error: 'signedOut' };
+    const backup = await this.reread();
+    if (!backup) return { ok: false, error: 'failed' };
+    void backup().catch((error: unknown) => this.log.warn('account: the backup after a new read failed', { error: String(error) }));
+    return { ok: true };
+  }
+
+  /** Reads the profile again and applies its error-reports answer; `null`
+   *  when it could not be read, or the account moved on meanwhile, else the
+   *  backup run that follows (one that does nothing when the backup is off). */
+  private async reread(): Promise<(() => Promise<void>) | null> {
     const user = this.user();
-    if (user === null || user !== this.handled || this.deleting) return;
+    if (user === null || user !== this.handled || this.deleting) return null;
     const generation = this.generation;
     const row = await this.readProfile(user);
-    if (row === undefined || generation !== this.generation || this.deleting) return;
+    if (row === undefined || generation !== this.generation || this.deleting) return null;
     const before = this.profile;
     this.profile = toState(row);
     this.deps.changed();
     const consent = row?.consent_errors === true;
     if (before.state !== 'read' || before.consentErrors !== consent) await this.deps.reports.apply({ consent });
-    if (this.profile.state !== 'read' || !this.profile.consentSync) return;
+    const after = this.profile;
+    if (after.state !== 'read' || !after.consentSync) return async () => {};
     // Turned on elsewhere: pull, in case the history was deleted meanwhile.
     const wasSyncing = before.state === 'read' && before.consentSync;
-    await this.deps.sync.run({ userId: user, pull: wasSyncing ? 'never' : 'always' });
+    return () => this.deps.sync.run({ userId: user, pull: wasSyncing ? 'never' : 'always' });
   }
 
   async setProfile(value: unknown): Promise<AccountReply> {

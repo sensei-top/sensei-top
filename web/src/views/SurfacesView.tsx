@@ -116,6 +116,7 @@ function useSampleApp(sample: SampleId): NonNullable<Shell['app']> {
       setProfile: () => Promise.resolve({ ok: true }),
       exportData: () => Promise.resolve({ ok: true, cancelled: true }),
       deleteCloudHistory: () => Promise.resolve({ ok: true, deleted: 0 }),
+      readProfileAgain: () => Promise.resolve({ ok: true }),
       deleteAccount: () => Promise.resolve({ ok: true }),
     },
   }
