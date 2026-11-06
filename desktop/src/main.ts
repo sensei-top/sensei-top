@@ -565,6 +565,14 @@ function run(): void {
   });
 
   void app.whenReady().then(async () => {
+    // The window's `spellcheck: false` (window.ts) does not reach the
+    // session: outside macOS it still downloads a Hunspell dictionary from
+    // Google for each of the session's languages, a request the privacy page
+    // does not list. Disabling the spellchecker alone does not stop it
+    // (measured, Electron 44); an empty language list does. Both a no-op on
+    // macOS, which uses the system's spellchecker.
+    electron.session.defaultSession.setSpellCheckerEnabled(false);
+    electron.session.defaultSession.setSpellCheckerLanguages([]);
     log.info('displays', screen.getAllDisplays().map((display) => ({
       id: display.id,
       bounds: display.bounds,
