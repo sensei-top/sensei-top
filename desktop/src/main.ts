@@ -69,6 +69,20 @@ if (typeof electron.app !== 'object' || electron.app === null) {
 const { app, BrowserWindow, Menu, Tray, dialog, ipcMain, nativeImage, screen, shell } = electron;
 const packaged = app.isPackaged;
 const onWindowsStore = process.windowsStore === true;
+
+// The window's `spellcheck: false` (window.ts) does not reach a session:
+// outside macOS every session downloads a Hunspell dictionary from Google
+// for each of its languages, a request the privacy page does not list.
+// Disabling the spellchecker alone does not stop it (measured, Electron 44);
+// an empty language list does. Every session, not only the default one:
+// electron-updater makes its own (`fromPartition('electron-updater')`), and
+// its first update check downloaded the dictionary. Both calls are no-ops on
+// macOS, which uses the system's spellchecker.
+function quietSpellchecker(ses: Electron.Session): void {
+  ses.setSpellCheckerEnabled(false);
+  ses.setSpellCheckerLanguages([]);
+}
+app.on('session-created', quietSpellchecker);
 const canStartWithSystem = canAutostart({
   platform: process.platform,
   packaged,
@@ -566,14 +580,7 @@ function run(): void {
   });
 
   void app.whenReady().then(async () => {
-    // The window's `spellcheck: false` (window.ts) does not reach the
-    // session: outside macOS it still downloads a Hunspell dictionary from
-    // Google for each of the session's languages, a request the privacy page
-    // does not list. Disabling the spellchecker alone does not stop it
-    // (measured, Electron 44); an empty language list does. Both a no-op on
-    // macOS, which uses the system's spellchecker.
-    electron.session.defaultSession.setSpellCheckerEnabled(false);
-    electron.session.defaultSession.setSpellCheckerLanguages([]);
+    quietSpellchecker(electron.session.defaultSession);
     log.info('displays', screen.getAllDisplays().map((display) => ({
       id: display.id,
       bounds: display.bounds,

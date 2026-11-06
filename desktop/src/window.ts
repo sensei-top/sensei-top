@@ -7,8 +7,8 @@
 // - **No spellchecker.** Electron turns it on by default, and outside macOS
 //   it downloads its Hunspell dictionary from Google's servers: a request
 //   the privacy page does not list, for text that is mostly card names. This
-//   option alone does not stop the download; `main.ts` also clears the
-//   session's spellchecker languages before the window opens.
+//   option alone does not stop the download; `main.ts` also clears every
+//   session's spellchecker languages (`quietSpellchecker`).
 // - **Navigation.** The window shows only its own origin,
 //   `http://127.0.0.1:<port>`, which `api/guard.py` accepts. Any other
 //   http or https address, from a link or `window.open`, goes to the system
