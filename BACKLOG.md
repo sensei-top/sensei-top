@@ -47,7 +47,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-106
+Next ID: BL-108
 
 ## Features
 
@@ -558,6 +558,42 @@ database" changes to name the storage in the same release (decided
 
 **Needs:** The pool (BL-103) live; Supabase Storage prices and limits read
 again at the time; the policy wording change.
+
+### BL-106 · A new card set's release
+
+type: chore · priority: P1 · status: ready · area: cards archetypes metagame guide
+
+The next card set reaches Arena and MTGO before the app has been checked
+against it. Several parts read the card pool or the format as of a date:
+the card database and its images (`cards.py`, `card_images.py`), the
+archetype definitions, the tournament corpus and the deck guide's
+format-reset detection. What a user sees on release day has not been
+checked: cards without a name or image, an opponent's deck left unnamed
+or named from the old format, and field and guide reads built on results
+from before the set. Nobody has checked which of these recovers on its
+own, and when. Added as urgent by the user (2026-11-06).
+
+**Why deferred:** It isn't deferred. Added 2026-11-06, not started.
+
+**Needs:** The set's name and its release dates on Arena and MTGO, and
+whether a rotation or a ban comes with it; a `Player.log` captured after
+Arena's set update, if a parsing rule turns out to need changing (rule 7).
+
+### BL-107 · A feedback button
+
+type: feat · priority: P2 · status: needs-decision · area: desktop web
+
+A user can't send feedback from inside the app. The only way to write to
+us is Report a problem, which is framed as reporting an error, so a
+suggestion or a feature request has nowhere to go but the contact address
+or GitHub, and the user has to find those on their own. Added by the user
+(2026-11-06).
+
+**Why deferred:** Added 2026-11-06. Where feedback goes is undecided.
+
+**Needs:** The user's decision on where feedback goes, and whether it
+shares Report a problem's consent and the route to Sentry in the United
+States. Its own line in the privacy policy if it sends anything new.
 
 ## Bugs
 
