@@ -1,9 +1,10 @@
 # Roadmap
 
-What Sensei Top is building, in the order it is building it, and what it
-will not build. Dates are not promised: one maintainer works on this in
-their spare time, and the order moves when players ask for something
-louder than the plan expected. Vote and argue in
+What Sensei Top is building, in the order it is building it. What it will
+not build, and why, is in [docs/status.md](docs/status.md#not-planned).
+Dates are not promised: one maintainer works on this in their spare time,
+and the order moves when players ask for something louder than the plan
+expected. Vote and argue in
 [Discussions](https://github.com/sensei-top/sensei-top/discussions).
 
 The tracker is free and works fully without an account, now and later:
@@ -113,45 +114,6 @@ In this order, unless Discussions says otherwise.
   tracker, the copy prompt and your own key stay as they are. (BL-006)
 - **A Discord server**, once there are enough people to staff one.
   Discussions on GitHub come first.
-
-## Never
-
-These are decisions, not gaps. Each one was considered and refused.
-
-- **Live advice during an event.** In an Arena event (paid events,
-  drafts, the Arena Open, Directs, Qualifiers, a Direct Challenge) the Live
-  page shows what any tracker shows: your library, draw odds, the cards
-  your opponent has revealed and what deck they point to. Keep advice, hand
-  reads and play-arounds appear in casual games, on the ranked ladder and
-  between games, and a switch in Settings hides them everywhere. Until
-  October 2026 the ladder got none either. The rules that could reach a
-  tracker are the
-  [Digital Tournament Rules](https://blogs.magicjudges.org/rules/dtr/) and
-  the [Digital Infraction Procedure Guide](https://blogs.magicjudges.org/rules/dipg/2-2/):
-  they allow deck tracking software that shows no private information,
-  they count play advice from an outside source as outside assistance, and
-  they govern tournaments, which the ladder is not. On the ladder only
-  [Wizards' Terms](https://company.wizards.com/en/legal/terms) apply, and
-  they treat every tracker alike. The terms of the
-  [Arena Open](https://magic.wizards.com/en/news/mtg-arena/arena-open-terms-and-conditions)
-  and [Arena Direct](https://magic.wizards.com/en/news/mtg-arena/arena-direct-terms-and-conditions)
-  say nothing of trackers either way, so events keep the stricter line.
-- **Reading the memory of, injecting into or automating either client.**
-  The tracker reads the log files Arena and MTGO already write, with
-  Arena's own Detailed Logs setting on, and nothing else.
-- **Pooling or sharing your matches without your yes.** Your match
-  history is never pooled or shared by default. Two things leave your
-  computer only when you turn them on: a backup of your match summaries
-  that only you can read, with the free account, and, with or without
-  one, your games contributed to the stats, stripped of everything that
-  names you or your opponent. A report you generate with your own key
-  sends that match to the model you configured. The matchup numbers from
-  outside your own games come from published tournament results.
-- **Draft.** The draft assistant was removed in October 2026 and is not
-  coming back in this project.
-- **Mobile.** iOS makes log reading impossible and Android impractical.
-- **Alchemy and Brawl.** Games in them still appear in your history, but
-  no field data or format-specific feature is built for them.
 
 ## Where it comes from
 

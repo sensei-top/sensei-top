@@ -66,7 +66,7 @@ the icon is named once.
 
 ### Widths
 
-The dashboard is a desktop app, never a phone one (`ROADMAP.md`, "Never").
+The dashboard is a desktop app, never a phone one (`docs/status.md`, "Not planned").
 A view is designed, reviewed and screenshotted at 1008 px and up, the
 common floor for a responsive desktop app, and the shell's window cannot
 be made narrower (`MIN_SIZE` in `desktop/src/window.ts`). Nothing new is
