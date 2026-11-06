@@ -365,7 +365,11 @@ on:
   install that never pulled for that account), when a match ends (the tray's
   5-second `/api/live` poll sees it leave a match; the profile is read again
   first, so a backup another install turned off sends nothing more), and when
-  a profile write turns it on (with a pull).
+  a profile write turns it on (with a pull). A run the local API failed (an
+  error answer, or no answer in 60 s) runs again two minutes later, up to
+  five times in a row, and any other run cancels that retry: a first
+  install's card download holds the database's write lock for about four and
+  a half minutes, and the next match end may be hours away.
 - *Push.* `GET /api/sync/payloads` returns every match with a digest.
   `sync-state.json` in `userData` keeps the `match_id → digest` last pushed;
   what differs goes up in batches of 100, so a re-projection or a pick is

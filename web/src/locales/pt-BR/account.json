@@ -116,7 +116,7 @@
       "doneUndated_other": "{{n}} partidas deste PC no backup.",
       "error": {
         "cloud": "O último backup parou porque não foi possível falar com sua conta. O Sensei Top tenta de novo quando a próxima partida terminar.",
-        "localApi": "O último backup parou porque o Sensei Top não conseguiu ler as partidas deste PC. Ele tenta de novo quando a próxima partida terminar.",
+        "localApi": "O último backup parou porque o Sensei Top não conseguiu ler as partidas deste PC. Ele tenta de novo em alguns minutos e quando a próxima partida terminar.",
         "disk": "O último backup parou porque o Sensei Top não conseguiu salvar o registro do backup neste PC. Ele tenta de novo quando a próxima partida terminar."
       }
     },

@@ -67,6 +67,12 @@ export const PULL_OVERLAP_MS = 5 * 60_000;
 /** How long a run waits for the local API while the server (re)starts:
  *  longer than the server's own 60 s ready limit. */
 export const SERVER_WAIT_MS = 90_000;
+/** A run the local API failed is tried again this much later, at most
+ *  `RETRY_LIMIT` times in a row: a first install's card download holds the
+ *  database's write lock for minutes (271 s measured), longer than one
+ *  request waits, and the next match end may be hours away. */
+export const RETRY_MS = 2 * 60_000;
+export const RETRY_LIMIT = 5;
 
 /** One `GET /api/sync/payloads` item. */
 export interface LocalPayload {
@@ -460,7 +466,15 @@ export interface CloudSyncDeps {
   now(): Date;
   /** Called whenever `status()` may have changed. */
   onStatus(): void;
+  /** Runs `fn` after `ms`; returns the cancel. Defaults to an unref'd `setTimeout`. */
+  after?(fn: () => void, ms: number): () => void;
   log?: Logger;
+}
+
+function laterTimer(fn: () => void, ms: number): () => void {
+  const timer = setTimeout(fn, ms);
+  timer.unref?.();
+  return () => clearTimeout(timer);
 }
 
 const PULL_RANK: Record<PullWhen, number> = { never: 0, ifNever: 1, always: 2 };
@@ -475,6 +489,8 @@ export class CloudSync {
   private running: Promise<void> | null = null;
   private pending: SyncRunOptions | null = null;
   private lastError: SyncError | null = null;
+  private retries = 0;
+  private cancelRetry: (() => void) | null = null;
 
   constructor(private readonly deps: CloudSyncDeps) {
     this.log = deps.log ?? silent;
@@ -512,6 +528,8 @@ export class CloudSync {
   async clear(): Promise<void> {
     await this.running;
     this.pending = null;
+    this.dropRetry();
+    this.retries = 0;
     this.state = emptyState(null);
     this.lastError = null;
     try {
@@ -572,7 +590,30 @@ export class CloudSync {
     if (!this.deps.enabled()) throw new Stopped('the backup was turned off');
   }
 
-  private async once({ userId, pull }: SyncRunOptions): Promise<void> {
+  private dropRetry(): void {
+    this.cancelRetry?.();
+    this.cancelRetry = null;
+  }
+
+  /** The same run again in `RETRY_MS`, for a run the local API failed; a run
+   *  asked for meanwhile replaces it. */
+  private retry(options: SyncRunOptions): void {
+    if (this.retries >= RETRY_LIMIT) {
+      this.log.warn('sync: no more retries until the next trigger', { tries: this.retries });
+      return;
+    }
+    this.retries++;
+    this.log.info('sync: trying again later', { inMs: RETRY_MS, try: this.retries });
+    const after = this.deps.after ?? laterTimer;
+    this.cancelRetry = after(() => {
+      this.cancelRetry = null;
+      void this.run(options);
+    }, RETRY_MS);
+  }
+
+  private async once(options: SyncRunOptions): Promise<void> {
+    const { userId, pull } = options;
+    this.dropRetry();
     try {
       this.checkUser(userId);
       let state = this.load();
@@ -585,6 +626,7 @@ export class CloudSync {
       await this.device(userId);
       this.commit({ ...this.load(), lastSyncAt: this.deps.now().toISOString() });
       this.lastError = null;
+      this.retries = 0;
     } catch (error) {
       if (error instanceof Stopped) {
         this.log.info('sync: stopped', { reason: error.message });
@@ -592,6 +634,7 @@ export class CloudSync {
       }
       this.lastError = error instanceof LocalApiError ? 'localApi' : error instanceof StateWriteError ? 'disk' : 'cloud';
       this.log.warn('sync: the run stopped', { error: String(error), kind: this.lastError });
+      if (this.lastError === 'localApi') this.retry(options);
     }
   }
 

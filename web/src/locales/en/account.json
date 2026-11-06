@@ -116,7 +116,7 @@
       "doneUndated_other": "{{n}} matches backed up from this PC.",
       "error": {
         "cloud": "The last backup stopped because your account couldn't be reached. Sensei Top tries again when the next match ends.",
-        "localApi": "The last backup stopped because Sensei Top couldn't read the matches on this PC. It tries again when the next match ends.",
+        "localApi": "The last backup stopped because Sensei Top couldn't read the matches on this PC. It tries again in a few minutes, and when the next match ends.",
         "disk": "The last backup stopped because Sensei Top couldn't save its backup record on this PC. It tries again when the next match ends."
       }
     },

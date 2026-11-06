@@ -18,6 +18,8 @@ import {
   parseState,
   PULL_OVERLAP_MS,
   readPayloads,
+  RETRY_LIMIT,
+  RETRY_MS,
   SERVER_NOW,
   supabaseSyncDb,
   timeMicros,
@@ -147,6 +149,7 @@ function harness(
   let user: string | null = options.user === undefined ? USER : options.user;
   let enabled = true;
   let statusCalls = 0;
+  const timers: { fn: () => void; ms: number; cancelled: boolean }[] = [];
   const sync = new CloudSync({
     db,
     local: options.localApi ?? {
@@ -164,6 +167,11 @@ function harness(
     os: 'Linux 6.0',
     now: () => new Date('2026-02-03T04:05:06.000Z'),
     onStatus: () => void statusCalls++,
+    after: (fn, ms) => {
+      const timer = { fn, ms, cancelled: false };
+      timers.push(timer);
+      return () => (timer.cancelled = true);
+    },
   });
   const state = (): SyncState => parseState(file.text ?? '');
   return {
@@ -175,6 +183,16 @@ function harness(
     setUser: (next: string | null) => (user = next),
     setEnabled: (on: boolean) => (enabled = on),
     statusCalls: () => statusCalls,
+    /** Timers set, not cancelled and not yet fired. */
+    waiting: () => timers.filter((t) => !t.cancelled),
+    /** Fires the first waiting timer and waits for the run it starts. */
+    fire: async () => {
+      const timer = timers.find((t) => !t.cancelled);
+      if (!timer) throw new Error('no timer is waiting');
+      timer.cancelled = true;
+      timer.fn();
+      await sync.idle();
+    },
   };
 }
 
@@ -480,6 +498,51 @@ describe('runs', () => {
     await h.sync.clear();
     expect(h.file.text).toBeNull();
     expect(h.sync.status().backedUp).toBe(0);
+  });
+});
+
+describe('a run the local API failed', () => {
+  it('is tried again later, and a retry that succeeds clears the error', async () => {
+    const h = harness({ payloads: [payload(1)] });
+    h.local.failPayloads = true;
+    await h.sync.run({ userId: USER, pull: 'ifNever' });
+    expect(h.sync.status().lastError).toBe('localApi');
+    expect(h.waiting().map((t) => t.ms)).toEqual([RETRY_MS]);
+
+    h.local.failPayloads = false;
+    await h.fire();
+    expect(h.sync.status().lastError).toBeNull();
+    expect(h.sync.status().backedUp).toBe(1);
+    expect(h.waiting()).toHaveLength(0);
+  });
+
+  it('stops retrying after RETRY_LIMIT failures in a row', async () => {
+    const h = harness({ payloads: [payload(1)] });
+    h.local.failPayloads = true;
+    await h.sync.run({ userId: USER, pull: 'never' });
+    for (let i = 0; i < RETRY_LIMIT; i++) {
+      await h.fire();
+    }
+    expect(h.waiting()).toHaveLength(0);
+    expect(h.sync.status().lastError).toBe('localApi');
+  });
+
+  it('is dropped when another run starts first', async () => {
+    const h = harness({ payloads: [payload(1)] });
+    h.local.failPayloads = true;
+    await h.sync.run({ userId: USER, pull: 'never' });
+    expect(h.waiting()).toHaveLength(1);
+    h.local.failPayloads = false;
+    await h.sync.run({ userId: USER, pull: 'never' });
+    expect(h.waiting()).toHaveLength(0);
+  });
+
+  it('is not tried again when the cloud failed', async () => {
+    const h = harness({ payloads: [payload(1)] });
+    h.db.failUpsert = 1;
+    await h.sync.run({ userId: USER, pull: 'never' });
+    expect(h.sync.status().lastError).toBe('cloud');
+    expect(h.waiting()).toHaveLength(0);
   });
 });
 
