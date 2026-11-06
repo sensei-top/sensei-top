@@ -825,7 +825,10 @@ other than `none` or `read` goes Home.
 `ContributeQuestion`, whose text (`ContributeDisclosure`) keeps three lines on
 the page (no account needed, what a yes sends, and that a sent game can't be
 deleted) and folds where the pool is and how to stop under "More about this"
-(`MoreAbout`, the consent screen's fold too). Settings' dialog shows its four
+(`MoreAbout`, the consent screen's fold too). Welcome's last step, which
+names no account, folds the no-account line as well (`foldNoAccount`); its
+age and wait hints share one line, and the yes it keeps off names that line
+as its description. Settings' dialog shows its four
 lines in full. It is due (`contribPageDue`) only when the build can
 upload, onboarding is finished, nothing is stored, the page was never shown,
 the consent screen is not due, and a signed-in account's profile has been

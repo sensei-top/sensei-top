@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Contribute } from '../bridge'
 import { useShell } from '../bridge'
@@ -9,15 +9,17 @@ import { POLICY_VERSION } from '../lib/policy'
 
 /** The five sentences every place that asks "Help build the stats" says:
  *  what it is and that a sent game can't be deleted on the page, where the
- *  pool is and how to stop under More about this. */
-export function ContributeDisclosure() {
+ *  pool is and how to stop under More about this. `foldNoAccount` moves the
+ *  no-account line under the fold too, for a page that names no account. */
+export function ContributeDisclosure({ foldNoAccount = false }: { foldNoAccount?: boolean }) {
   const { t } = useTranslation()
   return (
     <div className="max-w-prose space-y-1 text-body text-ink2">
-      <p>{t('contribute.disclosure.noAccount')}</p>
+      {!foldNoAccount && <p>{t('contribute.disclosure.noAccount')}</p>}
       <p>{t('contribute.disclosure.what')}</p>
       <p>{t('contribute.disclosure.final')}</p>
       <MoreAbout>
+        {foldNoAccount && <p>{t('contribute.disclosure.noAccount')}</p>}
         <p>{t('contribute.disclosure.where')}</p>
         <p>{t('contribute.disclosure.stop')}</p>
       </MoreAbout>
@@ -39,7 +41,7 @@ export function ContributeAge({
   const { t } = useTranslation()
   return (
     <div className="space-y-1">
-      <label className="flex items-start gap-3 text-body text-ink">
+      <label className="flex max-w-prose items-start gap-3 text-body text-ink">
         <input
           type="checkbox"
           className="mt-1 size-4 shrink-0 accent-accent"
@@ -56,9 +58,11 @@ export function ContributeAge({
 
 /** "Help build the stats" on Welcome's last step. Two buttons, neither
  *  pressed until the answer is saved; the yes is off until the age box is
- *  ticked. `stored` is the shell's answer, `picked` this run's saved press;
- *  `waiting` is Go to Home waiting on this or the AI question. The save goes
- *  through the shell's `contribSet`. */
+ *  ticked, and names the age hint as its description. `stored` is the
+ *  shell's answer, `picked` this run's saved press; `waiting` is Go to Home
+ *  waiting on this or the AI question. The hints are one line, so the age
+ *  and the wait don't stack. The save goes through the shell's
+ *  `contribSet`. */
 export function ContributeQuestion({
   stored,
   picked,
@@ -66,6 +70,7 @@ export function ContributeQuestion({
   onPicked,
   waitingHint,
   showHeading = true,
+  foldNoAccount = false,
 }: {
   stored: Contribute | null
   picked: boolean | null
@@ -75,6 +80,8 @@ export function ContributeQuestion({
   waitingHint?: string
   /** Whether the question draws its own heading. */
   showHeading?: boolean
+  /** Whether the no-account line folds under More about this. */
+  foldNoAccount?: boolean
 }) {
   const { t } = useTranslation()
   const shell = useShell()
@@ -82,6 +89,7 @@ export function ContributeQuestion({
   const [saving, setSaving] = useState<boolean | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
   const saved = savedAnswer(stored, picked)
+  const hintId = useId()
 
   const choose = async (yes: boolean) => {
     setSaving(yes)
@@ -102,7 +110,7 @@ export function ContributeQuestion({
   return (
     <div className="space-y-3">
       {showHeading && <h3 className="text-body font-medium text-ink">{t('contribute.heading')}</h3>}
-      <ContributeDisclosure />
+      <ContributeDisclosure foldNoAccount={foldNoAccount} />
       <ContributeAge checked={box.checked} disabled={box.disabled} onChange={setAge} />
       <div className="flex flex-wrap gap-3">
         {options.map(({ yes, label }) => {
@@ -113,16 +121,21 @@ export function ContributeQuestion({
               disabled={!canPress(yes, box.checked, saving !== null)}
               label={label}
               className="min-h-[44px] px-4 py-2"
+              describedBy={yes && hints.includes('age') ? hintId : undefined}
               onClick={() => void choose(yes)}
             />
           )
         })}
       </div>
-      {hints.map((hint) => (
-        <p key={hint} className="text-caption text-muted">
-          {hint === 'age' ? t('contribute.hint.age') : waitingHint ?? t('contribute.hint.waitsWelcome')}
+      {hints.length > 0 && (
+        <p id={hintId} className="max-w-prose text-caption text-muted">
+          {hints
+            .map((hint) =>
+              hint === 'age' ? t('contribute.hint.age') : (waitingHint ?? t('contribute.hint.waitsWelcome')),
+            )
+            .join(' ')}
         </p>
-      ))}
+      )}
       {failure && (
         <p role="alert" className="break-words text-caption text-loss">
           {failure}
@@ -132,30 +145,35 @@ export function ContributeQuestion({
   )
 }
 
-/** A button of a choice: the one pressed has a check and the accent border. */
+/** A button of a choice: the one pressed has a check and the accent border.
+ *  Off, it is the same box at half strength with no hover, as every disabled
+ *  control is; `describedBy` names the line that says why. */
 export function ChoiceTile({
   pressed,
   disabled,
   label,
   className,
+  describedBy,
   onClick,
 }: {
   pressed: boolean
   disabled: boolean
   label: string
   className: string
+  describedBy?: string
   onClick: () => void
 }) {
   return (
     <button
       type="button"
       aria-pressed={pressed}
+      aria-describedby={describedBy}
       disabled={disabled}
       onClick={onClick}
-      className={`flex items-center justify-center gap-2 rounded-control border text-body font-medium transition-chrome disabled:opacity-60 ${className} ${
+      className={`flex items-center justify-center gap-2 rounded-control border text-body font-medium transition-chrome disabled:cursor-not-allowed disabled:opacity-50 ${className} ${
         pressed
           ? 'border-accent bg-surface3 text-ink'
-          : 'border-edge bg-surface2 text-ink2 hover:border-edge-strong hover:text-ink'
+          : 'border-edge bg-surface2 text-ink2 enabled:hover:border-edge-strong enabled:hover:text-ink'
       }`}
     >
       {pressed && <Check size={16} strokeWidth={2.25} aria-hidden className="shrink-0 text-accent" />}

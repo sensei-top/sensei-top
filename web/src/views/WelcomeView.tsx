@@ -416,6 +416,7 @@ function DoneStep({
             answerWaits(asked, app.aiFeatures, picked) || contribWaits(contribPutToUser, app.contribute, contribPicked)
           }
           onPicked={onContribPicked}
+          foldNoAccount
         />
       )}
       {app.update.state !== 'unavailable' && (
