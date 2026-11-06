@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
-import type { AppChange, AppSettings, DeepPartial, Saved, ShellSettings } from '../bridge'
+import type { AccountActions, AppChange, AppSettings, DeepPartial, Saved, ShellSettings } from '../bridge'
 import { ChoiceTile, ContributeQuestion } from '../components/ContributeQuestion'
 import { CardDataProgress } from '../components/onboarding/CardDataProgress'
 import { DetailedLogsGuide } from '../components/onboarding/DetailedLogsGuide'
 import { RestoreButton } from '../components/settings/BackupSection'
 import { FolderField, PressButton, RestartNote, SaveButton, SavingSwitch } from '../components/settings/SaveButton'
+import { SignInButtons } from '../components/settings/SignInButtons'
 import { Button, Card, Disclosure, Field, Segmented, TextLink } from '../components/ui'
 import { useLanguage, type TFunction } from '../i18n'
 import { contribAskedOnWelcome, contribWaits } from '../lib/contribute'
@@ -26,6 +27,7 @@ export type WelcomeActions = {
   pickFolder(): Promise<string | null>
   pickFile(): Promise<string | null>
   restoreFrom(path: string): Promise<Saved>
+  signIn: AccountActions['signIn']
 }
 
 /** The welcome steps, one at a time: Start, Which do you play?, the setup
@@ -165,9 +167,12 @@ function Failure({ text }: { text: string | null }) {
 }
 
 /** The language, the promise, what leaves this computer behind a
- *  disclosure, the Wizards notice, and the restore for someone who has used
- *  the app before. A restore runs even while card data downloads: the shell
- *  stops the download first. */
+ *  disclosure, the Wizards notice, and for someone who has used the app
+ *  before: first the sign-in that brings back a backed-up history (in a
+ *  build with an account), then the restore from a file. Signed in, a line
+ *  says the history comes back by itself. A restore runs even while card
+ *  data downloads: the shell stops the download first. A sign-in that opens
+ *  the account's questions comes back to this step after them. */
 function StartStep({ app, actions }: { app: AppSettings; actions: WelcomeActions }) {
   const { t } = useTranslation()
   const { language, setLanguage } = useLanguage()
@@ -197,6 +202,16 @@ function StartStep({ app, actions }: { app: AppSettings; actions: WelcomeActions
       <p className="max-w-prose text-caption text-muted">{t('welcome.intro.wizardsNotice')}</p>
       <div className="space-y-1.5">
         <p className="text-body text-ink2">{t('welcome.start.restoreTitle')}</p>
+        {app.account.available && !app.account.signedIn && (
+          <div className="space-y-3 pb-2">
+            <p className="max-w-prose text-body text-ink2">{t('welcome.start.signIn')}</p>
+            <SignInButtons signIn={actions.signIn} variant="secondary" />
+          </div>
+        )}
+        {app.account.available && app.account.signedIn && (
+          <p className="max-w-prose pb-2 text-body text-ink2">{t('welcome.start.signedIn')}</p>
+        )}
+        {app.account.available && <p className="text-caption text-muted">{t('welcome.start.fromFile')}</p>}
         <RestoreButton
           label={t('welcome.start.restore')}
           pickFile={actions.pickFile}

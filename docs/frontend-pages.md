@@ -791,7 +791,10 @@ sends a signed-in user there (`needsConsent`) when the account's profile is
 build has no account, nobody is signed in, the profile could not be read, or
 the answers were given under a newer version than this install knows (asking
 again would write the older one back). The screen is never redirected from
-itself. Its kind is fixed when it opens, since the shell publishes the
+itself. Answered or skipped, it goes Home, or back to the setup step it
+interrupted, which the redirect from `/welcome` carries in the navigation
+state (`consentState`, `afterConsent`): a first sign-in on Welcome's first
+step otherwise skips the rest of setup. Its kind is fixed when it opens, since the shell publishes the
 profile before `setProfile` replies. It asks its questions over a few
 steps (`stepsOf`), drawn bare (`docs/frontend.md`, "The welcome's bare
 pages"), with the first-run Welcome's "Step n of m" caption, an `h2`

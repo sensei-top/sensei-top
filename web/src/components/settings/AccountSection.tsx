@@ -1,14 +1,13 @@
 import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
-import type { AccountActions, AccountProvider, AccountReply, AccountState, ProfileState, Saved } from '../../bridge'
+import type { AccountActions, AccountReply, AccountState, ProfileState, Saved } from '../../bridge'
 import { ACCOUNT_WELCOME_PATH } from '../../lib/accountWelcome'
 import { failureOf } from '../../lib/settings'
 import { ago, formatCount, useNow } from '../../lib/time'
 import { Button, Card } from '../ui'
 import { DeleteAccountDialog, DeleteHistoryDialog, ErrorsDialog } from './AccountDialogs'
 import {
-  attemptGuard,
   deleteControls,
   errorsChange,
   errorsControls,
@@ -20,6 +19,7 @@ import {
   type DeleteFailure,
 } from './accountLogic'
 import { PressButton, SavingSwitch } from './SaveButton'
+import { SignInButtons } from './SignInButtons'
 
 /** Settings → Account: signed out, the two sign-in buttons, both off while
  *  one waits on the browser; signed in, the three choices (or Try again when
@@ -37,9 +37,6 @@ export function AccountSection({ state, actions }: { state: AccountState; action
   const latest = useRef<ProfileState | undefined>(undefined)
   latest.current = state.available ? state.profile : undefined
 
-  const [waiting, setWaiting] = useState<AccountProvider | null>(null)
-  const [signInFailure, setSignInFailure] = useState<string | null>(null)
-  const [attempts] = useState(attemptGuard)
   const [gate] = useState(profileGate)
   const [writing, setWriting] = useState(false)
   const [signOutFailure, setSignOutFailure] = useState<string | null>(null)
@@ -62,25 +59,6 @@ export function AccountSection({ state, actions }: { state: AccountState; action
     setDialog(which)
   }
   const close = () => setDialog(null)
-
-  const signIn = async (provider: AccountProvider) => {
-    const current = attempts.begin()
-    setWaiting(provider)
-    setSignInFailure(null)
-    setDeletedNote(false)
-    let message: string | null = null
-    try {
-      const reply = await actions.signIn(provider)
-      if (!reply.ok) message = reply.message.trim() || t('account.settings.signInFailed')
-    } catch {
-      message = t('account.settings.signInFailed')
-    }
-    // Both buttons are off while one waits; the guard still keeps a stale
-    // answer from landing over a newer press.
-    if (!current()) return
-    setWaiting(null)
-    setSignInFailure(message)
-  }
 
   const deleting = (kind: 'history' | 'account') =>
     deleteControls({
@@ -172,30 +150,9 @@ export function AccountSection({ state, actions }: { state: AccountState; action
               <p>{t('account.settings.signedOut')}</p>
               <p>{t('account.settings.noPassword')}</p>
             </div>
-            <div className="flex flex-wrap gap-3">
-              {(['google', 'discord'] as const).map((which) => (
-                <Button
-                  key={which}
-                  variant="primary"
-                  className="min-h-[44px]"
-                  disabled={waiting !== null}
-                  onClick={() => void signIn(which)}
-                >
-                  {waiting === which
-                    ? t('account.settings.signingIn')
-                    : which === 'google'
-                      ? t('account.settings.signInGoogle')
-                      : t('account.settings.signInDiscord')}
-                </Button>
-              ))}
-            </div>
-            {persistenceNote}
-            {waiting && <p className="max-w-prose text-caption text-muted">{t('account.settings.waiting')}</p>}
-            {signInFailure && (
-              <p role="alert" className="break-words text-caption text-loss">
-                {signInFailure}
-              </p>
-            )}
+            <SignInButtons signIn={actions.signIn} onStart={() => setDeletedNote(false)}>
+              {persistenceNote}
+            </SignInButtons>
             {deletedNote && <p className="text-body text-ink2">{t('account.deleteAccount.done')}</p>}
           </div>
         ) : (

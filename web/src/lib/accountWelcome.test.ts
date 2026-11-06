@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { AccountState, AppSettings, ProfileState } from '../bridge'
 import {
+  afterConsent,
+  consentState,
   canContinue,
   contribAnswer,
   hintFor,
@@ -197,6 +199,22 @@ describe('when the shell layout sends the user to the consent screen', () => {
     expect(needsConsent(settings({ available: false }), VERSION)).toBe(false)
     expect(needsConsent(null, VERSION)).toBe(false)
     expect(needsConsent(undefined, VERSION)).toBe(false)
+  })
+})
+
+describe('the way back from the consent screen', () => {
+  it('returns to the setup step a sign-in on the welcome interrupted', () => {
+    expect(afterConsent(consentState('/welcome', '?step=start'))).toBe('/welcome?step=start')
+    expect(afterConsent(consentState('/welcome', ''))).toBe('/welcome')
+  })
+
+  it('goes Home from any other page, and for any other state', () => {
+    expect(consentState('/matches', '?page=2')).toBeUndefined()
+    expect(afterConsent(consentState('/matches', ''))).toBe('/')
+    expect(afterConsent(null)).toBe('/')
+    expect(afterConsent({ back: 'https://example.com/' })).toBe('/')
+    expect(afterConsent({ back: '/welcomeback' })).toBe('/')
+    expect(afterConsent({ back: 7 })).toBe('/')
   })
 })
 

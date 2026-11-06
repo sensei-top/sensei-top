@@ -21,7 +21,10 @@
   "start": {
     "promise": "Seu histórico de partidas e análises dos seus jogos, a partir dos logs que o Arena e o Magic Online já escrevem. Nada sobre seus jogos sai deste computador.",
     "restoreTitle": "Já usou o Sensei Top antes?",
-    "restore": "Restaurar um backup"
+    "signIn": "Entre para trazer de volta as partidas do backup da sua conta.",
+    "signedIn": "Você entrou na sua conta. Com o backup ligado, as partidas da sua conta voltam sozinhas.",
+    "fromFile": "Guardou um arquivo de backup?",
+    "restore": "Restaurar de um arquivo de backup"
   },
   "intro": {
     "wizardsNotice": "Sensei Top é um conteúdo de fã não oficial permitido sob a política de conteúdo de fãs. Não aprovado/apoiado pela Wizards. Porções do material usado são propriedade da Wizards of the Coast. ©Wizards of the Coast LLC.",

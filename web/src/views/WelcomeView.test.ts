@@ -26,6 +26,7 @@ const actions: WelcomeActions = {
   pickFolder: () => Promise.resolve(null),
   pickFile: () => Promise.resolve(null),
   restoreFrom: ok,
+  signIn: () => Promise.resolve({ ok: false, error: 'auth.error.cancelled', message: '' } as const),
 }
 
 type Sources = ShellSettings['sources']
@@ -226,9 +227,40 @@ describe('Start', () => {
 
   it('offers the restore, also while card data downloads', () => {
     const { text } = render('start')
-    expect(text).toContain('Used Sensei Top before? Restore a backup')
+    expect(text).toContain('Used Sensei Top before? Restore from a backup file')
+    expect(text).not.toContain('Sign in')
     const running = render('start', { app: withFirstData({ state: 'running', line: null }) }).html
-    expect(running).toMatch(/<button(?![^>]*\sdisabled="")[^>]*>Restore a backup</)
+    expect(running).toMatch(/<button(?![^>]*\sdisabled="")[^>]*>Restore from a backup file</)
+  })
+
+  const account = (signedIn: boolean): AppSettings['account'] => ({
+    available: true,
+    signedIn,
+    userId: signedIn ? 'u1' : null,
+    email: null,
+    provider: null,
+    persistence: { kept: true },
+  })
+
+  it('offers the sign-in before the file for someone with an account to bring back', () => {
+    const { text } = render('start', { app: app({ account: account(false) }) })
+    const order = [
+      'Used Sensei Top before?',
+      'Sign in to bring back the matches backed up to your account.',
+      'Sign in with Google',
+      'Sign in with Discord',
+      'Kept a backup file instead?',
+      'Restore from a backup file',
+    ].map((words) => text.indexOf(words))
+    expect(order.every((at) => at >= 0)).toBe(true)
+    expect(order).toEqual([...order].sort((a, b) => a - b))
+  })
+
+  it('says the history comes back by itself once signed in', () => {
+    const { text } = render('start', { app: app({ account: account(true) }) })
+    expect(text).toContain('the matches in your account come back by themselves')
+    expect(text).not.toContain('Sign in with Google')
+    expect(text).toContain('Restore from a backup file')
   })
 })
 
@@ -302,7 +334,7 @@ describe('Arena', () => {
   })
 
   it('no longer carries the restore', () => {
-    expect(render('arena').text).not.toContain('Restore a backup')
+    expect(render('arena').text).not.toContain('Restore from a backup file')
   })
 })
 

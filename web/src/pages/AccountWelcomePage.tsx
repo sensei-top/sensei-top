@@ -1,9 +1,10 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Navigate, useNavigate } from 'react-router'
+import { Navigate, useLocation, useNavigate } from 'react-router'
 import { useShell } from '../bridge'
 import { Button, Card, MoreAbout, Segmented, TextLink } from '../components/ui'
 import {
+  afterConsent,
   canContinue,
   contribAnswer,
   introLines,
@@ -83,23 +84,26 @@ function Question({
  *  publishes the new profile before a save replies, and the screen must not
  *  change under the person. The steps live in the page, not the address:
  *  nothing is saved until Continue on the last one, so a reload starts the
- *  draft over. A user with nothing to answer goes Home. */
+ *  draft over. Answered, skipped, or with nothing to answer, it goes Home,
+ *  or back to the setup step the redirect interrupted (`afterConsent`). */
 export function AccountWelcomePage() {
   const shell = useShell()
   const account = shell?.app?.settings.account
+  const location = useLocation()
   const [first] = useState<{ open: Opening | null }>(() => {
     const a = shell?.app?.settings.account
     if (!a?.available || !a.signedIn) return { open: null }
     return { open: opening(a.profile, shell?.app?.settings.contribute ?? null) }
   })
   if (!shell?.app || !account) return <NotFoundPage />
-  if (!first.open) return <Navigate to="/" replace />
+  if (!first.open) return <Navigate to={afterConsent(location.state)} replace />
   return <Questions open={first.open} />
 }
 
 function Questions({ open }: { open: Opening }) {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const shell = useShell()
   const app = shell?.app
   const { kind, contributeShown, storedNo: no } = open
@@ -141,7 +145,7 @@ function Questions({ open }: { open: Opening }) {
     }
     setBusy(null)
     if (failed) setFailure(failed)
-    else void navigate('/', { replace: true })
+    else void navigate(afterConsent(location.state), { replace: true })
   }
 
   const onContinue = () =>

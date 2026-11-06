@@ -146,6 +146,21 @@ export function needsConsent(app: AppSettings | null | undefined, policyVersion:
   return !given || given < policyVersion
 }
 
+/** The navigation state the shell layout's redirect carries: the setup
+ *  step it interrupted, so a sign-in on the welcome's first step comes back
+ *  to it. Any other page gives none. */
+export function consentState(pathname: string, search: string): { back: string } | undefined {
+  return pathname === '/welcome' ? { back: `${pathname}${search}` } : undefined
+}
+
+/** Where the consent screen goes once answered or skipped: the setup step
+ *  the redirect interrupted, else Home. Only a welcome address is taken
+ *  from the state, whatever else it holds. */
+export function afterConsent(state: unknown): string {
+  const back = typeof state === 'object' && state !== null ? (state as { back?: unknown }).back : undefined
+  return typeof back === 'string' && (back === '/welcome' || back.startsWith('/welcome?')) ? back : '/'
+}
+
 /** What the screen asks, fixed when the page loads so the answers' own
  *  publication mid-save never changes it: `null` for a profile that is
  *  neither `none` nor `read`, which has nothing to ask. */

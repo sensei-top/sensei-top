@@ -6,7 +6,7 @@ import { useLive } from '../api'
 import { useShell } from '../bridge'
 import { ReportProblemDialog } from '../components/ReportProblemDialog'
 import { BrandGlyph, Callout, TextLink } from '../components/ui'
-import { ACCOUNT_WELCOME_PATH, needsConsent } from '../lib/accountWelcome'
+import { ACCOUNT_WELCOME_PATH, consentState, needsConsent } from '../lib/accountWelcome'
 import { CONTRIBUTE_KEEPS, CONTRIBUTE_PATH, contribPageDue } from '../lib/contribute'
 import { POLICY_VERSION } from '../lib/policy'
 import { ReportProblemContext, signedInOf, type ReportOpener } from '../lib/reportProblem'
@@ -60,7 +60,7 @@ function SkipLink() {
 export function Shell() {
   const { t } = useTranslation()
   const live = useLive()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const matches = useMatches()
   const handle = matches[matches.length - 1]?.handle as RouteHandle | undefined
   const shell = useShell()
@@ -68,10 +68,12 @@ export function Shell() {
   const navigate = useNavigate()
   // A signed-in user with no profile, or answers given under an older
   // policy, is asked first; the consent screen itself is never redirected.
+  // From setup it carries the step, to come back to it.
   const consentDue = needsConsent(shell?.app?.settings, POLICY_VERSION)
   useEffect(() => {
-    if (consentDue && pathname !== ACCOUNT_WELCOME_PATH) void navigate(ACCOUNT_WELCOME_PATH, { replace: true })
-  }, [consentDue, pathname, navigate])
+    if (consentDue && pathname !== ACCOUNT_WELCOME_PATH)
+      void navigate(ACCOUNT_WELCOME_PATH, { replace: true, state: consentState(pathname, search) })
+  }, [consentDue, pathname, search, navigate])
   // The one-time "Help build the stats" page: at most once per page load, so
   // a failed write of `contribAsked` followed by Decide later cannot bring
   // the person back to it.

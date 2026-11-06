@@ -21,7 +21,10 @@
   "start": {
     "promise": "Your match history and game reviews, from the logs Arena and Magic Online already write. Nothing about your games leaves this computer.",
     "restoreTitle": "Used Sensei Top before?",
-    "restore": "Restore a backup"
+    "signIn": "Sign in to bring back the matches backed up to your account.",
+    "signedIn": "You're signed in. While backup is on, the matches in your account come back by themselves.",
+    "fromFile": "Kept a backup file instead?",
+    "restore": "Restore from a backup file"
   },
   "intro": {
     "wizardsNotice": "Sensei Top is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.",

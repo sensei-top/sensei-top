@@ -546,12 +546,12 @@ first can be passed over. Wording is the view's own, written for the
 first run: each step's body, labels and buttons aside, stays under 30
 words in English (plan 23's budget; no test pins it). It repeats
 nothing from Settings but its controls (`FolderField`, `SaveButton`,
-`RestartNote`, `PressButton`, `SavingSwitch`, and `BackupSection`'s
-`RestoreButton` with its confirming dialog).
+`RestartNote`, `PressButton`, `SavingSwitch`, `SignInButtons`, and
+`BackupSection`'s `RestoreButton` with its confirming dialog).
 
 | Step | Reads | Calls |
 |---|---|---|
-| Start | `useLanguage()`'s resolved language, pre-selected; `welcome.intro.wizardsNotice`; `app.settings.update`, for which update sentence the list shows | `setLanguage(language)` (`i18n.ts`), which writes the shell's `language` through `app.set`, not through `actions`; links to `/settings#credits`; `pickFile()`, Settings' own restore dialog, then `restoreFrom(path)` |
+| Start | `useLanguage()`'s resolved language, pre-selected; `welcome.intro.wizardsNotice`; `app.settings.update`, for which update sentence the list shows | `setLanguage(language)` (`i18n.ts`), which writes the shell's `language` through `app.set`, not through `actions`; links to `/settings#credits`; under "Used Sensei Top before?", in a build with an account, signed out, `signIn(provider)` first, since a backed-up history comes back on its own after it; signed in, a line saying so; then `pickFile()`, Settings' own restore dialog, then `restoreFrom(path)` |
 | Which do you play? | `app.settings.plays`, for the pressed tile | `app.set({ plays })`, then the first step the choice keeps |
 | Arena | `sources.arenaLog` (`path`, `detailedLogs`) | `app.recheck()` |
 | Magic Online | `sources.mtgoHandle`, `mtgoDir`, `mtgoDeckDir`, `mtgoFound` | `save({ sources: { mtgoHandle, mtgoDir, mtgoDeckDir } })`, `pickFolder()` |

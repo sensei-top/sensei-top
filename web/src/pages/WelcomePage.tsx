@@ -33,6 +33,7 @@ export function WelcomePage() {
         pickFolder: () => shell.pickFolder(),
         pickFile: () => shell.pickFile(),
         restoreFrom: (path) => shell.restoreFrom(path),
+        signIn: (provider) => app.account.signIn(provider),
       }}
       onFinished={() => void navigate('/')}
     />
