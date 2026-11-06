@@ -11,9 +11,9 @@
       "label": "What went wrong?",
       "placeholder": "What were you doing, and what happened instead?",
       "counter": "{{chars}} of 4,000 characters",
-      "tooLong": "Shorten it to 4,000 characters or fewer.",
-      "pageSaid": "The page said: {{message}}"
+      "tooLong": "Shorten it to 4,000 characters or fewer."
     },
+    "detail": "Technical detail, sent with your report:",
     "log": {
       "label": "Attach the last 500 lines of the app's log",
       "scrubbed": "This is Sensei Top's own log, never Arena's or MTGO's. Your user name in file paths, email addresses, keys and tokens, Arena account IDs, Magic Online names and opponents' names are removed before it's sent.",

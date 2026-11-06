@@ -5,12 +5,13 @@ import type { AccountState, ReportOutcome, ShellReports } from '../bridge'
 export const REPORT_LIMIT = 4000
 /** The counter appears from here, so it is quiet until it matters. */
 export const COUNTER_FROM = 3600
-/** An error's message is cut here before it prefills the field, so a stack
- *  pasted into a message cannot fill the limit before the person types. */
+/** An error's message is cut here, so a stack pasted into a message cannot
+ *  crowd out what the person writes. */
 const MESSAGE_CAP = 500
 
-/** What the dialog is drafting. */
-export type ReportDraft = { text: string; attachLog: boolean; agreed: boolean }
+/** What the dialog is drafting. `detail` is the worded technical-detail line
+ *  sent under the text, `''` when the dialog was not opened from an error. */
+export type ReportDraft = { text: string; attachLog: boolean; agreed: boolean; detail?: string }
 
 /** The first thing that keeps Send report disabled, in the order the hint names them. */
 export type Blocker = 'noText' | 'tooLong' | 'notAgreed'
@@ -22,12 +23,21 @@ export function blockerOf(draft: Pick<ReportDraft, 'text' | 'agreed'>): Blocker 
   return null
 }
 
-/** The field's starting text: the error's message as one editable first line
- *  (`said` words it), then a line break for the person to write under it.
- *  Nothing when the dialog was not opened from an error. */
-export function startingText(message: string | null, said: (message: string) => string): string {
-  const line = (message ?? '').replace(/\s+/g, ' ').trim().slice(0, MESSAGE_CAP)
-  return line === '' ? '' : `${said(line)}\n`
+/** The error's message as one line, cut to `MESSAGE_CAP`: shown apart from
+ *  the field as a technical detail and sent under the text. `''` when the
+ *  dialog was not opened from an error. */
+export function detailOf(message: string | null): string {
+  return (message ?? '').replace(/\s+/g, ' ').trim().slice(0, MESSAGE_CAP)
+}
+
+/** What is sent: the person's text, then the detail line after a blank line
+ *  when there is one and the two fit the limit together; the text alone when
+ *  they would not, since the text is the person's own. */
+export function reportText(text: string, detail: string | undefined): string {
+  const own = text.trim()
+  if (!detail) return own
+  const joined = `${own}\n\n${detail}`
+  return joined.length <= REPORT_LIMIT ? joined : own
 }
 
 const OUTCOMES: readonly ReportOutcome[] = ['sent', 'sent-without-log', 'unavailable', 'invalid', 'failed']
@@ -39,7 +49,7 @@ export async function sendReport(call: ShellReports['reportProblem'] | undefined
   if (!call) return 'unavailable'
   if (blockerOf(draft) !== null) return 'invalid'
   try {
-    const outcome = await call({ text: draft.text.trim(), attachLog: draft.attachLog })
+    const outcome = await call({ text: reportText(draft.text, draft.detail), attachLog: draft.attachLog })
     return OUTCOMES.includes(outcome) ? outcome : 'failed'
   } catch {
     return 'failed'
@@ -92,8 +102,8 @@ export function signedInOf(account: AccountState | undefined): boolean {
   return account?.available === true && account.signedIn
 }
 
-/** What a page that can open the dialog is given: `message` prefills the
- *  field (an error's). `null` where no shell sends reports. */
+/** What a page that can open the dialog is given: `message` is an error's,
+ *  shown and sent as a technical detail. `null` where no shell sends reports. */
 export type ReportOpener = { open: (message: string | null) => void }
 
 export const ReportProblemContext = createContext<ReportOpener | null>(null)

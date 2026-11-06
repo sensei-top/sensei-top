@@ -11,9 +11,9 @@
       "label": "O que deu errado?",
       "placeholder": "O que você estava fazendo, e o que aconteceu?",
       "counter": "{{chars}} de 4.000 caracteres",
-      "tooLong": "Encurte o texto para 4.000 caracteres ou menos.",
-      "pageSaid": "A página disse: {{message}}"
+      "tooLong": "Encurte o texto para 4.000 caracteres ou menos."
     },
+    "detail": "Detalhe técnico, enviado com seu relatório:",
     "log": {
       "label": "Anexar as últimas 500 linhas do log do aplicativo",
       "scrubbed": "É o log do próprio Sensei Top, nunca os logs do Arena ou do MTGO. Seu nome de usuário nos caminhos de arquivo, endereços de e-mail, chaves e tokens, IDs de conta do Arena, nomes do Magic Online e nomes de oponentes são removidos antes do envio.",

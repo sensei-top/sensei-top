@@ -6,8 +6,8 @@ import {
   COUNTER_FROM,
   outcomeKey,
   REPORT_LIMIT,
+  detailOf,
   sendControls,
-  startingText,
   wasSent,
 } from '../lib/reportProblem'
 import { Button, Dialog } from './ui'
@@ -15,8 +15,12 @@ import { Button, Dialog } from './ui'
 /** The Report a problem dialog. The shell mounts it with a new `key` for each
  *  opening, so every opening starts with an empty draft and both boxes
  *  unticked; `signedIn` and `message` are read once, then, so the intro does
- *  not flip while a report is on its way. A dialog dismissed mid-send comes
- *  back (`onOpenChange(true)`) when the send failed, to say so. */
+ *  not flip while a report is on its way. `message` is an error's, shown
+ *  apart from the field as a technical detail and sent under it. A dialog dismissed mid-send comes
+ *  back (`onOpenChange(true)`) when the send failed, to say so. Unlike the
+ *  other dialogs, the primary is Send report, not the safe answer: the
+ *  person opened it to send one, and Cancel keeps the focus. The outcome and
+ *  the hint sit in the footer, beside the buttons they are about. */
 export function ReportProblemDialog({
   open,
   onOpenChange,
@@ -32,9 +36,8 @@ export function ReportProblemDialog({
 }) {
   const { t, i18n } = useTranslation()
   const [signedInThen] = useState(signedIn)
-  const [text, setText] = useState(() =>
-    startingText(message, (said) => t('report.dialog.text.pageSaid', { message: said })),
-  )
+  const [detail] = useState(() => detailOf(message))
+  const [text, setText] = useState('')
   const [attachLog, setAttachLog] = useState(false)
   const [agreed, setAgreed] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -49,7 +52,7 @@ export function ReportProblemDialog({
 
   const { send: submit } = sendControls({
     call: send,
-    draft: () => ({ text, attachLog, agreed }),
+    draft: () => ({ text, attachLog, agreed, detail: detail && t('common.technicalDetail', { message: detail }) }),
     dismissed,
     setBusy,
     setOutcome,
@@ -79,14 +82,23 @@ export function ReportProblemDialog({
           </Button>
         ) : (
           <>
-            <Button variant="primary" className="min-h-[44px]" autoFocus disabled={busy} onClick={close}>
-              {t('report.dialog.cancel')}
-            </Button>
-            <Button className="min-h-[44px]" disabled={busy || blocker !== null} onClick={submit}>
+            <Button variant="primary" className="min-h-[44px]" disabled={busy || blocker !== null} onClick={submit}>
               {busy ? t('report.dialog.sending') : t('report.dialog.send')}
+            </Button>
+            <Button className="min-h-[44px]" autoFocus disabled={busy} onClick={close}>
+              {t('report.dialog.cancel')}
             </Button>
           </>
         )
+      }
+      status={
+        sent ? null : outcome !== null ? (
+          <p role="alert" className="break-words text-caption text-loss">
+            {t(outcomeKey(outcome))}
+          </p>
+        ) : hint && !busy ? (
+          <p className="text-caption text-muted">{hint}</p>
+        ) : null
       }
     >
       {sent ? (
@@ -127,6 +139,13 @@ export function ReportProblemDialog({
             )}
           </div>
 
+          {detail && (
+            <div className="space-y-1">
+              <p className="text-caption text-muted">{t('report.dialog.detail')}</p>
+              <p className="break-words text-caption text-ink2">{detail}</p>
+            </div>
+          )}
+
           <div className="space-y-1">
             <label className="flex items-start gap-3 text-body text-ink">
               <input
@@ -158,13 +177,6 @@ export function ReportProblemDialog({
             </label>
             <p className="text-caption text-muted">{t('report.dialog.transfer.decline')}</p>
           </div>
-
-          {outcome !== null && (
-            <p role="alert" className="break-words text-caption text-loss">
-              {t(outcomeKey(outcome))}
-            </p>
-          )}
-          {hint && !busy && <p className="text-caption text-muted">{hint}</p>}
         </div>
       )}
     </Dialog>

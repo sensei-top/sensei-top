@@ -8,7 +8,8 @@ import {
   sendControls,
   sendReport,
   signedInOf,
-  startingText,
+  detailOf,
+  reportText,
   wasSent,
   type ReportDraft,
 } from './reportProblem'
@@ -29,21 +30,35 @@ describe('what keeps Send report disabled', () => {
   })
 })
 
-describe('the field of a dialog opened from an error', () => {
-  const said = (message: string) => `The page said: ${message}`
-  it('starts with the message as one line, and a line break to write under', () => {
-    expect(startingText('Boom\n  at x', said)).toBe('The page said: Boom at x\n')
+describe('the technical detail of a dialog opened from an error', () => {
+  it('is the message as one line', () => {
+    expect(detailOf('Boom\n  at x')).toBe('Boom at x')
   })
-  it('starts empty with no message', () => {
-    expect(startingText(null, said)).toBe('')
-    expect(startingText('  ', said)).toBe('')
+  it('is empty with no message', () => {
+    expect(detailOf(null)).toBe('')
+    expect(detailOf('  ')).toBe('')
   })
   it('cuts a very long message', () => {
-    expect(startingText('a'.repeat(5000), said).length).toBeLessThan(600)
+    expect(detailOf('a'.repeat(5000)).length).toBe(500)
+  })
+  it('is sent under the text after a blank line, never in its place', () => {
+    expect(reportText('  It broke \n', 'Technical detail: Boom')).toBe('It broke\n\nTechnical detail: Boom')
+    expect(reportText('It broke', '')).toBe('It broke')
+    expect(reportText('It broke', undefined)).toBe('It broke')
+  })
+  it('is left out when the two would pass the limit together', () => {
+    const long = 'x'.repeat(REPORT_LIMIT - 5)
+    expect(reportText(long, 'Technical detail: Boom')).toBe(long)
   })
 })
 
 describe('sending a report', () => {
+  it('sends the detail under the text', async () => {
+    const call = vi.fn(async (): Promise<ReportOutcome> => 'sent')
+    await sendReport(call, draft({ detail: 'Technical detail: Boom' }))
+    expect(call).toHaveBeenCalledExactlyOnceWith({ text: 'It broke\n\nTechnical detail: Boom', attachLog: false })
+  })
+
   it('sends the trimmed text and the log choice through the bridge call', async () => {
     const call = vi.fn(async (): Promise<ReportOutcome> => 'sent')
     expect(await sendReport(call, draft({ text: '  It broke \n', attachLog: true }))).toBe('sent')
