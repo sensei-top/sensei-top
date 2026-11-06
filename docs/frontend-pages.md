@@ -815,7 +815,9 @@ first sign-in, while no "Help build the stats" answer is stored, that
 question is the last step, opening with the line that says it is not one of
 the account's choices, and the age box covers it. "Skip and don't create an
 account" stays at the foot of every step, with the note that the three
-choices need an account: it skips them all and deletes the just-made
+choices need an account, and that no match is backed up yet (sync waits on
+a read profile with the backup consent, so before the last step nothing
+is): it skips them all and deletes the just-made
 account; "Help build the stats", which needs none, goes unanswered there
 and is left to the one-time question or Settings. A returning user has Sign out there instead. A profile
 other than `none` or `read` goes Home.

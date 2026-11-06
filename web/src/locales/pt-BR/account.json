@@ -64,7 +64,7 @@
       "answers": "Responda às duas perguntas para seguir."
     },
     "decline": "Pular e não criar uma conta",
-    "declineNote": "Backup, relatórios de erro e histórico do treinador precisam de uma conta. Pular deixa tudo desligado e apaga a conta que este login acabou de criar.",
+    "declineNote": "Backup, relatórios de erro e histórico do treinador precisam de uma conta. Pular deixa tudo desligado e apaga a conta que este login acabou de criar. Nenhuma partida foi para o backup ainda, e suas partidas neste PC continuam.",
     "signOut": "Sair da conta",
     "error": {
       "failed": "Suas respostas não foram salvas, e nada foi alterado. Tente de novo.",

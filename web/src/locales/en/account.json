@@ -64,7 +64,7 @@
       "answers": "Answer both questions to go on."
     },
     "decline": "Skip and don't create an account",
-    "declineNote": "Backup, error reports and coach history need an account. Skipping leaves them off and deletes the account this sign-in just made.",
+    "declineNote": "Backup, error reports and coach history need an account. Skipping leaves them off and deletes the account this sign-in just made. No match has been backed up yet, and the matches on this PC stay.",
     "signOut": "Sign out",
     "error": {
       "failed": "Your answers were not saved, and nothing was changed. Try again.",
