@@ -258,6 +258,14 @@ it is, so every place is one click away, and the place's name stays as the
 Focus mode is read from the address (`Shell.tsx`'s `focus`). No control
 turns it on or off.
 
+### The welcome's bare pages
+
+The welcome's pages, `/welcome`, `/account/welcome` and `/contribute`, are
+drawn bare (the route handle's `bare`): the page's name and the page alone,
+with no rail, bottom bar, status chip or footer. Each page is finished or
+left by its own buttons. `/welcome`'s first step carries Wizards' notice
+itself, so the footer's copy of it is not missed.
+
 ### The footer and the credits
 
 The footer carries three things: "Your match history is kept on this
@@ -471,10 +479,13 @@ the failed backup's sentences name.
   `/welcome`.
 
 - **Account**, in a build that has an account (`docs/desktop.md`, "Account
-  and sync"). Signed out, "Sign in with Google" and "Sign in with Discord";
+  and sync"). Signed out, "Sign in with Google" and "Sign in with Discord",
+  both off while one waits on the browser, the pressed one saying so;
   signed in, the email, three choices as `SavingSwitch`es (cloud backup, error
-  reports, coach history), the backup's status, Export, "Delete my cloud
-  history", "Delete my account" and Sign out. Each delete and the error
+  reports, coach history), or Try again when the profile could not be read,
+  the backup's status, Export and Sign out, then under their own heading
+  "Delete my cloud history" and "Delete my account", quiet buttons like the
+  rest (no danger fill: `docs/design-system.md`). Each delete and the error
   reports' transfer consent sit behind a `Dialog` with the safe button
   focused and a destructive one that names the action. A note says when the
   session is not kept (no system keyring) and why. The section reads

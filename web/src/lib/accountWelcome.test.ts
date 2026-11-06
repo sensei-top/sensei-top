@@ -13,6 +13,8 @@ import {
   privacyUrl,
   profileChange,
   showContribute,
+  stepHint,
+  stepsOf,
   storedNo,
   withErrors,
   type Answer,
@@ -221,5 +223,42 @@ describe('what the screen opens with', () => {
     expect(introLines('first', false)).toBe('intro')
     expect(introLines('returning', true)).toBe('changed')
     expect(introLines('returning', false)).toBeNull()
+  })
+})
+
+describe('the steps of the consent screen', () => {
+  it('asks the age first and the stats last on a first sign-in, only the account questions on a return', () => {
+    expect(stepsOf('first', true)).toEqual(['age', 'keep', 'errors', 'contribute'])
+    expect(stepsOf('first', false)).toEqual(['age', 'keep', 'errors'])
+    expect(stepsOf('returning', true)).toEqual(['keep', 'errors'])
+  })
+
+  it('holds each step until it is answered', () => {
+    const empty = initialDraft({ state: 'none' })
+    expect(stepHint('age', empty)).toBe('age')
+    expect(stepHint('age', { ...empty, age: true })).toBeNull()
+    for (const step of ['errors', 'contribute'] as const) {
+      expect(stepHint(step, empty)).toBe('answer')
+      expect(stepHint(step, { ...empty, [step]: false })).toBeNull()
+    }
+  })
+
+  it('holds the keep step until both of its questions are answered', () => {
+    const empty = initialDraft({ state: 'none' })
+    expect(stepHint('keep', empty)).toBe('answers')
+    expect(stepHint('keep', { ...empty, sync: true })).toBe('answers')
+    expect(stepHint('keep', { ...empty, coach: false })).toBe('answers')
+    expect(stepHint('keep', { ...empty, sync: true, coach: false })).toBeNull()
+  })
+
+  it('holds the error-reports step while Send stands without the transfer box', () => {
+    const empty = initialDraft({ state: 'none' })
+    expect(stepHint('errors', withErrors(empty, true))).toBe('transfer')
+    expect(stepHint('errors', { ...withErrors(empty, true), transfer: true })).toBeNull()
+  })
+
+  it('lets a returning user through every step as the answers stand', () => {
+    const draft = initialDraft(read({ consentErrors: true }))
+    for (const step of stepsOf('returning', false)) expect(stepHint(step, draft)).toBeNull()
   })
 })

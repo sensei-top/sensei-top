@@ -79,6 +79,34 @@ export function canContinue(kind: Kind, draft: Draft, contributeShown: boolean):
   return hintFor(kind, draft, contributeShown) === null
 }
 
+/** One step of the screen. `keep` asks the two things the account keeps
+ *  at Supabase, the backup and the coach history; error reports have a step
+ *  of their own, since the transfer box opens under them. */
+export type Step = 'age' | 'keep' | 'errors' | 'contribute'
+
+/** The steps shown, in order: a first sign-in starts with the age and ends
+ *  with "Help build the stats" when it is asked; a returning user answers
+ *  the account's questions only. */
+export function stepsOf(kind: Kind, contributeShown: boolean): Step[] {
+  const questions: Step[] = ['keep', 'errors']
+  if (kind === 'returning') return questions
+  return ['age', ...questions, ...(contributeShown ? (['contribute'] as const) : [])]
+}
+
+/** Why a step's Next (or the last step's Continue) is off, as the one hint
+ *  shown: `age` until the box is ticked, `answers` until both of `keep`'s
+ *  questions are answered, `answer` until a one-question step is,
+ *  `transfer` while `Send` stands without the transfer box. `null` when the
+ *  step is answered. */
+export function stepHint(step: Step, draft: Draft): 'age' | 'answers' | 'answer' | 'transfer' | null {
+  if (step === 'age') return draft.age ? null : 'age'
+  if (step === 'keep') return draft.sync === null || draft.coach === null ? 'answers' : null
+  const answer = draft[step]
+  if (answer === null) return 'answer'
+  if (step === 'errors' && answer && !draft.transfer) return 'transfer'
+  return null
+}
+
 /** The profile write. `consentErrors` is `true` only with `Send` chosen and
  *  the transfer box ticked: the three together are the record of the
  *  transfer consent, so nothing else may ever write it. The age is sent on

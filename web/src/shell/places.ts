@@ -102,6 +102,9 @@ export type RouteHandle = {
   title?: RouteTitle
   /** The page is only for a desktop shell; in a browser it is not found. */
   needsShell?: boolean
+  /** The page is a step of the welcome: the layout draws its name and the
+   *  page alone, with no rail, bottom bar, status chip or footer. */
+  bare?: boolean
 }
 
 /** The name the layout shows as the `h1`, and `title`, the name of a

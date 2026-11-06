@@ -78,7 +78,7 @@ export const routes: RouteObject[] = [
           {
             path: 'welcome',
             Component: WelcomePage,
-            handle: { title: 'welcome', needsShell: true } satisfies RouteHandle,
+            handle: { title: 'welcome', needsShell: true, bare: true } satisfies RouteHandle,
           },
           // Not a place in the rail: the shell layout sends a signed-in user here
           // until the account's consent questions are answered under the current
@@ -86,14 +86,14 @@ export const routes: RouteObject[] = [
           {
             path: 'account/welcome',
             Component: AccountWelcomePage,
-            handle: { title: 'accountWelcome', needsShell: true } satisfies RouteHandle,
+            handle: { title: 'accountWelcome', needsShell: true, bare: true } satisfies RouteHandle,
           },
           // Not a place in the rail: the shell opens it once, for an install that
           // has not answered "Help build the stats". Its name is the question's.
           {
             path: 'contribute',
             Component: ContributePage,
-            handle: { title: 'contribute', needsShell: true } satisfies RouteHandle,
+            handle: { title: 'contribute', needsShell: true, bare: true } satisfies RouteHandle,
           },
           // The shell reads this handle: no place is current, and its name is
           // "No such page".

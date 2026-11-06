@@ -3,6 +3,7 @@ import type { ContribAnswer, Contribute } from '../bridge'
 import {
   answerFor,
   ageBox,
+  canPress,
   contribAskedOnWelcome,
   contribPageDue,
   dialogNeeded,
@@ -13,7 +14,7 @@ import {
   turnOnAnswer,
   contribWaits,
   failureKey,
-  hintFor,
+  hintsFor,
   isPressed,
   pressAnswer,
   savedAnswer,
@@ -73,15 +74,24 @@ describe('what a press sends', () => {
 })
 
 describe('the hint and the failure line', () => {
-  it('shows only the first hint that applies', () => {
-    expect(hintFor(true, false, true)).toBe('age')
-    expect(hintFor(false, false, true)).toBe('waitsWelcome')
-    expect(hintFor(false, false, false)).toBeNull()
+  it('shows each hint that applies, the age first', () => {
+    expect(hintsFor(false, null, true)).toEqual(['age', 'waitsWelcome'])
+    expect(hintsFor(true, null, true)).toEqual(['waitsWelcome'])
+    expect(hintsFor(true, null, false)).toEqual([])
   })
 
-  it('clears the age hint once the box is ticked', () => {
-    expect(hintFor(true, true, false)).toBeNull()
-    expect(hintFor(true, true, true)).toBe('waitsWelcome')
+  it('says why the yes is off until the box is ticked or an answer is saved', () => {
+    expect(hintsFor(false, null, false)).toEqual(['age'])
+    expect(hintsFor(true, null, false)).toEqual([])
+    expect(hintsFor(false, false, false)).toEqual([])
+    expect(hintsFor(false, false, true)).toEqual(['waitsWelcome'])
+  })
+
+  it('keeps the yes off without the age box, and both off while saving', () => {
+    expect(canPress(true, false, false)).toBe(false)
+    expect(canPress(true, true, false)).toBe(true)
+    expect(canPress(false, false, false)).toBe(true)
+    expect(canPress(false, true, true)).toBe(false)
   })
 
   it('keeps the box ticked and locked once a yes is saved, and free after a saved no', () => {

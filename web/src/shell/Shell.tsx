@@ -104,6 +104,9 @@ export function Shell() {
   const place = notFound ? null : placeAt(pathname)
   const { name, title } = layoutName(place, handle, hasShell, t)
   const focus = place?.id === 'live'
+  // The welcome's pages (`bare`) are the steps alone: the person finishes
+  // or leaves them by their own buttons, not by the rail.
+  const bare = handle?.bare === true && !notFound
 
   // The heartbeat is the only thing on a timer (current-match/read, ridden by
   // CurrentMatchView, is the one scoped exception — see its own hook). When
@@ -136,12 +139,12 @@ export function Shell() {
     <ReportProblemContext.Provider value={opener}>
       <div className="min-h-screen bg-plane md:flex">
         <SkipLink />
-        <Rail current={place} />
+        {!bare && <Rail current={place} />}
 
         {/* Under 48rem the bottom bar is fixed over the window's foot, so the
             column leaves its height free under the footer. */}
         <div
-          className={`flex min-h-screen min-w-0 flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0 ${
+          className={`flex min-h-screen min-w-0 flex-1 flex-col ${bare ? '' : 'pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0'} ${
             focus ? 'md:h-screen md:overflow-hidden' : ''
           }`}
         >
@@ -162,7 +165,7 @@ export function Shell() {
                 <BrandGlyph size={24} />
               </Link>
               <h1 className="min-w-0 flex-1 truncate font-display text-title text-ink md:text-heading">{name}</h1>
-              <LiveStatus className={focus ? 'md:hidden' : ''} />
+              {!bare && <LiveStatus className={focus ? 'md:hidden' : ''} />}
             </div>
           </header>
 
@@ -185,21 +188,25 @@ export function Shell() {
             </div>
           </main>
 
-          <footer className={`shrink-0 border-t border-line ${focus ? 'md:hidden' : ''}`}>
-            {/* Wizards' notice is the welcome catalogue's, one sentence in one
-                place. */}
-            <div className={`${COLUMN} flex flex-wrap items-baseline gap-x-3 gap-y-1 py-4 text-caption text-muted`}>
-              <p className="min-w-0 flex-1">
-                {t('shell.footer.local')} {t('welcome.intro.wizardsNotice')}
-              </p>
-              <TextLink href="/settings#credits" className="shrink-0">
-                {t('shell.footer.credits')}
-              </TextLink>
-            </div>
-          </footer>
+          {!bare && (
+            <footer className={`shrink-0 border-t border-line ${focus ? 'md:hidden' : ''}`}>
+              {/* Wizards' notice is the welcome catalogue's, one sentence in one
+                  place. */}
+              <div
+                className={`${COLUMN} flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-4 text-caption text-muted`}
+              >
+                <p className="min-w-0 max-w-prose flex-1">
+                  {t('shell.footer.local')} {t('welcome.intro.wizardsNotice')}
+                </p>
+                <TextLink href="/settings#credits" className="shrink-0">
+                  {t('shell.footer.credits')}
+                </TextLink>
+              </div>
+            </footer>
+          )}
         </div>
 
-        <BottomBar current={place} />
+        {!bare && <BottomBar current={place} />}
         <ScrollRestoration />
         {reportProblem && report.opening > 0 && (
           <ReportProblemDialog

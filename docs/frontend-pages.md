@@ -792,16 +792,33 @@ build has no account, nobody is signed in, the profile could not be read, or
 the answers were given under a newer version than this install knows (asking
 again would write the older one back). The screen is never redirected from
 itself. Its kind is fixed when it opens, since the shell publishes the
-profile before `setProfile` replies: *first* asks the age confirmation and
-the three choices (cloud backup, error reports, coach history), none
-pre-ticked, and Continue waits on the age and an answer to each; *returning*
-(a policy change) pre-selects the earlier answers and shows the policy-change
-sentence only when `account.policyChanges.<version>` exists. Choosing Send
-for error reports needs the transfer consent box ticked, and the two together
-are the only way `consentErrors` is written true. On a first sign-in, while
-no "Help build the stats" answer is stored, that question appears set apart,
-and the age box covers it. "Don't create an account" deletes the just-made
-account. A profile other than `none` or `read` goes Home.
+profile before `setProfile` replies. It asks its questions over a few
+steps (`stepsOf`), drawn bare (`docs/frontend.md`, "The welcome's bare
+pages"), with the first-run Welcome's "Step n of m" caption, an `h2`
+heading and Back and Next at the foot; the steps live in the page, not the
+address, since nothing is saved until Continue on the last one. A step
+shows a lead line and its control; what is kept, where and for how long
+sits under the control in a collapsed "More about this" `Disclosure` (where
+the account itself is kept opens the first step's), never what a choice
+costs: the transfer box and the line that a sent game can't be deleted stay
+in view. *first*
+steps through the age confirmation, then the three choices, none
+pre-ticked: cloud backup and coach history together (`keep`, the two things
+kept at Supabase), then error reports alone, since the transfer box opens
+under them; each step's Next waits on its answers (`stepHint`). *returning*
+(a policy change) steps through the same two with the earlier answers
+pre-selected, and shows the
+policy-change sentence only when `account.policyChanges.<version>` exists.
+Choosing Send for error reports needs the transfer consent box ticked, and
+the two together are the only way `consentErrors` is written true. On a
+first sign-in, while no "Help build the stats" answer is stored, that
+question is the last step, opening with the line that says it is not one of
+the account's choices, and the age box covers it. "Skip and don't create an
+account" stays at the foot of every step, with the note that the three
+choices need an account: it skips them all and deletes the just-made
+account; "Help build the stats", which needs none, goes unanswered there
+and is left to the one-time question or Settings. A returning user has Sign out there instead. A profile
+other than `none` or `read` goes Home.
 
 **The one-time question** (`/contribute`, `pages/ContributePage.tsx`, title
 `contribute.heading`). It is due (`contribPageDue`) only when the build can

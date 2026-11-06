@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Contribute } from '../bridge'
 import { useShell } from '../bridge'
-import { ageBox, hintFor, isPressed, pressAnswer, savedAnswer } from '../lib/contribute'
+import { ageBox, canPress, hintsFor, isPressed, pressAnswer, savedAnswer } from '../lib/contribute'
 import { POLICY_VERSION } from '../lib/policy'
 
 const DISCLOSURE = ['noAccount', 'what', 'where', 'final', 'stop'] as const
@@ -50,7 +50,7 @@ export function ContributeAge({
 }
 
 /** "Help build the stats" on Welcome's last step. Two buttons, neither
- *  pressed until the answer is saved; a yes saves only with the age box
+ *  pressed until the answer is saved; the yes is off until the age box is
  *  ticked. `stored` is the shell's answer, `picked` this run's saved press;
  *  `waiting` is Go to Home waiting on this or the AI question. The save goes
  *  through the shell's `contribSet`. */
@@ -75,27 +75,25 @@ export function ContributeQuestion({
   const shell = useShell()
   const [age, setAge] = useState(false)
   const [saving, setSaving] = useState<boolean | null>(null)
-  const [ageMissing, setAgeMissing] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
   const saved = savedAnswer(stored, picked)
 
   const choose = async (yes: boolean) => {
     setSaving(yes)
     setFailure(null)
-    setAgeMissing(false)
     const result = await pressAnswer(yes, age, stored, saved, POLICY_VERSION, shell?.contribSet, t)
     setSaving(null)
-    if (result.kind === 'needAge') setAgeMissing(true)
-    else if (result.kind === 'failed') setFailure(result.line)
-    else onPicked(result.yes)
+    // `needAge` cannot come back: the yes is off until the box is ticked.
+    if (result.kind === 'failed') setFailure(result.line)
+    else if (result.kind === 'saved') onPicked(result.yes)
   }
 
   const options = [
     { yes: true, label: t('contribute.answer.yes') },
     { yes: false, label: t('contribute.answer.no') },
   ]
-  const hint = hintFor(ageMissing, age, waiting)
   const box = ageBox(age, saved, saving !== null)
+  const hints = hintsFor(box.checked, saved, waiting)
   return (
     <div className="space-y-3">
       {showHeading && <h3 className="text-body font-medium text-ink">{t('contribute.heading')}</h3>}
@@ -107,7 +105,7 @@ export function ContributeQuestion({
             <ChoiceTile
               key={String(yes)}
               pressed={isPressed(saved, yes)}
-              disabled={saving !== null}
+              disabled={!canPress(yes, box.checked, saving !== null)}
               label={label}
               className="min-h-[44px] px-4 py-2"
               onClick={() => void choose(yes)}
@@ -115,9 +113,11 @@ export function ContributeQuestion({
           )
         })}
       </div>
-      {hint && (
-        <p className="text-caption text-muted">{hint === 'age' ? t('contribute.hint.age') : waitingHint ?? t('contribute.hint.waitsWelcome')}</p>
-      )}
+      {hints.map((hint) => (
+        <p key={hint} className="text-caption text-muted">
+          {hint === 'age' ? t('contribute.hint.age') : waitingHint ?? t('contribute.hint.waitsWelcome')}
+        </p>
+      ))}
       {failure && (
         <p role="alert" className="break-words text-caption text-loss">
           {failure}

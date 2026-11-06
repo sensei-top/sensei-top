@@ -47,12 +47,22 @@ export function isPressed(saved: boolean | null, yes: boolean): boolean {
   return saved === yes
 }
 
-/** The caption under the buttons: only the first that applies. `ageMissing`
- *  is a yes pressed without the box and `age` is the box now, so ticking it
- *  clears the hint; `waiting` is Go to Home waiting. */
-export function hintFor(ageMissing: boolean, age: boolean, waiting: boolean): 'age' | 'waitsWelcome' | null {
-  if (ageMissing && !age) return 'age'
-  return waiting ? 'waitsWelcome' : null
+/** The captions under the buttons, each that applies, in this order. `age`
+ *  is the box now and `saved` the saved answer: while nothing is saved and
+ *  the box is unticked, the yes is off and `age` says why; `waiting` is Go
+ *  to Home waiting, said whatever the box holds, since Don't send needs no
+ *  age. */
+export function hintsFor(age: boolean, saved: boolean | null, waiting: boolean): ('age' | 'waitsWelcome')[] {
+  const hints: ('age' | 'waitsWelcome')[] = []
+  if (!age && saved === null) hints.push('age')
+  if (waiting) hints.push('waitsWelcome')
+  return hints
+}
+
+/** Whether an answer button can be pressed: never while a save runs, and a
+ *  yes only with the age box ticked. */
+export function canPress(yes: boolean, age: boolean, saving: boolean): boolean {
+  return !saving && (!yes || age)
 }
 
 /** The key of the failure line: a no that failed after a yes was saved

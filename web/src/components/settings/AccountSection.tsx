@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import type { AccountActions, AccountProvider, AccountReply, AccountState, ProfileState, Saved } from '../../bridge'
@@ -21,9 +21,10 @@ import {
 } from './accountLogic'
 import { PressButton, SavingSwitch } from './SaveButton'
 
-/** Settings → Account: signed out, the two sign-in buttons; signed in, the
- *  three choices, the backup's status, Export, the two deletes (each behind
- *  its dialog) and Sign out. A delete's own publication of the new account
+/** Settings → Account: signed out, the two sign-in buttons, both off while
+ *  one waits on the browser; signed in, the three choices (or Try again when
+ *  the profile could not be read), the backup's status, Export, Sign out, and
+ *  under their own heading the two deletes, each behind its dialog. A delete's own publication of the new account
  *  state does not redraw the section while the call runs: what shows is the
  *  state the press found. Drawn only in the shell, in a build that has an
  *  account. */
@@ -36,7 +37,7 @@ export function AccountSection({ state, actions }: { state: AccountState; action
   const latest = useRef<ProfileState | undefined>(undefined)
   latest.current = state.available ? state.profile : undefined
 
-  const [waiting, setWaiting] = useState(false)
+  const [waiting, setWaiting] = useState<AccountProvider | null>(null)
   const [signInFailure, setSignInFailure] = useState<string | null>(null)
   const [attempts] = useState(attemptGuard)
   const [gate] = useState(profileGate)
@@ -45,6 +46,8 @@ export function AccountSection({ state, actions }: { state: AccountState; action
   const [exportResult, setExportResult] = useState<'saved' | 'failed' | null>(null)
   const [historyResult, setHistoryResult] = useState<number | null>(null)
   const [deletedNote, setDeletedNote] = useState(false)
+  const [retryFailed, setRetryFailed] = useState(false)
+  const deleteHeadingId = useId()
 
   const [dialog, setDialog] = useState<'history' | 'account' | 'errors' | null>(null)
   const [busy, setBusy] = useState(false)
@@ -62,7 +65,7 @@ export function AccountSection({ state, actions }: { state: AccountState; action
 
   const signIn = async (provider: AccountProvider) => {
     const current = attempts.begin()
-    setWaiting(true)
+    setWaiting(provider)
     setSignInFailure(null)
     setDeletedNote(false)
     let message: string | null = null
@@ -72,9 +75,10 @@ export function AccountSection({ state, actions }: { state: AccountState; action
     } catch {
       message = t('account.settings.signInFailed')
     }
-    // A later press started over: only its answer is shown.
+    // Both buttons are off while one waits; the guard still keeps a stale
+    // answer from landing over a newer press.
     if (!current()) return
-    setWaiting(false)
+    setWaiting(null)
     setSignInFailure(message)
   }
 
@@ -169,20 +173,24 @@ export function AccountSection({ state, actions }: { state: AccountState; action
               <p>{t('account.settings.noPassword')}</p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button variant="primary" className="min-h-[44px]" onClick={() => void signIn('google')}>
-                {t('account.settings.signInGoogle')}
-              </Button>
-              <Button variant="primary" className="min-h-[44px]" onClick={() => void signIn('discord')}>
-                {t('account.settings.signInDiscord')}
-              </Button>
+              {(['google', 'discord'] as const).map((which) => (
+                <Button
+                  key={which}
+                  variant="primary"
+                  className="min-h-[44px]"
+                  disabled={waiting !== null}
+                  onClick={() => void signIn(which)}
+                >
+                  {waiting === which
+                    ? t('account.settings.signingIn')
+                    : which === 'google'
+                      ? t('account.settings.signInGoogle')
+                      : t('account.settings.signInDiscord')}
+                </Button>
+              ))}
             </div>
             {persistenceNote}
-            {waiting && (
-              <div className="space-y-1 text-caption text-muted">
-                <p>{t('account.settings.waiting')}</p>
-                <p>{t('account.settings.waitingAgain')}</p>
-              </div>
-            )}
+            {waiting && <p className="max-w-prose text-caption text-muted">{t('account.settings.waiting')}</p>}
             {signInFailure && (
               <p role="alert" className="break-words text-caption text-loss">
                 {signInFailure}
@@ -208,7 +216,32 @@ export function AccountSection({ state, actions }: { state: AccountState; action
               </div>
             )}
             {(profile === undefined || profile.state === 'unknown') && (
-              <p className="text-body text-ink2">{t('account.settings.unknown')}</p>
+              <div className="space-y-1.5">
+                <p className="max-w-prose text-body text-ink2">{t('account.settings.unknown')}</p>
+                <PressButton
+                  variant="quiet"
+                  label={t('account.settings.retry')}
+                  workingLabel={t('account.dialog.working')}
+                  doneLabel={null}
+                  onPress={async () => {
+                    setRetryFailed(false)
+                    let reply: AccountReply | null
+                    try {
+                      reply = await actions.readProfileAgain()
+                    } catch {
+                      reply = null
+                    }
+                    const ok = reply?.ok === true
+                    setRetryFailed(!ok)
+                    return ok
+                  }}
+                />
+                {retryFailed && (
+                  <p role="alert" className="break-words text-caption text-loss">
+                    {t('account.settings.retryFailed')}
+                  </p>
+                )}
+              </div>
             )}
             {read && (
               <div className="space-y-4">
@@ -221,7 +254,7 @@ export function AccountSection({ state, actions }: { state: AccountState; action
                     onSave={(on) => save(switchChange(read, 'consentSync', on))}
                   />
                   {line && (
-                    <p className="text-caption text-muted">
+                    <p className="max-w-prose text-caption text-muted">
                       {t(line.key, {
                         count: line.count,
                         n: line.count == null ? undefined : formatCount(line.count),
@@ -251,7 +284,7 @@ export function AccountSection({ state, actions }: { state: AccountState; action
                   disabled={busy || writing}
                   onSave={(on) => save(switchChange(read, 'consentCoachHistory', on))}
                 />
-                <p className="text-caption text-muted">{t('account.settings.turningOff')}</p>
+                <p className="max-w-prose text-caption text-muted">{t('account.settings.turningOff')}</p>
               </div>
             )}
 
@@ -274,33 +307,13 @@ export function AccountSection({ state, actions }: { state: AccountState; action
                   return result !== 'failed'
                 }}
               />
-              <p className="text-caption text-muted">{t('account.settings.export.description')}</p>
+              <p className="max-w-prose text-caption text-muted">{t('account.settings.export.description')}</p>
               {exportResult === 'saved' && <p className="text-caption text-ink2">{t('account.settings.export.saved')}</p>}
               {exportResult === 'failed' && (
                 <p role="alert" className="break-words text-caption text-loss">
                   {t('account.settings.export.failed')}
                 </p>
               )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Button variant="quiet" className="min-h-[44px]" aria-haspopup="dialog" onClick={() => open('history')}>
-                {t('account.settings.history.button')}
-              </Button>
-              <p className="text-caption text-muted">{t('account.settings.history.description')}</p>
-              {historyResult !== null && (
-                <p className="text-caption text-ink2">
-                  {t('account.settings.history.done', { count: historyResult, n: formatCount(historyResult) })}{' '}
-                  {t('account.settings.history.removed')}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Button variant="quiet" className="min-h-[44px]" aria-haspopup="dialog" onClick={() => open('account')}>
-                {t('account.settings.deleteAccount.button')}
-              </Button>
-              <p className="text-caption text-muted">{t('account.settings.deleteAccount.description')}</p>
             </div>
 
             <div className="space-y-1.5">
@@ -322,16 +335,39 @@ export function AccountSection({ state, actions }: { state: AccountState; action
                   return sentence === null
                 }}
               />
-              <p className="text-caption text-muted">{t('account.settings.signOut.description')}</p>
+              <p className="max-w-prose text-caption text-muted">{t('account.settings.signOut.description')}</p>
               {signOutFailure && (
                 <p role="alert" className="break-words text-caption text-loss">
                   {signOutFailure}
                 </p>
               )}
             </div>
+
+            <section aria-labelledby={deleteHeadingId} className="space-y-4 border-t border-line pt-5">
+              <h3 id={deleteHeadingId} className="text-body font-medium text-ink">
+                {t('account.settings.deleteHeading')}
+              </h3>
+              <div className="space-y-1.5">
+                <Button variant="quiet" className="min-h-[44px]" aria-haspopup="dialog" onClick={() => open('history')}>
+                  {t('account.settings.history.button')}
+                </Button>
+                <p className="max-w-prose text-caption text-muted">{t('account.settings.history.description')}</p>
+                {historyResult !== null && (
+                  <p className="max-w-prose text-caption text-ink2">
+                    {t('account.settings.history.done', { count: historyResult, n: formatCount(historyResult) })}{' '}
+                    {t('account.settings.history.removed')}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Button variant="quiet" className="min-h-[44px]" aria-haspopup="dialog" onClick={() => open('account')}>
+                  {t('account.settings.deleteAccount.button')}
+                </Button>
+                <p className="max-w-prose text-caption text-muted">{t('account.settings.deleteAccount.description')}</p>
+              </div>
+            </section>
           </>
         )}
-
       </div>
 
       <DeleteHistoryDialog
