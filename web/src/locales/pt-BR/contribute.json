@@ -2,8 +2,8 @@
   "heading": "Ajudar a montar as estatísticas",
   "disclosure": {
     "noAccount": "Não precisa de conta, e sua resposta fica neste PC.",
-    "what": "Dizer sim envia seus jogos para um acervo privado, do qual são feitas as estatísticas do próprio Sensei Top. Isso vale para os jogos que já estão no seu histórico e para os que você jogar daqui em diante. Antes de um jogo sair deste PC, tudo o que identifica você ou seu oponente é removido, e ele é enviado sem seu login.",
-    "where": "O acervo fica guardado no Brasil, sem ligação com nenhuma conta.",
+    "what": "Com sim, seus jogos, passados e futuros, vão para um acervo privado do qual são feitas as estatísticas do próprio Sensei Top, sem nada que identifique você ou seu oponente.",
+    "where": "O acervo fica no Brasil, sem ligação com nenhuma conta, e seus jogos são enviados sem seu login.",
     "final": "Nada num jogo enviado diz quem o enviou. Depois de enviado, ele não pode ser mostrado a você, copiado nem apagado, nem mesmo se você apagar sua conta.",
     "stop": "Você pode desligar isso a qualquer momento em Configurações, e nada mais é enviado depois disso."
   },

@@ -67,13 +67,22 @@ export function WelcomeView({
   // Magic Online's Save.
   const forwardVariant = step === 'plays' || step === 'mtgo' ? 'quiet' : 'primary'
   return (
-    <Card className="max-w-3xl">
+    <Card className="mx-auto max-w-3xl">
       <div className="space-y-5">
-        <div className="space-y-1">
-          <p className="text-caption text-muted">
-            {t('welcome.frame.step', { n: stepNumber(step, steps), total: steps.length })}
-          </p>
-          <h2 className="font-display text-title text-ink">{headingOf(step, t)}</h2>
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-caption text-muted">
+              {t('welcome.frame.step', { n: stepNumber(step, steps), total: steps.length })}
+            </p>
+            <h2 className="font-display text-title text-ink">{headingOf(step, t)}</h2>
+          </div>
+          {/* The page is bare, so a run opened again from Settings needs a way
+              back that does not step to the end; the first run has none. */}
+          {app.onboarded && (
+            <Button variant="quiet" className="min-h-[44px] shrink-0" href="/settings">
+              {t('welcome.frame.close')}
+            </Button>
+          )}
         </div>
         {step === 'start' && <StartStep app={app} actions={actions} />}
         {step === 'plays' && <PlaysStep plays={app.plays} set={actions.set} />}
@@ -185,7 +194,7 @@ function StartStep({ app, actions }: { app: AppSettings; actions: WelcomeActions
           </p>
         </div>
       </Disclosure>
-      <p className="text-caption text-muted">{t('welcome.intro.wizardsNotice')}</p>
+      <p className="max-w-prose text-caption text-muted">{t('welcome.intro.wizardsNotice')}</p>
       <div className="space-y-1.5">
         <p className="text-body text-ink2">{t('welcome.start.restoreTitle')}</p>
         <RestoreButton

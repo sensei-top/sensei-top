@@ -98,6 +98,12 @@ const withFirstData = (firstData: FirstData, rulesText: number | null = null) =>
 const GUIDE = 'aria-label="In Arena, open Options, then Account, and tick Detailed Logs (Plugin Support). Then close Arena and start it again."'
 
 describe('the frame', () => {
+  it('has a Close back to Settings only once onboarding is done, the first run having no way out but its steps', () => {
+    expect(render('plays').html).not.toContain('>Close<')
+    const { html } = render('plays', { app: app({ onboarded: true }) })
+    expect(html).toMatch(/href="\/settings"[^>]*>Close</)
+  })
+
   it('numbers each step out of five when both clients are played, under its heading', () => {
     expect(render('start').text).toContain('Step 1 of 5 Welcome to Sensei Top')
     expect(render('plays').text).toContain('Step 2 of 5 Which do you play?')
@@ -483,7 +489,7 @@ describe('the AI features question', () => {
 })
 
 describe('the Help build the stats question', () => {
-  const body = 'Saying yes sends your games to a private pool that Sensei Top\'s own stats are built from.'
+  const body = 'Saying yes sends your games, past and future, to a private pool'
   const home = (html: string) => {
     const at = html.indexOf('>Go to Home<')
     return html.slice(html.lastIndexOf('<button', at), at)
@@ -493,6 +499,13 @@ describe('the Help build the stats question', () => {
     const { text, html } = render('done', { app: app({ aiFeatures: null, canContribute: true }) })
     expect(text).toContain('Help build the stats')
     expect(text).toContain(body)
+    expect(text).toContain("can't be shown to you, copied or deleted")
+    // Where the pool is and how to stop sit under More about this.
+    const fold = html.slice(html.indexOf('<details'), html.indexOf('</details>'))
+    expect(fold).toContain('More about this')
+    expect(fold).toContain('The pool is kept in Brazil')
+    expect(fold).toContain('You can turn it off at any time')
+    expect(fold).not.toContain("can't be shown to you")
     expect(text).toContain("I'm 13 or older.")
     expect(text).toContain('This PC keeps that you confirmed this, and when.')
     expect(html).toContain('>Send my games<')

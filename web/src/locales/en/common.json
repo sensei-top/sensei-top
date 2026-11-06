@@ -5,6 +5,7 @@
   "cancel": "Cancel",
   "loading": "Loading",
   "opening": "Opening",
+  "more": "More about this",
   "loadError": "Could not load data",
   "technicalDetail": "Technical detail: {{message}}",
   "notSet": "Not set",

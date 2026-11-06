@@ -3,19 +3,24 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Contribute } from '../bridge'
 import { useShell } from '../bridge'
+import { MoreAbout } from './ui'
 import { ageBox, canPress, hintsFor, isPressed, pressAnswer, savedAnswer } from '../lib/contribute'
 import { POLICY_VERSION } from '../lib/policy'
 
-const DISCLOSURE = ['noAccount', 'what', 'where', 'final', 'stop'] as const
-
-/** The five sentences every place that asks "Help build the stats" says. */
+/** The five sentences every place that asks "Help build the stats" says:
+ *  what it is and that a sent game can't be deleted on the page, where the
+ *  pool is and how to stop under More about this. */
 export function ContributeDisclosure() {
   const { t } = useTranslation()
   return (
-    <div className="space-y-1 text-body text-ink2">
-      {DISCLOSURE.map((line) => (
-        <p key={line}>{t(`contribute.disclosure.${line}`)}</p>
-      ))}
+    <div className="max-w-prose space-y-1 text-body text-ink2">
+      <p>{t('contribute.disclosure.noAccount')}</p>
+      <p>{t('contribute.disclosure.what')}</p>
+      <p>{t('contribute.disclosure.final')}</p>
+      <MoreAbout>
+        <p>{t('contribute.disclosure.where')}</p>
+        <p>{t('contribute.disclosure.stop')}</p>
+      </MoreAbout>
     </div>
   )
 }

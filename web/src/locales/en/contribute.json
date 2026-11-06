@@ -2,8 +2,8 @@
   "heading": "Help build the stats",
   "disclosure": {
     "noAccount": "It needs no account, and your answer stays on this PC.",
-    "what": "Saying yes sends your games to a private pool that Sensei Top's own stats are built from. That means the games already in your history and the ones you play from now on. Before a game leaves this PC, everything that names you or your opponent is removed, and it's sent without your sign-in.",
-    "where": "The pool is kept in Brazil, with no link to any account.",
+    "what": "Saying yes sends your games, past and future, to a private pool that Sensei Top's own stats are built from, with everything that names you or your opponent removed first.",
+    "where": "The pool is kept in Brazil, linked to no account, and your games are sent without your sign-in.",
     "final": "Nothing in a sent game says who sent it. Once it's sent, it can't be shown to you, copied or deleted, not even by deleting your account.",
     "stop": "You can turn it off at any time in Settings, and nothing more is sent after that."
   },

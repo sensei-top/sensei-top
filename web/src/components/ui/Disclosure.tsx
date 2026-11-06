@@ -1,5 +1,6 @@
 import { ChevronRight } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 /** Something worth having one click away rather than on the page: the
  *  native `<details>`, so it opens with the keyboard and in find-in-page
@@ -26,5 +27,16 @@ export function Disclosure({
       </summary>
       <div className="mt-3">{children}</div>
     </details>
+  )
+}
+
+/** The rest of a question's text, under "More about this": the lead line
+ *  stays on the page, the detail one click away. */
+export function MoreAbout({ children }: { children: ReactNode }) {
+  const { t } = useTranslation()
+  return (
+    <Disclosure summary={t('common.more')}>
+      <div className="max-w-prose space-y-1.5 text-body text-ink2">{children}</div>
+    </Disclosure>
   )
 }

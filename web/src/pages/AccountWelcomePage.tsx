@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useNavigate } from 'react-router'
 import { useShell } from '../bridge'
-import { Button, Card, Disclosure, Segmented, TextLink } from '../components/ui'
+import { Button, Card, MoreAbout, Segmented, TextLink } from '../components/ui'
 import {
   canContinue,
   contribAnswer,
@@ -32,15 +32,6 @@ function choiceOf(answer: Answer): Choice {
 /** A step's detail, one click away under the step's control: what is kept,
  *  where and for how long. What a choice costs (the transfer box, a sent
  *  game that can't be deleted) is never put in here. */
-function More({ children }: { children: ReactNode }) {
-  const { t } = useTranslation()
-  return (
-    <Disclosure summary={t('account.welcome.more')}>
-      <div className="max-w-prose space-y-1.5 text-body text-ink2">{children}</div>
-    </Disclosure>
-  )
-}
-
 /** A yes/no question's body, its pair of buttons, neither pressed until
  *  the user presses one, and its detail under them. The step's heading
  *  names a step's one question; a step that asks two gives each its own
@@ -81,7 +72,7 @@ function Question({
           onChange={(value) => onAnswer(value === 'yes')}
         />
       </fieldset>
-      <More>{more}</More>
+      <MoreAbout>{more}</MoreAbout>
     </div>
   )
 }
@@ -232,10 +223,10 @@ function Questions({ open }: { open: Opening }) {
                 />
                 <span>{t('account.welcome.age.label')}</span>
               </label>
-              <More>
+              <MoreAbout>
                 {openerMore}
                 <p>{t('account.welcome.age.small')}</p>
-              </More>
+              </MoreAbout>
             </div>
           )}
 

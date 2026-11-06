@@ -821,7 +821,12 @@ and is left to the one-time question or Settings. A returning user has Sign out 
 other than `none` or `read` goes Home.
 
 **The one-time question** (`/contribute`, `pages/ContributePage.tsx`, title
-`contribute.heading`). It is due (`contribPageDue`) only when the build can
+`contribute.heading`). It and Welcome's last step ask through
+`ContributeQuestion`, whose text (`ContributeDisclosure`) keeps three lines on
+the page (no account needed, what a yes sends, and that a sent game can't be
+deleted) and folds where the pool is and how to stop under "More about this"
+(`MoreAbout`, the consent screen's fold too). Settings' dialog shows its four
+lines in full. It is due (`contribPageDue`) only when the build can
 upload, onboarding is finished, nothing is stored, the page was never shown,
 the consent screen is not due, and a signed-in account's profile has been
 read (a missing or `unknown` one waits, so the one ask is never spent before

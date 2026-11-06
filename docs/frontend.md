@@ -263,8 +263,11 @@ turns it on or off.
 The welcome's pages, `/welcome`, `/account/welcome` and `/contribute`, are
 drawn bare (the route handle's `bare`): the page's name and the page alone,
 with no rail, bottom bar, status chip or footer. Each page is finished or
-left by its own buttons. `/welcome`'s first step carries Wizards' notice
-itself, so the footer's copy of it is not missed.
+left by its own buttons: `/welcome` opened again from Settings (once
+`onboarded`) has a Close back to Settings beside its heading, since stepping
+to the end is not a way out; the first run has none. Both welcome cards are
+centred (`mx-auto max-w-3xl`). `/welcome`'s first step carries Wizards'
+notice itself, so the footer's copy of it is not missed.
 
 ### The footer and the credits
 
