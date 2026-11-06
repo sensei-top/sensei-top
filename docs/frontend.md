@@ -266,7 +266,8 @@ with no rail, bottom bar, status chip or footer. Each page is finished or
 left by its own buttons: `/welcome` opened again from Settings (once
 `onboarded`) has a Close back to Settings beside its heading, since stepping
 to the end is not a way out; the first run has none. Both welcome cards are
-centred (`mx-auto max-w-3xl`). `/welcome`'s first step carries Wizards'
+centred (`mx-auto max-w-3xl`), and the shell draws a bare page's name in
+the same width, so it stands on the card's left edge. `/welcome`'s first step carries Wizards'
 notice itself, so the footer's copy of it is not missed.
 
 ### The footer and the credits

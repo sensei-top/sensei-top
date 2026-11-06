@@ -156,16 +156,20 @@ export function Shell() {
               focus ? 'md:sr-only' : ''
             }`}
           >
-            <div className={`${COLUMN} flex items-center gap-3 py-2.5 md:pt-7 md:pb-0`}>
-              <Link
-                to="/"
-                aria-label={t('shell.homeLink', { product: PRODUCT_NAME })}
-                className="flex size-9 shrink-0 items-center justify-center rounded-control text-accent md:hidden"
-              >
-                <BrandGlyph size={24} />
-              </Link>
-              <h1 className="min-w-0 flex-1 truncate font-display text-title text-ink md:text-heading">{name}</h1>
-              {!bare && <LiveStatus className={focus ? 'md:hidden' : ''} />}
+            {/* A bare page's name stands over its centred card (`max-w-3xl`,
+                as the welcome pages draw it), on the card's own left edge. */}
+            <div className={`${COLUMN} py-2.5 md:pt-7 md:pb-0`}>
+              <div className={`flex items-center gap-3 ${bare ? 'mx-auto max-w-3xl' : ''}`}>
+                <Link
+                  to="/"
+                  aria-label={t('shell.homeLink', { product: PRODUCT_NAME })}
+                  className="flex size-9 shrink-0 items-center justify-center rounded-control text-accent md:hidden"
+                >
+                  <BrandGlyph size={24} />
+                </Link>
+                <h1 className="min-w-0 flex-1 truncate font-display text-title text-ink md:text-heading">{name}</h1>
+                {!bare && <LiveStatus className={focus ? 'md:hidden' : ''} />}
+              </div>
             </div>
           </header>
 
