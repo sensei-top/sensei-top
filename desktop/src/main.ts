@@ -377,7 +377,8 @@ function run(): void {
   const reports: ReportsLink = new ReportsLink(
     store,
     errors,
-    cloudConfig.sentryDsnDesktop,
+    // The server's own project: this DSN only ever reaches its environment.
+    cloudConfig.sentryDsnLocalApi,
     () => (serverSpawned ? settings.restartFor('error-report settings changed') : Promise.resolve()),
     sentryLog,
   );
