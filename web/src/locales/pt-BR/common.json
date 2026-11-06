@@ -6,6 +6,7 @@
   "loading": "Carregando",
   "opening": "Abrindo",
   "loadError": "Não foi possível carregar os dados",
+  "technicalDetail": "Detalhe técnico: {{message}}",
   "notSet": "Não definido",
   "on": "Ligado",
   "off": "Desligado",

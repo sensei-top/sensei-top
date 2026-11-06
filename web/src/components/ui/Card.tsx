@@ -113,7 +113,7 @@ export function ErrorNote({ error }: { error: Error }) {
   return (
     <div className="rounded-card border border-edge bg-surface px-5 py-6 text-body shadow-lift">
       <p className="font-medium text-ink">{t('common.loadError')}</p>
-      <p className="mt-1 text-ink2">{error.message}</p>
+      <p className="mt-1 break-words text-caption text-muted">{t('common.technicalDetail', { message: error.message })}</p>
       {report && (
         <Button variant="quiet" className="mt-2 min-h-[44px]" onClick={() => report.open(error.message)}>
           {t('report.open')}

@@ -6,20 +6,24 @@ import { useEffect, useId, useRef, type ReactNode } from 'react'
  *  backdrop and the caller's buttons all end in the element's `close`
  *  event, where `onClose` is called once. `actions` are the buttons, the
  *  safe one first in the source and `primary`; the row draws it last on
- *  screen, at the right. It has no read-only form: it is an answer or
- *  nothing, and it never holds a form longer than three fields. */
+ *  screen, at the right. `status` is a line drawn above the buttons, out of
+ *  the scrolling body, for what the buttons' press said or why one is off.
+ *  It has no read-only form: it is an answer or nothing, and it never holds
+ *  a form longer than three fields. */
 export function Dialog({
   open,
   onClose,
   title,
   children,
   actions,
+  status,
 }: {
   open: boolean
   onClose: () => void
   title: string
   children: ReactNode
   actions: ReactNode
+  status?: ReactNode
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -53,7 +57,8 @@ export function Dialog({
           {title}
         </h2>
         <div className="-mx-1 mt-2 min-h-0 overflow-y-auto px-1 pb-1 text-body text-ink2">{children}</div>
-        <div className="mt-4 flex flex-row-reverse flex-wrap justify-start gap-2">{actions}</div>
+        {status && <div className="mt-4">{status}</div>}
+        <div className={`${status ? 'mt-3' : 'mt-4'} flex flex-row-reverse flex-wrap justify-start gap-2`}>{actions}</div>
       </div>
     </dialog>
   )

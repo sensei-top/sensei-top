@@ -6,6 +6,7 @@
   "loading": "Loading",
   "opening": "Opening",
   "loadError": "Could not load data",
+  "technicalDetail": "Technical detail: {{message}}",
   "notSet": "Not set",
   "on": "On",
   "off": "Off",
