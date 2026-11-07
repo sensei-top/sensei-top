@@ -512,6 +512,16 @@ export function matchesInFormat(matches: Match[], format: string): Match[] {
   return matches.filter((match) => match.format === format)
 }
 
+/** Most lists first, then by display name, then by key: the one order Home's
+ *  field card and the Field page give equal-share decks. */
+export function byShare(a: MetaPresence, b: MetaPresence): number {
+  return (
+    b.decks - a.decks ||
+    a.label.localeCompare(b.label, 'en') ||
+    archetypeKey(a).localeCompare(archetypeKey(b), 'en')
+  )
+}
+
 /** The field from `tier` (the caller passes the Field page's `defaultTier`;
  *  this module cannot import `lib/field.ts`, which imports it), and the
  *  viewer's record against each deck from `windowStart` on, in the same
@@ -528,7 +538,7 @@ export function homeField(
   tier: Tier,
   count = 6,
 ): Field | null {
-  const ofTier = presence.filter((row) => row.tier === tier && row.decks > 0).sort((a, b) => b.decks - a.decks)
+  const ofTier = presence.filter((row) => row.tier === tier && row.decks > 0).sort(byShare)
   if (ofTier.length === 0) return null
 
   // Only the field's own format: `listShort` below reads the whole list,

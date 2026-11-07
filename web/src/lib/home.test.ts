@@ -25,7 +25,7 @@ import {
   weeklyWinrate,
 } from './home'
 import { decksTiles } from './decks'
-import { defaultTier, defaultWindow, windowStartOf } from './field'
+import { defaultTier, defaultWindow, shareRows, windowStartOf } from './field'
 
 // The zone is America/New_York (vitest.config.ts). Every timestamp below is
 // bare, so the log's own local clock: 04:00 UTC is midnight in New York
@@ -466,6 +466,13 @@ describe('homeField', () => {
     row('B', 'league', 50),
     row('C', 'undefeated', 90),
   ]
+  it('orders equal-share decks by name, the way the Field page does', () => {
+    const tied = [row('A', 'z', 14), row('A', 'a', 14), row('A', 'top', 20)]
+    const home = homeField(tied, [], identities, false, startFor(null), 15, 'Standard', 'A')!
+    expect(home.rows.map((r) => r.presence.archetype_key)).toEqual(['top', 'a', 'z'])
+    expect(shareRows(tied, 'A').map((r) => r.archetype_key)).toEqual(['top', 'a', 'z'])
+  })
+
   // The window as a page asks for it: the reset, else the last 15 days.
   const startFor = (reset: string | null) => (reset ? windowStartOf('reset', reset, now) : windowStartOf(15, null, now))
   const against = (id: string, startedAt: string, result: string | null, deckId: string | null, key: string) =>

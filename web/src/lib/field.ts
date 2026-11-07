@@ -22,7 +22,7 @@ import type {
 } from '../api'
 import type { TFunction } from '../i18n'
 import { formatList } from './format'
-import type { FieldRecord, Tier } from './home'
+import { type FieldRecord, type Tier, byShare } from './home'
 import {
   HOME_MATCH_LIMIT,
   TIERS,
@@ -306,7 +306,7 @@ const byName = (a: string, b: string) => a.localeCompare(b, 'en')
 export function shareRows(presence: MetaPresence[], tier: Tier): MetaPresence[] {
   return presence
     .filter((row) => row.tier === tier && row.decks > 0)
-    .sort((a, b) => b.decks - a.decks || byName(a.label, b.label))
+    .sort(byShare)
 }
 
 /** Every list of the tier in the window. */
