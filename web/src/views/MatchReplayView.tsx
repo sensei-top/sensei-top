@@ -4,7 +4,7 @@ import { useMatchDetail, useMatchReport, useSideboarding } from '../api'
 import { GameCharts } from '../components/match/GameCharts'
 import { SideboardingCard } from '../components/match/SideboardingCard'
 import { TurnByTurn } from '../components/TurnByTurn'
-import { BackLink, EmptyState, ErrorNote, Loading, Segmented } from '../components/ui'
+import { BackLink, EmptyState, ErrorNote, OutlineCard, Segmented, Skeleton } from '../components/ui'
 import { resultWord } from '../lib/events'
 
 /** The way back to the match's report: a link, so Back in the browser does
@@ -15,6 +15,24 @@ function BackToReport({ matchId }: { matchId: string }) {
     <p className="text-caption">
       <BackLink href={`/matches/${encodeURIComponent(matchId)}`}>{t('matches.replay.back')}</BackLink>
     </p>
+  )
+}
+
+/** The page's pending state: the back link, drawn for real, the game
+ *  tabs' height, then the turns' frame and the charts' first. */
+function ReplayOutline({ matchId }: { matchId: string }) {
+  const { t } = useTranslation()
+  return (
+    <div className="space-y-6">
+      <BackToReport matchId={matchId} />
+      <Skeleton className="h-[calc(var(--text-caption)*1.4+1.25rem)] w-56 rounded-pill" />
+      <OutlineCard
+        label={t('matches.turnByTurn.title')}
+        words={t('matches.detail.reading')}
+        height="h-72"
+      />
+      <OutlineCard label={t('matches.charts.position')} height="h-56" />
+    </div>
   )
 }
 
@@ -65,7 +83,7 @@ export function MatchReplayView({ matchId }: { matchId: string }) {
       { replace: true },
     )
 
-  if (detail.isPending) return <Loading />
+  if (detail.isPending) return <ReplayOutline matchId={matchId} />
   if (detail.error) {
     return (
       <div className="space-y-4">
@@ -85,7 +103,7 @@ export function MatchReplayView({ matchId }: { matchId: string }) {
           ?.turn_number ?? null)
 
   return (
-    <div className="space-y-6">
+    <div className="arrive space-y-6">
       <BackToReport matchId={matchId} />
 
       {games.length === 0 ? (

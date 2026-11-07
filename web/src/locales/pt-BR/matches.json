@@ -172,6 +172,7 @@
     "nothingToReport": "Nada a relatar nesta partida: pouco dela foi registrado."
   },
   "history": {
+    "reading": "Lendo suas partidas…",
     "capFullShowing": "Mostrando {{shown}} das {{inHand}} partidas mais recentes",
     "capFull": "As {{inHand}} partidas mais recentes",
     "capOne": "1 partida",
@@ -187,6 +188,7 @@
     "stops": "A lista para nas {{n}} partidas mais recentes."
   },
   "detail": {
+    "reading": "Lendo esta partida…",
     "all": "Todas as partidas"
   },
   "replay": {

@@ -762,6 +762,8 @@ One file per primitive, all re-exported from `index.ts`, so every
   (both in "Card images", below).
 - **Waiting and failing.** `Loading` (a shape-holding `Skeleton`, not
   bare "Loading…" text), `Skeleton` and `ErrorNote`.
+- **A page's outline.** `OutlineCard` (`ui/Outline.tsx`).
+  See "Data fetching", "A page's outline".
 - **Text.** `Prose` (inline `**bold**` and `` `code` `` only, which is
   all a narrative needs), `TextBlock` (a wrapped `pre` in the
   interface face, for a prompt, a command or exported Markdown, which
@@ -807,6 +809,8 @@ with `staleTime: 'static'`. A query that is static is not asked again by
 an invalidation, so the heartbeat below passes it by. That is right for
 what it reads, the cards of a match that is over, and for nothing that
 can still change: see `docs/frontend-pages.md`, "Home".
+
+**A page's outline.** A view whose whole page is pending returns its own outline, not `Loading`: one `OutlineCard label height` per card the loaded page will draw, laid out the way it lays them out, under whatever the loaded page draws above its cards (a back link, a tab row), drawn for real when it needs no data and reserved at its size when it does. The page's main frame also takes `words={t('…reading')}`, the one `role="status"` line of words, a key of the page's namespace such as `matches.history.reading`, centred in its block. A frame's `label` reuses the key of the card's own title, never a label inside that card (the replay's frame is "Turn by turn", not "Opening hand"); omit it for a card without one. `height` is a Tailwind height class close to the loaded card's. The test is that nothing moves when the data arrives. The loaded page's root takes `arrive` (`index.css`; a 160 ms fade, none under reduced motion). The generic `Loading` stays for a card inside a page. A pending check that gates an empty state (Matches waiting on the heartbeat) returns the same outline.
 
 **Auto-refresh is heartbeat-driven, not poll-everything.** `/api/live` returns
 two tokens, deliberately separate:

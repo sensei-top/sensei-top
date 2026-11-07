@@ -172,6 +172,7 @@
     "nothingToReport": "Nothing to report for this match: too little of it was recorded."
   },
   "history": {
+    "reading": "Reading your matches…",
     "capFullShowing": "Showing {{shown}} of the {{inHand}} newest matches",
     "capFull": "The {{inHand}} newest matches",
     "capOne": "1 match",
@@ -187,6 +188,7 @@
     "stops": "The list stops at the {{n}} newest matches."
   },
   "detail": {
+    "reading": "Reading this match…",
     "all": "All matches"
   },
   "replay": {

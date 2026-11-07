@@ -161,7 +161,7 @@ export function Shell() {
             {/* A bare page's name stands over its centred card (`max-w-3xl`,
                 as the welcome pages draw it), on the card's own left edge. */}
             <div className={`${COLUMN} py-2.5 md:pt-7 md:pb-0`}>
-              <div className={`flex items-center gap-3 ${bare ? 'mx-auto max-w-3xl' : ''}`}>
+              <div className={`flex items-center gap-3 ${bare ? 'mx-auto max-w-3xl' : 'min-h-8'}`}>
                 <Link
                   to="/"
                   aria-label={t('shell.homeLink', { product: PRODUCT_NAME })}
