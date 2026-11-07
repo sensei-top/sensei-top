@@ -219,30 +219,122 @@ export function ownScore(match: Pick<Match, 'games_won' | 'games_lost'>): string
 
 export type ThingKind = 'match' | 'pattern' | 'field'
 
-/** Which of Home's candidates fill its three cards, in order: the last
- *  match, the pattern, the field. Those that exist; fewer when fewer do,
- *  never a filler. */
-export function threeThings(has: { match: boolean; pattern: boolean; field: boolean }): ThingKind[] {
-  const order: ThingKind[] = []
+export type SlotKind = ThingKind | 'deck' | 'next'
+
+/** Which of Home's slots fill its cards, in order: the last match, the
+ *  pattern or, with none, `deck`, the field or, with none, `next`. A
+ *  candidate whose request has not answered holds its place, so the slots
+ *  after it do not move when it arrives, and each slot waits only for its
+ *  own request; a request that failed is the failure, not a fallback. One
+ *  that answers with nothing and has no fallback drops out. */
+export function homeSlots(
+  has: { match: boolean; pattern: boolean; field: boolean },
+  pending: { pattern: boolean; field: boolean },
+  fallback: { deck: boolean; next: boolean },
+): SlotKind[] {
+  const order: SlotKind[] = []
   if (has.match) order.push('match')
-  if (has.pattern) order.push('pattern')
-  if (has.field) order.push('field')
+  if (pending.pattern || has.pattern) order.push('pattern')
+  else if (fallback.deck) order.push('deck')
+  if (pending.field || has.field) order.push('field')
+  else if (fallback.next) order.push('next')
   return order
 }
 
-/** `threeThings` while some candidates are still loading: a candidate whose
- *  request has not answered holds its place, so the slots after it do not
- *  move when it arrives, and each slot waits only for its own request. One
- *  that then turns out not to exist drops out. */
-export function thingSlots(
-  has: { match: boolean; pattern: boolean; field: boolean },
-  pending: { pattern: boolean; field: boolean },
-): ThingKind[] {
-  return threeThings({
-    match: has.match,
-    pattern: pending.pattern || has.pattern,
-    field: pending.field || has.field,
-  })
+/** The "Your deck" card's facts: the newest match's deck identity, its
+ *  record and matches in Home's list, and the field's most-played archetype
+ *  it has not met in that match's format (`unmet`), `null` when the field has
+ *  none to name. */
+export type DeckSlot = {
+  key: string
+  name: string | null
+  wins: number
+  losses: number
+  played: number
+  /** The newest of the deck's matches in the list, `ended_at` else `started_at`. */
+  lastAt: string | null
+  unmet: { archetypeKey: string; label: string; format: string } | null
+  artMatchId: string | null
+}
+
+/** Whether the newest match names a deck: the "Your deck" card can then
+ *  hold its slot while the identities that resolve it are on their way. */
+export function newestHasDeck(matches: Match[]): boolean {
+  return newestFirst(matches)[0]?.deck_id != null
+}
+
+/** `rows` are the field's presence rows of the default format and tier, and
+ *  `fieldFormat` that format: the unmet archetype is named only when the
+ *  newest match was played in it. `null` when the newest match has no deck
+ *  or no identity names it. */
+export function deckSlot(
+  identities: DeckIdentityOut[],
+  matches: Match[],
+  rows: MetaPresence[],
+  fieldFormat: string | null,
+): DeckSlot | null {
+  const listed = newestFirst(matches)
+  const newest = listed[0]
+  if (!newest || newest.deck_id == null) return null
+  const deckId = newest.deck_id
+  const identity = identities.find((candidate) => candidate.deck_ids.includes(deckId))
+  if (!identity) return null
+  const ids = new Set(identity.deck_ids)
+  const mine = listed.filter((match) => match.deck_id != null && ids.has(match.deck_id))
+  let unmet: DeckSlot['unmet'] = null
+  if (fieldFormat != null && newest.format === fieldFormat) {
+    const met = new Set(
+      matchesInFormat(mine, fieldFormat)
+        .filter((match) => match.opponent_key != null && match.opponent_label != null)
+        .map((match) => pairOf(match.opponent_key ?? '', match.opponent_label ?? '')),
+    )
+    const row = rows
+      .filter((candidate) => candidate.decks > 0)
+      .sort(byShare)
+      .find((candidate) => !met.has(pairOf(archetypeKey(candidate), candidate.label)))
+    if (row) unmet = { archetypeKey: archetypeKey(row), label: row.label, format: fieldFormat }
+  }
+  return {
+    key: identity.key,
+    name: identity.name ?? null,
+    wins: mine.filter((match) => match.result === 'win').length,
+    losses: mine.filter((match) => match.result === 'loss').length,
+    played: mine.length,
+    lastAt: newest.ended_at ?? newest.started_at ?? null,
+    unmet,
+    artMatchId: finishedNewestFirst(matches).find((match) => match.deck_id != null && ids.has(match.deck_id))?.match_id ?? null,
+  }
+}
+
+/** A pattern compares at least `PATTERN_SIDE` matches that have something
+ *  with as many that do not (`review/leaks.py`'s `MIN_SAMPLE`), so it
+ *  needs `PATTERN_MATCHES` in all. */
+export const PATTERN_SIDE = 10
+export const PATTERN_MATCHES = 2 * PATTERN_SIDE
+
+/** The one thing that unlocks most, for the field's slot when there is no
+ *  field: card data first, then a second week, then the pattern's count. */
+export type NextStep =
+  | { kind: 'cardData' }
+  | { kind: 'cardDataRunning' }
+  | { kind: 'secondWeek' }
+  | { kind: 'patterns'; count: number }
+
+/** `cardData`: `missing` when the shell reports no rules text and no
+ *  download under way, `running` while one is, `null` otherwise (and in a
+ *  browser, which cannot say). */
+export function nextStep(input: {
+  cardData: 'missing' | 'running' | null
+  weeks: Week[] | null
+  matches: Match[]
+}): NextStep | null {
+  if (input.cardData === 'missing') return { kind: 'cardData' }
+  if (input.cardData === 'running') return { kind: 'cardDataRunning' }
+  if (input.weeks && input.weeks.filter((week) => week.played > 0).length === 1) return { kind: 'secondWeek' }
+  const count = input.matches.filter(
+    (match) => match.deck_id != null && (match.result === 'win' || match.result === 'loss'),
+  ).length
+  return count < PATTERN_MATCHES ? { kind: 'patterns', count } : null
 }
 
 /* -------------------------------------------------------------- pattern */

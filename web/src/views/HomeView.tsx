@@ -27,23 +27,28 @@ import { ThreeThings, ThreeThingsLoading, type Thing } from '../components/home/
 import { WeeklyWinrate } from '../components/home/WeeklyWinrate'
 import { ErrorNote, Skeleton } from '../components/ui'
 import {
+  deckSlot,
   firstPattern,
   firstRunSteps,
   HOME_MATCH_LIMIT,
   homeDecks,
   homeField,
+  homeSlots,
+  newestHasDeck,
   isFirstRun,
   lastFinished,
   lastSession,
   lastThirtyDays,
+  nextStep,
   recentMatches,
-  thingSlots,
   weeklyWinrate,
-  type ThingKind,
+  type SlotKind,
 } from '../lib/home'
 import { FALLBACK_DAYS, defaultTier, defaultWindow, metaWindowOf, resetOf, windowStartOf } from '../lib/field'
 import { castCards, takeUnused, type ArtCard } from '../lib/matchArt'
 import { useNow } from '../lib/time'
+import { useShell } from '../bridge'
+import { useCardData } from '../shell/cardData'
 import { useAiFeatures } from '../shell/aiFeatures'
 import { useSignInOffer } from '../shell/signInOffer'
 
@@ -176,18 +181,49 @@ export function HomeView({
     [rows, identities.data, minute, t],
   )
 
+  const shell = useShell()
+  const cardDataState = useCardData()
+  const rulesText = shell?.app?.settings.rulesText ?? null
+  const cardData: 'missing' | 'running' | null =
+    cardDataState?.state === 'running'
+      ? 'running'
+      : (cardDataState?.state === 'idle' || cardDataState?.state === 'failed') && rulesText === 0
+        ? 'missing'
+        : null
+
   const fieldError = formats.error ?? status.error ?? presence.error ?? identities.error
   const fieldPending = !fieldError && (formats.isPending || status.isPending || presence.isPending || identities.isPending)
 
+  // The fallbacks need only what the page already holds. The deck's unmet
+  // archetype reads the field's presence rows of the default format and tier.
+  const fieldRows = useMemo(
+    () => (presence.data ? presence.data.filter((row) => row.tier === defaultTier(presence.data ?? [])) : []),
+    [presence.data],
+  )
+  const deck = useMemo(
+    () => (rows && identities.data ? deckSlot(identities.data, rows, fieldRows, format ?? null) : null),
+    [rows, identities.data, fieldRows, format],
+  )
+  // The identities that resolve the deck are still out: the slot is held.
+  const deckHeld = identities.isPending && rows != null && newestHasDeck(rows)
+  const next = useMemo(
+    () => (rows ? nextStep({ cardData, weeks: weeks?.weeks ?? null, matches: rows }) : null),
+    [rows, cardData, weeks],
+  )
+
   // A candidate whose request failed still takes its place, as the failure.
-  const kinds: ThingKind[] = counted
-    ? thingSlots(
+  // The deck card holds the pattern's slot as a pending card while the
+  // field's requests, which decide whether it can name an unmet archetype,
+  // are out, so no card moves when they answer.
+  const kinds: SlotKind[] = counted
+    ? homeSlots(
         {
           match: counted.last != null,
           pattern: leaks.error != null || pattern != null,
           field: fieldError != null || field != null,
         },
         { pattern: leaks.isPending, field: fieldPending },
+        { deck: deck != null || deckHeld, next: next != null },
       )
     : []
 
@@ -197,6 +233,7 @@ export function HomeView({
   const newestId = counted?.last?.match_id ?? null
   const artIds = unique([
     newestId,
+    kinds.includes('deck') ? (deck?.artMatchId ?? null) : null,
     kinds.includes('field') ? (field?.artMatchId ?? null) : null,
     ...decks.map((deck) => deck.artMatchId),
   ])
@@ -215,6 +252,16 @@ export function HomeView({
       if (leaks.isPending) things.push({ kind: 'pending', slot: 'pattern' })
       else if (leaks.error) things.push({ kind: 'error', key: 'pattern', error: leaks.error })
       else if (pattern) things.push({ kind, pattern, art: takeUnused(castCards(newest, 'self'), used) })
+    } else if (kind === 'deck') {
+      if (fieldPending) {
+        things.push({ kind: 'pending', slot: 'deck' })
+        continue
+      }
+      if (!deck) continue
+      const detail = deck.artMatchId ? details.get(deck.artMatchId) : undefined
+      things.push({ kind, deck, art: takeUnused(castCards(detail, 'self'), used) })
+    } else if (kind === 'next' && next) {
+      things.push({ kind, next })
     } else if (kind === 'field') {
       if (fieldPending) things.push({ kind: 'pending', slot: 'field' })
       else if (fieldError) things.push({ kind: 'error', key: 'field', error: fieldError })

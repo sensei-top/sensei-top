@@ -3,24 +3,26 @@ import { translator } from '../i18n'
 import type { DeckIdentityOut, LeakOut, Match, MetaPresence } from '../api'
 import type { DetailedLogs } from '../bridge'
 import {
+  deckSlot,
   detailedLogsNag,
   fieldWindowStart,
   firstPattern,
   firstRunSteps,
   homeDecks,
   homeField,
+  homeSlots,
   isFirstRun,
   lastFinished,
   lastSession,
   lastThirtyDays,
   liveState,
   mtgoOnly,
+  newestHasDeck,
+  nextStep,
   opponentNamed,
   ownScore,
   recentMatches,
   sessionHeadline,
-  thingSlots,
-  threeThings,
   weekStart,
   weeklyWinrate,
 } from './home'
@@ -223,43 +225,38 @@ describe('scores', () => {
   })
 })
 
-describe('threeThings', () => {
-  it('takes the match, the pattern and the field, in that order', () => {
-    expect(threeThings({ match: true, pattern: true, field: true })).toEqual(['match', 'pattern', 'field'])
-    expect(threeThings({ match: true, pattern: false, field: true })).toEqual(['match', 'field'])
-  })
+describe('homeSlots', () => {
+  const none = { pattern: false, field: false }
+  const nothing = { deck: false, next: false }
 
-  it('shows fewer than three rather than a filler', () => {
-    expect(threeThings({ match: true, pattern: false, field: false })).toEqual(['match'])
-    expect(threeThings({ match: false, pattern: false, field: false })).toEqual([])
-  })
-})
-
-describe('thingSlots', () => {
   it('keeps a pending pattern slot without holding back the field slot', () => {
-    // The pattern's request is out; the field's has answered with a field.
-    const slots = thingSlots(
-      { match: true, pattern: false, field: true },
-      { pattern: true, field: false },
-    )
-    expect(slots).toEqual(['match', 'pattern', 'field'])
+    expect(
+      homeSlots({ match: true, pattern: false, field: true }, { pattern: true, field: false }, nothing),
+    ).toEqual(['match', 'pattern', 'field'])
   })
 
   it('keeps a pending field slot after a pattern that has answered', () => {
     expect(
-      thingSlots({ match: true, pattern: true, field: false }, { pattern: false, field: true }),
+      homeSlots({ match: true, pattern: true, field: false }, { pattern: false, field: true }, nothing),
     ).toEqual(['match', 'pattern', 'field'])
   })
 
-  it('drops a slot that answered with nothing, as threeThings does', () => {
-    const none = { pattern: false, field: false }
-    expect(thingSlots({ match: true, pattern: false, field: true }, none)).toEqual(['match', 'field'])
+  it('drops a slot that answered with nothing and has no fallback', () => {
+    expect(homeSlots({ match: true, pattern: false, field: true }, none, nothing)).toEqual(['match', 'field'])
+    expect(
+      homeSlots({ match: true, pattern: false, field: false }, { pattern: false, field: true }, nothing),
+    ).toEqual(['match', 'field'])
   })
 
-  it('drops a pattern that answered empty while the field is still pending', () => {
-    expect(
-      thingSlots({ match: true, pattern: false, field: false }, { pattern: false, field: true }),
-    ).toEqual(['match', 'field'])
+  it('moves no card while the field loads and then answers', () => {
+    const has = { match: true, pattern: false, field: false }
+    const fallback = { deck: true, next: true }
+    const loading = homeSlots(has, { pattern: false, field: true }, fallback)
+    const noField = homeSlots(has, none, fallback)
+    const field = homeSlots({ ...has, field: true }, none, fallback)
+    expect(loading).toEqual(['match', 'deck', 'field'])
+    expect(field).toEqual(loading)
+    expect(noField).toEqual(['match', 'deck', 'next'])
   })
 })
 
@@ -652,5 +649,79 @@ describe('detailedLogsNag', () => {
 
   it('never asks an MTGO-only player', () => {
     expect(detailedLogsNag(sources('/log', 'disabled'), ['mtgo'])).toBe(false)
+  })
+})
+
+describe('the fallbacks after one match', () => {
+  const identities = [{ key: 'Izzet', name: 'Izzet', deck_ids: ['a1'] } as DeckIdentityOut]
+  const row = (key: string, decks: number) =>
+    ({ tier: 'B', archetype_key: key, label: key, decks }) as unknown as MetaPresence
+  const one = [
+    match('1', '2026-09-27T20:00:00', 'loss', {
+      deck_id: 'a1',
+      format: 'Standard',
+      opponent_key: 'archetype:met',
+      opponent_label: 'met',
+    }),
+  ]
+  const corpus = [row('met', 30), row('unmet', 20), row('rare', 5)]
+  const none = { pattern: false, field: false }
+
+  it('names the most played archetype the deck has not met, with a corpus', () => {
+    const slot = deckSlot(identities, one, corpus, 'Standard')!
+    expect(slot).toMatchObject({ key: 'Izzet', wins: 0, losses: 1, played: 1 })
+    expect(slot.unmet).toEqual({ archetypeKey: 'archetype:unmet', label: 'unmet', format: 'Standard' })
+  })
+
+  it('names none without a corpus, or when the match is in another format', () => {
+    expect(deckSlot(identities, one, [], 'Standard')!.unmet).toBeNull()
+    expect(deckSlot(identities, one, corpus, 'Modern')!.unmet).toBeNull()
+    expect(deckSlot(identities, one, [row('met', 30)], 'Standard')!.unmet).toBeNull()
+  })
+
+  it('compares an archetype by key and label together', () => {
+    const labelled = (label: string) => ({ tier: 'B', archetype_key: 'control', label, decks: 30 }) as unknown as MetaPresence
+    const jeskai = [
+      match('1', '2026-09-27T20:00:00', 'win', {
+        deck_id: 'a1',
+        format: 'Standard',
+        opponent_key: 'archetype:control',
+        opponent_label: 'Jeskai Control',
+      }),
+    ]
+    const slot = deckSlot(identities, jeskai, [labelled('Jeskai Control'), labelled('Sultai Control')], 'Standard')!
+    expect(slot.unmet?.label).toBe('Sultai Control')
+  })
+
+  it('knows from the matches alone whether the newest names a deck', () => {
+    expect(newestHasDeck(one)).toBe(true)
+    expect(newestHasDeck([match('2', '2026-09-27T20:00:00', 'win')])).toBe(false)
+    expect(newestHasDeck([])).toBe(false)
+  })
+
+  it('draws no deck card when the newest match has no deck', () => {
+    expect(deckSlot(identities, [match('2', '2026-09-27T20:00:00', 'win')], corpus, 'Standard')).toBeNull()
+  })
+
+  it('puts the deck in the pattern slot and the next step in the field slot', () => {
+    const has = { match: true, pattern: false, field: false }
+    expect(homeSlots(has, none, { deck: true, next: true })).toEqual(['match', 'deck', 'next'])
+    expect(homeSlots(has, none, { deck: true, next: false })).toEqual(['match', 'deck'])
+    expect(homeSlots({ ...has, pattern: true, field: true }, none, { deck: true, next: true })).toEqual([
+      'match',
+      'pattern',
+      'field',
+    ])
+    expect(homeSlots(has, { pattern: false, field: true }, { deck: true, next: true })).toEqual(['match', 'deck', 'field'])
+  })
+
+  it('picks the next step in order', () => {
+    const weeks = (played: number[]) => played.map((n) => ({ played: n }) as never)
+    expect(nextStep({ cardData: 'missing', weeks: weeks([1]), matches: one })).toEqual({ kind: 'cardData' })
+    expect(nextStep({ cardData: 'running', weeks: weeks([1]), matches: one })).toEqual({ kind: 'cardDataRunning' })
+    expect(nextStep({ cardData: null, weeks: weeks([0, 1]), matches: one })).toEqual({ kind: 'secondWeek' })
+    expect(nextStep({ cardData: null, weeks: weeks([1, 2]), matches: one })).toEqual({ kind: 'patterns', count: 1 })
+    const twenty = Array.from({ length: 20 }, (_, i) => match(`m${i}`, '2026-09-27T20:00:00', 'win', { deck_id: 'a1' }))
+    expect(nextStep({ cardData: null, weeks: weeks([1, 2]), matches: twenty })).toBeNull()
   })
 })

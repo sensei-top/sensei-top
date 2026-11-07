@@ -86,10 +86,13 @@
     "kicker": {
       "match": "Last match",
       "pattern": "Pattern",
-      "field": "Field"
+      "field": "Field",
+      "deck": "Your deck",
+      "next": "Next step"
     },
     "loading": {
       "pattern": "Looking for a pattern in your matches…",
+      "deck": "Comparing your deck with the field…",
       "field": "Reading the field…"
     },
     "readReport": "Read the report",
@@ -119,6 +122,32 @@
         "deckNone": "You have not played {{deck}} against it {{when}}.",
         "noDeckPlayed": "You are {{record}} against it.",
         "noDeckNone": "You have not played against it {{when}}."
+      }
+    },
+    "deckTitle": "{{deck}} is {{record}}",
+    "deckUnmet": "{{archetype}} is the most played deck in the {{format}} field that you have not played against yet.",
+    "deckPlayed_one": "{{count}} match, played {{when}}.",
+    "deckPlayed_other": "{{count}} matches, the last one {{when}}.",
+    "openMatchup": "Open the matchup",
+    "openDeck": "Open the deck",
+    "next": {
+      "cardData": {
+        "title": "Download card data",
+        "body": "The deck guides read their rules text from it."
+      },
+      "cardDataRunning": {
+        "title": "Card data is downloading",
+        "body": "The deck guides open once it is in."
+      },
+      "openSources": "Open Sources",
+      "secondWeek": {
+        "title": "Play in a second week",
+        "body": "With a second week, Home draws your win rate by week."
+      },
+      "patterns": {
+        "title": "Patterns start at 20 matches",
+        "body_one": "A pattern compares at least 10 matches that have something with 10 that do not. You have {{count}} won or lost match with a recognized deck.",
+        "body_other": "A pattern compares at least 10 matches that have something with 10 that do not. You have {{count}} won or lost matches with a recognized deck."
       }
     }
   },

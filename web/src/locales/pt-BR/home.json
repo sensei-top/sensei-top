@@ -86,10 +86,13 @@
     "kicker": {
       "match": "Última partida",
       "pattern": "Padrão",
-      "field": "Meta"
+      "field": "Meta",
+      "deck": "Seu deck",
+      "next": "Próximo passo"
     },
     "loading": {
       "pattern": "Procurando um padrão entre suas partidas…",
+      "deck": "Comparando seu deck com o meta…",
       "field": "Lendo o meta…"
     },
     "readReport": "Ler o relatório",
@@ -119,6 +122,32 @@
         "deckNone": "Você não jogou {{deck}} contra ele {{when}}.",
         "noDeckPlayed": "Seu histórico contra ele é {{record}}.",
         "noDeckNone": "Você não jogou contra ele {{when}}."
+      }
+    },
+    "deckTitle": "Histórico de {{deck}}: {{record}}",
+    "deckUnmet": "{{archetype}} é o deck mais jogado do meta de {{format}} que você ainda não enfrentou.",
+    "deckPlayed_one": "{{count}} partida, jogada {{when}}.",
+    "deckPlayed_other": "{{count}} partidas, a última {{when}}.",
+    "openMatchup": "Abrir o matchup",
+    "openDeck": "Abrir o deck",
+    "next": {
+      "cardData": {
+        "title": "Baixe os dados dos cards",
+        "body": "Os guias de deck leem o texto de regras deles."
+      },
+      "cardDataRunning": {
+        "title": "Os dados dos cards estão sendo baixados",
+        "body": "Os guias de deck abrem assim que terminar."
+      },
+      "openSources": "Abrir Fontes",
+      "secondWeek": {
+        "title": "Jogue em uma segunda semana",
+        "body": "Com uma segunda semana, o Início mostra sua taxa de vitórias por semana."
+      },
+      "patterns": {
+        "title": "Os padrões começam com 20 partidas",
+        "body_one": "Um padrão compara pelo menos 10 partidas que têm algo com 10 que não têm. Você tem {{count}} partida vencida ou perdida com um deck reconhecido.",
+        "body_other": "Um padrão compara pelo menos 10 partidas que têm algo com 10 que não têm. Você tem {{count}} partidas vencidas ou perdidas com um deck reconhecido."
       }
     }
   },

@@ -134,17 +134,32 @@ comes first; the 30-day line follows under its own `SectionLabel`, "Last
 30 days", behind a rule, so the two records are not read as one.
 
 **The three things** are the first three that exist of, in this order
-(`threeThings`): the last finished match; the first pattern that costs
+(`homeSlots`): the last finished match; the first pattern that costs
 the viewer (`firstPattern`: the leak finder's first whose win rate with it
 is below the rate without); the field. Fewer when fewer exist, never a filler. A candidate whose
 request failed still takes its place, as the failure.
 
 While they load, each slot renders as soon as its own data answers
-(`thingSlots`): a slot still waiting shows its card frame, its place and
+(`homeSlots`): a slot still waiting shows its card frame, its place and
 label, and a loading line ("Looking for a pattern in your matches…",
 "Reading the field…") over the skeleton, so it never reads as an empty
 card. A pending slot holds its place, so none moves when another arrives;
-the pattern's request never holds back the field's, nor the reverse. A slot that answers with nothing drops out, and the one after it moves up a place and takes its number: the one move the row makes, because never a filler outranks holding a place.
+the pattern's request never holds back the field's, nor the reverse; the one exception is the deck card, which takes the pattern's slot as a pending card ("Comparing your deck with the field…") until the field's requests answer, since they decide whether it can name an unmet archetype. A slot that answers with nothing drops out, and the one after it moves up a place and takes its number: the one move the row makes, because never a filler outranks holding a place.
+
+**The fallbacks** (`homeSlots`) fill an empty slot with a card from data
+Home already holds, in the same place: with no pattern, **Your deck** takes
+the pattern's slot (`deckSlot`: the newest match's deck, its record and match
+count in the list, and the default format's most-played archetype in the
+field's tier that the deck has not met, linking that pairing; with no corpus,
+no unmet one, or a newest match in another format, the card says when the deck
+was last played and links the deck; no deck on the newest match, no card).
+With no field, **Next step** takes the field's slot (`nextStep`), the first
+that applies: card data not downloaded or downloading (the shell's
+`firstData` and `rulesText`; Settings, Sources), exactly one week with a match
+(no button), fewer than `PATTERN_MATCHES` (20) won or lost matches with a
+deck (no button; `PATTERN_SIDE` is `review/leaks.py`'s `MIN_SAMPLE`). A "Next
+step" with nothing that applies draws no card. The deck card waits for the
+field's requests; the order stays match, pattern or deck, field or next.
 
 A pattern's title and sentence are Home's own words, by the leak
 finder's code (`patternWords` in `lib/patterns.ts`).
@@ -326,6 +341,7 @@ says what will appear and what causes it:
   report written before, and only once the coach has answered: a
   request that failed says it failed. A report written before is
   still shown when the matches are too few.
+- **Home's three things** have no empty state: an empty pattern or field slot takes its fallback ("The session, and the three things"), and with no fallback that applies the row is shorter, never a filler.
 - **Field** says that the server downloads tournament results on its own
   while it runs, and that `sensei-top meta` does it from the command line.
 
