@@ -41,6 +41,7 @@ import {
   weeklyWinrate,
   type ThingKind,
 } from '../lib/home'
+import { FALLBACK_DAYS, defaultTier, defaultWindow, metaWindowOf, resetOf, windowStartOf } from '../lib/field'
 import { castCards, takeUnused, type ArtCard } from '../lib/matchArt'
 import { useNow } from '../lib/time'
 import { useAiFeatures } from '../shell/aiFeatures'
@@ -76,6 +77,13 @@ export function SignInOffer() {
   )
 }
 
+// `defaultWindow` (lib/field.ts) always returns a day count today. A
+// 'reset' default would need `Field` to carry the window and its own words.
+const defaultDays = (reset: string | null): number => {
+  const window = defaultWindow(reset)
+  return window === 'reset' ? FALLBACK_DAYS : window
+}
+
 /** `/`: every source, no filter. First run alone until a match is
  *  recorded; then the last session, three things worth a look, recent
  *  matches beside the weeks, the deck tiles, and the field beside the
@@ -106,13 +114,12 @@ export function HomeView({
   const format = formats.data?.default
   const status = useMetagameStatus(format, format !== undefined)
   const resetStart = status.data?.format_reset_start ?? null
+  const reset = resetOf(resetStart)
   // Undefined until the status says whether a reset exists, so the field is
   // never asked for with a window guessed ahead of it: the same window and
   // the same key as the Field page's default.
   const metaWindow: MetaWindow | undefined = status.data
-    ? resetStart
-      ? { since: resetStart }
-      : { days: 90 }
+    ? metaWindowOf(defaultWindow(reset), reset)
     : undefined
   const presence = useMetaPresence(metaWindow, format)
   const needsPick = useMtgoNeedsPick()
@@ -151,9 +158,18 @@ export function HomeView({
   const field = useMemo(
     () =>
       rows && presence.data && identities.data && format
-        ? homeField(presence.data, rows, identities.data, resetStart, listFull, minute, format)
+        ? homeField(
+            presence.data,
+            rows,
+            identities.data,
+            listFull,
+            windowStartOf(defaultWindow(reset), reset, minute),
+            defaultDays(reset),
+            format,
+            defaultTier(presence.data),
+          )
         : null,
-    [rows, presence.data, identities.data, resetStart, listFull, minute, format],
+    [rows, presence.data, identities.data, reset, listFull, minute, format],
   )
   const decks = useMemo(
     () => (rows && identities.data ? homeDecks(identities.data, rows, minute, t) : []),
@@ -288,7 +304,7 @@ export function HomeView({
             ) : fieldPending || !field ? (
               <Skeleton className="h-[360px] rounded-card" />
             ) : (
-              <FieldAgainstYou field={field} now={minute} />
+              <FieldAgainstYou field={field} />
             )
           ) : null
         }

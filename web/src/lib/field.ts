@@ -156,7 +156,7 @@ export function metaWindowOf(window: FieldWindow, reset: string | null): MetaWin
 /** The window's start, in ms: the reset as Home reads it (the viewer's local
  *  midnight), else the day count back from `now`. */
 export function windowStartOf(window: FieldWindow, reset: string | null, now: number): number {
-  return window === 'reset' && reset ? fieldWindowStart(reset, now) : now - (window === 'reset' ? FALLBACK_DAYS : window) * DAY
+  return window === 'reset' && reset ? fieldWindowStart(reset) : now - (window === 'reset' ? FALLBACK_DAYS : window) * DAY
 }
 
 /** The window's words: `when` inside a sentence ("since Aug 11", "in the

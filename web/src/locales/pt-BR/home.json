@@ -25,15 +25,12 @@
   },
   "field": {
     "title": "O meta de {{format}}, e você contra ele",
-    "noteSince": "{{kind}} desde {{since}}",
-    "noteLast90": "{{kind}}, últimos 90 dias",
-    "notPlayedSince": "não jogado desde {{since}}",
-    "notPlayedLast90": "não jogado nos últimos 90 dias",
+    "noteLastDays": "{{kind}}, últimos {{days}} dias",
+    "notPlayedLastDays": "não jogado nos últimos {{days}} dias",
     "barsWithDeck": "As barras são a fatia de cada deck em {{lists}} listas de torneio. A linha sob cada uma é seu histórico com {{deck}} no mesmo período.",
     "barsNoDeck": "As barras são a fatia de cada deck em {{lists}} listas de torneio. A linha sob cada uma é seu histórico no mesmo período.",
     "listShort": "Seu histórico é contado sobre suas últimas 500 partidas.",
-    "sinceDate": "desde {{since}}",
-    "last90": "nos últimos 90 dias"
+    "lastDays": "nos últimos {{days}} dias"
   },
   "firstRun": {
     "title": "Esta página se preenche conforme você joga",

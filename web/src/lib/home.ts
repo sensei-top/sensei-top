@@ -442,9 +442,8 @@ export type Field = {
   lists: number
   /** The window's start, in ms. */
   windowStart: number
-  /** The format's reset the window starts at, a bare date; `null` when the
-   *  window is the last 90 days. */
-  reset: string | null
+  /** The window's length in days, as the request asked for it. */
+  days: number
   /** The format the field and the records are of. */
   format: string
   /** The deck of the newest match in that format that has one, which the
@@ -461,13 +460,13 @@ export type Field = {
   artMatchId: string | null
 }
 
-/** The window's start: the format's reset (a bare date, taken at the
- *  viewer's local midnight, since match starts are the log's local clock),
- *  else 90 days before `now`. */
-export function fieldWindowStart(resetStart: string | null, now: number): number {
-  const parts = resetStart ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(resetStart) : null
-  if (parts) return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3])).getTime()
-  return now - 90 * DAY
+/** The window's start when the format has a reset: its bare date, taken at
+ *  the viewer's local midnight, since match starts are the log's local
+ *  clock. A string that is not a bare date gives `NaN`; the day-count window
+ *  is `windowStartOf`'s (`lib/field.ts`). */
+export function fieldWindowStart(resetStart: string): number {
+  const [year, month, day] = resetStart.split('-').map(Number)
+  return new Date(year, month - 1, day).getTime()
 }
 
 const archetypeKey = (presence: MetaPresence) => `archetype:${presence.archetype_key}`
@@ -513,25 +512,24 @@ export function matchesInFormat(matches: Match[], format: string): Match[] {
   return matches.filter((match) => match.format === format)
 }
 
-/** The field from the first tier in rank order with lists in the window
- *  (`firstTierWithLists`: A, then B, then C, then D, the Field page's
- *  default share too), and the viewer's record against each deck in the
- *  same window and format, with the deck of the newest match in the format
- *  that has one. `null` with no lists in any tier. */
+/** The field from `tier` (the caller passes the Field page's `defaultTier`;
+ *  this module cannot import `lib/field.ts`, which imports it), and the
+ *  viewer's record against each deck from `windowStart` on, in the same
+ *  format, with the deck of the newest match in the format that has one.
+ *  `null` when the tier has no list in the window. */
 export function homeField(
   presence: MetaPresence[],
   matches: Match[],
   identities: DeckIdentityOut[],
-  resetStart: string | null,
   listFull: boolean,
-  now: number,
+  windowStart: number,
+  days: number,
   format: string,
+  tier: Tier,
   count = 6,
 ): Field | null {
-  const tier = firstTierWithLists(presence)
-  if (tier == null) return null
   const ofTier = presence.filter((row) => row.tier === tier && row.decks > 0).sort((a, b) => b.decks - a.decks)
-  const windowStart = fieldWindowStart(resetStart, now)
+  if (ofTier.length === 0) return null
 
   // Only the field's own format: `listShort` below reads the whole list,
   // since the fetch cap applies to it.
@@ -558,7 +556,7 @@ export function homeField(
     rows,
     lists: ofTier.reduce((sum, row) => sum + row.decks, 0),
     windowStart,
-    reset: resetStart && /^\d{4}-\d{2}-\d{2}$/.test(resetStart) ? resetStart : null,
+    days,
     format,
     deck,
     topTwo: record(rows.slice(0, 2).map((row) => row.presence)),

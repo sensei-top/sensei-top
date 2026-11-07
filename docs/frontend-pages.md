@@ -37,7 +37,7 @@ Matches still lists it.
 | `/api/guide/decks` | `useGuideDecks` | the deck tiles, one per deck |
 | `/api/review/leaks?source=all` | `useLeaks` | the pattern |
 | `/api/formats` | `useFormats` | the default format, whose field Home shows |
-| `/api/metagame/status?format=` | `useMetagameStatus` | that format's reset, where the field's window starts |
+| `/api/metagame/status?format=` | `useMetagameStatus` | that format's reset (the Field page's `reset` option; Home's window ignores it) |
 | `/api/metagame/presence?format=` | `useMetaPresence` | that format's field |
 | `/api/matches/{id}` | `useMatchArt` | card art alone, seven matches at most |
 | `/api/mtgo/needs-pick` | `useMtgoNeedsPick` | the Needs a deck card |
@@ -202,29 +202,32 @@ played" would be. The marks are computed over every identity
 `/api/guide/decks` returns, before the five are chosen, so a tile reads
 the same on both pages even when its twin is not on Home.
 
-**The field** (`homeField`) is the default format's, the one
-`/api/formats` names (`docs/frontend.md`, "Filters are in the address"), and both of its
+**The field** (`homeField`) is the default format's, the one `/api/formats`
+names (`docs/frontend.md`, "Filters are in the address"), and both of its
 titles name it: the card is "The Modern field, and you against it"
-(`FieldAgainstYou`), and as one of the three things it reads "Two decks
-are 41% of the Modern field" (`fieldTitle`, `ThreeThings.tsx`). It is
-read from the first ranked tier with lists in the window — A, then B,
-then C, then D (`firstTierWithLists`), the same rule the Field page's
-default share uses. Six decks at most, each a `FieldRow`
-(`components/field/`), the row the Field page draws too. The window
-starts at the format's reset, else 90 days back, which is the Field
-page's own default: a bare `/field` and Home ask `useMetaPresence` with
-the same window and format, so they share one request. Under each deck's
-name is the viewer's record against it in the same window
+(`FieldAgainstYou`), and as one of the three things it reads "Two decks are
+41% of the Modern field" (`fieldTitle`, `ThreeThings.tsx`). It is read from
+the Field page's default tier (`defaultTier` in `lib/field.ts`: B when it
+has lists in the window, else the first ranked tier that does), which
+`HomeView` passes to `homeField`. Six decks at most, each a `FieldRow`
+(`components/field/`), the row the Field page draws too. The window is the
+Field page's default (`defaultWindow`: the last 15 days, the reset or not),
+so "Open the field" lands on the same numbers: a bare `/field` and Home ask
+`useMetaPresence` with the same window and format, so they share one
+request. A deck's matchup records keep their own window: the reset, else the
+last 365 days, because a per-matchup rate needs the volume. Under each
+deck's name is the viewer's record against it in the same window
 (`recordAgainst`), counted over the finished matches in the same format
 (`matchesInFormat`: a match's `format` from `/api/matches`; a match with
 none counts toward no format) whose opponent carries both that row's
-archetype key and its label, for one deck: the deck of the newest match
-in the format that has one, in every version of it. With no such match
-the record is over every deck in the format. The art is the newest
-finished match in the format against the first row's deck. The card
-names whichever tier it landed on in words (`tierKind` in `lib/field.ts`, the `field.tier.kind` keys): "paper
-tournaments of 64+ players" for A, "MTGO challenges" for B, "MTGO
-leagues" for C, "paper tournaments under 64 players" for D.
+archetype key and its label, for one deck: the deck of the newest match in
+the format that has one, in every version of it. With no such match the
+record is over every deck in the format. The art is the newest finished
+match in the format against the first row's deck. The card names whichever
+tier it landed on in words (`tierKind` in `lib/field.ts`, the
+`field.tier.kind` keys): "paper tournaments of 64+ players" for A, "MTGO
+challenges" for B, "MTGO leagues" for C, "paper tournaments under 64
+players" for D.
 
 ### Art
 

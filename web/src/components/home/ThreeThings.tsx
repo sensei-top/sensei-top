@@ -9,7 +9,7 @@ import { opponentLabelText } from '../../lib/opponent'
 import { patternWords } from '../../lib/patterns'
 import { formatPercent, formatRecord } from '../../lib/format'
 import { useAiFeatures } from '../../shell/aiFeatures'
-import { ago, formatIsoDateShort } from '../../lib/time'
+import { ago } from '../../lib/time'
 import { Button, CardArt, ErrorNote, SectionLabel, Skeleton } from '../ui'
 
 /** One of Home's three cards, the failure of the request one needed, or a
@@ -161,7 +161,7 @@ function thingWords(
     case 'field':
       return {
         title: fieldTitle(thing.field, t),
-        body: <FieldBody field={thing.field} now={now} />,
+        body: <FieldBody field={thing.field} />,
         action: t('home.things.openField'),
         href: '/field',
       }
@@ -204,14 +204,13 @@ function fieldTitle(field: Field, t: TFunction): string {
   })
 }
 
-function FieldBody({ field, now }: { field: Field; now: number }) {
+function FieldBody({ field }: { field: Field }) {
   const { t } = useTranslation()
   const [first, second] = field.rows
-  const since = field.reset ? formatIsoDateShort(field.reset, now) : null
   const { played, won, losses } = field.topTwo
   // With one deck in the field the title names it, and the record is
   // against "it"; with two, against "them" (or "either").
-  const when = since ? t('home.field.sinceDate', { since }) : t('home.field.last90')
+  const when = t('home.field.lastDays', { days: field.days })
   const score = formatRecord(won, losses)
   let record: string
   if (field.deck) {
