@@ -12,9 +12,10 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from sensei_top.formats import deck_format_name
+from sensei_top.review.effects import is_land
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +33,8 @@ class DeckIdentity:
     first_played: str | None
     last_played: str | None
     current_cards: dict  # decks.cards_json of the most recently played version
+    art_grp_id: int | None = None  # see ``_art_grp_id``
+    card_names: tuple[str, ...] = ()  # distinct maindeck names, sorted, known only
 
 
 def deck_matches(deck_ids: Sequence[str]) -> str:
@@ -81,6 +84,47 @@ def _played_per_deck(conn: sqlite3.Connection) -> dict[str, sqlite3.Row]:
             """
         )
     }
+
+
+def _maindeck_ids(cards: dict) -> list[int]:
+    main = cards.get("maindeck") if isinstance(cards, dict) else None
+    return [g for g in main if isinstance(g, int)] if isinstance(main, list) else []
+
+
+def _card_facts(
+    conn: sqlite3.Connection, decks: list[dict]
+) -> dict[int, tuple[str, str | None]]:
+    """``grp_id -> (name, type_line)`` for every maindeck card of ``decks``,
+    in batched ``IN`` queries (one pass for the whole list, not one per deck)."""
+    ids = sorted({g for cards in decks for g in _maindeck_ids(cards)})
+    facts: dict[int, tuple[str, str | None]] = {}
+    for i in range(0, len(ids), 500):
+        chunk = ids[i : i + 500]
+        for row in conn.execute(
+            "SELECT grp_id, name, type_line FROM cards WHERE grp_id IN "
+            f"({','.join('?' for _ in chunk)})",
+            chunk,
+        ):
+            facts[row["grp_id"]] = (row["name"], row["type_line"])
+    return facts
+
+
+def _art_grp_id(cards: dict, facts: dict[int, tuple[str, str | None]]) -> int | None:
+    """The most-played maindeck non-land: copies counted in ``maindeck``,
+    ties to the lower ``grp_id`` so the answer never depends on row order. Land-ness
+    is ``is_land`` on the front face (``type_line`` before `` // ``), so a
+    modal double-faced "Instant // Land" counts as a spell. A card whose
+    ``type_line`` is unknown is skipped, never assumed a spell (rule 4); with
+    no known non-land the art is ``None``."""
+    counts: dict[int, int] = {}
+    for g in _maindeck_ids(cards):
+        fact = facts.get(g)
+        if fact is None or fact[1] is None or is_land(fact[1].split(" // ")[0]):
+            continue
+        counts[g] = counts.get(g, 0) + 1
+    if not counts:
+        return None
+    return min(counts, key=lambda g: (-counts[g], g))
 
 
 def list_identities(conn: sqlite3.Connection) -> list[DeckIdentity]:
@@ -143,6 +187,17 @@ def list_identities(conn: sqlite3.Connection) -> list[DeckIdentity]:
             last_played=max(ends) if ends else None,
         ))
 
+    facts = _card_facts(conn, [i.current_cards for i in identities])
+    identities = [
+        replace(
+            i,
+            art_grp_id=_art_grp_id(i.current_cards, facts),
+            card_names=tuple(sorted({
+                facts[g][0] for g in _maindeck_ids(i.current_cards) if g in facts
+            })),
+        )
+        for i in identities
+    ]
     identities.sort(key=lambda d: d.last_played or "", reverse=True)
     return identities
 

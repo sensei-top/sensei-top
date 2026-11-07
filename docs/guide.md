@@ -58,6 +58,17 @@ owns it) with `arena_deck_id` breaking an exact tie, falling back to a bare
 name and current cards; `resolve` looks up one by its API key
 (`"guid:<arena_deck_id>"` or `"deck:<deck_id>"`).
 
+Each identity also carries `art_grp_id` and `card_names`, read from the
+newest version's maindeck in one batched `cards` lookup for the whole list
+(500 ids a query, so `/api/guide/decks` stays cheap). `art_grp_id` is the
+most-played non-land (copies counted; a tie goes to the lower `grp_id`).
+Land-ness is `review/effects.py::is_land` on the front face, so a modal
+double-faced "Instant // Land" counts as a spell. Only cards whose type is
+known compete: one with no `type_line` is skipped rather than assumed a
+spell, and `art_grp_id` is `None` when no known card is a non-land.
+`card_names` is the distinct maindeck names the `cards` table knows, sorted;
+an unknown card is left out, never invented.
+
 An MTGO deck has no GUID, so it is always a `deck:<deck_id>` identity. Its
 matches are the ones the user picked it for (`mtgo_match_pick`): the guide
 reads a match's deck through `v_match_deck`, never `matches.deck_id`, which
