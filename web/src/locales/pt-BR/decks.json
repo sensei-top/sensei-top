@@ -188,6 +188,9 @@
       "tournamentLists": "Listas de torneio",
       "rulesText": "Texto de regras",
       "fieldSince": "Meta desde",
+      "waitsPercent": "Este guia espera os dados dos cards · {{pct}}%",
+      "waits": "Este guia espera os dados dos cards",
+      "download": "Baixe os dados dos cards em Configurações → Fontes",
       "resetOn": "Reinício do formato em <strong>{{date}}</strong> ({{detectedFrom}})."
     },
     "field": {

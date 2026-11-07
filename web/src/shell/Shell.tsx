@@ -11,6 +11,7 @@ import { CONTRIBUTE_KEEPS, CONTRIBUTE_PATH, contribPageDue } from '../lib/contri
 import { POLICY_VERSION } from '../lib/policy'
 import { ReportProblemContext, signedInOf, type ReportOpener } from '../lib/reportProblem'
 import { BottomBar } from './BottomBar'
+import { CardDataChip } from './CardDataChip'
 import { LiveStatus } from './LiveStatus'
 import { documentTitle, layoutName, placeAt, PRODUCT_NAME, type RouteHandle } from './places'
 import { Rail } from './Rail'
@@ -170,6 +171,7 @@ export function Shell() {
                   <BrandGlyph size={24} />
                 </Link>
                 <h1 className="min-w-0 flex-1 truncate font-display text-title text-ink md:text-heading">{name}</h1>
+                {!bare && <CardDataChip className={focus ? 'md:hidden' : ''} />}
                 {!bare && <LiveStatus className={focus ? 'md:hidden' : ''} />}
               </div>
             </div>

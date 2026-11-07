@@ -2557,6 +2557,11 @@ export interface components {
             field: components["schemas"]["FieldEvidenceOut"];
             /** Gaps */
             gaps: string[];
+            /**
+             * Gap Codes
+             * @description aligned with gaps: rules_text_missing, legality_missing or null
+             */
+            gap_codes?: (string | null)[];
         };
         /**
          * DeckIdentityOut

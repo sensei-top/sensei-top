@@ -148,6 +148,10 @@ class DeckGuideOut(BaseModel):
     list_diff: ListDiffOut | None
     field: FieldEvidenceOut
     gaps: list[str]
+    gap_codes: list[str | None] = Field(
+        default_factory=list,
+        description="aligned with gaps: rules_text_missing, legality_missing or null",
+    )
 
 
 class CardNoteOut(BaseModel):

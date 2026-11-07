@@ -454,6 +454,7 @@ def _deck_guide_out(guide) -> DeckGuideOut:
         list_diff=_list_diff_out(guide.list_diff),
         field=_field_evidence_out(guide.field),
         gaps=list(guide.gaps),
+        gap_codes=list(guide.gap_codes),
     )
 
 def _guide_narrative_out(n) -> GuideNarrativeOut:

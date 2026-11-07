@@ -217,6 +217,14 @@ is refused). After a restore that succeeded, a `done` or `failed`
 state goes back to `idle`, since it described the replaced database,
 and the check runs again against the restored one.
 
+**The download shows where the user is.** `shell/CardDataChip.tsx`, left of
+the live status in the header, reads `firstData` from the bridge
+(`shell/cardData.ts`'s `useCardData`) while it runs: "Card data · 43%" with
+a total, "downloading" without one, "saving"; "didn't finish" after a
+failure. Each links to Settings → Sources. Idle, done and a browser (no
+bridge) draw nothing. The Guide's scope card and an opponent shown as
+"Unknown deck" read the same state and say they wait for it.
+
 Pinned by `tests/test_cli.py`, "serve's handshake with a parent process",
 and, for the shell's side, `desktop/src/server.test.ts` (port choice,
 restart budget, stop order), `store.test.ts`, `log.test.ts`,

@@ -30,6 +30,12 @@
     "close": "Fechar",
     "signIn": "Entrar"
   },
+  "cardData": {
+    "percent": "Dados dos cards · {{pct}}%",
+    "downloading": "Dados dos cards · baixando",
+    "saving": "Dados dos cards · salvando",
+    "failed": "Dados dos cards · não terminou"
+  },
   "liveStatus": {
     "down": "Tracker parado",
     "stopped": "Acompanhamento parado",

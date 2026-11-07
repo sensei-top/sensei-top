@@ -196,6 +196,9 @@
       "tournamentLists": "Tournament lists",
       "rulesText": "Rules text",
       "fieldSince": "Field since",
+      "waitsPercent": "This guide waits for card data · {{pct}}%",
+      "waits": "This guide waits for card data",
+      "download": "Download card data in Settings → Sources",
       "resetOn": "Format reset on <strong>{{date}}</strong>. {{detectedFrom}}."
     },
     "field": {

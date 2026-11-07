@@ -60,6 +60,7 @@
     "resultScore": "{{result}} {{score}}",
     "unrecognizedDeck": "Deck não reconhecido",
     "showed": "mostrou {{card}}",
+    "namedLater": "Identificado quando os dados dos cards chegarem",
     "restored": "Restaurada"
   },
   "summary": {

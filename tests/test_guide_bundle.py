@@ -73,6 +73,7 @@ def test_no_reset_gap_is_stated(conn):
     guide = build_deck_guide(conn, "deck:d1")
     assert guide.provenance.reset is None
     assert any("No format reset" in g for g in guide.gaps)
+    assert not any(c in ("legality_missing", "rules_text_missing") for c in guide.gap_codes)
     assert not any("legality" in g for g in guide.gaps)
 
 
@@ -89,6 +90,7 @@ def test_missing_legality_is_reported_as_a_hole_not_as_no_reset(conn):
     assert not any("No format reset was detected" in g for g in guide.gaps)
     gap = next(g for g in guide.gaps if "legality" in g)
     assert "cards --scryfall" in gap
+    assert guide.gap_codes[guide.gaps.index(gap)] == "legality_missing"
 
 
 def test_oracle_coverage_gap_when_text_is_missing(conn):
@@ -99,6 +101,9 @@ def test_oracle_coverage_gap_when_text_is_missing(conn):
     guide = build_deck_guide(conn, "deck:d1")
     assert guide.provenance.oracle_coverage == (0, 1)
     assert any("Rules text is missing" in g for g in guide.gaps)
+    assert len(guide.gap_codes) == len(guide.gaps)
+    missing = next(i for i, g in enumerate(guide.gaps) if "Rules text is missing" in g)
+    assert guide.gap_codes[missing] == "rules_text_missing"
 
 
 def test_leaks_and_leaks_all_decks_are_both_present(conn):

@@ -60,6 +60,7 @@
     "resultScore": "{{result}} {{score}}",
     "unrecognizedDeck": "Unrecognized deck",
     "showed": "showed {{card}}",
+    "namedLater": "Named once card data arrives",
     "restored": "Restored"
   },
   "summary": {

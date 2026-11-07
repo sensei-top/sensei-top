@@ -240,6 +240,12 @@ alone and the words are its name. The dot's colour is decoration: the words
 are the fact. Nothing is drawn until the first heartbeat has answered
 either way.
 
+Left of the pill, `shell/CardDataChip.tsx` shows the card-data download while
+the desktop shell runs it (`docs/desktop.md`, "Card data starts on its own"):
+nothing in a browser, idle or done. `MatchRow` reads the same state, so an
+opponent with no deck named yet says "Named once card data arrives" while it
+runs.
+
 "In progress" is one rule, in `lib/liveMatch.ts`, for the live status, the
 dot on Live and the Live page's own strip. A current match that started 90
 minutes ago or more (`LIKELY_ABANDONED_MINUTES`) is more likely abandoned

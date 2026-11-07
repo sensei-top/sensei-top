@@ -95,7 +95,11 @@ class DeckGuide:
     own list has a format but could not be classified against the field's
     archetype definitions, so there is no list diff, and ``gaps[0]`` is the
     note saying so. ``ai/guide/rcq_prompt.py`` drops that note by this flag, never by
-    matching its sentence, which is in whatever language the build ran in."""
+    matching its sentence, which is in whatever language the build ran in.
+    ``gap_codes`` is aligned with ``gaps`` (``None`` for a gap with no code)
+    or empty; whoever rebuilds ``gaps`` also passes ``gap_codes``, aligned or
+    empty. A code is how the dashboard recognizes a gap whose fix is the
+    card-data download."""
 
     provenance: Provenance
     play: PlayEvidence
@@ -105,6 +109,7 @@ class DeckGuide:
     field: FieldEvidence
     gaps: tuple[str, ...]
     own_unclassified: bool = False
+    gap_codes: tuple[str | None, ...] = ()
 
 
 def _oracle_coverage(conn: sqlite3.Connection, identity: DeckIdentity) -> tuple[int, int]:
@@ -266,11 +271,17 @@ def build_deck_guide(
     # Keep this order: own_unclassified promises the unclassified note is
     # gaps[0] (DeckGuide's docstring).
     gaps: list[str] = []
+    gap_codes: list[str | None] = []
+
+    def add_gap(text: str, code: str | None = None) -> None:
+        gaps.append(text)
+        gap_codes.append(code)
+
     own_unclassified = fmt is not None and diff is None
     if fmt is None:
-        gaps.append(_(FORMAT_UNKNOWN_GAP))
+        add_gap(_(FORMAT_UNKNOWN_GAP))
     elif own_unclassified:
-        gaps.append(
+        add_gap(
             _(
                 "Your own deck could not be classified against the field's archetype "
                 "definitions — the list-vs-consensus comparison is unavailable."
@@ -279,37 +290,39 @@ def build_deck_guide(
     with_text, total_cards = oracle_coverage
     if total_cards and with_text < total_cards:
         missing = total_cards - with_text
-        gaps.append(
+        add_gap(
             ngettext(
                 "Rules text is missing for {missing} of your {total} cards — run "
                 "`sensei-top cards --scryfall` to fill this in.",
                 "Rules text is missing for {missing} of your {total} cards — run "
                 "`sensei-top cards --scryfall` to fill this in.",
                 missing,
-            ).format(missing=missing, total=total_cards)
+            ).format(missing=missing, total=total_cards),
+            "rules_text_missing",
         )
     if fmt is not None and reset is None:
         # Two different answers, and the difference matters: with no legality
         # data a ban cannot be detected at all, so "no reset" would be a
         # claim about the corpus that nothing here is in a position to make.
         if legality_known(conn, fmt):
-            gaps.append(
+            add_gap(
                 _(
                     "No format reset was detected in the tournament corpus — every number "
                     "below spans its full available history."
                 )
             )
         else:
-            gaps.append(
+            add_gap(
                 _(
                     "No card legality data is present, so a format reset cannot be detected "
                     "at all: every field share, consensus list and matchup rate below may "
                     "pool across a ban. Run `sensei-top cards --scryfall` and rebuild this "
                     "guide before trusting them."
-                )
+                ),
+                "legality_missing",
             )
     if not identity.deck_ids:
-        gaps.append(_("This deck has no recorded matches."))
+        add_gap(_("This deck has no recorded matches."))
 
     provenance = Provenance(
         deck=identity,
@@ -331,4 +344,5 @@ def build_deck_guide(
         field=field,
         gaps=tuple(gaps),
         own_unclassified=own_unclassified,
+        gap_codes=tuple(gap_codes),
     )

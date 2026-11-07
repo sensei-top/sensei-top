@@ -240,6 +240,16 @@ a deck with no format, an unclassifiable deck, missing oracle text (with the
 exact fix — `sensei-top cards --scryfall`), no detected reset — or,
 distinctly, no legality data to detect one *with* — and a never-played deck.
 
+A gap whose fix is the card-data download carries a code beside its text,
+`gap_codes` aligned with `gaps` (`DeckGuide.gap_codes`, `DeckGuideOut.gap_codes`):
+`rules_text_missing` and `legality_missing`; every other gap's is `None`,
+and whoever rebuilds `gaps` (the RCQ prompt does) also passes `gap_codes`,
+aligned or empty. The dashboard's scope card
+replaces them, together, with one line, "This guide waits for card data"
+(with the percent) while the desktop shell's download runs, else with a link to Settings →
+Sources; in a browser, and in every prompt and the Markdown export, the
+server's sentence stays.
+
 **Performance note.** `build_snapshot`/`build_match_report`/`find_leaks`
 accept optional caches, and `bundle.py` shares one of each: `_build_reports`
 fills them first, building every all-decks match's report, and both
