@@ -5,7 +5,7 @@ import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } fr
 import { ShowAll } from '../components/field/ShowAll'
 import { RateCell } from '../components/RateCell'
 import { VersionSwitcher } from '../components/VersionSwitcher'
-import { Button, Card, DataTable, EmptyState, ErrorNote, Loading, ManaPips, Segmented, StatTile, TextLink, Tooltip } from '../components/ui'
+import { Button, Card, DataTable, EmptyState, ErrorNote, ManaPips, OutlineCard, Segmented, StatTile, TextLink, Tooltip } from '../components/ui'
 import { mergeNewestFirst } from '../lib/deckOverview'
 import { formatName } from '../lib/decks'
 import {
@@ -21,12 +21,28 @@ import {
   rowFormatName,
   rowsSpanFormats,
 } from '../lib/matchups'
+import { STAT_TILE_BLOCK } from './DeckOverviewView'
 import { formatRecord } from '../lib/format'
 import { pairingAddress, withVersion } from '../lib/pairing'
 import { formatCount, useNow } from '../lib/time'
 import { placeById } from '../shell/places'
 
 const MINUTE = 60_000
+
+/** The Matchups' frames while its matches load, in the place of its body. */
+export function MatchupsFrames() {
+  const { t } = useTranslation()
+  return (
+    <>
+      <div className="grid gap-4 md:grid-cols-3">
+        <OutlineCard label={t('matchups.tiles.archetypesMet')} height={STAT_TILE_BLOCK} />
+        <OutlineCard label={t('matchups.tiles.best')} height={STAT_TILE_BLOCK} />
+        <OutlineCard label={t('matchups.tiles.worst')} height={STAT_TILE_BLOCK} />
+      </div>
+      <OutlineCard label={t('matchups.view.archetypesMet')} words={t('matchups.reading')} height="h-136" />
+    </>
+  )
+}
 
 /** A deck's Matchups, over the versions the address chose (`versionIds`,
  *  every version when `version` is `null`), counted from the matches in
@@ -97,7 +113,7 @@ export function MatchupsView({
 
   let body
   if (matches.error) body = <ErrorNote error={matches.error} />
-  else if (matches.isPending) body = <Loading />
+  else if (matches.isPending) body = <MatchupsFrames />
   else if (inHand.length === 0 && version != null) {
     body = (
       <EmptyState
@@ -196,7 +212,7 @@ export function MatchupsView({
   }
 
   return (
-    <div className="space-y-8">
+    <div className={`${matches.isPending ? '' : 'arrive '}space-y-8`}>
       {switcher}
       {body}
     </div>

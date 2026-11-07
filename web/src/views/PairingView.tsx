@@ -1,10 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } from '../api'
 import { useAi } from '../ai/registry'
 import { DeckMatchesCard } from '../components/DeckMatchesCard'
 import { VersionSwitcher } from '../components/VersionSwitcher'
-import { BackLink, Button, EmptyState, ErrorNote, Loading, ManaPips, StatTile } from '../components/ui'
+import { BackLink, Button, EmptyState, ErrorNote, ManaPips, OutlineCard, Skeleton, StatTile } from '../components/ui'
 import { coverageName } from '../lib/brief'
 import { deckAddress } from '../lib/decks'
 import { archetypeKeyOf, matchupRowOver } from '../lib/matchups'
@@ -21,6 +21,74 @@ import { useNow } from '../lib/time'
 import { placeById } from '../shell/places'
 
 const MINUTE = 60_000
+
+/** The heading's place while the matches load. */
+function PairingHeadingSkeleton() {
+  return (
+    <div>
+      <Skeleton className="h-[calc(var(--text-title)*1.25)] w-1/3" />
+      <Skeleton className="h-[calc(var(--text-caption)*1.4)] w-1/4" />
+    </div>
+  )
+}
+
+/** Five tiles' height: the stat line and the detail, which wraps to a
+ *  second line in the five-column row. */
+const PAIRING_TILE_BLOCK = 'h-[calc(var(--text-stat)*1.1+var(--text-caption)*2.8-var(--spacing)*3)]'
+
+/** The tiles' frames while the matches load, in the loaded row's grid. */
+function PairingTileFrames() {
+  const { t } = useTranslation()
+  return (
+    <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+      <OutlineCard label={t('matchups.pairing.record')} height={PAIRING_TILE_BLOCK} />
+      <OutlineCard label={t('matchups.pairing.games')} height={PAIRING_TILE_BLOCK} />
+      <OutlineCard label={t('matchups.pairing.game1')} height={PAIRING_TILE_BLOCK} />
+      <OutlineCard label={t('matchups.pairing.postboard')} height={PAIRING_TILE_BLOCK} />
+      <OutlineCard label={t('matchups.pairing.inTournaments')} height={PAIRING_TILE_BLOCK} />
+    </div>
+  )
+}
+
+/** The matches' frame while they load; it carries the page's words. */
+function PairingMatchesFrame() {
+  const { t } = useTranslation()
+  return <OutlineCard label={t('decks.matches.title')} words={t('matchups.reading')} height="h-140" />
+}
+
+/** The pairing's pending page for the deck layout, which has no context
+ *  yet: the same children, in the same places, as the loaded view's root.
+ *  `switcher` is the version row, real or reserved; `brief` goes between
+ *  the tiles and the matches when the caller has it. */
+export function PairingOutline({
+  deckKey,
+  version,
+  switcher,
+  brief,
+}: {
+  deckKey: string
+  version: string | null
+  switcher: ReactNode
+  brief?: ReactNode
+}) {
+  const { t } = useTranslation()
+  return (
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <p className="text-caption">
+          <BackLink href={withVersion(`${deckAddress(deckKey)}/matchups`, version)}>
+            {t('matchups.pairing.allMatchups')}
+          </BackLink>
+        </p>
+        <PairingHeadingSkeleton />
+      </div>
+      {switcher}
+      <PairingTileFrames />
+      {brief}
+      <PairingMatchesFrame />
+    </div>
+  )
+}
 
 /** One deck against one opponent's deck (`opponentKey`, a Matchups row's
  *  `opponent_key`), over the versions the address chose (`versionIds`,
@@ -96,8 +164,10 @@ export function PairingView({
   let body
   let matchesCard = null
   if (matches.error) body = <ErrorNote error={matches.error} />
-  else if (matches.isPending) body = <Loading />
-  else if (against.length === 0 && version != null) {
+  else if (matches.isPending) {
+    body = <PairingTileFrames />
+    matchesCard = <PairingMatchesFrame />
+  } else if (against.length === 0 && version != null) {
     body = (
       <EmptyState
         icon={icon}
@@ -134,13 +204,14 @@ export function PairingView({
   }
 
   return (
-    <div className="space-y-8">
+    <div className={`${matches.isPending ? '' : 'arrive '}space-y-8`}>
       <div className="space-y-2">
         <p className="text-caption">
           <BackLink href={withVersion(`${deckAddress(deckKey)}/matchups`, version)}>
             {t('matchups.pairing.allMatchups')}
           </BackLink>
         </p>
+        {matches.isPending && !matches.error && <PairingHeadingSkeleton />}
         {headingReady && (
           <div>
             <h3 className="flex flex-wrap items-center gap-x-2 gap-y-1 font-display text-title">

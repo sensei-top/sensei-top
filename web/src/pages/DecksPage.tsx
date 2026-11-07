@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 import { useGuideDecks, useMatchArt, useMatches, type MatchDetail } from '../api'
-import { DeckTile, EmptyState, ErrorNote, Loading, Select } from '../components/ui'
+import { DeckTile, EmptyState, ErrorNote, OutlineCard, Select } from '../components/ui'
 import {
   chosenSort,
   deckAddress,
@@ -20,6 +20,22 @@ import { formatShortDay, useNow } from '../lib/time'
 import { placeById } from '../shell/places'
 
 const MINUTE = 60_000
+
+/** The pending page: the filter row's place reserved, then a row of tiles
+ *  in the grid the loaded page uses. */
+function DecksOutline() {
+  const { t } = useTranslation()
+  return (
+    <div className="space-y-4">
+      <div className="h-[44px]" />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-5">
+        {[0, 1, 2, 3, 4].map((each) => (
+          <OutlineCard key={each} words={each === 0 ? t('decks.reading') : undefined} height="h-52" />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 /** `/decks`: one tile per deck (an identity of `/api/guide/decks`, however
  *  many versions its list has had), the last played first as the API
@@ -65,7 +81,7 @@ export function DecksPage() {
   const artQueries = useMatchArt(artIds)
   const details = new Map<string, MatchDetail | undefined>(artIds.map((id, index) => [id, artQueries[index]?.data]))
 
-  if (identities.isPending) return <Loading />
+  if (identities.isPending) return <DecksOutline />
   if (identities.error) return <ErrorNote error={identities.error} />
   if (tiles.length === 0) {
     return (
@@ -89,7 +105,7 @@ export function DecksPage() {
   const formatOptions = options.map((each) => ({ value: each, label: formatName(each, t) ?? each }))
   const sortOptions = DECKS_SORTS.map((each) => ({ value: each, label: t(`decks.list.sort.${each}`) }))
   return (
-    <div className="space-y-4">
+    <div className="arrive space-y-4">
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
         <Select
           label={t('decks.list.formatLabel')}
