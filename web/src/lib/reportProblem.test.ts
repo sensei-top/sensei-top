@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { ReportOutcome } from '../bridge'
+import type { AccountState, ProfileState, ReportOutcome } from '../bridge'
+import { POLICY_VERSION } from './policy'
 import {
   blockerOf,
   COUNTER_FROM,
@@ -8,6 +9,7 @@ import {
   sendControls,
   sendReport,
   signedInOf,
+  standingConsentOf,
   detailOf,
   reportText,
   wasSent,
@@ -165,5 +167,50 @@ describe('the Send button', () => {
       await r.send()
       expect(r.reopen).not.toHaveBeenCalled()
     }
+  })
+})
+
+describe('whether a standing consent replaces the box', () => {
+  const read = (change: Partial<Extract<ProfileState, { state: 'read' }>> = {}): ProfileState => ({
+    state: 'read',
+    ageConfirmedAt: '2026-01-01',
+    consentSync: false,
+    consentErrors: true,
+    consentCoachHistory: false,
+    consentVersion: POLICY_VERSION,
+    consentedAt: '2026-01-01',
+    ...change,
+  })
+  const account = (profile: ProfileState | undefined, signedIn = true): AccountState => ({
+    available: true,
+    signedIn,
+    userId: signedIn ? 'u' : null,
+    email: null,
+    provider: null,
+    persistence: { kept: true },
+    ...(profile ? { profile } : {}),
+  }) as AccountState
+
+  it('holds signed in, with error reports on under the current policy', () => {
+    expect(standingConsentOf(account(read()))).toBe(true)
+  })
+  it('holds under a later policy version', () => {
+    expect(standingConsentOf(account(read({ consentVersion: '2099-01-01' })))).toBe(true)
+  })
+  it('does not hold under an older policy version', () => {
+    expect(standingConsentOf(account(read({ consentVersion: '2026-11-04' })))).toBe(false)
+  })
+  it('does not hold with error reports off', () => {
+    expect(standingConsentOf(account(read({ consentErrors: false })))).toBe(false)
+  })
+  it('does not hold when the profile is unknown, unanswered or missing', () => {
+    expect(standingConsentOf(account({ state: 'unknown' }))).toBe(false)
+    expect(standingConsentOf(account({ state: 'none' }))).toBe(false)
+    expect(standingConsentOf(account(undefined))).toBe(false)
+  })
+  it('does not hold signed out, in a build with no account, or with no shell', () => {
+    expect(standingConsentOf(account(read(), false))).toBe(false)
+    expect(standingConsentOf({ available: false })).toBe(false)
+    expect(standingConsentOf(undefined)).toBe(false)
   })
 })

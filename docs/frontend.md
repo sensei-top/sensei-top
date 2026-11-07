@@ -565,8 +565,13 @@ the failed backup's sentences name.
 - **Report a problem** is a button in "Version and diagnostics" (About) and on every `ErrorNote` and on the
   error screen, in a shell that sends reports. It opens
   `components/ReportProblemDialog.tsx`: the text, "attach the last 500 lines
-  of the log", and the transfer consent line, which every press asks. It
-  sends through the bridge's `reportProblem` only, and works signed out. The
+  of the log", and the consent, with the rest (what the report holds, the
+  log's scrubbing, where Sentry keeps it) under "More about this". The consent
+  is a checkbox above Send, asked at every press, unless the dialog is signed
+  in with the profile read, `consentErrors` on and `consentVersion >=
+  POLICY_VERSION` (`standingConsentOf`): then it is one line naming Sentry and
+  the United States, no checkbox. Signed out, or with the profile unknown, the
+  box always shows. It sends through the bridge's `reportProblem` only, and works signed out. The
   shell mounts one dialog (`useReportProblem()`), remounted per opening.
 
 The Overlay section went with the pivot. An Arena overlay is planned again

@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react'
 import type { AccountState, ReportOutcome, ShellReports } from '../bridge'
+import { POLICY_VERSION } from './policy'
 
 /** The longest report the dialog sends, in characters; the shell refuses more. */
 export const REPORT_LIMIT = 4000
@@ -100,6 +101,17 @@ export function outcomeKey(outcome: ReportOutcome): string {
 /** Whether the report will carry an account ID: the shell's account is signed in. */
 export function signedInOf(account: AccountState | undefined): boolean {
   return account?.available === true && account.signedIn
+}
+
+/** Whether the error-reports consent already covers the transfer, so the
+ *  dialog shows a line instead of the box: signed in with the profile read,
+ *  error reports on, and the yes given under the current policy or a later
+ *  one (`YYYY-MM-DD` strings compare as dates). Signed out, an unread
+ *  profile or an older yes never skips the box. */
+export function standingConsentOf(account: AccountState | undefined, policyVersion: string = POLICY_VERSION): boolean {
+  if (!account?.available || !account.signedIn) return false
+  const profile = account.profile
+  return profile?.state === 'read' && profile.consentErrors && profile.consentVersion >= policyVersion
 }
 
 /** What a page that can open the dialog is given: `message` is an error's,

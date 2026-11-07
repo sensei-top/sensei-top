@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ReportOutcome, ShellReports } from '../bridge'
+import { useShell, type ReportOutcome, type ShellReports } from '../bridge'
 import {
   blockerOf,
   COUNTER_FROM,
@@ -8,14 +8,15 @@ import {
   REPORT_LIMIT,
   detailOf,
   sendControls,
+  standingConsentOf,
   wasSent,
 } from '../lib/reportProblem'
-import { Button, Dialog } from './ui'
+import { Button, Dialog, MoreAbout } from './ui'
 
 /** The Report a problem dialog. The shell mounts it with a new `key` for each
  *  opening, so every opening starts with an empty draft and both boxes
- *  unticked; `signedIn` and `message` are read once, then, so the intro does
- *  not flip while a report is on its way. `message` is an error's, shown
+ *  unticked; `signedIn`, `message` and the standing consent (a line in place of the
+ *  box) are read once, then, so neither flips while a report is on its way. `message` is an error's, shown
  *  apart from the field as a technical detail and sent under it. A dialog dismissed mid-send comes
  *  back (`onOpenChange(true)`) when the send failed, to say so. Unlike the
  *  other dialogs, the primary is Send report, not the safe answer: the
@@ -39,7 +40,10 @@ export function ReportProblemDialog({
   const [detail] = useState(() => detailOf(message))
   const [text, setText] = useState('')
   const [attachLog, setAttachLog] = useState(false)
-  const [agreed, setAgreed] = useState(false)
+  const [ticked, setTicked] = useState(false)
+  const account = useShell()?.app?.settings.account
+  const [standing] = useState(() => standingConsentOf(account))
+  const agreed = standing || ticked
   const [busy, setBusy] = useState(false)
   const [outcome, setOutcome] = useState<ReportOutcome | null>(null)
   const dismissed = useRef(false)
@@ -105,13 +109,6 @@ export function ReportProblemDialog({
         <p>{t(outcomeKey(outcome))}</p>
       ) : (
         <div className="space-y-4">
-          <div className="space-y-2">
-            <p>{t('report.dialog.intro')}</p>
-            <p>{t('report.dialog.holds')}</p>
-            <p>{signedInThen ? t('report.dialog.signedIn') : t('report.dialog.signedOut')}</p>
-            <p>{t('report.dialog.kept')}</p>
-          </div>
-
           <div className="flex flex-col gap-1.5">
             <label htmlFor={textId} className="text-caption font-medium text-ink2">
               {t('report.dialog.text.label')}
@@ -157,26 +154,34 @@ export function ReportProblemDialog({
               />
               <span>{t('report.dialog.log.label')}</span>
             </label>
-            <p className="pl-7 text-caption text-muted">{t('report.dialog.log.scrubbed')}</p>
-            <p className="pl-7 text-caption text-muted">{t('report.dialog.log.remains')}</p>
           </div>
 
-          <div className="space-y-2 rounded-block bg-surface2 p-3">
-            <h3 className="text-body font-medium text-ink">{t('report.dialog.transfer.title')}</h3>
-            <p className="text-caption text-muted">{t('report.dialog.transfer.where')}</p>
-            <p className="text-caption text-muted">{t('report.dialog.transfer.ip')}</p>
+          <MoreAbout>
+            <p>{t('report.dialog.intro')}</p>
+            <p>{t('report.dialog.holds')}</p>
+            <p>{signedInThen ? t('report.dialog.signedIn') : t('report.dialog.signedOut')}</p>
+            <p>{t('report.dialog.kept')}</p>
+            <p>{t('report.dialog.log.scrubbed')}</p>
+            <p>{t('report.dialog.log.remains')}</p>
+            <p>{t('report.dialog.transfer.where')}</p>
+            <p>{t('report.dialog.transfer.ip')}</p>
+            <p>{standing ? t('report.dialog.consent.withdraw') : t('report.dialog.transfer.decline')}</p>
+          </MoreAbout>
+
+          {standing ? (
+            <p className="text-caption text-muted">{t('report.dialog.consent.standing')}</p>
+          ) : (
             <label className="flex items-start gap-3 text-body text-ink">
               <input
                 type="checkbox"
                 className="mt-1 size-4 shrink-0 accent-accent"
-                checked={agreed}
+                checked={ticked}
                 disabled={busy}
-                onChange={(event) => setAgreed(event.target.checked)}
+                onChange={(event) => setTicked(event.target.checked)}
               />
               <span>{t('report.dialog.transfer.agree')}</span>
             </label>
-            <p className="text-caption text-muted">{t('report.dialog.transfer.decline')}</p>
-          </div>
+          )}
         </div>
       )}
     </Dialog>

@@ -2,7 +2,7 @@
   "open": "Relatar um problema",
   "dialog": {
     "title": "Relatar um problema",
-    "intro": "Conte o que deu errado. Cada clique em Enviar relatório envia um relatório, com ou sem conta, com os relatórios de erro ligados ou não.",
+    "intro": "Nada é enviado até você clicar em Enviar. Funciona com ou sem conta, com os relatórios de erro ligados ou não.",
     "holds": "O relatório traz o que você escrever, a versão do aplicativo e seu sistema.",
     "signedIn": "Você está conectado, então ele é ligado à sua conta por um ID interno, nunca pelo seu e-mail.",
     "signedOut": "Você não está conectado, então ele não carrega nenhum ID de conta.",
@@ -20,11 +20,14 @@
       "remains": "Ele ainda pode citar cards, decks e arquivos, e quando as coisas aconteceram. Com o Modo de diagnóstico ligado, ele traz muito mais, inclusive o texto inteiro de qualquer prompt enviado ao Claude."
     },
     "transfer": {
-      "title": "Enviado para os Estados Unidos",
-      "where": "O Sentry guarda os relatórios de erro nos Estados Unidos, então eles saem do Brasil. Os Estados Unidos não têm uma lei de proteção de dados como a LGPD. As autoridades de lá podem conseguir acessar os relatórios com base na lei dos Estados Unidos, e pode ser mais difícil para você fazer valer seus direitos lá.",
+      "where": "O Sentry guarda os relatórios nos Estados Unidos, que não têm uma lei de proteção de dados como a LGPD. As autoridades de lá podem conseguir acessar os relatórios com base na lei dos Estados Unidos, e pode ser mais difícil para você fazer valer seus direitos lá.",
       "ip": "O Sentry não guarda seu endereço IP, mas antes deduz dele uma localização aproximada.",
       "agree": "Concordo que este relatório seja enviado ao Sentry, nos Estados Unidos.",
-      "decline": "Se você não concordar, o relatório não é enviado. Isso é perguntado de novo a cada relatório."
+      "decline": "Se você não concordar, o relatório não é enviado. Enquanto os relatórios de erro estiverem desligados, isso é perguntado a cada relatório."
+    },
+    "consent": {
+      "standing": "Enviado ao Sentry, nos Estados Unidos, como você concordou ao ligar os relatórios de erro.",
+      "withdraw": "Para ser perguntado antes de cada relatório, desligue Enviar relatórios de erro em Configurações, em Conta."
     },
     "hint": {
       "noText": "Escreva o que deu errado para enviar o relatório.",
