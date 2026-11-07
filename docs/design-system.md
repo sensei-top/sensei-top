@@ -484,7 +484,7 @@ wording:
   sits where the gradient has arrived.
 - **Every piece of art leads to the whole card**, which carries the
   artist's name and the copyright line: the button in the art's corner
-  shows it on hover, on keyboard focus and on tap. The Credits page says
+  (lucide `Info`) shows it on hover, on keyboard focus and on tap. The Credits page says
   so (`credits.ts`).
 - **Neither picture is ever behind a paywall.** Scryfall's terms forbid one
   in front of their data.

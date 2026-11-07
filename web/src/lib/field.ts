@@ -124,8 +124,9 @@ export type FieldWindow = 'reset' | number
 
 export const DAY_WINDOWS = [7, 15, 30, 90, 180, 365] as const
 
-/** The window with no reset known. */
-export const FALLBACK_DAYS = 90
+/** The window a bare `/field` opens on, and what `?window=reset` means with
+ *  no reset known. */
+export const FALLBACK_DAYS = 15
 
 /** The status's reset when it is a bare date the page can read, else
  *  `null`. */
@@ -133,14 +134,14 @@ export function resetOf(formatResetStart: string | null | undefined): string | n
   return formatResetStart && /^\d{4}-\d{2}-\d{2}$/.test(formatResetStart) ? formatResetStart : null
 }
 
-/** The window a bare `/field` opens on: the reset when one is known, else
- *  the last 90 days. */
-export function defaultWindow(reset: string | null): FieldWindow {
-  return reset ? 'reset' : FALLBACK_DAYS
+/** The window a bare `/field` opens on: the last 15 days. The reset stays
+ *  an option in the select. */
+export function defaultWindow(_reset: string | null): FieldWindow {
+  return FALLBACK_DAYS
 }
 
 /** `?window=`: `reset` or one of the day counts; absent or unknown is the
- *  default, and `reset` with no reset known is the last 90 days. */
+ *  default, and `reset` with no reset known is the last 15 days. */
 export function windowOf(raw: string | null, reset: string | null): FieldWindow {
   if (raw === 'reset') return reset ? 'reset' : FALLBACK_DAYS
   const days = (DAY_WINDOWS as readonly number[]).find((d) => String(d) === raw)
@@ -212,11 +213,10 @@ export function tierOption(tier: Tier, t: TFunction): string {
   return options[tier]
 }
 
-/** The first tier in rank order with lists in the window: A, then B, then
- *  C, then D, as Home reads its field (`firstTierWithLists`). With no list
- *  in any tier, A, the first. */
+/** B when tier B has lists in the window, else the first tier in rank order
+ *  that does (`firstTierWithLists`). With no list in any tier, B. */
 export function defaultTier(presence: MetaPresence[]): Tier {
-  return firstTierWithLists(presence) ?? 'A'
+  return hasLists(presence, 'B') ? 'B' : (firstTierWithLists(presence) ?? 'B')
 }
 
 /** `?tier=`: `A`, `B`, `C` or `D`; absent or unknown is the default. */

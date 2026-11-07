@@ -1365,10 +1365,10 @@ The page draws no chart: every number is a row, a table or a tile.
 
 **The defaults.** The format is `/api/formats`' `default`, the format of
 the viewer's most recent match that has one, else Standard (`docs/frontend.md`, "Filters are
-in the address"). The window is the format's reset when the status has
-one, else 90 days; `?window=reset` with no reset known means 90 days.
-The tier is the first ranked tier with lists in the window, A, then B,
-then C, then D — Home's own rule (`firstTierWithLists`). `?pairs=` is
+in the address"). The window is the last 15 days; the format's reset
+stays an option in the select, and `?window=reset` with no reset known
+means 15 days. The tier is B when it has lists in the window, else the
+first ranked tier that does (`firstTierWithLists`: A, B, C, D). `?pairs=` is
 `A` when tier A has lists in the window, else `AB` when tier B has, else
 `ABD`. Every metagame read names the format. The status waits for
 `/api/formats`, and the three metagame reads (`useMetaPresence`,
