@@ -513,7 +513,10 @@ the failed backup's sentences name.
 - **Backup.** The last backup as a sentence, when and how large
   (`sizeOf`, `lib/size.ts`), or a `warn` callout when it failed; the
   folder; how many copies are kept (3, 7, 14 or 30); "Back up now";
-  "Restore from a backup file", which asks first and, once restored,
+  "Restore from a backup", which lists the copies in the backup folder by
+  date and time (`formatDayTime`), offers "Choose another file" for one
+  kept elsewhere, and opens the file picker directly when the folder has
+  none; it asks first and, once restored,
   offers Restart now (`app.relaunch()`; a refusal's sentence shows under
   the buttons). A second card, Cloud copy, holds the `consentSync` switch
   and its status line; signed out, one line linking to

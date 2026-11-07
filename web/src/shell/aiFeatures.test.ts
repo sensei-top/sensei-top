@@ -73,6 +73,7 @@ function shellWith(
     pickFile: () => Promise.resolve(null),
     backUpNow: never,
     restoreFrom: never,
+    listBackups: () => Promise.resolve([]),
     contribSet: never,
     account: {
       status: () => Promise.resolve({ available: false } as const),

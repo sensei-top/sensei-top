@@ -25,7 +25,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { AccountReply, ProfileChange } from './cloud/account';
 import type { ReportOutcome } from './cloud/report';
-import type { AccountSignInReply, AccountState, AppChange, BridgeSettings, DeepPartial, KeyName, Saved, ShellSettings } from './settings';
+import type { AccountSignInReply, AccountState, AppChange, BackupSnapshot, BridgeSettings, DeepPartial, KeyName, Saved, ShellSettings } from './settings';
 
 const CHANNEL = {
   initial: 'sensei-top:initial',
@@ -35,6 +35,7 @@ const CHANNEL = {
   pickFile: 'sensei-top:pick-file',
   backUpNow: 'sensei-top:back-up-now',
   restoreFrom: 'sensei-top:restore-from',
+  listBackups: 'sensei-top:list-backups',
   appSet: 'sensei-top:app-set',
   appCheckForUpdates: 'sensei-top:app-check-for-updates',
   appRestartToUpdate: 'sensei-top:app-restart-to-update',
@@ -74,6 +75,7 @@ if (location.protocol === 'http:') {
     pickFile: (): Promise<string | null> => ipcRenderer.invoke(CHANNEL.pickFile),
     backUpNow: (): Promise<Saved> => ipcRenderer.invoke(CHANNEL.backUpNow),
     restoreFrom: (path: string): Promise<Saved> => ipcRenderer.invoke(CHANNEL.restoreFrom, path),
+    listBackups: (): Promise<BackupSnapshot[]> => ipcRenderer.invoke(CHANNEL.listBackups),
     app: {
       set: (change: AppChange): Promise<Saved> => ipcRenderer.invoke(CHANNEL.appSet, change),
       checkForUpdates: (): Promise<Saved> => ipcRenderer.invoke(CHANNEL.appCheckForUpdates),

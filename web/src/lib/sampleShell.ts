@@ -183,5 +183,6 @@ export function useSampleShell(sample: SampleId): Shell | null {
         return saved
       }),
     restoreFrom: () => afterAWhile(answer),
+    listBackups: () => Promise.resolve([]),
   }
 }

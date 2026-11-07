@@ -58,6 +58,7 @@ export function SettingsView({
             pickFile={() => shell.pickFile()}
             backUpNow={() => shell.backUpNow()}
             restoreFrom={(path) => shell.restoreFrom(path)}
+            listBackups={() => shell.listBackups()}
           />
         </SettingsSection>
       )}

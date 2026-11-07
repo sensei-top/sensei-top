@@ -289,6 +289,10 @@ export type ShellReports = {
   onReportProblem(listener: () => void): () => void
 }
 
+/** One local backup: the file `restoreFrom` takes, when it was made (ISO)
+ *  and its size in bytes. */
+export type BackupSnapshot = { path: string; at: string; bytes: number }
+
 export type Shell = Partial<ShellReports> & {
   settings: ShellSettings
   app?: ShellApp
@@ -301,6 +305,8 @@ export type Shell = Partial<ShellReports> & {
   backUpNow(): Promise<Saved>
   /** Takes effect the next time the app starts. */
   restoreFrom(path: string): Promise<Saved>
+  /** The backups in the backup folder, newest first; `[]` when there are none or the folder cannot be read. */
+  listBackups(): Promise<BackupSnapshot[]>
   /** The answer to "Help build the stats"; a yes needs `ageConfirmed: true`. */
   contribSet(answer: ContribAnswer): Promise<Saved>
 }

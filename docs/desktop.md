@@ -109,6 +109,18 @@ reads it. It is read once at launch and written whole through a temporary
 file and a rename, a key it does not know is carried through every write,
 and a file that is not JSON is moved aside as `shell.json.bad`.
 
+**The restore's list.** Settings → Backup restores from a dated list, not
+a file picker: the `listBackups` call reads the backup folder (the `backup.dir`
+the settings cache holds) and answers each slot, `<db>.backup` and
+`<db>.backup.<n>`, as `{path, at, bytes}` with `at` the file's modification
+time, newest first (`backupSnapshots` in `settings.ts`, pure). Temporary
+copies and any other name in the folder are left out, since the folder may be
+shared. The page shows each by `formatDayTime` and hands the chosen `path` to
+`restoreFrom`. A folder with no slot, or one that cannot be read, answers `[]`
+and the page goes straight to the file picker. With copies listed, the list
+offers "Choose another file" for a backup kept elsewhere; Welcome's button,
+"Restore from a backup file" (`welcome.start.restore`), stays a picker.
+
 **Restart now.** After a restore the page offers it, and the `relaunch` call
 takes the quit path: `main.ts` schedules the new start with `app.relaunch()`
 and calls `app.quit()`, so `before-quit` stops the server and the error

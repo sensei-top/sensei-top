@@ -50,6 +50,7 @@ function fake(initial: BridgeSettings | null) {
     pickFile: () => Promise.resolve(null),
     backUpNow: never,
     restoreFrom: never,
+    listBackups: () => Promise.resolve([]),
     contribSet: never,
     app: {
       set: never,

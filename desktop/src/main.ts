@@ -46,6 +46,7 @@ import {
   CHANNELS,
   diagnosticsArgs,
   formatListing,
+  backupSnapshots,
   restoreLeftovers,
   restoreLeftoversMessage,
   ReportsLink,
@@ -357,6 +358,24 @@ function run(): void {
         return 0;
       }
     },
+    listBackups: (dir) => {
+      try {
+        return backupSnapshots(
+          DB_NAME,
+          fs.readdirSync(dir),
+          (name) => {
+            try {
+              return fs.statSync(path.join(dir, name));
+            } catch {
+              return null;
+            }
+          },
+          (name) => path.join(dir, name),
+        );
+      } catch {
+        return [];
+      }
+    },
     now: () => new Date(),
     applyAutostart: applyLoginItem,
     setDiagnostic: (on) => shellLog.setLevel(on ? 'DEBUG' : 'INFO'),
@@ -500,6 +519,7 @@ function run(): void {
   handle(CHANNELS.pickFolder, refusedNull, () => settings.pickFolder());
   handle(CHANNELS.pickFile, refusedNull, () => settings.pickFile());
   handle(CHANNELS.backUpNow, refusedSaved, () => settings.backUpNow());
+  handle(CHANNELS.listBackups, () => [], () => settings.listBackups());
   handle(CHANNELS.restoreFrom, refusedSaved, (file: string) => settings.restoreFrom(String(file)));
   handle(CHANNELS.appSet, refusedSaved, (change: Parameters<SettingsService['setApp']>[0]) => settings.setApp(change));
   handle(CHANNELS.appCheckForUpdates, refusedSaved, () => checkForUpdates());

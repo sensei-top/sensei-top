@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
-import { useShell, type AccountActions, type AccountReply, type AccountState, type DeepPartial, type Saved, type ShellSettings } from '../../bridge'
+import { useShell, type AccountActions, type BackupSnapshot, type AccountReply, type AccountState, type DeepPartial, type Saved, type ShellSettings } from '../../bridge'
 import { failureOf, settle, useRestart, useTextSave } from '../../lib/settings'
 import { sizeOf } from '../../lib/size'
-import { ago, formatCount, useNow } from '../../lib/time'
+import { ago, formatCount, formatDayTime, useNow } from '../../lib/time'
 import { Button, Callout, Card, Dialog } from '../ui'
+import { restoreStart } from './restoreStart'
 import { profileGate, switchChange, syncLine } from './accountLogic'
 import { FolderField, PressButton, RestartNote, SaveButton, SavingSelect, SavingSwitch } from './SaveButton'
 
@@ -28,7 +29,8 @@ function fileName(path: string): string {
 
 /** The daily copy of the matches, in two cards. The first: when the last
  *  one was made or that it failed, the folder and how many copies are
- *  kept, a backup made now, and a restore from a file, which asks first in
+ *  kept, a backup made now, and a restore from one of the dated copies in
+ *  the folder, which asks first in
  *  a dialog whose safe button is the primary one, then says it takes
  *  effect at the next start and offers Restart now. The second is Cloud
  *  copy. Only a shell makes backups, so with no shell the page does not
@@ -41,6 +43,7 @@ export function BackupSection({
   pickFile,
   backUpNow,
   restoreFrom,
+  listBackups,
   relaunch,
 }: {
   backup: Backup
@@ -49,6 +52,8 @@ export function BackupSection({
   pickFile?: () => Promise<string | null>
   backUpNow?: () => Promise<Saved>
   restoreFrom?: (path: string) => Promise<Saved>
+  /** The local snapshots, newest first; the restore picks from them. */
+  listBackups?: () => Promise<BackupSnapshot[]>
   /** Restart now, offered after a restore; the shell's, from `useShell` when absent. */
   relaunch?: () => Promise<Saved>
 }) {
@@ -93,6 +98,7 @@ export function BackupSection({
                 {pickFile && restoreFrom && (
                   <RestoreButton
                     pickFile={pickFile}
+                    listBackups={listBackups}
                     restoreFrom={restoreFrom}
                     onFailure={setFailure}
                     onRestored={() => setRestored(true)}
@@ -268,13 +274,57 @@ function BackUpNowButton({
   )
 }
 
-/** "Restore from a backup file": the shell's file picker, then a dialog
- *  that names the file and says what restoring replaces. Its safe button,
- *  the primary one, keeps what is here; the other restores, and this
- *  button says "Restoring" until the shell answers. `label` is the
- *  button's words; the welcome steps say "Choose a backup file". */
+/** The copies as buttons, newest first, each by the day and time it was
+ *  made and its size. */
+export function SnapshotChoices({
+  snapshots,
+  onChoose,
+  onOther,
+}: {
+  snapshots: BackupSnapshot[]
+  onChoose: (snapshot: BackupSnapshot) => void
+  /** "Choose another file": a backup kept outside the folder. */
+  onOther?: () => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <div className="space-y-3">
+      <ul className="space-y-1.5">
+        {snapshots.map((snapshot) => (
+          <li key={snapshot.path}>
+            <Button variant="quiet" className="min-h-[44px] w-full justify-between" onClick={() => onChoose(snapshot)}>
+              <span>{snapshotLabel(snapshot)}</span>
+              <span className="text-caption text-muted">{sizeOf(snapshot.bytes)}</span>
+            </Button>
+          </li>
+        ))}
+      </ul>
+      {onOther && (
+        <Button variant="quiet" className="min-h-[44px]" onClick={onOther}>
+          {t('settings.backup.chooseOther')}
+        </Button>
+      )}
+    </div>
+  )
+}
+
+/** A copy's date and time; a time that cannot be read falls back to the file's name. */
+function snapshotLabel(snapshot: BackupSnapshot): string {
+  const ms = Date.parse(snapshot.at)
+  return Number.isNaN(ms) ? fileName(snapshot.path) : formatDayTime(ms)
+}
+
+/** "Restore from a backup": with `listBackups`, a dialog lists the copies
+ *  in the folder by date and time and a press on one goes on to the
+ *  question; a folder with no copy, or a list that cannot be read, falls
+ *  back to the shell's file picker, as does a button given no list (the
+ *  welcome steps, which say "Restore from a backup file"). The question names
+ *  the copy and says what restoring replaces. Its safe button, the primary
+ *  one, keeps what is here; the other restores, and this button says
+ *  "Restoring" until the shell answers. `label` is the button's words. */
 export function RestoreButton({
   pickFile,
+  listBackups,
   restoreFrom,
   onFailure,
   onRestored,
@@ -282,18 +332,26 @@ export function RestoreButton({
 }: {
   label?: string
   pickFile: () => Promise<string | null>
+  listBackups?: () => Promise<BackupSnapshot[]>
   restoreFrom: (path: string) => Promise<Saved>
   onFailure: (sentence: string | null) => void
   onRestored: () => void
 }) {
   const { t } = useTranslation()
-  const [file, setFile] = useState<string | null>(null)
+  const [file, setFile] = useState<{ path: string; name: string } | null>(null)
+  const [choices, setChoices] = useState<BackupSnapshot[] | null>(null)
   const [restoring, setRestoring] = useState(false)
 
   const choose = async () => {
     onFailure(null)
+    const start = await restoreStart(listBackups)
+    if (start.kind === 'list') setChoices(start.snapshots)
+    else await pickOther()
+  }
+
+  const pickOther = async () => {
     const chosen = await pickFile().catch(() => null)
-    if (chosen !== null) setFile(chosen)
+    if (chosen !== null) setFile({ path: chosen, name: fileName(chosen) })
   }
 
   const restore = async (path: string) => {
@@ -311,6 +369,28 @@ export function RestoreButton({
         {restoring ? t('settings.backup.restoring') : (label ?? t('settings.backup.restore'))}
       </Button>
       <Dialog
+        open={choices !== null}
+        onClose={() => setChoices(null)}
+        title={t('settings.backup.restore')}
+        actions={
+          <Button variant="primary" className="min-h-[44px]" onClick={() => setChoices(null)}>
+            {t('common.cancel')}
+          </Button>
+        }
+      >
+        <SnapshotChoices
+          snapshots={choices ?? []}
+          onChoose={(snapshot) => {
+            setChoices(null)
+            setFile({ path: snapshot.path, name: snapshotLabel(snapshot) })
+          }}
+          onOther={() => {
+            setChoices(null)
+            void pickOther()
+          }}
+        />
+      </Dialog>
+      <Dialog
         open={file !== null}
         onClose={() => setFile(null)}
         title={t('settings.backup.restoreTitle')}
@@ -322,7 +402,7 @@ export function RestoreButton({
             <Button
               className="min-h-[44px]"
               onClick={() => {
-                const path = file
+                const path = file?.path ?? null
                 setFile(null)
                 if (path !== null) void restore(path)
               }}
@@ -333,7 +413,7 @@ export function RestoreButton({
         }
       >
         <div className="space-y-2">
-          <p className="break-words text-ink">{file === null ? '' : fileName(file)}</p>
+          <p className="break-words text-ink">{file?.name ?? ''}</p>
           <p>{t('settings.backup.restoreBody')}</p>
         </div>
       </Dialog>
