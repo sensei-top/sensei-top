@@ -3,12 +3,15 @@ import { translator } from '../i18n'
 import type { Deck, DeckIdentityOut, Match } from '../api'
 import {
   archetypeName,
+  chosenQuery,
   chosenSort,
   deckAddress,
   deckLine,
   deckRecord,
   deckRedirect,
   decksTiles,
+  splitFold,
+  tileMatches,
   fieldNameLine,
   filterTiles,
   formatName,
@@ -481,5 +484,77 @@ describe('tileArt while data is pending', () => {
     expect(tileArt([{ grpId: 1, name: 'A' }], used, 9, false)).toBeNull()
     expect(tileArt([], used, 9, false)).toBeNull()
     expect(used.size).toBe(0)
+  })
+})
+
+describe('searching the tiles', () => {
+  const tiles = decksTiles(
+    [
+      identity('a', ['va'], { name: 'Éclair Midrange', card_names: ['Lightning Bolt', 'Mountain'] }),
+      identity('b', ['vb'], { name: null, card_names: ['Séance Table'] }),
+    ],
+    [],
+    t,
+    0,
+  )
+  const [named, unnamed] = tiles
+
+  it('matches a name ignoring case and accents, either way', () => {
+    expect(tileMatches(named, 'ECLAIR')).toBe(true)
+    expect(tileMatches(named, 'éclair mid')).toBe(true)
+    expect(tileMatches(unnamed, 'seance')).toBe(true)
+  })
+
+  it('matches a card name', () => {
+    expect(tileMatches(named, 'lightning')).toBe(true)
+    expect(tileMatches(named, 'table')).toBe(false)
+  })
+
+  it('never matches an unnamed deck on a name', () => {
+    expect(tileMatches(unnamed, 'unnamed')).toBe(false)
+    expect(tileMatches(unnamed, 'deck')).toBe(false)
+  })
+
+  it('matches everything on an empty or blank query, and trims', () => {
+    expect(tileMatches(named, '')).toBe(true)
+    expect(tileMatches(named, '   ')).toBe(true)
+    expect(tileMatches(named, '  bolt ')).toBe(true)
+    expect(chosenQuery(' a ')).toBe('a')
+    expect(chosenQuery(null)).toBe('')
+  })
+})
+
+describe('the fold of decks under five matches', () => {
+  const deck = (key: string, wins: number, losses: number, cards: string[] = []) =>
+    identity(key, [`v${key}`], { match_wins: wins, match_losses: losses, card_names: cards })
+  const make = (rows: DeckIdentityOut[]) => decksTiles(rows, [], t, 0)
+  const keys = (list: { key: string }[]) => list.map((tile) => tile.key)
+
+  it('folds the tiles under five finished matches, in order', () => {
+    const { main, folded } = splitFold(make([deck('a', 5, 2), deck('b', 1, 1), deck('c', 4, 1), deck('d', 0, 3)]), '')
+    expect(keys(main)).toEqual(['a', 'c'])
+    expect(keys(folded)).toEqual(['b', 'd'])
+  })
+
+  it('does not fold when every tile would', () => {
+    const { main, folded } = splitFold(make([deck('a', 1, 1), deck('b', 0, 0)]), '')
+    expect(keys(main)).toEqual(['a', 'b'])
+    expect(folded).toEqual([])
+  })
+
+  it('counts only the matching tiles in the fold under a query', () => {
+    const tiles = make([deck('a', 9, 1, ['Bolt']), deck('b', 1, 0, ['Bolt']), deck('c', 1, 0, ['Opt']), deck('d', 0, 1, ['Bolt'])])
+    const { main, folded } = splitFold(tiles, 'bolt')
+    expect(keys(main)).toEqual(['a'])
+    expect(keys(folded)).toEqual(['b', 'd'])
+  })
+
+  it('draws no fold when the query leaves none in it, and keeps the all-fold rule', () => {
+    const tiles = make([deck('a', 9, 1, ['Bolt']), deck('b', 1, 0, ['Opt'])])
+    expect(splitFold(tiles, 'bolt').folded).toEqual([])
+    const small = make([deck('a', 1, 0, ['Bolt']), deck('b', 1, 0, ['Opt'])])
+    const result = splitFold(small, 'bolt')
+    expect(keys(result.main)).toEqual(['a'])
+    expect(result.folded).toEqual([])
   })
 })

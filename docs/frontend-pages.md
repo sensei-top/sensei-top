@@ -941,9 +941,9 @@ tiles share a name (a rebuilt deck is a second Arena deck, so a second
 tile), the one played most recently carries the "Newest" chip (`newest`)
 and each other shows "played Sep 3 to 14" (`playedRange`, `versionDays`)
 where "last played" would be, keeping "last played" when the list was
-played on one day only. Nothing is folded together. The grid is Home's
-own: two to a row under 48rem, three from there, five from 64rem. With no
-deck at all, "No decks yet".
+played on one day only. Same-name tiles are never merged into one. The
+grid is Home's own: two to a row under 48rem, three from there, five from
+64rem. With no deck at all, "No decks yet".
 
 Two `Select`s sit above the grid, both kept in the address as
 `useFilters` keeps its own and left out at their defaults. **`?format=`**:
@@ -960,6 +960,22 @@ played; Matches is finished matches, most first; every tie goes to the
 later last played, a tile with no date last. The art is picked in the
 route's order over every tile, so a tile's art does not change with the
 sort or the filter.
+
+**`?q=`** searches the decks on the page: a deck matches when the trimmed
+query, ignoring case and accents, is a substring of its name or of any of
+its identity's `card_names` (an unnamed deck matches on its cards only).
+The address keeps the query trimmed and drops `?q=` when it is empty; the
+box holds its own text, starts from the address and is reset only when
+the address's `?q=` changes under it. It combines with `?format=` and `?sort=`,
+filters data the page already has, and when nothing matches "No deck
+matches “q”." is drawn as an `EmptyState`. Decks with fewer than 5
+finished matches (`FOLD_MIN_MATCHES`: the tile's wins plus losses, draws
+aside, which under five is the record the tile shows) fold, after the
+grid and in the same sort, into one collapsed disclosure that reads
+"Fewer than 5 matches · N decks". N counts only the tiles matching the
+query, and a fold with none is hidden, not unmounted. When every deck in
+the chosen format would fold, none does. The fold's open state is local,
+and a query never opens or closes it.
 
 A tile leads to `deckAddress(key)`: `/decks/` and the identity's own
 key (`addressSegment`, its colon written bare). `/decks/:id` and the

@@ -26,6 +26,11 @@
     },
     "formatLabel": "Format",
     "allFormats": "All formats",
+    "searchLabel": "Search decks",
+    "searchPlaceholder": "Deck or card name",
+    "noMatch": "No deck matches “{{q}}”.",
+    "fewer_one": "Fewer than {{min}} matches · {{count}} deck",
+    "fewer_other": "Fewer than {{min}} matches · {{count}} decks",
     "sortLabel": "Sort by",
     "sort": {
       "lastPlayed": "Last played",

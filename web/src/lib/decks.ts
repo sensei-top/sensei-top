@@ -180,6 +180,8 @@ export type DecksTile = {
   artMatchId: string | null
   /** The identity's `art_grp_id`: the art when the match's cast gives none. */
   artGrpId: number | null
+  /** The identity's distinct maindeck card names, for the search. */
+  cardNames: string[]
 }
 
 /** A tile's art: the first card of `cast` not in `used`, else the deck's
@@ -260,6 +262,7 @@ export function decksTiles(
       playedRange: mark?.playedRange ?? null,
       detail: tileDetail(identity.format, identity.deck_ids.length, t),
       artGrpId: identity.art_grp_id ?? null,
+      cardNames: identity.card_names ?? [],
       artMatchId: finished.find((match) => ids.has(match.deck_id ?? ''))?.match_id ?? null,
     }
   })
@@ -310,4 +313,38 @@ export function tileFormats(tiles: DecksTile[]): string[] {
 /** The tiles of `format`; all of them when `format` is empty. */
 export function filterTiles(tiles: DecksTile[], format: string | null | undefined): DecksTile[] {
   return format ? tiles.filter((tile) => tile.format === format) : tiles
+}
+
+/** Matches under this many go into the fold on `/decks`. */
+export const FOLD_MIN_MATCHES = 5
+
+/** `text` lower-cased with its accents taken off (NFD, combining marks
+ *  stripped), for comparing what the viewer typed with a name. */
+function plain(text: string): string {
+  return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+}
+
+/** The query as the page uses and writes it: `raw` trimmed, `''` when absent. */
+export function chosenQuery(raw: string | null | undefined): string {
+  return (raw ?? '').trim()
+}
+
+/** Whether `query`, ignoring case and accents, is a substring of the tile's
+ *  name or of any of its card names. An empty query matches every tile; a
+ *  tile with no name matches on its cards only. */
+export function tileMatches(tile: DecksTile, query: string): boolean {
+  const needle = plain(chosenQuery(query))
+  if (!needle) return true
+  return [tile.name, ...tile.cardNames].some((each) => each != null && plain(each).includes(needle))
+}
+
+/** `tiles` (already filtered and sorted) split into the grid and the fold of
+ *  decks under `FOLD_MIN_MATCHES` finished matches, each keeping only the
+ *  tiles that match `query`. When every tile of `tiles` would fold, nothing
+ *  folds, whatever the query: the answer does not change as the viewer types. */
+export function splitFold(tiles: DecksTile[], query: string): { main: DecksTile[]; folded: DecksTile[] } {
+  const matching = tiles.filter((tile) => tileMatches(tile, query))
+  const few = (tile: DecksTile) => tile.finished < FOLD_MIN_MATCHES
+  if (tiles.every(few)) return { main: matching, folded: [] }
+  return { main: matching.filter((tile) => !few(tile)), folded: matching.filter(few) }
 }
