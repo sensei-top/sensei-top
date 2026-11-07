@@ -265,6 +265,7 @@ export function CurrentMatchView() {
           <EmptyState
             icon={placeById('live').icon}
             title={t('live.empty.title')}
+            level={2}
             message={t('live.empty.message')}
           />
         </div>
@@ -282,6 +283,7 @@ export function CurrentMatchView() {
           ) : (
             <EmptyState
               icon={placeById('live').icon}
+              level={2}
               title={t(adviceOff === 'switch' ? 'live.noAdvice.switchTitle' : 'live.noAdvice.eventTitle')}
               message={t(adviceOff === 'switch' ? 'live.noAdvice.switchMessage' : 'live.noAdvice.eventMessage')}
             />

@@ -12,13 +12,17 @@ export function EmptyState({
   title,
   message,
   action,
+  level = 3,
 }: {
   icon?: LucideIcon
   title?: string
   /** The one sentence. */
   message: string
   action?: ReactNode
+  /** The title's heading level: 2 where the page has only an h1 above. */
+  level?: 2 | 3
 }) {
+  const Heading = level === 2 ? 'h2' : 'h3'
   return (
     <div className="flex flex-col items-center gap-2 rounded-card border border-dashed border-edge-strong px-5 py-10 text-center">
       {Icon && (
@@ -26,7 +30,7 @@ export function EmptyState({
           <Icon size={22} strokeWidth={1.75} aria-hidden />
         </span>
       )}
-      {title && <h3 className="font-display text-title text-ink">{title}</h3>}
+      {title && <Heading className="font-display text-title text-ink">{title}</Heading>}
       <p className="max-w-prose text-body text-muted">{message}</p>
       {action && <div className="mt-2">{action}</div>}
     </div>

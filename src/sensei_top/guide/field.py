@@ -421,6 +421,8 @@ def build_field(
         "SELECT MAX(event_date) FROM meta_event WHERE duplicate_of IS NULL AND format = ?",
         (fmt,),
     ).fetchone()[0]
+    # Some sources store a timestamp; the card and the markdown show a day.
+    latest = latest[:10] if latest else latest
 
     return FieldEvidence(
         fmt=fmt,

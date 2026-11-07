@@ -185,6 +185,33 @@ def test_a_modern_decks_guide_reads_modern_resets_and_field(conn):
     assert FORMAT_UNKNOWN_GAP not in guide.gaps
 
 
+def test_a_timestamp_event_date_reaches_the_guide_as_a_day(conn):
+    """``meta_event.event_date`` is sometimes an ISO timestamp; the guide's
+    ``corpus_latest_event`` is the day alone."""
+    _two_formats_with_one_ban_each(conn)
+    conn.execute(
+        "UPDATE meta_event SET event_date = '2026-07-20T18:30:00Z' WHERE event_id = 'mod2'"
+    )
+    conn.execute(
+        "INSERT INTO decks (deck_id, name, format, cards_json, first_seen, last_seen) "
+        "VALUES ('dek1', 'My Deck', NULL, ?, 't', 't')",
+        (json.dumps({"maindeck": [10], "sideboard": []}),),
+    )
+    conn.execute(
+        "INSERT INTO matches (match_id, started_at, ended_at, result, games_won, games_lost, "
+        "source) VALUES ('mt1', '2026-06-15T00:00:00', 't', 'win', 2, 0, 'mtgo')"
+    )
+    conn.execute(
+        "INSERT INTO mtgo_match_pick (match_id, deck_id, format) VALUES ('mt1', 'dek1', 'Modern')"
+    )
+    conn.commit()
+
+    guide = build_deck_guide(conn, "deck:dek1")
+
+    assert guide.field.fmt == "Modern"
+    assert guide.field.corpus_latest_event == "2026-07-20"
+
+
 def test_a_deck_with_no_format_gets_no_field_and_the_format_unknown_note(conn):
     """A Draft deck whose match the log names no format for: ``identity_format``
     gives NULL, so the guide carries no reset, no field and no list diff, and

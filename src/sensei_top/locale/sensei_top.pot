@@ -1128,9 +1128,8 @@ msgstr ""
 
 #: sensei_top/review/analyzers/resources.py
 msgid ""
-"This is the last turn this reader captured, which may not be the literal "
-"final turn of the game — a trailing turn can go unrecorded (see the "
-"projector's own flush_trailing)."
+"This is the last turn the log recorded, which may not be the game's final "
+"turn: a turn at the very end can go unrecorded."
 msgstr ""
 
 #: sensei_top/review/match_report.py
