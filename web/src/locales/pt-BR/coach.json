@@ -136,5 +136,13 @@
     "noneDecisive": "Nenhum deles grave",
     "decisive_one": "{{n}} deles grave",
     "decisive_other": "{{n}} deles graves"
-  }
+  },
+  "stage": {
+    "label": "Progresso",
+    "matches": "Lendo suas partidas",
+    "matchesCount": "Lendo suas partidas · {{done}} de {{total}}",
+    "field": "Lendo o meta",
+    "together": "Montando o relatório"
+  },
+  "reading": "Montando o relatório…"
 }

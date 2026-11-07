@@ -10,6 +10,7 @@ import { chosenVersion } from '../lib/deckOverview'
 import { deckLine, deckRedirect, fieldNameLine, newestVersion, resolveDeck } from '../lib/decks'
 import { useNow } from '../lib/time'
 import { DeckOverviewFrames, STAT_TILE_BLOCK } from '../views/DeckOverviewView'
+import { GuidePending } from '../views/GuideView'
 import { MatchupsFrames } from '../views/MatchupsView'
 import { PairingOutline } from '../views/PairingView'
 
@@ -110,6 +111,9 @@ function BodyFrames({ deckKey, deckIds }: { deckKey: string | null; deckIds: str
         brief={ai && deckKey != null && <ai.PairingBrief deckKey={deckKey} opponentKey={opponent} />}
       />
     )
+  }
+  if (after[0] === 'guide' && after.length === 1) {
+    return <GuidePending deckKey={deckKey ?? undefined} />
   }
   return <OutlineCard words={t('decks.reading')} height="h-64" />
 }

@@ -321,7 +321,15 @@
       "noChanges": "Nenhuma troca de cards.",
       "plansSubtitle": "O que entra e o que sai contra cada arquétipo, do segundo jogo em diante.",
       "checked": "Encontrado ao conferir os planos"
-    }
+    },
+    "stage": {
+      "label": "Progresso",
+      "matches": "Lendo suas partidas",
+      "matchesCount": "Lendo suas partidas · {{done}} de {{total}}",
+      "field": "Lendo o meta",
+      "together": "Montando o guia"
+    },
+    "reading": "Montando o guia…"
   },
   "leak": {
     "category": {

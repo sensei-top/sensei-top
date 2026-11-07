@@ -1,9 +1,10 @@
 import { Fragment, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useGuide, useGuideNarrative } from '../api'
+import { guideQueryKey, useGuide, useGuideNarrative } from '../api'
 import { useAi } from '../ai/registry'
-import { ErrorNote, Loading } from '../components/ui'
+import { ErrorNote, OutlineCard } from '../components/ui'
+import { StageProgress } from '../components/StageProgress'
 import { MatchupCoverageCard } from '../components/MatchupCoverageCard'
 import { ScopeCard } from '../components/guide/ScopeCard'
 import { YourPlayCard } from '../components/guide/PlayCard'
@@ -18,6 +19,7 @@ import {
 import { SectionNav } from '../components/guide/SectionNav'
 import { guideSections } from '../lib/guide'
 import { useScrollSpy } from '../lib/scrollSpy'
+import { GUIDE_PAGE, stageRows, useStageProgress } from '../lib/stageProgress'
 
 /** What a section clears when a link brings it to the top, plus 16 px:
  *  under 48rem the shell's sticky header and the strip under it, from
@@ -34,6 +36,52 @@ import { useScrollSpy } from '../lib/scrollSpy'
  *  important. */
 const SECTION_CLASS =
   'scroll-mt-[calc(var(--guide-header,0px)_+_var(--guide-strip,0px)_+_16px)] md:scroll-mt-[calc(var(--guide-strip,0px)_+_16px)] lg:scroll-mt-6 outline-none!'
+
+/** The guide's pending cards, in the order and at the sizes the loaded page
+ *  draws them: the scope card, the slot of the written guide's callout (the
+ *  empty-state card's size), then the sections. The first frame holds the
+ *  page's one status: the server's stages once there are some, else the
+ *  line of words. Drawn by the page and, while the deck layout itself is
+ *  pending (the deck's identities or versions), by the layout. */
+export function GuideFrames({ deckKey }: { deckKey: string | undefined }) {
+  const { t } = useTranslation()
+  const ai = useAi()
+  const rows = stageRows(useStageProgress(guideQueryKey(deckKey), true), 'guide', t)
+  return (
+    <>
+      <OutlineCard label={t('decks.guide.scope.title')} words={t('decks.guide.reading')} height="h-42">
+        {rows && <StageProgress page={GUIDE_PAGE} rows={rows} />}
+      </OutlineCard>
+      {ai && <OutlineCard height="h-18" />}
+      <OutlineCard label={t('decks.guide.play.title')} height="h-96" />
+      <OutlineCard label={t('decks.guide.list.title')} height="h-96" />
+      <OutlineCard label={t('decks.guide.field.title')} height="h-96" />
+      <OutlineCard label={t(ai ? 'matchups.coverage.title' : 'matchups.coverage.fieldTitle')} height="h-64" />
+      {ai && <OutlineCard height="h-48" />}
+    </>
+  )
+}
+
+/** The guide's whole pending page: the grid the loaded page uses, the
+ *  section links beside the frames (the sections that always exist), and
+ *  `GuideFrames`. One component for the page and for the deck layout, so
+ *  nothing moves when the page takes over from the layout. */
+export function GuidePending({ deckKey }: { deckKey: string | undefined }) {
+  const { t } = useTranslation()
+  const ai = useAi()
+  const sections = useMemo(
+    () => guideSections({ written: false, plans: false, checklist: false, write: ai !== null }, t),
+    [ai, t],
+  )
+  return (
+    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-6">
+      <SectionNav sections={sections} activeId={sections[0].id} />
+      <div className="mt-6 min-w-0 space-y-6 lg:col-start-1 lg:row-start-1 lg:mt-0">
+        <GuideFrames deckKey={deckKey} />
+      </div>
+    </div>
+  )
+}
 
 /** A deck's guide: what its recorded games and the freshest tournament
  *  lists say about it, built again on every read rather than written by
@@ -73,7 +121,7 @@ export function GuideView({ deckKey }: { deckKey: string }) {
   const guideReady = !guide.isPending && !guide.error && guide.data != null
   const activeSection = useScrollSpy(sectionIds, guideReady)
 
-  if (guide.isPending) return <Loading />
+  if (guide.isPending) return <GuidePending deckKey={deckKey} />
   if (guide.error) return <ErrorNote error={guide.error} />
 
   const content: Record<string, ReactNode> = {
@@ -96,7 +144,7 @@ export function GuideView({ deckKey }: { deckKey: string }) {
     // stretches every item to the tallest one's height by default, which
     // silently defeats `position: sticky` (its box would already span the
     // whole scroll range, leaving nothing to stick).
-    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-6">
+    <div className="arrive lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-6">
       <SectionNav sections={sections} activeId={activeSection} />
       <div className="mt-6 min-w-0 space-y-6 lg:col-start-1 lg:row-start-1 lg:mt-0">
         {sections.map((section) => (

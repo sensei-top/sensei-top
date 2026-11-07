@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { withProgress } from '../lib/stageProgress'
 import {
   formatParams,
   get,
@@ -22,6 +23,8 @@ import {
   type RcqGuideOut,
 } from '../api'
 
+export const coachQueryKey = (format?: string) => ['coach', format ?? null] as const
+
 /** The coach tab's free, local evidence bundle — population, by-deck/role/
  *  mulligan/opponent rollups, leaks, turning points and the field, plus
  *  every report ever written. Deck-independent (no `deckId` in the key):
@@ -32,8 +35,11 @@ import {
  *  empty flash. */
 export const useCoach = (format?: string, enabled = true) =>
   useQuery({
-    queryKey: ['coach', format ?? null],
-    queryFn: () => get<CoachResponse>('/api/coach', formatParams(format)),
+    queryKey: coachQueryKey(format),
+    queryFn: () =>
+      withProgress(coachQueryKey(format), (progress) =>
+        get<CoachResponse>('/api/coach', { ...formatParams(format), progress }),
+      ),
     enabled,
   })
 
@@ -52,15 +58,21 @@ export const useAnyCoach = () => {
     : { isPending: fetched.isPending, error: fetched.error, data: fetched.data }
 }
 
+export const coachNarrativeQueryKey = (format?: string) => ['coach-narrative', format ?? null] as const
+
 /** The latest coach report, the prompt to write the next one from, and
  *  whether the evidence has drifted since it was written. A separate query
  *  from `useCoach` (neither `enabled`-gates the other), so the two ~7.5s
  *  evidence rebuilds happen in parallel over the network instead of one
- *  waiting on the other. */
+ *  waiting on the other. Every fetch of both passes a fresh
+ *  `?progress=` (`withProgress`), which the stage poll reads. */
 export const useCoachNarrative = (format?: string, enabled = true) =>
   useQuery({
-    queryKey: ['coach-narrative', format ?? null],
-    queryFn: () => get<CoachNarrativeResponse>('/api/coach/narrative', formatParams(format)),
+    queryKey: coachNarrativeQueryKey(format),
+    queryFn: () =>
+      withProgress(coachNarrativeQueryKey(format), (progress) =>
+        get<CoachNarrativeResponse>('/api/coach/narrative', { ...formatParams(format), progress }),
+      ),
     enabled,
   })
 

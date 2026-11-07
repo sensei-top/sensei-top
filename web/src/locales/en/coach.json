@@ -136,5 +136,13 @@
     "noneDecisive": "None of them major",
     "decisive_one": "{{n}} of them major",
     "decisive_other": "{{n}} of them major"
-  }
+  },
+  "stage": {
+    "label": "Progress",
+    "matches": "Reading your matches",
+    "matchesCount": "Reading your matches · {{done}} of {{total}}",
+    "field": "Reading the field",
+    "together": "Putting the report together"
+  },
+  "reading": "Putting the report together…"
 }

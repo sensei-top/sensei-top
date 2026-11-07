@@ -103,6 +103,14 @@
     "staleDefault": "The evidence has changed since."
   },
   "guide": {
+    "reading": "Putting the guide together…",
+    "stage": {
+      "label": "Progress",
+      "matches": "Reading your matches",
+      "matchesCount": "Reading your matches · {{done}} of {{total}}",
+      "field": "Reading the field",
+      "together": "Putting the guide together"
+    },
     "sectionsNav": "Guide sections",
     "problemOrphan": "{{archetype}}: {{message}}",
     "sections": {

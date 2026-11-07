@@ -10,6 +10,7 @@ import {
 import { useMemo } from 'react'
 import { apiLanguage } from './i18n'
 import { versionsInOrder } from './lib/deckOverview'
+import { withProgress } from './lib/stageProgress'
 import { fieldRecordsByKey, type FieldRecord } from './lib/matchups'
 import type { RcqInputs } from './lib/rcq'
 import type { components } from './types/api'
@@ -72,6 +73,7 @@ export type MetaCardGroup = components['schemas']['MetaCardGroup']
 export type MetaCard = components['schemas']['MetaCard']
 export type MetaSourceHold = components['schemas']['MetaSourceHold']
 export type DeckIdentityOut = components['schemas']['DeckIdentityOut']
+export type ProgressOut = components['schemas']['ProgressOut']
 export type DeckGuideOut = components['schemas']['DeckGuideOut']
 export type CardVerdictOut = components['schemas']['CardVerdictOut']
 export type ListDiffOut = components['schemas']['ListDiffOut']
@@ -403,12 +405,18 @@ export function useDeckVersions(deckKey: string, fallback: string[]): { deckIds:
   return { deckIds, versions }
 }
 
+export const guideQueryKey = (key: string | undefined) => ['guide', key] as const
+
 /** One deck's whole evidence bundle. Free and local, so an ordinary query on
- *  the heartbeat like the match report and the leak finder. */
+ *  the heartbeat like the match report and the leak finder. Every fetch
+ *  passes a fresh `?progress=` (`withProgress`), which the stage poll reads. */
 export const useGuide = (key: string | undefined) =>
   useQuery({
-    queryKey: ['guide', key],
-    queryFn: () => get<DeckGuideOut>(`/api/guide/${encodeURIComponent(key ?? '')}`),
+    queryKey: guideQueryKey(key),
+    queryFn: () =>
+      withProgress(guideQueryKey(key), (progress) =>
+        get<DeckGuideOut>(`/api/guide/${encodeURIComponent(key ?? '')}`, { progress }),
+      ),
     enabled: Boolean(key),
   })
 
