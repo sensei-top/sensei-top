@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DeleteFailure } from './accountLogic'
-import { Button, Dialog } from '../ui'
+import { Button, Dialog, MoreAbout } from '../ui'
 
 /** A dialog of the account's, one question: Cancel first in the source (the
  *  dialog focuses it) and the primary button, the confirm second. While the
@@ -130,9 +130,11 @@ export function ErrorsDialog({
       onCancel={onCancel}
       onConfirm={onConfirm}
     >
-      <p>{t('account.welcome.transfer.law')}</p>
-      <p>{t('account.welcome.transfer.ip')}</p>
       <p>{t('account.errorsDialog.withdraw')}</p>
+      <MoreAbout>
+        <p>{t('account.welcome.transfer.law')}</p>
+        <p>{t('account.welcome.transfer.ip')}</p>
+      </MoreAbout>
     </QuestionDialog>
   )
 }

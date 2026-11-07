@@ -27,10 +27,10 @@
     },
     "transfer": {
       "title": "Enviar relatórios de erro para os Estados Unidos",
-      "law": "Os relatórios saem do Brasil para os Estados Unidos, que não têm uma lei de proteção de dados como a LGPD. As autoridades de lá podem conseguir acessá-los com base na lei dos Estados Unidos, e pode ser mais difícil fazer valer seus direitos lá.",
+      "law": "Os relatórios vão para os Estados Unidos, que não têm uma lei de proteção de dados como a LGPD. As autoridades de lá podem conseguir acessá-los com base na lei dos Estados Unidos, e pode ser mais difícil fazer valer seus direitos lá.",
       "ip": "O Sentry não guarda seu endereço IP, mas antes deduz dele uma localização aproximada.",
-      "agree": "Concordo que os meus relatórios de erro sejam enviados ao Sentry, nos Estados Unidos.",
-      "withdraw": "Sem isso, nada é enviado automaticamente. Você pode revogar a qualquer momento, desligando os relatórios de erro."
+      "agree": "Concordo que os relatórios de erro, e os que eu enviar por conta própria, sejam enviados ao Sentry, nos Estados Unidos.",
+      "withdraw": "Sem isso, nada é enviado automaticamente, e cada relatório que você envia por conta própria pergunta antes. Você pode revogar a qualquer momento, desligando os relatórios de erro."
     },
     "coach": {
       "title": "Guardar meu histórico do treinador",
@@ -95,11 +95,11 @@
     "retryFailed": "Ainda não foi possível lê-las. Tente de novo daqui a pouco.",
     "backup": {
       "label": "Fazer backup do meu histórico de partidas",
-      "description": "Envia um resumo de cada partida, para seu histórico sobreviver a uma reinstalação e chegar aos seus outros PCs. Fica guardado no Brasil até você apagá-lo."
+      "description": "Envia um resumo de cada partida, para seu histórico sobreviver a uma reinstalação e chegar aos seus outros PCs. Fica guardado até você apagá-lo."
     },
     "errors": {
       "label": "Enviar relatórios de erro",
-      "description": "Envia um relatório ao Sentry, nos Estados Unidos, quando algo dá errado. Guardado por 30 dias. Relatar um problema funciona de qualquer jeito."
+      "description": "Envia um relatório ao Sentry, nos Estados Unidos, quando algo dá errado. Guardado por 30 dias. Com ele ligado, os relatórios que você envia por conta própria não perguntam antes."
     },
     "coach": {
       "label": "Guardar meu histórico do treinador",
@@ -173,9 +173,12 @@
     "failed": "Sua conta não foi apagada, e nada mudou. Tente de novo.",
     "done": "Sua conta foi apagada."
   },
+  "policyChanges": {
+    "2026-11-07": "seu sim aos relatórios de erro agora também vale para os relatórios que você envia por conta própria, e um relatório diz de qual página veio."
+  },
   "errorsDialog": {
     "title": "Enviar relatórios de erro para os Estados Unidos?",
-    "withdraw": "Você pode revogar isso a qualquer momento, desligando os relatórios de erro.",
+    "withdraw": "Isso também vale para os relatórios que você envia por conta própria, que deixam de perguntar antes. Você pode revogar isso a qualquer momento, desligando os relatórios de erro.",
     "confirm": "Concordar e enviar relatórios"
   }
 }

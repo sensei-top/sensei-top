@@ -301,8 +301,6 @@ function Questions({ open }: { open: Opening }) {
               {draft.errors === true && (
                 <section aria-labelledby={transferId} className="max-w-prose space-y-2 rounded-block bg-surface2 p-4 text-body text-ink2">
                   <h3 id={transferId} className="font-medium text-ink">{t('account.welcome.transfer.title')}</h3>
-                  <p>{t('account.welcome.transfer.law')}</p>
-                  <p>{t('account.welcome.transfer.ip')}</p>
                   <label className="flex items-start gap-3 text-ink">
                     <input
                       type="checkbox"
@@ -314,6 +312,10 @@ function Questions({ open }: { open: Opening }) {
                     <span>{t('account.welcome.transfer.agree')}</span>
                   </label>
                   <p className="text-caption text-muted">{t('account.welcome.transfer.withdraw')}</p>
+                  <MoreAbout>
+                    <p>{t('account.welcome.transfer.law')}</p>
+                    <p>{t('account.welcome.transfer.ip')}</p>
+                  </MoreAbout>
                 </section>
               )}
             </>
