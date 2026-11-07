@@ -70,7 +70,10 @@
     "wonInTournaments_one": "vencidos em torneios, {{n}} participação",
     "wonInTournaments_other": "vencidos em torneios, {{n}} participações",
     "wonInTournamentsThin_one": "vencidos em torneios, {{n}} participação, poucas para confiar",
-    "wonInTournamentsThin_other": "vencidos em torneios, {{n}} participações, poucas para confiar"
+    "wonInTournamentsThin_other": "vencidos em torneios, {{n}} participações, poucas para confiar",
+    "pastBoarding": {
+      "title": "O que você trocou antes"
+    }
   },
   "brief": {
     "title": "Briefing do matchup",

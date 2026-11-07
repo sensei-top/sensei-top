@@ -1,10 +1,11 @@
 import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } from '../api'
+import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage, usePastBoarding } from '../api'
 import { useAi } from '../ai/registry'
+import { PastBoardingList } from '../components/PastBoardingList'
 import { DeckMatchesCard } from '../components/DeckMatchesCard'
 import { VersionSwitcher } from '../components/VersionSwitcher'
-import { BackLink, Button, EmptyState, ErrorNote, ManaPips, OutlineCard, PAIRING_TILE_BLOCK, Skeleton, STAT_TILE_BLOCK, StatTile } from '../components/ui'
+import { BackLink, Button, Card, EmptyState, ErrorNote, ManaPips, OutlineCard, PAIRING_TILE_BLOCK, Skeleton, STAT_TILE_BLOCK, StatTile } from '../components/ui'
 import { coverageName } from '../lib/brief'
 import { deckAddress } from '../lib/decks'
 import { archetypeKeyOf, matchupRowOver } from '../lib/matchups'
@@ -112,7 +113,11 @@ export function PairingOutline({
  *  and the format, so a change of version keeps the switcher's `<select>`,
  *  and the focus on it; only the Matches card is keyed on the version, so
  *  its rows start again at ten. The brief is the deck's, not a version's,
- *  and is not keyed on it. */
+ *  and is not keyed on it. Last, below the Matches card, comes what the
+ *  deck boarded in its last matches against the archetype
+ *  (`PastBoardingList`), read by the deck's whole identity whatever version
+ *  or format the address chose; it draws nothing while pending or when the
+ *  answer is empty, so its arrival moves nothing above it. */
 export function PairingView({
   deckKey,
   versionIds,
@@ -131,6 +136,7 @@ export function PairingView({
   const { deckIds, versions } = useDeckVersions(deckKey, versionIds)
   const matches = useDeckMatches(versionIds)
   const now = useNow()
+  const pastBoarding = usePastBoarding(deckKey, archetypeKeyOf(opponentKey))
   // The days move with the minute, not with every second's re-render.
   const minute = Math.floor(now / MINUTE) * MINUTE
 
@@ -240,6 +246,16 @@ export function PairingView({
       {body}
       {ai && <ai.PairingBrief deckKey={deckKey} opponentKey={opponentKey} />}
       {matchesCard}
+      {pastBoarding.error ? (
+        <ErrorNote error={pastBoarding.error} />
+      ) : (
+        pastBoarding.data &&
+        pastBoarding.data.length > 0 && (
+          <Card title={t('matchups.pairing.pastBoarding.title')}>
+            <PastBoardingList entries={pastBoarding.data} />
+          </Card>
+        )
+      )}
     </div>
   )
 }

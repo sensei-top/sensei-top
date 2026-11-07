@@ -1,20 +1,14 @@
 import { useTranslation } from 'react-i18next'
-import type {
-  CurrentMatch,
-  IntermissionOut,
-  PastBoardingCardOut,
-  PastBoardingGameOut,
-  PastBoardingOut,
-} from '../api'
+import type { CurrentMatch, IntermissionOut } from '../api'
 import type { TFunction } from '../i18n'
 import { seenOpponentCards } from '../lib/brief'
-import { cardName } from '../lib/cards'
 import { railAlternatives } from '../lib/livePanels'
 import { confidenceLabel } from '../lib/opponent'
 import { useAi } from '../ai/registry'
-import { formatList, formatPercent } from '../lib/format'
+import { formatPercent } from '../lib/format'
 import { rateAndRecordLine } from '../lib/sample'
-import { Card, Chip, Disclosure, EmptyState, Prose, SectionLabel } from './ui'
+import { PastBoardingList } from './PastBoardingList'
+import { Card, Chip, Disclosure, EmptyState, Prose } from './ui'
 
 /** Arena's own `ResultReason_*` spelling, humanised the same way for every
  *  value it sends — the fixture only shows `ResultReason_Concede`
@@ -41,87 +35,6 @@ function headline(intermission: IntermissionOut, t: TFunction): string {
   return reason
     ? t('matchups.sideboard.headline.lostReason', { game, reason })
     : t('matchups.sideboard.headline.lost', { game })
-}
-
-function resultWord(result: string | null | undefined, t: TFunction): string {
-  switch (result) {
-    case undefined:
-    case null:
-    case '':
-      return t('matchups.sideboard.result.unresolved')
-    case 'win':
-      return t('matchups.sideboard.result.win')
-    case 'loss':
-      return t('matchups.sideboard.result.loss')
-    case 'draw':
-      return t('matchups.sideboard.result.draw')
-    default:
-      return result
-  }
-}
-
-/** Never a bare grpId (`lib/cards.ts`'s rule, applied to the differently
- *  named `card` field `PastBoardingCardOut` carries instead of
- *  `card_name`) — plus a dagger flag for a card since cut from the current
- *  75, never dropped (rule 4). */
-function pastCardLabel(c: PastBoardingCardOut, t: TFunction): string {
-  const name = cardName({ card_name: c.card, grp_id: c.grp_id }, t)
-  return c.in_current_75 ? name : `${name}†`
-}
-
-function formatDelta(g: PastBoardingGameOut, t: TFunction): string {
-  const out = formatList(g.board_out.map((c) => `−${c.n} ${pastCardLabel(c, t)}`), { type: 'unit' })
-  const inn = formatList(g.board_in.map((c) => `+${c.n} ${pastCardLabel(c, t)}`), { type: 'unit' })
-  return [out, inn].filter(Boolean).join(' ')
-}
-
-/** One compact line per prior match: the boarding delta (deduplicated when
- *  a later game's board didn't change from the one before it — the common
- *  case, since most Bo3s only reboard once) followed by every game's own
- *  result. */
-function pastBoardingLine(entry: PastBoardingOut, t: TFunction): string {
-  const deltas: string[] = []
-  let last = ''
-  for (const g of entry.games) {
-    const d = formatDelta(g, t)
-    if (d && d !== last) {
-      deltas.push(d)
-      last = d
-    }
-  }
-  const results = formatList(
-    entry.games.map((g) => t('matchups.sideboard.gameResult', { n: g.game_number, result: resultWord(g.result, t) })),
-    { type: 'unit' },
-  )
-  return [deltas.join('; '), results].filter(Boolean).join(' · ')
-}
-
-function hasCutCard(entries: PastBoardingOut[]): boolean {
-  return entries.some((e) =>
-    e.games.some((g) => [...g.board_in, ...g.board_out].some((c) => !c.in_current_75))
-  )
-}
-
-/** "What you boarded last time" — never advice, just a fact from
- *  ``game_decks``. Shown under a written plan when there is one
- *  (``plan_basis === 'exact'``); it *is* the primary content, above any
- *  closest-match plan, when there is not (S4/S8). */
-function PastBoardingList({ entries, label }: { entries: PastBoardingOut[]; label: string }) {
-  const { t } = useTranslation()
-  if (entries.length === 0) return null
-  return (
-    <div>
-      <SectionLabel as="h4">{t('matchups.sideboard.lastTime', { label })}</SectionLabel>
-      <ul className="mt-1 space-y-1 text-caption text-ink2">
-        {entries.map((entry) => (
-          <li key={entry.match_id}>{pastBoardingLine(entry, t)}</li>
-        ))}
-      </ul>
-      <p className="mt-1 text-caption text-muted">
-        {hasCutCard(entries) ? t('matchups.sideboard.pastNoteCut') : t('matchups.sideboard.pastNote')}
-      </p>
-    </div>
-  )
 }
 
 /** Which archetype `past_boarding` is measured against: the opponent's own
@@ -176,7 +89,10 @@ export function SideboardPlanCard({
   const pastBoardingEntries = intermission.past_boarding ?? []
   const pastBoarding =
     pastBoardingEntries.length > 0 ? (
-      <PastBoardingList entries={pastBoardingEntries} label={pastBoardingLabel(intermission, t)} />
+      <PastBoardingList
+        entries={pastBoardingEntries}
+        heading={t('matchups.sideboard.lastTime', { label: pastBoardingLabel(intermission, t) })}
+      />
     ) : null
 
   if (!ai || (!intermission.plan && !intermission.prompt)) {

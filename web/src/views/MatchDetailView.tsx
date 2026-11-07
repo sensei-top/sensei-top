@@ -1,10 +1,22 @@
 import { useTranslation } from 'react-i18next'
-import { useMatchDetail, useMatchReport } from '../api'
+import { useDeckMatches, useGuideCoverage, useGuideDecks, useMatchDetail, useMatchReport, type MatchDetail } from '../api'
+import { useAi } from '../ai/registry'
 import { MatchReportPanel } from '../components/MatchReportPanel'
 import { MatchHero } from '../components/match/MatchHero'
 import { MtgoDeckPick } from '../components/match/MtgoDeckPick'
-import { BackLink, ErrorNote, OutlineCard } from '../components/ui'
-import { castCards } from '../lib/matchArt'
+import { BackLink, Button, Card, ErrorNote, OutlineCard } from '../components/ui'
+import { coverageName } from '../lib/brief'
+import { formatRecord } from '../lib/format'
+import { matchupRowOver } from '../lib/matchups'
+import { opponentLabelText } from '../lib/opponent'
+import {
+  againstLink,
+  briefWritten,
+  coverageRowOf,
+  pairingAddress,
+  pairingHeading,
+  pairingMatches,
+} from '../lib/pairing'
 
 /** The way back to the list: a link, so Back in the browser does the same
  *  and lands where the list was left. */
@@ -34,11 +46,52 @@ function DetailOutline() {
   )
 }
 
-/** `/matches/:id`: the match's report. The hero, then the report itself;
- *  the games turn by turn are on the replay's own page. An MTGO match has
- *  its deck's pick between the two. The hero's title
- *  is the report's headline once the report has one and anything to say,
- *  and the result and the games' count from the match until then. */
+/** A lost match's way to its matchup: the opponent's archetype, this deck's
+ *  record against it and, with AI features on, whether its brief is
+ *  written, over a button to the pairing page. Nothing unless the match was
+ *  lost to a named archetype with a deck that resolves (`againstLink`);
+ *  each line is left out while its data is unread or when it has none. */
+function AgainstCard({ match }: { match: MatchDetail }) {
+  const { t } = useTranslation()
+  const ai = useAi()
+  const identities = useGuideDecks()
+  const link = identities.data ? againstLink(match, identities.data) : null
+  const identity = link ? identities.data?.find((i) => i.key === link.deckKey) : undefined
+  const matches = useDeckMatches(identity?.deck_ids ?? [])
+  const coverage = useGuideCoverage(link?.deckKey)
+  if (!link) return null
+
+  const against = matches.data ? pairingMatches(link.opponentKey, matches.data, link.format) : []
+  const row = matchupRowOver(against)
+  const coverageRow = coverage.data ? coverageRowOf(link.opponentKey, coverage.data) : null
+  const label = coverageRow && coverage.data ? coverageName(coverageRow, coverage.data.rows) : null
+  // The hero's own name for the opponent, so the title does not change as
+  // the matches load; the heading's only for a match with no label.
+  const name = match.opponent_label
+    ? opponentLabelText(match.opponent_label, match.opponent_colors)
+    : pairingHeading(link.opponentKey, against, label, t).name
+  const written = ai && coverageRow ? briefWritten(coverageRow) : null
+
+  return (
+    <Card title={t('matches.report.against.title', { archetype: name })}>
+      <div className="space-y-3">
+        <div className="space-y-1 text-body text-ink2">
+          {row && <p>{t('matches.report.against.record', { record: formatRecord(row.won, row.lost) })}</p>}
+          {written != null && (
+            <p>{written ? t('matches.report.against.briefWritten') : t('matches.report.against.briefMissing')}</p>
+          )}
+        </div>
+        <Button href={pairingAddress(link.deckKey, link.opponentKey, link.format)}>{t('matches.report.against.open')}</Button>
+      </div>
+    </Card>
+  )
+}
+
+/** `/matches/:id`: the match's report, top to bottom: the hero, an MTGO
+ *  match's deck pick, `AgainstCard` for a loss, then the report itself; the
+ *  games turn by turn are on the replay's own page. The hero's title is the
+ *  report's headline once the report has one and anything to say, and the
+ *  result and the games' count from the match until then. */
 export function MatchDetailView({ matchId }: { matchId: string }) {
   const detail = useMatchDetail(matchId)
   const report = useMatchReport(matchId)
@@ -58,9 +111,6 @@ export function MatchDetailView({ matchId }: { matchId: string }) {
   const hasSomething = data != null && (data.findings.length > 0 || data.gaps.length > 0)
   const headline = hasSomething && data.summary.headline.trim() ? data.summary.headline : null
   const subhead = headline != null ? (data?.summary.subhead ?? null) : null
-  // One card on the page: the last the opponent turned to, or the
-  // viewer's when the opponent cast nothing.
-  const art = castCards(match, 'opponent')[0] ?? castCards(match, 'self')[0] ?? null
 
   return (
     <div className="arrive space-y-6">
@@ -69,10 +119,10 @@ export function MatchDetailView({ matchId }: { matchId: string }) {
         match={match}
         headline={headline}
         subhead={subhead}
-        art={art}
         replayHref={`/matches/${encodeURIComponent(match.match_id)}/replay`}
       />
       {match.source === 'mtgo' && <MtgoDeckPick matchId={match.match_id} />}
+      <AgainstCard match={match} />
       <MatchReportPanel matchId={match.match_id} />
     </div>
   )

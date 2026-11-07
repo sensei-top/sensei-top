@@ -710,8 +710,8 @@ simply absent.
 ## The match report
 
 `/matches/:id` is the report: `MatchDetailView` draws the way back to
-the list, the hero, and `MatchReportPanel`
-(`components/MatchReportPanel.tsx`), which renders
+the list, the hero, an MTGO match's deck pick, `AgainstCard` and
+`MatchReportPanel` (`components/MatchReportPanel.tsx`), which renders
 `GET /api/matches/{id}/report`. The games turn by turn are on the
 replay's page, one address further. AGENTS.md rule 5 and
 `docs/review.md`, "The match report, and its optional narrative",
@@ -732,6 +732,21 @@ decks: the viewer's as `MatchRow` writes it, the opponent's as
 that leads to the replay. Until the report has arrived, or when it has
 nothing to say, the title is the result and the games' count from the
 match itself.
+
+**Against <archetype>** (`AgainstCard`, in `MatchDetailView`) is a card
+between the hero (and an MTGO match's pick) and the report, drawn only for
+a lost match whose opponent is a named archetype and whose deck resolves to
+an identity (`againstLink`, `lib/pairing.ts`); any other match has none.
+Its title names the archetype as the hero does (`opponentLabelText` over
+the match's `opponent_label`, so the raw key never shows and the title does
+not change as the matches load; only a match with no label falls back to
+the pairing's heading). Under it, this deck's record against the archetype
+from the same row the pairing page reads (`pairingMatches` over the
+identity's versions, in the match's format, then `matchupRowOver`), left
+out while unread or when no match against it has finished; and, with AI
+features on, whether its matchup brief is written (`briefWritten`, from
+coverage's row; nothing for a status that says neither). A button leads to
+the pairing (`pairingAddress`).
 
 **The games** (`components/match/GameCard.tsx`): one `Card` per game of
 `summary.games` (`review/summary.py`, `docs/review.md`), in game order,
@@ -834,8 +849,10 @@ address, since nothing is saved until Continue on the last one. A step
 shows a lead line and its control; what is kept, where and for how long
 sits under the control in a collapsed "More about this" `Disclosure` (where
 the account itself is kept opens the first step's), never what a choice
-costs: the transfer box and the line that a sent game can't be deleted stay
-in view. *first*
+costs: the transfer box's agree and withdraw lines and the line that a sent
+game can't be deleted (`account.welcome.contribute.final`) stay in view,
+while its law and IP lines fold inside the box under "More about this"; the
+error-reports dialog does the same, withdraw visible, law and IP folded. *first*
 steps through the age confirmation, then the three choices, none
 pre-ticked: cloud backup and coach history together (`keep`, the two things
 kept at Supabase), then error reports alone, since the transfer box opens
@@ -1089,7 +1106,20 @@ tournament format known for the deck (coverage's `fmt` null,
 `matchups.brief.formatUnknown`), too few tournament lists to write from
 yet, or not written with a "Build the prompt" button. A prompt the route
 answers `format_unknown` or `no_consensus` says the same in the prompt's
-place. Last, the deck's Matches card, this pairing's matches alone.
+place. Then the deck's Matches card, this pairing's matches alone. Last,
+**What you brought in before**: what this deck boarded in its last
+matches against the archetype, drawn by `PastBoardingList`
+(`components/PastBoardingList.tsx`, the list Live's sideboard card also
+draws, there under its own "Last time vs" heading). It is read by the
+deck's whole identity (`usePastBoarding`,
+`GET /api/guide/{key}/past-boarding/{archetype}`), across every version and
+format, whatever `?version=` or `?format=` the address chose. Only an
+`archetype:` pairing asks. While the request is pending the card draws
+nothing and holds no place, which is why it sits last: its arrival moves
+nothing above it. An empty answer (an archetype never faced, or
+MTGO, which has no boarding) draws no card (the request is still made); a
+failed request draws the page's
+`ErrorNote`.
 
 **`MatchRow withDeck={false}`** is what both the Overview's and a
 pairing's Matches card draw (`DeckMatchesCard`, shared by both): the

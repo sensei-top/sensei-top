@@ -157,6 +157,13 @@
     "everyOther": "Every other finding ({{n}})",
     "every": "Every finding ({{n}})",
     "pairing": "This pairing",
+    "against": {
+      "title": "Against {{archetype}}",
+      "record": "With this deck you are {{record}} against it.",
+      "briefWritten": "Its matchup brief is written.",
+      "briefMissing": "No matchup brief for it yet.",
+      "open": "Open the matchup"
+    },
     "gapsTitle": "What this report could not see",
     "gapsSubtitle": "Not evidence that something was wrong, only that this reader could not tell.",
     "showOther_one": "Show the other one",

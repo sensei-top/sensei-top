@@ -6,10 +6,10 @@
  * matches in hand against it as Matchups does, so a pairing reached from a
  * row of a known format has that row's numbers.
  */
-import type { CoverageOut, CoverageRowOut, Match, MatchupBriefOut } from '../api'
+import type { CoverageOut, CoverageRowOut, DeckIdentityOut, Match, MatchupBriefOut } from '../api'
 import type { TFunction } from '../i18n'
 import { mergeNewestFirst } from './deckOverview'
-import { addressSegment, archetypeName, deckAddress } from './decks'
+import { addressSegment, archetypeName, deckAddress, resolveDeck } from './decks'
 import {
   archetypeKeyOf,
   type FieldRecord,
@@ -200,4 +200,34 @@ export function pairingTiles(
         ]
       : []
   return [record, games, ...split, fieldTile(row.key, fieldByKey, t)]
+}
+
+/** Where a match's report links to: the pairing of its deck's identity
+ *  (`deckKey`) against its opponent's archetype (`opponentKey`, in the
+ *  match's `format`). */
+export type AgainstLink = { deckKey: string; opponentKey: string; format: string | null }
+
+/** The link a lost match's report carries to its matchup; `null` unless the
+ *  match was lost, its opponent is a named archetype (`archetypeKeyOf`) and
+ *  its deck resolves to an identity (`resolveDeck`, a version or the key). */
+export function againstLink(
+  match: Pick<Match, 'result' | 'deck_id' | 'opponent_key' | 'format'>,
+  identities: DeckIdentityOut[],
+): AgainstLink | null {
+  if (match.result !== 'loss') return null
+  const opponentKey = match.opponent_key ?? ''
+  if (archetypeKeyOf(opponentKey) == null) return null
+  const resolved = resolveDeck(match.deck_id ?? undefined, identities)
+  if (!resolved) return null
+  return { deckKey: resolved.identity.key, opponentKey, format: match.format ?? null }
+}
+
+/** Whether the brief against the archetype is written, from coverage's row
+ *  for it: `ok` and `stale` hold a stored brief, `missing` none; `null`
+ *  when there is no row or the status is anything else (`no_consensus`
+ *  says a brief cannot be written, not that none is). */
+export function briefWritten(row: CoverageRowOut | null): boolean | null {
+  if (row == null) return null
+  if (row.status === 'ok' || row.status === 'stale') return true
+  return row.status === 'missing' ? false : null
 }

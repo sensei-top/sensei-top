@@ -70,7 +70,10 @@
     "wonInTournaments_one": "won in tournaments, {{n}}\u00a0entry",
     "wonInTournaments_other": "won in tournaments, {{n}}\u00a0entries",
     "wonInTournamentsThin_one": "won in tournaments, {{n}}\u00a0entry, too few to trust",
-    "wonInTournamentsThin_other": "won in tournaments, {{n}}\u00a0entries, too few to trust"
+    "wonInTournamentsThin_other": "won in tournaments, {{n}}\u00a0entries, too few to trust",
+    "pastBoarding": {
+      "title": "What you brought in before"
+    }
   },
   "brief": {
     "title": "Matchup brief",

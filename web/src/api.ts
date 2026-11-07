@@ -393,6 +393,20 @@ export const useLeaks = () =>
 export const useGuideDecks = () =>
   useQuery({ queryKey: ['guide-decks'], queryFn: () => get<DeckIdentityOut[]>('/api/guide/decks') })
 
+/** What this deck's identity (`deckKey`) boarded in its last matches
+ *  against the archetype `archetypeKey`, bare (X of `archetype:X`): empty
+ *  for one never faced, and for MTGO, which has no boarding. Asked only with
+ *  both in hand. */
+export const usePastBoarding = (deckKey: string | undefined, archetypeKey: string | null) =>
+  useQuery({
+    queryKey: ['past-boarding', deckKey, archetypeKey],
+    queryFn: () =>
+      get<PastBoardingOut[]>(
+        `/api/guide/${encodeURIComponent(deckKey ?? '')}/past-boarding/${encodeURIComponent(archetypeKey ?? '')}`,
+      ),
+    enabled: Boolean(deckKey) && archetypeKey != null,
+  })
+
 /** A deck's versions, as a deck's pages find them from its key:
  *  `deckIds`, the identity's `deck_ids` (`fallback` until the identity is
  *  in hand; the layout has read both lists before drawing a page), and

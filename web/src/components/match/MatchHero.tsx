@@ -37,8 +37,6 @@ export function MatchHero({
   /** The report's, or `null` while there is none to show. */
   headline: string | null
   subhead: string | null
-  /** Unused: the card is chosen here (the viewer's cast, else the deck's). */
-  art?: ArtCard | null
   replayHref: string
 }) {
   const { t } = useTranslation()
