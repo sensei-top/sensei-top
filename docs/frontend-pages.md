@@ -719,10 +719,13 @@ say why advice is given after a match and not during one.
 
 **The hero** (`components/match/MatchHero.tsx`) has Home's shape: the
 art at the right with a fade to the left, on top with a fade down under
-48rem, and no word on the picture. The art is a card the opponent cast:
-the one whose first cast came latest in the match, as on Home
-(`castCards`, `lib/matchArt.ts`), or the viewer's own when
-the opponent cast nothing, or none. The words are a label line (the
+48rem, and no word on the picture. The art is a card the viewer cast:
+the one whose first cast came latest in the match (`castCards`,
+`lib/matchArt.ts`), or, when the match cast nothing, the deck identity's
+`art_grp_id` (`resolveDeck` over `useGuideDecks`, read in the hero). While
+the identities load and the match has a deck, the art box is reserved as
+the wash so the hero does not jump; if they resolve to no card the box
+drops and the words take the width. The words are a label line (the
 event in words, when), the report's headline and subhead, then the two
 decks: the viewer's as `MatchRow` writes it, the opponent's as
 `OpponentDeckLabel`, which is the way to correct it. Last, a `Button`
@@ -910,15 +913,20 @@ rate), the format in words with how many versions when there is more
 than one (`tileDetail`), when it was
 last played, and its art: a card the viewer cast in the deck's newest
 finished match of the same 500-match list Home reads, one card per
-page. A deck with no finished match in that list keeps the empty art
-box; nothing more is asked for it. When two or more tiles share a name
-(a rebuilt deck is a second Arena deck, so a second tile), the one played
-most recently carries the "Newest" chip (`newest`) and each other shows
-"played Sep 3 to 14" (`playedRange`, `versionDays`) where "last played"
-would be, keeping "last played" when the list was played on one day only.
-Nothing is folded together. The grid is Home's own: two to a
-row under 48rem, three from there, five from 64rem. With no deck at
-all, "No decks yet".
+page. A deck with no finished match in that list, or whose cast cards are
+all taken, wears its identity's `art_grp_id` (`tileArt`, which takes it
+even when another tile has it); with that null too, the wash. Until the
+matches list and the tile's match detail have arrived the tile shows the
+wash, never the fallback, so no art moves when data arrives. A deck's
+pages (`DeckLayout`) open on a band showing the identity's `art_grp_id`
+at the right, fading left, or the wash when it is null. When two or more
+tiles share a name (a rebuilt deck is a second Arena deck, so a second
+tile), the one played most recently carries the "Newest" chip (`newest`)
+and each other shows "played Sep 3 to 14" (`playedRange`, `versionDays`)
+where "last played" would be, keeping "last played" when the list was
+played on one day only. Nothing is folded together. The grid is Home's
+own: two to a row under 48rem, three from there, five from 64rem. With no
+deck at all, "No decks yet".
 
 Two `Select`s sit above the grid, both kept in the address as
 `useFilters` keeps its own and left out at their defaults. **`?format=`**:

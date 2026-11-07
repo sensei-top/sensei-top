@@ -15,6 +15,7 @@ import {
   newestVersion,
   resolveDeck,
   sortTiles,
+  tileArt,
   tileDetail,
   tileFormats,
 } from './decks'
@@ -449,5 +450,36 @@ describe('sorting and filtering the tiles', () => {
     expect(filterTiles(tiles, null)).toHaveLength(6)
     expect(filterTiles(tiles, '')).toHaveLength(6)
     expect(filterTiles(tiles, 'Modern')).toEqual([])
+  })
+})
+
+describe('tileArt', () => {
+  it('takes the first cast card not yet used, and marks it used', () => {
+    const used = new Set([1])
+    expect(tileArt([{ grpId: 1, name: 'A' }, { grpId: 2, name: 'B' }], used, 9)).toEqual({ grpId: 2, name: 'B' })
+    expect(used.has(2)).toBe(true)
+  })
+
+  it('falls back to the identity’s card when the cast is empty or all used', () => {
+    expect(tileArt([], new Set(), 9)).toEqual({ grpId: 9, name: null })
+    expect(tileArt([{ grpId: 1, name: 'A' }], new Set([1]), 9)).toEqual({ grpId: 9, name: null })
+  })
+
+  it('names no card when the cast gives none and the identity has none', () => {
+    expect(tileArt([], new Set(), null)).toBeNull()
+  })
+
+  it('carries the identity’s art on the tile', () => {
+    const tiles = decksTiles([identity('guid:a', ['v1'], { art_grp_id: 77 }), identity('guid:b', ['v2'])], [], t, 0)
+    expect(tiles.map((tile) => tile.artGrpId)).toEqual([77, null])
+  })
+})
+
+describe('tileArt while data is pending', () => {
+  it('names no card, and uses none, until settled', () => {
+    const used = new Set<number>()
+    expect(tileArt([{ grpId: 1, name: 'A' }], used, 9, false)).toBeNull()
+    expect(tileArt([], used, 9, false)).toBeNull()
+    expect(used.size).toBe(0)
   })
 })

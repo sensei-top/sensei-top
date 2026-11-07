@@ -10,6 +10,7 @@ import type { TFunction } from '../i18n'
 import { formatRecord } from './format'
 import { versionDays } from './deckOverview'
 import { isFinished, startOf } from './home'
+import { takeUnused, type ArtCard } from './matchArt'
 import type { RateOrRecord } from './sample'
 import { RATE_MIN_MATCHES, ROUGH_RATE_MIN, rateOrRecord } from './sample'
 import { ago, formatCount, parseTimestamp } from './time'
@@ -177,6 +178,21 @@ export type DecksTile = {
    *  detail is read once, so never one still in progress. `null` when the
    *  list holds none, and no other request is made for it. */
   artMatchId: string | null
+  /** The identity's `art_grp_id`: the art when the match's cast gives none. */
+  artGrpId: number | null
+}
+
+/** A tile's art: the first card of `cast` not in `used`, else the deck's
+ *  own `artGrpId` (taken even when `used`, so a deck with a named card is
+ *  never empty); `null` when neither exists. The card joins `used`.
+ *  While `settled` is false (the matches list or this tile's match detail
+ *  has not arrived) the answer is `null`, the wash, so no tile shows the
+ *  fallback and then switches to a cast card. */
+export function tileArt(cast: ArtCard[], used: Set<number>, artGrpId: number | null, settled = true): ArtCard | null {
+  if (!settled) return null
+  const card = takeUnused(cast, used) ?? (artGrpId != null ? { grpId: artGrpId, name: null } : null)
+  if (card) used.add(card.grpId)
+  return card
 }
 
 /** What a name shared by two or more identities marks on each (see
@@ -243,6 +259,7 @@ export function decksTiles(
       newest: mark?.newest ?? false,
       playedRange: mark?.playedRange ?? null,
       detail: tileDetail(identity.format, identity.deck_ids.length, t),
+      artGrpId: identity.art_grp_id ?? null,
       artMatchId: finished.find((match) => ids.has(match.deck_id ?? ''))?.match_id ?? null,
     }
   })

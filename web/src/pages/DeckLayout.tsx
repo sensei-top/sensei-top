@@ -5,7 +5,7 @@ import { useAi } from '../ai/registry'
 import { useDecks, useGuide, useGuideDecks } from '../api'
 import type { TFunction } from '../i18n'
 import { DeckKeyNumbers, StripFrames } from '../components/DeckKeyNumbers'
-import { BackLink, Button, EmptyState, ErrorNote, OutlineCard, Skeleton } from '../components/ui'
+import { BackLink, Button, CardArt, EmptyState, ErrorNote, OutlineCard, Skeleton } from '../components/ui'
 import { chosenVersion } from '../lib/deckOverview'
 import { deckLine, deckRedirect, fieldNameLine, newestVersion, resolveDeck } from '../lib/decks'
 import { useNow } from '../lib/time'
@@ -114,7 +114,8 @@ export type DeckOutletContext = {
 }
 
 /** The layout a deck's four pages share: the way back to every deck, the
- *  deck's name as typed (muted "Unnamed deck" without one), the field's name
+ *  deck's name as typed (muted "Unnamed deck" without one) on a band whose art
+ *  is the identity's `art_grp_id` (the wash when it has none), the field's name
  *  for it when the guide gives one that differs, the deck's line (its
  *  format and when it was last played), the deck strip over the versions
  *  the tab reads (`DeckKeyNumbers`; on the Guide and RCQ, which drop `?version=`,
@@ -188,21 +189,31 @@ export function DeckLayout() {
         <p className="text-caption">
           <BackLink href="/decks">{t('decks.layout.allDecks')}</BackLink>
         </p>
-        <div>
-          {identity ? (
-            <h2 className={`font-display text-title break-words ${identity.name ? 'text-ink' : 'text-muted'}`}>
-              {identity.name ?? t('common.unnamedDeck')}
-            </h2>
-          ) : (
-            <Skeleton className="h-[calc(var(--text-title)*1.25)] w-1/3" />
-          )}
-          {fieldName && <p className="text-body text-ink2">{fieldName}</p>}
-        </div>
-        {identity ? (
-          line && <p className="text-caption text-muted">{line}</p>
-        ) : (
-          <Skeleton className="h-[calc(var(--text-caption)*1.4)] w-1/4" />
-        )}
+        <section className="relative overflow-hidden rounded-hero border border-edge bg-surface shadow-lift [--art-surface:var(--surface-1)]">
+          <CardArt
+            grpId={identity?.art_grp_id ?? null}
+            name={null}
+            fade="left"
+            className="absolute inset-y-0 right-0 w-1/2"
+          />
+          <div className="relative min-h-[132px] space-y-2 px-9 py-6 md:max-w-[55%]">
+            <div>
+              {identity ? (
+                <h2 className={`font-display text-title break-words ${identity.name ? 'text-ink' : 'text-muted'}`}>
+                  {identity.name ?? t('common.unnamedDeck')}
+                </h2>
+              ) : (
+                <Skeleton className="h-[calc(var(--text-title)*1.25)] w-1/3" />
+              )}
+              {fieldName && <p className="text-body text-ink2">{fieldName}</p>}
+            </div>
+            {identity ? (
+              line && <p className="text-caption text-muted">{line}</p>
+            ) : (
+              <Skeleton className="h-[calc(var(--text-caption)*1.4)] w-1/4" />
+            )}
+          </div>
+        </section>
         {identity ? <DeckKeyNumbers versionIds={versionIds} /> : <StripFrames />}
         <DeckTabs versionSearch={versionSearch} />
       </div>

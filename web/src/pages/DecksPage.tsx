@@ -13,9 +13,10 @@ import {
   formatName,
   sortTiles,
   tileFormats,
+  tileArt,
 } from '../lib/decks'
 import { HOME_MATCH_LIMIT } from '../lib/home'
-import { castCards, takeUnused } from '../lib/matchArt'
+import { castCards } from '../lib/matchArt'
 import { formatShortDay, useNow } from '../lib/time'
 import { placeById } from '../shell/places'
 
@@ -47,8 +48,9 @@ function DecksOutline() {
  *
  *  The art is a card the viewer cast in the deck's newest finished match of
  *  the list Home asks for (the same request serves both pages), no card on
- *  two tiles. A deck with no finished match in that list keeps the empty
- *  box: nothing more is asked for it.
+ *  two tiles. A deck with no finished match in that list, or whose cards
+ *  are all taken, wears its identity's `art_grp_id`; with that null too,
+ *  the empty box: nothing more is asked for it.
  *
  *  The format filter and the sort: `docs/frontend-pages.md`, "Decks". */
 export function DecksPage() {
@@ -98,7 +100,9 @@ export function DecksPage() {
   const used = new Set<number>()
   const art = new Map(tiles.map((tile) => {
     const detail = tile.artMatchId ? details.get(tile.artMatchId) : undefined
-    return [tile.key, takeUnused(castCards(detail, 'self'), used)] as const
+    const index = tile.artMatchId ? artIds.indexOf(tile.artMatchId) : -1
+    const settled = !matches.isPending && (index < 0 || !artQueries[index]?.isPending)
+    return [tile.key, tileArt(castCards(detail, 'self'), used, tile.artGrpId, settled)] as const
   }))
   const options = tileFormats(tiles)
   if (format && !options.includes(format)) options.unshift(format)

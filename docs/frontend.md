@@ -189,7 +189,10 @@ typed ("Unnamed deck", muted, when it has none), the field's name for
 it under that once the guide names an archetype whose spaced name
 differs from the typed one (`fieldNameLine`), one more line under both
 (`lib/decks.ts`'s `deckLine`: the format in words and when it was last
-played, joined by `·` and left out part by part when unknown), the deck
+played, joined by `·` and left out part by part when unknown), all on a
+band whose art, at the right with a fade to the left, is the identity's
+`art_grp_id`, or the wash when that is null or the identity is pending,
+the band holding its height meanwhile; the deck
 strip (`components/DeckKeyNumbers.tsx`: Matches, Games and Play vs draw
 over the versions the tab reads, `docs/frontend-pages.md`, "Decks") and
 the navigation between Overview, Matchups, Guide and RCQ.
