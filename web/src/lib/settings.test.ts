@@ -131,6 +131,7 @@ describe('Settings groups', () => {
     expect(groupOfHash('#appearance')).toBe('general')
     expect(groupOfHash('#live-settings')).toBe('general')
     expect(groupOfHash('#app')).toBe('general')
+    expect(groupOfHash('#app-about')).toBe('about')
     expect(groupOfHash('#sources')).toBe('sources')
     expect(groupOfHash('#backup')).toBe('backup')
     expect(groupOfHash('#account')).toBe('account')

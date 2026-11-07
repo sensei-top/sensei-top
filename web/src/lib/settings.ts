@@ -155,6 +155,7 @@ const GROUP_OF_SECTION: Record<string, SettingsGroupId> = {
   appearance: 'general',
   'live-settings': 'general',
   app: 'general',
+  'app-about': 'about',
   sources: 'sources',
   backup: 'backup',
   account: 'account',

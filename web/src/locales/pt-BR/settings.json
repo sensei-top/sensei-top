@@ -124,6 +124,8 @@
   },
   "app": {
     "subtitle": "Como o aplicativo abre, fecha e se mantém atualizado.",
+    "aboutTitle": "Versão e diagnóstico",
+    "aboutSubtitle": "Qual versão é esta, e o que enviar quando algo der errado.",
     "version": "Versão {{version}}",
     "startWindows": "Abrir quando o Windows iniciar",
     "startLogin": "Abrir quando você entrar no computador",

@@ -21,7 +21,7 @@ export function SettingsLayout() {
   const shown = shownGroups(build)
   return (
     <div className="flex items-start gap-8">
-      <nav aria-label={t('shell.places.settings')} className="flex w-40 shrink-0 flex-col gap-1">
+      <nav aria-label={t('shell.places.settings')} className="sticky top-4 flex w-40 shrink-0 flex-col gap-1 self-start">
         {SETTINGS_GROUPS.filter((group) => shown.includes(group.id)).map((group) => (
           // NavLink marks the current one with aria-current="page" itself.
           <NavLink

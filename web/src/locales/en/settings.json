@@ -124,6 +124,8 @@
   },
   "app": {
     "subtitle": "How the app starts, closes and stays up to date.",
+    "aboutTitle": "Version and diagnostics",
+    "aboutSubtitle": "Which version this is, and what to send when something goes wrong.",
     "version": "Version {{version}}",
     "startWindows": "Start when Windows starts",
     "startLogin": "Start when you log in",

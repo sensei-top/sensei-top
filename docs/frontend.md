@@ -301,30 +301,58 @@ same change.
 
 ### Settings
 
-`/settings` is `pages/SettingsPage.tsx` over `views/SettingsView.tsx`.
-The page reads five things, `useShell()`, `useLLMStatus()`, the density, the
-Live advice switch and `useAiFeatures()`, and draws its own Language section,
-which reads `useLanguage()`, first, above the view; the view then draws the
-sections in this order, each an `h2` over its cards, with an id an address can
-name:
+Settings is six groups, each at its own address. `routes.tsx` puts
+`pages/SettingsLayout.tsx` at `/settings`, with a child per group, and the
+layout draws the groups this build shows as a vertical list on the left
+(`NavLink`, the current one `bg-surface3 text-ink`; `sticky top-4`, so it stays
+in view while a long group scrolls) and the group's page on the right. Each
+child is `pages/SettingsPage.tsx` over `views/SettingsView.tsx`, given a
+`group` (`SettingsView` with none, as `SurfacesView` uses it, draws every
+section). The page reads five things, `useShell()`, `useLLMStatus()`, the
+density, the Live advice switch and `useAiFeatures()`; the view is the one
+place that holds the `Shell`. `lib/settings.ts` holds the table
+(`SETTINGS_GROUPS`) and `inGroup`, which says whether a group draws a
+section.
+
+| Group | Address | Shown when | Sections, in order |
+|---|---|---|---|
+| General | `/settings/general` | always | Language, Appearance, Live, then the App's general half |
+| Sources | `/settings/sources` | a desktop shell | Sources |
+| Backup | `/settings/backup` | a desktop shell | Backup |
+| Account | `/settings/account` | a desktop shell whose build has an account | Account, then Help build the stats |
+| Writing | `/settings/writing` | always | AI features, then Writing while it is on |
+| About | `/settings/about` | always | the App's about half, then About and credits |
+
+Bare `/settings` redirects, in place of a history entry, to the group of its
+hash (`groupOfHash`: `language`, `appearance`, `live-settings` and `app` to
+General; `sources`; `backup`; `account` and `contribute` to Account; `writing`
+and `ai-settings` to Writing; `app-about` and `credits` to About) with the hash kept, so
+`ScrollRestoration` brings the section into view, and to General when there is
+no hash or it names nothing. A group this build does not show redirects to
+General. The footer's "Credits" link, `/settings#credits`, lands this way.
+
+Each group opens on its controls: the shell's `h1` is the page's title and the
+first `h2` is the group's first section. Sections, each an `h2` over its
+cards, with an id an address can name:
 
 | Section | Id | Component | Drawn when |
 |---|---|---|---|
 | Language | `language` | `settings/LanguageSection.tsx` | always |
-| Sources | `sources` | `settings/SourcesSection.tsx` | a desktop shell |
-| Writing | `writing` | `ai/settings/WritingSection.tsx` | AI features on; with no shell, its `WritingStatus` |
-| Backup | `backup` | `settings/BackupSection.tsx` | a desktop shell |
-| App | `app` | `settings/AppSection.tsx` | a desktop shell |
-| Account | `account` | `settings/AccountSection.tsx` | a desktop shell whose build has an account (`account.available`) |
-| Help build the stats | `contribute` | `settings/ContributeSection.tsx` | a desktop shell whose build can upload (`canContribute`) |
 | Appearance | `appearance` | the page's own | always |
 | Live | `live-settings` | the page's own | always |
+| App (general) | `app` | `settings/AppSection.tsx`'s `AppGeneral` | a desktop shell |
+| Sources | `sources` | `settings/SourcesSection.tsx` | a desktop shell |
+| Backup | `backup` | `settings/BackupSection.tsx` | a desktop shell |
+| Account | `account` | `settings/AccountSection.tsx` | a desktop shell whose build has an account (`account.available`) |
+| Help build the stats | `contribute` | `settings/ContributeSection.tsx` | a desktop shell whose build can upload (`canContribute`) |
 | AI features | `ai-settings` | the page's own | always |
+| Writing | `writing` | `ai/settings/WritingSection.tsx` | AI features on; with no shell, its `WritingStatus` |
+| Version and diagnostics (the App's about half) | `app-about` | `settings/AppSection.tsx`'s `AppAbout` | a desktop shell |
 | About and credits | `credits` | `CreditsView` | always |
 
 Language, Appearance, Live, AI features and About and credits are drawn with or
-without a shell. Language is drawn by the page above the view; Appearance, Live,
-AI features and About and credits reach the view as its children. Language is a
+without a shell. The page draws Language, Appearance, Live and AI features
+itself, handed to the view as `lead`, and About and credits as its children. Language is a
 `Segmented` (System, English, Português (Brasil)) over `i18n.ts`'s
 `useLanguage`. The choice is kept in a shell's `shell.json` (written through
 `app.set({ language })`, and the shell's publish of it wins at the next start),
@@ -346,8 +374,8 @@ description says what goes: the coach, written reports and guides, matchup
 briefs and the prompts that write them; nothing already written is deleted.
 Writing is drawn only while it is on.
 
-**In a browser, `/settings` is Language, Writing, Appearance, Live, AI features
-and About and credits.** Writing is then one card of sentences from `GET
+**In a browser, Settings is General (Language, Appearance, Live), Writing (AI
+features, then Writing as sentences) and About (About and credits).** Writing is then one card of sentences from `GET
 /api/llm/status`: a Claude key is set and which model writes, by its id as the
 API gives it; or none is set, and what the app does then (the prompt is copied,
 the answer pasted back). Nothing in it can be changed there: the key is set in
@@ -405,7 +433,9 @@ card's last line (`RestartNote`) until the page is left.
 
 The App section is the shell's own preferences, which the server
 never reads: starting with the system, recording with the window
-closed on Linux, the update check and diagnostic mode. Its actions go
+closed on Linux and the update check, in General; the version, diagnostic
+mode and the log buttons are its about half, "Version and diagnostics", under
+About. Its actions go
 through `app.set`, never `save()`. "Export diagnostics" answers
 `{ ok: true }` when the person cancels the shell's dialog too, so the
 section never says the export happened.
@@ -468,19 +498,19 @@ the failed backup's sentences name.
   (`sizeOf`, `lib/size.ts`), or a `warn` callout when it failed; the
   folder; how many copies are kept (3, 7, 14 or 30); "Back up now";
   "Restore from a backup file", which asks first.
-- **App.** The version; "Start when Windows starts" ("Start when you
-  log in" elsewhere), shown only where the copy can start at login, which
-  is not the Linux tarball, and not the Microsoft Store build, which shows
-  a note pointing to Windows' Startup settings instead; on Linux, "Keep
-  running when the window is closed"; "Check for updates" with "Check now"
-  and one sentence on where the update stands, or that sentence alone
-  where the copy cannot update itself; "Restart to update" once one has
-  downloaded; "Diagnostic mode";
-  "Show logs" and "Export diagnostics", with one caption that says what
-  the export holds and that matches are never in it; "Report a problem",
-  where the shell sends reports (below); last, the sentence
-  naming the welcome steps and "Go through them again", a link to
-  `/welcome`.
+- **App**, drawn in two halves, each its own card and state. `AppGeneral`
+  (General): "Start when Windows starts" ("Start when you log in"
+  elsewhere), shown only where the copy can start at login, which is not
+  the Linux tarball and not the Microsoft Store build, which shows a note
+  pointing to Windows' Startup settings in the switch's place; on Linux, "Keep running when the window is closed";
+  "Check for updates" with "Check now" and one sentence on where the update
+  stands, or that sentence alone where the copy cannot update itself;
+  "Restart to update" once one has downloaded; last, the sentence naming
+  the welcome steps and "Go through them again", a link to `/welcome`.
+  `AppAbout` (About): the version; "Diagnostic mode"; "Show logs" and
+  "Export diagnostics", with one caption that says what the export holds
+  and that matches are never in it; "Report a problem", where the shell
+  sends reports (below). `AppSection` is both, one after the other.
 
 - **Account**, in a build that has an account (`docs/desktop.md`, "Account
   and sync"). Signed out, "Sign in with Google" and "Sign in with Discord",
@@ -503,7 +533,7 @@ the failed backup's sentences name.
   only when nothing is stored, the stored yes lacks the age confirmation or
   it was given under an older `POLICY_VERSION`; a turn-off keeps the stored
   age confirmation and version.
-- **Report a problem** is a button in App and on every `ErrorNote` and on the
+- **Report a problem** is a button in "Version and diagnostics" (About) and on every `ErrorNote` and on the
   error screen, in a shell that sends reports. It opens
   `components/ReportProblemDialog.tsx`: the text, "attach the last 500 lines
   of the log", and the transfer consent line, which every press asks. It
