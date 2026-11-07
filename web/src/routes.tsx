@@ -1,4 +1,5 @@
 import type { RouteObject } from 'react-router'
+import { SETTINGS_GROUPS } from './lib/settings'
 import { AccountWelcomePage } from './pages/AccountWelcomePage'
 import { ContributePage } from './pages/ContributePage'
 import { CoachPage } from './pages/CoachPage'
@@ -16,6 +17,7 @@ import { MatchesPage } from './pages/MatchesPage'
 import { MatchPage, MatchReplayPage } from './pages/MatchPage'
 import { MtgoPicksPage } from './pages/MtgoPicksPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { SettingsLayout } from './pages/SettingsLayout'
 import { SettingsPage } from './pages/SettingsPage'
 import { WelcomePage } from './pages/WelcomePage'
 import { Shell } from './shell/Shell'
@@ -65,7 +67,15 @@ export const routes: RouteObject[] = [
           { path: 'field/events/*', Component: FieldEventPage },
           { path: 'coach', Component: CoachPage },
           { path: 'coach/:id', Component: CoachPage },
-          { path: 'settings', Component: SettingsPage },
+          // Bare `/settings` is sent on to a group by the layout.
+          {
+            path: 'settings',
+            Component: SettingsLayout,
+            children: SETTINGS_GROUPS.map((group) => ({
+              path: group.id,
+              element: <SettingsPage group={group.id} />,
+            })),
+          },
           // Not a place in the rail: Home's "Needs a deck" card links to it. Its
           // name, and Welcome's, is a key the shell resolves (`routeTitle`).
           {

@@ -7,7 +7,7 @@ import { BackupSection } from '../components/settings/BackupSection'
 import { ContributeSection } from '../components/settings/ContributeSection'
 import { SourcesSection } from '../components/settings/SourcesSection'
 import { useAi } from '../ai/registry'
-import type { WritingStatusAnswer } from '../lib/settings'
+import { inGroup, type SettingsGroupId, type WritingStatusAnswer } from '../lib/settings'
 
 /** Settings, as sections under their titles: Sources, Writing, Backup and
  *  App and Account (the last only in a build that has an account), then `children`, the sections that belong to the browser rather
@@ -15,21 +15,25 @@ import type { WritingStatusAnswer } from '../lib/settings'
  *  draws itself. The one place that holds a `Shell` and hands each section
  *  its part of the settings and the functions it calls. With no shell,
  *  Sources, Backup and App are not drawn and Writing is what the API says,
- *  as sentences, with no control. */
+ *  as sentences, with no control. With `group`, only the sections
+ *  `groupOfHash` puts in it are drawn. */
 export function SettingsView({
   shell,
   writing,
+  group,
   children,
 }: {
   shell: Shell | null
   writing: WritingStatusAnswer
+  group?: SettingsGroupId
   children?: ReactNode
 }) {
   const { t } = useTranslation()
   const ai = useAi()
+  const shows = (section: string) => inGroup(section, group)
   return (
     <div className="space-y-10">
-      {shell && (
+      {shell && shows('sources') && (
         <SettingsSection id="sources" title={t('settings.sections.sources')}>
           <SourcesSection
             sources={shell.settings.sources}
@@ -47,7 +51,7 @@ export function SettingsView({
           />
         </SettingsSection>
       )}
-      {ai && (
+      {ai && shows('writing') && (
         <SettingsSection id="writing" title={t('settings.sections.writing')}>
           {shell ? (
             <ai.WritingSection
@@ -60,7 +64,7 @@ export function SettingsView({
           )}
         </SettingsSection>
       )}
-      {shell && (
+      {shell && shows('backup') && (
         <SettingsSection id="backup" title={t('settings.sections.backup')}>
           <BackupSection
             backup={shell.settings.backup}
@@ -72,7 +76,7 @@ export function SettingsView({
           />
         </SettingsSection>
       )}
-      {shell?.app && (
+      {shell?.app && shows('app') && (
         <SettingsSection id="app" title={t('settings.sections.app')}>
           <AppSection
             app={shell.app.settings}
@@ -84,12 +88,12 @@ export function SettingsView({
           />
         </SettingsSection>
       )}
-      {shell?.app?.settings.account.available && (
+      {shell?.app?.settings.account.available && shows('account') && (
         <SettingsSection id="account" title={t('account.settings.title')}>
           <AccountSection state={shell.app.settings.account} actions={shell.app.account} />
         </SettingsSection>
       )}
-      {shell?.app?.settings.canContribute && (
+      {shell?.app?.settings.canContribute && shows('contribute') && (
         <SettingsSection id="contribute" title={t('contribute.heading')}>
           <ContributeSection shell={shell} />
         </SettingsSection>

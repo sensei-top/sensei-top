@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { translator } from '../i18n'
-import { changeToSend, changedFields, failureOf, updateSentence } from './settings'
+import {
+  changeToSend,
+  changedFields,
+  failureOf,
+  groupOfHash,
+  inGroup,
+  settingsRedirect,
+  shownGroups,
+  updateSentence,
+} from './settings'
 
 const saved = { mtgoHandle: 'Sample Player', mtgoDir: '/games/mtgo/logs' }
 
@@ -109,5 +118,69 @@ describe('updateSentence', () => {
     expect(updateSentence({ state: 'failed', checkedAt: 'not a date' }, now, t)).toBe(
       'The last check failed. The reason is in the log.',
     )
+  })
+})
+
+describe('Settings groups', () => {
+  const browser = { shell: false, account: false }
+  const noAccount = { shell: true, account: false }
+  const withAccount = { shell: true, account: true }
+
+  it('puts every section a hash can name in its group', () => {
+    expect(groupOfHash('#language')).toBe('general')
+    expect(groupOfHash('#appearance')).toBe('general')
+    expect(groupOfHash('#live-settings')).toBe('general')
+    expect(groupOfHash('#app')).toBe('general')
+    expect(groupOfHash('#sources')).toBe('sources')
+    expect(groupOfHash('#backup')).toBe('backup')
+    expect(groupOfHash('#account')).toBe('account')
+    expect(groupOfHash('#contribute')).toBe('account')
+    expect(groupOfHash('#writing')).toBe('writing')
+    expect(groupOfHash('#ai-settings')).toBe('writing')
+    expect(groupOfHash('#credits')).toBe('about')
+  })
+
+  it('names no group for a hash that names no section', () => {
+    expect(groupOfHash('')).toBeNull()
+    expect(groupOfHash('#')).toBeNull()
+    expect(groupOfHash('#nowhere')).toBeNull()
+    expect(groupOfHash('#toString')).toBeNull()
+  })
+
+  it('shows each build its groups, in order', () => {
+    expect(shownGroups(browser)).toEqual(['general', 'writing', 'about'])
+    expect(shownGroups(noAccount)).toEqual(['general', 'sources', 'backup', 'writing', 'about'])
+    expect(shownGroups(withAccount)).toEqual(['general', 'sources', 'backup', 'account', 'writing', 'about'])
+  })
+
+  it('sends bare /settings to General, or to the group of its hash with the hash kept', () => {
+    expect(settingsRedirect('/settings', '', browser)).toBe('/settings/general')
+    expect(settingsRedirect('/settings/', '', browser)).toBe('/settings/general')
+    expect(settingsRedirect('/settings', '#credits', browser)).toBe('/settings/about#credits')
+    expect(settingsRedirect('/settings', '#app', withAccount)).toBe('/settings/general#app')
+    expect(settingsRedirect('/settings', '#contribute', withAccount)).toBe('/settings/account#contribute')
+    expect(settingsRedirect('/settings', '#nowhere', browser)).toBe('/settings/general#nowhere')
+  })
+
+  it('sends a hash whose group this build does not show to General', () => {
+    expect(settingsRedirect('/settings', '#backup', browser)).toBe('/settings/general#backup')
+    expect(settingsRedirect('/settings', '#account', noAccount)).toBe('/settings/general#account')
+  })
+
+  it('sends a group this build does not show to General, and leaves a shown one', () => {
+    expect(settingsRedirect('/settings/sources', '', browser)).toBe('/settings/general')
+    expect(settingsRedirect('/settings/account', '', noAccount)).toBe('/settings/general')
+    expect(settingsRedirect('/settings/account', '', withAccount)).toBeNull()
+    expect(settingsRedirect('/settings/writing', '', browser)).toBeNull()
+    expect(settingsRedirect('/settings/about', '#credits', browser)).toBeNull()
+  })
+
+  it('keeps a section in its own group, and every section without one', () => {
+    expect(inGroup('credits', 'about')).toBe(true)
+    expect(inGroup('credits', 'general')).toBe(false)
+    expect(inGroup('contribute', 'account')).toBe(true)
+    expect(inGroup('nowhere', 'general')).toBe(false)
+    expect(inGroup('credits', undefined)).toBe(true)
+    expect(inGroup('nowhere', undefined)).toBe(true)
   })
 })

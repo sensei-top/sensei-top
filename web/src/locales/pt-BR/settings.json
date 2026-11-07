@@ -10,6 +10,14 @@
     "ai": "Recursos de IA",
     "credits": "Sobre e créditos"
   },
+  "groups": {
+    "general": "Geral",
+    "sources": "Fontes",
+    "backup": "Backup",
+    "account": "Conta",
+    "writing": "Escrita",
+    "about": "Sobre"
+  },
   "language": {
     "label": "Idioma",
     "system": "Do sistema",
