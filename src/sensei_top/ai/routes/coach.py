@@ -79,6 +79,7 @@ from sensei_top.api.models.coach import (
 )
 from sensei_top.api.models.common import PastedAnswerIn
 from sensei_top.api.models.metagame import FormatName
+from sensei_top.api.progress import progress_reporter
 from sensei_top.api.sql import _shared_report_cache, default_format
 from sensei_top.claude_config import REPORT_MODELS
 from sensei_top.i18n import _
@@ -276,16 +277,23 @@ def _too_few_matches() -> HTTPException:
 
 
 @router.get("/api/coach", response_model=CoachResponse, tags=["coach"])
-def coach(request: Request, conn: Conn, fmt: CoachFormatParam = None) -> CoachResponse:
+def coach(
+    request: Request, conn: Conn, fmt: CoachFormatParam = None, progress: str | None = None,
+) -> CoachResponse:
     """The Coach tab's free half: the cross-deck evidence for its profile
     tables, built for one format, and every report ever written, of every
     format. Always a 200 — a database below the leak finder's own minimum
     sample is an ordinary state for a new install, not a server error
     (``sufficient=False``, ``evidence=None``).
+
+    ``progress``, a UUID, has the build record its stages under it for
+    ``GET /api/progress/{key}`` (``api/progress.py``); any other value is
+    ignored.
     """
     fmt = fmt or default_format(conn)
     evidence = build_coach_evidence(
         conn, fmt=fmt, source="all", report_cache=_shared_report_cache(request, conn),
+        progress=progress_reporter(request, progress),
     )
     reports = list_coach_reports(conn)
     cfg = llm_config.load_coach()
@@ -311,7 +319,7 @@ def coach(request: Request, conn: Conn, fmt: CoachFormatParam = None) -> CoachRe
 
 @router.get("/api/coach/narrative", response_model=CoachNarrativeResponse, tags=["coach"])
 def coach_narrative(
-    request: Request, conn: Conn, fmt: CoachFormatParam = None
+    request: Request, conn: Conn, fmt: CoachFormatParam = None, progress: str | None = None,
 ) -> CoachNarrativeResponse:
     """The latest stored report for one format plus that format's current
     prompt, and whether the two have drifted apart. Same three-state
@@ -319,9 +327,15 @@ def coach_narrative(
     on yet' and 'nothing written yet' are both ordinary outcomes for an
     opt-in feature. Only a report of the same format is ever the latest
     one here, so another format's report can never read as current.
+
+    ``progress``: as for ``GET /api/coach``. The ``POST`` and ``PUT`` on
+    this path take none.
     """
     fmt = fmt or default_format(conn)
-    p = build_coach_prompt(conn, fmt=fmt, report_cache=_shared_report_cache(request, conn))
+    p = build_coach_prompt(
+        conn, fmt=fmt, report_cache=_shared_report_cache(request, conn),
+        progress=progress_reporter(request, progress),
+    )
     latest = latest_coach_report(conn, fmt)
     if latest is not None:
         stale = p is not None and latest.context_hash != p.context_hash

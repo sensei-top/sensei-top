@@ -24,6 +24,7 @@ from dataclasses import dataclass
 
 from sensei_top.ai.review.narrative import finding_line, play_lines_of, turn_lines_of
 from sensei_top.archetypes.classify import card_colors_by_name
+from sensei_top.guide.bundle import Progress, no_progress
 from sensei_top.guide.deck import DeckIdentity, deck_matches, identity_format, list_identities
 from sensei_top.guide.field import field_by_key
 from sensei_top.guide.play import mulligan_split
@@ -535,6 +536,7 @@ def _build_match_reports(
     colors_cache: dict,
     view_cache: dict,
     report_cache: ReportCache,
+    progress: Progress = no_progress,
 ) -> dict[str, MatchReport]:
     """Every population match's own post-game report, built once, keyed by
     match id. Private, and returned rather than stored on ``CoachEvidence``,
@@ -556,9 +558,14 @@ def _build_match_reports(
 
     A ``None`` report (the match missing from ``matches``, which cannot
     happen for a row just read from it) is skipped, not raised.
+
+    ``progress`` gets ``matches`` with ``0`` of ``len(rows)`` first, then
+    one tick per row, a cached report included.
     """
     reports: dict[str, MatchReport] = {}
-    for m in rows:
+    total = len(rows)
+    progress("matches", 0, total)
+    for done, m in enumerate(rows, start=1):
         match_window = _match_window(m, consensus_window)
         cache_key = report_cache_key(m.match_id, match_window)
         if cache_key in report_cache:
@@ -572,6 +579,7 @@ def _build_match_reports(
             report_cache[cache_key] = report
         if report is not None:
             reports[m.match_id] = report
+        progress("matches", done, total)
     return reports
 
 
@@ -1155,6 +1163,7 @@ def build_coach_evidence(
     fmt: str,
     source: str = "all",
     report_cache: dict | None = None,
+    progress: Progress = no_progress,
 ) -> CoachEvidence | None:
     """The full evidence base for the player-level coach report on ``fmt``
     (one of ``formats.FORMATS``), or ``None`` when there isn't enough of a
@@ -1181,7 +1190,13 @@ def build_coach_evidence(
     ``api/sql.py::_shared_report_cache(request, conn)`` from a route so a
     Leaks or Guide request in the same process can reuse these reports.
     ``None`` builds a dict that lives only as long as this one call.
+
+    ``progress`` is told each stage as it starts, in order: ``matches``
+    (counted per population match reported, ``_build_match_reports``),
+    ``field``, ``together``. ``matches`` is the first call, before the
+    population is read, so a population below the minimum still records it.
     """
+    progress("matches")
     population_rows, excluded = _population(conn, source)
     population = len(population_rows)
     if population < MIN_SAMPLE:
@@ -1354,7 +1369,7 @@ def build_coach_evidence(
     reports = _build_match_reports(
         conn, population_rows, consensus_window=consensus_window,
         consensus_cache=consensus_cache, colors_cache=colors_cache, view_cache=view_cache,
-        report_cache=report_cache,
+        report_cache=report_cache, progress=progress,
     )
     by_role = _build_by_role(format_rows, reports)
 
@@ -1399,6 +1414,7 @@ def build_coach_evidence(
     decklists, decklist_gaps = _build_decklists(conn, kept_decks, format_rows)
     gaps.extend(decklist_gaps)
 
+    progress("field")
     field, field_gaps = _build_field(conn, win_start, opponent_counts_by_key, fmt)
     gaps.extend(field_gaps)
     # duplicate_of IS NULL: a republished twin (metagame/dedup.py) can carry
@@ -1409,6 +1425,7 @@ def build_coach_evidence(
         (fmt,),
     ).fetchone()[0]
 
+    progress("together")
     return CoachEvidence(
         source=source,
         population=population,
@@ -1491,7 +1508,11 @@ def metrics_snapshot(evidence: CoachEvidence) -> dict:
 
 
 def progress_since(
-    conn: sqlite3.Connection, metrics: dict, *, source: str = "all",
+    conn: sqlite3.Connection,
+    metrics: dict,
+    *,
+    source: str = "all",
+    report_cache: ReportCache | None = None,
 ) -> list[str]:
     """Prose progress lines comparing a fresh read of the population against
     a ``metrics_snapshot()`` dict saved at some earlier ``as_of`` — the lines
@@ -1503,6 +1524,11 @@ def progress_since(
     ``MIN_SAMPLE`` gate a handful of new matches will almost never clear.
     Which stored report ``metrics`` comes from (the previous one of the same
     format) is the caller's choice.
+
+    ``report_cache``: pass the one ``build_coach_evidence`` just filled, in
+    the same language, and every new match's report is a lookup (the new
+    matches are population matches, and this resolver computes the same
+    windows). ``None`` builds a fresh dict.
     """
     as_of = metrics.get("as_of")
     population_rows, _ = _population(conn, source)
@@ -1527,7 +1553,8 @@ def progress_since(
     consensus_cache: dict = {}
     colors_cache: dict = {"colors_by_name": card_colors_by_name(conn)}
     view_cache: dict = {}
-    report_cache: ReportCache = {}
+    if report_cache is None:
+        report_cache = {}
     # Its own resolver, since this entry point shares none with
     # build_coach_evidence: build_match_report's None default would read
     # across a reset whenever one exists.

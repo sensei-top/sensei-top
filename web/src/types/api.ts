@@ -1597,6 +1597,10 @@ export interface paths {
          *     format. Always a 200 — a database below the leak finder's own minimum
          *     sample is an ordinary state for a new install, not a server error
          *     (``sufficient=False``, ``evidence=None``).
+         *
+         *     ``progress``, a UUID, has the build record its stages under it for
+         *     ``GET /api/progress/{key}`` (``api/progress.py``); any other value is
+         *     ignored.
          */
         get: operations["coach_api_coach_get"];
         put?: never;
@@ -1622,6 +1626,9 @@ export interface paths {
          *     on yet' and 'nothing written yet' are both ordinary outcomes for an
          *     opt-in feature. Only a report of the same format is ever the latest
          *     one here, so another format's report can never read as current.
+         *
+         *     ``progress``: as for ``GET /api/coach``. The ``POST`` and ``PUT`` on
+         *     this path take none.
          */
         get: operations["coach_narrative_api_coach_narrative_get"];
         /**
@@ -7780,6 +7787,7 @@ export interface operations {
             query?: {
                 /** @description which format the report is for; omitted, the default /api/formats reports */
                 format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+                progress?: string | null;
             };
             header?: never;
             path?: never;
@@ -7812,6 +7820,7 @@ export interface operations {
             query?: {
                 /** @description which format the report is for; omitted, the default /api/formats reports */
                 format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+                progress?: string | null;
             };
             header?: never;
             path?: never;
