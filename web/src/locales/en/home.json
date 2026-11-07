@@ -144,5 +144,10 @@
     "checkAgain": "Check again",
     "checking": "Checking",
     "stillOff": "Not confirmed yet. Arena says so when it starts, so start Arena again first."
+  },
+  "signInOffer": {
+    "line": "Sign in to keep a copy of your history in the cloud.",
+    "button": "Sign in",
+    "dismiss": "Not now"
   }
 }

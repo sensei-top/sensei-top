@@ -144,5 +144,10 @@
     "checkAgain": "Verificar de novo",
     "checking": "Verificando",
     "stillOff": "Ainda não confirmado. O Arena só diz isso ao iniciar, então abra-o de novo primeiro."
+  },
+  "signInOffer": {
+    "line": "Entre para guardar uma cópia do seu histórico na nuvem.",
+    "button": "Entrar",
+    "dismiss": "Agora não"
   }
 }

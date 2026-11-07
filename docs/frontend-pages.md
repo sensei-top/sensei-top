@@ -12,6 +12,15 @@ still need a deck, the recent matches beside the win rate by week, the deck
 tiles, and the field beside a pointer to the coach. A part with nothing to
 show is not drawn, and the part beside it takes the row.
 
+**The sign-in offer.** Above the first part, in first run too, one quiet
+line: "Sign in to keep a copy of your history in the cloud.", a Sign in link
+to `/settings/account` and a dismiss ×. It stands while the build has an
+account, nobody is signed in, the welcome was seen and `signInDismissed` is
+unset (`shell/signInOffer.ts`, `signInOffered`); each condition false hides
+it. The rail's Sign in item, above Settings, shares the condition. The ×
+sets the flag and removes both the line and the rail item; the rail item
+has no dismiss of its own.
+
 The components in `components/home/` only draw. **Every count on Home is
 a pure function in `lib/home.ts`**, of the API's rows and a clock handed
 to it, with no React in the file. A finished match is one whose result
@@ -308,7 +317,7 @@ says what will appear and what causes it:
 - **Matches** tells "No matches yet" from "No match fits these filters"
   by the heartbeat's count of matches, and the second offers "Show every
   match". With no match in the list the summary band is not drawn. Until the
-  heartbeat has answered, an empty list shows `Loading`, since the page
+  heartbeat has answered, an empty list shows the page's outline, since the page
   cannot yet tell the two apart.
 - **Coach** shows the empty state alone, with too few matches and no
   report written before, and only once the coach has answered: a
@@ -843,6 +852,13 @@ and never from `/welcome`, `/account/welcome` or itself. Mounting it sets
 `contribAsked`, so Decide later, closing the window and Go to Home all mean
 it does not show again; Settings still asks. A failed write only means it may
 show again at the next launch.
+
+**Settings → Backup's second card.** "Cloud copy" holds the cloud history
+switch (the profile's `consentSync`, written the way Account writes the
+other choices) and its status line; signed out it is one line linking to
+Settings → Account, and with no profile read it is not drawn. After a restore the first card's note carries Restart
+now, which calls `app.relaunch()` and shows a refusal's sentence under the
+buttons. A later phase lists the snapshots by date.
 
 **Settings → Account and its dialogs.** `docs/frontend.md`, "Settings", says
 what the section holds. The three dialogs are Delete my cloud history (says

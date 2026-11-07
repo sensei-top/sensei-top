@@ -1,5 +1,7 @@
+import { X } from 'lucide-react'
 import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router'
 import {
   useGuideDecks,
   useLeaks,
@@ -42,8 +44,37 @@ import {
 import { castCards, takeUnused, type ArtCard } from '../lib/matchArt'
 import { useNow } from '../lib/time'
 import { useAiFeatures } from '../shell/aiFeatures'
+import { useSignInOffer } from '../shell/signInOffer'
 
 const MINUTE = 60_000
+
+/** One quiet line above the page: sign in to keep a copy in the cloud, a
+ *  link to Settings → Account and a dismissal, which the rail item shares.
+ *  Draws nothing unless the offer stands (`signInOffered`). */
+export function SignInOffer() {
+  const { t } = useTranslation()
+  const { offered, dismiss } = useSignInOffer()
+  if (!offered) return null
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface px-4 py-2.5">
+      <p className="min-w-0 flex-1 text-body text-ink2">{t('home.signInOffer.line')}</p>
+      <Link
+        to="/settings/account"
+        className="inline-flex min-h-[44px] items-center rounded-control px-3 text-body font-medium text-ink underline decoration-muted underline-offset-2 hover:decoration-ink"
+      >
+        {t('home.signInOffer.button')}
+      </Link>
+      <button
+        type="button"
+        aria-label={t('home.signInOffer.dismiss')}
+        onClick={dismiss}
+        className="inline-flex size-11 items-center justify-center rounded-control text-muted transition-chrome hover:text-ink"
+      >
+        <X size={18} aria-hidden />
+      </button>
+    </div>
+  )
+}
 
 /** `/`: every source, no filter. First run alone until a match is
  *  recorded; then the last session, three things worth a look, recent
@@ -198,6 +229,7 @@ export function HomeView({
     const logDone = firstRunSteps(live.data, firstRun?.mtgoOnly)[1] === 'done'
     return (
       <div className="space-y-6 md:space-y-8">
+        <SignInOffer />
         {detailedLogs && logDone && <DetailedLogsBanner {...detailedLogs} />}
         <FirstRun live={live.data} shell={firstRun} />
       </div>
@@ -210,6 +242,7 @@ export function HomeView({
   const showField = fieldPending || fieldError != null || field != null
   return (
     <div className="space-y-6 md:space-y-8">
+      <SignInOffer />
       {detailedLogs && <DetailedLogsBanner {...detailedLogs} />}
 
       {counted.session && (

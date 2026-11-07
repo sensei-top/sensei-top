@@ -179,7 +179,7 @@ describe('what the section says', () => {
       sync: sync(),
     })
     expect(inn).toContain('Signed in as a@example.com, with Google.')
-    expect(inn).toContain('Back up my match history')
+    expect(inn).not.toContain('Back up my match history')
     expect(inn).toContain('This system has no keyring')
     expect(inn).toContain('Delete cloud history')
   })

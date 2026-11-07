@@ -120,7 +120,10 @@
     "restoreTitle": "Restaurar deste arquivo?",
     "keepWhatIsHere": "Manter o que está aqui",
     "restoreFromFile": "Restaurar do arquivo",
-    "restoreBody": "Toda partida no aplicativo é substituída pelo que o arquivo contém. Para manter o que está aqui agora, faça um backup antes."
+    "restoreBody": "Toda partida no aplicativo é substituída pelo que o arquivo contém. Para manter o que está aqui agora, faça um backup antes.",
+    "restartNow": "Reiniciar agora",
+    "cloudTitle": "Cópia na nuvem",
+    "cloudSignedOut": "Entre em <account>Configurações → Conta</account> para guardar uma cópia na nuvem."
   },
   "app": {
     "subtitle": "Como o aplicativo abre, fecha e se mantém atualizado.",

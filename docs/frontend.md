@@ -87,7 +87,10 @@ posts and links, so it stays responsive (`docs/frontend-site.md`).
 - **From 48rem up**: the rail (`shell/Rail.tsx`, 84 px wide) and beside it
   one column, capped at `max-w-[1196px]`, that holds the bar, the page and
   the footer on the same edges. The rail is the glyph as a link Home, then
-  each place as an icon over its label, with Settings at the bottom. The
+  each place as an icon over its label, with Settings at the bottom. While
+  `signInOffered` holds (`shell/signInOffer.ts`), a Sign in item (`LogIn`
+  icon, links `/settings/account`, not a `PLACES` entry) sits above Settings
+  and takes over its `mt-auto`. The
   bar is the place's name, which is the page's one `h1`, and the live
   status.
 - **Under 48rem**: a strip that stays at the top of the window (the glyph,
@@ -510,7 +513,11 @@ the failed backup's sentences name.
 - **Backup.** The last backup as a sentence, when and how large
   (`sizeOf`, `lib/size.ts`), or a `warn` callout when it failed; the
   folder; how many copies are kept (3, 7, 14 or 30); "Back up now";
-  "Restore from a backup file", which asks first.
+  "Restore from a backup file", which asks first and, once restored,
+  offers Restart now (`app.relaunch()`; a refusal's sentence shows under
+  the buttons). A second card, Cloud copy, holds the `consentSync` switch
+  and its status line; signed out, one line linking to
+  Settings → Account; with no profile read, not drawn.
 - **App**, drawn in two halves, each its own card and state. `AppGeneral`
   (General): "Start when Windows starts" ("Start when you log in"
   elsewhere), shown only where the copy can start at login, which is not
@@ -528,9 +535,9 @@ the failed backup's sentences name.
 - **Account**, in a build that has an account (`docs/desktop.md`, "Account
   and sync"). Signed out, "Sign in with Google" and "Sign in with Discord",
   both off while one waits on the browser, the pressed one saying so;
-  signed in, the email, three choices as `SavingSwitch`es (cloud backup, error
+  signed in, the email, two choices as `SavingSwitch`es (error
   reports, coach history), or Try again when the profile could not be read,
-  the backup's status, Export and Sign out, then under their own heading
+  Export and Sign out, then under their own heading
   "Delete my cloud history" and "Delete my account", quiet buttons like the
   rest (no danger fill: `docs/design-system.md`). Each delete and the error
   reports' transfer consent sit behind a `Dialog` with the safe button

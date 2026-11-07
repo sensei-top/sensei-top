@@ -27,7 +27,8 @@
     "matchInProgress": "partida em andamento,",
     "more": "Mais",
     "morePlaces": "Mais páginas",
-    "close": "Fechar"
+    "close": "Fechar",
+    "signIn": "Entrar"
   },
   "liveStatus": {
     "down": "Tracker parado",

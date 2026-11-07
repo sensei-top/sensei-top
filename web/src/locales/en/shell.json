@@ -27,7 +27,8 @@
     "matchInProgress": "match in progress,",
     "more": "More",
     "morePlaces": "More places",
-    "close": "Close"
+    "close": "Close",
+    "signIn": "Sign in"
   },
   "liveStatus": {
     "down": "Tracker not running",

@@ -120,7 +120,10 @@
     "restoreTitle": "Restore from this file?",
     "keepWhatIsHere": "Keep what is here",
     "restoreFromFile": "Restore from the file",
-    "restoreBody": "Every match in the app is replaced by what the file holds. To keep what is here now, back up first."
+    "restoreBody": "Every match in the app is replaced by what the file holds. To keep what is here now, back up first.",
+    "restartNow": "Restart now",
+    "cloudTitle": "Cloud copy",
+    "cloudSignedOut": "Sign in under <account>Settings → Account</account> to keep a copy in the cloud."
   },
   "app": {
     "subtitle": "How the app starts, closes and stays up to date.",
