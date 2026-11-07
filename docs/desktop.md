@@ -498,11 +498,20 @@ not scrubbed by the template rule; the text rules of `scrub.py` apply to it.
 made for it and closed after, whatever the toggle says, so it works signed
 out (the ID goes only when signed in). It is in the tray, in Settings → App
 and on every `ErrorNote` and the error screen in the desktop shell. Each
-press asks the transfer consent. The text is capped at 4000 characters and
+press asks the transfer consent, except when the user is signed in
+with error reports on under the current policy: that consent covers the
+reports they send themselves, and the dialog says so in place of the box.
+The text is capped at 4000 characters and
 scrubbed here and again by the client; with "attach the last 500 lines of
 the log" ticked, the attachment is `GET /api/diagnostics/log-tail`, already
 scrubbed by the server and scrubbed again here. A tail that cannot be read
-leaves the report without it, not unsent. A closed queue means the event
+leaves the report without it, not unsent. The payload also carries `kind`
+(`bug` or `idea`; `bug` when absent, so an older dashboard still works; any other value refuses the report),
+`page` (the address path, no query) and, on a match's page, `matchId`: the
+event is tagged `kind` and `page`, and `match_id` goes in its `feedback`
+context; `cleanEvent` keeps those and nothing else new. An idea never
+attaches the log, even if `attachLog` arrives true; a malformed `page` or
+`matchId` is dropped, not refused. A closed queue means the event
 left, not that Sentry accepted it.
 
 ### Contributed games
