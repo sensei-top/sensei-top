@@ -7,11 +7,12 @@ import {
   outcomeKey,
   REPORT_LIMIT,
   detailOf,
+  type ReportKind,
   sendControls,
   standingConsentOf,
   wasSent,
 } from '../lib/reportProblem'
-import { Button, Dialog, MoreAbout } from './ui'
+import { Button, Dialog, MoreAbout, Segmented } from './ui'
 
 /** The Report a problem dialog. The shell mounts it with a new `key` for each
  *  opening, so every opening starts with an empty draft and both boxes
@@ -28,16 +29,23 @@ export function ReportProblemDialog({
   send,
   signedIn,
   message,
+  page = null,
+  matchId = null,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   send: ShellReports['reportProblem']
   signedIn: boolean
   message: string | null
+  /** Where it was opened: the address path and a match's ID, read once like `signedIn`. */
+  page?: string | null
+  matchId?: string | null
 }) {
   const { t, i18n } = useTranslation()
   const [signedInThen] = useState(signedIn)
   const [detail] = useState(() => detailOf(message))
+  const [kind, setKind] = useState<ReportKind>('bug')
+  const idea = kind === 'idea'
   const [text, setText] = useState('')
   const [attachLog, setAttachLog] = useState(false)
   const [ticked, setTicked] = useState(false)
@@ -56,7 +64,15 @@ export function ReportProblemDialog({
 
   const { send: submit } = sendControls({
     call: send,
-    draft: () => ({ text, attachLog, agreed, detail: detail && t('common.technicalDetail', { message: detail }) }),
+    draft: () => ({
+      text,
+      attachLog,
+      agreed,
+      detail: detail && t('common.technicalDetail', { message: detail }),
+      kind,
+      page,
+      matchId,
+    }),
     dismissed,
     setBusy,
     setOutcome,
@@ -66,7 +82,7 @@ export function ReportProblemDialog({
   const sent = outcome !== null && wasSent(outcome)
   const hint =
     blocker === 'noText'
-      ? t('report.dialog.hint.noText')
+      ? t(idea ? 'report.dialog.hint.noTextIdea' : 'report.dialog.hint.noText')
       : blocker === 'notAgreed'
         ? t('report.dialog.hint.notAgreed')
         : null
@@ -78,7 +94,7 @@ export function ReportProblemDialog({
         dismissed.current = busy
         close()
       }}
-      title={t('report.dialog.title')}
+      title={t(idea ? 'report.dialog.titleIdea' : 'report.dialog.title')}
       actions={
         sent ? (
           <Button variant="primary" className="min-h-[44px]" onClick={close}>
@@ -87,7 +103,7 @@ export function ReportProblemDialog({
         ) : (
           <>
             <Button variant="primary" className="min-h-[44px]" disabled={busy || blocker !== null} onClick={submit}>
-              {busy ? t('report.dialog.sending') : t('report.dialog.send')}
+              {busy ? t('report.dialog.sending') : t(idea ? 'report.dialog.sendIdea' : 'report.dialog.send')}
             </Button>
             <Button className="min-h-[44px]" autoFocus disabled={busy} onClick={close}>
               {t('report.dialog.cancel')}
@@ -98,7 +114,7 @@ export function ReportProblemDialog({
       status={
         sent ? null : outcome !== null ? (
           <p role="alert" className="break-words text-caption text-loss">
-            {t(outcomeKey(outcome))}
+            {t(outcomeKey(outcome, kind))}
           </p>
         ) : hint && !busy ? (
           <p className="text-caption text-muted">{hint}</p>
@@ -106,12 +122,26 @@ export function ReportProblemDialog({
       }
     >
       {sent ? (
-        <p>{t(outcomeKey(outcome))}</p>
+        <p>{t(outcomeKey(outcome, kind))}</p>
       ) : (
         <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="text-caption font-medium text-ink2">{t('report.dialog.kind.label')}</span>
+            <Segmented
+              value={kind}
+              onChange={setKind}
+              size="sm"
+              label={t('report.dialog.kind.label')}
+              options={[
+                { value: 'bug', label: t('report.dialog.kind.bug') },
+                { value: 'idea', label: t('report.dialog.kind.idea') },
+              ]}
+            />
+          </div>
+
           <div className="flex flex-col gap-1.5">
             <label htmlFor={textId} className="text-caption font-medium text-ink2">
-              {t('report.dialog.text.label')}
+              {t(idea ? 'report.dialog.text.ideaLabel' : 'report.dialog.text.label')}
             </label>
             <textarea
               id={textId}
@@ -119,7 +149,7 @@ export function ReportProblemDialog({
               rows={5}
               disabled={busy}
               onChange={(event) => setText(event.target.value)}
-              placeholder={t('report.dialog.text.placeholder')}
+              placeholder={t(idea ? 'report.dialog.text.ideaPlaceholder' : 'report.dialog.text.placeholder')}
               spellCheck
               aria-invalid={tooLong ? true : undefined}
               aria-describedby={tooLong || text.length >= COUNTER_FROM ? noteId : undefined}
@@ -136,33 +166,35 @@ export function ReportProblemDialog({
             )}
           </div>
 
-          {detail && (
+          {detail && !idea && (
             <div className="space-y-1">
               <p className="text-caption text-muted">{t('report.dialog.detail')}</p>
               <p className="break-words text-caption text-ink2">{detail}</p>
             </div>
           )}
 
-          <div className="space-y-1">
-            <label className="flex items-start gap-3 text-body text-ink">
-              <input
-                type="checkbox"
-                className="mt-1 size-4 shrink-0 accent-accent"
-                checked={attachLog}
-                disabled={busy}
-                onChange={(event) => setAttachLog(event.target.checked)}
-              />
-              <span>{t('report.dialog.log.label')}</span>
-            </label>
-          </div>
+          {!idea && (
+            <div className="space-y-1">
+              <label className="flex items-start gap-3 text-body text-ink">
+                <input
+                  type="checkbox"
+                  className="mt-1 size-4 shrink-0 accent-accent"
+                  checked={attachLog}
+                  disabled={busy}
+                  onChange={(event) => setAttachLog(event.target.checked)}
+                />
+                <span>{t('report.dialog.log.label')}</span>
+              </label>
+            </div>
+          )}
 
           <MoreAbout>
             <p>{t('report.dialog.intro')}</p>
             <p>{t('report.dialog.holds')}</p>
             <p>{signedInThen ? t('report.dialog.signedIn') : t('report.dialog.signedOut')}</p>
             <p>{t('report.dialog.kept')}</p>
-            <p>{t('report.dialog.log.scrubbed')}</p>
-            <p>{t('report.dialog.log.remains')}</p>
+            {!idea && <p>{t('report.dialog.log.scrubbed')}</p>}
+            {!idea && <p>{t('report.dialog.log.remains')}</p>}
             <p>{t('report.dialog.transfer.where')}</p>
             <p>{t('report.dialog.transfer.ip')}</p>
             <p>{standing ? t('report.dialog.consent.withdraw') : t('report.dialog.transfer.decline')}</p>

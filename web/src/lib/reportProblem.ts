@@ -12,7 +12,32 @@ const MESSAGE_CAP = 500
 
 /** What the dialog is drafting. `detail` is the worded technical-detail line
  *  sent under the text, `''` when the dialog was not opened from an error. */
-export type ReportDraft = { text: string; attachLog: boolean; agreed: boolean; detail?: string }
+export type ReportDraft = {
+  text: string
+  attachLog: boolean
+  agreed: boolean
+  detail?: string
+  /** `bug` when absent. An `idea` never sends the log or the detail, whatever the draft holds. */
+  kind?: ReportKind
+  /** The address path the dialog was opened on; `null` where there is none. */
+  page?: string | null
+  /** The match whose page it was opened on; `null` elsewhere. */
+  matchId?: string | null
+}
+
+export type ReportKind = 'bug' | 'idea'
+
+/** The address path a report is sent from, as the shell accepts it: a `/…`
+ *  path with no query or fragment; `null` for anything else. */
+export function pageOf(pathname: string | null | undefined): string | null {
+  if (!pathname || !pathname.startsWith('/') || /[?#]/.test(pathname)) return null
+  return pathname
+}
+
+/** The match a path is the page of (`/matches/:id` and its views), else `null`. */
+export function matchIdOf(params: { id?: string } | undefined, pathname: string): string | null {
+  return params?.id && /^\/matches\/[^/]+(\/|$)/.test(pathname) ? params.id : null
+}
 
 /** The first thing that keeps Send report disabled, in the order the hint names them. */
 export type Blocker = 'noText' | 'tooLong' | 'notAgreed'
@@ -50,7 +75,14 @@ export async function sendReport(call: ShellReports['reportProblem'] | undefined
   if (!call) return 'unavailable'
   if (blockerOf(draft) !== null) return 'invalid'
   try {
-    const outcome = await call({ text: reportText(draft.text, draft.detail), attachLog: draft.attachLog })
+    const idea = draft.kind === 'idea'
+    const outcome = await call({
+      text: reportText(draft.text, idea ? undefined : draft.detail),
+      attachLog: idea ? false : draft.attachLog,
+      kind: draft.kind ?? 'bug',
+      page: draft.page ?? null,
+      matchId: draft.matchId ?? null,
+    })
     return OUTCOMES.includes(outcome) ? outcome : 'failed'
   } catch {
     return 'failed'
@@ -93,8 +125,9 @@ export function wasSent(outcome: ReportOutcome): boolean {
   return outcome === 'sent' || outcome === 'sent-without-log'
 }
 
-/** The catalogue key of an outcome's line. */
-export function outcomeKey(outcome: ReportOutcome): string {
+/** The catalogue key of an outcome's line; an idea that went has its own thanks. */
+export function outcomeKey(outcome: ReportOutcome, kind: ReportKind = 'bug'): string {
+  if (kind === 'idea' && outcome === 'sent') return 'report.dialog.result.sentIdea'
   return `report.dialog.result.${outcome === 'sent-without-log' ? 'sentWithoutLog' : outcome}`
 }
 

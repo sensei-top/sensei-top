@@ -11,12 +11,16 @@ import {
   signedInOf,
   standingConsentOf,
   detailOf,
+  matchIdOf,
+  pageOf,
   reportText,
   wasSent,
   type ReportDraft,
 } from './reportProblem'
 
 const draft = (change: Partial<ReportDraft> = {}): ReportDraft => ({ text: 'It broke', attachLog: false, agreed: true, ...change })
+
+const BUG = { kind: 'bug', page: null, matchId: null } as const
 
 describe('what keeps Send report disabled', () => {
   it('names the first that applies, in the order of the hints', () => {
@@ -58,13 +62,13 @@ describe('sending a report', () => {
   it('sends the detail under the text', async () => {
     const call = vi.fn(async (): Promise<ReportOutcome> => 'sent')
     await sendReport(call, draft({ detail: 'Technical detail: Boom' }))
-    expect(call).toHaveBeenCalledExactlyOnceWith({ text: 'It broke\n\nTechnical detail: Boom', attachLog: false })
+    expect(call).toHaveBeenCalledExactlyOnceWith({ text: 'It broke\n\nTechnical detail: Boom', attachLog: false, ...BUG })
   })
 
   it('sends the trimmed text and the log choice through the bridge call', async () => {
     const call = vi.fn(async (): Promise<ReportOutcome> => 'sent')
     expect(await sendReport(call, draft({ text: '  It broke \n', attachLog: true }))).toBe('sent')
-    expect(call).toHaveBeenCalledExactlyOnceWith({ text: 'It broke', attachLog: true })
+    expect(call).toHaveBeenCalledExactlyOnceWith({ text: 'It broke', attachLog: true, ...BUG })
   })
 
   it('calls nothing for a draft the dialog would have blocked', async () => {
@@ -90,6 +94,38 @@ describe('sending a report', () => {
   })
 })
 
+describe('the payload per kind', () => {
+  it('carries the page and the match of a bug', async () => {
+    const call = vi.fn(async (): Promise<ReportOutcome> => 'sent')
+    await sendReport(call, draft({ attachLog: true, detail: 'Technical detail: Boom', kind: 'bug', page: '/matches/m1', matchId: 'm1' }))
+    expect(call).toHaveBeenCalledExactlyOnceWith({
+      text: 'It broke\n\nTechnical detail: Boom',
+      attachLog: true,
+      kind: 'bug',
+      page: '/matches/m1',
+      matchId: 'm1',
+    })
+  })
+  it('never sends the log or the detail of an idea, whatever the draft holds', async () => {
+    const call = vi.fn(async (): Promise<ReportOutcome> => 'sent')
+    await sendReport(call, draft({ attachLog: true, detail: 'Technical detail: Boom', kind: 'idea', page: '/decks', matchId: null }))
+    expect(call).toHaveBeenCalledExactlyOnceWith({ text: 'It broke', attachLog: false, kind: 'idea', page: '/decks', matchId: null })
+  })
+  it('takes the page only as a path the shell accepts', () => {
+    expect(pageOf('/matches/m1')).toBe('/matches/m1')
+    expect(pageOf('/decks?x=1')).toBeNull()
+    expect(pageOf('/decks#a')).toBeNull()
+    expect(pageOf('decks')).toBeNull()
+    expect(pageOf(undefined)).toBeNull()
+  })
+  it('takes the match only on a match page', () => {
+    expect(matchIdOf({ id: 'm1' }, '/matches/m1')).toBe('m1')
+    expect(matchIdOf({ id: 'm1' }, '/matches/m1/replay')).toBe('m1')
+    expect(matchIdOf({ id: 'd1' }, '/decks/d1')).toBeNull()
+    expect(matchIdOf(undefined, '/matches')).toBeNull()
+  })
+})
+
 describe('the outcomes', () => {
   it('replace the form only when the report went', () => {
     expect(wasSent('sent')).toBe(true)
@@ -99,6 +135,8 @@ describe('the outcomes', () => {
   it('each have a catalogue line', () => {
     expect(outcomeKey('sent-without-log')).toBe('report.dialog.result.sentWithoutLog')
     expect(outcomeKey('failed')).toBe('report.dialog.result.failed')
+    expect(outcomeKey('sent', 'idea')).toBe('report.dialog.result.sentIdea')
+    expect(outcomeKey('failed', 'idea')).toBe('report.dialog.result.failed')
   })
 })
 

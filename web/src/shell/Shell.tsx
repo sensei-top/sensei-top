@@ -4,12 +4,13 @@ import { useTranslation } from 'react-i18next'
 import { Link, Outlet, ScrollRestoration, useLocation, useMatches, useNavigate } from 'react-router'
 import { useLive } from '../api'
 import { useShell } from '../bridge'
+import { FeedbackPill } from '../components/FeedbackPill'
 import { ReportProblemDialog } from '../components/ReportProblemDialog'
 import { BrandGlyph, Callout, TextLink } from '../components/ui'
 import { ACCOUNT_WELCOME_PATH, consentState, needsConsent } from '../lib/accountWelcome'
 import { CONTRIBUTE_KEEPS, CONTRIBUTE_PATH, contribPageDue } from '../lib/contribute'
 import { POLICY_VERSION } from '../lib/policy'
-import { ReportProblemContext, signedInOf, type ReportOpener } from '../lib/reportProblem'
+import { matchIdOf, pageOf, ReportProblemContext, signedInOf, type ReportOpener } from '../lib/reportProblem'
 import { BottomBar } from './BottomBar'
 import { CardDataChip } from './CardDataChip'
 import { LiveStatus } from './LiveStatus'
@@ -91,13 +92,29 @@ export function Shell() {
   const reportProblem = shell?.reportProblem
   const onReportProblem = shell?.onReportProblem
   const signedIn = signedInOf(shell?.app?.settings.account)
-  const [report, setReport] = useState({ opening: 0, open: false, message: null as string | null, signedIn: false })
+  const [report, setReport] = useState({
+    opening: 0,
+    open: false,
+    message: null as string | null,
+    signedIn: false,
+    page: null as string | null,
+    matchId: null as string | null,
+  })
+  // Where the person is when they open it, read at that moment, so the
+  // opener keeps its identity as they move about.
+  const here = useRef({ page: null as string | null, matchId: null as string | null })
+  here.current = {
+    page: pageOf(pathname),
+    matchId: matchIdOf(matches[matches.length - 1]?.params as { id?: string } | undefined, pathname),
+  }
   const opener = useMemo<ReportOpener | null>(
     () =>
       reportProblem
         ? {
             open: (message) =>
-              setReport((now) => (now.open ? now : { opening: now.opening + 1, open: true, message, signedIn })),
+              setReport((now) =>
+                now.open ? now : { opening: now.opening + 1, open: true, message, signedIn, ...here.current },
+              ),
           }
         : null,
     [reportProblem, signedIn],
@@ -201,7 +218,10 @@ export function Shell() {
               {/* Wizards' notice is the welcome catalogue's, one sentence in one
                   place. */}
               <div
-                className={`${COLUMN} flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-4 text-caption text-muted`}
+                className={`${COLUMN} flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-4 text-caption text-muted ${
+                  // Keeps Credits clear of the fixed Feedback pill: change both together.
+                  opener ? 'md:pr-[calc(2.25rem+8.5rem)]' : ''
+                }`}
               >
                 <p className="min-w-0 max-w-prose flex-1">
                   {t('shell.footer.local')} {t('welcome.intro.wizardsNotice')}
@@ -215,6 +235,7 @@ export function Shell() {
         </div>
 
         {!bare && <BottomBar current={place} />}
+        {!bare && !focus && <FeedbackPill />}
         <ScrollRestoration />
         {reportProblem && report.opening > 0 && (
           <ReportProblemDialog
@@ -224,6 +245,8 @@ export function Shell() {
             send={reportProblem}
             signedIn={report.signedIn}
             message={report.message}
+            page={report.page}
+            matchId={report.matchId}
           />
         )}
       </div>

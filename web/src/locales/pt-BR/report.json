@@ -2,8 +2,14 @@
   "open": "Relatar um problema",
   "dialog": {
     "title": "Relatar um problema",
+    "titleIdea": "Sugerir uma ideia",
+    "kind": {
+      "label": "O que é?",
+      "bug": "Problema",
+      "idea": "Ideia"
+    },
     "intro": "Nada é enviado até você clicar em Enviar. Funciona com ou sem conta, com os relatórios de erro ligados ou não.",
-    "holds": "O relatório traz o que você escrever, a versão do aplicativo e seu sistema.",
+    "holds": "O relatório traz o que você escrever, a página em que você estava, a versão do aplicativo e seu sistema. Na página de uma partida, ele também leva o ID dessa partida.",
     "signedIn": "Você está conectado, então ele é ligado à sua conta por um ID interno, nunca pelo seu e-mail.",
     "signedOut": "Você não está conectado, então ele não carrega nenhum ID de conta.",
     "kept": "O Sentry o guarda por 30 dias.",
@@ -11,7 +17,9 @@
       "label": "O que deu errado?",
       "placeholder": "O que você estava fazendo, e o que aconteceu?",
       "counter": "{{chars}} de 4.000 caracteres",
-      "tooLong": "Encurte o texto para 4.000 caracteres ou menos."
+      "tooLong": "Encurte o texto para 4.000 caracteres ou menos.",
+      "ideaLabel": "Qual é a sua ideia?",
+      "ideaPlaceholder": "O que você gostaria que o Sensei Top fizesse, e onde?"
     },
     "detail": "Detalhe técnico, enviado com seu relatório:",
     "log": {
@@ -31,7 +39,8 @@
     },
     "hint": {
       "noText": "Escreva o que deu errado para enviar o relatório.",
-      "notAgreed": "Para enviar o relatório, concorde com o envio para os Estados Unidos."
+      "notAgreed": "Para enviar o relatório, concorde com o envio para os Estados Unidos.",
+      "noTextIdea": "Escreva sua ideia para enviá-la."
     },
     "send": "Enviar relatório",
     "sending": "Enviando",
@@ -42,8 +51,10 @@
       "sentWithoutLog": "Seu relatório foi enviado, mas sem o log: o Sensei Top não conseguiu lê-lo.",
       "unavailable": "Esta versão do Sensei Top não envia relatórios. Você pode escrever para contact@senseitop.com.",
       "invalid": "O relatório não pôde ser enviado. Escreva o que deu errado, em até 4.000 caracteres, e tente de novo.",
-      "failed": "Seu relatório não pôde ser enviado. Seu texto continua aqui, então tente de novo daqui a pouco."
-    }
+      "failed": "Seu relatório não pôde ser enviado. Seu texto continua aqui, então tente de novo daqui a pouco.",
+      "sentIdea": "Sua ideia foi enviada. Obrigado."
+    },
+    "sendIdea": "Enviar ideia"
   },
   "settings": {
     "description": "Envia um relatório a cada clique, com ou sem conta, com os relatórios de erro ligados ou não."
@@ -55,5 +66,6 @@
     "sent": "Um relatório deste erro foi enviado automaticamente, porque Enviar relatórios de erro está ligado.",
     "notSent": "Este erro não foi enviado. Para nos contar sobre ele, use Relatar um problema.",
     "pending": "Este erro só é enviado automaticamente se Enviar relatórios de erro estiver ligado."
-  }
+  },
+  "feedback": "Feedback"
 }

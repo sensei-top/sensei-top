@@ -284,7 +284,13 @@ export type ShellReports = {
   /** `true` when the shell captured it. */
   reportError(error: RendererErrorReport): Promise<boolean>
   /** Sends one report whatever the error-reports choice; the caller has asked the transfer consent. */
-  reportProblem(report: { text: string; attachLog: boolean }): Promise<ReportOutcome>
+  reportProblem(report: {
+    text: string
+    attachLog: boolean
+    kind: 'bug' | 'idea'
+    page: string | null
+    matchId: string | null
+  }): Promise<ReportOutcome>
   /** Calls `listener` when the shell's tray asked for the report dialog; returns a function that stops it. */
   onReportProblem(listener: () => void): () => void
 }
