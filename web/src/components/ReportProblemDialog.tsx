@@ -1,7 +1,9 @@
 import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useMatchDetail } from '../api'
 import { useShell, type ReportOutcome, type ShellReports } from '../bridge'
 import {
+  aboutOf,
   blockerOf,
   COUNTER_FROM,
   outcomeKey,
@@ -12,7 +14,18 @@ import {
   standingConsentOf,
   wasSent,
 } from '../lib/reportProblem'
+import { useNow } from '../lib/time'
 import { Button, Dialog, MoreAbout, Segmented } from './ui'
+
+/** The line naming the match a report from its page is about. Shown, never
+ *  sent: only the match's ID goes. Nothing while the match loads or if it fails. */
+function AboutMatch({ matchId }: { matchId: string }) {
+  const { t } = useTranslation()
+  const now = useNow()
+  const match = useMatchDetail(matchId).data
+  const about = match ? aboutOf(match, now) : null
+  return about ? <p className="break-words text-caption text-muted">{t(about.key, about.values)}</p> : null
+}
 
 /** The Report a problem dialog. The shell mounts it with a new `key` for each
  *  opening, so every opening starts with an empty draft and both boxes
@@ -138,6 +151,8 @@ export function ReportProblemDialog({
               ]}
             />
           </div>
+
+          {matchId && <AboutMatch matchId={matchId} />}
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor={textId} className="text-caption font-medium text-ink2">

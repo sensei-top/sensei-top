@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useRouteError } from 'react-router'
+import { useLocation, useParams, useRouteError } from 'react-router'
 import { useShell } from '../bridge'
 import { ReportProblemDialog } from '../components/ReportProblemDialog'
 import { Button } from '../components/ui'
 import { messageOf, sentKey, useBoundaryReport } from '../lib/errorReports'
-import { signedInOf } from '../lib/reportProblem'
+import { matchIdOf, pageOf, signedInOf } from '../lib/reportProblem'
 
 /** What the router shows in place of a page that threw. It can render where
  *  the shell's layout is not mounted (an error in the layout itself), so it
@@ -14,6 +14,8 @@ import { signedInOf } from '../lib/reportProblem'
 export function ErrorPage() {
   const { t } = useTranslation()
   const error = useRouteError()
+  const { pathname } = useLocation()
+  const params = useParams()
   const sent = useBoundaryReport(error)
   const shell = useShell()
   const reportProblem = shell?.reportProblem
@@ -47,6 +49,8 @@ export function ErrorPage() {
           send={reportProblem}
           signedIn={dialog.signedIn}
           message={messageOf(error)}
+          page={pageOf(pathname)}
+          matchId={matchIdOf(params, pathname)}
         />
       )}
     </div>

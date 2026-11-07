@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { AccountState, ProfileState, ReportOutcome } from '../bridge'
 import { POLICY_VERSION } from './policy'
 import {
+  aboutOf,
   blockerOf,
   COUNTER_FROM,
   outcomeKey,
@@ -250,5 +251,26 @@ describe('whether a standing consent replaces the box', () => {
     expect(standingConsentOf(account(read(), false))).toBe(false)
     expect(standingConsentOf({ available: false })).toBe(false)
     expect(standingConsentOf(undefined)).toBe(false)
+  })
+})
+
+describe('aboutOf', () => {
+  const now = Date.parse('2026-11-07T12:00:00')
+  it('names the match by date, deck and opponent when it has all three', () => {
+    const about = aboutOf({ started_at: '2026-11-02T20:00:00', deck_name: 'Deck A', opponent_label: 'Opp B' }, now)
+    expect(about?.key).toBe('report.dialog.about.match')
+    expect(about?.values).toMatchObject({ deck: 'Deck A', opponent: 'Opp B' })
+    expect(about?.values.date).toBe('Nov 2')
+  })
+  it('falls back to the date when the deck or the opponent is null', () => {
+    expect(aboutOf({ started_at: '2026-11-02T20:00:00', deck_name: null, opponent_label: 'Opp B' }, now)?.key).toBe(
+      'report.dialog.about.matchDate',
+    )
+    expect(aboutOf({ started_at: '2026-11-02T20:00:00', deck_name: 'Deck A', opponent_label: null }, now)?.key).toBe(
+      'report.dialog.about.matchDate',
+    )
+  })
+  it('names nothing without a start time', () => {
+    expect(aboutOf({ started_at: null, deck_name: 'Deck A', opponent_label: 'Opp B' }, now)).toBeNull()
   })
 })

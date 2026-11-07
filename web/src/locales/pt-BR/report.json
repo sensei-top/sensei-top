@@ -8,6 +8,10 @@
       "bug": "Problema",
       "idea": "Ideia"
     },
+    "about": {
+      "match": "Sobre: a partida de {{date}}, {{deck}} contra {{opponent}}",
+      "matchDate": "Sobre: a partida de {{date}}"
+    },
     "intro": "Nada é enviado até você clicar em Enviar. Funciona com ou sem conta, com os relatórios de erro ligados ou não.",
     "holds": "O relatório traz o que você escrever, a página em que você estava, a versão do aplicativo e seu sistema. Na página de uma partida, ele também leva o ID dessa partida.",
     "signedIn": "Você está conectado, então ele é ligado à sua conta por um ID interno, nunca pelo seu e-mail.",

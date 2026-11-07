@@ -8,6 +8,10 @@
       "bug": "Bug",
       "idea": "Idea"
     },
+    "about": {
+      "match": "About: the match of {{date}}, {{deck}} vs {{opponent}}",
+      "matchDate": "About: the match of {{date}}"
+    },
     "intro": "Nothing is sent until you press Send. It works with or without an account, whether or not error reports are on.",
     "holds": "The report holds what you write, the page you were on, the app version and your system. From a match's page it also carries that match's ID.",
     "signedIn": "You're signed in, so it's linked to your account by an internal ID, never by your email.",

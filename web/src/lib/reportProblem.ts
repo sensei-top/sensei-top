@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react'
 import type { AccountState, ReportOutcome, ShellReports } from '../bridge'
 import { POLICY_VERSION } from './policy'
+import { formatShortDay, parseTimestamp } from './time'
 
 /** The longest report the dialog sends, in characters; the shell refuses more. */
 export const REPORT_LIMIT = 4000
@@ -37,6 +38,21 @@ export function pageOf(pathname: string | null | undefined): string | null {
 /** The match a path is the page of (`/matches/:id` and its views), else `null`. */
 export function matchIdOf(params: { id?: string } | undefined, pathname: string): string | null {
   return params?.id && /^\/matches\/[^/]+(\/|$)/.test(pathname) ? params.id : null
+}
+
+/** The "About: the match of …" line a match's page shows, shown and never sent.
+ *  The fuller key needs both the deck and the opponent; one missing falls back
+ *  to the date alone. `null` when the match has no start time to name it by. */
+export function aboutOf(
+  match: { started_at?: string | null; deck_name?: string | null; opponent_label?: string | null },
+  now: number,
+): { key: 'report.dialog.about.match' | 'report.dialog.about.matchDate'; values: Record<string, string> } | null {
+  const started = parseTimestamp(match.started_at)
+  if (started == null) return null
+  const date = formatShortDay(started, now)
+  return match.deck_name && match.opponent_label
+    ? { key: 'report.dialog.about.match', values: { date, deck: match.deck_name, opponent: match.opponent_label } }
+    : { key: 'report.dialog.about.matchDate', values: { date } }
 }
 
 /** The first thing that keeps Send report disabled, in the order the hint names them. */

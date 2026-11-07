@@ -84,6 +84,13 @@ posts and links, so it stays responsive (`docs/frontend-site.md`).
 
 `shell/Shell.tsx` is the layout route every place renders in.
 
+- **The Feedback pill** (`FeedbackPill`, fixed at the bottom right) opens
+  Report a problem from any page. It is absent on the bare pages, on Live in
+  focus mode, under 48rem, and in the browser: it shows only in the desktop
+  shell, where the shell sends reports. While it shows, the footer row gets
+  end padding (`md:pr-[calc(2.25rem+8.5rem)]`, changed together with the
+  pill) so Credits stays clear of it.
+
 - **From 48rem up**: the rail (`shell/Rail.tsx`, 84 px wide) and beside it
   one column, capped at `max-w-[1196px]`, that holds the bar, the page and
   the footer on the same edges. The rail is the glyph as a link Home, then
@@ -265,7 +272,7 @@ it is, so every place is one click away, and the place's name stays as the
 `h1` for a screen reader. Under 48rem the page scrolls like any other.
 
 Focus mode is read from the address (`Shell.tsx`'s `focus`). No control
-turns it on or off.
+turns it on or off. The Feedback pill is absent in it too (see "The layout").
 
 ### The welcome's bare pages
 
@@ -277,7 +284,8 @@ left by its own buttons: `/welcome` opened again from Settings (once
 to the end is not a way out; the first run has none. Both welcome cards are
 centred (`mx-auto max-w-3xl`), and the shell draws a bare page's name in
 the same width, so it stands on the card's left edge. `/welcome`'s first step carries Wizards'
-notice itself, so the footer's copy of it is not missed.
+notice itself, so the footer's copy of it is not missed. A bare page has no
+Feedback pill either.
 
 ### The footer and the credits
 
@@ -562,16 +570,22 @@ the failed backup's sentences name.
   only when nothing is stored, the stored yes lacks the age confirmation or
   it was given under an older `POLICY_VERSION`; a turn-off keeps the stored
   age confirmation and version.
-- **Report a problem** is a button in "Version and diagnostics" (About) and on every `ErrorNote` and on the
-  error screen, in a shell that sends reports. It opens
-  `components/ReportProblemDialog.tsx`: the text, "attach the last 500 lines
+- **Report a problem** is a button in "Version and diagnostics" (About), on every `ErrorNote`, on the
+  error screen and in the Feedback pill, in a shell that sends reports. It opens
+  `components/ReportProblemDialog.tsx`: a Bug/Idea choice, the text, "attach the last 500 lines
   of the log", and the consent, with the rest (what the report holds, the
   log's scrubbing, where Sentry keeps it) under "More about this". The consent
   is a checkbox above Send, asked at every press, unless the dialog is signed
   in with the profile read, `consentErrors` on and `consentVersion >=
   POLICY_VERSION` (`standingConsentOf`): then it is one line naming Sentry and
   the United States, no checkbox. Signed out, or with the profile unknown, the
-  box always shows. It sends through the bridge's `reportProblem` only, and works signed out. The
+  box always shows. An Idea hides the log box and the technical detail and sends neither
+  (`attachLog` false, no detail). The report sends `kind`, `page` (the
+  address path, no query) and, on a match's pages, `matchId`. On a match's
+  pages the dialog also shows a line, "About: the match of <date>, <deck> vs
+  <opponent>" (the date alone when the deck or opponent is null): it is shown
+  and not sent; only the match's ID goes. The error screen passes the path it
+  was showing, and the match's ID when that is a match's page. It sends through the bridge's `reportProblem` only, and works signed out. The
   shell mounts one dialog (`useReportProblem()`), remounted per opening.
 
 The Overlay section went with the pivot. An Arena overlay is planned again
