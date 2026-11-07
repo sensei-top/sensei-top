@@ -921,6 +921,10 @@ export interface paths {
          *     field's consensus, and the field itself around any detected format
          *     reset — see ``guide/bundle.py``. 404 mirrors ``match_report``'s own
          *     posture: a key that resolves to nothing is a missing resource.
+         *
+         *     ``progress``, a UUID, has the build record its stages under it for
+         *     ``GET /api/progress/{key}`` (``api/progress.py``); any other value is
+         *     ignored.
          */
         get: operations["guide_api_guide__key__get"];
         put?: never;
@@ -1124,6 +1128,27 @@ export interface paths {
          *     it.
          */
         get: operations["contrib_records_api_contrib_records_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/progress/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Progress
+         * @description The latest stage a build recorded under ``key``. 404 when nothing is
+         *     recorded under it, or its entry expired; 422 when ``key`` is not a UUID.
+         */
+        get: operations["progress_api_progress__key__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4982,6 +5007,25 @@ export interface components {
              */
             lost: number;
         };
+        /** ProgressOut */
+        ProgressOut: {
+            /**
+             * Stage
+             * @description The stage the build is in now, an id the page keys.
+             * @enum {string}
+             */
+            stage: "matches" | "field" | "together";
+            /**
+             * Done
+             * @description Items of this stage finished; null where the stage has no count.
+             */
+            done?: number | null;
+            /**
+             * Total
+             * @description Items this stage has in all; null where it has no count.
+             */
+            total?: number | null;
+        };
         /** ProvenanceOut */
         ProvenanceOut: {
             deck: components["schemas"]["DeckIdentityOut"];
@@ -6801,7 +6845,9 @@ export interface operations {
     };
     guide_api_guide__key__get: {
         parameters: {
-            query?: never;
+            query?: {
+                progress?: string | null;
+            };
             header?: never;
             path: {
                 key: string;
@@ -7050,6 +7096,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContribRecordItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    progress_api_progress__key__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressOut"];
                 };
             };
             /** @description Validation Error */
