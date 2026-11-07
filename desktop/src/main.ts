@@ -716,10 +716,10 @@ function run(): void {
       },
       {
         open: () => window?.open(),
-        settings: () => window?.open('/settings'),
-        // The result shows in Settings' App section.
+        settings: () => window?.open('/settings/general'),
+        // The result shows in Settings' General group.
         checkForUpdates: () => {
-          window?.open('/settings');
+          window?.open('/settings/general');
           void checkForUpdates();
         },
         restartToUpdate: () => {

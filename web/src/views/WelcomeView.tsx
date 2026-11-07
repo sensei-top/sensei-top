@@ -81,7 +81,7 @@ export function WelcomeView({
           {/* The page is bare, so a run opened again from Settings needs a way
               back that does not step to the end; the first run has none. */}
           {app.onboarded && (
-            <Button variant="quiet" className="min-h-[44px] shrink-0" href="/settings">
+            <Button variant="quiet" className="min-h-[44px] shrink-0" href="/settings/general">
               {t('welcome.frame.close')}
             </Button>
           )}
@@ -195,7 +195,7 @@ function StartStep({ app, actions }: { app: AppSettings; actions: WelcomeActions
             <li>{t('welcome.intro.claude')}</li>
           </ul>
           <p className="text-body text-ink2">
-            <Trans i18nKey="welcome.intro.credits" components={{ credits: <TextLink href="/settings#credits" /> }} />
+            <Trans i18nKey="welcome.intro.credits" components={{ credits: <TextLink href="/settings/about#credits" /> }} />
           </p>
         </div>
       </Disclosure>

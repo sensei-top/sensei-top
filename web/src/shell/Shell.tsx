@@ -204,7 +204,7 @@ export function Shell() {
                 <p className="min-w-0 max-w-prose flex-1">
                   {t('shell.footer.local')} {t('welcome.intro.wizardsNotice')}
                 </p>
-                <TextLink href="/settings#credits" className="shrink-0">
+                <TextLink href="/settings/about#credits" className="shrink-0">
                   {t('shell.footer.credits')}
                 </TextLink>
               </div>
