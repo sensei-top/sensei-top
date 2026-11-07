@@ -654,6 +654,7 @@ function run(): void {
           log: shellLog.child('shell.session'),
         }),
         openExternal: (url) => shell.openExternal(url),
+        focusApp: () => window?.open(),
         log: shellLog.child('shell.auth'),
       });
       auth = cloud;

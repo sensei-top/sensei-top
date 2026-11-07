@@ -83,6 +83,8 @@ export interface CloudAuthOptions {
   fetch: NetFetch;
   storage: SessionStore;
   openExternal: (url: string) => Promise<void>;
+  /** Brings the app's window to the front after a good callback. */
+  focusApp?: () => void;
   log?: Logger;
   /** The language the callback page and the result's text are in. */
   language?: () => Language;
@@ -125,6 +127,12 @@ export function callbackPage(language: Language, kind: PageKind, script?: string
     '',
   ].join('\n');
 }
+
+const CLOSE_DELAY_MS = 1500;
+
+/** Best effort: a browser refuses to close a tab it did not open from a
+ *  script, and the page's sentence stays for it. */
+const CLOSE_SCRIPT = `setTimeout(function(){window.close()},${CLOSE_DELAY_MS});`;
 
 const FORWARD_SCRIPT =
   `var h=location.hash.slice(1);` +
@@ -268,7 +276,8 @@ class Attempt {
       return;
     }
     const result = await this.auth.exchange(code, this.flowId);
-    this.page(res, result.ok ? 'done' : 'failed');
+    this.page(res, result.ok ? 'done' : 'failed', result.ok ? CLOSE_SCRIPT : undefined);
+    if (result.ok) this.auth.focusApp();
     this.finish(result);
   }
 
@@ -300,6 +309,7 @@ export class CloudAuth {
   readonly language: () => Language;
   private readonly storage: SessionStore;
   private readonly openExternal: (url: string) => Promise<void>;
+  private readonly focus: () => void;
   private readonly log: Logger;
   private readonly ports: readonly number[];
   private readonly timeoutMs: number;
@@ -311,6 +321,7 @@ export class CloudAuth {
   constructor(options: CloudAuthOptions) {
     this.storage = options.storage;
     this.openExternal = options.openExternal;
+    this.focus = options.focusApp ?? (() => {});
     this.log = options.log ?? silent;
     this.language = options.language ?? currentLanguage;
     this.ports = options.ports ?? CALLBACK_PORTS;
@@ -356,6 +367,15 @@ export class CloudAuth {
     return () => {
       this.listeners.delete(listener);
     };
+  }
+
+  /** Never throws: a window that cannot be raised must not fail a sign-in. */
+  focusApp(): void {
+    try {
+      this.focus();
+    } catch (error) {
+      this.log.warn('the window could not be brought to the front', { error: String(error) });
+    }
   }
 
   failure(error: SignInError, params?: Record<string, string>): SignInResult {

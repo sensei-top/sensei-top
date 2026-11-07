@@ -380,8 +380,12 @@ loopback ports, `53682`, `53683` and `53684`, at `/auth/callback`; all three
 are in the project's redirect allow-list. It exchanges the callback's code for a
 session and closes the listener. One callback is taken per sign-in, and it
 gives up after five minutes. The tab shows a small page in the shell's
-language. An address the provider has not verified is refused, and the raw
-error goes to the log only.
+language. After a good callback the app's window comes to the front (the
+`focusApp` dependency, wired to the window's `open()` with no path, so the
+dashboard stays on its page) and that page tries to close its tab after 1.5
+seconds with an inline script; a browser that refuses leaves the sentence
+standing. A failed callback does neither. An address the provider has
+not verified is refused, and the raw error goes to the log only.
 
 **The session is stored by the system.** `sessionStore.ts` writes it to
 `session.bin` in `userData` encrypted by `safeStorage` (the keyring on
