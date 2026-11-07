@@ -13,6 +13,7 @@
   },
   "range": "{{from}} – {{to}}",
   "page": {
+    "reading": "Reading your MTGO matches…",
     "intro": "MTGO's log does not say which deck you played. These matches are grouped by the saved list that holds the most cards you played in each; confirm a group and every match in it counts toward that list.",
     "waiting_one": "{{matches}} needs a deck.",
     "waiting_other": "{{matches}} need a deck.",

@@ -1,4 +1,7 @@
 {
+  "page": {
+    "reading": "Lendo o jogo…"
+  },
   "title": "Ao vivo",
   "textUnknown": "Texto desconhecido",
   "onPlay": "no play",
