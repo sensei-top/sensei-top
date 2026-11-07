@@ -45,3 +45,12 @@ export function OutlineCard({
     </div>
   )
 }
+
+/** The block of an `OutlineCard` standing in for a `StatTile`: the tile's
+ *  stat and detail lines, less what the frame's label and padding add. */
+export const STAT_TILE_BLOCK = 'h-[calc(var(--text-stat)*1.1+var(--text-caption)*1.4-var(--spacing)*3)]'
+
+/** Five pairing tiles' block: the stat line and the detail, which wraps to a
+ *  second line in the five-column row. The same block stands in for the
+ *  field's tile while its figures load. */
+export const PAIRING_TILE_BLOCK = 'h-[calc(var(--text-stat)*1.1+var(--text-caption)*2.8-var(--spacing)*3)]'

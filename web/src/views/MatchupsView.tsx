@@ -5,7 +5,7 @@ import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } fr
 import { ShowAll } from '../components/field/ShowAll'
 import { RateCell } from '../components/RateCell'
 import { VersionSwitcher } from '../components/VersionSwitcher'
-import { Button, Card, DataTable, EmptyState, ErrorNote, ManaPips, OutlineCard, Segmented, StatTile, TextLink, Tooltip } from '../components/ui'
+import { Button, Card, DataTable, EmptyState, ErrorNote, ManaPips, OutlineCard, Segmented, Skeleton, StatTile, TextLink, Tooltip } from '../components/ui'
 import { mergeNewestFirst } from '../lib/deckOverview'
 import { formatName } from '../lib/decks'
 import {
@@ -86,8 +86,12 @@ export function MatchupsView({
   // The field's win rate, in the line under a name.
   // In the deck's own format: undefined while coverage loads, null when the
   // deck has none, and neither asks for a field.
-  const fmt = useGuideCoverage(deckKey).data?.fmt
-  const fieldByKey = useFieldRecords(fmt)
+  const coverage = useGuideCoverage(deckKey)
+  const fmt = coverage.data?.fmt
+  const fieldRead = useFieldRecords(fmt)
+  const fieldByKey = fieldRead.records
+  // The format is unknown while coverage loads, and the field is then still to come.
+  const fieldLoading = fieldRead.pending || coverage.isPending
   const fieldLink = fmt ? (
     <TextLink href={`/field?format=${encodeURIComponent(fmt)}`} className="text-caption">
       {t('matchups.view.openField', { format: formatName(fmt, t) })}
@@ -195,6 +199,10 @@ export function MatchupsView({
                   {namesFormat && <div className="text-caption break-words text-muted">{rowFormatName(row, t)}</div>}
                   <div className="text-caption break-words text-muted">
                     {fieldLine({ won: row.gamesWon, lost: row.gamesLost }, field, t)}
+                    {fieldLoading && archetype != null && (
+                      // The field's part of the line, about as long as it will be.
+                      <Skeleton className="ml-2 inline-block h-[calc(var(--text-caption)*1.1)] w-40 align-middle" />
+                    )}
                   </div>
                 </div>,
                 formatCount(row.matches),

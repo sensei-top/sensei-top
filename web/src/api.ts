@@ -542,9 +542,10 @@ export const useMetaWinrate = (metaWindow: MetaWindow | undefined, format?: stri
 /** The field's record of each archetype, by its archetype key, pooled over
  *  every label the key carries (`lib/matchups.ts`'s `fieldRecordsByKey`),
  *  as a deck's Matchups and a pairing's page join it (`archetypeKeyOf`).
- *  Empty until the numbers come, and when they fail: the field never holds
- *  a page. */
-export function useFieldRecords(format: string | null | undefined): Map<string, FieldRecord> {
+ *  `records` is empty until the numbers come, and when they fail: the field
+ *  never holds a page. `pending` is `fieldPending`'s answer, for a page that
+ *  reserves the field's figure while it loads. */
+export function useFieldRecords(format: string | null | undefined): { records: Map<string, FieldRecord>; pending: boolean } {
   // The field's win rate uses the same post-reset window as Field
   // whenever a reset is detected: pooling a pre-ban field rate into a
   // post-ban matchup would repeat the mistake docs/metagame.md's
@@ -560,7 +561,21 @@ export function useFieldRecords(format: string | null | undefined): Map<string, 
   const resetStart = status.data?.format_reset_start
   const fieldWindow = format && status.data ? (resetStart ? { since: resetStart } : { days: 365 }) : undefined
   const fieldWinrate = useMetaWinrate(fieldWindow, format ?? undefined)
-  return useMemo(() => fieldRecordsByKey(fieldWinrate.data ?? []), [fieldWinrate.data])
+  const records = useMemo(() => fieldRecordsByKey(fieldWinrate.data ?? []), [fieldWinrate.data])
+  return { records, pending: fieldPending(format, status, fieldWinrate) }
+}
+
+/** Whether the field's figures are still on their way: a format is known and
+ *  the status or the win-rate read has neither data nor an error. A failed
+ *  status leaves the win-rate read disabled, so it is not waited for; an
+ *  empty field is an answer. */
+export function fieldPending(
+  format: string | null | undefined,
+  status: { isPending: boolean; isError: boolean },
+  winrate: { isPending: boolean; isError: boolean },
+): boolean {
+  if (!format || status.isError) return false
+  return status.isPending || (winrate.isPending && !winrate.isError)
 }
 
 /** Archetype-vs-archetype, from real completed matches. `tiers` defaults to

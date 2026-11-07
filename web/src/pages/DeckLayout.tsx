@@ -4,12 +4,12 @@ import { Navigate, NavLink, Outlet, useLocation, useParams, useSearchParams } fr
 import { useAi } from '../ai/registry'
 import { useDecks, useGuide, useGuideDecks } from '../api'
 import type { TFunction } from '../i18n'
-import { DeckKeyNumbers } from '../components/DeckKeyNumbers'
+import { DeckKeyNumbers, StripFrames } from '../components/DeckKeyNumbers'
 import { BackLink, Button, EmptyState, ErrorNote, OutlineCard, Skeleton } from '../components/ui'
 import { chosenVersion } from '../lib/deckOverview'
 import { deckLine, deckRedirect, fieldNameLine, newestVersion, resolveDeck } from '../lib/decks'
 import { useNow } from '../lib/time'
-import { DeckOverviewFrames, STAT_TILE_BLOCK } from '../views/DeckOverviewView'
+import { DeckOverviewFrames } from '../views/DeckOverviewView'
 import { GuidePending } from '../views/GuideView'
 import { MatchupsFrames } from '../views/MatchupsView'
 import { PairingOutline } from '../views/PairingView'
@@ -54,22 +54,6 @@ function DeckTabs({ versionSearch }: { versionSearch: string }) {
 
 /** The versions the Overview's outline reserves for a deck not yet known. */
 const UNKNOWN_VERSIONS = 4
-
-/** The strip's place while the layout waits: its three tiles' frames and
- *  the note, as `DeckKeyNumbers` draws them. */
-function StripFrames() {
-  const { t } = useTranslation()
-  return (
-    <div className="space-y-2 pt-2">
-      <div className="grid gap-4 md:grid-cols-3">
-        <OutlineCard label={t('decks.strip.matches')} height={STAT_TILE_BLOCK} />
-        <OutlineCard label={t('decks.strip.games')} height={STAT_TILE_BLOCK} />
-        <OutlineCard label={t('decks.strip.playDraw')} height={STAT_TILE_BLOCK} />
-      </div>
-      <p className="text-caption text-muted">{t('decks.overview.playDrawNote')}</p>
-    </div>
-  )
-}
 
 /** The frames of the page under the tabs while the layout waits, chosen by
  *  the address after the deck's own (the Guide and RCQ share one frame):

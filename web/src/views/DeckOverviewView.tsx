@@ -19,10 +19,6 @@ const MINUTE = 60_000
 const RANK_HEIGHT =
   'h-[calc(var(--text-title)*1.25+var(--text-caption)*2.8+var(--text-body)*12-var(--text-chip)*1.5+var(--spacing)*41.5)]'
 
-/** The block of an `OutlineCard` standing in for a `StatTile`: the tile's
- *  stat and detail lines, less what the frame's label and padding add. */
-export const STAT_TILE_BLOCK = 'h-[calc(var(--text-stat)*1.1+var(--text-caption)*1.4-var(--spacing)*3)]'
-
 /** The same block for a tile whose detail wraps to a second line under the
  *  `lg` breakpoint, where the tiles are three to a row, and not from it. */
 export const STAT_TILE_BLOCK_WRAPS_UNDER_LG =

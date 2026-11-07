@@ -4,7 +4,7 @@ import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } fr
 import { useAi } from '../ai/registry'
 import { DeckMatchesCard } from '../components/DeckMatchesCard'
 import { VersionSwitcher } from '../components/VersionSwitcher'
-import { BackLink, Button, EmptyState, ErrorNote, ManaPips, OutlineCard, Skeleton, StatTile } from '../components/ui'
+import { BackLink, Button, EmptyState, ErrorNote, ManaPips, OutlineCard, PAIRING_TILE_BLOCK, Skeleton, STAT_TILE_BLOCK, StatTile } from '../components/ui'
 import { coverageName } from '../lib/brief'
 import { deckAddress } from '../lib/decks'
 import { archetypeKeyOf, matchupRowOver } from '../lib/matchups'
@@ -31,10 +31,6 @@ function PairingHeadingSkeleton() {
     </div>
   )
 }
-
-/** Five tiles' height: the stat line and the detail, which wraps to a
- *  second line in the five-column row. */
-const PAIRING_TILE_BLOCK = 'h-[calc(var(--text-stat)*1.1+var(--text-caption)*2.8-var(--spacing)*3)]'
 
 /** Record, Games and Game 1 in the three-column row under `lg`, where they
  *  need no second line; from `lg` they do, like the others. */
@@ -143,7 +139,10 @@ export function PairingView({
   const coverage = useGuideCoverage(deckKey)
   // The field in the deck's own format: nothing is asked until coverage
   // answers, or when the deck has none.
-  const fieldByKey = useFieldRecords(coverage.data?.fmt)
+  const field = useFieldRecords(coverage.data?.fmt)
+  const fieldByKey = field.records
+  // The format is unknown while coverage loads, and the field is then still to come.
+  const fieldLoading = field.pending || coverage.isPending
 
   const against = useMemo(
     () => (matches.data ? pairingMatches(opponentKey, matches.data, format) : []),
@@ -194,9 +193,18 @@ export function PairingView({
       // `lg`, as Home's and Decks' five-column grids: under 64rem, 1008–1023 px
       // included, five tiles wrap three and two.
       <div className={`grid gap-4 md:grid-cols-3 ${tiles.length > 3 ? 'lg:grid-cols-5' : ''}`}>
-        {tiles.map((tile) => (
-          <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} muted={tile.muted} />
-        ))}
+        {tiles.map((tile, i) =>
+          // The field's tile is the last; while its figures load it keeps its loaded height.
+          fieldLoading && archetypeKeyOf(opponentKey) != null && i === tiles.length - 1 ? (
+            <OutlineCard
+              key={tile.label}
+              label={tile.label}
+              height={tiles.length > 3 ? PAIRING_TILE_BLOCK : STAT_TILE_BLOCK}
+            />
+          ) : (
+            <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} muted={tile.muted} />
+          ),
+        )}
       </div>
     ) : (
       <EmptyState
