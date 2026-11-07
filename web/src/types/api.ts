@@ -205,6 +205,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/guide/{key}/past-boarding/{archetype_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Guide Past Boarding
+         * @description What this deck boarded the last few times it faced ``archetype_key``
+         *     (bare, no ``archetype:`` prefix), the break read's own past boarding
+         *     read with no break and no match excluded. 404 for a deck key that
+         *     resolves to nothing; an archetype it never faced is an empty list.
+         */
+        get: operations["guide_past_boarding_api_guide__key__past_boarding__archetype_key__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/metrics/winrate": {
         parameters: {
             query?: never;
@@ -2570,6 +2593,9 @@ export interface components {
          *     ``deck_ids`` is every content-hash version this identity groups — a
          *     match's deck and a version's address name a bare ``deck_id``, so the
          *     frontend needs this list to find which guide identity one belongs to.
+         *     ``art_grp_id`` is the newest version's most-played card among those whose
+         *     type is known (``None`` when no known card is a non-land);
+         *     ``card_names`` its distinct maindeck names.
          */
         DeckIdentityOut: {
             /** Key */
@@ -2596,6 +2622,13 @@ export interface components {
             first_played: string | null;
             /** Last Played */
             last_played: string | null;
+            /** Art Grp Id */
+            art_grp_id?: number | null;
+            /**
+             * Card Names
+             * @default []
+             */
+            card_names: string[];
         };
         /** DeckLeaksOut */
         DeckLeaksOut: {
@@ -6025,6 +6058,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CurrentMatchRead"];
+                };
+            };
+        };
+    };
+    guide_past_boarding_api_guide__key__past_boarding__archetype_key__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+                archetype_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PastBoardingOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
