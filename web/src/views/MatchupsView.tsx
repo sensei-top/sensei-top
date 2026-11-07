@@ -21,7 +21,7 @@ import {
   rowFormatName,
   rowsSpanFormats,
 } from '../lib/matchups'
-import { STAT_TILE_BLOCK } from './DeckOverviewView'
+import { STAT_TILE_BLOCK_WRAPS_UNDER_LG } from './DeckOverviewView'
 import { formatRecord } from '../lib/format'
 import { pairingAddress, withVersion } from '../lib/pairing'
 import { formatCount, useNow } from '../lib/time'
@@ -35,9 +35,9 @@ export function MatchupsFrames() {
   return (
     <>
       <div className="grid gap-4 md:grid-cols-3">
-        <OutlineCard label={t('matchups.tiles.archetypesMet')} height={STAT_TILE_BLOCK} />
-        <OutlineCard label={t('matchups.tiles.best')} height={STAT_TILE_BLOCK} />
-        <OutlineCard label={t('matchups.tiles.worst')} height={STAT_TILE_BLOCK} />
+        <OutlineCard label={t('matchups.tiles.archetypesMet')} height={STAT_TILE_BLOCK_WRAPS_UNDER_LG} />
+        <OutlineCard label={t('matchups.tiles.best')} height={STAT_TILE_BLOCK_WRAPS_UNDER_LG} />
+        <OutlineCard label={t('matchups.tiles.worst')} height={STAT_TILE_BLOCK_WRAPS_UNDER_LG} />
       </div>
       <OutlineCard label={t('matchups.view.archetypesMet')} words={t('matchups.reading')} height="h-136" />
     </>

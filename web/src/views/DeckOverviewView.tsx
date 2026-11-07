@@ -23,6 +23,11 @@ const RANK_HEIGHT =
  *  stat and detail lines, less what the frame's label and padding add. */
 export const STAT_TILE_BLOCK = 'h-[calc(var(--text-stat)*1.1+var(--text-caption)*1.4-var(--spacing)*3)]'
 
+/** The same block for a tile whose detail wraps to a second line under the
+ *  `lg` breakpoint, where the tiles are three to a row, and not from it. */
+export const STAT_TILE_BLOCK_WRAPS_UNDER_LG =
+  'h-[calc(var(--text-stat)*1.1+var(--text-caption)*2.8-var(--spacing)*3)] lg:h-[calc(var(--text-stat)*1.1+var(--text-caption)*1.4-var(--spacing)*3)]'
+
 /** The versions card's reserved height by how many versions it lists, from
  *  two: the loaded card's title and line, less the frame's label, plus per
  *  version the link's two lines, its padding and the row's (the first row

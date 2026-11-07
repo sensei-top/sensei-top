@@ -36,14 +36,19 @@ function PairingHeadingSkeleton() {
  *  second line in the five-column row. */
 const PAIRING_TILE_BLOCK = 'h-[calc(var(--text-stat)*1.1+var(--text-caption)*2.8-var(--spacing)*3)]'
 
+/** Record, Games and Game 1 in the three-column row under `lg`, where they
+ *  need no second line; from `lg` they do, like the others. */
+const PAIRING_FIRST_TILE_BLOCK =
+  'h-[calc(var(--text-stat)*1.1+var(--text-caption)*1.4-var(--spacing)*3)] lg:h-[calc(var(--text-stat)*1.1+var(--text-caption)*2.8-var(--spacing)*3)]'
+
 /** The tiles' frames while the matches load, in the loaded row's grid. */
 function PairingTileFrames() {
   const { t } = useTranslation()
   return (
     <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
-      <OutlineCard label={t('matchups.pairing.record')} height={PAIRING_TILE_BLOCK} />
-      <OutlineCard label={t('matchups.pairing.games')} height={PAIRING_TILE_BLOCK} />
-      <OutlineCard label={t('matchups.pairing.game1')} height={PAIRING_TILE_BLOCK} />
+      <OutlineCard label={t('matchups.pairing.record')} height={PAIRING_FIRST_TILE_BLOCK} />
+      <OutlineCard label={t('matchups.pairing.games')} height={PAIRING_FIRST_TILE_BLOCK} />
+      <OutlineCard label={t('matchups.pairing.game1')} height={PAIRING_FIRST_TILE_BLOCK} />
       <OutlineCard label={t('matchups.pairing.postboard')} height={PAIRING_TILE_BLOCK} />
       <OutlineCard label={t('matchups.pairing.inTournaments')} height={PAIRING_TILE_BLOCK} />
     </div>

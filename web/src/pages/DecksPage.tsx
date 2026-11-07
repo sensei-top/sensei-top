@@ -30,7 +30,7 @@ function DecksOutline() {
       <div className="h-[44px]" />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-5">
         {[0, 1, 2, 3, 4].map((each) => (
-          <OutlineCard key={each} words={each === 0 ? t('decks.reading') : undefined} height="h-52" />
+          <OutlineCard key={each} words={each === 0 ? t('decks.reading') : undefined} height="h-57 lg:h-61.5" />
         ))}
       </div>
     </div>
