@@ -5,7 +5,7 @@ import type { AccountActions, AccountReply, AccountState, ProfileState, Saved } 
 import { ACCOUNT_WELCOME_PATH } from '../../lib/accountWelcome'
 import { failureOf } from '../../lib/settings'
 import { ago, formatCount, useNow } from '../../lib/time'
-import { Button, Card } from '../ui'
+import { Button, Card, MoreAbout } from '../ui'
 import { DeleteAccountDialog, DeleteHistoryDialog, ErrorsDialog } from './AccountDialogs'
 import {
   deleteControls,
@@ -137,7 +137,11 @@ export function AccountSection({ state, actions }: { state: AccountState; action
   const persistenceNote = note && (
     <div className="space-y-1 text-caption text-muted">
       <p>{t(`account.settings.persistence.${note}`)}</p>
-      {note === 'noKeyring' && <p>{t('account.settings.persistence.keyringHint')}</p>}
+      {note === 'noKeyring' && (
+        <MoreAbout>
+          <p className="text-caption text-muted">{t('account.settings.persistence.keyringHint')}</p>
+        </MoreAbout>
+      )}
     </div>
   )
 

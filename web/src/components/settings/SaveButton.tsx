@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Saved } from '../../bridge'
-import { failureOf, settle } from '../../lib/settings'
+import { runSave, useSavedFlash } from './useSavedFlash'
 import { Button, Field, Select, Switch, type ButtonVariant, type SelectOption } from '../ui'
 
 /** A button's press: `'working'` while what it started is in flight, then
@@ -37,6 +37,40 @@ function usePress(): { state: 'idle' | 'working' | 'done'; press: (action: () =>
   }
 
   return { state, press }
+}
+
+/** "Saved" beside a control that saves the moment it changes. The status
+ *  element is always on the page and keeps its width, so a screen reader
+ *  announces the text when it arrives and nothing moves when it comes or
+ *  goes; nothing animates, so reduced motion needs no case. */
+export function SavedNote({ shown }: { shown: boolean }) {
+  const { t } = useTranslation()
+  return (
+    <span role="status" aria-live="polite" className="min-w-[4.5rem] shrink-0 text-caption text-ink2">
+      {shown ? t('common.saved') : null}
+    </span>
+  )
+}
+
+/** A control with its "Saved" note in the same row, at its right. */
+export function WithSaved({
+  shown,
+  align = 'center',
+  children,
+}: {
+  shown: boolean
+  align?: 'center' | 'end'
+  children: ReactNode
+}) {
+  return (
+    <div className={`flex gap-3 ${align === 'end' ? 'items-end' : 'items-center'}`}>
+      <div className="min-w-0 flex-1">{children}</div>
+      {/* The select's box is 44 px tall; the note sits level with it. */}
+      <div className="flex min-h-[44px] items-center">
+        <SavedNote shown={shown} />
+      </div>
+    </div>
+  )
 }
 
 /** A button whose press starts something that takes a while: it says
@@ -130,27 +164,37 @@ export function SavingSelect({
   const { t } = useTranslation()
   const [pending, setPending] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const saved = useSavedFlash()
 
   const change = async (next: string) => {
     if (!onSave) return
-    setPending(next)
-    setError(null)
-    const sentence = failureOf(await settle(onSave(next), t), t)
-    setPending(null)
-    setError(sentence)
+    await runSave(() => onSave(next), t, {
+      start: () => {
+        setPending(next)
+        setError(null)
+        saved.clear()
+      },
+      settled: (sentence) => {
+        setPending(null)
+        setError(sentence)
+      },
+      flash: saved.flash,
+    })
   }
 
   const note = error ?? hint
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
-      <Select
-        label={label}
-        placement="above"
-        value={pending ?? value}
-        options={options}
-        onChange={onSave ? change : undefined}
-        disabled={disabled || pending !== null}
-      />
+      <WithSaved shown={saved.shown} align="end">
+        <Select
+          label={label}
+          placement="above"
+          value={pending ?? value}
+          options={options}
+          onChange={onSave ? change : undefined}
+          disabled={disabled || pending !== null}
+        />
+      </WithSaved>
       {note && <p className={`break-words text-caption ${error ? 'text-loss' : 'text-muted'}`}>{note}</p>}
     </div>
   )
@@ -159,7 +203,8 @@ export function SavingSelect({
 /** A `Switch` that saves the moment it turns. While the save is in flight
  *  it shows the new state and is disabled, as it is whenever `disabled`
  *  says so; when it fails it goes back and the failure's sentence is under
- *  it. With no `onSave` it is read-only. */
+ *  it, and when it works "Saved" shows beside it for two seconds. With no
+ *  `onSave` it is read-only. */
 export function SavingSwitch({
   label,
   description,
@@ -176,25 +221,35 @@ export function SavingSwitch({
   const { t } = useTranslation()
   const [pending, setPending] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const saved = useSavedFlash()
 
   const change = async (next: boolean) => {
     if (!onSave) return
-    setPending(next)
-    setError(null)
-    const sentence = failureOf(await settle(onSave(next), t), t)
-    setPending(null)
-    setError(sentence)
+    await runSave(() => onSave(next), t, {
+      start: () => {
+        setPending(next)
+        setError(null)
+        saved.clear()
+      },
+      settled: (sentence) => {
+        setPending(null)
+        setError(sentence)
+      },
+      flash: saved.flash,
+    })
   }
 
   return (
     <div className="space-y-1.5">
-      <Switch
-        label={label}
-        description={description}
-        checked={pending ?? checked}
-        onChange={onSave ? change : undefined}
-        disabled={disabled || pending !== null}
-      />
+      <WithSaved shown={saved.shown}>
+        <Switch
+          label={label}
+          description={description}
+          checked={pending ?? checked}
+          onChange={onSave ? change : undefined}
+          disabled={disabled || pending !== null}
+        />
+      </WithSaved>
       {error && <p className="break-words text-caption text-loss">{error}</p>}
     </div>
   )

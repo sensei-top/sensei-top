@@ -1,7 +1,8 @@
 import { useLLMStatus } from '../api'
 import { useTranslation } from 'react-i18next'
 import { useShell } from '../bridge'
-import { SavingSwitch } from '../components/settings/SaveButton'
+import { SavingSwitch, WithSaved } from '../components/settings/SaveButton'
+import { useSavedFlash } from '../components/settings/useSavedFlash'
 import { LanguageSection } from '../components/settings/LanguageSection'
 import { Card, Segmented, Switch } from '../components/ui'
 import { inGroup, type SettingsGroupId, type WritingStatusAnswer } from '../lib/settings'
@@ -23,6 +24,7 @@ export function SettingsPage({ group }: { group?: SettingsGroupId }) {
   const status = useLLMStatus()
   const [density, setDensity] = useDensity()
   const [liveAdvice, setLiveAdvice] = useLiveAdvice()
+  const liveSaved = useSavedFlash()
   const [aiOn, setAiOn] = useAiFeatures()
   const densityOptions = [
     { value: 'comfortable' as const, label: t('settings.density.comfortable') },
@@ -63,12 +65,17 @@ export function SettingsPage({ group }: { group?: SettingsGroupId }) {
                 {t('settings.sections.live')}
               </h2>
               <Card className="max-w-3xl">
-                <Switch
-                  label={t('settings.liveAdvice.label')}
-                  description={aiOn ? t('settings.liveAdvice.description') : t('settings.liveAdvice.descriptionOff')}
-                  checked={liveAdvice}
-                  onChange={setLiveAdvice}
-                />
+                <WithSaved shown={liveSaved.shown}>
+                  <Switch
+                    label={t('settings.liveAdvice.label')}
+                    description={aiOn ? t('settings.liveAdvice.description') : t('settings.liveAdvice.descriptionOff')}
+                    checked={liveAdvice}
+                    onChange={(on) => {
+                      setLiveAdvice(on)
+                      liveSaved.flash()
+                    }}
+                  />
+                </WithSaved>
               </Card>
             </section>
           )}

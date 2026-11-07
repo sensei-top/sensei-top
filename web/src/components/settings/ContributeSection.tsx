@@ -14,6 +14,8 @@ import {
 import { formatDate } from '../../lib/format'
 import { POLICY_VERSION } from '../../lib/policy'
 import { Button, Card, Dialog, Switch } from '../ui'
+import { WithSaved } from './SaveButton'
+import { useSavedFlash } from './useSavedFlash'
 
 const BODY = ['what', 'where', 'final', 'stop'] as const
 
@@ -85,6 +87,7 @@ export function ContributeSection({ shell }: { shell: Shell }) {
   const [visit, setVisit] = useState<'on' | 'off' | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
   const [dialogFailure, setDialogFailure] = useState<string | null>(null)
+  const saved = useSavedFlash()
   if (!settings?.canContribute || !shell.contribSet) return null
 
   const stored = settings.contribute
@@ -95,9 +98,11 @@ export function ContributeSection({ shell }: { shell: Shell }) {
     setBusy(true)
     setFailure(null)
     setDialogFailure(null)
+    saved.clear()
     const ok = await submitAnswer(answer, save, t)
     setBusy(false)
     if (ok) {
+      saved.flash()
       setOpen(false)
       setVisit(inDialog ? null : turnedOn ? 'on' : 'off')
       return
@@ -133,13 +138,15 @@ export function ContributeSection({ shell }: { shell: Shell }) {
   return (
     <Card>
       <div className="space-y-1.5">
-        <Switch
-          label={t('contribute.heading')}
-          description={t('contribute.settings.description')}
-          checked={yes}
-          onChange={change}
-          disabled={busy}
-        />
+        <WithSaved shown={saved.shown}>
+          <Switch
+            label={t('contribute.heading')}
+            description={t('contribute.settings.description')}
+            checked={yes}
+            onChange={change}
+            disabled={busy}
+          />
+        </WithSaved>
         <p className="text-caption text-ink2">{t(`contribute.settings.state.${key}`, { date })}</p>
         {failure && (
           <p role="alert" className="break-words text-caption text-loss">

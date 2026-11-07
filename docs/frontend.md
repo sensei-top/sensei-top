@@ -456,7 +456,20 @@ the failed backup's sentences name.
 - **A `Switch` or a `Select` saves on change** (`SavingSwitch`,
   `SavingSelect`, in `settings/SaveButton.tsx`). It is disabled while
   the save is in flight; when the save fails it goes back to what is
-  saved and the failure's sentence is under it.
+  saved and the failure's sentence is under it. When it works, "Saved"
+  shows beside it, in the same row, for two seconds in a polite
+  `role="status"` region (`SavedNote`) that is always on the page and
+  keeps its width, so it is announced and nothing moves; nothing
+  animates, so reduced motion needs no case. Contribute's switch and the
+  Live advice switch do the same (`WithSaved`, `useSavedFlash`; `runSave`
+  is the one save-then-flash rule).
+- **Folding.** An explanatory paragraph of more than one sentence keeps
+  its first sentence and folds the rest, unchanged, under `MoreAbout`. A
+  control's own description — the line under a switch, a select or a card
+  title, saying what it does — stays whole: a disclosure under every
+  control adds more than it hides. Never folded, wherever it sits: a
+  sentence that says where data goes, under which consent, or what a
+  switch sends.
 - **Text fields save by the card's one button** (`SaveButton`): disabled
   until something in the card differs from what is saved, "Saving" in
   flight, "Saved" for two seconds after. A failure's sentence is the
