@@ -94,6 +94,7 @@ describe('the shell groups draw their sections in order', () => {
       aiFeatures: true,
       canContribute: true,
       contribAsked: false,
+      signInDismissed: false,
       contribute: null,
       account: { available: true, signedIn: false, userId: null, email: null, provider: null, persistence: { kept: true } },
       askAutostart: false,

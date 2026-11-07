@@ -100,7 +100,7 @@ the first sign-in, never replaced), the cached yes to error reports
 (`consentErrors`, set from the account's profile), the answer to
 "Help build the stats" (`contribute`: `yes`, `policyVersion`, `answeredAt`,
 `ageConfirmed`; absent or `null` is not asked, and sends nothing) and
-`contribAsked`, which says the one-time page for that question was shown. A missing `aiFeatures` is undecided: the
+`contribAsked`, which says the one-time page for that question was shown, `signInDismissed`, which says the user dismissed the offer to sign in (like `contribAsked`, only `true` is stored and nothing un-sets it). A missing `aiFeatures` is undecided: the
 page reads it as off and Welcome asks. Once per launch, before the first
 publish, an install with `onboarded: true` and no key is settled to true
 (`settleAiFeatures`), since it never sees Welcome again; any other install
@@ -108,6 +108,20 @@ stays undecided until Welcome or Settings writes it. The server never
 reads it. It is read once at launch and written whole through a temporary
 file and a rename, a key it does not know is carried through every write,
 and a file that is not JSON is moved aside as `shell.json.bad`.
+
+**Restart now.** After a restore the page offers it, and the `relaunch` call
+takes the quit path: `main.ts` schedules the new start with `app.relaunch()`
+and calls `app.quit()`, so `before-quit` stops the server and the error
+reporter before the process exits and the new copy starts. The
+single-instance lock is not freed first: the new copy starts only after this
+one has exited, and freeing it earlier would let a launch during the server's
+stop become a second instance. `desktop/src/relaunch.ts` decides, Electron-free: the
+AppImage is started by its own path when `APPIMAGE` is set, and `--hidden`
+is dropped from the arguments so a copy started at login does not restart
+looking closed. With an update downloaded (`ready`) it calls `restartToUpdate`
+instead, since a quit with install-on-quit armed would race the silent
+installer on Windows. It is refused while a quit is already stopping the
+server, and a second call while a relaunch is scheduled does nothing.
 
 **Which saves restart the server.** The server reads the Arena log path, the
 date order, the MTGO handle, game-log folder and deck folder, and the backup

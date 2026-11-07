@@ -34,6 +34,7 @@
   "settings.notAKey": "That is not a key.",
   "settings.cannotSave": "That cannot be saved.",
   "settings.notSaved": "The setting could not be saved.",
+  "settings.closing": "Sensei Top is already closing.",
   "settings.keyNotSaved": "The key could not be saved.",
   "settings.notRead": "The settings could not be read.",
   "settings.folderNotOpened": "The folder could not be opened.",

@@ -216,6 +216,8 @@ export type AppSettings = {
   canContribute: boolean
   /** Whether the one-time "Help build the stats" page was shown; set it to true through `app.set`; only `true` is stored. */
   contribAsked: boolean
+  /** Whether the user dismissed the offer to sign in; set it to true through `app.set`; only `true` is stored. */
+  signInDismissed: boolean
   /** The stored "Help build the stats" answer; `null` while unanswered, which sends nothing. */
   contribute: Contribute | null
   /** The account; a change arrives with the rest of the settings. */
@@ -243,7 +245,7 @@ export type AppSettings = {
 /** What the page can change of `AppSettings`. */
 export type AppChange = Partial<
   Pick<AppSettings, 'startWithSystem' | 'keepRunningOnClose' | 'checkForUpdates' | 'diagnostic' | 'language' | 'plays'>
-> & { aiFeatures?: boolean; contribAsked?: true }
+> & { aiFeatures?: boolean; contribAsked?: true; signInDismissed?: true }
 
 /** The shell's actions. `exportDiagnostics` answers `{ ok: true }` when the
  *  viewer cancels the shell's dialog too, so `ok` never means "exported". */
@@ -251,6 +253,8 @@ export type AppActions = {
   set(change: AppChange): Promise<Saved>
   checkForUpdates(): Promise<Saved>
   restartToUpdate(): Promise<Saved>
+  /** Restart now: the shell stops its server as a quit does, then starts again. */
+  relaunch(): Promise<Saved>
   showLogs(): Promise<Saved>
   exportDiagnostics(): Promise<Saved>
   showDataFolder(): Promise<Saved>

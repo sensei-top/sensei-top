@@ -137,6 +137,8 @@ export type AppSettings = {
   canContribute: boolean;
   /** shell.json's `contribAsked`: the one-time "Help build the stats" page was shown; a missing key reads false. */
   contribAsked: boolean;
+  /** shell.json's `signInDismissed` (D9): the user dismissed the offer to sign in; a missing key reads false. */
+  signInDismissed: boolean;
   /** shell.json's `contribute` (plan 40b S13); `null` while unanswered. */
   contribute: Contribute | null;
   /** The account (plan 40b S10); `{ available: false }` in a build with no Supabase project. */
@@ -160,6 +162,8 @@ export type AppChange = Partial<Pick<AppSettings, 'startWithSystem' | 'keepRunni
   aiFeatures?: boolean;
   /** Only `true`: the page was shown, and nothing un-asks it. */
   contribAsked?: true;
+  /** Only `true`: the offer was dismissed, and nothing brings it back. */
+  signInDismissed?: true;
 };
 
 /** What `window.senseiTopShell.initial` holds, and what a change sends. */
@@ -178,6 +182,7 @@ export const CHANNELS = {
   appSet: 'sensei-top:app-set',
   appCheckForUpdates: 'sensei-top:app-check-for-updates',
   appRestartToUpdate: 'sensei-top:app-restart-to-update',
+  appRelaunch: 'sensei-top:app-relaunch',
   appShowLogs: 'sensei-top:app-show-logs',
   appShowDataFolder: 'sensei-top:app-show-data-folder',
   appExportDiagnostics: 'sensei-top:app-export-diagnostics',
@@ -511,6 +516,7 @@ export function toAppSettings(
     aiFeatures: prefs.aiFeatures ?? null,
     canContribute: info.canContribute,
     contribAsked: prefs.contribAsked === true,
+    signInDismissed: prefs.signInDismissed === true,
     contribute: prefs.contribute ?? null,
     account: info.account,
     askAutostart: info.askAutostart,
@@ -625,6 +631,7 @@ export function planAppChange(
   // A `null` stored would be dropped at the next launch and decided again.
   if (typeof change.aiFeatures === 'boolean') patch.aiFeatures = change.aiFeatures;
   if (change.contribAsked === true) patch.contribAsked = true;
+  if (change.signInDismissed === true) patch.signInDismissed = true;
   return { patch, restart: change.diagnostic !== undefined && change.diagnostic !== current.diagnostic };
 }
 

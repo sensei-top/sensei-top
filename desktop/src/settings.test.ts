@@ -137,6 +137,7 @@ describe('config --json to ShellSettings', () => {
       aiFeatures: null,
       canContribute: false,
       contribAsked: false,
+      signInDismissed: false,
       contribute: null,
       account: { available: false },
       askAutostart: false,
@@ -395,6 +396,7 @@ describe('small readers', () => {
     expect(uses('showDataFolder', 'appShowDataFolder')).toBe(true);
     expect(uses('checkForUpdates', 'appCheckForUpdates')).toBe(true);
     expect(uses('restartToUpdate', 'appRestartToUpdate')).toBe(true);
+    expect(uses('relaunch', 'appRelaunch')).toBe(true);
     expect(uses('recheck', 'appRecheck')).toBe(true);
     expect(uses('firstData', 'appFirstData')).toBe(true);
     expect(uses('finishOnboarding', 'appFinishOnboarding')).toBe(true);
@@ -1012,6 +1014,27 @@ describe('the service', () => {
       expect(planAppChange(current, fromThePage)).toEqual({ patch: {}, restart: false });
       expect(planAppChange(current, { contribAsked: true })).toEqual({ patch: { contribAsked: true }, restart: false });
       expect(toAppSettings({ contribAsked: true }, { version: '1', platform: 'linux', update: { state: 'idle' }, ...NO_APP_EXTRAS }).contribAsked).toBe(true);
+    });
+  });
+
+  describe('signInDismissed (D9)', () => {
+    it('reads false when missing, is written by a change, published, and needs no restart', async () => {
+      const { service, stored, events, changes } = harness();
+      await service.refresh();
+      expect(service.current?.app.signInDismissed).toBe(false);
+      expect(await service.setApp({ signInDismissed: true })).toEqual({ ok: true });
+      expect(stored.signInDismissed).toBe(true);
+      expect(changes.at(-1)?.app.signInDismissed).toBe(true);
+      expect(events).not.toContain('stop');
+    });
+
+    it('stores only true', () => {
+      const current = toAppSettings({}, { version: '1', platform: 'linux', update: { state: 'idle' }, ...NO_APP_EXTRAS });
+      expect(planAppChange(current, { signInDismissed: false } as unknown as Parameters<typeof planAppChange>[1])).toEqual({ patch: {}, restart: false });
+      const fromThePage = { signInDismissed: 'yes' } as unknown as Parameters<typeof planAppChange>[1];
+      expect(planAppChange(current, fromThePage)).toEqual({ patch: {}, restart: false });
+      expect(planAppChange(current, { signInDismissed: true })).toEqual({ patch: { signInDismissed: true }, restart: false });
+      expect(toAppSettings({ signInDismissed: true }, { version: '1', platform: 'linux', update: { state: 'idle' }, ...NO_APP_EXTRAS }).signInDismissed).toBe(true);
     });
   });
 

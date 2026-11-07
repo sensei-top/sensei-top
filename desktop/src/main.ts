@@ -36,6 +36,7 @@ import { SessionStore } from './cloud/sessionStore';
 import { anonContribSender, contribAnswer, contributedFile, Contributor, localContribApi } from './cloud/contrib';
 import { CloudSync, localSyncApi, MatchEndWatch, stateFile, supabaseSyncDb } from './cloud/sync';
 import { applyAutostart, applyFirstRun, startMode } from './autostart';
+import { planRelaunch } from './relaunch';
 import { setLanguage, setSystemTags, t } from './i18n';
 import { logPath, newSessionId, ShellLog } from './log';
 import {
@@ -455,6 +456,30 @@ function run(): void {
     return restarting;
   };
 
+  // Restart now (S8): the quit path itself. `app.relaunch()` only schedules a
+  // start for when the process has exited, and `app.quit()` goes through
+  // `before-quit`, which stops the server and the error reporter first. The
+  // single-instance lock is not freed: the new copy starts after this one
+  // exits. `planRelaunch` decides; this only executes.
+  let relaunching = false;
+  const relaunch = (): Promise<Saved> => {
+    const plan = planRelaunch({
+      stopping,
+      relaunching,
+      updateState: updateStatus().state,
+      argv: process.argv,
+      env: process.env,
+    });
+    if (plan.action === 'noop') return Promise.resolve({ ok: true });
+    if (plan.action === 'refused') return Promise.resolve({ ok: false, error: t('settings.closing') });
+    if (plan.action === 'update') return restartToUpdate();
+    relaunching = true;
+    log.info('relaunching');
+    app.relaunch(plan.options);
+    app.quit();
+    return Promise.resolve({ ok: true });
+  };
+
   // Only the dashboard, on the running server's origin, is answered.
   const trusted = (event: electron.IpcMainEvent | electron.IpcMainInvokeEvent): boolean => {
     const ok = trustedSender(event.senderFrame?.url ?? '', server.port);
@@ -479,6 +504,7 @@ function run(): void {
   handle(CHANNELS.appSet, refusedSaved, (change: Parameters<SettingsService['setApp']>[0]) => settings.setApp(change));
   handle(CHANNELS.appCheckForUpdates, refusedSaved, () => checkForUpdates());
   handle(CHANNELS.appRestartToUpdate, refusedSaved, () => restartToUpdate());
+  handle(CHANNELS.appRelaunch, refusedSaved, () => relaunch());
   handle(CHANNELS.appExportDiagnostics, refusedSaved, () => exportDiagnostics());
   handle(CHANNELS.appRecheck, refusedSaved, () => settings.recheck());
   handle(CHANNELS.appFirstData, refusedSaved, () => settings.firstData());
