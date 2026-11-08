@@ -18,6 +18,9 @@ import {
   planChange as planChangeOn,
   restoreLeftovers,
   restoreLeftoversMessage,
+  AccountApi,
+  type AccountState,
+  ReportsLink,
   SettingsService,
   toAppSettings,
   toShellSettings,
@@ -26,6 +29,7 @@ import {
   type FirstData,
   type SettingsDeps,
 } from './settings';
+import { ErrorReporter, type SentryClient, type SentryFactory } from './cloud/sentry';
 import type { ShellJson } from './store';
 import type { UpdateStatus } from './updater';
 
@@ -49,7 +53,7 @@ const DOCTOR = {
   mtgo: { discovered: null },
   cards: { arena_ids: 10, rules_text: 5 },
 };
-const NO_APP_EXTRAS = { askAutostart: false, canAutostart: false, windowsStore: false, rulesText: null, firstData: { state: 'idle' } } as const;
+const NO_APP_EXTRAS = { askAutostart: false, canAutostart: false, windowsStore: false, rulesText: null, firstData: { state: 'idle' }, account: { available: false }, canContribute: false } as const;
 
 describe('config --json to ShellSettings', () => {
   it('carries mtgo.deck_dir into sources.mtgoDeckDir, null when unset', () => {
@@ -131,6 +135,10 @@ describe('config --json to ShellSettings', () => {
       update: { state: 'idle' },
       onboarded: false,
       aiFeatures: null,
+      canContribute: false,
+      contribAsked: false,
+      contribute: null,
+      account: { available: false },
       askAutostart: false,
       canAutostart: false,
       windowsStore: false,
@@ -144,7 +152,7 @@ describe('config --json to ShellSettings', () => {
   });
 
   it('carries askAutostart and canAutostart through as given', () => {
-    const base = { version: '1', platform: 'win32', update: { state: 'idle' } as const, rulesText: null, firstData: { state: 'idle' } } as const;
+    const base = { version: '1', platform: 'win32', update: { state: 'idle' } as const, rulesText: null, firstData: { state: 'idle' }, account: { available: false }, canContribute: false } as const;
     const installer = toAppSettings({}, { ...base, askAutostart: false, canAutostart: true, windowsStore: false });
     expect(installer.askAutostart).toBe(false);
     expect(installer.canAutostart).toBe(true);
@@ -227,6 +235,15 @@ describe('doctor --json for onboarding (S15)', () => {
     expect(toAppSettings({ aiFeatures: true }, info).aiFeatures).toBe(true);
     expect(toAppSettings({ aiFeatures: false }, info).aiFeatures).toBe(false);
     expect(toAppSettings({ onboarded: true }, info).aiFeatures).toBeNull();
+  });
+
+  it('publishes the stored contribute answer, null while unanswered', () => {
+    const info = { version: '1', platform: 'linux', update: { state: 'idle' } as const, ...NO_APP_EXTRAS };
+    const answer = { yes: true, policyVersion: '2026-11-03', answeredAt: '2026-11-04T10:00:00.000Z', ageConfirmed: true };
+    expect(toAppSettings({ contribute: answer }, info).contribute).toEqual(answer);
+    expect(toAppSettings({ contribute: { ...answer, yes: false } }, info).contribute?.yes).toBe(false);
+    expect(toAppSettings({ contribute: null }, info).contribute).toBeNull();
+    expect(toAppSettings({}, info).contribute).toBeNull();
   });
 });
 
@@ -381,6 +398,16 @@ describe('small readers', () => {
     expect(uses('recheck', 'appRecheck')).toBe(true);
     expect(uses('firstData', 'appFirstData')).toBe(true);
     expect(uses('finishOnboarding', 'appFinishOnboarding')).toBe(true);
+    expect(uses('status', 'accountStatus')).toBe(true);
+    expect(uses('signIn', 'accountSignIn')).toBe(true);
+    expect(uses('signOut', 'accountSignOut')).toBe(true);
+    expect(uses('setProfile', 'accountSetProfile')).toBe(true);
+    expect(uses('exportData', 'accountExport')).toBe(true);
+    expect(uses('deleteCloudHistory', 'accountDeleteHistory')).toBe(true);
+    expect(uses('deleteAccount', 'accountDelete')).toBe(true);
+    expect(uses('readProfileAgain', 'accountReadProfile')).toBe(true);
+    expect(uses('reportError', 'reportError')).toBe(true);
+    expect(uses('reportProblem', 'reportProblem')).toBe(true);
   });
 });
 
@@ -438,7 +465,7 @@ const BUSY = 'A backup started 2m ago (pid 123) is still running; nothing to do.
 
 type Cards = { lines: string[]; fail?: RunError; finish?: Promise<void> };
 
-function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?: string; slot?: { at: string; bytes: number } | null; open?: string | Error; storeFails?: boolean; cards?: Cards; doctor?: () => string; configFails?: { on: boolean }; restoreHold?: Promise<void>; appFlags?: { canAutostart: boolean; windowsStore: boolean } } = {}) {
+function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?: string; slot?: { at: string; bytes: number } | null; open?: string | Error; storeFails?: boolean; cards?: Cards; doctor?: () => string; configFails?: { on: boolean }; restoreHold?: Promise<void>; canContribute?: boolean; appFlags?: { canAutostart: boolean; windowsStore: boolean } } = {}) {
   const backupOutput = extra.backupOutput ?? '  Backup:    2,048 bytes, verified\n';
   const calls: Array<{ args: readonly string[]; stdin?: string }> = [];
   const events: string[] = [];
@@ -450,6 +477,7 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
   const autostarts: boolean[] = [];
   let cardsActive = 0;
   const overlap = { restoreDuringCards: false };
+  const accountState: { value: AccountState } = { value: { available: false } };
   const updates: { status: UpdateStatus; switched: boolean[] } = { status: { state: 'idle' }, switched: [] };
   let rules = 5;
   const late: Array<() => void> = [];
@@ -510,6 +538,7 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
     askAutostart: true,
     canAutostart: extra.appFlags?.canAutostart ?? true,
     windowsStore: extra.appFlags?.windowsStore ?? false,
+    canContribute: extra.canContribute ?? false,
     applyAutostart: (on) => void autostarts.push(on),
     countBackups: () => 1,
     newestBackup: () => extra.slot ?? null,
@@ -520,6 +549,7 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
     openDataFolder: () => (extra.open instanceof Error ? Promise.reject(extra.open) : Promise.resolve(extra.open ?? '')),
     changed: (settings) => changes.push(settings),
     updateStatus: () => updates.status,
+    account: () => accountState.value,
     setUpdateChecks: (on) => void updates.switched.push(on),
     log: {
       debug: () => {},
@@ -528,7 +558,7 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
       error: () => {},
     },
   };
-  return { service: new SettingsService(deps), languages, late, calls, events, stored, changes, warnings, infos, overlap, updates, autostarts };
+  return { service: new SettingsService(deps), languages, late, calls, events, stored, changes, warnings, infos, overlap, updates, autostarts, accountState };
 }
 
 describe('the service', () => {
@@ -674,6 +704,31 @@ describe('the service', () => {
     expect(changes[0]?.sources.dataDir).toBe('/data');
     expect(service.current?.app.update).toEqual({ state: 'ready', version: '0.6.1' });
     expect(calls).toHaveLength(reads);
+  });
+
+  it('sends the settings again when the account changes, and nothing before the first read', async () => {
+    const { service, accountState, changes } = harness();
+    service.accountChanged();
+    expect(changes).toHaveLength(0);
+    await service.refresh();
+    const status = { signedIn: true, userId: 'u1', email: 'a@b.c', provider: 'google', persistence: { kept: true } } as const;
+    accountState.value = { available: true, ...status };
+    service.accountChanged();
+    expect(changes).toHaveLength(1);
+    expect(changes.at(-1)?.app.account).toEqual({ available: true, ...status });
+  });
+
+  it('sends the settings again with the stored contribute answer, and nothing before the first read', async () => {
+    const { service, stored, changes } = harness();
+    service.contributeChanged();
+    expect(changes).toHaveLength(0);
+    await service.refresh();
+    expect(service.current?.app.contribute).toBeNull();
+    const answer = { yes: true, policyVersion: '2026-11-03', answeredAt: '2026-11-04T10:00:00.000Z', ageConfirmed: true };
+    stored.contribute = answer;
+    service.contributeChanged();
+    expect(changes).toHaveLength(1);
+    expect(changes.at(-1)?.app.contribute).toEqual(answer);
   });
 
   it('hands the update switch to the updater, and nothing else', async () => {
@@ -926,6 +981,40 @@ describe('the service', () => {
     });
   });
 
+  describe('contribAsked (plan 40b S15)', () => {
+    it('reads false when missing, is written by a change, published, and needs no restart', async () => {
+      const { service, stored, events, changes } = harness();
+      await service.refresh();
+      expect(service.current?.app.contribAsked).toBe(false);
+      expect(await service.setApp({ contribAsked: true })).toEqual({ ok: true });
+      expect(stored.contribAsked).toBe(true);
+      expect(changes.at(-1)?.app.contribAsked).toBe(true);
+      expect(events).not.toContain('stop');
+    });
+
+    it('forwards canContribute from the deps to the page', async () => {
+      const on = harness({}, { canContribute: true });
+      await on.service.refresh();
+      expect(on.service.current?.app.canContribute).toBe(true);
+      const off = harness();
+      await off.service.refresh();
+      expect(off.service.current?.app.canContribute).toBe(false);
+    });
+
+    it('stores only true: false gives an empty patch', () => {
+      const current = toAppSettings({}, { version: '1', platform: 'linux', update: { state: 'idle' }, ...NO_APP_EXTRAS });
+      expect(planAppChange(current, { contribAsked: false } as unknown as Parameters<typeof planAppChange>[1])).toEqual({ patch: {}, restart: false });
+    });
+
+    it('is not stored when it is not a boolean', () => {
+      const current = toAppSettings({}, { version: '1', platform: 'linux', update: { state: 'idle' }, ...NO_APP_EXTRAS });
+      const fromThePage = { contribAsked: 'yes' } as unknown as Parameters<typeof planAppChange>[1];
+      expect(planAppChange(current, fromThePage)).toEqual({ patch: {}, restart: false });
+      expect(planAppChange(current, { contribAsked: true })).toEqual({ patch: { contribAsked: true }, restart: false });
+      expect(toAppSettings({ contribAsked: true }, { version: '1', platform: 'linux', update: { state: 'idle' }, ...NO_APP_EXTRAS }).contribAsked).toBe(true);
+    });
+  });
+
   describe('plays', () => {
     it('is written by a change and read back', async () => {
       const { service, stored } = harness();
@@ -1074,5 +1163,146 @@ describe('the service', () => {
       release();
       await download;
     });
+  });
+});
+
+describe('the account calls (plan 40b S10)', () => {
+  const persistence = { kept: true } as const;
+  const signedOut = { signedIn: false, userId: null, email: null, provider: null, persistence } as const;
+  const signedIn = { signedIn: true, userId: 'u1', email: 'a@b.c', provider: 'google', persistence } as const;
+  const fakeStore = () => {
+    let prefs: ShellJson = {};
+    return {
+      get: () => prefs,
+      update: (patch: Partial<ShellJson>) => {
+        prefs = { ...prefs, ...patch };
+        return true;
+      },
+    };
+  };
+  const api = (auth: unknown, store = fakeStore()) => {
+    let n = 0;
+    return { store, api: new AccountApi(() => auth as never, store, () => `id-${++n}`, () => 'unavailable', () => 'signout-failed') };
+  };
+
+  it('answers unavailable and refuses to sign in when the build has no project', async () => {
+    const store = fakeStore();
+    const account = new AccountApi(() => null, store, () => 'x', () => 'unavailable', () => 'signout-failed');
+    expect(account.state()).toEqual({ available: false });
+    expect(await account.signIn('google')).toMatchObject({ ok: false, message: 'unavailable' });
+    expect(await account.signOut()).toEqual({ ok: false, error: 'signout-failed' });
+    expect(store.get().installId).toBeUndefined();
+  });
+
+  it('carries the persistence reason through the status', () => {
+    const status = { ...signedOut, persistence: { kept: false, reason: 'noKeyring' } } as const;
+    const { api: account } = api({ status: () => status });
+    expect(account.state()).toEqual({ available: true, ...status });
+  });
+
+  it('writes the install ID at the first successful sign-in and never replaces it', async () => {
+    const { api: account, store } = api({ status: () => signedOut, signIn: async () => ({ ok: true, account: signedIn }) });
+    await account.signIn('google');
+    expect(store.get().installId).toBe('id-1');
+    await account.signIn('discord');
+    expect(store.get().installId).toBe('id-1');
+  });
+
+  it('writes no install ID when the sign-in fails or the provider is unknown', async () => {
+    const failing = api({ status: () => signedOut, signIn: async () => ({ ok: false, error: 'auth.error.cancelled', message: 'm' }) });
+    expect(await failing.api.signIn('google')).toMatchObject({ ok: false });
+    expect(await failing.api.signIn('github')).toMatchObject({ ok: false, message: 'unavailable' });
+    expect(failing.store.get().installId).toBeUndefined();
+  });
+
+  it('signs out through the auth', async () => {
+    let out = 0;
+    const { api: account } = api({ status: () => signedOut, signOut: async () => void out++ });
+    expect(await account.signOut()).toEqual({ ok: true });
+    expect(out).toBe(1);
+  });
+});
+
+describe('the error-reports link (S11, DB8)', () => {
+  const DSN = 'https://public@sentry.example.invalid/1';
+  const USER = '00000000-0000-4000-8000-000000000001';
+
+  function setup(dsn: string | null, consentErrors?: boolean) {
+    let prefs: ShellJson = consentErrors === undefined ? {} : { consentErrors };
+    const store = {
+      get: () => prefs,
+      update: (patch: Partial<ShellJson>) => {
+        prefs = { ...prefs, ...patch };
+        return true;
+      },
+    };
+    const made: string[] = [];
+    const closed: string[] = [];
+    const factory: SentryFactory = (options) => {
+      made.push(options.dsn);
+      const client: SentryClient = {
+        captureException: () => 'id',
+        captureFeedback: () => 'id',
+        close: async () => {
+          closed.push(options.dsn);
+          return true;
+        },
+      };
+      return client;
+    };
+    const reporter = new ErrorReporter({ dsn, release: '1.0.0', factory, os: { name: 'Linux', version: '1' }, home: null });
+    let restarts = 0;
+    const link = new ReportsLink(store, reporter, dsn, async () => void restarts++);
+    return { link, reporter, made, closed, restarts: () => restarts, prefs: () => prefs };
+  }
+
+  it('is off by default: no client, blank environment', async () => {
+    const h = setup(DSN);
+    await h.link.start();
+    expect(h.link.consent).toBe(false);
+    expect(h.reporter.active).toBe(false);
+    expect(h.made).toEqual([]);
+    expect(h.link.env()).toEqual({ SENSEI_TOP_SENTRY_DSN: '', SENSEI_TOP_SENTRY_CONSENT: '0', SENSEI_TOP_SENTRY_USER: '' });
+  });
+
+  it('starts a client at launch for a cached yes', async () => {
+    const h = setup(DSN, true);
+    await h.link.start();
+    expect(h.reporter.active).toBe(true);
+    expect(h.made).toEqual([DSN]);
+  });
+
+  it('turning consent on creates the client and restarts the server; off closes it and restarts again', async () => {
+    const h = setup(DSN);
+    await h.link.setConsent(true);
+    expect(h.prefs().consentErrors).toBe(true);
+    expect(h.made).toEqual([DSN]);
+    expect(h.restarts()).toBe(1);
+    expect(h.link.env().SENSEI_TOP_SENTRY_DSN).toBe(DSN);
+    await h.link.setConsent(false);
+    expect(h.closed).toEqual([DSN]);
+    expect(h.reporter.active).toBe(false);
+    expect(h.restarts()).toBe(2);
+  });
+
+  it('restarts for a change of user only while consent is on', async () => {
+    const h = setup(DSN);
+    await h.link.setUser(USER);
+    expect(h.restarts()).toBe(0);
+    await h.link.setConsent(true);
+    expect(h.restarts()).toBe(1);
+    await h.link.setUser(null);
+    expect(h.restarts()).toBe(2);
+    await h.link.setUser(USER);
+    expect(h.link.env().SENSEI_TOP_SENTRY_USER).toBe(USER);
+    expect(h.restarts()).toBe(3);
+  });
+
+  it('makes no client and restarts nothing in a build with no DSN', async () => {
+    const h = setup(null);
+    await h.link.setConsent(true);
+    expect(h.made).toEqual([]);
+    expect(h.reporter.active).toBe(false);
+    expect(h.restarts()).toBe(0);
   });
 });

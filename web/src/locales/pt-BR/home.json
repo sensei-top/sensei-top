@@ -29,8 +29,8 @@
     "noteLast90": "{{kind}}, últimos 90 dias",
     "notPlayedSince": "não jogado desde {{since}}",
     "notPlayedLast90": "não jogado nos últimos 90 dias",
-    "barsWithDeck": "As barras são a fatia de cada deck em {{lists}} listas de torneio. A linha sob cada uma é o seu histórico com {{deck}} no mesmo período.",
-    "barsNoDeck": "As barras são a fatia de cada deck em {{lists}} listas de torneio. A linha sob cada uma é o seu histórico no mesmo período.",
+    "barsWithDeck": "As barras são a fatia de cada deck em {{lists}} listas de torneio. A linha sob cada uma é seu histórico com {{deck}} no mesmo período.",
+    "barsNoDeck": "As barras são a fatia de cada deck em {{lists}} listas de torneio. A linha sob cada uma é seu histórico no mesmo período.",
     "listShort": "Seu histórico é contado sobre suas últimas 500 partidas.",
     "sinceDate": "desde {{since}}",
     "last90": "nos últimos 90 dias"

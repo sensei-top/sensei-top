@@ -72,6 +72,11 @@ class LiveStatus(BaseModel):
     )
     events: int
     matches: int
+    restored_matches: int = Field(
+        0,
+        description="matches restored from the user's cloud history that this install's own "
+        "log does not hold (v_cloud_match); not counted in matches",
+    )
     games: int
     turns: int
     revision: str = Field(

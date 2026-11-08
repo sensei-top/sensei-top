@@ -1,14 +1,16 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Shell } from '../bridge'
+import { AccountSection } from '../components/settings/AccountSection'
 import { AppSection } from '../components/settings/AppSection'
 import { BackupSection } from '../components/settings/BackupSection'
+import { ContributeSection } from '../components/settings/ContributeSection'
 import { SourcesSection } from '../components/settings/SourcesSection'
 import { useAi } from '../ai/registry'
 import type { WritingStatusAnswer } from '../lib/settings'
 
 /** Settings, as sections under their titles: Sources, Writing, Backup and
- *  App, then `children`, the sections that belong to the browser rather
+ *  App and Account (the last only in a build that has an account), then `children`, the sections that belong to the browser rather
  *  than to a shell (the density control, the credits), which the page
  *  draws itself. The one place that holds a `Shell` and hands each section
  *  its part of the settings and the functions it calls. With no shell,
@@ -80,6 +82,16 @@ export function SettingsView({
             showLogs={() => shell.app!.showLogs()}
             exportDiagnostics={() => shell.app!.exportDiagnostics()}
           />
+        </SettingsSection>
+      )}
+      {shell?.app?.settings.account.available && (
+        <SettingsSection id="account" title={t('account.settings.title')}>
+          <AccountSection state={shell.app.settings.account} actions={shell.app.account} />
+        </SettingsSection>
+      )}
+      {shell?.app?.settings.canContribute && (
+        <SettingsSection id="contribute" title={t('contribute.heading')}>
+          <ContributeSection shell={shell} />
         </SettingsSection>
       )}
       {children}

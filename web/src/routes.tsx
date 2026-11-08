@@ -1,9 +1,12 @@
 import type { RouteObject } from 'react-router'
+import { AccountWelcomePage } from './pages/AccountWelcomePage'
+import { ContributePage } from './pages/ContributePage'
 import { CoachPage } from './pages/CoachPage'
 import { DecksPage } from './pages/DecksPage'
 import { DeckLayout } from './pages/DeckLayout'
 import { DeckRcqPage, RcqRedirect } from './pages/DeckRcqPage'
 import { DeckGuidePage, DeckMatchupsPage, DeckOverviewPage, DeckPairingPage } from './pages/DeckPages'
+import { ErrorPage } from './pages/ErrorPage'
 import { DesignPage } from './pages/DesignPage'
 import { DesignSurfacesPage } from './pages/DesignSurfacesPage'
 import { FieldEventPage } from './pages/FieldEventPage'
@@ -27,52 +30,76 @@ import { CurrentMatchView } from './views/CurrentMatchView'
 export const routes: RouteObject[] = [
   // The design reference and its second page, surfaces, stand in place of
   // the app, outside the shell.
-  { path: '/design', Component: DesignPage },
-  { path: '/design/surfaces', Component: DesignSurfacesPage },
+  { path: '/design', Component: DesignPage, ErrorBoundary: ErrorPage },
+  { path: '/design/surfaces', Component: DesignSurfacesPage, ErrorBoundary: ErrorPage },
   {
     path: '/',
     Component: Shell,
+    // An error in the layout itself lands here, without the layout.
+    ErrorBoundary: ErrorPage,
     children: [
-      { index: true, Component: HomePage },
-      { path: 'live', Component: CurrentMatchView },
-      { path: 'matches', Component: MatchesPage },
-      { path: 'matches/:id', Component: MatchPage },
-      { path: 'matches/:id/replay', Component: MatchReplayPage },
-      { path: 'decks', Component: DecksPage },
+      // A page's error lands in this pathless route instead, so the layout stays
+      // around it and the screen fills the page area.
       {
-        path: 'decks/:id',
-        Component: DeckLayout,
+        ErrorBoundary: ErrorPage,
         children: [
-          { index: true, Component: DeckOverviewPage },
-          { path: 'matchups', Component: DeckMatchupsPage },
-          { path: 'matchups/:opponent', Component: DeckPairingPage },
-          { path: 'guide', Component: DeckGuidePage },
-          { path: 'rcq', Component: DeckRcqPage },
-          { path: 'guide/rcq', Component: RcqRedirect },
+          { index: true, Component: HomePage },
+          { path: 'live', Component: CurrentMatchView },
+          { path: 'matches', Component: MatchesPage },
+          { path: 'matches/:id', Component: MatchPage },
+          { path: 'matches/:id/replay', Component: MatchReplayPage },
+          { path: 'decks', Component: DecksPage },
+          {
+            path: 'decks/:id',
+            Component: DeckLayout,
+            children: [
+              { index: true, Component: DeckOverviewPage },
+              { path: 'matchups', Component: DeckMatchupsPage },
+              { path: 'matchups/:opponent', Component: DeckPairingPage },
+              { path: 'guide', Component: DeckGuidePage },
+              { path: 'rcq', Component: DeckRcqPage },
+              { path: 'guide/rcq', Component: RcqRedirect },
+            ],
+          },
+          { path: 'field', Component: FieldPage },
+          { path: 'field/events/*', Component: FieldEventPage },
+          { path: 'coach', Component: CoachPage },
+          { path: 'coach/:id', Component: CoachPage },
+          { path: 'settings', Component: SettingsPage },
+          // Not a place in the rail: Home's "Needs a deck" card links to it. Its
+          // name, and Welcome's, is a key the shell resolves (`routeTitle`).
+          {
+            path: 'mtgo/picks',
+            Component: MtgoPicksPage,
+            handle: { title: 'mtgoPicks' } satisfies RouteHandle,
+          },
+          // Not a place in the rail: the shell opens it until onboarding is done,
+          // and Settings links back to it.
+          {
+            path: 'welcome',
+            Component: WelcomePage,
+            handle: { title: 'welcome', needsShell: true, bare: true } satisfies RouteHandle,
+          },
+          // Not a place in the rail: the shell layout sends a signed-in user here
+          // until the account's consent questions are answered under the current
+          // policy. Its title is the consent screen's own heading (`accountWelcome`).
+          {
+            path: 'account/welcome',
+            Component: AccountWelcomePage,
+            handle: { title: 'accountWelcome', needsShell: true, bare: true } satisfies RouteHandle,
+          },
+          // Not a place in the rail: the shell opens it once, for an install that
+          // has not answered "Help build the stats". Its name is the question's.
+          {
+            path: 'contribute',
+            Component: ContributePage,
+            handle: { title: 'contribute', needsShell: true, bare: true } satisfies RouteHandle,
+          },
+          // The shell reads this handle: no place is current, and its name is
+          // "No such page".
+          { path: '*', Component: NotFoundPage, handle: { notFound: true } satisfies RouteHandle },
         ],
       },
-      { path: 'field', Component: FieldPage },
-      { path: 'field/events/*', Component: FieldEventPage },
-      { path: 'coach', Component: CoachPage },
-      { path: 'coach/:id', Component: CoachPage },
-      { path: 'settings', Component: SettingsPage },
-      // Not a place in the rail: Home's "Needs a deck" card links to it. Its
-      // name, and Welcome's, is a key the shell resolves (`routeTitle`).
-      {
-        path: 'mtgo/picks',
-        Component: MtgoPicksPage,
-        handle: { title: 'mtgoPicks' } satisfies RouteHandle,
-      },
-      // Not a place in the rail: the shell opens it until onboarding is done,
-      // and Settings links back to it.
-      {
-        path: 'welcome',
-        Component: WelcomePage,
-        handle: { title: 'welcome', needsShell: true } satisfies RouteHandle,
-      },
-      // The shell reads this handle: no place is current, and its name is
-      // "No such page".
-      { path: '*', Component: NotFoundPage, handle: { notFound: true } satisfies RouteHandle },
     ],
   },
 ]

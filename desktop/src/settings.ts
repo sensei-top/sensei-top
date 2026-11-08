@@ -28,16 +28,29 @@
 //   into `progress` and forwarding the other lines as `line`;
 //   `finishOnboarding` writes `onboarded`.
 //
+// - **Account** (plan 40b S10). `app.account` is `AccountApi.state()`; the
+//   three account channels answer through `AccountApi`, and a change of the
+//   account sends the settings again like an update does. A build with no
+//   Supabase project has no `CloudAuth`: the state is `{ available: false }`
+//   and sign-in refuses. The first successful sign-in writes `installId`.
+//   A signed-in state also carries `AccountDetails` (the profile and the
+//   backup's status, `cloud/account.ts`), and a change of either sends the
+//   settings again. The profile write, export and the two deletes answer
+//   through `cloud/account.ts` with an `AccountError` code, not text.
+//
 // `bridge.ts` in the dashboard is the other half of the contract. The types
 // are repeated here because `desktop/` cannot import from `web/`.
 //
 // Electron-free: vitest imports it directly. The main process hands in what
 // needs Electron (the server, dialogs, the window) as `SettingsDeps`.
 
+import type { AccountDetails } from './cloud/account';
+import { PROVIDERS, type AccountStatus, type CloudAuth, type Provider, type SignInError } from './cloud/auth';
 import { t } from './i18n';
 import type { Logger } from './log';
 import { silent } from './log';
-import type { LanguageChoice, Play, ShellJson } from './store';
+import { localApiSentryEnv, type ErrorReporter } from './cloud/sentry';
+import { ensureInstallId, type Contribute, type LanguageChoice, type Play, type ShellJson } from './store';
 import type { UpdateStatus } from './updater';
 
 export type DetailedLogs = 'enabled' | 'disabled' | 'unknown';
@@ -120,6 +133,14 @@ export type AppSettings = {
   onboarded: boolean;
   /** shell.json's `aiFeatures` (plan 40D); `null` while undecided, which the page reads as off. */
   aiFeatures: boolean | null;
+  /** Whether this build can upload contributed games: the same condition as `main.ts` building the `Contributor` (a Supabase project in the build). Read-only for the page. */
+  canContribute: boolean;
+  /** shell.json's `contribAsked`: the one-time "Help build the stats" page was shown; a missing key reads false. */
+  contribAsked: boolean;
+  /** shell.json's `contribute` (plan 40b S13); `null` while unanswered. */
+  contribute: Contribute | null;
+  /** The account (plan 40b S10); `{ available: false }` in a build with no Supabase project. */
+  account: AccountState;
   /** Whether onboarding's last step asks about starting with the system (D25). */
   askAutostart: boolean;
   /** Whether this copy can start with the system at all; the page hides the toggle when not. */
@@ -137,6 +158,8 @@ export type AppSettings = {
 export type AppChange = Partial<Pick<AppSettings, 'startWithSystem' | 'keepRunningOnClose' | 'checkForUpdates' | 'diagnostic' | 'language' | 'plays'>> & {
   /** Never `null`: once chosen, the switch is not undecided again. */
   aiFeatures?: boolean;
+  /** Only `true`: the page was shown, and nothing un-asks it. */
+  contribAsked?: true;
 };
 
 /** What `window.senseiTopShell.initial` holds, and what a change sends. */
@@ -161,8 +184,146 @@ export const CHANNELS = {
   appRecheck: 'sensei-top:app-recheck',
   appFirstData: 'sensei-top:app-first-data',
   appFinishOnboarding: 'sensei-top:app-finish-onboarding',
+  accountStatus: 'sensei-top:account-status',
+  accountSignIn: 'sensei-top:account-sign-in',
+  accountSignOut: 'sensei-top:account-sign-out',
+  accountSetProfile: 'sensei-top:account-set-profile',
+  accountExport: 'sensei-top:account-export',
+  accountDeleteHistory: 'sensei-top:account-delete-history',
+  accountDelete: 'sensei-top:account-delete',
+  accountReadProfile: 'sensei-top:account-read-profile',
+  contribSet: 'sensei-top:contrib-set',
+  reportError: 'sensei-top:report-error',
+  reportProblem: 'sensei-top:report-problem',
+  /** Main to page: the tray's "Report a problem" was chosen. */
+  reportProblemRequested: 'sensei-top:report-problem-requested',
   changed: 'sensei-top:changed',
 } as const;
+
+/** The account as the page sees it. `AccountDetails` is there once the
+ *  account module runs (a build with a Supabase project, Electron ready). */
+export type AccountState = { available: false } | ({ available: true } & AccountStatus & Partial<AccountDetails>);
+
+export type AccountSignInReply =
+  | { ok: true; account: AccountStatus }
+  | { ok: false; error: SignInError; message: string };
+
+/** The part of `CloudAuth` the page's calls use. */
+export type AuthLike = Pick<CloudAuth, 'status' | 'signIn' | 'signOut'>;
+
+/** The account calls the page can make. `getAuth()` is `null` in a build with no
+ *  Supabase project (DB4): the state is unavailable and sign-in refuses
+ *  before anything is built or sent. */
+export class AccountApi {
+  constructor(
+    private readonly getAuth: () => AuthLike | null,
+    private readonly store: Parameters<typeof ensureInstallId>[0],
+    private readonly makeId: () => string,
+    private readonly unavailableMessage: () => string,
+    private readonly signOutFailedMessage: () => string,
+    private readonly log: Logger = silent,
+    /** The profile and the backup's status; `null` while no account module runs. */
+    private readonly details: () => AccountDetails | null = () => null,
+  ) {}
+
+  state(): AccountState {
+    const auth = this.getAuth();
+    if (!auth) return { available: false };
+    const status = auth.status();
+    const details = status.signedIn ? this.details() : null;
+    return details ? { available: true, ...status, ...details } : { available: true, ...status };
+  }
+
+  async signIn(provider: unknown): Promise<AccountSignInReply> {
+    const auth = this.getAuth();
+    if (!auth || !(PROVIDERS as readonly unknown[]).includes(provider)) {
+      return { ok: false, error: 'auth.error.failed', message: this.unavailableMessage() };
+    }
+    const result = await auth.signIn(provider as Provider);
+    if (result.ok && ensureInstallId(this.store, this.makeId) === null) {
+      this.log.warn('the install ID could not be written');
+    }
+    return result;
+  }
+
+  async signOut(): Promise<Saved> {
+    const auth = this.getAuth();
+    if (!auth) return { ok: false, error: this.signOutFailedMessage() };
+    try {
+      await auth.signOut();
+      return { ok: true };
+    } catch (error) {
+      this.log.warn('signing out failed', { error: String(error) });
+      return { ok: false, error: this.signOutFailedMessage() };
+    }
+  }
+}
+
+/** The error-reports consent and the signed-in user, kept in step with the
+ *  main process's reporter and the server's environment. The consent is read
+ *  from `shell.json` (default off); the account module sets it and the user. */
+export class ReportsLink {
+  private user: string | null = null;
+
+  constructor(
+    private readonly store: Parameters<typeof ensureInstallId>[0],
+    private readonly reporter: Pick<ErrorReporter, 'setConsent' | 'setUser'>,
+    private readonly dsn: string | null,
+    /** Restarts the server so it reads the new environment. */
+    private readonly restartServer: () => Promise<void>,
+    private readonly log: Logger = silent,
+  ) {}
+
+  get consent(): boolean {
+    return this.store.get().consentErrors === true;
+  }
+
+  get userId(): string | null {
+    return this.user;
+  }
+
+  /** The three variables the server is spawned with. */
+  env(): Record<string, string> {
+    return localApiSentryEnv(this.dsn, this.consent, this.user);
+  }
+
+  /** Starts the reporter for a consent already cached; call once Electron is ready. */
+  async start(): Promise<void> {
+    this.reporter.setUser(this.user);
+    await this.reporter.setConsent(this.consent);
+  }
+
+  /** Caches the consent and applies it at once; restarts the server only
+   *  when its environment changed. */
+  async setConsent(on: boolean): Promise<void> {
+    await this.apply({ consent: on });
+  }
+
+  /** The signed-in account's ID, `null` signed out. */
+  async setUser(userId: string | null): Promise<void> {
+    await this.apply({ user: userId });
+  }
+
+  /** `setUser` and `setConsent` for what `change` holds, with one restart at most. */
+  async apply(change: { consent?: boolean; user?: string | null }): Promise<void> {
+    const before = this.env();
+    if (change.user !== undefined) {
+      this.user = change.user?.trim() || null;
+      this.reporter.setUser(this.user);
+    }
+    if (change.consent !== undefined) {
+      if (!this.store.update({ consentErrors: change.consent })) this.log.warn('the error-reports choice could not be written');
+      await this.reporter.setConsent(change.consent);
+    }
+    await this.restartIfChanged(before);
+  }
+
+  private async restartIfChanged(before: Record<string, string>): Promise<void> {
+    const after = this.env();
+    if (Object.keys(after).every((key) => after[key] === before[key])) return;
+    await this.restartServer();
+  }
+}
 
 // ---- reading -------------------------------------------------------------
 
@@ -334,6 +495,8 @@ export function toAppSettings(
     windowsStore: boolean;
     rulesText: number | null;
     firstData: FirstData;
+    account: AccountState;
+    canContribute: boolean;
   },
 ): AppSettings {
   return {
@@ -346,6 +509,10 @@ export function toAppSettings(
     update: info.update,
     onboarded: prefs.onboarded ?? false,
     aiFeatures: prefs.aiFeatures ?? null,
+    canContribute: info.canContribute,
+    contribAsked: prefs.contribAsked === true,
+    contribute: prefs.contribute ?? null,
+    account: info.account,
     askAutostart: info.askAutostart,
     canAutostart: info.canAutostart,
     windowsStore: info.windowsStore,
@@ -457,6 +624,7 @@ export function planAppChange(
   if (change.plays !== undefined) patch.plays = change.plays;
   // A `null` stored would be dropped at the next launch and decided again.
   if (typeof change.aiFeatures === 'boolean') patch.aiFeatures = change.aiFeatures;
+  if (change.contribAsked === true) patch.contribAsked = true;
   return { patch, restart: change.diagnostic !== undefined && change.diagnostic !== current.diagnostic };
 }
 
@@ -598,6 +766,8 @@ export interface SettingsDeps {
   canAutostart: boolean;
   /** `process.windowsStore === true`. */
   windowsStore: boolean;
+  /** Whether the build has a Supabase project, which `main.ts` builds the `Contributor` on. */
+  canContribute: boolean;
   /** How many backups the folder holds. */
   countBackups(dir: string): number;
   /** The newest `<db>.backup` slot in `dir`: its modification time (ISO) and size. */
@@ -609,6 +779,8 @@ export interface SettingsDeps {
   setLanguage?(choice: LanguageChoice): void;
   /** Where the shell's own update stands now. */
   updateStatus(): UpdateStatus;
+  /** The account as it stands now (`AccountApi.state`). */
+  account(): AccountState;
   /** The "Check for updates" switch changed: the updater follows it. */
   setUpdateChecks?(on: boolean): void;
   pickFolder(): Promise<string | null>;
@@ -695,7 +867,19 @@ export class SettingsService {
       windowsStore: this.deps.windowsStore,
       rulesText: this.doctor?.rulesText ?? null,
       firstData: this.firstDataState,
+      account: this.deps.account(),
+      canContribute: this.deps.canContribute,
     });
+  }
+
+  /** The stored "Help build the stats" answer changed: same contract as `updateChanged`. */
+  contributeChanged(): void {
+    this.updateChanged();
+  }
+
+  /** The account changed: same contract as `updateChanged`. */
+  accountChanged(): void {
+    this.updateChanged();
   }
 
   /** The update status changed: the page gets the settings it has with the
@@ -716,6 +900,11 @@ export class SettingsService {
   private async publish(): Promise<void> {
     const settings = await this.refresh();
     if (settings) this.deps.changed(settings);
+  }
+
+  /** Restarts the server after the queued work, for a change of its environment. */
+  restartFor(reason: string): Promise<void> {
+    return this.serial(() => this.restartServer(reason));
   }
 
   private async restartServer(reason: string): Promise<void> {

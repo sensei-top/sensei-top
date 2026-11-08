@@ -244,6 +244,9 @@ export interface ServerOptions {
   env: NodeJS.ProcessEnv;
   /** D18: `--verbose`, read at each start. */
   verbose: () => boolean;
+  /** Extra variables for the long-running server alone (not the one-shot
+   *  commands), read at each start. */
+  serveEnv?: () => Record<string, string>;
   rememberedPort: () => number | undefined;
   rememberPort: (port: number) => void;
   log?: Logger;
@@ -465,10 +468,10 @@ export class ServerController extends EventEmitter {
     });
   }
 
-  private spawnOptions(): SpawnOptions {
+  private spawnOptions(extraEnv: Record<string, string> = {}): SpawnOptions {
     return {
       cwd: this.options.dataDir,
-      env: childEnv(this.options.env, this.options.session),
+      env: { ...childEnv(this.options.env, this.options.session), ...extraEnv },
       stdio: ['pipe', 'pipe', 'pipe'],
       // The frozen server is a console executable; without this Windows
       // opens a console window for it.
@@ -567,7 +570,7 @@ export class ServerController extends EventEmitter {
     return new Promise((resolve) => {
       let child: ChildProcess;
       try {
-        child = this.spawnFn(file, args, this.spawnOptions());
+        child = this.spawnFn(file, args, this.spawnOptions(this.options.serveEnv?.()));
       } catch (error) {
         this.log.error('server could not be started', { error: String(error) });
         resolve({ kind: 'exited', reason: `could not be started: ${String(error)}` });

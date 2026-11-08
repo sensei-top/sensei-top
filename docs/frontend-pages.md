@@ -1,6 +1,6 @@
 # Frontend: the pages
 
-The dashboard page by page: Home, Matches and a match's views, the current-match reads, the opponent-deck read, the MTGO picks, the match report, Decks, the RCQ page, the Deck guide, Field and Coach. Cut from [docs/frontend.md](frontend.md), which keeps the rules every page follows.
+The dashboard page by page: Home, Matches and a match's views, the current-match reads, the opponent-deck read, the MTGO picks, the match report, Decks, the account's pages, the RCQ page, the Deck guide, Field and Coach. Cut from [docs/frontend.md](frontend.md), which keeps the rules every page follows.
 
 ## Home
 
@@ -353,6 +353,19 @@ same row. On Matches the row carries one more caption, the event in
 words and the rank. From 48rem up a row is a grid (when, result, the
 opponent's deck, the viewer's deck, event and rank); under that it
 stacks.
+
+**A restored match** (`Match.restored`) is one pulled back from the
+user's cloud history that this install has no log of (`cloud_match`, read
+through `v_cloud_match`, migration 073). Its row is a plain element with a
+"Restored" chip beside the result and links nowhere: it has no report,
+replay or turns, and `/api/matches/{id}` 404s for it. What the cloud does
+not carry is null, never guessed: the end time, the rank, the opponent's
+colours and the best-of-three split. A local match with the same id always
+hides the restored one. Restored matches count in the match-level
+win-rate views (`v_deck_winrate`, `v_deck_identity_winrate`,
+`v_matchup_winrate`), under a `deck_key` of `cloud:` and the deck's name
+with no `deck_id`; the game-level views and the deck pages stay
+local-only, and a deck filter leaves restored rows out.
 
 **The event in words** is `eventLabel` (`lib/events.ts`). The names
 known are written out in a table. Any other id is respelled and never
@@ -763,6 +776,90 @@ the findings, and never a raw hand or graveyard. Unlike the guide it has
 no command-line importer: a match review is read once, about a game
 already played, so a stored narrative comes only from the generate
 button (`docs/review.md`).
+
+## The account's pages
+
+Shell-level screens, all in the desktop shell and none in a browser. The
+shell's half is `docs/desktop.md`, "Account and sync", "Error reports" and
+"Contributed games".
+
+**The consent screen** (`/account/welcome`, `pages/AccountWelcomePage.tsx`,
+title `accountWelcome`, a child of the layout like `/welcome`). The layout
+sends a signed-in user there (`needsConsent`) when the account's profile is
+`none`, or is `read` with a `consentVersion` that is missing or older than
+`POLICY_VERSION` (`lib/policy.ts`, the privacy policy's date); never when the
+build has no account, nobody is signed in, the profile could not be read, or
+the answers were given under a newer version than this install knows (asking
+again would write the older one back). The screen is never redirected from
+itself. Answered or skipped, it goes Home, or back to the setup step it
+interrupted, which the redirect from `/welcome` carries in the navigation
+state (`consentState`, `afterConsent`): a first sign-in on Welcome's first
+step otherwise skips the rest of setup. Its kind is fixed when it opens, since the shell publishes the
+profile before `setProfile` replies. It asks its questions over a few
+steps (`stepsOf`), drawn bare (`docs/frontend.md`, "The welcome's bare
+pages"), with the first-run Welcome's "Step n of m" caption, an `h2`
+heading and Back and Next at the foot; the steps live in the page, not the
+address, since nothing is saved until Continue on the last one. A step
+shows a lead line and its control; what is kept, where and for how long
+sits under the control in a collapsed "More about this" `Disclosure` (where
+the account itself is kept opens the first step's), never what a choice
+costs: the transfer box and the line that a sent game can't be deleted stay
+in view. *first*
+steps through the age confirmation, then the three choices, none
+pre-ticked: cloud backup and coach history together (`keep`, the two things
+kept at Supabase), then error reports alone, since the transfer box opens
+under them; each step's Next waits on its answers (`stepHint`). *returning*
+(a policy change) steps through the same two with the earlier answers
+pre-selected, and shows the
+policy-change sentence only when `account.policyChanges.<version>` exists.
+Choosing Send for error reports needs the transfer consent box ticked, and
+the two together are the only way `consentErrors` is written true. On a
+first sign-in, while no "Help build the stats" answer is stored, that
+question is the last step, opening with the line that says it is not one of
+the account's choices, and the age box covers it. "Skip and don't create an
+account" stays at the foot of every step, with the note that the three
+choices need an account, and that no match is backed up yet (sync waits on
+a read profile with the backup consent, so before the last step nothing
+is): it skips them all and deletes the just-made
+account; "Help build the stats", which needs none, goes unanswered there
+and is left to the one-time question or Settings. A returning user has Sign out there instead. A profile
+other than `none` or `read` goes Home.
+
+**The one-time question** (`/contribute`, `pages/ContributePage.tsx`, title
+`contribute.heading`). It and Welcome's last step ask through
+`ContributeQuestion`, whose text (`ContributeDisclosure`) keeps three lines on
+the page (no account needed, what a yes sends, and that a sent game can't be
+deleted) and folds where the pool is and how to stop under "More about this"
+(`MoreAbout`, the consent screen's fold too). Welcome's last step, which
+names no account, folds the no-account line as well (`foldNoAccount`); its
+age and wait hints share one line, and the yes it keeps off names that line
+as its description. Settings' dialog shows its four
+lines in full. It is due (`contribPageDue`) only when the build can
+upload, onboarding is finished, nothing is stored, the page was never shown,
+the consent screen is not due, and a signed-in account's profile has been
+read (a missing or `unknown` one waits, so the one ask is never spent before
+the consent check). The layout redirects to it at most once per page load,
+and never from `/welcome`, `/account/welcome` or itself. Mounting it sets
+`contribAsked`, so Decide later, closing the window and Go to Home all mean
+it does not show again; Settings still asks. A failed write only means it may
+show again at the next launch.
+
+**Settings → Account and its dialogs.** `docs/frontend.md`, "Settings", says
+what the section holds. The three dialogs are Delete my cloud history (says
+that every backed-up match is deleted, this PC's matches stay, the backup
+turns off, turning it on uploads everything again, and that it cannot be
+undone; Cancel is focused; a failure line depends on whether the switch is
+off), Delete my account, and the error-reports transfer consent. The delete
+IPC is not called until the confirm button is pressed.
+
+**The error screen** (`pages/ErrorPage.tsx`) is the `ErrorBoundary` of every
+route in `routes.tsx`, the layout's too, so it can render where the layout is
+not mounted and mounts its own report dialog. It says something went wrong,
+offers Reload and, in a shell that sends reports, Report a problem, and says
+whether the error was sent already (only with error reports on; it is
+reported once per thrown object, since a boundary's catch does not reach
+`window`). Errors that do reach `window` are forwarded by
+`lib/errorReports.ts`'s `forwardErrors`.
 
 ## Decks
 

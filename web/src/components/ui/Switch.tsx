@@ -37,7 +37,7 @@ export function Switch({
           {label}
         </p>
         {description && (
-          <p id={descriptionId} className="break-words text-caption text-muted">
+          <p id={descriptionId} className="max-w-prose break-words text-caption text-muted">
             {description}
           </p>
         )}

@@ -192,6 +192,12 @@ describe('the matches Home names', () => {
     expect(lastFinished([rows[1]])).toBeNull()
   })
 
+  it('never takes a restored match as the last one', () => {
+    const withRestored = [...rows, match('cloud', '2026-10-01T10:00:00', 'win', { restored: true })]
+    expect(lastFinished(withRestored)!.match_id).toBe('new')
+    expect(lastFinished([withRestored[4]])).toBeNull()
+  })
+
   it('lists the newest matches, finished or not', () => {
     expect(ids(recentMatches(rows))).toEqual(['live', 'new', 'old'])
     expect(ids(recentMatches(rows, 2))).toEqual(['live', 'new'])
@@ -489,6 +495,18 @@ describe('homeField', () => {
     const field = homeField(smallPaperOnly, matches, identities, null, false, now, 'Standard')!
     expect(field.tier).toBe('D')
     expect(field.lists).toBe(12)
+  })
+
+  it('never takes a restored match for its art', () => {
+    const cloud = match('cloud', '2026-09-28T10:00:00', 'win', {
+      restored: true,
+      deck_id: null,
+      format: 'Standard',
+      opponent_key: 'archetype:big',
+      opponent_label: 'big',
+    })
+    const field = homeField(presence, [cloud, ...matches], identities, '2026-09-01', false, now, 'Standard')!
+    expect(field.artMatchId).toBe('1')
   })
 
   it('ignores a newer match in another format, for the deck and for the record', () => {

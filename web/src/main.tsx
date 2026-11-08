@@ -11,6 +11,7 @@ import '@fontsource-variable/bricolage-grotesque/wght.css'
 import '@fontsource-variable/hanken-grotesk/wght.css'
 import '@fontsource-variable/hanken-grotesk/wght-italic.css'
 import './index.css'
+import { forwardErrors } from './lib/errorReports'
 // The translation layer starts before anything renders: the language is
 // chosen and i18next is ready when this import returns.
 import { onLanguageChange } from './i18n'
@@ -35,6 +36,8 @@ const client = new QueryClient({
 // no prose: resetting it would lose the projection revision Shell.tsx
 // compares, and the next beat would invalidate everything a second time.
 onLanguageChange(() => void client.resetQueries({ predicate: (q) => q.queryKey[0] !== 'live' }))
+
+forwardErrors()
 
 // Every place is an address (routes.tsx). The router only picks the page;
 // TanStack Query above it stays the only data layer.

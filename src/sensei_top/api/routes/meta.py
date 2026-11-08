@@ -7,10 +7,12 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
+from fastapi.responses import PlainTextResponse
 
+from sensei_top import diagnostics
 from sensei_top.api.deps import Conn
 from sensei_top.api.models.common import Deck, Health, LiveStatus
 from sensei_top.api.models.metagame import FormatEntry, FormatMatchCounts, FormatsOut
@@ -28,6 +30,20 @@ def health(request: Request, conn: Conn) -> Health:
         for table in ("decks", "matches", "games", "turns")
     }
     return Health(status="ok", database=str(request.app.state.database), **counts)
+
+
+@router.get("/api/diagnostics/log-tail", response_class=PlainTextResponse, tags=["meta"])
+def log_tail(
+    request: Request,
+    lines: Annotated[int, Query(ge=1, le=diagnostics.LOG_TAIL_MAX_LINES)] = 500,
+) -> PlainTextResponse:
+    """The last ``lines`` lines of the app's log across its rotated files,
+    through ``scrub.scrub_text`` with every name the database and config
+    hold. Plain text; an empty body when there is no log. Reads the files,
+    never writes."""
+    database: Path = request.app.state.database
+    names = diagnostics.known_names(database)
+    return PlainTextResponse(diagnostics.log_tail(database, lines, names))
 
 
 def _with_home_as_tilde(path: Path) -> str:
@@ -92,6 +108,12 @@ def live(request: Request, conn: Conn) -> LiveStatus:
         "ORDER BY logged_at DESC LIMIT 1"
     ).fetchone()
     last_event = last_event_row[0] if last_event_row else None
+    # Restored matches (migration 073) are a separate count: matches stays
+    # this install's own, which the dashboard compares to its local rows.
+    try:
+        restored_matches = conn.execute("SELECT COUNT(*) FROM v_cloud_match").fetchone()[0]
+    except sqlite3.OperationalError:
+        restored_matches = 0
     watcher = getattr(request.app.state, "watcher", None)
     # projection_state (migrations/026) is how the rebuild count crosses the
     # process boundary: serve --watch runs the watcher in its own process
@@ -125,6 +147,7 @@ def live(request: Request, conn: Conn) -> LiveStatus:
         last_projection_at=last_projection,
         events=newest_event or 0,
         matches=counts["matches"],
+        restored_matches=restored_matches,
         games=counts["games"],
         turns=counts["turns"],
         # Ingestion moves the row id; projection moves the counts. Both must

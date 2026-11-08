@@ -24,6 +24,10 @@ function settings(version: string, model = 'm'): BridgeSettings {
       update: { state: 'idle' },
       onboarded: true,
       aiFeatures: true,
+      canContribute: false,
+      contribAsked: false,
+      contribute: null,
+      account: { available: false },
       askAutostart: false,
       canAutostart: true,
       windowsStore: false,
@@ -45,6 +49,7 @@ function fake(initial: BridgeSettings | null) {
     pickFile: () => Promise.resolve(null),
     backUpNow: never,
     restoreFrom: never,
+    contribSet: never,
     app: {
       set: never,
       checkForUpdates: never,
@@ -55,6 +60,16 @@ function fake(initial: BridgeSettings | null) {
       recheck: never,
       firstData: never,
       finishOnboarding: never,
+    },
+    account: {
+      status: () => Promise.resolve({ available: false } as const),
+      signIn: () => Promise.resolve({ ok: false, error: 'auth.error.failed', message: '' } as const),
+      signOut: never,
+      setProfile: never,
+      exportData: never,
+      deleteCloudHistory: never,
+      deleteAccount: never,
+      readProfileAgain: never,
     },
     onChange: (listener: (s: BridgeSettings) => void) => {
       listeners.add(listener)
@@ -88,6 +103,13 @@ describe('the shell store', () => {
     stop()
     emit(settings('1.0.2'))
     expect(heard).toBe(1)
+  })
+
+  it('passes the account calls and the account state through', () => {
+    const { raw } = fake(settings('1.0.0'))
+    const shell = shellStore(raw).snapshot()
+    expect(shell?.app?.account).toBe(raw.account)
+    expect(shell?.app?.settings.account).toEqual({ available: false })
   })
 
   it('is null while initial is null, until a change event brings settings', () => {

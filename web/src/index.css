@@ -200,6 +200,11 @@ h4 {
   text-wrap: balance;
 }
 
+/* A paragraph's last line never ends on one stranded word. */
+p {
+  text-wrap: pretty;
+}
+
 /* One focus ring, from a token, for everything that takes focus. A
    component never spells its own. */
 :focus-visible {

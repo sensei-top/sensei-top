@@ -161,7 +161,7 @@ describe('the tray on a change of language', () => {
         icon: (name) => name as unknown as NativeImage,
         fetch: (() => new Promise<Response>(() => {})) as typeof globalThis.fetch,
       },
-      { open: noop, settings: noop, checkForUpdates: noop, restartToUpdate: noop, showLogs: noop, exportDiagnostics: noop, quit: noop },
+      { open: noop, settings: noop, checkForUpdates: noop, restartToUpdate: noop, showLogs: noop, exportDiagnostics: noop, reportProblem: noop, quit: noop },
       silentLog,
       'linux',
     );

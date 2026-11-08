@@ -59,7 +59,8 @@
   "row": {
     "resultScore": "{{result}} {{score}}",
     "unrecognizedDeck": "Unrecognized deck",
-    "showed": "showed {{card}}"
+    "showed": "showed {{card}}",
+    "restored": "Restored"
   },
   "summary": {
     "matchesWon": "Matches",

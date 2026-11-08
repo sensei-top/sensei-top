@@ -9,9 +9,9 @@
   "desktopName": "sensei-top.desktop",
   "main": "dist/main.js",
   "scripts": {
-    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p .",
-    "typecheck": "tsc -p tsconfig.test.json",
-    "test": "vitest run",
+    "build": "node scripts/build-config.mjs && node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p .",
+    "typecheck": "node scripts/build-config.mjs && tsc -p tsconfig.test.json",
+    "test": "node scripts/build-config.mjs && vitest run",
     "dist:win": "pnpm run build && node scripts/notices.ts && electron-builder --win nsis appx --publish never",
     "dist:linux": "pnpm run build && node scripts/notices.ts && electron-builder --linux AppImage tar.gz --publish never",
     "dev": "pnpm run build && env -u ELECTRON_RUN_AS_NODE electron ."
@@ -24,6 +24,8 @@
     "vitest": "^5.0.2"
   },
   "dependencies": {
+    "@sentry/electron": "8.3.0",
+    "@supabase/supabase-js": "2.118.0",
     "electron-updater": "6.8.9"
   }
 }

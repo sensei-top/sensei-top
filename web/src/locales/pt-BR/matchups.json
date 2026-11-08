@@ -94,7 +94,7 @@
     "ofTheField": "{{share}} do meta",
     "reasoned": "deduzido do texto dos cards",
     "unclassified": "Oponente ainda não identificado.",
-    "formatUnknown": "Nenhum formato de torneio é conhecido para o seu deck, então não há listas de torneio de onde escrever um briefing.",
+    "formatUnknown": "Nenhum formato de torneio é conhecido para seu deck, então não há listas de torneio de onde escrever um briefing.",
     "noConsensus": "O corpus de torneios tem poucos decks deste arquétipo para escrever um briefing.",
     "stale": "O meta mudou desde que isto foi escrito.",
     "noBrief": "Nenhum briefing escrito para este matchup ainda. A maioria chega com a importação completa do guia do deck; isto escreve só este."
@@ -175,7 +175,7 @@
     },
     "manaScrewed": {
       "title": "Falta de terrenos até o turno quatro",
-      "clause": "em que faltaram terrenos até o seu quarto turno"
+      "clause": "em que faltaram terrenos até seu quarto turno"
     },
     "manaFlooded": {
       "title": "Mais terrenos do que o deck prevê",
@@ -224,7 +224,7 @@
     "noPlanYet": "Nenhum plano escrito para este matchup ainda.",
     "closest": "Nenhum plano escrito para {{label}} — plano escrito mais próximo: {{closest}}",
     "stale": "Desatualizado",
-    "staleMessage": "O meta ou os seus 75 atuais mudaram desde que este plano foi escrito.",
+    "staleMessage": "O meta ou seus 75 atuais mudaram desde que este plano foi escrito.",
     "boarding": "Trocas",
     "fullWriteup": "Texto completo",
     "otherPlans": "Outros planos escritos",

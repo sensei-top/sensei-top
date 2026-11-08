@@ -1989,6 +1989,12 @@ def cmd_serve(args) -> None:
         )
         backup_scheduler = _start_backup(db_path)
 
+    # After the watcher starts: on Linux it is forked, and a child forked
+    # with the SDK running would report as this process.
+    from sensei_top import telemetry
+
+    telemetry.init(db_path)
+
     server = uvicorn.Server(
         uvicorn.Config(
             create_app(db_path, watcher=watcher),

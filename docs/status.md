@@ -23,14 +23,18 @@ rule numbers and is never sent a match (`BACKLOG.md`'s BL-100 to BL-102;
 AGENTS.md rules 5 and 6; `docs/llm.md`, "What is hosted, and what it
 receives"). The tracker keeps working fully without an account. The copy
 prompt and the user's own key stay as they are, and an "AI features"
-switch hides them and the coach together. Until the account ships, every
-"no account" claim in the README, the dashboard and the site is true and
-stays as written.
+switch hides them and the coach together. Since the account shipped, the
+"no account" claims in the README and the site read "Sensei Top works
+fully without an account. A free, optional account adds cloud backup of
+your match history and error reports." (`docs/llm.md`); the dashboard's
+footer, "No account needed", is still true and stays.
 
 **The roadmap's order, 2026-10-19.** Reordered with the user after the
 tracker research (plan 27). Written guides with any model and macOS move
 to Later; match contributions move to Never, so no match is ever
-pooled or shared; the one that leaves the machine is a report the user
+pooled or shared (reversed 2026-11-02, plan 40: contributing your games
+is an opt-in of its own, anonymous, with or without an account); the one
+that leaves the machine is a report the user
 asks for with their own key (and, since 2026-11-02, the user's own
 cloud backup, above). The order itself is `ROADMAP.md`'s alone.
 
@@ -90,7 +94,8 @@ non-negotiable #5). `serve` refuses to bind anything but loopback, and
 dashboard's own header, so another page open in the browser can't use the
 API either (`tests/test_guard.py`).
 
-The only measurement the no-account decision leaves is built: the daily
+Besides the error reports and contributed games, which only the user's
+yes sends (the privacy policy), the measurements are these: the daily
 version check reads the latest GitHub release's `latest.yml`, which the
 release job publishes with the installer (`docs/testing.md`, "CI"); the
 site (`site/`, `docs/frontend-site.md`, "The site") counts its page views with
@@ -130,6 +135,47 @@ the decision.
   prose stays in the language it was written in. Decided with the user,
   2026-10-08 (plan 18, D3 and D7); `docs/i18n.md`, "What is never
   translated".
+
+## Not planned
+
+Decisions about the product as a whole, not gaps: each one was considered
+and refused. Moved here from `ROADMAP.md` on 2026-11-06; the site's "What
+is not planned" card links to this section.
+
+- **Live advice during an event.** In an Arena event (paid events,
+  drafts, the Arena Open, Directs, Qualifiers, a Direct Challenge) the Live
+  page shows what any tracker shows: your library, draw odds, the cards
+  your opponent has revealed and what deck they point to. Keep advice, hand
+  reads and play-arounds appear in casual games, on the ranked ladder and
+  between games, and a switch in Settings hides them everywhere. Until
+  October 2026 the ladder got none either. The rules that could reach a
+  tracker are the
+  [Digital Tournament Rules](https://blogs.magicjudges.org/rules/dtr/) and
+  the [Digital Infraction Procedure Guide](https://blogs.magicjudges.org/rules/dipg/2-2/):
+  they allow deck tracking software that shows no private information,
+  they count play advice from an outside source as outside assistance, and
+  they govern tournaments, which the ladder is not. On the ladder only
+  [Wizards' Terms](https://company.wizards.com/en/legal/terms) apply, and
+  they treat every tracker alike. The terms of the
+  [Arena Open](https://magic.wizards.com/en/news/mtg-arena/arena-open-terms-and-conditions)
+  and [Arena Direct](https://magic.wizards.com/en/news/mtg-arena/arena-direct-terms-and-conditions)
+  say nothing of trackers either way, so events keep the stricter line.
+- **Reading the memory of, injecting into or automating either client.**
+  The tracker reads the log files Arena and MTGO already write, with
+  Arena's own Detailed Logs setting on, and nothing else.
+- **Pooling or sharing your matches without your yes.** Your match
+  history is never pooled or shared by default. Two things leave your
+  computer only when you turn them on: a backup of your match summaries
+  that only you can read, with the free account, and, with or without
+  one, your games contributed to the stats, stripped of everything that
+  names you or your opponent. A report you generate with your own key
+  sends that match to the model you configured. The matchup numbers from
+  outside your own games come from published tournament results.
+- **Draft.** The draft assistant was removed in October 2026 and is not
+  coming back in this project.
+- **Mobile.** iOS makes log reading impossible and Android impractical.
+- **Alchemy and Brawl.** Games in them still appear in your history, but
+  no field data or format-specific feature is built for them.
 
 ## Data the real database still carries
 

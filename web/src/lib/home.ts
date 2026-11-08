@@ -197,9 +197,10 @@ export function opponentNamed(match: Pick<Match, 'opponent_source'>): boolean {
   return source != null && source !== 'colors' && source !== 'unknown'
 }
 
-/** The newest finished match. */
+/** The newest finished match, never a restored one: it has no page to link
+ *  to and no detail to read art from. */
 export function lastFinished(matches: Match[]): Match | null {
-  return finishedNewestFirst(matches)[0] ?? null
+  return finishedNewestFirst(matches).find((match) => !match.restored) ?? null
 }
 
 /** The eight newest matches, finished or not. */
@@ -564,7 +565,8 @@ export function homeField(
     listShort: listFull && oldest != null && (startOf(oldest) ?? 0) > windowStart,
     artMatchId: firstKey
       ? (finishedNewestFirst(inFormat).find(
-          (match) => match.opponent_key === firstKey && match.opponent_label === rows[0].presence.label,
+          (match) =>
+            !match.restored && match.opponent_key === firstKey && match.opponent_label === rows[0].presence.label,
         )?.match_id ?? null)
       : null,
   }

@@ -55,12 +55,46 @@ export interface ShellPrefs {
   /** Plan 40D: whether the page shows its AI features; absent means undecided
    *  (`settleAiFeatures`), which the page reads as off. The server never reads it. */
   aiFeatures?: boolean;
+  /** Plan 40b S10: a random UUID made at the first successful sign-in; never replaced. */
+  installId?: string;
+  /** Plan 40b S11: the yes to error reports, cached from the profile (the account module sets it); absent means off. */
+  consentErrors?: boolean;
+  /** Plan 40b S13: the answer to "help build the stats"; absent or `null` means not asked, which sends nothing. */
+  contribute?: Contribute | null;
+  /** Plan 40b S15: the one-time "Help build the stats" page was shown; absent means not yet. */
+  contribAsked?: boolean;
+}
+
+/** The yes to contributed games and what it was given to. */
+export interface Contribute {
+  yes: boolean;
+  /** The privacy policy's version the answer was given under. */
+  policyVersion: string;
+  answeredAt: string;
+  ageConfirmed: boolean;
+}
+
+/** `value` as a `Contribute`, or `undefined` when any field is the wrong type. */
+export function parseContribute(value: unknown): Contribute | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  const raw = value as Record<string, unknown>;
+  if (
+    typeof raw.yes !== 'boolean' ||
+    typeof raw.policyVersion !== 'string' ||
+    raw.policyVersion === '' ||
+    typeof raw.answeredAt !== 'string' ||
+    raw.answeredAt === '' ||
+    typeof raw.ageConfirmed !== 'boolean'
+  ) {
+    return undefined;
+  }
+  return { yes: raw.yes, policyVersion: raw.policyVersion, answeredAt: raw.answeredAt, ageConfirmed: raw.ageConfirmed };
 }
 
 /** What is on disk: the known keys plus whatever else was there. */
 export type ShellJson = ShellPrefs & Record<string, unknown>;
 
-const BOOLEAN_KEYS = ['keepRunningOnClose', 'autostart', 'checkForUpdates', 'diagnostic', 'onboarded', 'aiFeatures'] as const;
+const BOOLEAN_KEYS = ['keepRunningOnClose', 'autostart', 'checkForUpdates', 'diagnostic', 'onboarded', 'aiFeatures', 'consentErrors', 'contribAsked'] as const;
 
 function isInt(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value);
@@ -108,6 +142,18 @@ export function parseShellJson(text: string): { prefs: ShellJson; dropped: strin
       dropped.push(key);
     }
   }
+  if ('installId' in prefs && !(typeof prefs.installId === 'string' && prefs.installId !== '')) {
+    delete prefs.installId;
+    dropped.push('installId');
+  }
+  if ('contribute' in prefs && prefs.contribute !== null) {
+    const contribute = parseContribute(prefs.contribute);
+    if (contribute) prefs.contribute = contribute;
+    else {
+      delete prefs.contribute;
+      dropped.push('contribute');
+    }
+  }
   if ('language' in prefs && !(LANGUAGE_CHOICES as readonly unknown[]).includes(prefs.language)) {
     delete prefs.language;
     dropped.push('language');
@@ -153,6 +199,19 @@ export function settleAiFeatures(
   store.update({ aiFeatures: true });
   log.info('aiFeatures on: onboarding was already finished');
   return true;
+}
+
+/** The install ID, made with `make` and written the first time it is asked
+ *  for, never replaced afterwards. `null` when the write failed (the next
+ *  call tries again). */
+export function ensureInstallId(
+  store: { get(): Readonly<ShellJson>; update(patch: Partial<ShellJson>): boolean },
+  make: () => string,
+): string | null {
+  const existing = store.get().installId;
+  if (typeof existing === 'string' && existing !== '') return existing;
+  const id = make();
+  return store.update({ installId: id }) ? id : null;
 }
 
 /** Writes `data` to `file` through a temporary file beside it. */

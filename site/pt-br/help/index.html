@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ajuda · Sensei Top</title>
-<meta name="description" content="Como instalar o Sensei Top, configurá-lo e enviar um relatório de problema.">
+<meta name="description" content="Como instalar o Sensei Top, configurá-lo, a conta gratuita e como enviar um relatório de problema.">
 <link rel="canonical" href="https://senseitop.com/pt-br/help/">
 <link rel="alternate" hreflang="en" href="https://senseitop.com/help/">
 <link rel="alternate" hreflang="pt-BR" href="https://senseitop.com/pt-br/help/">
@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Sensei Top">
 <meta property="og:title" content="Ajuda · Sensei Top">
-<meta property="og:description" content="Como instalar o Sensei Top, configurá-lo e enviar um relatório de problema.">
+<meta property="og:description" content="Como instalar o Sensei Top, configurá-lo, a conta gratuita e como enviar um relatório de problema.">
 <meta property="og:url" content="https://senseitop.com/pt-br/help/">
 <meta property="og:image" content="https://senseitop.com/img/og-pt-br.png">
 <meta property="og:image:width" content="1200">
@@ -42,11 +42,13 @@
 
 <main>
 <h1>Ajuda</h1>
-<p class="lead">Como instalar o Sensei Top, configurá-lo e o que fazer quando algo parece errado. Se a sua dúvida não estiver aqui, pergunte nas <a href="https://github.com/sensei-top/sensei-top/discussions">Discussions</a>.</p>
+<p class="lead">Como instalar o Sensei Top, configurá-lo, a conta gratuita e o que fazer quando algo parece errado. Se a sua dúvida não estiver aqui, pergunte nas <a href="https://github.com/sensei-top/sensei-top/discussions">Discussions</a>.</p>
 <ul class="toc">
 <li><a href="#install">Instalar</a></li>
 <li><a href="#first-run">A primeira vez</a></li>
 <li><a href="#mtgo">Magic Online</a></li>
+<li><a href="#account">Conta</a></li>
+<li><a href="#stats">Ajudar a montar as estatísticas</a></li>
 <li><a href="#troubleshooting">Algo parece errado</a></li>
 <li><a href="#report">Enviar um relatório de problema</a></li>
 </ul>
@@ -75,11 +77,11 @@
 <h2>A primeira vez</h2>
 <p>Na primeira vez que abre, o aplicativo guia você pela configuração, um passo curto de cada vez:</p>
 <ol>
-<li><b>Boas-vindas ao Sensei Top</b>: escolha o <b>Idioma</b>, inglês ou português. <b>O que sai deste computador</b> abre a lista de tudo o que o aplicativo baixa. Se você já usou o Sensei Top antes, <b>Restaurar um backup</b> traz o seu histórico de partidas de volta.</li>
+<li><b>Boas-vindas ao Sensei Top</b>: escolha o <b>Idioma</b>, inglês ou português. <b>O que sai deste computador</b> abre a lista de tudo o que o aplicativo baixa. Se você já usou o Sensei Top antes, <b>Entrar com o Google</b> ou <b>Entrar com o Discord</b> traz de volta as partidas do backup da sua conta, e <b>Restaurar de um arquivo de backup</b> traz de volta um arquivo de backup.</li>
 <li><b>Onde você joga?</b>: <b>Arena</b>, <b>Magic Online</b> ou <b>Nos dois</b>. Os próximos passos configuram só o que você escolher.</li>
 <li><b>Arena</b>: o aplicativo procura o log do Arena e confere se os Registros detalhados estão ligados. Se não estiverem, o passo mostra onde ligá-los: no Arena, abra <b>Opções</b>, depois <b>Conta</b>, marque <b>Registros detalhados (suporte de plugin)</b>, feche o Arena e abra-o de novo, e então aperte <b>Verificar de novo</b>. Sem os Registros detalhados, nenhuma partida do Arena é registrada.</li>
 <li><b>Magic Online</b>: <a href="#mtgo">veja abaixo</a>.</li>
-<li><b>Pronto</b>: jogue uma partida. Ela aparece no <b>Início</b> quando termina. Onde o aplicativo pode se atualizar sozinho, este passo tem <b>Verificar uma vez por dia se há uma nova versão</b>; com o AppImage do Linux, também oferece <b>Abrir o Sensei Top ao entrar no computador</b>.</li>
+<li><b>Pronto</b>: jogue uma partida. Ela aparece no <b>Início</b> quando termina. Onde o aplicativo pode se atualizar sozinho, este passo tem <b>Verificar uma vez por dia se há uma nova versão</b>; com o AppImage do Linux, também oferece <b>Abrir o Sensei Top ao entrar no computador</b>. Ele também pergunta se você quer ajudar a montar as estatísticas, <a href="#stats">como explicado abaixo</a>.</li>
 </ol>
 <p>Os dados dos cards, cerca de 80 MB, são baixados sozinhos na primeira vez que o aplicativo abre, e o passo <b>Pronto</b> mostra quanto já foi baixado. Os guias de deck precisam deles. Se o download falhar, aperte <b>Tentar de novo</b> ali, ou <b>Baixar dados dos cards</b> em <b>Configurações</b>, na seção <b>Fontes</b>.</p>
 <p>Se você joga Arena, o <b>Início</b> mostra <b>Ligue os Registros detalhados no Arena</b> até que o log do Arena diga que eles estão ligados, com os mesmos passos e <b>Verificar de novo</b>. O Arena só escreve essa linha ao iniciar, então abra o Arena de novo antes de verificar.</p>
@@ -97,6 +99,38 @@
 </ul>
 <p>Cada jogo é lido quando termina. O Magic Online muda essa pasta de lugar quando se atualiza; se jogos novos pararem de aparecer, escolha a pasta de novo em <b>Configurações</b>, na seção <b>Fontes</b>.</p>
 <p>Uma partida do Magic Online conta para um dos seus decks depois que você escolhe o deck. Abra a partida e responda <b>Qual deck foi este?</b>; com muitas partidas esperando, use o card <b>Precisa de um deck</b> no <b>Início</b>. Ele agrupa as partidas pelo deck salvo no Magic Online que tem mais cards dos que você jogou, e uma confirmação escolhe esse deck para o grupo inteiro. Partidas do Magic Online nunca aparecem em <b>Ao vivo</b>, que acompanha só o Arena.</p>
+</section>
+
+<section id="account">
+<h2>Conta</h2>
+<p>A conta é gratuita e opcional, e o Sensei Top funciona do mesmo jeito sem ela. Com ela, você pode fazer backup do seu histórico de partidas, levá-lo para outro computador e escolher se envia relatórios de erro. Cada uma dessas coisas é um sim à parte, e nada vem escolhido.</p>
+<h3>Entrar</h3>
+<p>Abra <b>Configurações</b>, depois <b>Conta</b>, e aperte <b>Entrar com o Google</b> ou <b>Entrar com o Discord</b>. O login termina no seu navegador, não no aplicativo, que espera até 5 minutos. Não há senha do Sensei Top.</p>
+<p>Na primeira vez, alguns passos curtos pedem que você confirme a sua idade (13 anos ou mais e, se tiver menos de 18, com a permissão de um dos seus pais ou do seu responsável) e depois fazem três perguntas: se faz backup do seu histórico de partidas, se envia relatórios de erro e se guarda o seu histórico com o treinador de regras, que chega numa versão futura. Nada vem marcado, e você pode mudar cada resposta depois em <b>Configurações</b>, na seção <b>Conta</b>. Se preferir não ter conta, <b>Pular e não criar uma conta</b> pula as três, apaga a conta que acabou de ser criada e sai dela.</p>
+<h3>Fazer backup e levar para outro computador</h3>
+<p>Com <b>Fazer backup do meu histórico de partidas</b> ligado, um resumo de cada partida é enviado: quando foi jogada, o formato, o seu deck, o resultado e os cards do oponente que você viu. Os seus logs do Arena e do Magic Online, nomes e chat nunca são enviados. Uma partida do Magic Online só entra no backup depois que você escolhe o deck dela. O banco de dados do seu computador continua sendo o original; a cópia na nuvem é um backup.</p>
+<p>Para levar o seu histórico para outro computador, instale o Sensei Top nele e entre com a mesma conta. As suas respostas vêm com a conta, então o backup também fica ligado lá, e as partidas salvas a partir dos seus outros computadores são baixadas nele. Em <b>Partidas</b>, uma partida que veio da nuvem, e da qual este computador não tem o log, aparece marcada como <b>Restaurada</b>. Ela não tem relatório nem replay turno a turno, porque eles são lidos do log do jogo, que fica no computador em que ele foi jogado.</p>
+<h3>Exportar e apagar</h3>
+<p>Em <b>Configurações</b>, na seção <b>Conta</b>:</p>
+<ul>
+<li><b>Exportar meus dados na nuvem</b> salva tudo o que há na sua conta num arquivo JSON, onde você escolher.</li>
+<li><b>Apagar histórico na nuvem</b> desliga o backup e então apaga as partidas salvas na sua conta. Se você religar o backup, todas as partidas deste computador são enviadas outra vez.</li>
+<li><b>Apagar conta</b> apaga a sua conta e tudo o que há nela, e sai da conta neste computador.</li>
+<li><b>Sair da conta</b> para o backup neste computador até você entrar de novo.</li>
+</ul>
+<p>Cada uma das duas opções de apagar pergunta antes, e nenhuma pode ser desfeita. Nenhuma delas mexe nas partidas do seu computador, e nenhuma alcança os jogos enviados para <a href="#stats">ajudar a montar as estatísticas</a>, porque nada neles diz que são seus.</p>
+<h3>Entrar no Linux</h3>
+<p>O aplicativo guarda o seu login criptografado pelo próprio sistema. Um desktop Linux sem um chaveiro configurado, como o GNOME Keyring ou o KWallet, não tem com o que criptografá-lo, então o aplicativo não o guarda: você entra de novo cada vez que abre o aplicativo, e o backup só roda enquanto você está conectado. <b>Configurações</b>, na seção <b>Conta</b>, avisa quando é o caso.</p>
+<p>O que é guardado, onde e por quanto tempo está na <a href="/pt-br/privacy/#the-free-account">Política de Privacidade</a>.</p>
+</section>
+
+<section id="stats">
+<h2>Ajudar a montar as estatísticas</h2>
+<p><b>Ajudar a montar as estatísticas</b> envia os seus jogos para um acervo privado, do qual são feitas as estatísticas do próprio Sensei Top: quais decks estão indo bem, como vão os matchups, como os cards se saem. Não precisa de conta, e a sua resposta fica neste computador.</p>
+<p>Antes de um jogo sair do seu computador, tudo o que identifica você ou o seu oponente é removido, e ele é enviado sem o seu login. Um sim envia os jogos que já estão no seu histórico e também os que você jogar daqui em diante. Nada num jogo enviado diz quem o enviou, então, depois de enviado, ele não pode ser mostrado a você nem apagado, nem mesmo se você apagar a sua conta.</p>
+<p>O aplicativo pergunta uma vez: no último passo das boas-vindas ou, se você configurou o aplicativo antes de essa pergunta existir, numa página própria na primeira vez que abrir esta versão, onde <b>Decidir depois</b> não envia nada. Se você criar uma conta sem ter dito sim, o primeiro login pergunta de novo, à parte das perguntas da conta. Até você responder, nenhum jogo é enviado. Um sim pede que você confirme a sua idade: 13 anos ou mais e, se tiver menos de 18, com a permissão de um dos seus pais ou do seu responsável.</p>
+<p>Para ligar ou desligar, abra <b>Configurações</b>, na seção <b>Ajudar a montar as estatísticas</b>. Desligar interrompe na hora: nenhum jogo a mais é enviado, nem mesmo um que ainda estava esperando. Os jogos já enviados continuam no acervo.</p>
+<p>O que o registro de um jogo traz, e o que ele nunca traz, está na <a href="/pt-br/privacy/#contributing-your-games">Política de Privacidade</a>.</p>
 </section>
 
 <section id="troubleshooting">
@@ -119,7 +153,16 @@
 
 <section id="report">
 <h2>Enviar um relatório de problema</h2>
-<p>Quando algo está errado, uma exportação de diagnóstico mostra o que o aplicativo viu. Leva um minuto.</p>
+<h3>Relatar um problema</h3>
+<p><b>Relatar um problema</b> nos envia algumas linhas sobre o que deu errado, direto do aplicativo. Fica no menu do ícone na bandeja, em <b>Configurações</b>, na seção <b>Aplicativo</b>, numa mensagem de erro e na tela mostrada quando uma página para de funcionar.</p>
+<ol>
+<li>Escreva o que você estava fazendo e o que aconteceu. Aberto a partir de um erro, o texto começa com a mensagem do erro, que você pode mudar ou apagar.</li>
+<li>Se quiser, marque <b>Anexar as últimas 500 linhas do log do aplicativo</b>. É o log do próprio Sensei Top, nunca os logs do Arena ou do Magic Online, e nomes e chaves são removidos dele antes do envio.</li>
+<li>Concorde com o envio do relatório ao Sentry, nos Estados Unidos. A janela pergunta toda vez, e nada é enviado até você concordar e apertar <b>Enviar relatório</b>.</li>
+</ol>
+<p>Funciona com ou sem conta, com os relatórios de erro ligados ou não: cada clique envia um relatório. Com uma conta, <b>Enviar relatórios de erro</b> em <b>Configurações</b>, na seção <b>Conta</b>, é um sim à parte, que envia um relatório sozinho quando algo dá errado. O que um relatório traz, e por quanto tempo é guardado, está na <a href="/pt-br/privacy/#error-reports-and-report-a-problem">Política de Privacidade</a>. Para receber uma resposta, abra uma issue ou escreva para nós, <a href="#where">como explicado abaixo</a>.</p>
+<h3>Uma exportação de diagnóstico</h3>
+<p>Para um problema que precisa ser examinado mais a fundo, uma exportação de diagnóstico mostra o que o aplicativo viu. Leva um minuto.</p>
 <ol>
 <li>Abra <b>Configurações</b>, depois <b>Aplicativo</b>, e aperte <b>Exportar diagnóstico</b>. O menu do ícone na bandeja tem a mesma opção.</li>
 <li>Uma janela lista o que vai no arquivo. Deixe <b>Incluir o Player.log</b> desmarcado, a menos que peçam: o log do Arena tem os nomes dos seus oponentes e os seus decks.</li>

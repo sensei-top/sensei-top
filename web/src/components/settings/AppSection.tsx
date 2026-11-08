@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AppChange, AppSettings, Saved } from '../../bridge'
 import { failureOf, settle, updateSentence } from '../../lib/settings'
+import { useReportProblem } from '../../lib/reportProblem'
 import { useNow } from '../../lib/time'
 import { Button, Card } from '../ui'
 import { PressButton, SavingSwitch } from './SaveButton'
@@ -42,6 +43,7 @@ export function AppSection({
     setUpdateFailure(null)
     setRestartFailure(null)
   }
+  const report = useReportProblem()
   const now = useNow()
   const sentence = updateSentence(app.update, now, t)
   const [failure, setFailure] = useState<string | null>(null)
@@ -125,7 +127,7 @@ export function AppSection({
           checked={app.diagnostic}
           onSave={set && ((on) => set({ diagnostic: on }))}
         />
-        {(showLogs || exportDiagnostics) && (
+        {(showLogs || exportDiagnostics || report) && (
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               {showLogs && (
@@ -146,9 +148,15 @@ export function AppSection({
                   onPress={press(exportDiagnostics, setFailure)}
                 />
               )}
+              {report && (
+                <Button variant="quiet" className="min-h-[44px]" onClick={() => report.open(null)}>
+                  {t('report.open')}
+                </Button>
+              )}
             </div>
             {failure && <p className="break-words text-caption text-loss">{failure}</p>}
-            <p className="text-caption text-muted">{t('settings.app.exportNote')}</p>
+            {(showLogs || exportDiagnostics) && <p className="text-caption text-muted">{t('settings.app.exportNote')}</p>}
+            {report && <p className="text-caption text-muted">{t('report.settings.description')}</p>}
           </div>
         )}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">

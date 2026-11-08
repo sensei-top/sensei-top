@@ -38,6 +38,24 @@ describe('parsing shell.json', () => {
     });
   });
 
+  it('keeps a well-formed contribute answer, keeps null, and drops anything else', () => {
+    const answer = { yes: true, policyVersion: '2026-11-01', answeredAt: '2026-11-02T00:00:00.000Z', ageConfirmed: true };
+    expect(parseShellJson(JSON.stringify({ contribute: answer }))).toEqual({ prefs: { contribute: answer }, dropped: [] });
+    expect(parseShellJson(JSON.stringify({ contribute: null }))).toEqual({ prefs: { contribute: null }, dropped: [] });
+    expect(parseShellJson(JSON.stringify({ contribute: { ...answer, yes: 'yes' } }))).toEqual({ prefs: {}, dropped: ['contribute'] });
+    expect(parseShellJson(JSON.stringify({ contribute: true }))).toEqual({ prefs: {}, dropped: ['contribute'] });
+  });
+
+  it('keeps contribAsked when it is a boolean and drops anything else', () => {
+    expect(parseShellJson(JSON.stringify({ contribAsked: true }))).toEqual({ prefs: { contribAsked: true }, dropped: [] });
+    expect(parseShellJson(JSON.stringify({ contribAsked: 'yes' }))).toEqual({ prefs: {}, dropped: ['contribAsked'] });
+  });
+
+  it('keeps consentErrors when it is a boolean and drops anything else', () => {
+    expect(parseShellJson(JSON.stringify({ consentErrors: true }))).toEqual({ prefs: { consentErrors: true }, dropped: [] });
+    expect(parseShellJson(JSON.stringify({ consentErrors: 'yes' }))).toEqual({ prefs: {}, dropped: ['consentErrors'] });
+  });
+
   it('drops a value of the wrong type and keeps the rest', () => {
     const { prefs, dropped } = parseShellJson(
       JSON.stringify({ port: '41234', onboarded: 'yes', bounds: { width: -1, height: 800 }, autostart: true, aiFeatures: null }),
@@ -238,6 +256,17 @@ describe('deciding aiFeatures once (plan 40D, DD6)', () => {
     for (const later of ['new SettingsService(', 'settings.refresh()']) {
       const at = source.indexOf(later);
       expect(at, later).toBeGreaterThan(decided);
+    }
+  });
+});
+
+describe('installId', () => {
+  it('keeps a non-empty string and drops an empty one or a number', () => {
+    expect(parseShellJson('{"installId":"abc"}')).toEqual({ prefs: { installId: 'abc' }, dropped: [] });
+    for (const bad of ['""', '42']) {
+      const { prefs, dropped } = parseShellJson(`{"installId":${bad}}`);
+      expect(prefs.installId).toBeUndefined();
+      expect(dropped).toEqual(['installId']);
     }
   });
 });

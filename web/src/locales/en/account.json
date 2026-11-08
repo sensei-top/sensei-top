@@ -1,0 +1,181 @@
+{
+  "welcome": {
+    "intro": "Your account is free. The next steps ask about three things it can do, and nothing is chosen for you: each happens only if you say yes.",
+    "stored": "Your account holds your email, name and picture from Google or Discord, and these answers. It's kept at Supabase, in São Paulo, Brazil.",
+    "changed": "The privacy policy changed on {{date}}: {{changes}}",
+    "kept": "Your earlier answers are already chosen and apply until you press Continue.",
+    "age": {
+      "label": "I'm 13 or older. If I'm under 18, a parent or guardian has said I can have an account and, if I choose to, send my games.",
+      "small": "We store that you confirmed your age, and when.",
+      "title": "Your account"
+    },
+    "sync": {
+      "title": "Back up my match history",
+      "what": "The summary holds when the match was played, the format, your deck, the result and the opponent's cards you saw.",
+      "where": "Kept at Supabase, in São Paulo, until you delete it or your account. Your Arena and MTGO logs, names and chat are never uploaded.",
+      "yes": "Back up",
+      "no": "Don't back up",
+      "lead": "Backs up a summary of each match, so it survives a reinstall and reaches your other PCs."
+    },
+    "errors": {
+      "title": "Send error reports",
+      "what": "A report holds the error, where in the code it happened, the app version and your system.",
+      "linked": "It carries an internal account ID, never your email. Names, keys and file paths are removed first, and it's kept for 30 days.",
+      "yes": "Send",
+      "no": "Don't send",
+      "lead": "When something goes wrong, the app sends a report to Sentry, in the United States."
+    },
+    "transfer": {
+      "title": "Sending error reports to the United States",
+      "law": "The reports leave Brazil for the United States, which has no data-protection law like the LGPD. Authorities there may be able to reach them under US law, and your rights may be harder to enforce.",
+      "ip": "Sentry doesn't store your IP address, but works out an approximate location from it first.",
+      "agree": "I agree that my error reports are sent to Sentry, in the United States.",
+      "withdraw": "Without this, nothing is sent automatically. You can withdraw it at any time by turning error reports off."
+    },
+    "coach": {
+      "title": "Keep my coach history",
+      "kept": "They're kept at Supabase, in Brazil, until you delete them or your account.",
+      "off": "With it off, only when you asked, which model answered and what it cost are kept, for 90 days.",
+      "yes": "Keep",
+      "no": "Don't keep",
+      "lead": "The rules coach comes in a later version. With this on, your questions and its answers are kept so you can reread them."
+    },
+    "policy": {
+      "lead": "What is stored, where and for how long:",
+      "link": "Privacy policy ({{date}})"
+    },
+    "contribute": {
+      "title": "Help build the stats",
+      "storedNo": "You said no to this on {{date}}. You can keep that answer or change it here.",
+      "apart": "This isn't an account choice: it works the same without an account, and your answer stays on this PC.",
+      "pool": "The pool is kept in Brazil, linked to no account, and your games are sent without your sign-in.",
+      "final": "Nothing in a sent game says who sent it. Once it's sent, it can't be shown to you, copied or deleted, not even by deleting your account.",
+      "off": "You can turn it off in Settings at any time, and nothing more is sent after that.",
+      "yes": "Send my games",
+      "no": "Don't send",
+      "lead": "Saying yes sends your games, past and future, to a private pool that Sensei Top's own stats are built from, with everything that names you or your opponent removed first."
+    },
+    "continue": "Continue",
+    "working": "Saving",
+    "hint": {
+      "transfer": "To send error reports, agree to sending them to the United States, or choose Don't send.",
+      "age": "Confirm your age to go on.",
+      "answer": "Choose an answer to go on.",
+      "answers": "Answer both questions to go on."
+    },
+    "decline": "Skip and don't create an account",
+    "declineNote": "Backup, error reports and coach history need an account. Skipping leaves them off and deletes the account this sign-in just made. No match has been backed up yet, and the matches on this PC stay.",
+    "signOut": "Sign out",
+    "error": {
+      "failed": "Your answers were not saved, and nothing was changed. Try again.",
+      "declineFailed": "The account was not deleted, and nothing was changed. Try again.",
+      "signOutFailed": "You were not signed out. Try again."
+    },
+    "later": "You can change any answer later in Settings, under Account.",
+    "keep": {
+      "title": "What your account keeps"
+    }
+  },
+  "settings": {
+    "title": "Account",
+    "unavailable": "This version of Sensei Top has no account.",
+    "signedOut": "An account is free and optional. Sensei Top works the same without one. With one, you can back up your match history, move it to another PC, and choose whether to send error reports.",
+    "noPassword": "There's no Sensei Top password: you sign in with Google or Discord.",
+    "signInGoogle": "Sign in with Google",
+    "signInDiscord": "Sign in with Discord",
+    "signingIn": "Waiting for your browser",
+    "waiting": "Finish signing in in your browser. Sensei Top waits up to 5 minutes.",
+    "signInFailed": "Sign-in didn't finish. Try again.",
+    "signedInAs": "Signed in as {{email}}, with {{provider}}.",
+    "signedInWith": "Signed in with {{provider}}.",
+    "unanswered": "You haven't answered your account's questions yet. Until you do, nothing is backed up or sent as an error report.",
+    "answerNow": "Answer now",
+    "unknown": "Your choices couldn't be read from your account. Sensei Top tries again after your next match, or you can try now.",
+    "retry": "Try again",
+    "retryFailed": "They still couldn't be read. Try again in a moment.",
+    "backup": {
+      "label": "Back up my match history",
+      "description": "Uploads a summary of each match, so your history survives a reinstall and reaches your other PCs. Kept in Brazil until you delete it."
+    },
+    "errors": {
+      "label": "Send error reports",
+      "description": "Sends a report to Sentry, in the United States, when something goes wrong. Kept for 30 days. Report a problem works either way."
+    },
+    "coach": {
+      "label": "Keep my coach history",
+      "description": "Saves your questions to the rules coach and its answers so you can reread them. The coach comes in a later version."
+    },
+    "turningOff": "Turning a choice off stops it from then on. To remove what was already uploaded, use Delete cloud history.",
+    "sync": {
+      "off": "Backup is off. Your match history stays only on this PC.",
+      "none": "Not backed up yet.",
+      "running": "Backing up…",
+      "done_one": "{{n}} match backed up from this PC. Last backup {{when}}.",
+      "done_other": "{{n}} matches backed up from this PC. Last backup {{when}}.",
+      "doneUndated_one": "{{n}} match backed up from this PC.",
+      "doneUndated_other": "{{n}} matches backed up from this PC.",
+      "error": {
+        "cloud": "The last backup stopped because your account couldn't be reached. Sensei Top tries again when the next match ends.",
+        "localApi": "The last backup stopped because Sensei Top couldn't read the matches on this PC. It tries again in a few minutes, and when the next match ends.",
+        "disk": "The last backup stopped because Sensei Top couldn't save its backup record on this PC. It tries again when the next match ends."
+      }
+    },
+    "export": {
+      "button": "Export my cloud data",
+      "description": "Saves everything in your account as one JSON file, wherever you choose.",
+      "saved": "Your cloud data was saved.",
+      "failed": "The export didn't finish. Try again."
+    },
+    "deleteHeading": "Delete your data",
+    "history": {
+      "button": "Delete cloud history",
+      "description": "Deletes the matches backed up to your account and turns backup off. The matches on this PC stay.",
+      "done_one": "{{n}} match deleted from your cloud history. Backup is off.",
+      "done_other": "{{n}} matches deleted from your cloud history. Backup is off.",
+      "removed": "They're removed for good after 30 days, once your other PCs have caught up."
+    },
+    "deleteAccount": {
+      "button": "Delete account",
+      "description": "Deletes your account and everything in it. The matches on this PC stay."
+    },
+    "signOut": {
+      "button": "Sign out",
+      "description": "Backup stops on this PC until you sign in again. Your matches stay."
+    },
+    "persistence": {
+      "noKeyring": "This system has no keyring, so Sensei Top doesn't keep your sign-in, and you'll sign in again each time you open the app. Backup runs only while you're signed in.",
+      "keyringHint": "With a keyring set up (such as GNOME Keyring or KWallet), the app keeps your sign-in, encrypted.",
+      "noEncryption": "This system can't encrypt your sign-in, so Sensei Top doesn't keep it, and you'll sign in again each time you open the app. Backup runs only while you're signed in."
+    }
+  },
+  "dialog": {
+    "cancel": "Cancel",
+    "working": "Working"
+  },
+  "deleteHistory": {
+    "title": "Delete your cloud history?",
+    "body1": "This deletes every match backed up to your account. The matches on this PC stay where they are.",
+    "body2": "Backup also turns off, so nothing is uploaded again until you turn it back on. If you do, every match on this PC is uploaded again.",
+    "body3": "This can't be undone.",
+    "confirm": "Delete cloud history",
+    "failed": {
+      "historyOn": "Your cloud history wasn't deleted, and nothing has changed. Try again.",
+      "historyOff": "Your cloud history wasn't deleted. Backup is off, so nothing more is uploaded. Try again."
+    }
+  },
+  "deleteAccount": {
+    "title": "Delete your account?",
+    "body1": "This deletes your Sensei Top account and everything in it: your profile and choices, the PCs linked to it, and every match backed up to it. It leaves our database at once.",
+    "body2": "The matches on this PC stay where they are. So do the games you sent to Help build the stats: nothing in them says they're yours, so they can't be found to delete. Error reports already sent stay at Sentry until they're deleted, 30 days after they were sent.",
+    "body3": "You'll be signed out on this PC. Help build the stats stays as you set it, since it needs no account.",
+    "body4": "This can't be undone.",
+    "confirm": "Delete account",
+    "failed": "Your account wasn't deleted, and nothing has changed. Try again.",
+    "done": "Your account was deleted."
+  },
+  "errorsDialog": {
+    "title": "Send error reports to the United States?",
+    "withdraw": "You can withdraw this at any time by turning error reports off.",
+    "confirm": "Agree and send error reports"
+  }
+}

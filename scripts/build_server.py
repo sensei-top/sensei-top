@@ -327,9 +327,14 @@ def collect_licences(dist: Path) -> None:
         "orjson is in part under the Mozilla Public License 2.0, unmodified. Its "
         f"source is at https://github.com/ijl/orjson/releases/tag/{versions.get('orjson', '?')} "
         "and in its source distribution on PyPI.",
+        "",
+        "certifi is under the Mozilla Public License 2.0, unmodified. Its source is "
+        f"at https://pypi.org/project/certifi/{versions.get('certifi', '?')}/ and "
+        "https://github.com/certifi/python-certifi.",
     ]
-    if "orjson" not in versions:
-        _fail("orjson is not a runtime requirement; the INDEX paragraph is stale")
+    for mpl in ("orjson", "certifi"):
+        if mpl not in versions:
+            _fail(f"{mpl} is not a runtime requirement; the INDEX paragraph is stale")
     (out / "python" / "INDEX.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     prefix = Path(sys.base_prefix)

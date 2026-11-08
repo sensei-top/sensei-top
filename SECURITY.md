@@ -29,8 +29,11 @@ promises. A way to break any of them is what we most want to hear about:
 3. **Nothing calls a paid API without a configured key and a button
    press.** Anything that makes the application call a paid API on its
    own, on a schedule, or on another page's behalf is a vulnerability.
-4. **No match data leaves the machine**, except the prompt of a report the
-   user asked to generate ([docs/llm.md](docs/llm.md)).
+4. **No match data leaves the machine without the user's yes**: the prompt
+   of a report the user asked to generate ([docs/llm.md](docs/llm.md)),
+   the cloud backup the user turned on, and the games the user agreed to
+   contribute, which the app strips of names and IDs first. Error reports
+   are scrubbed before they leave and are sent only with the user's yes.
 
 Also in scope: a crafted log file, or a crafted file from one of the
 download sources, that makes the application run code or write outside its

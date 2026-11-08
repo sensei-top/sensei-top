@@ -12,6 +12,7 @@
   "tray.menu.checkForUpdates": "Check for updates",
   "tray.menu.showLogs": "Show logs",
   "tray.menu.exportDiagnostics": "Export diagnostics",
+  "tray.menu.reportProblem": "Report a problem",
   "tray.menu.restartToUpdate": "Restart to update",
   "tray.menu.quit": "Quit",
   "menu.edit": "Edit",
@@ -51,5 +52,15 @@
   "update.checkFailed": "The check failed. The reason is in the log.",
   "update.off": "Updates are off for this copy.",
   "update.nothingReady": "No update is ready to install.",
-  "update.installFailed": "The update could not be installed. The reason is in the log."
+  "update.installFailed": "The update could not be installed. The reason is in the log.",
+  "auth.callback.doneTitle": "Signed in to Sensei Top",
+  "auth.callback.done": "You're signed in. You can close this tab and go back to Sensei Top.",
+  "auth.callback.failedTitle": "Sign-in didn't finish",
+  "auth.callback.failed": "Sign-in didn't finish. Close this tab and try again from Sensei Top.",
+  "auth.error.unverifiedEmail": "This account has no verified email address. Verify the address with the provider you signed in with, then sign in again.",
+  "auth.error.cancelled": "Sign-in was cancelled.",
+  "auth.error.timeout": "Sign-in timed out after 5 minutes. Try again.",
+  "auth.error.noPort": "Sign-in needs one of the ports {ports} on this computer, and all of them are in use. Close the program using them and try again.",
+  "auth.error.failed": "Sign-in didn't finish. Try again.",
+  "auth.error.signOutFailed": "Sign-out didn't finish. Try again."
 }

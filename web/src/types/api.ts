@@ -21,6 +21,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/diagnostics/log-tail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Log Tail
+         * @description The last ``lines`` lines of the app's log across its rotated files,
+         *     through ``scrub.scrub_text`` with every name the database and config
+         *     hold. Plain text; an empty body when there is no log. Reads the files,
+         *     never writes.
+         */
+        get: operations["log_tail_api_diagnostics_log_tail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/live": {
         parameters: {
             query?: never;
@@ -667,7 +690,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Matches */
+        /**
+         * Matches
+         * @description The newest matches: this install's own, then the restored ones
+         *     (``v_cloud_match``) with the columns the cloud does not carry null. A
+         *     ``deck_id`` filter leaves the restored ones out, since none has one.
+         */
         get: operations["matches_api_matches_get"];
         put?: never;
         post?: never;
@@ -996,6 +1024,106 @@ export interface paths {
          *     never answer for each other.
          */
         get: operations["card_art_api_cards__grp_id__art_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sync/payloads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sync Payloads
+         * @description Every backed-up match with its digest, oldest first, all of them on
+         *     every call: the caller pushes the ones whose digest differs from the one
+         *     it last pushed, which catches a rebuild or a pick that a timestamp would
+         *     miss.
+         */
+        get: operations["sync_payloads_api_sync_payloads_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sync/pulled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Sync Pulled
+         * @description Store a batch of rows pulled from the user's cloud backup, in order,
+         *     in one transaction.
+         *
+         *     - A row with ``deleted_at`` deletes that match's ``cloud_match`` row, if
+         *       any. A match read from this install's own log is never deleted.
+         *     - A row for a match in ``matches`` is never stored: the local match wins.
+         *       Each of its pulled picks replaces the local one only when strictly
+         *       newer by ``updated_at`` (equal keeps the local one), and keeps the
+         *       pulled ``updated_at``. A missing pulled pick never clears a local one.
+         *     - An MTGO pick names its deck by board, not id: it applies only when
+         *       exactly one local MTGO deck file has that resolved maindeck, and only
+         *       to an MTGO match.
+         *     - A pick that cannot be read or applied is skipped with a warning; the
+         *       rest of the batch is written.
+         *     - Any other row is upserted into ``cloud_match``.
+         */
+        put: operations["sync_pulled_api_sync_pulled_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/contrib/games": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Contrib Games
+         * @description The key, ``match_id:game_number``, of every finished game, oldest
+         *     match first; the caller keeps which ones it has sent.
+         */
+        get: operations["contrib_games_api_contrib_games_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/contrib/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Contrib Records
+         * @description One record per key that names a finished game, in the order asked;
+         *     any other key is left out of the answer, so the caller sends nothing for
+         *     it.
+         */
+        get: operations["contrib_records_api_contrib_records_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1925,6 +2053,159 @@ export interface components {
              */
             cited_text?: string | null;
         };
+        /** ContribArchetype */
+        ContribArchetype: {
+            /**
+             * Key
+             * @description the archetype definition's key
+             */
+            key?: string | null;
+            /**
+             * Label
+             * @description the name the app gave the deck
+             */
+            label: string;
+        };
+        /** ContribArchetypes */
+        ContribArchetypes: {
+            self?: components["schemas"]["ContribArchetype"] | null;
+            opp?: components["schemas"]["ContribArchetype"] | null;
+        };
+        /** ContribDeck */
+        ContribDeck: {
+            /**
+             * Main
+             * @description [card name, copies], by name
+             */
+            main: [
+                string,
+                number
+            ][];
+            /**
+             * Side
+             * @description [card name, copies], by name
+             */
+            side: [
+                string,
+                number
+            ][];
+        };
+        /** ContribLife */
+        ContribLife: {
+            /** Self */
+            self?: number | null;
+            /** Opp */
+            opp?: number | null;
+        };
+        /** ContribRecord */
+        ContribRecord: {
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: 1;
+            /**
+             * Client
+             * @enum {string}
+             */
+            client: "arena" | "mtgo";
+            /** Format */
+            format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            /**
+             * Event
+             * @description the event's class, never Arena's raw id
+             */
+            event?: ("ranked" | "play" | "limited" | "event") | null;
+            /** Best Of */
+            best_of?: number | null;
+            /**
+             * Week
+             * @description ISO year and week, e.g. 2026-W33
+             */
+            week?: string | null;
+            /**
+             * Rank
+             * @description Arena's rank class, never the step
+             */
+            rank?: string | null;
+            /**
+             * Game
+             * @description which game of the match
+             */
+            game: number;
+            /** On Play */
+            on_play?: boolean | null;
+            /** Mulligans */
+            mulligans?: number | null;
+            /**
+             * Kept Hand
+             * @description [card name, copies] on offer at our keep, the cards then put on the bottom included
+             */
+            kept_hand?: [
+                string,
+                number
+            ][] | null;
+            /** @description the deck this game was played with */
+            deck?: components["schemas"]["ContribDeck"] | null;
+            /** Turns */
+            turns: components["schemas"]["ContribTurn"][];
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "win" | "loss" | "draw";
+            /** Turn Count */
+            turn_count?: number | null;
+            archetypes?: components["schemas"]["ContribArchetypes"] | null;
+            /**
+             * Policy Version
+             * @description as the caller sent it
+             */
+            policy_version: string;
+        };
+        /** ContribRecordItem */
+        ContribRecordItem: {
+            /**
+             * Key
+             * @description the game's key, as asked; never part of the record sent
+             */
+            key: string;
+            record: components["schemas"]["ContribRecord"];
+        };
+        /**
+         * ContribSides
+         * @description One turn's cards, by the seat that played them; a side is absent when
+         *     a card of its own had no name.
+         */
+        ContribSides: {
+            /**
+             * Self
+             * @description card names, in order
+             */
+            self?: string[] | null;
+            /**
+             * Opp
+             * @description card names, in order
+             */
+            opp?: string[] | null;
+        };
+        /** ContribTurn */
+        ContribTurn: {
+            /**
+             * N
+             * @description the turn's number, both players' turns counted
+             */
+            n: number;
+            /**
+             * Drawn
+             * @description the cards we drew; Arena only
+             */
+            drawn?: string[] | null;
+            /** @description lands played and spells cast */
+            played?: components["schemas"]["ContribSides"] | null;
+            /** @description Arena only */
+            life?: components["schemas"]["ContribLife"] | null;
+        };
         /** CoverageOut */
         CoverageOut: {
             /**
@@ -2313,7 +2594,7 @@ export interface components {
         DeckWinrate: {
             /**
              * Deck Key
-             * @description 'guid:<arena_deck_id>', or 'deck:<hash>' when Arena never named one; null on the one row that counts every match with no deck recorded, which for an MTGO match is one the user has not picked a deck for
+             * @description 'guid:<arena_deck_id>', or 'deck:<hash>' when Arena never named one, or 'cloud:<name>' for matches restored from the user's cloud history, which name a deck but have no local one; null on the one row that counts every match with no deck recorded, which for an MTGO match is one the user has not picked a deck for
              */
             deck_key: string | null;
             /** Arena Deck Id */
@@ -2322,7 +2603,7 @@ export interface components {
             deck_name?: string | null;
             /**
              * Versions
-             * @description distinct maindeck content hashes rolled into this deck; 0 on the row of matches with no deck
+             * @description distinct maindeck content hashes rolled into this deck; 0 on the row of matches with no deck and on a 'cloud:' row
              */
             versions: number;
             /** Matches Completed */
@@ -3064,6 +3345,12 @@ export interface components {
             events: number;
             /** Matches */
             matches: number;
+            /**
+             * Restored Matches
+             * @description matches restored from the user's cloud history that this install's own log does not hold (v_cloud_match); not counted in matches
+             * @default 0
+             */
+            restored_matches: number;
             /** Games */
             games: number;
             /** Turns */
@@ -3184,6 +3471,12 @@ export interface components {
              * @description the match's format (v_match_format); null when it is unknown or not a tracked format
              */
             format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            /**
+             * Restored
+             * @description true for a match pulled back from the user's cloud history (cloud_match) that this install has no log of: it has no report, replay or turns, and the columns the cloud does not carry (ended_at, rank, opponent_colors, the best-of-three split) are null
+             * @default false
+             */
+            restored: boolean;
         };
         /**
          * MatchDetail
@@ -3293,6 +3586,12 @@ export interface components {
              * @description the match's format (v_match_format); null when it is unknown or not a tracked format
              */
             format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            /**
+             * Restored
+             * @description true for a match pulled back from the user's cloud history (cloud_match) that this install has no log of: it has no report, replay or turns, and the columns the cloud does not carry (ended_at, rank, opponent_colors, the best-of-three split) are null
+             * @default false
+             */
+            restored: boolean;
             /**
              * Self Seat
              * @description Arena's systemSeatNumber for us; a turn is ours when active_seat matches
@@ -5172,6 +5471,227 @@ export interface components {
             /** Blocked */
             blocked?: string[];
         };
+        /** SyncDeck */
+        SyncDeck: {
+            /**
+             * Name
+             * @description the deck's own name, as the client saved it
+             */
+            name: string | null;
+            /**
+             * Main
+             * @description [card name, copies], by name
+             */
+            main: [
+                string,
+                number
+            ][];
+            /**
+             * Side
+             * @description [card name, copies], by name
+             */
+            side: [
+                string,
+                number
+            ][];
+        };
+        /** SyncMatchPayload */
+        SyncMatchPayload: {
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: 1;
+            /**
+             * Played At
+             * @description UTC ISO-8601; null when the log never said
+             */
+            played_at: string | null;
+            /**
+             * Event
+             * @description Arena's event id; always null for MTGO
+             */
+            event: string | null;
+            /** Format */
+            format: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            /** Best Of */
+            best_of: number | null;
+            deck: components["schemas"]["SyncDeck"] | null;
+            /** Result */
+            result: ("win" | "loss" | "draw" | "incomplete") | null;
+            /**
+             * Won
+             * @description games won
+             */
+            won: number | null;
+            /**
+             * Lost
+             * @description games lost
+             */
+            lost: number | null;
+            /**
+             * Play
+             * @description game 1 only
+             */
+            play: ("play" | "draw") | null;
+            /** @description null when the opponent's deck is unknown */
+            opp: components["schemas"]["SyncOpponent"] | null;
+            /**
+             * Opp Cards
+             * @description distinct names of the opponent's cards seen
+             */
+            opp_cards: string[];
+            /**
+             * Duration S
+             * @description Seconds from the match's start to its end; null for an MTGO match, whose log shows only when it was first seen, not when it began.
+             */
+            duration_s: number | null;
+            /**
+             * Unknown Cards
+             * @description cards left out for having no name: each deck copy, and each distinct opponent card
+             */
+            unknown_cards: number;
+            picks: components["schemas"]["SyncPicks"];
+        };
+        /** SyncMtgoPick */
+        SyncMtgoPick: {
+            /** Format */
+            format: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+            /**
+             * Updated At
+             * @description UTC ISO-8601, when the user last set it
+             */
+            updated_at: string;
+        };
+        /** SyncOpponent */
+        SyncOpponent: {
+            /**
+             * Label
+             * @description the name the app gave the opponent's deck
+             */
+            label: string;
+            /**
+             * Key
+             * @description its grouping identity, as matchups group on it
+             */
+            key: string;
+        };
+        /** SyncOpponentPick */
+        SyncOpponentPick: {
+            /** Label */
+            label: string;
+            /** Archetype Key */
+            archetype_key: string | null;
+            /**
+             * Updated At
+             * @description UTC ISO-8601, when the user last set it
+             */
+            updated_at: string;
+        };
+        /** SyncPayload */
+        SyncPayload: {
+            /**
+             * Match Id
+             * @description Arena's or MTGO's own id for the match
+             */
+            match_id: string;
+            /**
+             * Source
+             * @description arena | mtgo
+             */
+            source: string;
+            /**
+             * Played At
+             * @description the payload's played_at, for ordering
+             */
+            played_at: string | null;
+            /**
+             * Digest
+             * @description SHA-256 hex of the payload's canonical JSON (sorted keys, no whitespace); a changed digest is a payload to push again
+             */
+            digest: string;
+            payload: components["schemas"]["SyncMatchPayload"];
+        };
+        /** SyncPicks */
+        SyncPicks: {
+            /** @description the user's pick of the opponent's deck */
+            opp: components["schemas"]["SyncOpponentPick"] | null;
+            /** @description the user's pick of their own MTGO deck and format; the deck itself is the payload's deck */
+            mtgo: components["schemas"]["SyncMtgoPick"] | null;
+        };
+        /**
+         * SyncPulledIn
+         * @description One batch of pulled rows, written in one transaction, in order.
+         */
+        SyncPulledIn: {
+            /** Items */
+            items: components["schemas"]["SyncPulledMatch"][];
+        };
+        /**
+         * SyncPulledMatch
+         * @description One row of the user's cloud backup, as the shell's main process pulled
+         *     it.
+         */
+        SyncPulledMatch: {
+            /**
+             * Match Id
+             * @description Arena's or MTGO's own id for the match
+             */
+            match_id: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "arena" | "mtgo";
+            /**
+             * Played At
+             * @description the cloud row's played_at
+             */
+            played_at?: string | null;
+            /**
+             * Payload
+             * @description the payload as the cloud holds it; stored as received, never checked against this install's schema
+             */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Schema Version */
+            schema_version: number;
+            /**
+             * Updated At
+             * Format: date-time
+             * @description when the cloud row last changed
+             */
+            updated_at: string;
+            /**
+             * Deleted At
+             * @description set when the user deleted the match from their backup
+             */
+            deleted_at?: string | null;
+        };
+        /** SyncPulledWritten */
+        SyncPulledWritten: {
+            /**
+             * Stored
+             * @description restored matches written to this install
+             */
+            stored: number;
+            /**
+             * Removed
+             * @description restored matches deleted, the cloud having deleted them
+             */
+            removed: number;
+            /**
+             * Local
+             * @description rows for a match this install read from its own log, never stored: only their picks are considered
+             */
+            local: number;
+            /**
+             * Picks
+             * @description local picks replaced by a newer pulled one
+             */
+            picks: number;
+        };
         /** TurnCurve */
         TurnCurve: {
             /**
@@ -5318,6 +5838,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    log_tail_api_diagnostics_log_tail_get: {
+        parameters: {
+            query?: {
+                lines?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -6394,6 +6945,111 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_payloads_api_sync_payloads_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncPayload"][];
+                };
+            };
+        };
+    };
+    sync_pulled_api_sync_pulled_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncPulledIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncPulledWritten"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    contrib_games_api_contrib_games_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+        };
+    };
+    contrib_records_api_contrib_records_get: {
+        parameters: {
+            query: {
+                keys: string[];
+                policy_version: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContribRecordItem"][];
                 };
             };
             /** @description Validation Error */

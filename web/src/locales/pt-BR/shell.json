@@ -12,7 +12,8 @@
   "notFound": "Esta página não existe",
   "titles": {
     "mtgoPicks": "Escolher decks do MTGO",
-    "welcome": "Boas-vindas"
+    "welcome": "Boas-vindas",
+    "accountWelcome": "Escolha o que sua conta faz"
   },
   "homeLink": "{{product}}, início",
   "skipLink": "Pular para a página",

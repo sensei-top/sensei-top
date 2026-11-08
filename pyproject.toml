@@ -12,6 +12,7 @@ dependencies = [
     "orjson>=3.10",
     "polib>=1.2.0",
     "pydantic>=2.7",
+    "sentry-sdk>=2.73.0",
     "uvicorn[standard]>=0.52.3",
 ]
 
@@ -62,6 +63,7 @@ source_modules = [
     "sensei_top.claude_config",
     "sensei_top.clock",
     "sensei_top.config",
+    "sensei_top.contrib",
     "sensei_top.db",
     "sensei_top.diagnostics",
     "sensei_top.doctor",
@@ -76,9 +78,12 @@ source_modules = [
     "sensei_top.projector",
     "sensei_top.reader",
     "sensei_top.review",
+    "sensei_top.scrub",
     "sensei_top.secrets",
     "sensei_top.steam",
+    "sensei_top.sync",
     "sensei_top.table",
+    "sensei_top.telemetry",
     "sensei_top.wine",
 ]
 forbidden_modules = ["sensei_top.ai"]

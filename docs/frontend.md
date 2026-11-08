@@ -66,7 +66,7 @@ the icon is named once.
 
 ### Widths
 
-The dashboard is a desktop app, never a phone one (`ROADMAP.md`, "Never").
+The dashboard is a desktop app, never a phone one (`docs/status.md`, "Not planned").
 A view is designed, reviewed and screenshotted at 1008 px and up, the
 common floor for a responsive desktop app, and the shell's window cannot
 be made narrower (`MIN_SIZE` in `desktop/src/window.ts`). Nothing new is
@@ -258,6 +258,18 @@ it is, so every place is one click away, and the place's name stays as the
 Focus mode is read from the address (`Shell.tsx`'s `focus`). No control
 turns it on or off.
 
+### The welcome's bare pages
+
+The welcome's pages, `/welcome`, `/account/welcome` and `/contribute`, are
+drawn bare (the route handle's `bare`): the page's name and the page alone,
+with no rail, bottom bar, status chip or footer. Each page is finished or
+left by its own buttons: `/welcome` opened again from Settings (once
+`onboarded`) has a Close back to Settings beside its heading, since stepping
+to the end is not a way out; the first run has none. Both welcome cards are
+centred (`mx-auto max-w-3xl`), and the shell draws a bare page's name in
+the same width, so it stands on the card's left edge. `/welcome`'s first step carries Wizards'
+notice itself, so the footer's copy of it is not missed.
+
 ### The footer and the credits
 
 The footer carries three things: "Your match history is kept on this
@@ -303,6 +315,8 @@ name:
 | Writing | `writing` | `ai/settings/WritingSection.tsx` | AI features on; with no shell, its `WritingStatus` |
 | Backup | `backup` | `settings/BackupSection.tsx` | a desktop shell |
 | App | `app` | `settings/AppSection.tsx` | a desktop shell |
+| Account | `account` | `settings/AccountSection.tsx` | a desktop shell whose build has an account (`account.available`) |
+| Help build the stats | `contribute` | `settings/ContributeSection.tsx` | a desktop shell whose build can upload (`canContribute`) |
 | Appearance | `appearance` | the page's own | always |
 | Live | `live-settings` | the page's own | always |
 | AI features | `ai-settings` | the page's own | always |
@@ -463,9 +477,38 @@ the failed backup's sentences name.
   where the copy cannot update itself; "Restart to update" once one has
   downloaded; "Diagnostic mode";
   "Show logs" and "Export diagnostics", with one caption that says what
-  the export holds and that matches are never in it; last, the sentence
+  the export holds and that matches are never in it; "Report a problem",
+  where the shell sends reports (below); last, the sentence
   naming the welcome steps and "Go through them again", a link to
   `/welcome`.
+
+- **Account**, in a build that has an account (`docs/desktop.md`, "Account
+  and sync"). Signed out, "Sign in with Google" and "Sign in with Discord",
+  both off while one waits on the browser, the pressed one saying so;
+  signed in, the email, three choices as `SavingSwitch`es (cloud backup, error
+  reports, coach history), or Try again when the profile could not be read,
+  the backup's status, Export and Sign out, then under their own heading
+  "Delete my cloud history" and "Delete my account", quiet buttons like the
+  rest (no danger fill: `docs/design-system.md`). Each delete and the error
+  reports' transfer consent sit behind a `Dialog` with the safe button
+  focused and a destructive one that names the action. A note says when the
+  session is not kept (no system keyring) and why. The section reads
+  `app.settings.account` and calls `app.account`; a delete's own publication
+  of the new state does not redraw it while the call runs. A save never
+  records a policy version older than the profile's. The wording of each
+  answer is in `docs/frontend-pages.md`, "The account's pages".
+- **Help build the stats**, in a build that can upload: one switch, outside
+  Account, with a state line. A turn-on opens a dialog (what is sent, that
+  past games are included, that a sent game cannot be deleted, the age rule)
+  only when nothing is stored, the stored yes lacks the age confirmation or
+  it was given under an older `POLICY_VERSION`; a turn-off keeps the stored
+  age confirmation and version.
+- **Report a problem** is a button in App and on every `ErrorNote` and on the
+  error screen, in a shell that sends reports. It opens
+  `components/ReportProblemDialog.tsx`: the text, "attach the last 500 lines
+  of the log", and the transfer consent line, which every press asks. It
+  sends through the bridge's `reportProblem` only, and works signed out. The
+  shell mounts one dialog (`useReportProblem()`), remounted per opening.
 
 The Overlay section went with the pivot. An Arena overlay is planned again
 (`BACKLOG.md`'s BL-098), and it gets its section back when one is built.
@@ -503,12 +546,12 @@ first can be passed over. Wording is the view's own, written for the
 first run: each step's body, labels and buttons aside, stays under 30
 words in English (plan 23's budget; no test pins it). It repeats
 nothing from Settings but its controls (`FolderField`, `SaveButton`,
-`RestartNote`, `PressButton`, `SavingSwitch`, and `BackupSection`'s
-`RestoreButton` with its confirming dialog).
+`RestartNote`, `PressButton`, `SavingSwitch`, `SignInButtons`, and
+`BackupSection`'s `RestoreButton` with its confirming dialog).
 
 | Step | Reads | Calls |
 |---|---|---|
-| Start | `useLanguage()`'s resolved language, pre-selected; `welcome.intro.wizardsNotice`; `app.settings.update`, for which update sentence the list shows | `setLanguage(language)` (`i18n.ts`), which writes the shell's `language` through `app.set`, not through `actions`; links to `/settings#credits`; `pickFile()`, Settings' own restore dialog, then `restoreFrom(path)` |
+| Start | `useLanguage()`'s resolved language, pre-selected; `welcome.intro.wizardsNotice`; `app.settings.update`, for which update sentence the list shows | `setLanguage(language)` (`i18n.ts`), which writes the shell's `language` through `app.set`, not through `actions`; links to `/settings#credits`; under "Used Sensei Top before?", in a build with an account, signed out, `signIn(provider)` first, since a backed-up history comes back on its own after it; signed in, a line saying so; then `pickFile()`, Settings' own restore dialog, then `restoreFrom(path)` |
 | Which do you play? | `app.settings.plays`, for the pressed tile | `app.set({ plays })`, then the first step the choice keeps |
 | Arena | `sources.arenaLog` (`path`, `detailedLogs`) | `app.recheck()` |
 | Magic Online | `sources.mtgoHandle`, `mtgoDir`, `mtgoDeckDir`, `mtgoFound` | `save({ sources: { mtgoHandle, mtgoDir, mtgoDeckDir } })`, `pickFolder()` |
@@ -560,6 +603,14 @@ Notes the table does not carry:
   never sees it, and never in a browser, which has no Welcome. Go to
   Home waits for a press of one of the two answers, which saves
   `aiFeatures` through `app.set`.
+- **Ready asks a second question: Help build the stats**, set apart under
+  the AI features one, only when the build can upload (`canContribute`) and
+  no answer is stored when the run begins (`contribAskedOnWelcome`). Go to
+  Home waits for it as it does for the AI question. It states that past
+  games are included, that a sent game cannot be deleted and the age rule,
+  with a confirmation a yes needs. An install that was onboarded before this
+  question existed sees it once, as `/contribute` (`docs/frontend-pages.md`,
+  "The account's pages").
 - **Ready holds the two preferences**: the update check, where the
   build has an updater, and autostart, where the shell asks. Both are
   preferences, and Ready is where the person stops reading. Ready

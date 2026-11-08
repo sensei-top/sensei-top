@@ -18,9 +18,10 @@ Each item has an ID heading, then one label line with four keys:
 - `type`: `feat`, `fix`, `perf`, `refactor`, `docs` or `chore`, the
   Conventional Commits words, so an item's type is the type of the commit
   that closes it.
-- `priority`: `P1` is on `ROADMAP.md`'s Now or Next, or puts a wrong number
-  in front of the user; `P2` is to do when its area is next touched; `P3`
-  waits on evidence or is optional.
+- `priority`: `P1` is taken first, in the order `ROADMAP.md` gives, or
+  puts a wrong number in front of the user; `P2` comes after every `P1`,
+  in the same order; `P3` waits until `P1` and `P2` are done, or on
+  evidence, or is optional.
 - `status`: `ready`, `needs-decision`, `needs-data` (a capture or a fixture
   is missing, rule 7), `blocked` (on a person or a party outside the code)
   or `in-progress`.
@@ -47,7 +48,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-103
+Next ID: BL-108
 
 ## Features
 
@@ -75,9 +76,9 @@ never fetched.
 
 ### BL-002 · A CSV export and a definition on every column
 
-type: feat · priority: P1 · status: ready · area: api web i18n
+type: feat · priority: P3 · status: ready · area: api web i18n
 
-Next 4. A CSV export of the user's own matches, games and per-deck numbers
+A CSV export of the user's own matches, games and per-deck numbers
 (an unknown value is an empty cell, never 0); a one-line definition on each
 table column; and the help tour below, with an entry that cites Arena's own
 article on Detailed Logs for community tools and says the app reads only the
@@ -91,9 +92,9 @@ other trackers charge for.
 
 ### BL-003 · The help pages' tour of the dashboard
 
-type: feat · priority: P1 · status: needs-decision · area: site i18n
+type: feat · priority: P2 · status: needs-decision · area: site i18n
 
-Next 4, with the export above: the help pages' tour of the dashboard
+The help pages' tour of the dashboard
 (`site/help/`): what each page shows, in both languages, linked from the
 welcome steps' last step, Ready. The first cut (2026-10-13) covers
 installing, the first run, Magic Online, troubleshooting and the problem
@@ -117,11 +118,12 @@ drawn.
 
 type: feat · priority: P1 · status: ready · area: projector guide web
 
-Next 3. Per-card win rates from the user's own games: in the opening hand,
+Per-card win rates from the user's own games: in the opening hand,
 drawn and cast, with n beside every rate. Today `key_card_timing`
 (`docs/guide.md`) covers maindeck cards with 3 or more copies only.
 
-**Why deferred:** Next in order. An undone cast no longer counts (plan 29).
+**Why deferred:** Behind the `P1` items ordered before it. An undone cast
+no longer counts (plan 29).
 
 **Needs:** The user's own opening hand and draws per game, computed in the
 rebuild with NULL where the hand is unknown (rules 3 and 4); fixture tests
@@ -131,7 +133,7 @@ rebuild with NULL where the hand is unknown (rules 3 and 4); fixture tests
 
 type: feat · priority: P1 · status: blocked · area: guide archetypes web
 
-Sideboard help without a model (decided 2026-10-07; `ROADMAP.md`'s Next 2):
+Sideboard help without a model (decided 2026-10-07):
 candidate ins by a card-role rule over the 75 (answers, threats, hate by the
 opponent's archetype), and a link to a sideboard guide for the pairing from
 the Skill Issue Magic guide index. No generated outs. The user's own
@@ -183,8 +185,8 @@ brief, coverage and sideboard-plan cards get a generate route with it.
 
 **Why deferred:** The repositioning made the user's own credential the only
 writing path, and "any model" was the research's second-most-asked thing
-after "no account". Moved from Next to Later on 2026-10-19: the 2026-10-19
-tracker research found no demand either way. Not started.
+after "no account". Moved out of the roadmap's order on 2026-10-19: the
+2026-10-19 tracker research found no demand either way. Not started.
 
 **Needs:** Its plan (`~/.claude/plans/release-16-provider-adapter.md`,
 outline). One adapter per protocol under `ai/llm/`, `claude_config.py` widened,
@@ -201,7 +203,7 @@ to it since the repository went public; notarization when donations cover
 the Apple fee.
 
 **Why deferred:** Linux and Windows ship first (decided 2026-10-07); moved
-from Next to Later on 2026-10-19, behind wider Linux discovery.
+out of the roadmap's order on 2026-10-19, behind wider Linux discovery.
 
 **Needs:** A plan of its own: plan 6, now done, left macOS out of scope.
 
@@ -258,13 +260,13 @@ part of the 2026-10-01 pivot; Alchemy and Brawl stay out.
 
 **Needs:** What plan 13 built per format (legality, archetype rules, corpus
 prior, consensus, field), and a corpus source for formats that have no MTGO
-events. `ROADMAP.md` keeps them in Later (2026-10-19).
+events. Out of the roadmap's order since 2026-10-19.
 
 ### BL-013 · MTGO on the Live page
 
 type: feat · priority: P1 · status: ready · area: table api web mtgo
 
-Next 5. MTGO on the Live page: the opponent's revealed cards during a game (MTGO
+MTGO on the Live page: the opponent's revealed cards during a game (MTGO
 appends to the game log every 1–8 s mid-game, median 2.3 s, and never
 rewrites what it wrote) and the between-games plan (see `docs/status.md`,
 "Limited on purpose").
@@ -343,8 +345,8 @@ Caution cards: the cards to watch for from the opponent's leading candidate
 deck, with rules text on expand. The brief and the sideboard plan cover part
 of it.
 
-**Why deferred:** Seen in the tracker research (2026-10-19); in
-`ROADMAP.md`'s Later.
+**Why deferred:** Seen in the tracker research (2026-10-19); out
+of the roadmap's order.
 
 **Needs:** Its own design: where it sits on Live (and whether it is advice
 under `table/queues.py`'s rule), and its source (the candidate's consensus
@@ -357,8 +359,8 @@ type: feat · priority: P3 · status: needs-decision · area: web api
 Finding history faster: date presets (7, 30, 90 days, a custom range), a
 search, matches grouped by day, league runs with their trophies.
 
-**Why deferred:** Seen in the tracker research (2026-10-19); in
-`ROADMAP.md`'s Later.
+**Why deferred:** Seen in the tracker research (2026-10-19); out
+of the roadmap's order.
 
 **Needs:** A check of what the Matches page and Home's session block already
 do, then a design per piece; league runs need the log's event records read.
@@ -427,12 +429,13 @@ threshold for screw that a fixture can pin.
 
 type: feat · priority: P1 · status: needs-decision · area: desktop web table
 
-Next 2. An overlay for Arena only: the Live page's reads in a window of the
+An overlay for Arena only: the Live page's reads in a window of the
 tracker's own, on top of the game. MTGO does not get one.
 
 **Why deferred:** The user reversed "no overlay" on 2026-11-02 and put it first
-in `ROADMAP.md`'s Next the same day; it is second since the account and the
-rules coach (BL-100, BL-101) went first. Not started: it has no design yet.
+in the roadmap's order the same day; the account, the rules coach and the
+work after them (BL-100 to BL-106, BL-004) have gone ahead of it since. Not
+started: it has no design yet.
 
 **Needs:** Its own design: which reads it carries, how a window stays over the
 game on Windows and on Linux under Wine or Proton, and how Arena's fullscreen
@@ -441,11 +444,11 @@ client (`ROADMAP.md`, "Never"), and the event rule (`table/queues.py`).
 
 ### BL-100 · A free, optional account, with cloud history and error reports
 
-type: feat · priority: P1 · status: blocked · area: desktop api web site legal
+type: feat · priority: P1 · status: in-progress · area: desktop api web site legal
 
-A free, optional account (Google sign-in through Supabase Auth) that adds
-cloud history and error reports, each a separate yes on one consent screen
-with nothing pre-ticked (decided 2026-11-02; AGENTS.md rules 5 and 6;
+A free, optional account (Google or Discord sign-in through Supabase
+Auth) that adds cloud history and error reports, each a separate yes on
+one consent screen with nothing pre-ticked (decided 2026-11-02; AGENTS.md rules 5 and 6;
 `docs/llm.md`, "What is hosted, and what it receives"). Electron's main
 process holds the session and syncs; the local API builds the payloads
 and stores pulled matches in a new `cloud_match` table; Sentry in the
@@ -454,15 +457,9 @@ Account with export and delete; a restored marker in the match list.
 MTGO matches sync once their deck is picked. Notes and tags are not
 built, and installs run from source get no sync.
 
-**Why deferred:** Waits on setup only the user can do: the domain, the
-Supabase project and its region, the Google OAuth consent screen (about a
-week to approve), the Sentry projects, and the privacy policy and terms
-the consent screen links to.
-
-**Needs:** Its plan (`~/.claude/plans/release-40-coach-and-accounts.md`,
-sub-plan B, an outline). Supabase's CLI and Docker on the development
-machine, the user's call. The rewrite of every statement `docs/llm.md`
-lists as false once the account ships, in the same build.
+**Why deferred:** Built on `feature/accounts-sync`, with the privacy
+policy and terms it links to live. It waits on the final verification
+against the hosted Supabase project and on the Windows VM.
 
 ### BL-101 · The rules coach
 
@@ -509,6 +506,98 @@ database or settings file means on (decided 2026-11-02).
 `~/.claude/plans/release-40-coach-and-accounts.md`).
 `config_path` moved out of the credential module into core `config.py`
 first, since a dozen modules that have nothing to do with a model import it.
+
+### BL-103 · Contributing games
+
+type: feat · priority: P1 · status: in-progress · area: desktop api web site legal
+
+A yes of its own, with or without an account, that sends the player's
+games, past and new, to a private pool Sensei Top's own features are built
+from, as the published policy's "Contributing your games" describes: one
+record per game, built on the device and stripped of every handle, account
+and user ID, under a random code made fresh for that game, sent without the
+sign-in. The pool is `contrib.games` in Supabase, written only through an
+anonymous `security definer` function that nobody can read back from; the
+shell remembers which games it sent in its own `userData`, so no migration
+and no change to rule 6 (decided 2026-11-03).
+
+**Why deferred:** Built with the account (BL-100) on
+`feature/accounts-sync`. It waits on the same final verification, against
+the hosted Supabase project and on the Windows VM.
+
+### BL-104 · Deleting an inactive account
+
+type: feat · priority: P2 · status: blocked · area: api legal
+
+An account nobody has signed in to for 24 months is deleted, after an
+email 30 days before that says so and how to keep it. Not built with the
+account (BL-100): it needs an email sender, which nothing else in the app
+has yet. The first account can turn 24 months old in late 2028, so this is
+due well before then, not now (decided 2026-11-03).
+
+**Why deferred:** No email sender exists, and no account is old enough to
+need it.
+
+**Needs:** An email provider and its entry in the privacy policy's "Who
+handles your data"; a scheduled job in the coach repository's Supabase
+project.
+
+### BL-105 · Compacting the contributed-games pool
+
+type: perf · priority: P2 · status: blocked · area: api legal
+
+The contributed-games pool (BL-103) starts as one Postgres table, sharing
+Supabase Free's 500 MB with account backup. Before the pool reaches about
+150 MB (its size function in the coach repository, read in the weekly
+measuring), a scheduled job packs its older records into large
+compressed Parquet files in Supabase Storage, in the same São Paulo
+project, and deletes those rows.
+A file's timestamp then dates thousands of games at once, so the policy's
+"we do not record when a game arrives" still holds; the policy's "in our
+database" changes to name the storage in the same release (decided
+2026-11-03; plan 40B, DB13).
+
+**Why deferred:** The beta's pool is far below the threshold.
+
+**Needs:** The pool (BL-103) live; Supabase Storage prices and limits read
+again at the time; the policy wording change.
+
+### BL-106 · A new card set's release
+
+type: chore · priority: P1 · status: ready · area: cards archetypes metagame guide
+
+The next card set reaches Arena and MTGO before the app has been checked
+against it. Several parts read the card pool or the format as of a date:
+the card database and its images (`cards.py`, `card_images.py`), the
+archetype definitions, the tournament corpus and the deck guide's
+format-reset detection. What a user sees on release day has not been
+checked: cards without a name or image, an opponent's deck left unnamed
+or named from the old format, and field and guide reads built on results
+from before the set. Nobody has checked which of these recovers on its
+own, and when. Added as urgent by the user (2026-11-06).
+
+**Why deferred:** Taken right after the 1.3.0 release (decided 2026-11-06).
+Not started.
+
+**Needs:** The set's name and its release dates on Arena and MTGO, and
+whether a rotation or a ban comes with it; a `Player.log` captured after
+Arena's set update, if a parsing rule turns out to need changing (rule 7).
+
+### BL-107 · A feedback button
+
+type: feat · priority: P2 · status: needs-decision · area: desktop web
+
+A user can't send feedback from inside the app. The only way to write to
+us is Report a problem, which is framed as reporting an error, so a
+suggestion or a feature request has nowhere to go but the contact address
+or GitHub, and the user has to find those on their own. Added by the user
+(2026-11-06).
+
+**Why deferred:** Added 2026-11-06. Where feedback goes is undecided.
+
+**Needs:** The user's decision on where feedback goes, and whether it
+shares Report a problem's consent and the route to Sentry in the United
+States. Its own line in the privacy policy if it sends anything new.
 
 ## Bugs
 

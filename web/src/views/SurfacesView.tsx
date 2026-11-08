@@ -62,6 +62,10 @@ const SAMPLE_APP: AppSettings = {
   update: { state: 'ready', version: '0.0.1-sample' },
   onboarded: true,
   aiFeatures: true,
+  canContribute: false,
+  contribAsked: false,
+  contribute: null,
+  account: { available: false },
   askAutostart: false,
   canAutostart: true,
   windowsStore: false,
@@ -105,6 +109,16 @@ function useSampleApp(sample: SampleId): NonNullable<Shell['app']> {
     recheck: () => answer({ ok: true }),
     firstData: () => answer({ ok: true }),
     finishOnboarding: () => answer({ ok: true }),
+    account: {
+      status: () => Promise.resolve({ available: false }),
+      signIn: () => Promise.resolve({ ok: false, error: 'auth.error.failed', message: 'Not available on the reference page.' }),
+      signOut: () => answer({ ok: true }),
+      setProfile: () => Promise.resolve({ ok: true }),
+      exportData: () => Promise.resolve({ ok: true, cancelled: true }),
+      deleteCloudHistory: () => Promise.resolve({ ok: true, deleted: 0 }),
+      readProfileAgain: () => Promise.resolve({ ok: true }),
+      deleteAccount: () => Promise.resolve({ ok: true }),
+    },
   }
 }
 

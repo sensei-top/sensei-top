@@ -91,8 +91,13 @@ export function HomeView({
   // exactly the limit recorded, the list is every match. The heartbeat
   // counts every source, as the list does; without it, a full list is
   // taken as cut short.
+  // The heartbeat counts local matches only, so restored rows are not counted.
+  const localCount = rows?.filter((match) => !match.restored).length ?? 0
   const listFull =
-    (rows?.length ?? 0) >= HOME_MATCH_LIMIT && (live.data == null || live.data.matches > (rows?.length ?? 0))
+    (rows?.length ?? 0) >= HOME_MATCH_LIMIT && (live.data == null || live.data.matches > localCount)
+
+  // "All N matches" names every row the list can show: restored ones too.
+  const total = live.data ? live.data.matches + live.data.restored_matches : undefined
 
   const counted = useMemo(() => {
     if (!rows) return null
@@ -224,7 +229,7 @@ export function HomeView({
       {counted.recent.length > 0 && (
         <div className="grid gap-4 md:gap-6 lg:grid-cols-3">
           <div className={`min-w-0 ${showWeeks ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
-            <RecentMatches matches={counted.recent} total={live.data?.matches} />
+            <RecentMatches matches={counted.recent} total={total} />
           </div>
           {showWeeks && weeks && (
             <div className="min-w-0">
