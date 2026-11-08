@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
   asksAutostart,
+  backupSnapshots,
   canAutostart,
   CHANNELS,
   diagnosticsArgs,
@@ -25,6 +26,7 @@ import {
   toAppSettings,
   toShellSettings,
   trustedSender,
+  type BackupSnapshot,
   type BridgeSettings,
   type FirstData,
   type SettingsDeps,
@@ -137,6 +139,7 @@ describe('config --json to ShellSettings', () => {
       aiFeatures: null,
       canContribute: false,
       contribAsked: false,
+      signInDismissed: false,
       contribute: null,
       account: { available: false },
       askAutostart: false,
@@ -392,9 +395,11 @@ describe('small readers', () => {
     expect(uses('setKey', 'setKey')).toBe(true);
     expect(uses('backUpNow', 'backUpNow')).toBe(true);
     expect(uses('restoreFrom', 'restoreFrom')).toBe(true);
+    expect(uses('listBackups', 'listBackups')).toBe(true);
     expect(uses('showDataFolder', 'appShowDataFolder')).toBe(true);
     expect(uses('checkForUpdates', 'appCheckForUpdates')).toBe(true);
     expect(uses('restartToUpdate', 'appRestartToUpdate')).toBe(true);
+    expect(uses('relaunch', 'appRelaunch')).toBe(true);
     expect(uses('recheck', 'appRecheck')).toBe(true);
     expect(uses('firstData', 'appFirstData')).toBe(true);
     expect(uses('finishOnboarding', 'appFinishOnboarding')).toBe(true);
@@ -465,7 +470,7 @@ const BUSY = 'A backup started 2m ago (pid 123) is still running; nothing to do.
 
 type Cards = { lines: string[]; fail?: RunError; finish?: Promise<void> };
 
-function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?: string; slot?: { at: string; bytes: number } | null; open?: string | Error; storeFails?: boolean; cards?: Cards; doctor?: () => string; configFails?: { on: boolean }; restoreHold?: Promise<void>; canContribute?: boolean; appFlags?: { canAutostart: boolean; windowsStore: boolean } } = {}) {
+function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?: string; slot?: { at: string; bytes: number } | null; snapshots?: BackupSnapshot[]; open?: string | Error; storeFails?: boolean; cards?: Cards; doctor?: () => string; configFails?: { on: boolean }; restoreHold?: Promise<void>; canContribute?: boolean; appFlags?: { canAutostart: boolean; windowsStore: boolean } } = {}) {
   const backupOutput = extra.backupOutput ?? '  Backup:    2,048 bytes, verified\n';
   const calls: Array<{ args: readonly string[]; stdin?: string }> = [];
   const events: string[] = [];
@@ -542,6 +547,7 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
     applyAutostart: (on) => void autostarts.push(on),
     countBackups: () => 1,
     newestBackup: () => extra.slot ?? null,
+    listBackups: () => extra.snapshots ?? [],
     now: () => new Date('2026-10-08T10:00:00Z'),
     pickFolder: () => Promise.resolve(null),
     pickFile: () => Promise.resolve(null),
@@ -560,6 +566,39 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
   };
   return { service: new SettingsService(deps), languages, late, calls, events, stored, changes, warnings, infos, overlap, updates, autostarts, accountState };
 }
+
+describe('the local snapshots', () => {
+  const mtimes: Record<string, number> = {
+    'sensei-top.db.backup': Date.parse('2026-11-05T10:00:00Z'),
+    'sensei-top.db.backup.1': Date.parse('2026-11-04T10:00:00Z'),
+    'sensei-top.db.backup.2': Date.parse('2026-11-06T10:00:00Z'),
+    'sensei-top.db.backup.3': Date.parse('2026-11-01T10:00:00Z'),
+  };
+  const statOf = (name: string) => (name in mtimes && name !== 'sensei-top.db.backup.3' ? { mtimeMs: mtimes[name]!, size: 100 } : null);
+
+  it('lists the slots, newest first, and only the slots', () => {
+    const entries = [
+      'sensei-top.db.backup.tmp.4242',
+      'sensei-top.db.backup.1',
+      'sensei-top.db',
+      'other.db.backup.1',
+      'sensei-top.db.backup.keepme',
+      'sensei-top.db.backup',
+      'sensei-top.db.backup.2',
+      'sensei-top.db.backup.3',
+    ];
+    expect(backupSnapshots('sensei-top.db', entries, statOf, (name) => `/b/${name}`)).toEqual([
+      { path: '/b/sensei-top.db.backup.2', at: '2026-11-06T10:00:00.000Z', bytes: 100 },
+      { path: '/b/sensei-top.db.backup', at: '2026-11-05T10:00:00.000Z', bytes: 100 },
+      { path: '/b/sensei-top.db.backup.1', at: '2026-11-04T10:00:00.000Z', bytes: 100 },
+    ]);
+  });
+
+  it('answers the service call', async () => {
+    const snapshots = [{ path: '/b/sensei-top.db.backup', at: '2026-11-05T10:00:00.000Z', bytes: 100 }];
+    expect(await harness({}, { snapshots }).service.listBackups()).toEqual(snapshots);
+  });
+});
 
 describe('the service', () => {
   it('stores an autostart choice without applying it where the copy cannot start with the system', async () => {
@@ -1012,6 +1051,27 @@ describe('the service', () => {
       expect(planAppChange(current, fromThePage)).toEqual({ patch: {}, restart: false });
       expect(planAppChange(current, { contribAsked: true })).toEqual({ patch: { contribAsked: true }, restart: false });
       expect(toAppSettings({ contribAsked: true }, { version: '1', platform: 'linux', update: { state: 'idle' }, ...NO_APP_EXTRAS }).contribAsked).toBe(true);
+    });
+  });
+
+  describe('signInDismissed (D9)', () => {
+    it('reads false when missing, is written by a change, published, and needs no restart', async () => {
+      const { service, stored, events, changes } = harness();
+      await service.refresh();
+      expect(service.current?.app.signInDismissed).toBe(false);
+      expect(await service.setApp({ signInDismissed: true })).toEqual({ ok: true });
+      expect(stored.signInDismissed).toBe(true);
+      expect(changes.at(-1)?.app.signInDismissed).toBe(true);
+      expect(events).not.toContain('stop');
+    });
+
+    it('stores only true', () => {
+      const current = toAppSettings({}, { version: '1', platform: 'linux', update: { state: 'idle' }, ...NO_APP_EXTRAS });
+      expect(planAppChange(current, { signInDismissed: false } as unknown as Parameters<typeof planAppChange>[1])).toEqual({ patch: {}, restart: false });
+      const fromThePage = { signInDismissed: 'yes' } as unknown as Parameters<typeof planAppChange>[1];
+      expect(planAppChange(current, fromThePage)).toEqual({ patch: {}, restart: false });
+      expect(planAppChange(current, { signInDismissed: true })).toEqual({ patch: { signInDismissed: true }, restart: false });
+      expect(toAppSettings({ signInDismissed: true }, { version: '1', platform: 'linux', update: { state: 'idle' }, ...NO_APP_EXTRAS }).signInDismissed).toBe(true);
     });
   });
 

@@ -20,6 +20,7 @@ import {
   sentryFactory,
   type ClientOptions,
   type FeedbackAttachment,
+  type FeedbackMeta,
   type SentryClient,
   type SentryFactory,
   type SentrySdk,
@@ -32,7 +33,7 @@ const OS = { name: 'Linux', version: '6.0.0-test' };
 interface FakeClient extends SentryClient {
   readonly options: ClientOptions;
   readonly exceptions: Array<{ error: unknown; hint: EventHint | undefined }>;
-  readonly feedback: Array<{ message: string; attachments: readonly FeedbackAttachment[] }>;
+  readonly feedback: Array<{ message: string; attachments: readonly FeedbackAttachment[]; meta?: FeedbackMeta }>;
   readonly closes: number[];
 }
 
@@ -49,8 +50,8 @@ function fakeFactory(closeResult = true): { factory: SentryFactory; clients: Fak
         client.exceptions.push({ error, hint });
         return 'event-id';
       },
-      captureFeedback(message, attachments) {
-        client.feedback.push({ message, attachments });
+      captureFeedback(message, attachments, meta) {
+        client.feedback.push({ message, attachments, ...(meta ? { meta } : {}) });
         return 'event-id';
       },
       async close(timeoutMs) {
@@ -246,9 +247,36 @@ describe('sendProblemReport', () => {
     const outcome = await sendProblemReport({ text: '  It broke.  ', attachLog: false }, options(factory));
     expect(outcome).toBe('sent');
     const client = only(clients);
-    expect(client.feedback).toEqual([{ message: 'It broke.', attachments: [] }]);
+    expect(client.feedback).toEqual([
+      { message: 'It broke.', attachments: [], meta: { kind: 'bug', page: null, matchId: null } },
+    ]);
     expect(client.closes).toHaveLength(1);
     expect(client.options.dataCollection.userInfo).toBe(false);
+  });
+
+  it('carries kind, page and matchId, defaulting to a bug, and drops a malformed page', async () => {
+    const { factory, clients } = fakeFactory();
+    await sendProblemReport(
+      { text: 'Add X.', attachLog: false, kind: 'idea', page: '/matches/m-1', matchId: 'm-1' },
+      options(factory),
+    );
+    await sendProblemReport({ text: 'Odd.', attachLog: false, page: '/matches?x=1', matchId: 'a b' }, options(factory));
+    expect(clients[0]!.feedback[0]!.meta).toEqual({ kind: 'idea', page: '/matches/m-1', matchId: 'm-1' });
+    expect(clients[1]!.feedback[0]!.meta).toEqual({ kind: 'bug', page: null, matchId: null });
+    expect(await sendProblemReport({ text: 'x', attachLog: false, kind: 'other' }, options(factory))).toBe('invalid');
+  });
+
+  it('never attaches the log to an idea', async () => {
+    let reads = 0;
+    const { factory, clients } = fakeFactory();
+    const logTail = async () => {
+      reads += 1;
+      return 'line';
+    };
+    const outcome = await sendProblemReport({ text: 'Add X.', attachLog: true, kind: 'idea' }, options(factory, { logTail }));
+    expect(outcome).toBe('sent');
+    expect(reads).toBe(0);
+    expect(only(clients).feedback[0]!.attachments).toEqual([]);
   });
 
   it('scrubs the text before it is captured', async () => {
@@ -381,6 +409,10 @@ describe('sentryFactory', () => {
       setClient(client: unknown): void {
         this.client = client;
       }
+      tags: Record<string, unknown> = {};
+      setTags(tags: Record<string, unknown>): void {
+        Object.assign(this.tags, tags);
+      }
       captureException(): string {
         return 'event-id';
       }
@@ -450,5 +482,42 @@ describe('sentryFactory', () => {
     const scope = fake.scopes[0]!;
     expect(scope.client).not.toBeNull();
     expect(fake.feedback).toEqual([{ params: { message: 'It broke.' }, hint: { attachments: [attachment] }, scope }]);
+  });
+});
+
+describe('feedback tags and match context', () => {
+  it('tags the scope and merges match_id into the feedback context, kept and scrubbed', () => {
+    const tags: Array<Record<string, unknown>> = [];
+    let processor: ((event: Event) => Event | null) | undefined;
+    const sdk = {
+      NodeClient: class {
+        constructor(options: { integrations: Array<{ processEvent?: (event: Event) => Event | null }> }) {
+          processor = options.integrations.at(-1)!.processEvent;
+        }
+        init(): void {}
+        async close(): Promise<boolean> {
+          return true;
+        }
+      },
+      Scope: class {
+        setClient(): void {}
+        setTags(t: Record<string, unknown>): void {
+          tags.push(t);
+        }
+      },
+      captureFeedback: () => 'event-id',
+      makeElectronTransport: () => ({}),
+      defaultStackParser: () => [],
+      linkedErrorsIntegration: () => ({ name: 'L' }),
+      dedupeIntegration: () => ({ name: 'D' }),
+      normalizePathsIntegration: () => ({ name: 'N' }),
+    } as unknown as SentrySdk;
+    const ctx = { userId: () => null, names: () => ['Quuxling'], home: null, os: OS };
+    const client = sentryFactory(sdk)(clientOptions({ dsn: DSN, release: '1.3.0' }, ctx));
+    client.captureFeedback('x', [], { kind: 'idea', page: '/decks/Quuxling', matchId: 'Quuxling-1' });
+    expect(tags).toEqual([{ kind: 'idea', page: '/decks/Quuxling' }]);
+    const out = processor!({ type: 'feedback', tags: { kind: 'idea', page: '/decks/Quuxling' }, contexts: { feedback: { message: 'hi' } } })!;
+    expect(out.contexts).toEqual({ feedback: { message: 'hi', match_id: '<name>-1' }, os: OS });
+    expect(out.tags).toEqual({ kind: 'idea', page: '/decks/<name>' });
   });
 });

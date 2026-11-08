@@ -219,30 +219,122 @@ export function ownScore(match: Pick<Match, 'games_won' | 'games_lost'>): string
 
 export type ThingKind = 'match' | 'pattern' | 'field'
 
-/** Which of Home's candidates fill its three cards, in order: the last
- *  match, the pattern, the field. Those that exist; fewer when fewer do,
- *  never a filler. */
-export function threeThings(has: { match: boolean; pattern: boolean; field: boolean }): ThingKind[] {
-  const order: ThingKind[] = []
+export type SlotKind = ThingKind | 'deck' | 'next'
+
+/** Which of Home's slots fill its cards, in order: the last match, the
+ *  pattern or, with none, `deck`, the field or, with none, `next`. A
+ *  candidate whose request has not answered holds its place, so the slots
+ *  after it do not move when it arrives, and each slot waits only for its
+ *  own request; a request that failed is the failure, not a fallback. One
+ *  that answers with nothing and has no fallback drops out. */
+export function homeSlots(
+  has: { match: boolean; pattern: boolean; field: boolean },
+  pending: { pattern: boolean; field: boolean },
+  fallback: { deck: boolean; next: boolean },
+): SlotKind[] {
+  const order: SlotKind[] = []
   if (has.match) order.push('match')
-  if (has.pattern) order.push('pattern')
-  if (has.field) order.push('field')
+  if (pending.pattern || has.pattern) order.push('pattern')
+  else if (fallback.deck) order.push('deck')
+  if (pending.field || has.field) order.push('field')
+  else if (fallback.next) order.push('next')
   return order
 }
 
-/** `threeThings` while some candidates are still loading: a candidate whose
- *  request has not answered holds its place, so the slots after it do not
- *  move when it arrives, and each slot waits only for its own request. One
- *  that then turns out not to exist drops out. */
-export function thingSlots(
-  has: { match: boolean; pattern: boolean; field: boolean },
-  pending: { pattern: boolean; field: boolean },
-): ThingKind[] {
-  return threeThings({
-    match: has.match,
-    pattern: pending.pattern || has.pattern,
-    field: pending.field || has.field,
-  })
+/** The "Your deck" card's facts: the newest match's deck identity, its
+ *  record and matches in Home's list, and the field's most-played archetype
+ *  it has not met in that match's format (`unmet`), `null` when the field has
+ *  none to name. */
+export type DeckSlot = {
+  key: string
+  name: string | null
+  wins: number
+  losses: number
+  played: number
+  /** The newest of the deck's matches in the list, `ended_at` else `started_at`. */
+  lastAt: string | null
+  unmet: { archetypeKey: string; label: string; format: string } | null
+  artMatchId: string | null
+}
+
+/** Whether the newest match names a deck: the "Your deck" card can then
+ *  hold its slot while the identities that resolve it are on their way. */
+export function newestHasDeck(matches: Match[]): boolean {
+  return newestFirst(matches)[0]?.deck_id != null
+}
+
+/** `rows` are the field's presence rows of the default format and tier, and
+ *  `fieldFormat` that format: the unmet archetype is named only when the
+ *  newest match was played in it. `null` when the newest match has no deck
+ *  or no identity names it. */
+export function deckSlot(
+  identities: DeckIdentityOut[],
+  matches: Match[],
+  rows: MetaPresence[],
+  fieldFormat: string | null,
+): DeckSlot | null {
+  const listed = newestFirst(matches)
+  const newest = listed[0]
+  if (!newest || newest.deck_id == null) return null
+  const deckId = newest.deck_id
+  const identity = identities.find((candidate) => candidate.deck_ids.includes(deckId))
+  if (!identity) return null
+  const ids = new Set(identity.deck_ids)
+  const mine = listed.filter((match) => match.deck_id != null && ids.has(match.deck_id))
+  let unmet: DeckSlot['unmet'] = null
+  if (fieldFormat != null && newest.format === fieldFormat) {
+    const met = new Set(
+      matchesInFormat(mine, fieldFormat)
+        .filter((match) => match.opponent_key != null && match.opponent_label != null)
+        .map((match) => pairOf(match.opponent_key ?? '', match.opponent_label ?? '')),
+    )
+    const row = rows
+      .filter((candidate) => candidate.decks > 0)
+      .sort(byShare)
+      .find((candidate) => !met.has(pairOf(archetypeKey(candidate), candidate.label)))
+    if (row) unmet = { archetypeKey: archetypeKey(row), label: row.label, format: fieldFormat }
+  }
+  return {
+    key: identity.key,
+    name: identity.name ?? null,
+    wins: mine.filter((match) => match.result === 'win').length,
+    losses: mine.filter((match) => match.result === 'loss').length,
+    played: mine.length,
+    lastAt: newest.ended_at ?? newest.started_at ?? null,
+    unmet,
+    artMatchId: finishedNewestFirst(matches).find((match) => match.deck_id != null && ids.has(match.deck_id))?.match_id ?? null,
+  }
+}
+
+/** A pattern compares at least `PATTERN_SIDE` matches that have something
+ *  with as many that do not (`review/leaks.py`'s `MIN_SAMPLE`), so it
+ *  needs `PATTERN_MATCHES` in all. */
+export const PATTERN_SIDE = 10
+export const PATTERN_MATCHES = 2 * PATTERN_SIDE
+
+/** The one thing that unlocks most, for the field's slot when there is no
+ *  field: card data first, then a second week, then the pattern's count. */
+export type NextStep =
+  | { kind: 'cardData' }
+  | { kind: 'cardDataRunning' }
+  | { kind: 'secondWeek' }
+  | { kind: 'patterns'; count: number }
+
+/** `cardData`: `missing` when the shell reports no rules text and no
+ *  download under way, `running` while one is, `null` otherwise (and in a
+ *  browser, which cannot say). */
+export function nextStep(input: {
+  cardData: 'missing' | 'running' | null
+  weeks: Week[] | null
+  matches: Match[]
+}): NextStep | null {
+  if (input.cardData === 'missing') return { kind: 'cardData' }
+  if (input.cardData === 'running') return { kind: 'cardDataRunning' }
+  if (input.weeks && input.weeks.filter((week) => week.played > 0).length === 1) return { kind: 'secondWeek' }
+  const count = input.matches.filter(
+    (match) => match.deck_id != null && (match.result === 'win' || match.result === 'loss'),
+  ).length
+  return count < PATTERN_MATCHES ? { kind: 'patterns', count } : null
 }
 
 /* -------------------------------------------------------------- pattern */
@@ -442,9 +534,8 @@ export type Field = {
   lists: number
   /** The window's start, in ms. */
   windowStart: number
-  /** The format's reset the window starts at, a bare date; `null` when the
-   *  window is the last 90 days. */
-  reset: string | null
+  /** The window's length in days, as the request asked for it. */
+  days: number
   /** The format the field and the records are of. */
   format: string
   /** The deck of the newest match in that format that has one, which the
@@ -461,13 +552,13 @@ export type Field = {
   artMatchId: string | null
 }
 
-/** The window's start: the format's reset (a bare date, taken at the
- *  viewer's local midnight, since match starts are the log's local clock),
- *  else 90 days before `now`. */
-export function fieldWindowStart(resetStart: string | null, now: number): number {
-  const parts = resetStart ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(resetStart) : null
-  if (parts) return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3])).getTime()
-  return now - 90 * DAY
+/** The window's start when the format has a reset: its bare date, taken at
+ *  the viewer's local midnight, since match starts are the log's local
+ *  clock. A string that is not a bare date gives `NaN`; the day-count window
+ *  is `windowStartOf`'s (`lib/field.ts`). */
+export function fieldWindowStart(resetStart: string): number {
+  const [year, month, day] = resetStart.split('-').map(Number)
+  return new Date(year, month - 1, day).getTime()
 }
 
 const archetypeKey = (presence: MetaPresence) => `archetype:${presence.archetype_key}`
@@ -513,25 +604,34 @@ export function matchesInFormat(matches: Match[], format: string): Match[] {
   return matches.filter((match) => match.format === format)
 }
 
-/** The field from the first tier in rank order with lists in the window
- *  (`firstTierWithLists`: A, then B, then C, then D, the Field page's
- *  default share too), and the viewer's record against each deck in the
- *  same window and format, with the deck of the newest match in the format
- *  that has one. `null` with no lists in any tier. */
+/** Most lists first, then by display name, then by key: the one order Home's
+ *  field card and the Field page give equal-share decks. */
+export function byShare(a: MetaPresence, b: MetaPresence): number {
+  return (
+    b.decks - a.decks ||
+    a.label.localeCompare(b.label, 'en') ||
+    archetypeKey(a).localeCompare(archetypeKey(b), 'en')
+  )
+}
+
+/** The field from `tier` (the caller passes the Field page's `defaultTier`;
+ *  this module cannot import `lib/field.ts`, which imports it), and the
+ *  viewer's record against each deck from `windowStart` on, in the same
+ *  format, with the deck of the newest match in the format that has one.
+ *  `null` when the tier has no list in the window. */
 export function homeField(
   presence: MetaPresence[],
   matches: Match[],
   identities: DeckIdentityOut[],
-  resetStart: string | null,
   listFull: boolean,
-  now: number,
+  windowStart: number,
+  days: number,
   format: string,
+  tier: Tier,
   count = 6,
 ): Field | null {
-  const tier = firstTierWithLists(presence)
-  if (tier == null) return null
-  const ofTier = presence.filter((row) => row.tier === tier && row.decks > 0).sort((a, b) => b.decks - a.decks)
-  const windowStart = fieldWindowStart(resetStart, now)
+  const ofTier = presence.filter((row) => row.tier === tier && row.decks > 0).sort(byShare)
+  if (ofTier.length === 0) return null
 
   // Only the field's own format: `listShort` below reads the whole list,
   // since the fetch cap applies to it.
@@ -558,7 +658,7 @@ export function homeField(
     rows,
     lists: ofTier.reduce((sum, row) => sum + row.decks, 0),
     windowStart,
-    reset: resetStart && /^\d{4}-\d{2}-\d{2}$/.test(resetStart) ? resetStart : null,
+    days,
     format,
     deck,
     topTwo: record(rows.slice(0, 2).map((row) => row.presence)),

@@ -10,6 +10,8 @@ import {
   type FormatsOut,
 } from '../../api'
 import {
+  coachNarrativeQueryKey,
+  coachQueryKey,
   useAnyCoach,
   useCoach,
   useCoachNarrative,
@@ -21,7 +23,7 @@ import { CoachReport } from './CoachReport'
 import { Profile } from './cards/Profile'
 import { GenerateCard } from '../GenerateCard'
 import { isPasted } from '../../lib/written'
-import { Callout, Card, EmptyState, ErrorNote, Loading, Select, TextLink } from '../../components/ui'
+import { Callout, Card, EmptyState, ErrorNote, Loading, OutlineCard, Select, Skeleton, TextLink } from '../../components/ui'
 import {
   coachAddress,
   coachFormatChoices,
@@ -39,6 +41,37 @@ import {
 } from './coach'
 import { writerFrom } from '../../lib/writer'
 import { placeById } from '../../shell/places'
+import { StageProgress } from '../../components/StageProgress'
+import { COACH_PAGE, stageRows, useStageProgress, type StageRow } from '../../lib/stageProgress'
+
+/** The page's one status frame while it is pending: the server's stages
+ *  once there are some, else the line of words. */
+function MainFrame({ label, height, rows }: { label?: string; height: string; rows: StageRow[] | null }) {
+  const { t } = useTranslation()
+  return (
+    <OutlineCard label={label} words={t('coach.reading')} height={height}>
+      {rows && <StageProgress page={COACH_PAGE} rows={rows} />}
+    </OutlineCard>
+  )
+}
+
+/** The report's pending frames, in the order the loaded report draws them:
+ *  its heading and byline as text lines, then its cards, then the writing
+ *  card. */
+function ReportFrames({ rows, writeLabel }: { rows: StageRow[] | null; writeLabel: string }) {
+  return (
+    <>
+      <div>
+        <Skeleton className="h-[calc(var(--text-heading)*1.15)] w-1/3" />
+        <Skeleton className="h-[calc(var(--text-caption)*1.4)] w-1/4" />
+      </div>
+      <MainFrame height="h-121" rows={rows} />
+      <OutlineCard height="h-52" />
+      <OutlineCard height="h-344" />
+      <OutlineCard label={writeLabel} height="h-64" />
+    </>
+  )
+}
 
 /** "Every report": one row a report of any format, newest first
  *  (`/api/coach`'s order). A row's title opens that report at its address;
@@ -241,6 +274,11 @@ function LatestCoach() {
   const { format, setFormat } = useCoachFormat(formats.data)
   const coach = useCoach(format, format !== undefined)
   const narrative = useCoachNarrative(format, format !== undefined)
+  // The report's frame is the page's main one while it is pending; once it
+  // has answered, the first frame still waiting for the evidence is.
+  const narrativeStages = useStageProgress(coachNarrativeQueryKey(format), narrative.isPending)
+  const coachStages = useStageProgress(coachQueryKey(format), coach.isPending && !narrative.isPending)
+  const rows = stageRows(narrative.isPending ? narrativeStages : coachStages, 'coach', t)
   const generate = useGenerateCoachNarrative()
   const paste = usePasteCoachNarrative()
   // The day in a title changes with the year alone: read the clock once.
@@ -296,10 +334,10 @@ function LatestCoach() {
   const costNote = writer.by === 'key' ? modelCostNote(model ?? defaultModel, models, reports, t) : null
 
   return (
-    <div className="space-y-6">
+    <div className={`${coach.isPending || narrative.isPending ? '' : 'arrive '}space-y-6`}>
       {formatControl}
       {narrative.isPending ? (
-        <Loading />
+        <ReportFrames rows={rows} writeLabel={t('coach.write.first')} />
       ) : narrative.error ? (
         <ErrorNote error={narrative.error} />
       ) : (
@@ -311,7 +349,7 @@ function LatestCoach() {
           )}
           {report && <ReportDocument report={report} models={models} now={now} />}
           {coach.isPending ? (
-            <Loading />
+            <MainFrame label={report ? t('coach.write.new') : t('coach.write.first')} height="h-64" rows={rows} />
           ) : (
             <GenerateCard
               title={report ? t('coach.write.new') : t('coach.write.first')}
@@ -344,7 +382,11 @@ function LatestCoach() {
       )}
 
       {coach.isPending ? (
-        <Loading />
+        <>
+          <OutlineCard label={t('coach.profile.title')} height="h-139" />
+          <OutlineCard height="h-89" />
+          <OutlineCard height="h-74" />
+        </>
       ) : coach.error ? (
         <ErrorNote error={coach.error} />
       ) : (

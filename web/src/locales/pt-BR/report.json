@@ -2,8 +2,18 @@
   "open": "Relatar um problema",
   "dialog": {
     "title": "Relatar um problema",
-    "intro": "Conte o que deu errado. Cada clique em Enviar relatório envia um relatório, com ou sem conta, com os relatórios de erro ligados ou não.",
-    "holds": "O relatório traz o que você escrever, a versão do aplicativo e seu sistema.",
+    "titleIdea": "Sugerir uma ideia",
+    "kind": {
+      "label": "O que é?",
+      "bug": "Problema",
+      "idea": "Ideia"
+    },
+    "about": {
+      "match": "Sobre: a partida de {{date}}, {{deck}} contra {{opponent}}",
+      "matchDate": "Sobre: a partida de {{date}}"
+    },
+    "intro": "Nada é enviado até você clicar em Enviar. Funciona com ou sem conta, com os relatórios de erro ligados ou não.",
+    "holds": "O relatório traz o que você escrever, a página em que você estava, a versão do aplicativo e seu sistema. Na página de uma partida, ele também leva o ID dessa partida.",
     "signedIn": "Você está conectado, então ele é ligado à sua conta por um ID interno, nunca pelo seu e-mail.",
     "signedOut": "Você não está conectado, então ele não carrega nenhum ID de conta.",
     "kept": "O Sentry o guarda por 30 dias.",
@@ -11,7 +21,9 @@
       "label": "O que deu errado?",
       "placeholder": "O que você estava fazendo, e o que aconteceu?",
       "counter": "{{chars}} de 4.000 caracteres",
-      "tooLong": "Encurte o texto para 4.000 caracteres ou menos."
+      "tooLong": "Encurte o texto para 4.000 caracteres ou menos.",
+      "ideaLabel": "Qual é a sua ideia?",
+      "ideaPlaceholder": "O que você gostaria que o Sensei Top fizesse, e onde?"
     },
     "detail": "Detalhe técnico, enviado com seu relatório:",
     "log": {
@@ -20,15 +32,19 @@
       "remains": "Ele ainda pode citar cards, decks e arquivos, e quando as coisas aconteceram. Com o Modo de diagnóstico ligado, ele traz muito mais, inclusive o texto inteiro de qualquer prompt enviado ao Claude."
     },
     "transfer": {
-      "title": "Enviado para os Estados Unidos",
-      "where": "O Sentry guarda os relatórios de erro nos Estados Unidos, então eles saem do Brasil. Os Estados Unidos não têm uma lei de proteção de dados como a LGPD. As autoridades de lá podem conseguir acessar os relatórios com base na lei dos Estados Unidos, e pode ser mais difícil para você fazer valer seus direitos lá.",
+      "where": "O Sentry guarda os relatórios nos Estados Unidos, que não têm uma lei de proteção de dados como a LGPD. As autoridades de lá podem conseguir acessar os relatórios com base na lei dos Estados Unidos, e pode ser mais difícil para você fazer valer seus direitos lá.",
       "ip": "O Sentry não guarda seu endereço IP, mas antes deduz dele uma localização aproximada.",
       "agree": "Concordo que este relatório seja enviado ao Sentry, nos Estados Unidos.",
-      "decline": "Se você não concordar, o relatório não é enviado. Isso é perguntado de novo a cada relatório."
+      "decline": "Se você não concordar, o relatório não é enviado. Enquanto os relatórios de erro estiverem desligados, isso é perguntado a cada relatório."
+    },
+    "consent": {
+      "standing": "Enviado ao Sentry, nos Estados Unidos, como você concordou ao ligar os relatórios de erro.",
+      "withdraw": "Para ser perguntado antes de cada relatório, desligue Enviar relatórios de erro em Configurações, em Conta."
     },
     "hint": {
       "noText": "Escreva o que deu errado para enviar o relatório.",
-      "notAgreed": "Para enviar o relatório, concorde com o envio para os Estados Unidos."
+      "notAgreed": "Para enviar o relatório, concorde com o envio para os Estados Unidos.",
+      "noTextIdea": "Escreva sua ideia para enviá-la."
     },
     "send": "Enviar relatório",
     "sending": "Enviando",
@@ -39,8 +55,10 @@
       "sentWithoutLog": "Seu relatório foi enviado, mas sem o log: o Sensei Top não conseguiu lê-lo.",
       "unavailable": "Esta versão do Sensei Top não envia relatórios. Você pode escrever para contact@senseitop.com.",
       "invalid": "O relatório não pôde ser enviado. Escreva o que deu errado, em até 4.000 caracteres, e tente de novo.",
-      "failed": "Seu relatório não pôde ser enviado. Seu texto continua aqui, então tente de novo daqui a pouco."
-    }
+      "failed": "Seu relatório não pôde ser enviado. Seu texto continua aqui, então tente de novo daqui a pouco.",
+      "sentIdea": "Sua ideia foi enviada. Obrigado."
+    },
+    "sendIdea": "Enviar ideia"
   },
   "settings": {
     "description": "Envia um relatório a cada clique, com ou sem conta, com os relatórios de erro ligados ou não."
@@ -52,5 +70,6 @@
     "sent": "Um relatório deste erro foi enviado automaticamente, porque Enviar relatórios de erro está ligado.",
     "notSent": "Este erro não foi enviado. Para nos contar sobre ele, use Relatar um problema.",
     "pending": "Este erro só é enviado automaticamente se Enviar relatórios de erro estiver ligado."
-  }
+  },
+  "feedback": "Feedback"
 }

@@ -366,6 +366,7 @@ def _deck_identity_out(identity) -> DeckIdentityOut:
         match_wins=identity.match_wins, match_losses=identity.match_losses,
         games_won=identity.games_won, games_lost=identity.games_lost,
         first_played=identity.first_played, last_played=identity.last_played,
+        art_grp_id=identity.art_grp_id, card_names=list(identity.card_names),
     )
 
 def _reset_out(reset) -> FormatResetOut | None:
@@ -454,6 +455,7 @@ def _deck_guide_out(guide) -> DeckGuideOut:
         list_diff=_list_diff_out(guide.list_diff),
         field=_field_evidence_out(guide.field),
         gaps=list(guide.gaps),
+        gap_codes=list(guide.gap_codes),
     )
 
 def _guide_narrative_out(n) -> GuideNarrativeOut:

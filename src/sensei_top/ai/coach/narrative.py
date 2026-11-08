@@ -42,6 +42,7 @@ from sensei_top.ai.coach.evidence import (
 from sensei_top.ai.coach.store import CoachReport, extract_focus_section, latest_coach_report
 from sensei_top.ai.review.narrative import UNTRACKED, _wrap_prompt
 from sensei_top.ai.review.narrative_store import context_hash as _context_hash
+from sensei_top.guide.bundle import Progress, no_progress
 from sensei_top.i18n import english
 
 __all__ = [
@@ -600,13 +601,18 @@ def build_coach_prompt(
     fmt: str,
     source: str = "all",
     report_cache: dict | None = None,
+    progress: Progress = no_progress,
 ) -> CoachPrompt | None:
     """The one entry point a coach-report route calls (module docstring),
     for a report on ``fmt``. Returns ``None`` exactly when
     ``build_coach_evidence`` does — too few matches to report on at all.
     ``report_cache`` is passed straight through to ``build_coach_evidence``
     (the API's cross-request cache, ``api/sql.py::_shared_report_cache``;
-    ``None`` builds a fresh one).
+    ``None`` builds a fresh one), and so is ``progress`` (the stage
+    progress a GET polls, not the "since your last report" lines below):
+    its last stage, ``together``, also spans this function's own work after
+    the evidence. ``progress_since`` gets the same ``report_cache``, so it
+    reads the reports the evidence already built rather than building any.
 
     Progress is measured against the previous report of the same format
     (``latest_coach_report(conn, fmt)``). Its metrics must be version 2
@@ -614,20 +620,25 @@ def build_coach_prompt(
     Standard alone, so it gets a line saying progress can't be measured
     rather than a comparison across two different populations.
     """
-    evidence = build_coach_evidence(conn, fmt=fmt, source=source, report_cache=report_cache)
+    report_cache = {} if report_cache is None else report_cache
+    evidence = build_coach_evidence(
+        conn, fmt=fmt, source=source, report_cache=report_cache, progress=progress,
+    )
     if evidence is None:
         return None
 
     entries = reading_list(evidence)
     previous = latest_coach_report(conn, fmt)
 
-    progress: tuple[str, ...] = ()
+    since: tuple[str, ...] = ()
     if previous is not None:
         version = previous.metrics.get("version")
         if version == 2:
-            progress = tuple(progress_since(conn, previous.metrics, source=source))
+            since = tuple(progress_since(
+                conn, previous.metrics, source=source, report_cache=report_cache,
+            ))
         elif version == 1:
-            progress = (
+            since = (
                 f"The previous {fmt} report was written before reports covered every format, "
                 f"so progress can't be measured against it.",
             )
@@ -635,10 +646,10 @@ def build_coach_prompt(
             # Never guess (rule 4): a previous report whose metrics can't be
             # read as this schema's version 2 gets a plain, honest line
             # instead of a comparison that would silently be wrong.
-            progress = ("The previous report's metrics are unreadable; progress can't be "
-                        "measured.",)
+            since = ("The previous report's metrics are unreadable; progress can't be "
+                     "measured.",)
 
-    context = build_coach_context(evidence, entries, previous, progress)
+    context = build_coach_context(evidence, entries, previous, since)
     # Hashed over the evidence alone (previous=None, progress=()): the full
     # context embeds "previous", so a freshly-stored report would read stale
     # the instant the next build lists it as "previous". The scope block

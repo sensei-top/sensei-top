@@ -1,4 +1,4 @@
-import { Maximize2 } from 'lucide-react'
+import { Info } from 'lucide-react'
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
 import { CardPreview } from '../CardImage'
 import { Button } from './Button'
@@ -98,7 +98,7 @@ function ShowCardButton({ grpId, name }: { grpId: number; name: string | null })
           else close()
         }}
       >
-        <Maximize2 size={16} strokeWidth={2} aria-hidden />
+        <Info size={16} strokeWidth={2} aria-hidden />
       </Button>
       {anchor && <CardPreview grpId={grpId} name={name ?? t('common.theCard')} anchor={anchor} />}
     </>

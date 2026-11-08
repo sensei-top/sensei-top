@@ -544,7 +544,7 @@ order: an **exact** stored `matchup_brief` for `(deck, archetype)`; failing
 that, the **closest** already-written brief for a different archetype this
 deck could plausibly be facing (`_closest_alternatives`, best `fit` first,
 excluding the archetype actually named); this deck identity's own **past
-boarding** the last time it faced this same archetype (`_past_boarding`,
+boarding** the last time it faced this same archetype (`past_boarding_against`,
 measured against the past match's own game-1 maindeck, never a chained
 diff); and, last, a **prompt** to write the exact plan from
 (`ai/brief/narrative.py::full_prompt`, the same call `/api/current-match/brief`
@@ -558,7 +558,7 @@ says so rather than rendering dead buttons (rule 4). No archetype named at
 all (a game 1 conceded before a card was seen, or a match with no format):
 `prompt` comes back `None`, but the alternatives still run, so the top one
 can still show as a "closest" plan, and past boarding reads that same
-alternative (`intermission.py::_past_boarding`). The
+alternative (`intermission.py::past_boarding_against`). The
 prompt is `full_prompt`'s, so it is `None` too when the player's own deck has
 no format (`docs/brief.md`).
 
@@ -584,7 +584,7 @@ response keeps its shape, every brief field null or empty.
 **Post-board record.** `postboard_record` (`{won, lost}`, or `None`) is this
 deck identity's games 2 and 3 against the archetype the read named or the
 user picked (`_postboard_record`): the same identity and exclusion as
-`_past_boarding`, over every earlier finished match with
+`past_boarding_against`, over every earlier finished match with
 `matches.best_of = 3`, a drawn game counted in neither number. It reads only
 the named or picked archetype, never the "closest" alternative that past
 boarding falls back to: the card words it as a record against this
@@ -592,6 +592,23 @@ opponent's deck, which a guess at a different archetype is not. `None` when
 no archetype is named or picked, when the identity is unknown, or when no
 such earlier game exists. Bo1 matches stay out: their games are not
 post-board games.
+
+**Past boarding outside a break.** The same read answers
+`GET /api/guide/{key}/past-boarding/{archetype_key}` for a deck's pairing
+page, where no match is on a break: `past_boarding_against` with no match
+to exclude (`exclude_match_id=None`), which drops nothing, since a match
+still being played has no finished result and is never read anyway. The
+path sits beside the other per-deck, per-archetype reads
+(`/api/guide/{key}/briefs/{archetype_key}/prompt`) because the deck guide's
+identity key is the one the pairing page has; `/api/decks` names deck
+versions, a different key. The handler lives in
+`api/routes/current_match.py` with the break read it shares the code
+with. As in its sibling, a deck key that resolves to nothing is a 404;
+an archetype the deck never faced is an empty list. The archetype is the
+bare key, without `v_match_opponent`'s `archetype:` prefix. Nothing is
+memoized here: the route is asked once per page, not polled, so the
+~0.27 s cold cost below is paid each time. It is Arena-only and capped
+at three matches, like the break read's.
 
 **Degradation.** Unknown opponent → no prompt, though a "closest" plan
 from the alternatives may still show; no format → no
@@ -610,7 +627,7 @@ them can change while *this* match is still being played (only past,
 completed matches and the corpus do). Measured on the real database: a cold
 `build_break_read` costs ~2.0 s, almost all of it `full_prompt` (~1.05 s:
 `format_resets` ~0.75 s, the personal matchup-rate read ~0.27 s) plus
-`_past_boarding` (~0.27 s). Memoized, a reprojection mid-break (the watcher still rebuilds on every
+`past_boarding_against` (~0.27 s). Memoized, a reprojection mid-break (the watcher still rebuilds on every
 match-boundary event) now costs ~70 ms instead of paying that ~2 s again,
 and an ordinary cache hit costs ~3 ms; only the first poll of a match's
 first break ever pays the full ~2 s. `api/sql.py`'s `_cached_break_read`

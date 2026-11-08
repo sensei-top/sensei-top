@@ -59,12 +59,12 @@ of them: no account, no cloud backup, no error reports and no games sent.
   cloud that this install has no log of is marked "Restored" on Matches
   and has no report or replay. On Linux with no keyring the app does not
   keep the sign-in, so it asks again at each launch.
-- **Report a problem**, in the tray, Settings → App and on an error
+- **Report a problem**, in the tray, Settings → About and on an error
   message: one report, sent after you agree to it, with or without an
   account. Automatic error reports are the account's separate yes.
 - **Help build the stats**, a yes of its own that needs no account: it
   sends your games, stripped of everything that names you or your
-  opponent, to the pool Sensei Top's own stats are built from. Settings
+  opponent, to the pool Sensei Top's own stats are built from. Settings → Account
   turns it off.
 
 What each one sends, and for how long it is kept, is in the

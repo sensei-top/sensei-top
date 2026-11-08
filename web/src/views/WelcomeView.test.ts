@@ -55,6 +55,7 @@ function app(change: Partial<AppSettings> = {}): AppSettings {
     aiFeatures: true,
     canContribute: false,
     contribAsked: false,
+    signInDismissed: false,
     contribute: null,
     account: { available: false },
     askAutostart: false,
@@ -102,7 +103,7 @@ describe('the frame', () => {
   it('has a Close back to Settings only once onboarding is done, the first run having no way out but its steps', () => {
     expect(render('plays').html).not.toContain('>Close<')
     const { html } = render('plays', { app: app({ onboarded: true }) })
-    expect(html).toMatch(/href="\/settings"[^>]*>Close</)
+    expect(html).toMatch(/href="\/settings\/general"[^>]*>Close</)
   })
 
   it('numbers each step out of five when both clients are played, under its heading', () => {
@@ -216,7 +217,7 @@ describe('Start', () => {
   it('links to the credits inside the disclosure', () => {
     const { html } = render('start')
     const inside = html.slice(html.indexOf('<details'), html.indexOf('</details>'))
-    expect(inside).toMatch(/href="\/settings#credits"[^>]*>Settings, under About and credits<\/a>/)
+    expect(inside).toMatch(/href="\/settings\/about#credits"[^>]*>Settings, under About and credits<\/a>/)
   })
 
   it('says so where the copy does not update itself', () => {

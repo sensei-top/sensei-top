@@ -583,22 +583,6 @@ Not started.
 whether a rotation or a ban comes with it; a `Player.log` captured after
 Arena's set update, if a parsing rule turns out to need changing (rule 7).
 
-### BL-107 · A feedback button
-
-type: feat · priority: P2 · status: needs-decision · area: desktop web
-
-A user can't send feedback from inside the app. The only way to write to
-us is Report a problem, which is framed as reporting an error, so a
-suggestion or a feature request has nowhere to go but the contact address
-or GitHub, and the user has to find those on their own. Added by the user
-(2026-11-06).
-
-**Why deferred:** Added 2026-11-06. Where feedback goes is undecided.
-
-**Needs:** The user's decision on where feedback goes, and whether it
-shares Report a problem's consent and the route to Sentry in the United
-States. Its own line in the privacy policy if it sends anything new.
-
 ## Bugs
 
 ### BL-025 · A prepare face several cards share

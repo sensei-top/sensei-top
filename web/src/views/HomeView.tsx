@@ -1,5 +1,7 @@
+import { X } from 'lucide-react'
 import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router'
 import {
   useGuideDecks,
   useLeaks,
@@ -25,25 +27,67 @@ import { ThreeThings, ThreeThingsLoading, type Thing } from '../components/home/
 import { WeeklyWinrate } from '../components/home/WeeklyWinrate'
 import { ErrorNote, Skeleton } from '../components/ui'
 import {
+  deckSlot,
   firstPattern,
   firstRunSteps,
   HOME_MATCH_LIMIT,
   homeDecks,
   homeField,
+  homeSlots,
+  newestHasDeck,
   isFirstRun,
   lastFinished,
   lastSession,
   lastThirtyDays,
+  nextStep,
   recentMatches,
-  thingSlots,
   weeklyWinrate,
-  type ThingKind,
+  type SlotKind,
 } from '../lib/home'
+import { FALLBACK_DAYS, defaultTier, defaultWindow, metaWindowOf, resetOf, windowStartOf } from '../lib/field'
 import { castCards, takeUnused, type ArtCard } from '../lib/matchArt'
 import { useNow } from '../lib/time'
+import { useShell } from '../bridge'
+import { useCardData } from '../shell/cardData'
 import { useAiFeatures } from '../shell/aiFeatures'
+import { useSignInOffer } from '../shell/signInOffer'
 
 const MINUTE = 60_000
+
+/** One quiet line above the page: sign in to keep a copy in the cloud, a
+ *  link to Settings → Account and a dismissal, which the rail item shares.
+ *  Draws nothing unless the offer stands (`signInOffered`). */
+export function SignInOffer() {
+  const { t } = useTranslation()
+  const { offered, dismiss } = useSignInOffer()
+  if (!offered) return null
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface px-4 py-2.5">
+      <p className="min-w-0 flex-1 text-body text-ink2">{t('home.signInOffer.line')}</p>
+      <Link
+        to="/settings/account"
+        className="inline-flex min-h-[44px] items-center rounded-control px-3 text-body font-medium text-ink underline decoration-muted underline-offset-2 hover:decoration-ink"
+      >
+        {t('home.signInOffer.button')}
+      </Link>
+      <button
+        type="button"
+        aria-label={t('home.signInOffer.dismiss')}
+        onClick={dismiss}
+        className="inline-flex size-11 items-center justify-center rounded-control text-muted transition-chrome hover:text-ink"
+      >
+        <X size={18} aria-hidden />
+      </button>
+    </div>
+  )
+}
+
+// `defaultWindow` (lib/field.ts) always returns a day count today. A
+// 'reset' default would need `Field` to carry the window and its own words.
+const defaultDays = (reset: string | null): number => {
+  const window = defaultWindow(reset)
+  return window === 'reset' ? FALLBACK_DAYS : window
+}
 
 /** `/`: every source, no filter. First run alone until a match is
  *  recorded; then the last session, three things worth a look, recent
@@ -75,13 +119,12 @@ export function HomeView({
   const format = formats.data?.default
   const status = useMetagameStatus(format, format !== undefined)
   const resetStart = status.data?.format_reset_start ?? null
+  const reset = resetOf(resetStart)
   // Undefined until the status says whether a reset exists, so the field is
   // never asked for with a window guessed ahead of it: the same window and
   // the same key as the Field page's default.
   const metaWindow: MetaWindow | undefined = status.data
-    ? resetStart
-      ? { since: resetStart }
-      : { days: 90 }
+    ? metaWindowOf(defaultWindow(reset), reset)
     : undefined
   const presence = useMetaPresence(metaWindow, format)
   const needsPick = useMtgoNeedsPick()
@@ -120,27 +163,67 @@ export function HomeView({
   const field = useMemo(
     () =>
       rows && presence.data && identities.data && format
-        ? homeField(presence.data, rows, identities.data, resetStart, listFull, minute, format)
+        ? homeField(
+            presence.data,
+            rows,
+            identities.data,
+            listFull,
+            windowStartOf(defaultWindow(reset), reset, minute),
+            defaultDays(reset),
+            format,
+            defaultTier(presence.data),
+          )
         : null,
-    [rows, presence.data, identities.data, resetStart, listFull, minute, format],
+    [rows, presence.data, identities.data, reset, listFull, minute, format],
   )
   const decks = useMemo(
     () => (rows && identities.data ? homeDecks(identities.data, rows, minute, t) : []),
     [rows, identities.data, minute, t],
   )
 
+  const shell = useShell()
+  const cardDataState = useCardData()
+  const rulesText = shell?.app?.settings.rulesText ?? null
+  const cardData: 'missing' | 'running' | null =
+    cardDataState?.state === 'running'
+      ? 'running'
+      : (cardDataState?.state === 'idle' || cardDataState?.state === 'failed') && rulesText === 0
+        ? 'missing'
+        : null
+
   const fieldError = formats.error ?? status.error ?? presence.error ?? identities.error
   const fieldPending = !fieldError && (formats.isPending || status.isPending || presence.isPending || identities.isPending)
 
+  // The fallbacks need only what the page already holds. The deck's unmet
+  // archetype reads the field's presence rows of the default format and tier.
+  const fieldRows = useMemo(
+    () => (presence.data ? presence.data.filter((row) => row.tier === defaultTier(presence.data ?? [])) : []),
+    [presence.data],
+  )
+  const deck = useMemo(
+    () => (rows && identities.data ? deckSlot(identities.data, rows, fieldRows, format ?? null) : null),
+    [rows, identities.data, fieldRows, format],
+  )
+  // The identities that resolve the deck are still out: the slot is held.
+  const deckHeld = identities.isPending && rows != null && newestHasDeck(rows)
+  const next = useMemo(
+    () => (rows ? nextStep({ cardData, weeks: weeks?.weeks ?? null, matches: rows }) : null),
+    [rows, cardData, weeks],
+  )
+
   // A candidate whose request failed still takes its place, as the failure.
-  const kinds: ThingKind[] = counted
-    ? thingSlots(
+  // The deck card holds the pattern's slot as a pending card while the
+  // field's requests, which decide whether it can name an unmet archetype,
+  // are out, so no card moves when they answer.
+  const kinds: SlotKind[] = counted
+    ? homeSlots(
         {
           match: counted.last != null,
           pattern: leaks.error != null || pattern != null,
           field: fieldError != null || field != null,
         },
         { pattern: leaks.isPending, field: fieldPending },
+        { deck: deck != null || deckHeld, next: next != null },
       )
     : []
 
@@ -150,6 +233,7 @@ export function HomeView({
   const newestId = counted?.last?.match_id ?? null
   const artIds = unique([
     newestId,
+    kinds.includes('deck') ? (deck?.artMatchId ?? null) : null,
     kinds.includes('field') ? (field?.artMatchId ?? null) : null,
     ...decks.map((deck) => deck.artMatchId),
   ])
@@ -168,6 +252,16 @@ export function HomeView({
       if (leaks.isPending) things.push({ kind: 'pending', slot: 'pattern' })
       else if (leaks.error) things.push({ kind: 'error', key: 'pattern', error: leaks.error })
       else if (pattern) things.push({ kind, pattern, art: takeUnused(castCards(newest, 'self'), used) })
+    } else if (kind === 'deck') {
+      if (fieldPending) {
+        things.push({ kind: 'pending', slot: 'deck' })
+        continue
+      }
+      if (!deck) continue
+      const detail = deck.artMatchId ? details.get(deck.artMatchId) : undefined
+      things.push({ kind, deck, art: takeUnused(castCards(detail, 'self'), used) })
+    } else if (kind === 'next' && next) {
+      things.push({ kind, next })
     } else if (kind === 'field') {
       if (fieldPending) things.push({ kind: 'pending', slot: 'field' })
       else if (fieldError) things.push({ kind: 'error', key: 'field', error: fieldError })
@@ -198,6 +292,7 @@ export function HomeView({
     const logDone = firstRunSteps(live.data, firstRun?.mtgoOnly)[1] === 'done'
     return (
       <div className="space-y-6 md:space-y-8">
+        <SignInOffer />
         {detailedLogs && logDone && <DetailedLogsBanner {...detailedLogs} />}
         <FirstRun live={live.data} shell={firstRun} />
       </div>
@@ -210,6 +305,7 @@ export function HomeView({
   const showField = fieldPending || fieldError != null || field != null
   return (
     <div className="space-y-6 md:space-y-8">
+      <SignInOffer />
       {detailedLogs && <DetailedLogsBanner {...detailedLogs} />}
 
       {counted.session && (
@@ -255,7 +351,7 @@ export function HomeView({
             ) : fieldPending || !field ? (
               <Skeleton className="h-[360px] rounded-card" />
             ) : (
-              <FieldAgainstYou field={field} now={minute} />
+              <FieldAgainstYou field={field} />
             )
           ) : null
         }

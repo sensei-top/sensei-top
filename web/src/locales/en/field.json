@@ -109,6 +109,7 @@
     "matches_other": "{{n}}\u00a0matches,"
   },
   "page": {
+    "reading": "Reading the field…",
     "emptyTitle": "No {{format}} tournament results yet",
     "emptyMessage": "This page shows what is being played in tournaments and your own record against each deck. It fills in once tournament results are downloaded, which the server does on its own while it runs; sensei-top meta does it from the command line.",
     "topdeckCredit": "{{format}} tournament data from <site>TopDeck.gg</site>."

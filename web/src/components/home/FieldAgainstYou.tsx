@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { tierKind } from '../../lib/field'
 import type { Field } from '../../lib/home'
-import { formatCount, formatIsoDateShort } from '../../lib/time'
+import { formatCount } from '../../lib/time'
 import { FieldRow } from '../field/FieldRow'
 import { Card } from '../ui'
 
@@ -9,11 +9,10 @@ import { Card } from '../ui'
  *  lists in the window (`homeField`), the tier named in words
  *  (`tierKind`), each with its share as a bar in the field's colour and,
  *  under its name, the viewer's own record against it in the same window. */
-export function FieldAgainstYou({ field, now }: { field: Field; now: number }) {
+export function FieldAgainstYou({ field }: { field: Field }) {
   const { t } = useTranslation()
-  const since = field.reset ? formatIsoDateShort(field.reset, now) : null
   const kind = tierKind(field.tier, t)
-  const note = since ? t('home.field.noteSince', { kind, since }) : t('home.field.noteLast90', { kind })
+  const note = t('home.field.noteLastDays', { kind, days: field.days })
   const deck = field.deck ? (field.deck.name ?? t('home.unnamedDeckInSentence')) : null
   return (
     <Card title={t('home.field.title', { format: field.format })} action={<span className="text-caption text-muted">{note}</span>}>
@@ -23,7 +22,7 @@ export function FieldAgainstYou({ field, now }: { field: Field; now: number }) {
             key={presence.archetype_key}
             presence={presence}
             record={record}
-            notPlayed={since ? t('home.field.notPlayedSince', { since }) : t('home.field.notPlayedLast90')}
+            notPlayed={t('home.field.notPlayedLastDays', { days: field.days })}
           />
         ))}
       </ul>

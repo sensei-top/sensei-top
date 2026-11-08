@@ -236,7 +236,8 @@ def rcq_prompt(evidence: RcqEvidence, *, conn, answer_contract: bool = True) -> 
             + ", ".join(evidence.resolved.unresolved) + "."
         )
     shown = dataclasses.replace(
-        guide, list_diff=evidence.list_diff, gaps=tuple(gaps), own_unclassified=False,
+        guide, list_diff=evidence.list_diff, gaps=tuple(gaps), gap_codes=(),
+        own_unclassified=False,
     )
 
     deck = guide.provenance.deck

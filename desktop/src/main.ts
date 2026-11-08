@@ -36,6 +36,7 @@ import { SessionStore } from './cloud/sessionStore';
 import { anonContribSender, contribAnswer, contributedFile, Contributor, localContribApi } from './cloud/contrib';
 import { CloudSync, localSyncApi, MatchEndWatch, stateFile, supabaseSyncDb } from './cloud/sync';
 import { applyAutostart, applyFirstRun, startMode } from './autostart';
+import { planRelaunch } from './relaunch';
 import { setLanguage, setSystemTags, t } from './i18n';
 import { logPath, newSessionId, ShellLog } from './log';
 import {
@@ -45,6 +46,7 @@ import {
   CHANNELS,
   diagnosticsArgs,
   formatListing,
+  backupSnapshots,
   restoreLeftovers,
   restoreLeftoversMessage,
   ReportsLink,
@@ -356,6 +358,24 @@ function run(): void {
         return 0;
       }
     },
+    listBackups: (dir) => {
+      try {
+        return backupSnapshots(
+          DB_NAME,
+          fs.readdirSync(dir),
+          (name) => {
+            try {
+              return fs.statSync(path.join(dir, name));
+            } catch {
+              return null;
+            }
+          },
+          (name) => path.join(dir, name),
+        );
+      } catch {
+        return [];
+      }
+    },
     now: () => new Date(),
     applyAutostart: applyLoginItem,
     setDiagnostic: (on) => shellLog.setLevel(on ? 'DEBUG' : 'INFO'),
@@ -455,6 +475,30 @@ function run(): void {
     return restarting;
   };
 
+  // Restart now (S8): the quit path itself. `app.relaunch()` only schedules a
+  // start for when the process has exited, and `app.quit()` goes through
+  // `before-quit`, which stops the server and the error reporter first. The
+  // single-instance lock is not freed: the new copy starts after this one
+  // exits. `planRelaunch` decides; this only executes.
+  let relaunching = false;
+  const relaunch = (): Promise<Saved> => {
+    const plan = planRelaunch({
+      stopping,
+      relaunching,
+      updateState: updateStatus().state,
+      argv: process.argv,
+      env: process.env,
+    });
+    if (plan.action === 'noop') return Promise.resolve({ ok: true });
+    if (plan.action === 'refused') return Promise.resolve({ ok: false, error: t('settings.closing') });
+    if (plan.action === 'update') return restartToUpdate();
+    relaunching = true;
+    log.info('relaunching');
+    app.relaunch(plan.options);
+    app.quit();
+    return Promise.resolve({ ok: true });
+  };
+
   // Only the dashboard, on the running server's origin, is answered.
   const trusted = (event: electron.IpcMainEvent | electron.IpcMainInvokeEvent): boolean => {
     const ok = trustedSender(event.senderFrame?.url ?? '', server.port);
@@ -475,10 +519,12 @@ function run(): void {
   handle(CHANNELS.pickFolder, refusedNull, () => settings.pickFolder());
   handle(CHANNELS.pickFile, refusedNull, () => settings.pickFile());
   handle(CHANNELS.backUpNow, refusedSaved, () => settings.backUpNow());
+  handle(CHANNELS.listBackups, () => [], () => settings.listBackups());
   handle(CHANNELS.restoreFrom, refusedSaved, (file: string) => settings.restoreFrom(String(file)));
   handle(CHANNELS.appSet, refusedSaved, (change: Parameters<SettingsService['setApp']>[0]) => settings.setApp(change));
   handle(CHANNELS.appCheckForUpdates, refusedSaved, () => checkForUpdates());
   handle(CHANNELS.appRestartToUpdate, refusedSaved, () => restartToUpdate());
+  handle(CHANNELS.appRelaunch, refusedSaved, () => relaunch());
   handle(CHANNELS.appExportDiagnostics, refusedSaved, () => exportDiagnostics());
   handle(CHANNELS.appRecheck, refusedSaved, () => settings.recheck());
   handle(CHANNELS.appFirstData, refusedSaved, () => settings.firstData());
@@ -608,6 +654,7 @@ function run(): void {
           log: shellLog.child('shell.session'),
         }),
         openExternal: (url) => shell.openExternal(url),
+        focusApp: () => window?.open(),
         log: shellLog.child('shell.auth'),
       });
       auth = cloud;
@@ -716,10 +763,10 @@ function run(): void {
       },
       {
         open: () => window?.open(),
-        settings: () => window?.open('/settings'),
-        // The result shows in Settings' App section.
+        settings: () => window?.open('/settings/general'),
+        // The result shows in Settings' General group.
         checkForUpdates: () => {
-          window?.open('/settings');
+          window?.open('/settings/general');
           void checkForUpdates();
         },
         restartToUpdate: () => {

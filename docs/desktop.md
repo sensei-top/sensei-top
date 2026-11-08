@@ -100,7 +100,7 @@ the first sign-in, never replaced), the cached yes to error reports
 (`consentErrors`, set from the account's profile), the answer to
 "Help build the stats" (`contribute`: `yes`, `policyVersion`, `answeredAt`,
 `ageConfirmed`; absent or `null` is not asked, and sends nothing) and
-`contribAsked`, which says the one-time page for that question was shown. A missing `aiFeatures` is undecided: the
+`contribAsked`, which says the one-time page for that question was shown, `signInDismissed`, which says the user dismissed the offer to sign in (like `contribAsked`, only `true` is stored and nothing un-sets it). A missing `aiFeatures` is undecided: the
 page reads it as off and Welcome asks. Once per launch, before the first
 publish, an install with `onboarded: true` and no key is settled to true
 (`settleAiFeatures`), since it never sees Welcome again; any other install
@@ -108,6 +108,32 @@ stays undecided until Welcome or Settings writes it. The server never
 reads it. It is read once at launch and written whole through a temporary
 file and a rename, a key it does not know is carried through every write,
 and a file that is not JSON is moved aside as `shell.json.bad`.
+
+**The restore's list.** Settings → Backup restores from a dated list, not
+a file picker: the `listBackups` call reads the backup folder (the `backup.dir`
+the settings cache holds) and answers each slot, `<db>.backup` and
+`<db>.backup.<n>`, as `{path, at, bytes}` with `at` the file's modification
+time, newest first (`backupSnapshots` in `settings.ts`, pure). Temporary
+copies and any other name in the folder are left out, since the folder may be
+shared. The page shows each by `formatDayTime` and hands the chosen `path` to
+`restoreFrom`. A folder with no slot, or one that cannot be read, answers `[]`
+and the page goes straight to the file picker. With copies listed, the list
+offers "Choose another file" for a backup kept elsewhere; Welcome's button,
+"Restore from a backup file" (`welcome.start.restore`), stays a picker.
+
+**Restart now.** After a restore the page offers it, and the `relaunch` call
+takes the quit path: `main.ts` schedules the new start with `app.relaunch()`
+and calls `app.quit()`, so `before-quit` stops the server and the error
+reporter before the process exits and the new copy starts. The
+single-instance lock is not freed first: the new copy starts only after this
+one has exited, and freeing it earlier would let a launch during the server's
+stop become a second instance. `desktop/src/relaunch.ts` decides, Electron-free: the
+AppImage is started by its own path when `APPIMAGE` is set, and `--hidden`
+is dropped from the arguments so a copy started at login does not restart
+looking closed. With an update downloaded (`ready`) it calls `restartToUpdate`
+instead, since a quit with install-on-quit armed would race the silent
+installer on Windows. It is refused while a quit is already stopping the
+server, and a second call while a relaunch is scheduled does nothing.
 
 **Which saves restart the server.** The server reads the Arena log path, the
 date order, the MTGO handle, game-log folder and deck folder, and the backup
@@ -190,6 +216,14 @@ and no download starts while a restore runs (a Download pressed then
 is refused). After a restore that succeeded, a `done` or `failed`
 state goes back to `idle`, since it described the replaced database,
 and the check runs again against the restored one.
+
+**The download shows where the user is.** `shell/CardDataChip.tsx`, left of
+the live status in the header, reads `firstData` from the bridge
+(`shell/cardData.ts`'s `useCardData`) while it runs: "Card data · 43%" with
+a total, "downloading" without one, "saving"; "didn't finish" after a
+failure. Each links to Settings → Sources. Idle, done and a browser (no
+bridge) draw nothing. The Guide's scope card and an opponent shown as
+"Unknown deck" read the same state and say they wait for it.
 
 Pinned by `tests/test_cli.py`, "serve's handshake with a parent process",
 and, for the shell's side, `desktop/src/server.test.ts` (port choice,
@@ -346,8 +380,12 @@ loopback ports, `53682`, `53683` and `53684`, at `/auth/callback`; all three
 are in the project's redirect allow-list. It exchanges the callback's code for a
 session and closes the listener. One callback is taken per sign-in, and it
 gives up after five minutes. The tab shows a small page in the shell's
-language. An address the provider has not verified is refused, and the raw
-error goes to the log only.
+language. After a good callback the app's window comes to the front (the
+`focusApp` dependency, wired to the window's `open()` with no path, so the
+dashboard stays on its page) and that page tries to close its tab after 1.5
+seconds with an inline script; a browser that refuses leaves the sentence
+standing. A failed callback does neither. An address the provider has
+not verified is refused, and the raw error goes to the log only.
 
 **The session is stored by the system.** `sessionStore.ts` writes it to
 `session.bin` in `userData` encrypted by `safeStorage` (the keyring on
@@ -460,11 +498,20 @@ not scrubbed by the template rule; the text rules of `scrub.py` apply to it.
 made for it and closed after, whatever the toggle says, so it works signed
 out (the ID goes only when signed in). It is in the tray, in Settings → App
 and on every `ErrorNote` and the error screen in the desktop shell. Each
-press asks the transfer consent. The text is capped at 4000 characters and
+press asks the transfer consent, except when the user is signed in
+with error reports on under the current policy: that consent covers the
+reports they send themselves, and the dialog says so in place of the box.
+The text is capped at 4000 characters and
 scrubbed here and again by the client; with "attach the last 500 lines of
 the log" ticked, the attachment is `GET /api/diagnostics/log-tail`, already
 scrubbed by the server and scrubbed again here. A tail that cannot be read
-leaves the report without it, not unsent. A closed queue means the event
+leaves the report without it, not unsent. The payload also carries `kind`
+(`bug` or `idea`; `bug` when absent, so an older dashboard still works; any other value refuses the report),
+`page` (the address path, no query) and, on a match's page, `matchId`: the
+event is tagged `kind` and `page`, and `match_id` goes in its `feedback`
+context; `cleanEvent` keeps those and nothing else new. An idea never
+attaches the log, even if `attachLog` arrives true; a malformed `page` or
+`matchId` is dropped, not refused. A closed queue means the event
 left, not that Sentry accepted it.
 
 ### Contributed games

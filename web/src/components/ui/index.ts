@@ -23,6 +23,7 @@ export {
   type OnboardingStep,
   type OnboardingStepState,
 } from './OnboardingSteps'
+export { OutlineCard, PAIRING_TILE_BLOCK, STAT_TILE_BLOCK } from './Outline'
 export { PageHeader } from './PageHeader'
 export { SectionLabel } from './SectionLabel'
 export { Segmented, type SegmentedOption } from './Segmented'

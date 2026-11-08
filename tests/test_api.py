@@ -3746,6 +3746,9 @@ def test_a_guide_for_a_deck_with_no_format_is_200_with_a_null_field_format(clien
     assert body["field"]["fmt"] is None
     assert body["field"]["shares"] == []
     assert FORMAT_UNKNOWN_GAP in body["gaps"]
+    # gap_codes rides beside gaps, one per gap; the format note has no code.
+    assert len(body["gap_codes"]) == len(body["gaps"])
+    assert body["gap_codes"][body["gaps"].index(FORMAT_UNKNOWN_GAP)] is None
 
 
 def test_current_match_read_for_a_match_with_no_format_has_a_format_unknown_hand(

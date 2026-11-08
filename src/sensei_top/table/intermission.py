@@ -118,7 +118,7 @@ class PastBoardingGame:
 class PastBoarding:
     """One prior completed match of this deck identity against this
     archetype, and what was actually boarded in it — shown as "what you
-    boarded last time", never as advice (``_past_boarding``)."""
+    boarded last time", never as advice (``past_boarding_against``)."""
 
     match_id: str
     played_at: str | None
@@ -320,8 +320,12 @@ def _flag_card(entry: dict, current_75: set[int]) -> PastBoardingCard:
     )
 
 
-def _past_boarding(
-    conn: sqlite3.Connection, identity: DeckIdentity, archetype_key: str, current_match_id: str
+def past_boarding_against(
+    conn: sqlite3.Connection,
+    identity: DeckIdentity,
+    archetype_key: str,
+    *,
+    exclude_match_id: str | None = None,
 ) -> list[PastBoarding]:
     """What this deck identity actually boarded, the last few times
     it faced this archetype — recorded fact ("what you boarded last time"),
@@ -330,7 +334,11 @@ def _past_boarding(
     a game-1 row) rather than a chained per-game baseline — deliberately
     different from ``/api/matches/{id}/sideboarding``'s own chained diff,
     which answers "what changed since the last game" rather than "what does
-    this game's 75 look like versus game 1"."""
+    this game's 75 look like versus game 1".
+
+    ``archetype_key`` is bare, without ``v_match_opponent``'s ``archetype:``
+    prefix. ``exclude_match_id`` is the match on a break; ``None`` excludes
+    nothing (an unfinished match is never read anyway)."""
     if not identity.deck_ids:
         return []
     current_75 = {
@@ -347,12 +355,12 @@ def _past_boarding(
          WHERE m.deck_id IN ({placeholders})
            AND m.source = 'arena'
            AND m.result IS NOT NULL AND m.result != 'incomplete'
-           AND m.match_id != ?
+           AND (? IS NULL OR m.match_id != ?)
            AND o.opponent_key = ?
            AND EXISTS (SELECT 1 FROM game_decks gd WHERE gd.match_id = m.match_id)
          ORDER BY m.started_at DESC
         """,
-        (*identity.deck_ids, current_match_id, f"archetype:{archetype_key}"),
+        (*identity.deck_ids, exclude_match_id, exclude_match_id, f"archetype:{archetype_key}"),
     ).fetchall()
 
     results: list[PastBoarding] = []
@@ -564,8 +572,8 @@ def build_break_read(
             boardings = caches.setdefault("past_boarding", {})
             boarding_cache_key = (match_id, identity.key, boarding_key)
             if boarding_cache_key not in boardings:
-                boardings[boarding_cache_key] = _past_boarding(
-                    conn, identity, boarding_key, match_id
+                boardings[boarding_cache_key] = past_boarding_against(
+                    conn, identity, boarding_key, exclude_match_id=match_id
                 )
             past_boarding = boardings[boarding_cache_key]
 

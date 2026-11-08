@@ -27,10 +27,10 @@
     },
     "transfer": {
       "title": "Sending error reports to the United States",
-      "law": "The reports leave Brazil for the United States, which has no data-protection law like the LGPD. Authorities there may be able to reach them under US law, and your rights may be harder to enforce.",
+      "law": "The reports go to the United States, which has no data-protection law like Brazil's LGPD. Authorities there may be able to reach them under US law, and your rights may be harder to enforce.",
       "ip": "Sentry doesn't store your IP address, but works out an approximate location from it first.",
-      "agree": "I agree that my error reports are sent to Sentry, in the United States.",
-      "withdraw": "Without this, nothing is sent automatically. You can withdraw it at any time by turning error reports off."
+      "agree": "I agree that error reports, and the reports I send myself, go to Sentry, in the United States.",
+      "withdraw": "Without this, nothing is sent automatically, and each report you send yourself asks first. You can withdraw it at any time by turning error reports off."
     },
     "coach": {
       "title": "Keep my coach history",
@@ -95,11 +95,11 @@
     "retryFailed": "They still couldn't be read. Try again in a moment.",
     "backup": {
       "label": "Back up my match history",
-      "description": "Uploads a summary of each match, so your history survives a reinstall and reaches your other PCs. Kept in Brazil until you delete it."
+      "description": "Uploads a summary of each match, so your history survives a reinstall and reaches your other PCs. Kept until you delete it."
     },
     "errors": {
       "label": "Send error reports",
-      "description": "Sends a report to Sentry, in the United States, when something goes wrong. Kept for 30 days. Report a problem works either way."
+      "description": "Sends a report to Sentry, in the United States, when something goes wrong. Kept for 30 days. With it on, the reports you send yourself don't ask first."
     },
     "coach": {
       "label": "Keep my coach history",
@@ -173,9 +173,12 @@
     "failed": "Your account wasn't deleted, and nothing has changed. Try again.",
     "done": "Your account was deleted."
   },
+  "policyChanges": {
+    "2026-11-07": "your yes to error reports now also covers the reports you send yourself, and a report says which page it came from."
+  },
   "errorsDialog": {
     "title": "Send error reports to the United States?",
-    "withdraw": "You can withdraw this at any time by turning error reports off.",
+    "withdraw": "This also covers the reports you send yourself, so they stop asking first. You can withdraw it at any time by turning error reports off.",
     "confirm": "Agree and send error reports"
   }
 }

@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router'
 import type { AccountActions, AccountReply, AccountState, ProfileState, Saved } from '../../bridge'
 import { ACCOUNT_WELCOME_PATH } from '../../lib/accountWelcome'
 import { failureOf } from '../../lib/settings'
-import { ago, formatCount, useNow } from '../../lib/time'
-import { Button, Card } from '../ui'
+import { formatCount } from '../../lib/time'
+import { Button, Card, MoreAbout } from '../ui'
 import { DeleteAccountDialog, DeleteHistoryDialog, ErrorsDialog } from './AccountDialogs'
 import {
   deleteControls,
@@ -15,23 +15,22 @@ import {
   profileGate,
   providerName,
   switchChange,
-  syncLine,
   type DeleteFailure,
 } from './accountLogic'
 import { PressButton, SavingSwitch } from './SaveButton'
 import { SignInButtons } from './SignInButtons'
 
 /** Settings → Account: signed out, the two sign-in buttons, both off while
- *  one waits on the browser; signed in, the three choices (or Try again when
- *  the profile could not be read), the backup's status, Export, Sign out, and
- *  under their own heading the two deletes, each behind its dialog. A delete's own publication of the new account
- *  state does not redraw the section while the call runs: what shows is the
- *  state the press found. Drawn only in the shell, in a build that has an
- *  account. */
+ *  one waits on the browser; signed in, the two choices, error reports and
+ *  coach history (or Try again when the profile could not be read), Export,
+ *  Sign out, and under their own heading the two deletes, each behind its
+ *  dialog. The cloud backup switch is Backup's. A delete's own publication
+ *  of the new account state does not redraw the section while the call
+ *  runs: what shows is the state the press found. Drawn only in the shell,
+ *  in a build that has an account. */
 export function AccountSection({ state, actions }: { state: AccountState; actions: AccountActions }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const now = useNow()
   const [frozen, setFrozen] = useState<AccountState | null>(null)
   const view = frozen ?? state
   const latest = useRef<ProfileState | undefined>(undefined)
@@ -107,7 +106,6 @@ export function AccountSection({ state, actions }: { state: AccountState; action
     })
     return answer ?? saved({ ok: false, error: 'failed' })
   }
-  const line = syncLine(read?.consentSync ?? false, view.sync)
   const note = !view.persistence.kept ? view.persistence.reason : null
   const provider = providerName(view.provider)
 
@@ -137,7 +135,11 @@ export function AccountSection({ state, actions }: { state: AccountState; action
   const persistenceNote = note && (
     <div className="space-y-1 text-caption text-muted">
       <p>{t(`account.settings.persistence.${note}`)}</p>
-      {note === 'noKeyring' && <p>{t('account.settings.persistence.keyringHint')}</p>}
+      {note === 'noKeyring' && (
+        <MoreAbout>
+          <p className="text-caption text-muted">{t('account.settings.persistence.keyringHint')}</p>
+        </MoreAbout>
+      )}
     </div>
   )
 
@@ -202,24 +204,6 @@ export function AccountSection({ state, actions }: { state: AccountState; action
             )}
             {read && (
               <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <SavingSwitch
-                    label={t('account.settings.backup.label')}
-                    description={t('account.settings.backup.description')}
-                    checked={read.consentSync}
-                    disabled={busy || writing}
-                    onSave={(on) => save(switchChange(read, 'consentSync', on))}
-                  />
-                  {line && (
-                    <p className="max-w-prose text-caption text-muted">
-                      {t(line.key, {
-                        count: line.count,
-                        n: line.count == null ? undefined : formatCount(line.count),
-                        when: line.when ? ago(view.sync?.lastSyncAt, now) : undefined,
-                      })}
-                    </p>
-                  )}
-                </div>
                 <SavingSwitch
                   label={t('account.settings.errors.label')}
                   description={t('account.settings.errors.description')}

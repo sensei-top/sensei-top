@@ -205,6 +205,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/guide/{key}/past-boarding/{archetype_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Guide Past Boarding
+         * @description What this deck boarded the last few times it faced ``archetype_key``
+         *     (bare, no ``archetype:`` prefix), the break read's own past boarding
+         *     read with no break and no match excluded. 404 for a deck key that
+         *     resolves to nothing; an archetype it never faced is an empty list.
+         */
+        get: operations["guide_past_boarding_api_guide__key__past_boarding__archetype_key__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/metrics/winrate": {
         parameters: {
             query?: never;
@@ -921,6 +944,10 @@ export interface paths {
          *     field's consensus, and the field itself around any detected format
          *     reset — see ``guide/bundle.py``. 404 mirrors ``match_report``'s own
          *     posture: a key that resolves to nothing is a missing resource.
+         *
+         *     ``progress``, a UUID, has the build record its stages under it for
+         *     ``GET /api/progress/{key}`` (``api/progress.py``); any other value is
+         *     ignored.
          */
         get: operations["guide_api_guide__key__get"];
         put?: never;
@@ -1124,6 +1151,27 @@ export interface paths {
          *     it.
          */
         get: operations["contrib_records_api_contrib_records_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/progress/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Progress
+         * @description The latest stage a build recorded under ``key``. 404 when nothing is
+         *     recorded under it, or its entry expired; 422 when ``key`` is not a UUID.
+         */
+        get: operations["progress_api_progress__key__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1572,6 +1620,10 @@ export interface paths {
          *     format. Always a 200 — a database below the leak finder's own minimum
          *     sample is an ordinary state for a new install, not a server error
          *     (``sufficient=False``, ``evidence=None``).
+         *
+         *     ``progress``, a UUID, has the build record its stages under it for
+         *     ``GET /api/progress/{key}`` (``api/progress.py``); any other value is
+         *     ignored.
          */
         get: operations["coach_api_coach_get"];
         put?: never;
@@ -1597,6 +1649,9 @@ export interface paths {
          *     on yet' and 'nothing written yet' are both ordinary outcomes for an
          *     opt-in feature. Only a report of the same format is ever the latest
          *     one here, so another format's report can never read as current.
+         *
+         *     ``progress``: as for ``GET /api/coach``. The ``POST`` and ``PUT`` on
+         *     this path take none.
          */
         get: operations["coach_narrative_api_coach_narrative_get"];
         /**
@@ -2525,6 +2580,11 @@ export interface components {
             field: components["schemas"]["FieldEvidenceOut"];
             /** Gaps */
             gaps: string[];
+            /**
+             * Gap Codes
+             * @description aligned with gaps: rules_text_missing, legality_missing or null
+             */
+            gap_codes?: (string | null)[];
         };
         /**
          * DeckIdentityOut
@@ -2533,6 +2593,9 @@ export interface components {
          *     ``deck_ids`` is every content-hash version this identity groups — a
          *     match's deck and a version's address name a bare ``deck_id``, so the
          *     frontend needs this list to find which guide identity one belongs to.
+         *     ``art_grp_id`` is the newest version's most-played card among those whose
+         *     type is known (``None`` when no known card is a non-land);
+         *     ``card_names`` its distinct maindeck names.
          */
         DeckIdentityOut: {
             /** Key */
@@ -2559,6 +2622,13 @@ export interface components {
             first_played: string | null;
             /** Last Played */
             last_played: string | null;
+            /** Art Grp Id */
+            art_grp_id?: number | null;
+            /**
+             * Card Names
+             * @default []
+             */
+            card_names: string[];
         };
         /** DeckLeaksOut */
         DeckLeaksOut: {
@@ -4982,6 +5052,25 @@ export interface components {
              */
             lost: number;
         };
+        /** ProgressOut */
+        ProgressOut: {
+            /**
+             * Stage
+             * @description The stage the build is in now, an id the page keys.
+             * @enum {string}
+             */
+            stage: "matches" | "field" | "together";
+            /**
+             * Done
+             * @description Items of this stage finished; null where the stage has no count.
+             */
+            done?: number | null;
+            /**
+             * Total
+             * @description Items this stage has in all; null where it has no count.
+             */
+            total?: number | null;
+        };
         /** ProvenanceOut */
         ProvenanceOut: {
             deck: components["schemas"]["DeckIdentityOut"];
@@ -5973,6 +6062,38 @@ export interface operations {
             };
         };
     };
+    guide_past_boarding_api_guide__key__past_boarding__archetype_key__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+                archetype_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PastBoardingOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     winrate_api_metrics_winrate_get: {
         parameters: {
             query?: {
@@ -6801,7 +6922,9 @@ export interface operations {
     };
     guide_api_guide__key__get: {
         parameters: {
-            query?: never;
+            query?: {
+                progress?: string | null;
+            };
             header?: never;
             path: {
                 key: string;
@@ -7050,6 +7173,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContribRecordItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    progress_api_progress__key__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressOut"];
                 };
             };
             /** @description Validation Error */
@@ -7703,6 +7857,7 @@ export interface operations {
             query?: {
                 /** @description which format the report is for; omitted, the default /api/formats reports */
                 format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+                progress?: string | null;
             };
             header?: never;
             path?: never;
@@ -7735,6 +7890,7 @@ export interface operations {
             query?: {
                 /** @description which format the report is for; omitted, the default /api/formats reports */
                 format?: ("Standard" | "Pioneer" | "Modern" | "Pauper" | "Legacy" | "Vintage" | "Premodern") | null;
+                progress?: string | null;
             };
             header?: never;
             path?: never;

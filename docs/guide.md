@@ -58,6 +58,17 @@ owns it) with `arena_deck_id` breaking an exact tie, falling back to a bare
 name and current cards; `resolve` looks up one by its API key
 (`"guid:<arena_deck_id>"` or `"deck:<deck_id>"`).
 
+Each identity also carries `art_grp_id` and `card_names`, read from the
+newest version's maindeck in one batched `cards` lookup for the whole list
+(500 ids a query, so `/api/guide/decks` stays cheap). `art_grp_id` is the
+most-played non-land (copies counted; a tie goes to the lower `grp_id`).
+Land-ness is `review/effects.py::is_land` on the front face, so a modal
+double-faced "Instant // Land" counts as a spell. Only cards whose type is
+known compete: one with no `type_line` is skipped rather than assumed a
+spell, and `art_grp_id` is `None` when no known card is a non-land.
+`card_names` is the distinct maindeck names the `cards` table knows, sorted;
+an unknown card is left out, never invented.
+
 An MTGO deck has no GUID, so it is always a `deck:<deck_id>` identity. Its
 matches are the ones the user picked it for (`mtgo_match_pick`): the guide
 reads a match's deck through `v_match_deck`, never `matches.deck_id`, which
@@ -240,9 +251,22 @@ a deck with no format, an unclassifiable deck, missing oracle text (with the
 exact fix — `sensei-top cards --scryfall`), no detected reset — or,
 distinctly, no legality data to detect one *with* — and a never-played deck.
 
+A gap whose fix is the card-data download carries a code beside its text,
+`gap_codes` aligned with `gaps` (`DeckGuide.gap_codes`, `DeckGuideOut.gap_codes`):
+`rules_text_missing` and `legality_missing`; every other gap's is `None`,
+and whoever rebuilds `gaps` (the RCQ prompt does) also passes `gap_codes`,
+aligned or empty. The dashboard's scope card
+replaces them, together, with one line, "This guide waits for card data"
+(with the percent) while the desktop shell's download runs, else with a link to Settings →
+Sources; in a browser, and in every prompt and the Markdown export, the
+server's sentence stays.
+
 **Performance note.** `build_snapshot`/`build_match_report`/`find_leaks`
-accept optional caches, and `bundle.py` shares one of each across its two
-`find_leaks` calls: `colors_cache` and `consensus_cache`, so
+accept optional caches, and `bundle.py` shares one of each: `_build_reports`
+fills them first, building every all-decks match's report, and both
+`find_leaks` calls then hit them (`_build_reports` exists to count those
+reports for the page, "Stage progress" below). The caches are
+`colors_cache` and `consensus_cache`, so
 `archetypes.classify.card_colors_by_name` — a full scan of `cards`, reached
 through both `rank_candidates` and `classify_own_deck` — runs at most once
 per request rather than twice per match report; `view_cache`, memoizing
@@ -405,6 +429,59 @@ a word on a neutral chip (`coverageStatusWord`: Written, Out of date,
 Not written, Too few lists), and its share of the field. A row offers no
 prompt of its own: one archetype's prompt is on its pairing's page
 (`docs/brief.md`, "The brief on a pairing's page").
+
+### Stage progress
+
+A guide built against a cold report cache takes long enough that the
+page says what it is doing. Measured on the demo database (423 completed
+Arena matches, the leak rollups' population, and a deck of 123), each step
+of `build_deck_guide` timed once cold and once with every `MatchReport`
+already cached:
+
+| Step | Cold | Warm |
+|---|---:|---:|
+| resolve, format, resets | 0.5 s | 0.5 s |
+| play evidence | 0.2 s | 0.2 s |
+| `find_leaks`, this deck | 13.6 s | 0.5 s |
+| `find_leaks`, all decks | 24.0 s | 1.6 s |
+| list diff | 0.3 s | 0.3 s |
+| field | 1.0 s | 1.0 s |
+| oracle coverage | 0.0 s | 0.0 s |
+| the whole build | 41.1 s | 4.1 s |
+
+Nearly all of a cold build is building one `MatchReport` per completed
+match, so that is the one stage with a count. The build reports three
+stages, by id, in this order:
+
+| Stage | What runs in it | Count |
+|---|---|---|
+| `matches` | resolving the deck, its resets, its play evidence, every match's report, both leak rollups | `done` of `total` while the reports are built |
+| `field` | the list diff and the field | none |
+| `together` | oracle coverage and the gaps; the route's conversion follows | none |
+
+The count is real because `bundle.py::_build_reports` builds the reports
+itself before either `find_leaks` call, one tick per match: the all-decks
+population (`review/leaks.py::leak_population`, the rows `find_leaks` itself
+ranks: completed Arena matches) under the window `find_leaks` gives each
+match. Both rollups then find every report in
+the cache, since the deck's own matches are a subset of that population.
+`total` is that population, every deck's, not this deck's matches. A
+warm build ticks through the same count, only faster.
+
+The transport is two GETs, and nothing is stored. `GET /api/guide/{key}`
+takes an optional `?progress=<uuid>`; any value that is not a UUID is
+ignored and the build runs without progress. The build records each
+stage in `api/progress.py`'s `ProgressRegistry`, in memory on
+`app.state.progress`, keyed by the UUID in canonical lowercase. An entry
+is dropped 60 s after its last update, lazily, on the next record or read;
+nothing runs in the background. `GET /api/progress/{key}` answers
+`{stage, done, total}`, 404 for an id with no entry (never recorded, or
+expired) and 422 for one that is not a UUID. The stage is an id, never
+prose: the page keys its own words. A stage id outside `STAGES` raises,
+so a typo at a call site fails a test rather than reaching the page.
+
+`build_deck_guide`'s `progress` defaults to a no-op, so the markdown
+export, the RCQ guide and the CLI pass nothing and record nothing.
 
 ## The RCQ guide
 

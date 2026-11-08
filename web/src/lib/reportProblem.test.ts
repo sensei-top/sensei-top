@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { ReportOutcome } from '../bridge'
+import type { AccountState, ProfileState, ReportOutcome } from '../bridge'
+import { POLICY_VERSION } from './policy'
 import {
+  aboutOf,
   blockerOf,
   COUNTER_FROM,
   outcomeKey,
@@ -8,13 +10,18 @@ import {
   sendControls,
   sendReport,
   signedInOf,
+  standingConsentOf,
   detailOf,
+  matchIdOf,
+  pageOf,
   reportText,
   wasSent,
   type ReportDraft,
 } from './reportProblem'
 
 const draft = (change: Partial<ReportDraft> = {}): ReportDraft => ({ text: 'It broke', attachLog: false, agreed: true, ...change })
+
+const BUG = { kind: 'bug', page: null, matchId: null } as const
 
 describe('what keeps Send report disabled', () => {
   it('names the first that applies, in the order of the hints', () => {
@@ -56,13 +63,13 @@ describe('sending a report', () => {
   it('sends the detail under the text', async () => {
     const call = vi.fn(async (): Promise<ReportOutcome> => 'sent')
     await sendReport(call, draft({ detail: 'Technical detail: Boom' }))
-    expect(call).toHaveBeenCalledExactlyOnceWith({ text: 'It broke\n\nTechnical detail: Boom', attachLog: false })
+    expect(call).toHaveBeenCalledExactlyOnceWith({ text: 'It broke\n\nTechnical detail: Boom', attachLog: false, ...BUG })
   })
 
   it('sends the trimmed text and the log choice through the bridge call', async () => {
     const call = vi.fn(async (): Promise<ReportOutcome> => 'sent')
     expect(await sendReport(call, draft({ text: '  It broke \n', attachLog: true }))).toBe('sent')
-    expect(call).toHaveBeenCalledExactlyOnceWith({ text: 'It broke', attachLog: true })
+    expect(call).toHaveBeenCalledExactlyOnceWith({ text: 'It broke', attachLog: true, ...BUG })
   })
 
   it('calls nothing for a draft the dialog would have blocked', async () => {
@@ -88,6 +95,38 @@ describe('sending a report', () => {
   })
 })
 
+describe('the payload per kind', () => {
+  it('carries the page and the match of a bug', async () => {
+    const call = vi.fn(async (): Promise<ReportOutcome> => 'sent')
+    await sendReport(call, draft({ attachLog: true, detail: 'Technical detail: Boom', kind: 'bug', page: '/matches/m1', matchId: 'm1' }))
+    expect(call).toHaveBeenCalledExactlyOnceWith({
+      text: 'It broke\n\nTechnical detail: Boom',
+      attachLog: true,
+      kind: 'bug',
+      page: '/matches/m1',
+      matchId: 'm1',
+    })
+  })
+  it('never sends the log or the detail of an idea, whatever the draft holds', async () => {
+    const call = vi.fn(async (): Promise<ReportOutcome> => 'sent')
+    await sendReport(call, draft({ attachLog: true, detail: 'Technical detail: Boom', kind: 'idea', page: '/decks', matchId: null }))
+    expect(call).toHaveBeenCalledExactlyOnceWith({ text: 'It broke', attachLog: false, kind: 'idea', page: '/decks', matchId: null })
+  })
+  it('takes the page only as a path the shell accepts', () => {
+    expect(pageOf('/matches/m1')).toBe('/matches/m1')
+    expect(pageOf('/decks?x=1')).toBeNull()
+    expect(pageOf('/decks#a')).toBeNull()
+    expect(pageOf('decks')).toBeNull()
+    expect(pageOf(undefined)).toBeNull()
+  })
+  it('takes the match only on a match page', () => {
+    expect(matchIdOf({ id: 'm1' }, '/matches/m1')).toBe('m1')
+    expect(matchIdOf({ id: 'm1' }, '/matches/m1/replay')).toBe('m1')
+    expect(matchIdOf({ id: 'd1' }, '/decks/d1')).toBeNull()
+    expect(matchIdOf(undefined, '/matches')).toBeNull()
+  })
+})
+
 describe('the outcomes', () => {
   it('replace the form only when the report went', () => {
     expect(wasSent('sent')).toBe(true)
@@ -97,6 +136,8 @@ describe('the outcomes', () => {
   it('each have a catalogue line', () => {
     expect(outcomeKey('sent-without-log')).toBe('report.dialog.result.sentWithoutLog')
     expect(outcomeKey('failed')).toBe('report.dialog.result.failed')
+    expect(outcomeKey('sent', 'idea')).toBe('report.dialog.result.sentIdea')
+    expect(outcomeKey('failed', 'idea')).toBe('report.dialog.result.failed')
   })
 })
 
@@ -165,5 +206,71 @@ describe('the Send button', () => {
       await r.send()
       expect(r.reopen).not.toHaveBeenCalled()
     }
+  })
+})
+
+describe('whether a standing consent replaces the box', () => {
+  const read = (change: Partial<Extract<ProfileState, { state: 'read' }>> = {}): ProfileState => ({
+    state: 'read',
+    ageConfirmedAt: '2026-01-01',
+    consentSync: false,
+    consentErrors: true,
+    consentCoachHistory: false,
+    consentVersion: POLICY_VERSION,
+    consentedAt: '2026-01-01',
+    ...change,
+  })
+  const account = (profile: ProfileState | undefined, signedIn = true): AccountState => ({
+    available: true,
+    signedIn,
+    userId: signedIn ? 'u' : null,
+    email: null,
+    provider: null,
+    persistence: { kept: true },
+    ...(profile ? { profile } : {}),
+  }) as AccountState
+
+  it('holds signed in, with error reports on under the current policy', () => {
+    expect(standingConsentOf(account(read()))).toBe(true)
+  })
+  it('holds under a later policy version', () => {
+    expect(standingConsentOf(account(read({ consentVersion: '2099-01-01' })))).toBe(true)
+  })
+  it('does not hold under an older policy version', () => {
+    expect(standingConsentOf(account(read({ consentVersion: '2026-11-04' })))).toBe(false)
+  })
+  it('does not hold with error reports off', () => {
+    expect(standingConsentOf(account(read({ consentErrors: false })))).toBe(false)
+  })
+  it('does not hold when the profile is unknown, unanswered or missing', () => {
+    expect(standingConsentOf(account({ state: 'unknown' }))).toBe(false)
+    expect(standingConsentOf(account({ state: 'none' }))).toBe(false)
+    expect(standingConsentOf(account(undefined))).toBe(false)
+  })
+  it('does not hold signed out, in a build with no account, or with no shell', () => {
+    expect(standingConsentOf(account(read(), false))).toBe(false)
+    expect(standingConsentOf({ available: false })).toBe(false)
+    expect(standingConsentOf(undefined)).toBe(false)
+  })
+})
+
+describe('aboutOf', () => {
+  const now = Date.parse('2026-11-07T12:00:00')
+  it('names the match by date, deck and opponent when it has all three', () => {
+    const about = aboutOf({ started_at: '2026-11-02T20:00:00', deck_name: 'Deck A', opponent_label: 'Opp B' }, now)
+    expect(about?.key).toBe('report.dialog.about.match')
+    expect(about?.values).toMatchObject({ deck: 'Deck A', opponent: 'Opp B' })
+    expect(about?.values.date).toBe('Nov 2')
+  })
+  it('falls back to the date when the deck or the opponent is null', () => {
+    expect(aboutOf({ started_at: '2026-11-02T20:00:00', deck_name: null, opponent_label: 'Opp B' }, now)?.key).toBe(
+      'report.dialog.about.matchDate',
+    )
+    expect(aboutOf({ started_at: '2026-11-02T20:00:00', deck_name: 'Deck A', opponent_label: null }, now)?.key).toBe(
+      'report.dialog.about.matchDate',
+    )
+  })
+  it('names nothing without a start time', () => {
+    expect(aboutOf({ started_at: null, deck_name: 'Deck A', opponent_label: 'Opp B' }, now)).toBeNull()
   })
 })

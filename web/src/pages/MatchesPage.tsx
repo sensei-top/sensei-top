@@ -10,7 +10,7 @@ export function MatchesPage() {
   const { source, deck, setSource, setDeck } = useFilters()
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex min-h-[44px] flex-wrap items-center gap-3">
         <SourceFilter value={source} onChange={setSource} />
         <DeckFilter value={deck} onChange={setDeck} />
       </div>

@@ -20,6 +20,7 @@ function app(change: Partial<AppSettings> = {}): AppSettings {
     aiFeatures: true,
     canContribute: false,
     contribAsked: false,
+    signInDismissed: false,
     contribute: null,
     account: { available: false },
     askAutostart: false,

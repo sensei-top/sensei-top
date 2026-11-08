@@ -60,6 +60,7 @@
     "resultScore": "{{result}} {{score}}",
     "unrecognizedDeck": "Deck não reconhecido",
     "showed": "mostrou {{card}}",
+    "namedLater": "Identificado quando os dados dos cards chegarem",
     "restored": "Restaurada"
   },
   "summary": {
@@ -156,6 +157,13 @@
     "everyOther": "Todas as outras observações ({{n}})",
     "every": "Todas as observações ({{n}})",
     "pairing": "Este matchup",
+    "against": {
+      "title": "Contra {{archetype}}",
+      "record": "Com este deck, seu histórico contra ele é {{record}}.",
+      "briefWritten": "O briefing deste matchup já está escrito.",
+      "briefMissing": "Ainda não há briefing para este matchup.",
+      "open": "Abrir o matchup"
+    },
     "gapsTitle": "O que este relatório não conseguiu ver",
     "gapsSubtitle": "Não é prova de que algo deu errado, só de que este leitor não conseguiu dizer.",
     "showOther_one": "Mostrar a outra",
@@ -172,6 +180,7 @@
     "nothingToReport": "Nada a relatar nesta partida: pouco dela foi registrado."
   },
   "history": {
+    "reading": "Lendo suas partidas…",
     "capFullShowing": "Mostrando {{shown}} das {{inHand}} partidas mais recentes",
     "capFull": "As {{inHand}} partidas mais recentes",
     "capOne": "1 partida",
@@ -187,6 +196,7 @@
     "stops": "A lista para nas {{n}} partidas mais recentes."
   },
   "detail": {
+    "reading": "Lendo esta partida…",
     "all": "Todas as partidas"
   },
   "replay": {

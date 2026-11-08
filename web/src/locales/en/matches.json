@@ -60,6 +60,7 @@
     "resultScore": "{{result}} {{score}}",
     "unrecognizedDeck": "Unrecognized deck",
     "showed": "showed {{card}}",
+    "namedLater": "Named once card data arrives",
     "restored": "Restored"
   },
   "summary": {
@@ -156,6 +157,13 @@
     "everyOther": "Every other finding ({{n}})",
     "every": "Every finding ({{n}})",
     "pairing": "This pairing",
+    "against": {
+      "title": "Against {{archetype}}",
+      "record": "With this deck you are {{record}} against it.",
+      "briefWritten": "Its matchup brief is written.",
+      "briefMissing": "No matchup brief for it yet.",
+      "open": "Open the matchup"
+    },
     "gapsTitle": "What this report could not see",
     "gapsSubtitle": "Not evidence that something was wrong, only that this reader could not tell.",
     "showOther_one": "Show the other one",
@@ -172,6 +180,7 @@
     "nothingToReport": "Nothing to report for this match: too little of it was recorded."
   },
   "history": {
+    "reading": "Reading your matches…",
     "capFullShowing": "Showing {{shown}} of the {{inHand}} newest matches",
     "capFull": "The {{inHand}} newest matches",
     "capOne": "1 match",
@@ -187,6 +196,7 @@
     "stops": "The list stops at the {{n}} newest matches."
   },
   "detail": {
+    "reading": "Reading this match…",
     "all": "All matches"
   },
   "replay": {

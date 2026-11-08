@@ -109,6 +109,7 @@
     "matches_other": "{{n}} partidas,"
   },
   "page": {
+    "reading": "Lendo o meta…",
     "emptyTitle": "Nenhum resultado de torneio de {{format}} ainda",
     "emptyMessage": "Esta página mostra o que está sendo jogado em torneios e seu histórico contra cada deck. Ela se preenche quando os resultados de torneios são baixados, o que o servidor faz sozinho enquanto roda; sensei-top meta faz isso pela linha de comando.",
     "topdeckCredit": "Dados de torneios de {{format}} de <site>TopDeck.gg</site>."

@@ -1,10 +1,11 @@
 import { Play } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { MatchDetail } from '../../api'
+import { useGuideDecks, type MatchDetail } from '../../api'
 import type { TFunction } from '../../i18n'
 import { eventLabel, resultWord } from '../../lib/events'
 import { formatRecord } from '../../lib/format'
-import type { ArtCard } from '../../lib/matchArt'
+import { resolveDeck } from '../../lib/decks'
+import { castCards, type ArtCard } from '../../lib/matchArt'
 import { headlineOpponentText } from '../../lib/opponent'
 import { when } from '../../lib/time'
 import { OpponentDeckLabel } from '../OpponentDeckLabel'
@@ -22,35 +23,41 @@ function resultTitle(match: MatchDetail, t: TFunction): string {
  *  report's headline and the line under it, or, until the report has
  *  arrived or when it has nothing, the result and the games' count; the
  *  two decks, the opponent's with its correction; and the way to the
- *  replay. Its art is a card the opponent cast, or the viewer's when the
- *  opponent cast nothing: at the right with a fade to the left, and on
+ *  replay. Its art is a card the viewer cast, or the deck's art card when
+ *  the match cast nothing: at the right with a fade to the left, and on
  *  top with a fade down under 48rem. The words never sit on the picture.
  *  With no card to show there is no box, and the words take the width. */
 export function MatchHero({
   match,
   headline,
   subhead,
-  art,
   replayHref,
 }: {
   match: MatchDetail
   /** The report's, or `null` while there is none to show. */
   headline: string | null
   subhead: string | null
-  art: ArtCard | null
   replayHref: string
 }) {
   const { t } = useTranslation()
+  const identities = useGuideDecks()
+  // The viewer's last-cast card; with none, the deck's own art card. While
+  // the identities load and the match has a deck, the art box is reserved
+  // (the wash) so the hero does not jump; when they resolve to no card the
+  // box drops. Never a guessed card.
+  const identityArt = match.deck_id != null && identities.data ? resolveDeck(match.deck_id, identities.data)?.identity.art_grp_id : null
+  const art: ArtCard | null = castCards(match, 'self')[0] ?? (identityArt != null ? { grpId: identityArt, name: null } : null)
+  const reserved = art == null && match.deck_id != null && identities.isPending
   const event = eventLabel(match.event_id, t)
   const label = [t('matches.hero.kicker'), event, when(match.started_at)].filter(Boolean).join(' · ')
   return (
     <section className="relative overflow-hidden rounded-hero border border-edge bg-surface shadow-lift [--art-surface:var(--surface-1)]">
-      {art && (
+      {(art || reserved) && (
         <>
-          <CardArt grpId={art.grpId} name={art.name} fade="down" className="h-[140px] md:hidden" />
+          <CardArt grpId={art?.grpId ?? null} name={art?.name ?? null} fade="down" className="h-[140px] md:hidden" />
           <CardArt
-            grpId={art.grpId}
-            name={art.name}
+            grpId={art?.grpId ?? null}
+            name={art?.name ?? null}
             fade="left"
             className="absolute inset-y-0 right-0 hidden w-1/2 md:block"
           />
@@ -58,7 +65,7 @@ export function MatchHero({
       )}
       <div
         className={`relative flex flex-col justify-end gap-3 px-5 pb-6 md:px-9 md:py-8 ${
-          art ? 'md:min-h-[280px] md:max-w-[55%]' : 'pt-6'
+          art || reserved ? 'md:min-h-[280px] md:max-w-[55%]' : 'pt-6'
         }`}
       >
         <SectionLabel as="p">{label}</SectionLabel>

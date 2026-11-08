@@ -2,14 +2,16 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Match } from '../../api'
 import type { TFunction } from '../../i18n'
-import type { Field, Pattern } from '../../lib/home'
+import type { DeckSlot, Field, NextStep, Pattern } from '../../lib/home'
 import { opponentNamed, ownScore } from '../../lib/home'
+import { deckAddress } from '../../lib/decks'
+import { pairingAddress } from '../../lib/pairing'
 import type { ArtCard } from '../../lib/matchArt'
 import { opponentLabelText } from '../../lib/opponent'
 import { patternWords } from '../../lib/patterns'
 import { formatPercent, formatRecord } from '../../lib/format'
 import { useAiFeatures } from '../../shell/aiFeatures'
-import { ago, formatIsoDateShort } from '../../lib/time'
+import { ago } from '../../lib/time'
 import { Button, CardArt, ErrorNote, SectionLabel, Skeleton } from '../ui'
 
 /** One of Home's three cards, the failure of the request one needed, or a
@@ -18,19 +20,25 @@ export type Thing =
   | { kind: 'match'; match: Match; art: ArtCard | null }
   | { kind: 'pattern'; pattern: Pattern; art: ArtCard | null }
   | { kind: 'field'; field: Field; art: ArtCard | null }
+  | { kind: 'deck'; deck: DeckSlot; art: ArtCard | null }
+  | { kind: 'next'; next: NextStep }
   | { kind: 'error'; key: string; error: Error }
-  | { kind: 'pending'; slot: 'pattern' | 'field' }
+  | { kind: 'pending'; slot: 'pattern' | 'field' | 'deck' }
 
-function kickerOf(kind: Exclude<Thing['kind'], 'error' | 'pending'>, t: TFunction): string {
-  const kickers: Record<Exclude<Thing['kind'], 'error' | 'pending'>, string> = {
+type Drawn = Exclude<Thing, { kind: 'error' | 'pending' }>
+
+function kickerOf(kind: Drawn['kind'], t: TFunction): string {
+  const kickers: Record<Drawn['kind'], string> = {
     match: t('home.things.kicker.match'),
     pattern: t('home.things.kicker.pattern'),
     field: t('home.things.kicker.field'),
+    deck: t('home.things.kicker.deck'),
+    next: t('home.things.kicker.next'),
   }
   return kickers[kind]
 }
 
-/** Home's three things worth a look (`lib/home.ts`'s `threeThings` picks
+/** Home's three things worth a look (`lib/home.ts`'s `homeSlots` picks
  *  them), each carrying its place among them in an accent disc. The art
  *  is on top with a fade down; the words stay under it. The action is a
  *  button rather than the whole card, since the art has a control of its
@@ -67,10 +75,11 @@ export function ThreeThingsLoading() {
   )
 }
 
-function PendingCard({ slot, place }: { slot: 'pattern' | 'field'; place: number }) {
+function PendingCard({ slot, place }: { slot: 'pattern' | 'field' | 'deck'; place: number }) {
   const { t } = useTranslation()
-  const loading: Record<'pattern' | 'field', string> = {
+  const loading: Record<'pattern' | 'field' | 'deck', string> = {
     pattern: t('home.things.loading.pattern'),
+    deck: t('home.things.loading.deck'),
     field: t('home.things.loading.field'),
   }
   return (
@@ -97,11 +106,12 @@ function PendingCard({ slot, place }: { slot: 'pattern' | 'field'; place: number
   )
 }
 
-function ThingCard({ thing, place, now }: { thing: Exclude<Thing, { kind: 'error' | 'pending' }>; place: number; now: number }) {
+function ThingCard({ thing, place, now }: { thing: Drawn; place: number; now: number }) {
   const { t } = useTranslation()
   const [aiOn] = useAiFeatures()
   const words = thingWords(thing, now, t)
-  const art = thing.art
+  // "Next step" has no card to show: the art's wash.
+  const art = thing.kind === 'next' ? null : thing.art
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-card border border-edge bg-surface shadow-lift [--art-surface:var(--surface-1)]">
       <CardArt grpId={art?.grpId ?? null} name={art?.name ?? null} fade="down" className="h-[104px] md:h-[124px]" />
@@ -117,7 +127,7 @@ function ThingCard({ thing, place, now }: { thing: Exclude<Thing, { kind: 'error
         </div>
         <h2 className="font-display text-title text-ink">{words.title}</h2>
         <div className="flex-1 space-y-1.5 text-body text-ink2">{words.body}</div>
-        {(aiOn || thing.kind !== 'pattern') && (
+        {words.href != null && (aiOn || thing.kind !== 'pattern') && (
           <div className="pt-2">
             <Button href={words.href}>{words.action}</Button>
           </div>
@@ -128,10 +138,10 @@ function ThingCard({ thing, place, now }: { thing: Exclude<Thing, { kind: 'error
 }
 
 function thingWords(
-  thing: Exclude<Thing, { kind: 'error' | 'pending' }>,
+  thing: Drawn,
   now: number,
   t: TFunction,
-): { title: string; body: ReactNode; action: string; href: string } {
+): { title: string; body: ReactNode; action: string; href: string | null } {
   switch (thing.kind) {
     case 'match':
       return {
@@ -161,9 +171,75 @@ function thingWords(
     case 'field':
       return {
         title: fieldTitle(thing.field, t),
-        body: <FieldBody field={thing.field} now={now} />,
+        body: <FieldBody field={thing.field} />,
         action: t('home.things.openField'),
         href: '/field',
+      }
+    case 'deck':
+      return deckWords(thing.deck, now, t)
+    case 'next':
+      return nextWords(thing.next, t)
+  }
+}
+
+function deckWords(
+  deck: DeckSlot,
+  now: number,
+  t: TFunction,
+): { title: string; body: ReactNode; action: string; href: string } {
+  const title = t('home.things.deckTitle', {
+    deck: deck.name ?? t('home.unnamedDeckInSentence'),
+    record: formatRecord(deck.wins, deck.losses),
+  })
+  if (deck.unmet) {
+    return {
+      title,
+      body: <p>{t('home.things.deckUnmet', { archetype: deck.unmet.label, format: deck.unmet.format })}</p>,
+      action: t('home.things.openMatchup'),
+      href: pairingAddress(deck.key, deck.unmet.archetypeKey, deck.unmet.format),
+    }
+  }
+  const when = ago(deck.lastAt, now)
+  return {
+    title,
+    body: when == null ? null : <p>{t('home.things.deckPlayed', { count: deck.played, when })}</p>,
+    action: t('home.things.openDeck'),
+    href: deckAddress(deck.key),
+  }
+}
+
+function nextWords(
+  next: NextStep,
+  t: TFunction,
+): { title: string; body: ReactNode; action: string; href: string | null } {
+  switch (next.kind) {
+    case 'cardData':
+      return {
+        title: t('home.things.next.cardData.title'),
+        body: <p>{t('home.things.next.cardData.body')}</p>,
+        action: t('home.things.next.openSources'),
+        href: '/settings/sources',
+      }
+    case 'cardDataRunning':
+      return {
+        title: t('home.things.next.cardDataRunning.title'),
+        body: <p>{t('home.things.next.cardDataRunning.body')}</p>,
+        action: t('home.things.next.openSources'),
+        href: '/settings/sources',
+      }
+    case 'secondWeek':
+      return {
+        title: t('home.things.next.secondWeek.title'),
+        body: <p>{t('home.things.next.secondWeek.body')}</p>,
+        action: '',
+        href: null,
+      }
+    case 'patterns':
+      return {
+        title: t('home.things.next.patterns.title'),
+        body: <p>{t('home.things.next.patterns.body', { count: next.count })}</p>,
+        action: '',
+        href: null,
       }
   }
 }
@@ -204,14 +280,13 @@ function fieldTitle(field: Field, t: TFunction): string {
   })
 }
 
-function FieldBody({ field, now }: { field: Field; now: number }) {
+function FieldBody({ field }: { field: Field }) {
   const { t } = useTranslation()
   const [first, second] = field.rows
-  const since = field.reset ? formatIsoDateShort(field.reset, now) : null
   const { played, won, losses } = field.topTwo
   // With one deck in the field the title names it, and the record is
   // against "it"; with two, against "them" (or "either").
-  const when = since ? t('home.field.sinceDate', { since }) : t('home.field.last90')
+  const when = t('home.field.lastDays', { days: field.days })
   const score = formatRecord(won, losses)
   let record: string
   if (field.deck) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pasteRequest } from './api'
+import { fieldPending, pasteRequest } from './api'
 
 // The seven PUT routes, as the API declares them: each on its
 // generate route's address, each taking `{ answer }`, the RCQ guide's with
@@ -60,5 +60,25 @@ describe('pasteRequest', () => {
     )
     expect(pasteRequest({ card: 'match', matchId: 'x?y' }, answer).path).toBe('/api/matches/x%3Fy/report/narrative')
     expect(pasteRequest({ card: 'coach', format: 'A&B' }, answer).path).toBe('/api/coach/narrative?format=A%26B')
+  })
+})
+
+describe('fieldPending', () => {
+  const waiting = { isPending: true, isError: false }
+  const done = { isPending: false, isError: false }
+  const failed = { isPending: false, isError: true }
+  // A disabled query is pending with no error, as react-query reports it.
+
+  it('waits only while a format is known and an answer is still missing', () => {
+    expect(fieldPending(undefined, waiting, waiting)).toBe(false)
+    expect(fieldPending(null, waiting, waiting)).toBe(false)
+    expect(fieldPending('modern', waiting, waiting)).toBe(true)
+    expect(fieldPending('modern', done, waiting)).toBe(true)
+    expect(fieldPending('modern', done, done)).toBe(false)
+  })
+
+  it('does not wait on an error, nor on the win rate a failed status leaves disabled', () => {
+    expect(fieldPending('modern', failed, waiting)).toBe(false)
+    expect(fieldPending('modern', done, failed)).toBe(false)
   })
 })

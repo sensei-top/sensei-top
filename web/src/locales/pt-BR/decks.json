@@ -1,4 +1,5 @@
 {
+  "reading": "Lendo seus decks…",
   "format": {
     "bestOfThree": "{{format}}, melhor de três"
   },
@@ -25,6 +26,11 @@
     },
     "formatLabel": "Formato",
     "allFormats": "Todos os formatos",
+    "searchLabel": "Buscar decks",
+    "searchPlaceholder": "Nome do deck ou de um card",
+    "noMatch": "Nenhum deck encontrado para “{{q}}”.",
+    "fewer_one": "Menos de {{min}} partidas · {{count}} deck",
+    "fewer_other": "Menos de {{min}} partidas · {{count}} decks",
     "sortLabel": "Ordenar por",
     "sort": {
       "lastPlayed": "Última partida",
@@ -187,6 +193,9 @@
       "tournamentLists": "Listas de torneio",
       "rulesText": "Texto de regras",
       "fieldSince": "Meta desde",
+      "waitsPercent": "Este guia espera os dados dos cards · {{pct}}%",
+      "waits": "Este guia espera os dados dos cards",
+      "download": "Baixe os dados dos cards em Configurações → Fontes",
       "resetOn": "Reinício do formato em <strong>{{date}}</strong> ({{detectedFrom}})."
     },
     "field": {
@@ -320,7 +329,15 @@
       "noChanges": "Nenhuma troca de cards.",
       "plansSubtitle": "O que entra e o que sai contra cada arquétipo, do segundo jogo em diante.",
       "checked": "Encontrado ao conferir os planos"
-    }
+    },
+    "stage": {
+      "label": "Progresso",
+      "matches": "Lendo suas partidas",
+      "matchesCount": "Lendo suas partidas · {{done}} de {{total}}",
+      "field": "Lendo o meta",
+      "together": "Montando o guia"
+    },
+    "reading": "Montando o guia…"
   },
   "leak": {
     "category": {

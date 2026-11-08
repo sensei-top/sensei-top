@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { CoverageOut, CoverageRowOut, Match, MatchupBriefOut } from '../api'
+import type { CoverageOut, CoverageRowOut, DeckIdentityOut, Match, MatchupBriefOut } from '../api'
 import { translator } from '../i18n'
 import { type FieldRecord, matchupRows, type MatchupRow, NBSP } from './matchups'
 import {
+  againstLink,
   briefState,
+  briefWritten,
   lastMetLine as lastMetOf,
   pairingAddress,
   pairingHeading as headingOf,
@@ -467,5 +469,60 @@ describe('pairingTiles', () => {
       value: '—',
       detail: 'only a named archetype has results',
     })
+  })
+})
+
+describe('againstLink', () => {
+  const identity = { key: 'deck-a', deck_ids: ['v1', 'v2'] } as DeckIdentityOut
+  const lost: Pick<Match, 'result' | 'deck_id' | 'opponent_key' | 'format'> = {
+    result: 'loss',
+    deck_id: 'v2',
+    opponent_key: 'archetype:dimir_midrange',
+    format: 'Standard',
+  }
+
+  it('links a loss to a named archetype through the deck identity of its version', () => {
+    expect(againstLink(lost, [identity])).toEqual({
+      deckKey: 'deck-a',
+      opponentKey: 'archetype:dimir_midrange',
+      format: 'Standard',
+    })
+  })
+
+  it('links nothing for a win, a draw or an unfinished match', () => {
+    for (const result of ['win', 'draw', null, undefined]) {
+      expect(againstLink({ ...lost, result }, [identity])).toBeNull()
+    }
+  })
+
+  it('links nothing when the opponent is not a named archetype', () => {
+    for (const opponent_key of ['colors:ub', 'manual:Pile', '', null, undefined]) {
+      expect(againstLink({ ...lost, opponent_key }, [identity])).toBeNull()
+    }
+  })
+
+  it('links nothing when the deck resolves to no identity', () => {
+    expect(againstLink({ ...lost, deck_id: 'other' }, [identity])).toBeNull()
+    expect(againstLink({ ...lost, deck_id: null }, [identity])).toBeNull()
+    expect(againstLink(lost, [])).toBeNull()
+  })
+
+  it('carries no format for a match without one', () => {
+    expect(againstLink({ ...lost, format: null }, [identity])?.format).toBeNull()
+  })
+})
+
+describe('briefWritten', () => {
+  const row = (status: string) => ({ status }) as CoverageRowOut
+
+  it('reads a stored brief, stale or not, as written and a missing one as not', () => {
+    expect(briefWritten(row('ok'))).toBe(true)
+    expect(briefWritten(row('stale'))).toBe(true)
+    expect(briefWritten(row('missing'))).toBe(false)
+  })
+
+  it('says nothing without a row or for a status it does not know', () => {
+    expect(briefWritten(null)).toBeNull()
+    expect(briefWritten(row('no_consensus'))).toBeNull()
   })
 })

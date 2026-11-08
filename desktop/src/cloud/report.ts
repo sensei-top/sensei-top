@@ -8,6 +8,7 @@
 //   server with the names its database holds; it is scrubbed again here
 //   with the shell's, and goes as an attachment, only when `attachLog`. A
 //   tail that cannot be read leaves the report without it, never unsent.
+// - An idea never attaches the log, even when `attachLog` arrives true.
 // - The text is scrubbed here before it is captured, and again by the
 //   client's `cleanFeedback` with every other string in the event.
 // - `close` resolving true means the queue drained in time, not that
@@ -22,6 +23,7 @@ import {
   errorName,
   systemOs,
   type FeedbackAttachment,
+  type FeedbackMeta,
   type OsContext,
   type SentryFactory,
 } from './sentry';
@@ -35,20 +37,38 @@ export const LOG_TAIL_TIMEOUT_MS = 5000;
 export const REPORT_TIMEOUT_MS = 10000;
 export const LOG_ATTACHMENT_NAME = 'sensei-top.log';
 
+export const PAGE_MAX = 200;
+const MATCH_ID = /^[\w.:-]{1,100}$/;
+
 export interface ProblemReport {
   readonly text: string;
+  /** Always false for an idea, whatever arrived. */
   readonly attachLog: boolean;
+  readonly kind: 'bug' | 'idea';
+  /** An address path with no query or fragment; `null` when absent or malformed. */
+  readonly page: string | null;
+  readonly matchId: string | null;
 }
 
 /** `payload` as a `ProblemReport`, or `null`: a non-blank string `text` of
- *  at most `PROBLEM_TEXT_MAX` characters and a boolean `attachLog`. */
+ *  at most `PROBLEM_TEXT_MAX` characters and a boolean `attachLog`. `kind` is
+ *  `'bug'` when absent (older dashboards) and refuses anything but `'bug'` or
+ *  `'idea'`; a malformed `page` or `matchId` is dropped, not refused. */
 export function problemReport(payload: unknown): ProblemReport | null {
   if (payload === null || typeof payload !== 'object') return null;
-  const { text, attachLog } = payload as Record<string, unknown>;
+  const { text, attachLog, kind: rawKind, page, matchId } = payload as Record<string, unknown>;
   if (typeof text !== 'string' || typeof attachLog !== 'boolean') return null;
+  const kind = rawKind === undefined ? 'bug' : rawKind;
+  if (kind !== 'bug' && kind !== 'idea') return null;
   const trimmed = text.trim();
   if (!trimmed || trimmed.length > PROBLEM_TEXT_MAX) return null;
-  return { text: trimmed, attachLog };
+  return {
+    text: trimmed,
+    attachLog: kind === 'bug' && attachLog,
+    kind,
+    page: typeof page === 'string' && page.length <= PAGE_MAX && /^\/[^?#\s]*$/.test(page) ? page : null,
+    matchId: typeof matchId === 'string' && MATCH_ID.test(matchId) ? matchId : null,
+  };
 }
 
 export type LogTailFetch = (url: string, init: { signal: AbortSignal }) => Promise<Response>;
@@ -134,7 +154,8 @@ export async function sendProblemReport(payload: unknown, options: ReportOptions
         { userId: () => userId, names, home, os: options.os ?? systemOs() },
       ),
     );
-    client.captureFeedback(scrubText(report.text, [...names()], home), attachments);
+    const meta: FeedbackMeta = { kind: report.kind, page: report.page, matchId: report.matchId };
+    client.captureFeedback(scrubText(report.text, [...names()], home), attachments, meta);
     sent = await client.close(REPORT_TIMEOUT_MS);
   } catch (error) {
     log.warn('problem report not sent', { error: errorName(error) });

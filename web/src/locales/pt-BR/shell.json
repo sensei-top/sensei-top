@@ -27,7 +27,14 @@
     "matchInProgress": "partida em andamento,",
     "more": "Mais",
     "morePlaces": "Mais páginas",
-    "close": "Fechar"
+    "close": "Fechar",
+    "signIn": "Entrar"
+  },
+  "cardData": {
+    "percent": "Dados dos cards · {{pct}}%",
+    "downloading": "Dados dos cards · baixando",
+    "saving": "Dados dos cards · salvando",
+    "failed": "Dados dos cards · não terminou"
   },
   "liveStatus": {
     "down": "Tracker parado",

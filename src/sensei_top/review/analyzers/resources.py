@@ -129,9 +129,8 @@ def analyze_resources(snap: MatchSnapshot) -> AnalyzerResult:
                                  last_turn.self_hand),
                     ),
                     caveats=(
-                        _("This is the last turn this reader captured, which may not be the "
-                          "literal final turn of the game — a trailing turn can go unrecorded "
-                          "(see the projector's own flush_trailing)."),
+                        _("This is the last turn the log recorded, which may not be the game's "
+                          "final turn: a turn at the very end can go unrecorded."),
                     ),
                 )
             )

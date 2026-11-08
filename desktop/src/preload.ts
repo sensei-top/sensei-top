@@ -25,7 +25,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { AccountReply, ProfileChange } from './cloud/account';
 import type { ReportOutcome } from './cloud/report';
-import type { AccountSignInReply, AccountState, AppChange, BridgeSettings, DeepPartial, KeyName, Saved, ShellSettings } from './settings';
+import type { AccountSignInReply, AccountState, AppChange, BackupSnapshot, BridgeSettings, DeepPartial, KeyName, Saved, ShellSettings } from './settings';
 
 const CHANNEL = {
   initial: 'sensei-top:initial',
@@ -35,9 +35,11 @@ const CHANNEL = {
   pickFile: 'sensei-top:pick-file',
   backUpNow: 'sensei-top:back-up-now',
   restoreFrom: 'sensei-top:restore-from',
+  listBackups: 'sensei-top:list-backups',
   appSet: 'sensei-top:app-set',
   appCheckForUpdates: 'sensei-top:app-check-for-updates',
   appRestartToUpdate: 'sensei-top:app-restart-to-update',
+  appRelaunch: 'sensei-top:app-relaunch',
   appShowLogs: 'sensei-top:app-show-logs',
   appShowDataFolder: 'sensei-top:app-show-data-folder',
   appExportDiagnostics: 'sensei-top:app-export-diagnostics',
@@ -73,10 +75,12 @@ if (location.protocol === 'http:') {
     pickFile: (): Promise<string | null> => ipcRenderer.invoke(CHANNEL.pickFile),
     backUpNow: (): Promise<Saved> => ipcRenderer.invoke(CHANNEL.backUpNow),
     restoreFrom: (path: string): Promise<Saved> => ipcRenderer.invoke(CHANNEL.restoreFrom, path),
+    listBackups: (): Promise<BackupSnapshot[]> => ipcRenderer.invoke(CHANNEL.listBackups),
     app: {
       set: (change: AppChange): Promise<Saved> => ipcRenderer.invoke(CHANNEL.appSet, change),
       checkForUpdates: (): Promise<Saved> => ipcRenderer.invoke(CHANNEL.appCheckForUpdates),
       restartToUpdate: (): Promise<Saved> => ipcRenderer.invoke(CHANNEL.appRestartToUpdate),
+      relaunch: (): Promise<Saved> => ipcRenderer.invoke(CHANNEL.appRelaunch),
       showLogs: (): Promise<Saved> => ipcRenderer.invoke(CHANNEL.appShowLogs),
       showDataFolder: (): Promise<Saved> => ipcRenderer.invoke(CHANNEL.appShowDataFolder),
       exportDiagnostics: (): Promise<Saved> => ipcRenderer.invoke(CHANNEL.appExportDiagnostics),
@@ -97,7 +101,7 @@ if (location.protocol === 'http:') {
     /** Plan 40b S13: the answer to "help build the stats"; off stops any upload at once. */
     contribSet: (answer: { yes: boolean; policyVersion: string; ageConfirmed: boolean }): Promise<Saved> => ipcRenderer.invoke(CHANNEL.contribSet, answer),
     reportError: (error: { name: string; message: string; stack: string | null }): Promise<boolean> => ipcRenderer.invoke(CHANNEL.reportError, error),
-    reportProblem: (report: { text: string; attachLog: boolean }): Promise<ReportOutcome> => ipcRenderer.invoke(CHANNEL.reportProblem, report),
+    reportProblem: (report: { text: string; attachLog: boolean; kind?: 'bug' | 'idea'; page?: string; matchId?: string }): Promise<ReportOutcome> => ipcRenderer.invoke(CHANNEL.reportProblem, report),
     /** Calls `listener` when the tray's "Report a problem" was chosen; returns a function that stops it. */
     onReportProblem: (listener: () => void): (() => void) => {
       const handler = () => listener();

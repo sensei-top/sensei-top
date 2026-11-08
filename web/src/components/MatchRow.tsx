@@ -5,6 +5,7 @@ import { eventLabel, resultWord } from '../lib/events'
 import { opponentNamed, ownScore, startOf } from '../lib/home'
 import { opponentLabelText } from '../lib/opponent'
 import { formatDayTime } from '../lib/time'
+import { useCardData } from '../shell/cardData'
 import { Chip, type ChipVariant, ManaPips } from './ui'
 
 const VARIANT: Record<string, ChipVariant> = {
@@ -103,6 +104,7 @@ function OpponentDeck({ match }: { match: Match }) {
   const { t } = useTranslation()
   const named = opponentNamed(match) && match.opponent_label
   const shown = match.opponent_source === 'colors' && match.opponent_label
+  const cardData = useCardData()
   return (
     <span className="flex min-w-0 items-center gap-2">
       <ManaPips colors={match.opponent_colors} />
@@ -117,7 +119,9 @@ function OpponentDeck({ match }: { match: Match }) {
             </span>
           </>
         ) : (
-          <span className="text-body text-muted">{t('common.unknownDeck')}</span>
+          <span className="text-body text-muted">
+            {cardData?.state === 'running' ? t('matches.row.namedLater') : t('common.unknownDeck')}
+          </span>
         )}
       </span>
     </span>

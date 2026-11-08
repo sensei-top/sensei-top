@@ -73,6 +73,7 @@ def test_no_reset_gap_is_stated(conn):
     guide = build_deck_guide(conn, "deck:d1")
     assert guide.provenance.reset is None
     assert any("No format reset" in g for g in guide.gaps)
+    assert not any(c in ("legality_missing", "rules_text_missing") for c in guide.gap_codes)
     assert not any("legality" in g for g in guide.gaps)
 
 
@@ -89,6 +90,7 @@ def test_missing_legality_is_reported_as_a_hole_not_as_no_reset(conn):
     assert not any("No format reset was detected" in g for g in guide.gaps)
     gap = next(g for g in guide.gaps if "legality" in g)
     assert "cards --scryfall" in gap
+    assert guide.gap_codes[guide.gaps.index(gap)] == "legality_missing"
 
 
 def test_oracle_coverage_gap_when_text_is_missing(conn):
@@ -99,6 +101,9 @@ def test_oracle_coverage_gap_when_text_is_missing(conn):
     guide = build_deck_guide(conn, "deck:d1")
     assert guide.provenance.oracle_coverage == (0, 1)
     assert any("Rules text is missing" in g for g in guide.gaps)
+    assert len(guide.gap_codes) == len(guide.gaps)
+    missing = next(i for i, g in enumerate(guide.gaps) if "Rules text is missing" in g)
+    assert guide.gap_codes[missing] == "rules_text_missing"
 
 
 def test_leaks_and_leaks_all_decks_are_both_present(conn):
@@ -183,6 +188,33 @@ def test_a_modern_decks_guide_reads_modern_resets_and_field(conn):
     assert guide.field.fmt == "Modern"
     assert guide.field.corpus_latest_event == "2026-07-20"
     assert FORMAT_UNKNOWN_GAP not in guide.gaps
+
+
+def test_a_timestamp_event_date_reaches_the_guide_as_a_day(conn):
+    """``meta_event.event_date`` is sometimes an ISO timestamp; the guide's
+    ``corpus_latest_event`` is the day alone."""
+    _two_formats_with_one_ban_each(conn)
+    conn.execute(
+        "UPDATE meta_event SET event_date = '2026-07-20T18:30:00Z' WHERE event_id = 'mod2'"
+    )
+    conn.execute(
+        "INSERT INTO decks (deck_id, name, format, cards_json, first_seen, last_seen) "
+        "VALUES ('dek1', 'My Deck', NULL, ?, 't', 't')",
+        (json.dumps({"maindeck": [10], "sideboard": []}),),
+    )
+    conn.execute(
+        "INSERT INTO matches (match_id, started_at, ended_at, result, games_won, games_lost, "
+        "source) VALUES ('mt1', '2026-06-15T00:00:00', 't', 'win', 2, 0, 'mtgo')"
+    )
+    conn.execute(
+        "INSERT INTO mtgo_match_pick (match_id, deck_id, format) VALUES ('mt1', 'dek1', 'Modern')"
+    )
+    conn.commit()
+
+    guide = build_deck_guide(conn, "deck:dek1")
+
+    assert guide.field.fmt == "Modern"
+    assert guide.field.corpus_latest_event == "2026-07-20"
 
 
 def test_a_deck_with_no_format_gets_no_field_and_the_format_unknown_note(conn):

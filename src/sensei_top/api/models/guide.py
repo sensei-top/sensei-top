@@ -24,6 +24,9 @@ class DeckIdentityOut(BaseModel):
     ``deck_ids`` is every content-hash version this identity groups — a
     match's deck and a version's address name a bare ``deck_id``, so the
     frontend needs this list to find which guide identity one belongs to.
+    ``art_grp_id`` is the newest version's most-played card among those whose
+    type is known (``None`` when no known card is a non-land);
+    ``card_names`` its distinct maindeck names.
     """
 
     key: str
@@ -38,6 +41,8 @@ class DeckIdentityOut(BaseModel):
     games_lost: int
     first_played: str | None
     last_played: str | None
+    art_grp_id: int | None = None
+    card_names: list[str] = []
 
 
 class FormatResetOut(BaseModel):
@@ -148,6 +153,10 @@ class DeckGuideOut(BaseModel):
     list_diff: ListDiffOut | None
     field: FieldEvidenceOut
     gaps: list[str]
+    gap_codes: list[str | None] = Field(
+        default_factory=list,
+        description="aligned with gaps: rules_text_missing, legality_missing or null",
+    )
 
 
 class CardNoteOut(BaseModel):

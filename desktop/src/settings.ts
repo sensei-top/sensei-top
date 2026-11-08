@@ -137,6 +137,8 @@ export type AppSettings = {
   canContribute: boolean;
   /** shell.json's `contribAsked`: the one-time "Help build the stats" page was shown; a missing key reads false. */
   contribAsked: boolean;
+  /** shell.json's `signInDismissed` (D9): the user dismissed the offer to sign in; a missing key reads false. */
+  signInDismissed: boolean;
   /** shell.json's `contribute` (plan 40b S13); `null` while unanswered. */
   contribute: Contribute | null;
   /** The account (plan 40b S10); `{ available: false }` in a build with no Supabase project. */
@@ -160,6 +162,8 @@ export type AppChange = Partial<Pick<AppSettings, 'startWithSystem' | 'keepRunni
   aiFeatures?: boolean;
   /** Only `true`: the page was shown, and nothing un-asks it. */
   contribAsked?: true;
+  /** Only `true`: the offer was dismissed, and nothing brings it back. */
+  signInDismissed?: true;
 };
 
 /** What `window.senseiTopShell.initial` holds, and what a change sends. */
@@ -175,9 +179,11 @@ export const CHANNELS = {
   pickFile: 'sensei-top:pick-file',
   backUpNow: 'sensei-top:back-up-now',
   restoreFrom: 'sensei-top:restore-from',
+  listBackups: 'sensei-top:list-backups',
   appSet: 'sensei-top:app-set',
   appCheckForUpdates: 'sensei-top:app-check-for-updates',
   appRestartToUpdate: 'sensei-top:app-restart-to-update',
+  appRelaunch: 'sensei-top:app-relaunch',
   appShowLogs: 'sensei-top:app-show-logs',
   appShowDataFolder: 'sensei-top:app-show-data-folder',
   appExportDiagnostics: 'sensei-top:app-export-diagnostics',
@@ -511,6 +517,7 @@ export function toAppSettings(
     aiFeatures: prefs.aiFeatures ?? null,
     canContribute: info.canContribute,
     contribAsked: prefs.contribAsked === true,
+    signInDismissed: prefs.signInDismissed === true,
     contribute: prefs.contribute ?? null,
     account: info.account,
     askAutostart: info.askAutostart,
@@ -625,6 +632,7 @@ export function planAppChange(
   // A `null` stored would be dropped at the next launch and decided again.
   if (typeof change.aiFeatures === 'boolean') patch.aiFeatures = change.aiFeatures;
   if (change.contribAsked === true) patch.contribAsked = true;
+  if (change.signInDismissed === true) patch.signInDismissed = true;
   return { patch, restart: change.diagnostic !== undefined && change.diagnostic !== current.diagnostic };
 }
 
@@ -705,6 +713,38 @@ export function formatListing(output: string): string {
     .join('\n');
 }
 
+// ---- the local snapshots, for the restore's dated list --------------------
+
+/** One backup slot: the file to hand to `restoreFrom`, when it was made
+ *  (its modification time, ISO) and its size. */
+export interface BackupSnapshot {
+  path: string;
+  at: string;
+  bytes: number;
+}
+
+/** The slots among `entries`, the names in the backup folder: `<db>.backup`
+ *  and `<db>.backup.<n>`, never `<db>.backup.tmp.<pid>` or any other name
+ *  (the folder may be shared). A slot `statOf` cannot read is left out.
+ *  Newest first. */
+export function backupSnapshots(
+  dbName: string,
+  entries: readonly string[],
+  statOf: (name: string) => { mtimeMs: number; size: number } | null,
+  join: (name: string) => string,
+): BackupSnapshot[] {
+  const escaped = dbName.replace(/[.*+?^$|()[\]{}\\]/g, '\\$&');
+  const pattern = new RegExp(`^${escaped}\\.backup(?:\\.\\d+)?$`);
+  const found: Array<BackupSnapshot & { ms: number }> = [];
+  for (const name of entries) {
+    if (!pattern.test(name)) continue;
+    const stat = statOf(name);
+    if (!stat) continue;
+    found.push({ path: join(name), at: new Date(stat.mtimeMs).toISOString(), bytes: stat.size, ms: stat.mtimeMs });
+  }
+  return found.sort((a, b) => b.ms - a.ms).map(({ ms: _ms, ...slot }) => slot);
+}
+
 // ---- a restore that stopped partway (D19) --------------------------------
 
 /** The files a restore left under `.replaced` names when the live database
@@ -772,6 +812,8 @@ export interface SettingsDeps {
   countBackups(dir: string): number;
   /** The newest `<db>.backup` slot in `dir`: its modification time (ISO) and size. */
   newestBackup(dir: string): { at: string; bytes: number } | null;
+  /** Every backup slot in `dir`, newest first; `[]` when the folder cannot be read. */
+  listBackups(dir: string): BackupSnapshot[];
   now(): Date;
   applyAutostart?(on: boolean): void;
   setDiagnostic?(on: boolean): void;
@@ -1162,6 +1204,18 @@ export class SettingsService {
 
   pickFile(): Promise<string | null> {
     return this.deps.pickFile();
+  }
+
+  /** The local snapshots in the backup folder, newest first. */
+  async listBackups(): Promise<BackupSnapshot[]> {
+    const settings = this.cache ?? (await this.refresh());
+    if (!settings) return [];
+    try {
+      return this.deps.listBackups(settings.backup.dir);
+    } catch (error) {
+      this.log.warn('the backups could not be listed', { error: String(error) });
+      return [];
+    }
   }
 
   showLogs(): void {

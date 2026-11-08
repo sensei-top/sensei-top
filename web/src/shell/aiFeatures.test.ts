@@ -55,6 +55,7 @@ function shellWith(
         aiFeatures,
         canContribute: false,
         contribAsked: false,
+        signInDismissed: false,
         contribute: null,
         account: { available: false },
         askAutostart: false,
@@ -72,6 +73,7 @@ function shellWith(
     pickFile: () => Promise.resolve(null),
     backUpNow: never,
     restoreFrom: never,
+    listBackups: () => Promise.resolve([]),
     contribSet: never,
     account: {
       status: () => Promise.resolve({ available: false } as const),
@@ -87,6 +89,7 @@ function shellWith(
       set,
       checkForUpdates: never,
       restartToUpdate: never,
+      relaunch: never,
       showLogs: never,
       exportDiagnostics: never,
       showDataFolder: never,

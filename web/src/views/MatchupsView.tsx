@@ -5,7 +5,7 @@ import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } fr
 import { ShowAll } from '../components/field/ShowAll'
 import { RateCell } from '../components/RateCell'
 import { VersionSwitcher } from '../components/VersionSwitcher'
-import { Button, Card, DataTable, EmptyState, ErrorNote, Loading, ManaPips, Segmented, StatTile, TextLink, Tooltip } from '../components/ui'
+import { Button, Card, DataTable, EmptyState, ErrorNote, ManaPips, OutlineCard, Segmented, Skeleton, StatTile, TextLink, Tooltip } from '../components/ui'
 import { mergeNewestFirst } from '../lib/deckOverview'
 import { formatName } from '../lib/decks'
 import {
@@ -21,12 +21,28 @@ import {
   rowFormatName,
   rowsSpanFormats,
 } from '../lib/matchups'
+import { STAT_TILE_BLOCK_WRAPS_UNDER_LG } from './DeckOverviewView'
 import { formatRecord } from '../lib/format'
 import { pairingAddress, withVersion } from '../lib/pairing'
 import { formatCount, useNow } from '../lib/time'
 import { placeById } from '../shell/places'
 
 const MINUTE = 60_000
+
+/** The Matchups' frames while its matches load, in the place of its body. */
+export function MatchupsFrames() {
+  const { t } = useTranslation()
+  return (
+    <>
+      <div className="grid gap-4 md:grid-cols-3">
+        <OutlineCard label={t('matchups.tiles.archetypesMet')} height={STAT_TILE_BLOCK_WRAPS_UNDER_LG} />
+        <OutlineCard label={t('matchups.tiles.best')} height={STAT_TILE_BLOCK_WRAPS_UNDER_LG} />
+        <OutlineCard label={t('matchups.tiles.worst')} height={STAT_TILE_BLOCK_WRAPS_UNDER_LG} />
+      </div>
+      <OutlineCard label={t('matchups.view.archetypesMet')} words={t('matchups.reading')} height="h-136" />
+    </>
+  )
+}
 
 /** A deck's Matchups, over the versions the address chose (`versionIds`,
  *  every version when `version` is `null`), counted from the matches in
@@ -70,8 +86,12 @@ export function MatchupsView({
   // The field's win rate, in the line under a name.
   // In the deck's own format: undefined while coverage loads, null when the
   // deck has none, and neither asks for a field.
-  const fmt = useGuideCoverage(deckKey).data?.fmt
-  const fieldByKey = useFieldRecords(fmt)
+  const coverage = useGuideCoverage(deckKey)
+  const fmt = coverage.data?.fmt
+  const fieldRead = useFieldRecords(fmt)
+  const fieldByKey = fieldRead.records
+  // The format is unknown while coverage loads, and the field is then still to come.
+  const fieldLoading = fieldRead.pending || coverage.isPending
   const fieldLink = fmt ? (
     <TextLink href={`/field?format=${encodeURIComponent(fmt)}`} className="text-caption">
       {t('matchups.view.openField', { format: formatName(fmt, t) })}
@@ -97,7 +117,7 @@ export function MatchupsView({
 
   let body
   if (matches.error) body = <ErrorNote error={matches.error} />
-  else if (matches.isPending) body = <Loading />
+  else if (matches.isPending) body = <MatchupsFrames />
   else if (inHand.length === 0 && version != null) {
     body = (
       <EmptyState
@@ -179,6 +199,10 @@ export function MatchupsView({
                   {namesFormat && <div className="text-caption break-words text-muted">{rowFormatName(row, t)}</div>}
                   <div className="text-caption break-words text-muted">
                     {fieldLine({ won: row.gamesWon, lost: row.gamesLost }, field, t)}
+                    {fieldLoading && archetype != null && (
+                      // The field's part of the line, about as long as it will be.
+                      <Skeleton className="ml-2 inline-block h-[calc(var(--text-caption)*1.1)] w-40 align-middle" />
+                    )}
                   </div>
                 </div>,
                 formatCount(row.matches),
@@ -196,7 +220,7 @@ export function MatchupsView({
   }
 
   return (
-    <div className="space-y-8">
+    <div className={`${matches.isPending ? '' : 'arrive '}space-y-8`}>
       {switcher}
       {body}
     </div>

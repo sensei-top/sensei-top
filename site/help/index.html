@@ -70,7 +70,7 @@
 <li>Open the file's properties, allow it to run as a program, then double-click it. On the Steam Deck, do this in desktop mode.</li>
 </ol>
 <p>If the AppImage will not run on your system, there is also <a href="/download/linux-tar">a <code>.tar.gz</code></a>: unpack it and run <code>sensei-top</code> from the folder. It never updates itself and cannot start when you log in; the <a href="https://github.com/sensei-top/sensei-top/blob/main/INSTALL.md#the-targz">install guide</a> has the steps.</p>
-<p>On Linux, closing the window quits the app, and games you play afterwards are not recorded. To keep it running, turn on <b>Keep running when the window is closed</b> in <b>Settings</b>, under <b>App</b>. If the app does not start, the <a href="https://github.com/sensei-top/sensei-top/blob/main/INSTALL.md#linux">install guide</a> has the fix for each system.</p>
+<p>On Linux, closing the window quits the app, and games you play afterwards are not recorded. To keep it running, turn on <b>Keep running when the window is closed</b> in <b>Settings</b>, under <b>General</b>. If the app does not start, the <a href="https://github.com/sensei-top/sensei-top/blob/main/INSTALL.md#linux">install guide</a> has the fix for each system.</p>
 </section>
 
 <section id="first-run">
@@ -85,8 +85,8 @@
 </ol>
 <p>Card data, about 80 MB, downloads on its own the first time the app opens, and <b>Ready</b> shows how far it has got. The deck guides need it. If the download fails, press <b>Try again</b> there, or <b>Download card data</b> in <b>Settings</b>, under <b>Sources</b>.</p>
 <p>If you play Arena, <b>Home</b> shows <b>Turn on Detailed Logs in Arena</b> until Arena's log says they are on, with the same steps and <b>Check again</b>. Arena writes that line only when it starts, so start Arena again before you check.</p>
-<p>To go through the steps again, open <b>Settings</b>, then <b>App</b>, and press <b>Go through them again</b>.</p>
-<p><strong>Keep the app running while you play.</strong> Arena empties its log every time it starts, and keeps the session before only until it starts again. A session played with Sensei Top closed is gone after two Arena launches. <b>Start when Windows starts</b>, or <b>Start when you log in</b> with the Linux AppImage, under <b>App</b> in <b>Settings</b>, takes care of it.</p>
+<p>To go through the steps again, open <b>Settings</b>, then <b>General</b>, and press <b>Go through them again</b>.</p>
+<p><strong>Keep the app running while you play.</strong> Arena empties its log every time it starts, and keeps the session before only until it starts again. A session played with Sensei Top closed is gone after two Arena launches. <b>Start when Windows starts</b>, or <b>Start when you log in</b> with the Linux AppImage, under <b>General</b> in <b>Settings</b>, takes care of it.</p>
 </section>
 
 <section id="mtgo">
@@ -106,9 +106,9 @@
 <p>An account is free and optional, and Sensei Top works the same without one. With one, you can back up your match history, move it to another computer, and choose whether to send error reports. Each is a yes of its own, and nothing is chosen for you.</p>
 <h3>Signing in</h3>
 <p>Open <b>Settings</b>, then <b>Account</b>, and press <b>Sign in with Google</b> or <b>Sign in with Discord</b>. Signing in finishes in your browser, not in the app, which waits up to 5 minutes. There is no Sensei Top password.</p>
-<p>The first time, a few short steps ask you to confirm your age (13 or older and, if you are under 18, with a parent's or guardian's permission) and then ask three questions: whether to back up your match history, whether to send error reports, and whether to keep your history with the rules coach, which comes in a later version. Nothing is ticked for you, and you can change each answer later in <b>Settings</b>, under <b>Account</b>. If you would rather not have an account, <b>Skip and don't create an account</b> skips all three, deletes the account just made and signs you out.</p>
+<p>The first time, a few short steps ask you to confirm your age (13 or older and, if you are under 18, with a parent's or guardian's permission) and then ask three questions: whether to back up your match history, whether to send error reports, and whether to keep your history with the rules coach, which comes in a later version. Nothing is ticked for you, and you can change each answer later in <b>Settings</b>: the backup under <b>Backup</b>, the other two under <b>Account</b>. If you would rather not have an account, <b>Skip and don't create an account</b> skips all three, deletes the account just made and signs you out.</p>
 <h3>Backing up, and moving to another computer</h3>
-<p>With <b>Back up my match history</b> on, a summary of each match is uploaded: when it was played, the format, your deck, the result and the opponent's cards you saw. Your Arena and Magic Online logs, names and chat are never uploaded. A Magic Online match is backed up once you pick its deck. The database on your computer stays the original; the cloud copy is a backup.</p>
+<p>With <b>Back up my match history</b> on, a summary of each match is uploaded: when it was played, the format, your deck, the result and the opponent's cards you saw. Your Arena and Magic Online logs, names and chat are never uploaded. A Magic Online match is backed up once you pick its deck. The database on your computer stays the original; the cloud copy is a backup. The switch is in <b>Settings</b>, under <b>Backup</b>, in <b>Cloud copy</b>.</p>
 <p>To move your history to another computer, install Sensei Top there and sign in with the same account. Your answers come with the account, so backup is on there too, and the matches backed up from your other computers are downloaded to it. On <b>Matches</b>, a match that came from the cloud, and that this computer has no log of, is marked <b>Restored</b>. It has no report or turn-by-turn replay, since those are read from the game's log, which stays on the computer that played it.</p>
 <h3>Export and delete</h3>
 <p>In <b>Settings</b>, under <b>Account</b>:</p>
@@ -129,7 +129,7 @@
 <p><b>Help build the stats</b> sends your games to a private pool that Sensei Top's own stats are built from: which decks are doing well, how matchups go, how cards perform. It needs no account, and your answer stays on this computer.</p>
 <p>Before a game leaves your computer, everything that names you or your opponent is removed, and it is sent without your sign-in. A yes sends the games already in your history as well as the ones you play from then on. Nothing in a sent game says who sent it, so once it is sent it cannot be shown to you or deleted, not even by deleting your account.</p>
 <p>The app asks once: on the last welcome step or, if you set the app up before this question existed, on a page of its own the first time you open this version, where <b>Decide later</b> sends nothing. If you create an account without having said yes, the first sign-in asks again, apart from the account's questions. Until you answer, no game is sent. A yes asks you to confirm your age: 13 or older and, if you are under 18, with a parent's or guardian's permission.</p>
-<p>To turn it on or off, open <b>Settings</b>, then <b>Help build the stats</b>. Turning it off stops it at once: no more games are sent, not even one still waiting to go. Games already sent stay in the pool.</p>
+<p>To turn it on or off, open <b>Settings</b>, then <b>Account</b>, under <b>Help build the stats</b>. Turning it off stops it at once: no more games are sent, not even one still waiting to go. Games already sent stay in the pool.</p>
 <p>What a game's record holds, and what it never holds, is in the <a href="/privacy/#contributing-your-games">privacy policy</a>.</p>
 </section>
 
@@ -154,17 +154,17 @@
 <section id="report">
 <h2>Send a problem report</h2>
 <h3>Report a problem</h3>
-<p><b>Report a problem</b> sends us a few lines about what went wrong, straight from the app. It is in the tray icon's menu, in <b>Settings</b> under <b>App</b>, on an error message, and on the screen shown when a page stops working.</p>
+<p><b>Report a problem</b> sends us a few lines about what went wrong, straight from the app. It is in the tray icon's menu, in <b>Settings</b> under <b>About</b>, on an error message, and on the screen shown when a page stops working.</p>
 <ol>
-<li>Write what you were doing and what happened instead. Opened from an error, the text starts with the error's message, which you can change or delete.</li>
+<li>Write what you were doing and what happened instead. Opened from an error, the error's message is shown apart and sent after your text.</li>
 <li>If you like, tick <b>Attach the last 500 lines of the app's log</b>. It is Sensei Top's own log, never Arena's or Magic Online's, and names and keys are removed from it before it is sent.</li>
-<li>Agree to the report being sent to Sentry, in the United States. The dialog asks each time, and nothing is sent until you agree and press <b>Send report</b>.</li>
+<li>Agree to the report being sent to Sentry, in the United States. With error reports on, that yes is already given and the dialog says so; otherwise it asks each time, and nothing is sent until you agree and press <b>Send report</b>.</li>
 </ol>
 <p>It works with or without an account, and whether or not error reports are on: each press sends one report. With an account, <b>Send error reports</b> in <b>Settings</b>, under <b>Account</b>, is a separate yes that sends a report on its own when something goes wrong. What a report holds, and how long it is kept, is in the <a href="/privacy/#error-reports-and-report-a-problem">privacy policy</a>. To get an answer, open an issue or write to us, <a href="#where">as below</a>.</p>
 <h3>A diagnostics export</h3>
 <p>For a problem that needs a closer look, a diagnostics export shows what the app saw. It takes a minute.</p>
 <ol>
-<li>Open <b>Settings</b>, then <b>App</b>, and press <b>Export diagnostics</b>. The tray icon's menu has the same entry.</li>
+<li>Open <b>Settings</b>, then <b>About</b>, and press <b>Export diagnostics</b>. The tray icon's menu has the same entry.</li>
 <li>A window lists what goes in. Leave <b>Include Player.log</b> unticked unless you are asked for it: Arena's log names your opponents and your decks.</li>
 <li>Press <b>Save as…</b> and choose where to save the zip.</li>
 <li>Send the zip with a few lines: what you did, what you expected, what the app showed, and what the game showed.</li>
@@ -178,7 +178,7 @@
 </ul>
 <p>Never in it: your database, so none of your matches, and no key. Arena's <code>Player.log</code> goes in only when you tick the box.</p>
 <h3>A problem that comes and goes</h3>
-<p>Turn on <b>Diagnostic mode</b> in <b>Settings</b>, under <b>App</b>. The app then writes much more detail to its log; turning it on or off restarts the tracker for a moment. Use the app until the problem shows up again, export, then turn it off.</p>
+<p>Turn on <b>Diagnostic mode</b> in <b>Settings</b>, under <b>About</b>. The app then writes much more detail to its log; turning it on or off restarts the tracker for a moment. Use the app until the problem shows up again, export, then turn it off.</p>
 <h3 id="where">Where to send it</h3>
 <p>Open an issue with the <a href="https://github.com/sensei-top/sensei-top/issues/new?template=bug.yml">bug form</a> and attach the zip. Issues are public, so never attach <code>Player.log</code> to one. If something stopped appearing after Arena or Magic Online updated, the <a href="https://github.com/sensei-top/sensei-top/issues/new?template=log-change.yml">log change form</a> is the better one. To send a report privately, e-mail it to <a href="mailto:contact@senseitop.com">contact@senseitop.com</a>. A question rather than a problem goes to <a href="https://github.com/sensei-top/sensei-top/discussions">Discussions</a>.</p>
 </section>

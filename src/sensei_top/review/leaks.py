@@ -167,6 +167,28 @@ def scope_clause(
     return (" AND " + " AND ".join(clauses)) if clauses else "", params
 
 
+def leak_population(
+    conn,
+    deck_ids: tuple[str, ...] | None = None,
+    since: str | None = None,
+    source: str = "arena",
+    *,
+    match_ids: tuple[str, ...] | None = None,
+) -> list:
+    """The completed matches ``find_leaks`` ranks for this scope
+    (``scope_clause``'s arguments), as rows with ``match_id``, ``result``
+    and ``match_format`` (``v_match_format``'s, ``None`` when unknown).
+    ``guide/bundle.py::_build_reports`` builds its reports from the same
+    rows, so its count is exactly the matches this function's caller will
+    look up."""
+    scope_sql, scope_params = scope_clause(deck_ids, since, source, match_ids=match_ids)
+    return conn.execute(
+        f"SELECT match_id, result, match_format FROM {_MATCHES_WITH_FORMAT} "
+        f"WHERE result IN ('win', 'loss'){scope_sql}",
+        scope_params,
+    ).fetchall()
+
+
 def mana_flags(conn, match_id: str) -> tuple[bool | None, bool | None]:
     """One match's own ``(screwed, flooded)`` flags — the per-match body
     ``_mana_leaks`` rolls up into a population-wide rate, and the one place
@@ -410,12 +432,7 @@ def find_leaks(
         colors_cache = {}
     if view_cache is None:
         view_cache = {}
-    scope_sql, scope_params = scope_clause(deck_ids, since, source, match_ids=match_ids)
-    matches = conn.execute(
-        f"SELECT match_id, result, match_format FROM {_MATCHES_WITH_FORMAT} "
-        f"WHERE result IN ('win', 'loss'){scope_sql}",
-        scope_params,
-    ).fetchall()
+    matches = leak_population(conn, deck_ids, since, source, match_ids=match_ids)
     match_results = {row["match_id"]: row["result"] for row in matches}
     match_formats = {row["match_id"]: row["match_format"] for row in matches}
     total_n = len(matches)

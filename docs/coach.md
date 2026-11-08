@@ -384,6 +384,45 @@ future, incompatible schema, or corrupted — it does not guess at a
 comparison either. It states plainly that the previous report's metrics are
 unreadable and progress can't be measured, per rule 4.
 
+## Stage progress
+
+Not the "Progress" above: this is the page saying what a slow request is
+doing while it waits, the same transport the deck guide uses
+(`docs/guide.md`, "Stage progress"). On the demo database the coach's
+evidence took 88 s cold and 9 s warm, the per-match reports nearly all of
+it. They are cached across requests on `app.state.report_cache`, so only
+the first build after the data changes pays it, and per language: the
+page's evidence and the English prompt never share a report.
+
+Both GETs that build coach evidence, `GET /api/coach` and
+`GET /api/coach/narrative` (the prompt), take an optional
+`?progress=<uuid>`, and record three stages, by id, in this order:
+
+| Stage | What runs in it | Count |
+|---|---|---|
+| `matches` | the population, the format window and its resets, by deck, every population match's report, by role, mulligans, by opponent, both leak rollups, turning points, the example games, the decklists | `done` of `total` while the reports are built |
+| `field` | the field and its latest event date | none |
+| `together` | assembling the evidence; for the prompt, the reading list, "since your last report" and the prompt itself; the route's conversion follows | none |
+
+The count is `ai/coach/evidence.py::_build_match_reports` over the whole
+population, every format's matches, one tick per match whether its report
+was built or found in the cache. Every later reader of a report (both leak
+rollups, the role and turning-point buckets, the examples) is handed that
+map or finds the same cache key, so `total` is exactly the reports the build
+reads. `matches` is first recorded before the population is read, so a
+database below the minimum sample records it and nothing else.
+
+`together` on the prompt GET includes `progress_since`, which reads the
+reports the evidence already built: `build_coach_prompt` hands it the same
+cache, and its matches newer than the previous report are population
+matches under the same windows and the same (English) key, so it builds
+none of its own.
+
+The `POST` (the metered call) and the `PUT` (a pasted answer) take no
+`progress`: each is a button press whose request already shows it is
+pending. Nothing is stored and `query_only` is untouched; the registry, the
+UUID rule and the progress route are the guide's, described there.
+
 ## The prompt and the report
 
 `SYSTEM_PROMPT` is a template: `system_prompt(fmt)` fills each `{fmt}` with

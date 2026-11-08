@@ -34,6 +34,7 @@
   "settings.notAKey": "Isso não é uma chave.",
   "settings.cannotSave": "Isso não pode ser salvo.",
   "settings.notSaved": "A configuração não pôde ser salva.",
+  "settings.closing": "O Sensei Top já está fechando.",
   "settings.keyNotSaved": "A chave não pôde ser salva.",
   "settings.notRead": "As configurações não puderam ser lidas.",
   "settings.folderNotOpened": "A pasta não pôde ser aberta.",

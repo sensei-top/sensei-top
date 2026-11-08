@@ -27,7 +27,14 @@
     "matchInProgress": "match in progress,",
     "more": "More",
     "morePlaces": "More places",
-    "close": "Close"
+    "close": "Close",
+    "signIn": "Sign in"
+  },
+  "cardData": {
+    "percent": "Card data · {{pct}}%",
+    "downloading": "Card data · downloading",
+    "saving": "Card data · saving",
+    "failed": "Card data · didn't finish"
   },
   "liveStatus": {
     "down": "Tracker not running",

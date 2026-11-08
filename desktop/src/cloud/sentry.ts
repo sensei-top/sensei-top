@@ -104,6 +104,14 @@ export interface ClientOptions {
   readonly cleanFeedback: (event: Event) => Event | null;
 }
 
+/** What a report adds to its event: tags `kind` and `page`, and `match_id`
+ *  in the `feedback` context. */
+export interface FeedbackMeta {
+  readonly kind: 'bug' | 'idea';
+  readonly page: string | null;
+  readonly matchId: string | null;
+}
+
 export interface FeedbackAttachment {
   readonly filename: string;
   readonly data: string;
@@ -113,7 +121,7 @@ export interface FeedbackAttachment {
 /** One client, on a scope of its own. */
 export interface SentryClient {
   captureException(error: unknown, hint?: EventHint): string;
-  captureFeedback(message: string, attachments: readonly FeedbackAttachment[]): string;
+  captureFeedback(message: string, attachments: readonly FeedbackAttachment[], meta?: FeedbackMeta): string;
   /** Sends what is queued, then disables the client; true when the queue
    *  drained within `timeoutMs`. */
   close(timeoutMs: number): Promise<boolean>;
@@ -188,12 +196,23 @@ export type SentrySdk = Pick<
   | 'normalizePathsIntegration'
 >;
 
+function withMatchId(event: Event, matchId: string | null): Event {
+  if (!matchId || event.type !== 'feedback') return event;
+  return { ...event, contexts: { ...event.contexts, feedback: { ...event.contexts?.feedback, match_id: matchId } } };
+}
+
 /** The real factory, on the SDK `main.ts` hands over. Each client sends
  *  through Electron's `net` (DB5) and carries only the integrations that
  *  shape an error: linked causes, duplicates dropped, the app's paths
  *  written `app:///`. */
 export function sentryFactory(sdk: SentrySdk): SentryFactory {
   return (options) => {
+    // The SDK builds the `feedback` context from its own fields, so the
+    // match ID is merged in by the processor; the tags ride the scope.
+    // One feedback per client (a new client per report, as `sendProblemReport`
+    // does): a second capture before the first is processed would take the
+    // second's match ID.
+    let matchId: string | null = null;
     const client = new sdk.NodeClient({
       dsn: options.dsn,
       release: options.release,
@@ -213,7 +232,7 @@ export function sentryFactory(sdk: SentrySdk): SentryFactory {
         sdk.linkedErrorsIntegration(),
         sdk.dedupeIntegration(),
         sdk.normalizePathsIntegration(),
-        { name: 'SenseiTopFeedback', processEvent: (event) => options.cleanFeedback(event) },
+        { name: 'SenseiTopFeedback', processEvent: (event) => options.cleanFeedback(withMatchId(event, matchId)) },
       ],
     });
     const scope = new sdk.Scope();
@@ -221,8 +240,11 @@ export function sentryFactory(sdk: SentrySdk): SentryFactory {
     client.init();
     return {
       captureException: (error, hint) => scope.captureException(error, hint),
-      captureFeedback: (message, attachments) =>
-        sdk.captureFeedback({ message }, { attachments: attachments.map((a) => ({ ...a })) }, scope),
+      captureFeedback: (message, attachments, meta) => {
+        matchId = meta?.matchId ?? null;
+        if (meta) scope.setTags({ kind: meta.kind, ...(meta.page ? { page: meta.page } : {}) });
+        return sdk.captureFeedback({ message }, { attachments: attachments.map((a) => ({ ...a })) }, scope);
+      },
       close: async (timeoutMs) => client.close(timeoutMs),
     };
   };

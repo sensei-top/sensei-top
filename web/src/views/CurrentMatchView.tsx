@@ -8,7 +8,7 @@ import { OpeningHandCard } from '../components/OpeningHandCard'
 import { OpponentHandCard } from '../components/OpponentHandCard'
 import { OpponentRead, PickDeckButton } from '../components/OpponentRead'
 import { SideboardOpponentRail, SideboardPlanCard } from '../components/SideboardPlanCard'
-import { Callout, Chip, Disclosure, EmptyState, ErrorNote, Loading, ManaPips } from '../components/ui'
+import { Callout, Chip, Disclosure, EmptyState, ErrorNote, ManaPips, OutlineCard, Skeleton } from '../components/ui'
 import { isLikelyAbandoned } from '../lib/liveMatch'
 import { type LivePanel, livePanels, railAlternatives } from '../lib/livePanels'
 import { timesPhrase } from '../lib/format'
@@ -216,6 +216,24 @@ function DisclosureBar({ match, advice }: { match: CurrentMatch; advice: boolean
   )
 }
 
+/** The page's pending state: the status strip's place reserved, then the
+ *  primary card and the rail's two, in the loaded grid. */
+function LiveOutline() {
+  const { t } = useTranslation()
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <Skeleton className="h-[calc(var(--text-chip)*1.3+var(--text-stat)+var(--spacing)*6+2px)] w-full" />
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-3">
+        <OutlineCard label={t('live.library.title')} words={t('live.page.reading')} height="h-96" />
+        <div className="flex flex-col gap-3">
+          <OutlineCard label={t('live.opponentHand.title')} height="h-44" />
+          <OutlineCard label={t('live.opponent.title')} height="h-44" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function CurrentMatchView() {
   const current = useCurrentMatch()
   const read = useCurrentMatchRead()
@@ -240,7 +258,7 @@ export function CurrentMatchView() {
     </div>
   ) : null
 
-  if (current.isPending) return <Loading />
+  if (current.isPending) return <LiveOutline />
   if (current.error) return <ErrorNote error={current.error} />
 
   const openingHand = read.data?.opening_hand ?? null
@@ -260,11 +278,12 @@ export function CurrentMatchView() {
       // The live status is hidden from 48rem up here, so while the tracker
       // is not watching the page says so itself.
       return (
-        <div className="flex flex-col gap-3">
+        <div className="arrive flex flex-col gap-3">
           {callout && <Callout tone="warn">{callout}</Callout>}
           <EmptyState
             icon={placeById('live').icon}
             title={t('live.empty.title')}
+            level={2}
             message={t('live.empty.message')}
           />
         </div>
@@ -273,7 +292,7 @@ export function CurrentMatchView() {
     // A decision is pending before any match row exists. Without advice
     // the hand's read is all there is, and nothing else is known yet.
     return (
-      <div className="flex h-full min-h-0 flex-col gap-3">
+      <div className="arrive flex h-full min-h-0 flex-col gap-3">
         {stopped}
         <MatchStatusStrip match={null} openingHand={openingHand} adviceOff={adviceOff} />
         <div className="min-h-0 flex-1 overflow-hidden">
@@ -282,6 +301,7 @@ export function CurrentMatchView() {
           ) : (
             <EmptyState
               icon={placeById('live').icon}
+              level={2}
               title={t(adviceOff === 'switch' ? 'live.noAdvice.switchTitle' : 'live.noAdvice.eventTitle')}
               message={t(adviceOff === 'switch' ? 'live.noAdvice.switchMessage' : 'live.noAdvice.eventMessage')}
             />
@@ -301,7 +321,7 @@ export function CurrentMatchView() {
   if (intermission) {
     const hasRail = railAlternatives(intermission).length > 0
     return (
-      <div className="flex h-full min-h-0 flex-col gap-3">
+      <div className="arrive flex h-full min-h-0 flex-col gap-3">
         {stopped}
         <MatchStatusStrip match={match} openingHand={null} intermission={intermission} />
         <div
@@ -375,7 +395,7 @@ export function CurrentMatchView() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
+    <div className="arrive flex h-full min-h-0 flex-col gap-3">
       {stopped}
       <MatchStatusStrip match={match} openingHand={openingHand} adviceOff={adviceOff} />
 

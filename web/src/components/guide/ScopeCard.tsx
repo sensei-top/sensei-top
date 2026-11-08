@@ -1,17 +1,57 @@
 import { Trans, useTranslation } from 'react-i18next'
 import type { DeckGuideOut } from '../../api'
+import type { FirstData } from '../../bridge'
 import { formatCount, formatIsoDateShort, useNow } from '../../lib/time'
-import { Callout, Card, StatTile } from '../ui'
+import { cardDataPercent, useCardData } from '../../shell/cardData'
+import { Callout, Card, StatTile, TextLink } from '../ui'
+
+/** The gaps whose fix is the card-data download (`gap_codes`). */
+const CARD_DATA_GAPS = ['rules_text_missing', 'legality_missing']
+
+/** The gaps as lines. The card-data gaps (`gap_codes`) are one line, at the
+ *  first's place: waiting while the download runs, else a link to Settings →
+ *  Sources; in a browser (`state` null) each stays the server's sentence. */
+export function GapLines({
+  gaps,
+  codes,
+  state,
+}: {
+  gaps: string[]
+  codes: (string | null)[] | undefined
+  state: FirstData | null
+}) {
+  const { t } = useTranslation()
+  const isCardData = (i: number) => state !== null && CARD_DATA_GAPS.includes(codes?.[i] ?? '')
+  const first = gaps.findIndex((_, i) => isCardData(i))
+  return (
+    <>
+      {gaps.map((g, i) => {
+        if (!isCardData(i)) return <p key={g}>{g}</p>
+        if (i !== first || state === null) return null
+        if (state.state === 'running') {
+          const pct = cardDataPercent(state.progress)
+          return <p key={g}>{pct === null ? t('decks.guide.scope.waits') : t('decks.guide.scope.waitsPercent', { pct })}</p>
+        }
+        return (
+          <p key={g}>
+            <TextLink href="/settings/sources">{t('decks.guide.scope.download')}</TextLink>
+          </p>
+        )
+      })}
+    </>
+  )
+}
 
 /** The evidence's own provenance: the tournament corpus's freshness, how
  *  much of the current 75 has rules text, and the window a detected format
  *  reset scopes everything else to. The deck's record is the strip's over
  *  the tabs, not this card's. The page's title already names the deck, so
  *  this card's own title is just "Scope". Every gap `build_deck_guide` found is the server's own
- *  sentence, shown as sent. */
+ *  sentence, shown as sent, except the two card-data gaps (`GapLines`). */
 export function ScopeCard({ guide }: { guide: DeckGuideOut }) {
   const { t } = useTranslation()
   const now = useNow()
+  const cardData = useCardData()
   const { provenance } = guide
   const [withText, totalCards] = provenance.oracle_coverage
   const { reset, matches_before_reset: before, classified_decks, corpus_latest_event } = provenance
@@ -58,9 +98,7 @@ export function ScopeCard({ guide }: { guide: DeckGuideOut }) {
       {guide.gaps.length > 0 && (
         <div className="mt-3">
           <Callout tone="warn">
-            {guide.gaps.map((g) => (
-              <p key={g}>{g}</p>
-            ))}
+            <GapLines gaps={guide.gaps} codes={guide.gap_codes} state={cardData} />
           </Callout>
         </div>
       )}

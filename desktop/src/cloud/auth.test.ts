@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as net from 'node:net';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Logger } from '../log';
 import {
   CALLBACK_PORTS,
@@ -249,6 +249,26 @@ describe('the callback', () => {
     expect(page.text).toContain('<html lang="en">');
     expect(page.text).toContain("You're signed in. You can close this tab and go back to Sensei Top.");
     expect(auth.status().signedIn).toBe(true);
+  });
+
+  it('brings the app to the front once on a good callback, and the page closes its tab', async () => {
+    const focusApp = vi.fn();
+    const { page } = await signInWith('?code=a-code', { focusApp });
+    expect(focusApp).toHaveBeenCalledTimes(1);
+    expect(page.text).toContain('window.close()');
+    expect(page.text).toContain("You're signed in.");
+  });
+
+  it('neither focuses the app nor closes the tab on a failed callback', async () => {
+    const focusApp = vi.fn();
+    const refused = await signInWith('?error=access_denied', { focusApp });
+    expect(refused.page.text).not.toContain('window.close');
+    const rejected = await signInWith('?code=a-bad-code', {
+      focusApp,
+      token: () => json({ code: 404, error_code: 'flow_state_not_found', msg: 'x' }, 404),
+    });
+    expect(rejected.page.text).not.toContain('window.close');
+    expect(focusApp).not.toHaveBeenCalled();
   });
 
   it('answers in the shell language', async () => {

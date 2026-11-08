@@ -7,7 +7,9 @@ together for one deck, under the deck's own format
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Protocol
 
 from sensei_top.guide.deck import DeckIdentity, deck_matches, identity_format, resolve
 from sensei_top.guide.field import FieldEvidence, build_field
@@ -32,7 +34,27 @@ from sensei_top.guide.window import (
 )
 from sensei_top.guide.window import window_start as _window_start
 from sensei_top.i18n import N_, _, ngettext
-from sensei_top.review.leaks import Leak, find_leaks
+from sensei_top.review import leaks as leaks_mod
+from sensei_top.review.leaks import (
+    Leak,
+    ReportCache,
+    find_leaks,
+    leak_population,
+    report_cache_key,
+)
+
+
+class Progress(Protocol):
+    """What a slow build calls at each stage boundary: a stage id
+    (``api/progress.py::STAGES``), and ``done``/``total`` only where the
+    stage has a real count. Must be cheap: it may be called once per match."""
+
+    def __call__(self, stage: str, done: int | None = None, total: int | None = None) -> None: ...
+
+
+def no_progress(stage: str, done: int | None = None, total: int | None = None) -> None:
+    return None
+
 
 # The format_unknown note. Translated where it is used; the English stays
 # importable for the tests that look for it.
@@ -73,7 +95,11 @@ class DeckGuide:
     own list has a format but could not be classified against the field's
     archetype definitions, so there is no list diff, and ``gaps[0]`` is the
     note saying so. ``ai/guide/rcq_prompt.py`` drops that note by this flag, never by
-    matching its sentence, which is in whatever language the build ran in."""
+    matching its sentence, which is in whatever language the build ran in.
+    ``gap_codes`` is aligned with ``gaps`` (``None`` for a gap with no code)
+    or empty; whoever rebuilds ``gaps`` also passes ``gap_codes``, aligned or
+    empty. A code is how the dashboard recognizes a gap whose fix is the
+    card-data download."""
 
     provenance: Provenance
     play: PlayEvidence
@@ -83,6 +109,7 @@ class DeckGuide:
     field: FieldEvidence
     gaps: tuple[str, ...]
     own_unclassified: bool = False
+    gap_codes: tuple[str | None, ...] = ()
 
 
 def _oracle_coverage(conn: sqlite3.Connection, identity: DeckIdentity) -> tuple[int, int]:
@@ -99,8 +126,46 @@ def _oracle_coverage(conn: sqlite3.Connection, identity: DeckIdentity) -> tuple[
     return (with_text, len(grp_ids))
 
 
+def _build_reports(
+    conn: sqlite3.Connection,
+    *,
+    consensus_window: Callable[[str], str | None],
+    consensus_cache: dict,
+    colors_cache: dict,
+    view_cache: dict,
+    report_cache: ReportCache,
+    progress: Progress,
+) -> None:
+    """Builds into ``report_cache`` the ``MatchReport`` of every match the
+    all-decks ``find_leaks`` call ranks (``leak_population``, unscoped),
+    counting each one for ``progress``, so both ``find_leaks`` calls then
+    find every report already built. Each match gets the window that call
+    gives it: its format's, through the same ``consensus_window``, and none
+    for a match with no format."""
+    rows = leak_population(conn)
+    total = len(rows)
+    progress("matches", 0, total)
+    for done, row in enumerate(rows, start=1):
+        match_format = row["match_format"]
+        window = consensus_window(match_format) if match_format is not None else None
+        cache_key = report_cache_key(row["match_id"], window)
+        if cache_key not in report_cache:
+            # Through review.leaks, so this is the very builder find_leaks
+            # calls (and a test's spy on it sees every build).
+            report_cache[cache_key] = leaks_mod.build_match_report(
+                conn, row["match_id"], consensus_since=window,
+                consensus_cache=consensus_cache, colors_cache=colors_cache,
+                view_cache=view_cache,
+            )
+        progress("matches", done, total)
+
+
 def build_deck_guide(
-    conn: sqlite3.Connection, key: str, *, report_cache: dict | None = None,
+    conn: sqlite3.Connection,
+    key: str,
+    *,
+    report_cache: dict | None = None,
+    progress: Progress = no_progress,
 ) -> DeckGuide | None:
     """One deck's whole guide bundle, under the deck's format
     (``guide/deck.py``'s ``identity_format``): its resets, its field and
@@ -119,7 +184,13 @@ def build_deck_guide(
     process rather than rebuilt from scratch. ``None`` (the CLI ``guide``
     command's own call, and this function's default) is a fresh dict that
     lives only as long as this one call.
+
+    ``progress`` is told each stage as it starts, in order: ``matches``
+    (counted per match reported), ``field``, ``together``. ``matches`` is
+    the first call, before the key is resolved, so a key that resolves to
+    nothing still records it.
     """
+    progress("matches")
     identity = resolve(conn, key)
     if identity is None:
         return None
@@ -151,14 +222,15 @@ def build_deck_guide(
         game_length=game_length(conn, identity),
     )
 
-    # One cache set shared across both calls: the deck-scoped population is
-    # a subset of the all-decks one, so most opponent archetypes, the
-    # classifier's card-colour table, and build_snapshot's own repeated view
-    # lookups all recur between them (find_leaks/build_consensus/
-    # build_snapshot docstrings). A match reported in both populations needs
-    # its MatchReport built only once: report_cache_key (this function's
-    # docstring) never includes find_leaks's own scoping, and both calls give
-    # a match the same window and language.
+    # One cache set shared by _build_reports and both find_leaks calls: the
+    # deck-scoped population is a subset of the all-decks one, so most
+    # opponent archetypes, the classifier's card-colour table, and
+    # build_snapshot's own repeated view lookups all recur between them
+    # (find_leaks/build_consensus/build_snapshot docstrings). A match
+    # reported in both populations needs its MatchReport built only once:
+    # report_cache_key (this function's docstring) never includes
+    # find_leaks's own scoping, and every call gives a match the same window
+    # and language.
     consensus_cache: dict = {}
     colors_cache: dict = {}
     view_cache: dict = {}
@@ -173,6 +245,11 @@ def build_deck_guide(
         conn, {fmt: window_start} if fmt is not None else None,
     )
 
+    _build_reports(
+        conn, consensus_window=consensus_window, consensus_cache=consensus_cache,
+        colors_cache=colors_cache, view_cache=view_cache, report_cache=report_cache,
+        progress=progress,
+    )
     leaks = tuple(find_leaks(
         conn, deck_ids=identity.deck_ids, consensus_window=consensus_window,
         consensus_cache=consensus_cache, colors_cache=colors_cache,
@@ -184,19 +261,27 @@ def build_deck_guide(
         view_cache=view_cache, report_cache=report_cache,
     ))
 
+    progress("field")
     diff = build_list_diff(conn, identity, reset=reset, fmt=fmt) if fmt is not None else None
     field = build_field(conn, identity, reset=reset, fmt=fmt)
 
+    progress("together")
     oracle_coverage = _oracle_coverage(conn, identity)
 
     # Keep this order: own_unclassified promises the unclassified note is
     # gaps[0] (DeckGuide's docstring).
     gaps: list[str] = []
+    gap_codes: list[str | None] = []
+
+    def add_gap(text: str, code: str | None = None) -> None:
+        gaps.append(text)
+        gap_codes.append(code)
+
     own_unclassified = fmt is not None and diff is None
     if fmt is None:
-        gaps.append(_(FORMAT_UNKNOWN_GAP))
+        add_gap(_(FORMAT_UNKNOWN_GAP))
     elif own_unclassified:
-        gaps.append(
+        add_gap(
             _(
                 "Your own deck could not be classified against the field's archetype "
                 "definitions — the list-vs-consensus comparison is unavailable."
@@ -205,37 +290,39 @@ def build_deck_guide(
     with_text, total_cards = oracle_coverage
     if total_cards and with_text < total_cards:
         missing = total_cards - with_text
-        gaps.append(
+        add_gap(
             ngettext(
                 "Rules text is missing for {missing} of your {total} cards — run "
                 "`sensei-top cards --scryfall` to fill this in.",
                 "Rules text is missing for {missing} of your {total} cards — run "
                 "`sensei-top cards --scryfall` to fill this in.",
                 missing,
-            ).format(missing=missing, total=total_cards)
+            ).format(missing=missing, total=total_cards),
+            "rules_text_missing",
         )
     if fmt is not None and reset is None:
         # Two different answers, and the difference matters: with no legality
         # data a ban cannot be detected at all, so "no reset" would be a
         # claim about the corpus that nothing here is in a position to make.
         if legality_known(conn, fmt):
-            gaps.append(
+            add_gap(
                 _(
                     "No format reset was detected in the tournament corpus — every number "
                     "below spans its full available history."
                 )
             )
         else:
-            gaps.append(
+            add_gap(
                 _(
                     "No card legality data is present, so a format reset cannot be detected "
                     "at all: every field share, consensus list and matchup rate below may "
                     "pool across a ban. Run `sensei-top cards --scryfall` and rebuild this "
                     "guide before trusting them."
-                )
+                ),
+                "legality_missing",
             )
     if not identity.deck_ids:
-        gaps.append(_("This deck has no recorded matches."))
+        add_gap(_("This deck has no recorded matches."))
 
     provenance = Provenance(
         deck=identity,
@@ -257,4 +344,5 @@ def build_deck_guide(
         field=field,
         gaps=tuple(gaps),
         own_unclassified=own_unclassified,
+        gap_codes=tuple(gap_codes),
     )

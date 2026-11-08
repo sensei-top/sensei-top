@@ -251,7 +251,25 @@ p {
   transition-timing-function: ease-out;
 }
 
+/* The content that replaces a page's outline fades in. Opacity only, so
+   nothing moves: the outline already reserved the layout. */
+.arrive {
+  animation: arrive 160ms ease-out;
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .arrive {
+    animation: none;
+  }
   .transition-chrome {
     transition: none;
   }
