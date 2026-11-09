@@ -164,6 +164,10 @@ free tracker, the copy prompt and the user's own key stay free beside it.
 the launch's own counts measure. Not part of the account and rules coach
 decided on 2026-11-02, which plan no paywall.
 
+**Frozen (2026-11-09):** with the rest of the selling work, under "Outside
+the code". The trigger there reopens the preparation; the subscription
+itself still waits for around 3,000 monthly active users.
+
 **Needs:** Which features it holds. A merchant of record (Paddle). The
 account (BL-100). X sign-in's terms, unread. Daybreak's Fansite license
 agreement if §14.3 asks for one. The notice Anthropic's Commercial Terms
@@ -1020,9 +1024,20 @@ Each of those items says what the other party's own pages already answer, as
 read on that day, and what is left to ask. The user sends each question.
 Such an item closes when the answer is recorded in `docs/attribution.md`.
 
+**Frozen since 2026-11-09:** the work that only serves selling. That is the
+Store listing's price (BL-070), the subscription (BL-006), the question to
+Microsoft about selling from an Individual account, and the Daybreak and
+TopDeck.gg questions (BL-077, BL-078), which only a sale raises. At the
+app's present size neither paid thing can pay for the work it takes, so
+what brings users comes first. Each of these is `P3` and is picked up again
+when the updater's feed counts about 100 active installs a day or the app
+has 1,000 monthly active users, whichever comes first. The freeze is
+reviewed on 2027-03-01; below the trigger it holds through 2027. BL-076 is
+not frozen, because the free download reads those definitions too.
+
 ### BL-070 · The Microsoft Store listing
 
-type: chore · priority: P1 · status: blocked · area: release legal
+type: chore · priority: P3 · status: blocked · area: release legal
 
 The paid Microsoft Store listing (decided 2026-10-12, `ROADMAP.md`): the
 Store build is the same app as the free download, listed free at release and
@@ -1038,6 +1053,9 @@ submitted on 2026-10-21 and passed certification the same day: the listing
 (Store ID 9NZ5GQMCG1ZN) is live and free, in every market. What is left is
 the price. The maintainer stays an individual, not a company, until income
 asks otherwise.
+
+**Frozen (2026-11-09):** the price, and the question to Microsoft with it,
+wait for the trigger under "Outside the code". The listing stays up, free.
 
 **Needs:** Microsoft's answer on selling from an Individual developer
 account, whose eligibility text names "non-commercial purposes" and "not in
@@ -1151,11 +1169,13 @@ the use the maintainer proposed MIT for, so the free download does not block
 on the answer. The paid Store build and the subscription (2026-10-12) sell
 an app that names decks from these definitions, so neither is sold until the
 file lands. If it never does, deck naming falls back to the corpus read plus
-rules written here.
+rules written here. Not frozen with the selling work (2026-11-09): the free
+download names decks from these definitions too, so the comment on issue
+148 is still worth sending.
 
 ### BL-077 · Daybreak's terms for mtgo.com
 
-type: chore · priority: P2 · status: blocked · area: legal mtgo
+type: chore · priority: P3 · status: blocked · area: legal mtgo
 
 Daybreak's terms for mtgo.com (2026-10-05). Read in full: the ToS
 (2026-07-13), the MTGO EULA (2022-05-31), the API Policy on the Census page
@@ -1182,9 +1202,12 @@ MTGO documentation lists no decklist collection, while its page source names
 five; a service id the user registers settles whether they exist, and only a
 "no" turns into a question for Daybreak.
 
+**Frozen (2026-11-09):** every question left here is raised by a sale or by
+a hosted feed, and neither is being built. See "Outside the code".
+
 ### BL-078 · TopDeck.gg's terms
 
-type: chore · priority: P2 · status: blocked · area: legal metagame
+type: chore · priority: P3 · status: blocked · area: legal metagame
 
 TopDeck.gg (2026-10-05, closed 2026-10-07, open again 2026-10-12). Read in
 full: the API page (undated, API version 2026-07), the site's Terms and
@@ -1201,3 +1224,6 @@ say its content "is not for resale" and forbid use that would "in any way
 exploit any of the content"; only the API page's grant answers it today, and
 the question to TopDeck should quote both. The fetch runs on the user's own
 key.
+
+**Frozen (2026-11-09):** the one open question is raised only by a sale.
+See "Outside the code".
