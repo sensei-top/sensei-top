@@ -19,7 +19,7 @@ needs an account", "no telemetry", and the site never saying "AI".
 Planned, not built: a free, optional account with Google sign-in, which
 adds a backup of the match history and error reports, each its own yes,
 and a hosted rules coach that answers rules and card questions with cited
-rule numbers and is never sent a match (`BACKLOG.md`'s BL-100 to BL-102;
+rule numbers and is never sent a match (`BACKLOG.md`'s BL-101 and BL-102;
 AGENTS.md rules 5 and 6; `docs/llm.md`, "What is hosted, and what it
 receives"). The tracker keeps working fully without an account. The copy
 prompt and the user's own key stay as they are, and an "AI features"

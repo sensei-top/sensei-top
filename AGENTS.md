@@ -136,7 +136,7 @@ One line each; the detail is in the doc named, and
      foreign `Host` or `Origin` and any non-GET request without the
      dashboard's `X-Tracker-Client` header, pinned by `tests/test_guard.py`.
 
-   **The free, optional account** (being built: BL-100 to BL-102) adds
+   **The free, optional account** (released in 1.4.0; the coach, BL-101, is being built) adds
    cloud history, error reports and the hosted rules coach, each its own yes;
    no sync payload carries a raw event, handle or chat, and the coach gets no
    match: `docs/llm.md`, "What is hosted, and what it receives".
@@ -169,7 +169,7 @@ One line each; the detail is in the doc named, and
    current slot, because each report is measured against the one before it),
    `rcq_guide` (a tournament-day guide written for one decklist the user
    pasted; like `coach_report` it keeps every row, because each one is the
-   record of a specific event's preparation), and, being built (BL-100),
+   record of a specific event's preparation), and
    `cloud_match` (a match pulled back from the user's own cloud history,
    stored as received, never derived; a match read from this install's own
    log always wins over it). Nothing on this allowlist is ever read by

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-09
+
 ### Added
 
 - A free, optional account, in Settings under "Account": sign in with
@@ -25,7 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - "Report a problem", in the tray, in Settings under "App", on an error
   message and on the screen shown when a page stops working: each press
   sends one report, with or without an account, and can attach the last
-  500 lines of the app's own log. It asks before every report.
+  500 lines of the app's own log. It asks before every report. You say
+  whether it is a bug or an idea, and the report carries the page and the
+  match you sent it from.
 - "Help build the stats", a yes of its own that needs no account: it sends
   your games, with everything that names you or your opponent removed, to
   the private pool Sensei Top's own stats are built from. The last welcome
@@ -33,6 +37,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   or off at any time.
 - A page that stops working now says so, with Reload and "Report a
   problem", and the app keeps recording meanwhile.
+- Decks has a search box for deck and card names, and decks with fewer
+  than 5 matches fold into one group.
+- A lost match's report links to the matchup, with your record in it, and
+  a pairing shows what you brought in against it before.
+- Settings restores the database from a dated list of backup copies, and
+  "Restart now" relaunches the app.
+- Guide and Coach show which stage they are at while they work.
+- The header shows the card data's download while it runs.
 
 ### Changed
 
@@ -41,6 +53,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   error reports, Report a problem and contributed games, dated 2026-11-05.
 - The help pages on [senseitop.com](https://senseitop.com/help/) explain
   the account, "Help build the stats" and Report a problem.
+- Settings is in six groups, each on a page of its own, and says "Saved"
+  when a change is kept.
+- A deck's pages open on a band with its art, and a match's page shows
+  your own card.
+- Pages load as outlines first, so nothing moves when the data arrives.
+- Field opens on 15 days of tier B results, and Home's field card uses the
+  same window.
+- Signing in brings the app to the front and closes the browser tab.
 
 ## [1.3.0] - 2026-11-03
 
@@ -458,7 +478,8 @@ The app is the same as 0.7.1's; this release carries the website.
   keeps recording with the window closed, and start-with-Windows as an
   option. On Linux, an AppImage that updates itself in place.
 
-[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/sensei-top/sensei-top/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/sensei-top/sensei-top/compare/v1.2.4...v1.3.0
 [1.2.4]: https://github.com/sensei-top/sensei-top/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/sensei-top/sensei-top/compare/v1.2.2...v1.2.3

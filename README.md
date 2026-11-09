@@ -133,7 +133,7 @@ Each change is checked before it is merged:
   account ID or local path reaches it.
 - **Real games.** Nothing is released before the maintainer has run it
   against their own Arena and Magic Online games, and release builds are
-  tried by a small group of testers on Windows and a Steam Deck.
+  tried by a small group of testers on Windows and Linux.
 
 This is about how the app is made. The app itself never sends anything to
 a model unless you set a Claude key of your own and press a button that
