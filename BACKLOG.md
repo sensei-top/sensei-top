@@ -48,7 +48,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-108
+Next ID: BL-109
 
 ## Features
 
@@ -157,7 +157,7 @@ The optional subscription (decided 2026-10-12, `AGENTS.md` rule 5,
 `docs/llm.md`, "What is hosted, and what it receives"): gated by feature,
 never by rank or event type; a monthly report allowance inside it, never
 tokens, credits or a prepaid balance; a hosted proxy holding the
-maintainer's key; the free account BL-100 builds, used at checkout. The
+maintainer's key; the free account, used at checkout. The
 free tracker, the copy prompt and the user's own key stay free beside it.
 
 **Why deferred:** Deferred until around 3,000 monthly active users, which
@@ -169,7 +169,7 @@ the code". The trigger there reopens the preparation; the subscription
 itself still waits for around 3,000 monthly active users.
 
 **Needs:** Which features it holds. A merchant of record (Paddle). The
-account (BL-100). X sign-in's terms, unread. Daybreak's Fansite license
+account, released in 1.4.0. X sign-in's terms, unread. Daybreak's Fansite license
 agreement if §14.3 asks for one. The notice Anthropic's Commercial Terms
 (D.3) require, that outputs are not to be relied on without checking, shown
 to subscribers. A line in rule 5 for the allowance.
@@ -438,32 +438,13 @@ tracker's own, on top of the game. MTGO does not get one.
 
 **Why deferred:** The user reversed "no overlay" on 2026-11-02 and put it first
 in the roadmap's order the same day; the account, the rules coach and the
-work after them (BL-100 to BL-106, BL-004) have gone ahead of it since. Not
+work after them (BL-101 to BL-106, BL-004) have gone ahead of it since. Not
 started: it has no design yet.
 
 **Needs:** Its own design: which reads it carries, how a window stays over the
 game on Windows and on Linux under Wine or Proton, and how Arena's fullscreen
 modes affect that. It holds to two standing rules: never injecting into the
 client (`ROADMAP.md`, "Never"), and the event rule (`table/queues.py`).
-
-### BL-100 · A free, optional account, with cloud history and error reports
-
-type: feat · priority: P1 · status: in-progress · area: desktop api web site legal
-
-A free, optional account (Google or Discord sign-in through Supabase
-Auth) that adds cloud history and error reports, each a separate yes on
-one consent screen with nothing pre-ticked (decided 2026-11-02; AGENTS.md rules 5 and 6;
-`docs/llm.md`, "What is hosted, and what it receives"). Electron's main
-process holds the session and syncs; the local API builds the payloads
-and stores pulled matches in a new `cloud_match` table; Sentry in the
-shell and the local API, gated on consent; Report a problem; Settings →
-Account with export and delete; a restored marker in the match list.
-MTGO matches sync once their deck is picked. Notes and tags are not
-built, and installs run from source get no sync.
-
-**Why deferred:** Built on `feature/accounts-sync`, with the privacy
-policy and terms it links to live. It waits on the final verification
-against the hosted Supabase project and on the Windows VM.
 
 ### BL-101 · The rules coach
 
@@ -487,8 +468,8 @@ cap and kill switch tested. Until then the hosted coach is limited to
 beta testers' accounts. The eval's gold set is the user's to write.
 
 **Needs:** Its plan (sub-plans C and E of
-`~/.claude/plans/release-40-coach-and-accounts.md`). The account
-(BL-100). An OpenAI account with a hard monthly limit. The Fan Content
+`~/.claude/plans/release-40-coach-and-accounts.md`). The account,
+released in 1.4.0. An OpenAI account with a hard monthly limit. The Fan Content
 Policy notice in the site's footer and the app's About.
 
 ### BL-102 · The AI package and its switch
@@ -525,7 +506,7 @@ anonymous `security definer` function that nobody can read back from; the
 shell remembers which games it sent in its own `userData`, so no migration
 and no change to rule 6 (decided 2026-11-03).
 
-**Why deferred:** Built with the account (BL-100) on
+**Why deferred:** Built with the account on
 `feature/accounts-sync`. It waits on the same final verification, against
 the hosted Supabase project and on the Windows VM.
 
@@ -535,7 +516,7 @@ type: feat · priority: P2 · status: blocked · area: api legal
 
 An account nobody has signed in to for 24 months is deleted, after an
 email 30 days before that says so and how to keep it. Not built with the
-account (BL-100): it needs an email sender, which nothing else in the app
+account: it needs an email sender, which nothing else in the app
 has yet. The first account can turn 24 months old in late 2028, so this is
 due well before then, not now (decided 2026-11-03).
 
@@ -586,6 +567,20 @@ Not started.
 **Needs:** The set's name and its release dates on Arena and MTGO, and
 whether a rotation or a ban comes with it; a `Player.log` captured after
 Arena's set update, if a parsing rule turns out to need changing (rule 7).
+
+### BL-108 · Notes and tags on a match, synced with the account
+
+type: feat · priority: P3 · status: needs-decision · area: desktop api web
+
+The account (released in 1.4.0) was planned to carry the user's own notes
+and tags on a match to their other computers, beside the match history.
+Neither notes nor tags exist in the app yet, so there was nothing to sync:
+the free account shipped without them. Building them means a new
+authored-artifact table, so rule 6's allowlist grows (a design change, not
+a patch), and a sync payload for each.
+
+**Why deferred:** Split out of the account's item when it closed with
+1.4.0 (2026-11-09). No player has asked for notes or tags yet.
 
 ## Bugs
 

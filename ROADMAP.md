@@ -10,9 +10,9 @@ expected. Vote and argue in
 The tracker is free and works fully without an account, now and later:
 your match history, your record in every matchup, the leak finder, the
 turn-by-turn replay, and written guides through a prompt you paste into
-any assistant or through a key of your own. [Next](#next), a free,
-optional account adds a backup of your match history, error reports you
-choose to send, and a rules coach that answers with the rule numbers it
+any assistant or through a key of your own. A free, optional account
+adds a backup of your match history and error reports you choose to send,
+and [next](#next) a rules coach that answers with the rule numbers it
 relied on. Two paid things are planned, and neither takes any of that
 away. The Microsoft Store build is the same app as the free download,
 [listed free](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN) since
@@ -34,7 +34,10 @@ The order below follows from that.
 1.0.0 shipped on 2026-10-17, with the Windows installer, the Linux
 AppImage, updates that apply themselves, and Brazilian Portuguese beside
 English. Since then: games 1 and 2–3 apart in every matchup, fixes to how
-Magic Online's log is read, and Arena found on more Linux setups
+Magic Online's log is read, Arena found on more Linux setups, and in 1.4.0
+a free, optional account. Sign in with Google or Discord, or never: it
+backs up your match history and sends error reports, each only if you
+turn it on, on one screen where nothing is ticked for you
 ([CHANGELOG.md](CHANGELOG.md)). What comes before the next release:
 
 1. **The Microsoft Store build** of the same app, which the Store signs,
@@ -47,18 +50,13 @@ Magic Online's log is read, and Arena found on more Linux setups
 
 In this order, unless Discussions says otherwise.
 
-1. **A free, optional account, and a rules coach.** Sign in with Google,
-   or never: the tracker keeps working fully without it. The account
-   adds a backup of your match history, so it survives a reinstall and
-   reaches your other computers, and error reports, each only if you
-   turn it on, on one screen where nothing is ticked for you. The rules
-   coach answers rules and card questions in English, on the website and
-   in the app, and cites the rule numbers it used. It is a hosted AI
+1. **A rules coach**, for players signed in to the free account. It
+   answers rules and card questions in English, on the website and in
+   the app, and cites the rule numbers it used. It is a hosted AI
    model, so each answer says it may be wrong and to ask a judge at a
    tournament, and there is a daily limit per player. The coach is never
    sent your matches. An "AI features" switch in Settings hides the
-   coach and the written guides. Testers get the account first, and both
-   go public together. (BL-100, BL-101, BL-102)
+   coach and the written guides. (BL-101, BL-102)
 2. **An overlay for Arena.** The Live page's reads in a window of the
    tracker's own, on top of the game, under the rule below for events. It
    draws over Arena and never injects into it. Magic Online does not get
