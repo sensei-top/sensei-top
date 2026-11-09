@@ -63,6 +63,7 @@ function shellWith(
         windowsStore: false,
         rulesText: null,
         firstData: { state: 'idle' },
+        restarting: false,
         version: '1',
         platform: 'linux',
       },

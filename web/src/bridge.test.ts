@@ -34,6 +34,7 @@ function settings(version: string, model = 'm'): BridgeSettings {
       windowsStore: false,
       rulesText: null,
       firstData: { state: 'idle' },
+      restarting: false,
       version,
       platform: 'linux',
     },

@@ -72,6 +72,7 @@ const SAMPLE_APP: AppSettings = {
   windowsStore: false,
   rulesText: 31000,
   firstData: { state: 'idle' },
+  restarting: false,
   version: '0.0.0-sample',
   platform: 'linux',
 }

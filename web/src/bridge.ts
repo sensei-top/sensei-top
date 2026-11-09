@@ -232,6 +232,10 @@ export type AppSettings = {
   /** Cards with rules text, from the shell's last read; `null` when unknown. */
   rulesText: number | null
   firstData: FirstData
+  /** True while the shell stops and starts the server on purpose (a setting
+   *  it reads at start, the account, error reports, a restore); the shell
+   *  layout shows `RestartScreen` instead of the tracker-down notice. */
+  restarting: boolean
   version: string
   platform: string
   /** The language preference (`shell.json`'s `language`). Absent from a

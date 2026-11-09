@@ -14,6 +14,8 @@ import { matchIdOf, pageOf, ReportProblemContext, signedInOf, type ReportOpener 
 import { BottomBar } from './BottomBar'
 import { CardDataChip } from './CardDataChip'
 import { LiveStatus } from './LiveStatus'
+import { RestartScreen } from './RestartScreen'
+import { mainNotice, useRestartScreen } from './restarting'
 import { documentTitle, layoutName, placeAt, PRODUCT_NAME, type RouteHandle } from './places'
 import { Rail } from './Rail'
 
@@ -68,6 +70,7 @@ export function Shell() {
   const shell = useShell()
   const hasShell = shell !== null
   const navigate = useNavigate()
+  const notice = mainNotice(useRestartScreen(shell?.app?.settings.restarting === true), live.isError)
   // A signed-in user with no profile, or answers given under an older
   // policy, is asked first; the consent screen itself is never redirected.
   // From setup it carries the step, to come back to it.
@@ -201,14 +204,21 @@ export function Shell() {
               focus ? 'md:flex md:min-h-0 md:flex-col md:overflow-hidden md:py-3' : ''
             }`}
           >
-            {live.isError && (
+            {notice === 'trackerDown' && (
               <div className="mb-4 shrink-0">
                 <Callout tone="warn">{t('shell.trackerDown')}</Callout>
               </div>
             )}
+            {notice === 'restarting' && <RestartScreen />}
             {/* In focus mode the page fills what the callout leaves, and a live
-                view's own h-full column measures against this box. */}
-            <div className={focus ? 'md:flex md:min-h-0 md:flex-1 md:flex-col' : undefined}>
+                view's own h-full column measures against this box. Hidden, not
+                unmounted, under the restart screen: a page waiting on the
+                restart (the welcome's Send, a Settings save) keeps its state
+                and finishes what it started. */}
+            <div
+              hidden={notice === 'restarting'}
+              className={focus ? 'md:flex md:min-h-0 md:flex-1 md:flex-col' : undefined}
+            >
               <Outlet />
             </div>
           </main>

@@ -102,6 +102,7 @@ describe('the shell groups draw their sections in order', () => {
       windowsStore: false,
       rulesText: null,
       firstData: { state: 'idle' },
+      restarting: false,
       version: '1.0.0',
       platform: 'linux',
     }

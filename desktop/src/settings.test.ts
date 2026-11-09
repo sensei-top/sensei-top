@@ -55,7 +55,7 @@ const DOCTOR = {
   mtgo: { discovered: null },
   cards: { arena_ids: 10, rules_text: 5 },
 };
-const NO_APP_EXTRAS = { askAutostart: false, canAutostart: false, windowsStore: false, rulesText: null, firstData: { state: 'idle' }, account: { available: false }, canContribute: false } as const;
+const NO_APP_EXTRAS = { askAutostart: false, canAutostart: false, windowsStore: false, rulesText: null, firstData: { state: 'idle' }, account: { available: false }, canContribute: false, restarting: false } as const;
 
 describe('config --json to ShellSettings', () => {
   it('carries mtgo.deck_dir into sources.mtgoDeckDir, null when unset', () => {
@@ -147,6 +147,7 @@ describe('config --json to ShellSettings', () => {
       windowsStore: false,
       rulesText: null,
       firstData: { state: 'idle' },
+      restarting: false,
       version: '1.2.3',
       platform: 'linux',
     });
@@ -155,7 +156,7 @@ describe('config --json to ShellSettings', () => {
   });
 
   it('carries askAutostart and canAutostart through as given', () => {
-    const base = { version: '1', platform: 'win32', update: { state: 'idle' } as const, rulesText: null, firstData: { state: 'idle' }, account: { available: false }, canContribute: false } as const;
+    const base = { version: '1', platform: 'win32', update: { state: 'idle' } as const, rulesText: null, firstData: { state: 'idle' }, account: { available: false }, canContribute: false, restarting: false } as const;
     const installer = toAppSettings({}, { ...base, askAutostart: false, canAutostart: true, windowsStore: false });
     expect(installer.askAutostart).toBe(false);
     expect(installer.canAutostart).toBe(true);
@@ -470,10 +471,12 @@ const BUSY = 'A backup started 2m ago (pid 123) is still running; nothing to do.
 
 type Cards = { lines: string[]; fail?: RunError; finish?: Promise<void> };
 
-function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?: string; slot?: { at: string; bytes: number } | null; snapshots?: BackupSnapshot[]; open?: string | Error; storeFails?: boolean; cards?: Cards; doctor?: () => string; configFails?: { on: boolean }; restoreHold?: Promise<void>; canContribute?: boolean; appFlags?: { canAutostart: boolean; windowsStore: boolean } } = {}) {
+function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?: string; slot?: { at: string; bytes: number } | null; snapshots?: BackupSnapshot[]; open?: string | Error; storeFails?: boolean; cards?: Cards; doctor?: () => string; configFails?: { on: boolean }; restoreHold?: Promise<void>; startFails?: boolean; canContribute?: boolean; appFlags?: { canAutostart: boolean; windowsStore: boolean } } = {}) {
   const backupOutput = extra.backupOutput ?? '  Backup:    2,048 bytes, verified\n';
   const calls: Array<{ args: readonly string[]; stdin?: string }> = [];
   const events: string[] = [];
+  // The server's stops and starts among the `restarting` values the page was sent.
+  const timeline: string[] = [];
   const languages: string[] = [];
   const stored: ShellJson = {};
   const changes: BridgeSettings[] = [];
@@ -521,11 +524,13 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
     },
     stopServer: () => {
       events.push('stop');
+      timeline.push('stop');
       return Promise.resolve();
     },
     startServer: () => {
       events.push('start');
-      return Promise.resolve();
+      timeline.push('start');
+      return extra.startFails ? Promise.reject(new Error('the server did not start')) : Promise.resolve();
     },
     reloadWindow: () => events.push('reload'),
     store: {
@@ -553,7 +558,10 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
     pickFile: () => Promise.resolve(null),
     showLogs: () => {},
     openDataFolder: () => (extra.open instanceof Error ? Promise.reject(extra.open) : Promise.resolve(extra.open ?? '')),
-    changed: (settings) => changes.push(settings),
+    changed: (settings) => {
+      changes.push(settings);
+      timeline.push(`restarting ${settings.app.restarting}`);
+    },
     updateStatus: () => updates.status,
     account: () => accountState.value,
     setUpdateChecks: (on) => void updates.switched.push(on),
@@ -564,7 +572,7 @@ function harness(failures: Record<string, RunError> = {}, extra: { backupOutput?
       error: () => {},
     },
   };
-  return { service: new SettingsService(deps), languages, late, calls, events, stored, changes, warnings, infos, overlap, updates, autostarts, accountState };
+  return { service: new SettingsService(deps), languages, late, calls, events, timeline, stored, changes, warnings, infos, overlap, updates, autostarts, accountState };
 }
 
 describe('the local snapshots', () => {
@@ -664,6 +672,41 @@ describe('the service', () => {
     const saved = await bad.service.save({ sources: { arenaLog: { path: '/x' } } });
     expect(saved).toEqual({ ok: false, error: 'The path is not allowed.' });
     expect(bad.events).not.toContain('stop');
+  });
+
+  it('tells the page it is restarting for the whole stop and start, and no longer after', async () => {
+    const { service, timeline } = harness();
+    await service.refresh();
+    await service.save({ sources: { arenaLog: { path: '/a/Player.log' } } });
+    expect(timeline).toEqual(['restarting true', 'stop', 'start', 'restarting false', 'restarting false']);
+    timeline.length = 0;
+    await service.restartFor('error-report settings changed');
+    expect(timeline).toEqual(['restarting true', 'stop', 'start', 'restarting false']);
+  });
+
+  it('stops saying it is restarting when the server does not start', async () => {
+    const { service, timeline } = harness({}, { startFails: true });
+    await service.refresh();
+    await expect(service.restartFor('error-report settings changed')).rejects.toThrow('the server did not start');
+    expect(timeline).toEqual(['restarting true', 'stop', 'start', 'restarting false']);
+    expect(service.current?.app.restarting).toBe(false);
+  });
+
+  it('says it is restarting through a restore, and not after one that stopped partway', async () => {
+    const ok = harness();
+    await ok.service.refresh();
+    await ok.service.restoreFrom('/b/backup');
+    expect(ok.timeline.slice(0, 4)).toEqual(['restarting true', 'stop', 'start', 'restarting false']);
+    const partway = harness({ restore: new RunError(3, 'Restore stopped partway.\n') });
+    await partway.service.refresh();
+    await partway.service.restoreFrom('/b/backup');
+    expect(partway.timeline).toEqual(['restarting true', 'stop', 'restarting false']);
+  });
+
+  it('sends nothing about a restart before the first read', async () => {
+    const { service, timeline } = harness();
+    await service.restartFor('error-report settings changed');
+    expect(timeline).toEqual(['stop', 'start']);
   });
 
   it('restarts the server for diagnostic mode', async () => {
