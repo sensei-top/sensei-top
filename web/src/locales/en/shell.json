@@ -18,6 +18,7 @@
   "homeLink": "{{product}}, home",
   "skipLink": "Skip to the page",
   "trackerDown": "The tracker is not running, so nothing new can load. What is on screen is what was last loaded. This notice goes away once the tracker answers again.",
+  "restarting": "Applying your changes, back in a moment…",
   "footer": {
     "local": "Your match history is kept on this computer. No account needed.",
     "credits": "Credits"

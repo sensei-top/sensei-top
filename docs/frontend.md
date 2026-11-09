@@ -266,6 +266,19 @@ notice over the page (a `Callout`, `tone="warn"`): the tracker is not
 running, and what is on screen is what was last loaded. It goes once the
 tracker answers again.
 
+A restart the desktop shell makes on purpose shows the restart screen
+instead (`web/src/shell/RestartScreen.tsx`): the top sways on its point and hops
+now and then (`.top-spin`, `.top-hop` in `index.css`, still under reduced
+motion) over one status line, "Applying your changes, back in a moment…"
+(`shell.restarting`). It shows while `AppSettings.restarting` is true
+(`docs/desktop.md`, "Which saves restart the server") and until one more
+heartbeat has answered after it (`web/src/shell/restarting.ts`), so the notice the
+failed beats left never flashes before the page comes back. The page stays
+mounted under it, `hidden`, so a button waiting on the restart, the account
+welcome's Send or a Settings save, keeps its state and finishes. A crash
+restart never sets the flag and keeps the notice. The header's pill still
+says "Tracker not running" meanwhile, which is true.
+
 ### Focus mode
 
 Live is in focus mode from 48rem up. The bar and the footer go and the

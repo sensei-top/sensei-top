@@ -266,8 +266,52 @@ p {
   }
 }
 
+/* The restart screen's top (shell/RestartScreen.tsx). It spins on its
+   point: a flat glyph can't turn, so it sways about the tip as a top
+   precesses. Every few seconds it hops and lands with a small squash. Two
+   elements, so the two transforms compose. */
+.top-spin {
+  transform-origin: 40% 95%;
+  animation: top-spin 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes top-spin {
+  from {
+    transform: rotate(-28deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+.top-hop {
+  transform-origin: 50% 100%;
+  animation: top-hop 2.8s ease-in-out infinite;
+}
+
+@keyframes top-hop {
+  0%,
+  72%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  80% {
+    transform: translateY(-18px) scale(0.96, 1.04);
+  }
+  88% {
+    transform: translateY(0) scale(1.06, 0.94);
+  }
+  92% {
+    transform: translateY(-4px) scale(1, 1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .arrive {
+    animation: none;
+  }
+  .top-spin,
+  .top-hop {
     animation: none;
   }
   .transition-chrome {

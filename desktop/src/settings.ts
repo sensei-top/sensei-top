@@ -152,6 +152,11 @@ export type AppSettings = {
   /** Cards with rules text, from doctor; `null` when unknown. */
   rulesText: number | null;
   firstData: FirstData;
+  /** True while the shell stops and starts the server on purpose (a setting
+   *  it reads at start, the account, error reports, a restore): the page
+   *  shows its restart screen, not the tracker-down notice. A crash restart
+   *  never sets it. */
+  restarting: boolean;
   version: string;
   platform: string;
 };
@@ -503,6 +508,7 @@ export function toAppSettings(
     firstData: FirstData;
     account: AccountState;
     canContribute: boolean;
+    restarting: boolean;
   },
 ): AppSettings {
   return {
@@ -525,6 +531,7 @@ export function toAppSettings(
     windowsStore: info.windowsStore,
     rulesText: info.rulesText,
     firstData: info.firstData,
+    restarting: info.restarting,
     version: info.version,
     platform: info.platform,
   };
@@ -849,6 +856,8 @@ export class SettingsService {
   private quietAbort = false;
   /** Restores asked for and not yet finished; no download starts while any is. */
   private pendingRestores = 0;
+  /** A deliberate stop...start is under way (`AppSettings.restarting`). */
+  private restarting = false;
 
   constructor(private readonly deps: SettingsDeps) {
     this.log = deps.log ?? silent;
@@ -911,6 +920,7 @@ export class SettingsService {
       firstData: this.firstDataState,
       account: this.deps.account(),
       canContribute: this.deps.canContribute,
+      restarting: this.restarting,
     });
   }
 
@@ -951,8 +961,24 @@ export class SettingsService {
 
   private async restartServer(reason: string): Promise<void> {
     this.log.info('restarting the server for a setting', { reason });
-    await this.deps.stopServer();
-    await this.deps.startServer();
+    await this.whileRestarting(async () => {
+      await this.deps.stopServer();
+      await this.deps.startServer();
+    });
+  }
+
+  /** Runs a deliberate stop...start with `restarting` on, so the page shows
+   *  its restart screen for it, and turns it off however `work` ends: a
+   *  server left stopped then shows the tracker-down notice, as it should. */
+  private async whileRestarting<T>(work: () => Promise<T>): Promise<T> {
+    this.restarting = true;
+    this.updateChanged();
+    try {
+      return await work();
+    } finally {
+      this.restarting = false;
+      this.updateChanged();
+    }
   }
 
   save(change: DeepPartial<ShellSettings>): Promise<Saved> {
@@ -1043,23 +1069,27 @@ export class SettingsService {
     try {
       await this.stopDownloadForRestore();
       return await this.serial(async () => {
-        await this.deps.stopServer();
-        let code: number | null | 'not-run' = 0;
-        let stderr = '';
-        try {
-          await this.deps.run(['restore', file]);
-        } catch (error) {
-          const shaped = errorShape(error);
-          if (shaped) ({ code, stderr } = shaped);
-          else code = 'not-run';
-        }
-        const outcome = interpretRestore(code, stderr);
-        if (!outcome.restartServer) {
-          this.log.error('restore ended partway; the server stays stopped', { code, files: filePairLines(stderr) });
-          return outcome.saved;
-        }
-        await this.deps.startServer();
-        restarted = true;
+        const outcome = await this.whileRestarting(async () => {
+          await this.deps.stopServer();
+          let code: number | null | 'not-run' = 0;
+          let stderr = '';
+          try {
+            await this.deps.run(['restore', file]);
+          } catch (error) {
+            const shaped = errorShape(error);
+            if (shaped) ({ code, stderr } = shaped);
+            else code = 'not-run';
+          }
+          const outcome = interpretRestore(code, stderr);
+          if (!outcome.restartServer) {
+            this.log.error('restore ended partway; the server stays stopped', { code, files: filePairLines(stderr) });
+            return outcome;
+          }
+          await this.deps.startServer();
+          restarted = true;
+          return outcome;
+        });
+        if (!outcome.restartServer) return outcome.saved;
         // A finished or failed download described the database just replaced.
         if (outcome.saved.ok && this.firstDataState.state !== 'idle' && this.firstDataState.state !== 'running') {
           this.setFirstData({ state: 'idle' });

@@ -147,6 +147,14 @@ spawned with both (`ReportsLink`, "Error reports" below); a change that
 leaves the server's environment as it was does not. The model, the keys and
 every other `shell.json` preference do not restart it.
 
+Every one of these sets `AppSettings.restarting` for its stop and start
+(`SettingsService.whileRestarting`), the restore for its whole stop,
+`restore` and start, and clears it however the restart ends; the page shows
+its restart screen meanwhile, not the tracker-down notice
+(`docs/frontend.md`, "The live status"). A crash restart (`server.ts`) never sets
+it. The change is sent only once the settings have been read, like every
+`updateChanged`.
+
 **The shell log.** `logs/shell.log` in the data directory, beside the
 server's `sensei-top.log`, in the same line format (`src/sensei_top/logs.py`) so the two merge by time:
 a UTC timestamp with milliseconds, the launch's 8-hex session id (the same

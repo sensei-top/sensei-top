@@ -28,6 +28,7 @@ function app(change: Partial<AppSettings> = {}): AppSettings {
     windowsStore: false,
     rulesText: null,
     firstData: { state: 'idle' },
+    restarting: false,
     version: '1.0.0',
     platform: 'linux',
     ...change,
