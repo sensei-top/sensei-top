@@ -390,6 +390,13 @@ class Match(BaseModel):
         description="the match's format (v_match_format); null when it is unknown or not a "
         "tracked format",
     )
+    restored: bool = Field(
+        False,
+        description="true for a match pulled back from the user's cloud history (cloud_match) "
+        "that this install has no log of: it has no report, replay or turns, and the columns "
+        "the cloud does not carry (ended_at, rank, opponent_colors, the best-of-three split) "
+        "are null",
+    )
 
 
 class MatchGame(BaseModel):

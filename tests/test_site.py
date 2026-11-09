@@ -601,11 +601,15 @@ def test_the_store_listing_is_a_button_a_step_and_a_help_line():
 
 
 def test_the_policy_pages_carry_the_date_they_changed():
-    """The privacy policy's date is its version, which an account's consent records."""
+    """The privacy policy's date is its version, `POLICY_VERSION`, which an
+    account's consent records: the two never drift apart."""
+    source = (ROOT / "web" / "src" / "lib" / "policy.ts").read_text(encoding="utf-8")
+    found = re.search(r"POLICY_VERSION = '(\d{4}-\d{2}-\d{2})'", source)
+    assert found, "web/src/lib/policy.ts no longer declares POLICY_VERSION = 'YYYY-MM-DD'"
     for url_path in POLICY_PAGES:
         phrase = "Last changed" if PAGES[url_path][1] == "en" else "Última alteração:"
         _, page = load(url_path)
-        assert f"{phrase} 2026-11-03" in page.paragraphs, url_path
+        assert f"{phrase} {found.group(1)}" in page.paragraphs, url_path
 
 
 def test_the_privacy_pages_name_every_request_the_app_makes():
@@ -620,6 +624,8 @@ def test_the_privacy_pages_name_every_request_the_app_makes():
             "TopDeck.gg",
             "GitHub",
             "Cloudflare Web Analytics",
+            "Supabase",
+            "Sentry",
         ):
             assert name in text, (url_path, name)
 

@@ -44,6 +44,33 @@ match, one at a time or a group at once, and saving a written deck guide,
 matchup brief, match or leak narrative, coach report or RCQ guide. While
 `serve` runs, the API it uses is documented at http://127.0.0.1:8000/docs.
 
+## The account, error reports and Help build the stats
+
+The desktop app adds three things the dashboard alone does not have, all
+of them done by the app's shell, so an install run from source gets none
+of them: no account, no cloud backup, no error reports and no games sent.
+
+- **The account**, free and optional: Settings → Account, signing in with
+  Google or Discord in the system browser. Cloud backup of the match
+  history (a summary of each match, never a log, a name or chat) and error
+  reports are each a separate yes. The backup restores the history on
+  another computer; Settings → Account also exports the cloud data and
+  deletes the cloud history or the whole account. A match pulled from the
+  cloud that this install has no log of is marked "Restored" on Matches
+  and has no report or replay. On Linux with no keyring the app does not
+  keep the sign-in, so it asks again at each launch.
+- **Report a problem**, in the tray, Settings → About and on an error
+  message: one report, sent after you agree to it, with or without an
+  account. Automatic error reports are the account's separate yes.
+- **Help build the stats**, a yes of its own that needs no account: it
+  sends your games, stripped of everything that names you or your
+  opponent, to the pool Sensei Top's own stats are built from. Settings → Account
+  turns it off.
+
+What each one sends, and for how long it is kept, is in the
+[privacy policy](https://senseitop.com/privacy/); the step-by-step is
+[on the website](https://senseitop.com/help/#account).
+
 ## Language
 
 The dashboard reads in English and in Brazilian Portuguese. The desktop app

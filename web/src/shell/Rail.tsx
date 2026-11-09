@@ -1,8 +1,10 @@
+import { LogIn } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { BrandGlyph } from '../components/ui'
 import { useMatchInProgress } from '../lib/liveMatch'
 import { useAiFeatures } from './aiFeatures'
+import { useSignInOffer } from './signInOffer'
 import { placeLabel, PRODUCT_NAME, visiblePlaces, type Place } from './places'
 
 /** A place's icon, with the live dot when something is happening there
@@ -35,6 +37,7 @@ export function Rail({ current }: { current: Place | null }) {
   const { t } = useTranslation()
   const matchInProgress = useMatchInProgress()
   const [aiOn] = useAiFeatures()
+  const { offered } = useSignInOffer()
   const isLive = (place: Place) => place.id === 'live' && matchInProgress
   return (
     <nav
@@ -50,19 +53,31 @@ export function Rail({ current }: { current: Place | null }) {
       </Link>
       {visiblePlaces(aiOn).map((place) => {
         const isCurrent = current?.id === place.id
-        return (
+        const signIn =
+          place.id === 'settings' && offered ? (
+            <Link
+              key="sign-in"
+              to="/settings/account"
+              className="mt-auto flex w-full flex-col items-center gap-1 rounded-control px-1 py-2 text-chip font-medium text-muted transition-chrome hover:text-ink"
+            >
+              <LogIn size={22} strokeWidth={1.75} aria-hidden />
+              <span>{t('shell.nav.signIn')}</span>
+            </Link>
+          ) : null
+        return [
+          signIn,
           <Link
             key={place.id}
             to={place.path}
             aria-current={isCurrent ? 'page' : undefined}
             className={`flex w-full flex-col items-center gap-1 rounded-control px-1 py-2 text-chip font-medium transition-chrome ${
-              place.id === 'settings' ? 'mt-auto' : ''
+              place.id === 'settings' && !offered ? 'mt-auto' : ''
             } ${isCurrent ? 'bg-surface3 text-ink' : 'text-muted hover:text-ink'}`}
           >
             <PlaceIcon place={place} live={isLive(place)} current={isCurrent} />
             <span>{placeLabel(place, t)}</span>
-          </Link>
-        )
+          </Link>,
+        ]
       })}
     </nav>
   )

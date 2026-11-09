@@ -25,15 +25,12 @@
   },
   "field": {
     "title": "O meta de {{format}}, e você contra ele",
-    "noteSince": "{{kind}} desde {{since}}",
-    "noteLast90": "{{kind}}, últimos 90 dias",
-    "notPlayedSince": "não jogado desde {{since}}",
-    "notPlayedLast90": "não jogado nos últimos 90 dias",
-    "barsWithDeck": "As barras são a fatia de cada deck em {{lists}} listas de torneio. A linha sob cada uma é o seu histórico com {{deck}} no mesmo período.",
-    "barsNoDeck": "As barras são a fatia de cada deck em {{lists}} listas de torneio. A linha sob cada uma é o seu histórico no mesmo período.",
+    "noteLastDays": "{{kind}}, últimos {{days}} dias",
+    "notPlayedLastDays": "não jogado nos últimos {{days}} dias",
+    "barsWithDeck": "As barras são a fatia de cada deck em {{lists}} listas de torneio. A linha sob cada uma é seu histórico com {{deck}} no mesmo período.",
+    "barsNoDeck": "As barras são a fatia de cada deck em {{lists}} listas de torneio. A linha sob cada uma é seu histórico no mesmo período.",
     "listShort": "Seu histórico é contado sobre suas últimas 500 partidas.",
-    "sinceDate": "desde {{since}}",
-    "last90": "nos últimos 90 dias"
+    "lastDays": "nos últimos {{days}} dias"
   },
   "firstRun": {
     "title": "Esta página se preenche conforme você joga",
@@ -89,10 +86,13 @@
     "kicker": {
       "match": "Última partida",
       "pattern": "Padrão",
-      "field": "Meta"
+      "field": "Meta",
+      "deck": "Seu deck",
+      "next": "Próximo passo"
     },
     "loading": {
       "pattern": "Procurando um padrão entre suas partidas…",
+      "deck": "Comparando seu deck com o meta…",
       "field": "Lendo o meta…"
     },
     "readReport": "Ler o relatório",
@@ -123,6 +123,32 @@
         "noDeckPlayed": "Seu histórico contra ele é {{record}}.",
         "noDeckNone": "Você não jogou contra ele {{when}}."
       }
+    },
+    "deckTitle": "Histórico de {{deck}}: {{record}}",
+    "deckUnmet": "{{archetype}} é o deck mais jogado do meta de {{format}} que você ainda não enfrentou.",
+    "deckPlayed_one": "{{count}} partida, jogada {{when}}.",
+    "deckPlayed_other": "{{count}} partidas, a última {{when}}.",
+    "openMatchup": "Abrir o matchup",
+    "openDeck": "Abrir o deck",
+    "next": {
+      "cardData": {
+        "title": "Baixe os dados dos cards",
+        "body": "Os guias de deck leem o texto de regras deles."
+      },
+      "cardDataRunning": {
+        "title": "Os dados dos cards estão sendo baixados",
+        "body": "Os guias de deck abrem assim que terminar."
+      },
+      "openSources": "Abrir Fontes",
+      "secondWeek": {
+        "title": "Jogue em uma segunda semana",
+        "body": "Com uma segunda semana, o Início mostra sua taxa de vitórias por semana."
+      },
+      "patterns": {
+        "title": "Os padrões começam com 20 partidas",
+        "body_one": "Um padrão compara pelo menos 10 partidas que têm algo com 10 que não têm. Você tem {{count}} partida vencida ou perdida com um deck reconhecido.",
+        "body_other": "Um padrão compara pelo menos 10 partidas que têm algo com 10 que não têm. Você tem {{count}} partidas vencidas ou perdidas com um deck reconhecido."
+      }
     }
   },
   "weekly": {
@@ -144,5 +170,10 @@
     "checkAgain": "Verificar de novo",
     "checking": "Verificando",
     "stillOff": "Ainda não confirmado. O Arena só diz isso ao iniciar, então abra-o de novo primeiro."
+  },
+  "signInOffer": {
+    "line": "Entre para guardar uma cópia do seu histórico na nuvem.",
+    "button": "Entrar",
+    "dismiss": "Agora não"
   }
 }

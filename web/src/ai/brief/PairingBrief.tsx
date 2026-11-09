@@ -9,7 +9,7 @@ import { useNow } from '../../lib/time'
 import { writtenNote } from '../../lib/written'
 import { CopyPromptBody } from '../CopyPromptCard'
 import { PlanBody } from '../../components/guide/WrittenCards'
-import { Button, Callout, Card, ErrorNote, Loading, SectionLabel } from '../../components/ui'
+import { Button, Callout, Card, ErrorNote, SectionLabel, Skeleton } from '../../components/ui'
 
 /** A stored brief: what to play around, card then reason; the swap, its
  *  problems and the prose as a guide's plan lays them (`PlanBody`); then
@@ -79,7 +79,7 @@ export function PairingBrief({ deckKey, opponentKey }: { deckKey: string; oppone
   if (coverage.data == null || briefs.data == null) {
     return (
       <Card title={title} subtitle={subtitle}>
-        <Loading />
+        <Skeleton className="h-50 w-full" />
       </Card>
     )
   }

@@ -13,7 +13,9 @@ from pydantic import BaseModel, Field
 
 class DeckWinrate(BaseModel):
     deck_key: str | None = Field(
-        description="'guid:<arena_deck_id>', or 'deck:<hash>' when Arena never named one; "
+        description="'guid:<arena_deck_id>', or 'deck:<hash>' when Arena never named one, "
+        "or 'cloud:<name>' for matches restored from the user's cloud history, which name a "
+        "deck but have no local one; "
         "null on the one row that counts every match with no deck recorded, which for an "
         "MTGO match is one the user has not picked a deck for"
     )
@@ -21,7 +23,7 @@ class DeckWinrate(BaseModel):
     deck_name: str | None = None
     versions: int = Field(
         description="distinct maindeck content hashes rolled into this deck; 0 on the "
-        "row of matches with no deck"
+        "row of matches with no deck and on a 'cloud:' row"
     )
     matches_completed: int
     matches_won: int

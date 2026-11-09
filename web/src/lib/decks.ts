@@ -10,6 +10,7 @@ import type { TFunction } from '../i18n'
 import { formatRecord } from './format'
 import { versionDays } from './deckOverview'
 import { isFinished, startOf } from './home'
+import { takeUnused, type ArtCard } from './matchArt'
 import type { RateOrRecord } from './sample'
 import { RATE_MIN_MATCHES, ROUGH_RATE_MIN, rateOrRecord } from './sample'
 import { ago, formatCount, parseTimestamp } from './time'
@@ -177,6 +178,23 @@ export type DecksTile = {
    *  detail is read once, so never one still in progress. `null` when the
    *  list holds none, and no other request is made for it. */
   artMatchId: string | null
+  /** The identity's `art_grp_id`: the art when the match's cast gives none. */
+  artGrpId: number | null
+  /** The identity's distinct maindeck card names, for the search. */
+  cardNames: string[]
+}
+
+/** A tile's art: the first card of `cast` not in `used`, else the deck's
+ *  own `artGrpId` (taken even when `used`, so a deck with a named card is
+ *  never empty); `null` when neither exists. The card joins `used`.
+ *  While `settled` is false (the matches list or this tile's match detail
+ *  has not arrived) the answer is `null`, the wash, so no tile shows the
+ *  fallback and then switches to a cast card. */
+export function tileArt(cast: ArtCard[], used: Set<number>, artGrpId: number | null, settled = true): ArtCard | null {
+  if (!settled) return null
+  const card = takeUnused(cast, used) ?? (artGrpId != null ? { grpId: artGrpId, name: null } : null)
+  if (card) used.add(card.grpId)
+  return card
 }
 
 /** What a name shared by two or more identities marks on each (see
@@ -243,6 +261,8 @@ export function decksTiles(
       newest: mark?.newest ?? false,
       playedRange: mark?.playedRange ?? null,
       detail: tileDetail(identity.format, identity.deck_ids.length, t),
+      artGrpId: identity.art_grp_id ?? null,
+      cardNames: identity.card_names ?? [],
       artMatchId: finished.find((match) => ids.has(match.deck_id ?? ''))?.match_id ?? null,
     }
   })
@@ -293,4 +313,38 @@ export function tileFormats(tiles: DecksTile[]): string[] {
 /** The tiles of `format`; all of them when `format` is empty. */
 export function filterTiles(tiles: DecksTile[], format: string | null | undefined): DecksTile[] {
   return format ? tiles.filter((tile) => tile.format === format) : tiles
+}
+
+/** Matches under this many go into the fold on `/decks`. */
+export const FOLD_MIN_MATCHES = 5
+
+/** `text` lower-cased with its accents taken off (NFD, combining marks
+ *  stripped), for comparing what the viewer typed with a name. */
+function plain(text: string): string {
+  return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+}
+
+/** The query as the page uses and writes it: `raw` trimmed, `''` when absent. */
+export function chosenQuery(raw: string | null | undefined): string {
+  return (raw ?? '').trim()
+}
+
+/** Whether `query`, ignoring case and accents, is a substring of the tile's
+ *  name or of any of its card names. An empty query matches every tile; a
+ *  tile with no name matches on its cards only. */
+export function tileMatches(tile: DecksTile, query: string): boolean {
+  const needle = plain(chosenQuery(query))
+  if (!needle) return true
+  return [tile.name, ...tile.cardNames].some((each) => each != null && plain(each).includes(needle))
+}
+
+/** `tiles` (already filtered and sorted) split into the grid and the fold of
+ *  decks under `FOLD_MIN_MATCHES` finished matches, each keeping only the
+ *  tiles that match `query`. When every tile of `tiles` would fold, nothing
+ *  folds, whatever the query: the answer does not change as the viewer types. */
+export function splitFold(tiles: DecksTile[], query: string): { main: DecksTile[]; folded: DecksTile[] } {
+  const matching = tiles.filter((tile) => tileMatches(tile, query))
+  const few = (tile: DecksTile) => tile.finished < FOLD_MIN_MATCHES
+  if (tiles.every(few)) return { main: matching, folded: [] }
+  return { main: matching.filter((tile) => !few(tile)), folded: matching.filter(few) }
 }

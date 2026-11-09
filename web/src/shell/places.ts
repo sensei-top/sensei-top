@@ -81,13 +81,15 @@ export function documentTitle(place: Place | null, t: TFunction, title: string |
 }
 
 /** An address that is no place in the rail but has a name of its own. */
-export type RouteTitle = 'mtgoPicks' | 'welcome'
+export type RouteTitle = 'mtgoPicks' | 'welcome' | 'accountWelcome' | 'contribute'
 
 /** The name of an address that is no place, "Welcome". */
 export function routeTitle(title: RouteTitle, t: TFunction): string {
   const titles: Record<RouteTitle, string> = {
     mtgoPicks: t('shell.titles.mtgoPicks'),
     welcome: t('shell.titles.welcome'),
+    accountWelcome: t('shell.titles.accountWelcome'),
+    contribute: t('contribute.heading'),
   }
   return titles[title]
 }
@@ -100,6 +102,9 @@ export type RouteHandle = {
   title?: RouteTitle
   /** The page is only for a desktop shell; in a browser it is not found. */
   needsShell?: boolean
+  /** The page is a step of the welcome: the layout draws its name and the
+   *  page alone, with no rail, bottom bar, status chip or footer. */
+  bare?: boolean
 }
 
 /** The name the layout shows as the `h1`, and `title`, the name of a

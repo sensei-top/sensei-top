@@ -1,7 +1,8 @@
 """The current-match reads: the match in progress, and the
 opening-hand/keep/opponent-hand/library reads that replaced board math,
 play-around and the scoreboard (``sensei_top.table``,
-``docs/current-match.md``).
+``docs/current-match.md``), and the break read's past boarding asked for
+outside a break.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from sensei_top.api.convert import (
     _intermission_out,
     _keep_guide_out,
     _opening_hand_out,
+    _past_boarding_out,
 )
 from sensei_top.api.deps import Conn
 from sensei_top.api.models.current_match import (
@@ -23,7 +25,9 @@ from sensei_top.api.models.current_match import (
     CurrentMatchRead,
     HandReadOut,
     LibraryCardOut,
+    PastBoardingOut,
 )
+from sensei_top.api.routes.guide import _no_deck
 from sensei_top.api.sql import (
     _attach_zones,
     _cached_break_read,
@@ -33,7 +37,9 @@ from sensei_top.api.sql import (
     _rows,
     match_format,
 )
+from sensei_top.guide.deck import resolve
 from sensei_top.table.hand_read import build_hand_read
+from sensei_top.table.intermission import past_boarding_against
 from sensei_top.table.keep import build_keep_guide
 from sensei_top.table.live import build_library_remaining, build_live_state
 from sensei_top.table.opening_hand import build_opening_hand_read
@@ -288,3 +294,18 @@ def current_match_read(request: Request, conn: Conn) -> CurrentMatchRead:
         # an event's game is not (table/queues.py).
         advice=advice or intermission_out is not None,
     )
+
+
+@router.get(
+    "/api/guide/{key}/past-boarding/{archetype_key}",
+    response_model=list[PastBoardingOut], tags=["guide"],
+)
+def guide_past_boarding(key: str, archetype_key: str, conn: Conn) -> list[PastBoardingOut]:
+    """What this deck boarded the last few times it faced ``archetype_key``
+    (bare, no ``archetype:`` prefix), the break read's own past boarding
+    read with no break and no match excluded. 404 for a deck key that
+    resolves to nothing; an archetype it never faced is an empty list."""
+    identity = resolve(conn, key)
+    if identity is None:
+        raise _no_deck(key)
+    return [_past_boarding_out(p) for p in past_boarding_against(conn, identity, archetype_key)]

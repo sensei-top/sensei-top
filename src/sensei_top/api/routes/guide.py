@@ -13,6 +13,7 @@ from sensei_top.api.models.guide import (
     DeckIdentityOut,
     GuideMarkdownOut,
 )
+from sensei_top.api.progress import progress_reporter
 from sensei_top.api.sql import _shared_report_cache
 from sensei_top.guide.bundle import build_deck_guide
 from sensei_top.guide.deck import list_identities
@@ -38,14 +39,23 @@ def guide_decks(conn: Conn) -> list[DeckIdentityOut]:
 
 
 @router.get("/api/guide/{key}", response_model=DeckGuideOut, tags=["guide"])
-def guide(key: str, request: Request, conn: Conn) -> DeckGuideOut:
+def guide(
+    key: str, request: Request, conn: Conn, progress: str | None = None,
+) -> DeckGuideOut:
     """One deck's whole evidence bundle: play patterns, this deck's own
     leak-finder rollup beside every deck's, the current 75 against the
     field's consensus, and the field itself around any detected format
     reset — see ``guide/bundle.py``. 404 mirrors ``match_report``'s own
     posture: a key that resolves to nothing is a missing resource.
+
+    ``progress``, a UUID, has the build record its stages under it for
+    ``GET /api/progress/{key}`` (``api/progress.py``); any other value is
+    ignored.
     """
-    deck_guide = build_deck_guide(conn, key, report_cache=_shared_report_cache(request, conn))
+    deck_guide = build_deck_guide(
+        conn, key, report_cache=_shared_report_cache(request, conn),
+        progress=progress_reporter(request, progress),
+    )
     if deck_guide is None:
         raise _no_deck(key)
     return _deck_guide_out(deck_guide)

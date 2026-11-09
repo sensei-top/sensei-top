@@ -10,6 +10,7 @@ import {
 import { useMemo } from 'react'
 import { apiLanguage } from './i18n'
 import { versionsInOrder } from './lib/deckOverview'
+import { withProgress } from './lib/stageProgress'
 import { fieldRecordsByKey, type FieldRecord } from './lib/matchups'
 import type { RcqInputs } from './lib/rcq'
 import type { components } from './types/api'
@@ -72,6 +73,7 @@ export type MetaCardGroup = components['schemas']['MetaCardGroup']
 export type MetaCard = components['schemas']['MetaCard']
 export type MetaSourceHold = components['schemas']['MetaSourceHold']
 export type DeckIdentityOut = components['schemas']['DeckIdentityOut']
+export type ProgressOut = components['schemas']['ProgressOut']
 export type DeckGuideOut = components['schemas']['DeckGuideOut']
 export type CardVerdictOut = components['schemas']['CardVerdictOut']
 export type ListDiffOut = components['schemas']['ListDiffOut']
@@ -391,6 +393,20 @@ export const useLeaks = () =>
 export const useGuideDecks = () =>
   useQuery({ queryKey: ['guide-decks'], queryFn: () => get<DeckIdentityOut[]>('/api/guide/decks') })
 
+/** What this deck's identity (`deckKey`) boarded in its last matches
+ *  against the archetype `archetypeKey`, bare (X of `archetype:X`): empty
+ *  for one never faced, and for MTGO, which has no boarding. Asked only with
+ *  both in hand. */
+export const usePastBoarding = (deckKey: string | undefined, archetypeKey: string | null) =>
+  useQuery({
+    queryKey: ['past-boarding', deckKey, archetypeKey],
+    queryFn: () =>
+      get<PastBoardingOut[]>(
+        `/api/guide/${encodeURIComponent(deckKey ?? '')}/past-boarding/${encodeURIComponent(archetypeKey ?? '')}`,
+      ),
+    enabled: Boolean(deckKey) && archetypeKey != null,
+  })
+
 /** A deck's versions, as a deck's pages find them from its key:
  *  `deckIds`, the identity's `deck_ids` (`fallback` until the identity is
  *  in hand; the layout has read both lists before drawing a page), and
@@ -403,12 +419,18 @@ export function useDeckVersions(deckKey: string, fallback: string[]): { deckIds:
   return { deckIds, versions }
 }
 
+export const guideQueryKey = (key: string | undefined) => ['guide', key] as const
+
 /** One deck's whole evidence bundle. Free and local, so an ordinary query on
- *  the heartbeat like the match report and the leak finder. */
+ *  the heartbeat like the match report and the leak finder. Every fetch
+ *  passes a fresh `?progress=` (`withProgress`), which the stage poll reads. */
 export const useGuide = (key: string | undefined) =>
   useQuery({
-    queryKey: ['guide', key],
-    queryFn: () => get<DeckGuideOut>(`/api/guide/${encodeURIComponent(key ?? '')}`),
+    queryKey: guideQueryKey(key),
+    queryFn: () =>
+      withProgress(guideQueryKey(key), (progress) =>
+        get<DeckGuideOut>(`/api/guide/${encodeURIComponent(key ?? '')}`, { progress }),
+      ),
     enabled: Boolean(key),
   })
 
@@ -534,9 +556,10 @@ export const useMetaWinrate = (metaWindow: MetaWindow | undefined, format?: stri
 /** The field's record of each archetype, by its archetype key, pooled over
  *  every label the key carries (`lib/matchups.ts`'s `fieldRecordsByKey`),
  *  as a deck's Matchups and a pairing's page join it (`archetypeKeyOf`).
- *  Empty until the numbers come, and when they fail: the field never holds
- *  a page. */
-export function useFieldRecords(format: string | null | undefined): Map<string, FieldRecord> {
+ *  `records` is empty until the numbers come, and when they fail: the field
+ *  never holds a page. `pending` is `fieldPending`'s answer, for a page that
+ *  reserves the field's figure while it loads. */
+export function useFieldRecords(format: string | null | undefined): { records: Map<string, FieldRecord>; pending: boolean } {
   // The field's win rate uses the same post-reset window as Field
   // whenever a reset is detected: pooling a pre-ban field rate into a
   // post-ban matchup would repeat the mistake docs/metagame.md's
@@ -552,7 +575,21 @@ export function useFieldRecords(format: string | null | undefined): Map<string, 
   const resetStart = status.data?.format_reset_start
   const fieldWindow = format && status.data ? (resetStart ? { since: resetStart } : { days: 365 }) : undefined
   const fieldWinrate = useMetaWinrate(fieldWindow, format ?? undefined)
-  return useMemo(() => fieldRecordsByKey(fieldWinrate.data ?? []), [fieldWinrate.data])
+  const records = useMemo(() => fieldRecordsByKey(fieldWinrate.data ?? []), [fieldWinrate.data])
+  return { records, pending: fieldPending(format, status, fieldWinrate) }
+}
+
+/** Whether the field's figures are still on their way: a format is known and
+ *  the status or the win-rate read has neither data nor an error. A failed
+ *  status leaves the win-rate read disabled, so it is not waited for; an
+ *  empty field is an answer. */
+export function fieldPending(
+  format: string | null | undefined,
+  status: { isPending: boolean; isError: boolean },
+  winrate: { isPending: boolean; isError: boolean },
+): boolean {
+  if (!format || status.isError) return false
+  return status.isPending || (winrate.isPending && !winrate.isError)
 }
 
 /** Archetype-vs-archetype, from real completed matches. `tiers` defaults to

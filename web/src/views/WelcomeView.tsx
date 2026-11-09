@@ -1,14 +1,16 @@
-import { Check } from 'lucide-react'
 import { useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
-import type { AppChange, AppSettings, DeepPartial, Saved, ShellSettings } from '../bridge'
+import type { AccountActions, AppChange, AppSettings, DeepPartial, Saved, ShellSettings } from '../bridge'
+import { ChoiceTile, ContributeQuestion } from '../components/ContributeQuestion'
 import { CardDataProgress } from '../components/onboarding/CardDataProgress'
 import { DetailedLogsGuide } from '../components/onboarding/DetailedLogsGuide'
 import { RestoreButton } from '../components/settings/BackupSection'
 import { FolderField, PressButton, RestartNote, SaveButton, SavingSwitch } from '../components/settings/SaveButton'
+import { SignInButtons } from '../components/settings/SignInButtons'
 import { Button, Card, Disclosure, Field, Segmented, TextLink } from '../components/ui'
 import { useLanguage, type TFunction } from '../i18n'
+import { contribAskedOnWelcome, contribWaits } from '../lib/contribute'
 import { failureOf, settle, useRestart, useTextSave } from '../lib/settings'
 import { answerWaits, neighbour, stepHref, stepNumber, stepsFor, type Plays, type WelcomeStep } from '../lib/welcome'
 
@@ -25,6 +27,7 @@ export type WelcomeActions = {
   pickFolder(): Promise<string | null>
   pickFile(): Promise<string | null>
   restoreFrom(path: string): Promise<Saved>
+  signIn: AccountActions['signIn']
 }
 
 /** The welcome steps, one at a time: Start, Which do you play?, the setup
@@ -55,6 +58,9 @@ export function WelcomeView({
   // button stays on show; an install that already has a value is never asked.
   const [asked] = useState(app.aiFeatures === null)
   const [picked, setPicked] = useState<boolean | null>(null)
+  // The same for "Help build the stats"; a build that cannot upload never asks.
+  const [contribPutToUser] = useState(contribAskedOnWelcome(app.canContribute, app.contribute))
+  const [contribPicked, setContribPicked] = useState<boolean | null>(null)
   const steps = stepsFor(app.plays, step)
   const previous = neighbour(step, -1, steps)
   const next = neighbour(step, 1, steps)
@@ -63,20 +69,35 @@ export function WelcomeView({
   // Magic Online's Save.
   const forwardVariant = step === 'plays' || step === 'mtgo' ? 'quiet' : 'primary'
   return (
-    <Card className="max-w-3xl">
+    <Card className="mx-auto max-w-3xl">
       <div className="space-y-5">
-        <div className="space-y-1">
-          <p className="text-caption text-muted">
-            {t('welcome.frame.step', { n: stepNumber(step, steps), total: steps.length })}
-          </p>
-          <h2 className="font-display text-title text-ink">{headingOf(step, t)}</h2>
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-caption text-muted">
+              {t('welcome.frame.step', { n: stepNumber(step, steps), total: steps.length })}
+            </p>
+            <h2 className="font-display text-title text-ink">{headingOf(step, t)}</h2>
+          </div>
+          {/* The page is bare, so a run opened again from Settings needs a way
+              back that does not step to the end; the first run has none. */}
+          {app.onboarded && (
+            <Button variant="quiet" className="min-h-[44px] shrink-0" href="/settings/general">
+              {t('welcome.frame.close')}
+            </Button>
+          )}
         </div>
         {step === 'start' && <StartStep app={app} actions={actions} />}
         {step === 'plays' && <PlaysStep plays={app.plays} set={actions.set} />}
         {step === 'arena' && <ArenaStep sources={sources} recheck={actions.recheck} />}
         {step === 'mtgo' && <MtgoStep sources={sources} save={actions.save} pickFolder={actions.pickFolder} />}
         {step === 'done' && (
-          <DoneStep app={app} actions={actions} asked={asked} picked={picked} onPicked={setPicked} />
+          <DoneStep app={app} actions={actions} asked={asked}
+            picked={picked}
+            onPicked={setPicked}
+            contribAskedOnWelcome={contribPutToUser}
+            contribPicked={contribPicked}
+            onContribPicked={setContribPicked}
+          />
         )}
         {(previous || next || step === 'done') && (
           <div className="space-y-1.5">
@@ -97,7 +118,10 @@ export function WelcomeView({
                   label={t('welcome.frame.goHome')}
                   workingLabel={t('welcome.frame.finishing')}
                   doneLabel={null}
-                  disabled={answerWaits(asked, app.aiFeatures, picked)}
+                  disabled={
+                    answerWaits(asked, app.aiFeatures, picked) ||
+                    contribWaits(contribPutToUser, app.contribute, contribPicked)
+                  }
                   onPress={async () => {
                     const ok = await finish.press(actions.finishOnboarding)()
                     if (ok) onFinished()
@@ -143,9 +167,12 @@ function Failure({ text }: { text: string | null }) {
 }
 
 /** The language, the promise, what leaves this computer behind a
- *  disclosure, the Wizards notice, and the restore for someone who has used
- *  the app before. A restore runs even while card data downloads: the shell
- *  stops the download first. */
+ *  disclosure, the Wizards notice, and for someone who has used the app
+ *  before: first the sign-in that brings back a backed-up history (in a
+ *  build with an account), then the restore from a file. Signed in, a line
+ *  says the history comes back by itself. A restore runs even while card
+ *  data downloads: the shell stops the download first. A sign-in that opens
+ *  the account's questions comes back to this step after them. */
 function StartStep({ app, actions }: { app: AppSettings; actions: WelcomeActions }) {
   const { t } = useTranslation()
   const { language, setLanguage } = useLanguage()
@@ -168,13 +195,23 @@ function StartStep({ app, actions }: { app: AppSettings; actions: WelcomeActions
             <li>{t('welcome.intro.claude')}</li>
           </ul>
           <p className="text-body text-ink2">
-            <Trans i18nKey="welcome.intro.credits" components={{ credits: <TextLink href="/settings#credits" /> }} />
+            <Trans i18nKey="welcome.intro.credits" components={{ credits: <TextLink href="/settings/about#credits" /> }} />
           </p>
         </div>
       </Disclosure>
-      <p className="text-caption text-muted">{t('welcome.intro.wizardsNotice')}</p>
+      <p className="max-w-prose text-caption text-muted">{t('welcome.intro.wizardsNotice')}</p>
       <div className="space-y-1.5">
         <p className="text-body text-ink2">{t('welcome.start.restoreTitle')}</p>
+        {app.account.available && !app.account.signedIn && (
+          <div className="space-y-3 pb-2">
+            <p className="max-w-prose text-body text-ink2">{t('welcome.start.signIn')}</p>
+            <SignInButtons signIn={actions.signIn} variant="secondary" />
+          </div>
+        )}
+        {app.account.available && app.account.signedIn && (
+          <p className="max-w-prose pb-2 text-body text-ink2">{t('welcome.start.signedIn')}</p>
+        )}
+        {app.account.available && <p className="text-caption text-muted">{t('welcome.start.fromFile')}</p>}
         <RestoreButton
           label={t('welcome.start.restore')}
           pickFile={actions.pickFile}
@@ -367,12 +404,18 @@ function DoneStep({
   asked,
   picked,
   onPicked,
+  contribAskedOnWelcome: contribPutToUser,
+  contribPicked,
+  onContribPicked,
 }: {
   app: AppSettings
   actions: WelcomeActions
   asked: boolean
   picked: boolean | null
   onPicked: (on: boolean) => void
+  contribAskedOnWelcome: boolean
+  contribPicked: boolean | null
+  onContribPicked: (yes: boolean) => void
 }) {
   const { t } = useTranslation()
   return (
@@ -380,6 +423,17 @@ function DoneStep({
       <p className="text-body text-ink2">{t('welcome.done.body')}</p>
       <CardDataProgress state={app.firstData} count={app.rulesText} retry={actions.firstData} />
       {asked && <AiQuestion value={app.aiFeatures ?? picked} set={actions.set} onPicked={onPicked} />}
+      {contribPutToUser && (
+        <ContributeQuestion
+          stored={app.contribute}
+          picked={contribPicked}
+          waiting={
+            answerWaits(asked, app.aiFeatures, picked) || contribWaits(contribPutToUser, app.contribute, contribPicked)
+          }
+          onPicked={onContribPicked}
+          foldNoAccount
+        />
+      )}
       {app.update.state !== 'unavailable' && (
         <SavingSwitch
           label={t('welcome.done.updatesLabel')}
@@ -444,37 +498,5 @@ function AiQuestion({
       </div>
       <Failure text={failure} />
     </div>
-  )
-}
-
-/** A button of a choice: the one pressed has a check and the accent border. */
-function ChoiceTile({
-  pressed,
-  disabled,
-  label,
-  className,
-  onClick,
-}: {
-  pressed: boolean
-  disabled: boolean
-  label: string
-  className: string
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      disabled={disabled}
-      onClick={onClick}
-      className={`flex items-center justify-center gap-2 rounded-control border text-body font-medium transition-chrome disabled:opacity-60 ${className} ${
-        pressed
-          ? 'border-accent bg-surface3 text-ink'
-          : 'border-edge bg-surface2 text-ink2 hover:border-edge-strong hover:text-ink'
-      }`}
-    >
-      {pressed && <Check size={16} strokeWidth={2.25} aria-hidden className="shrink-0 text-accent" />}
-      {label}
-    </button>
   )
 }

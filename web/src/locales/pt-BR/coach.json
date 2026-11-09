@@ -29,7 +29,7 @@
     "noSuchMessage": "Não há relatório com este número.",
     "back": "Voltar ao treinador",
     "note": "Um relatório anterior, guardado como foi escrito.",
-    "goLatest": "Ir para o seu relatório mais recente"
+    "goLatest": "Ir para seu relatório mais recente"
   },
   "sources": {
     "reading": "Lista de leitura",
@@ -127,7 +127,7 @@
   },
   "turning": {
     "title": "Onde os jogos perdidos viraram",
-    "subtitle": "O seu turno em que um jogo perdido começou a escapar, sobre os {{games}} em que um foi encontrado.",
+    "subtitle": "Seu turno em que um jogo perdido começou a escapar, sobre os {{games}} em que um foi encontrado.",
     "lostGames_one": "{{n}} jogo perdido",
     "lostGames_other": "{{n}} jogos perdidos",
     "early": "Cedo, turnos 1 a 3",
@@ -136,5 +136,13 @@
     "noneDecisive": "Nenhum deles grave",
     "decisive_one": "{{n}} deles grave",
     "decisive_other": "{{n}} deles graves"
-  }
+  },
+  "stage": {
+    "label": "Progresso",
+    "matches": "Lendo suas partidas",
+    "matchesCount": "Lendo suas partidas · {{done}} de {{total}}",
+    "field": "Lendo o meta",
+    "together": "Montando o relatório"
+  },
+  "reading": "Montando o relatório…"
 }

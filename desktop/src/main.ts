@@ -4,7 +4,8 @@
 // `tray.ts` (D14), `log.ts` (D17), `store.ts` (shell.json, D2), `settings.ts`
 // (the bridge's settings and its IPC contract, S9; `preload.ts` is its page side),
 // `updater.ts` (S14, D24), `i18n.ts` (the shell's own text, plan 18 D8).
-// Onboarding's three actions (S15) are answered by `settings.ts`.
+// Onboarding's three actions (S15) are answered by `settings.ts`. The account's
+// backup and actions (plan 40b S12) are `cloud/sync.ts` and `cloud/account.ts`.
 //
 // - One instance (F7): a second launch shows the first one's window, and
 //   retries the server if it had given up.
@@ -22,28 +23,42 @@
 //   install-on-quit is still armed.
 
 import * as electron from 'electron';
+import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { cloudConfig } from './cloud/config';
+import { CloudAccount, restoredUser, supabaseAccountDb, type AccountReply } from './cloud/account';
+import { CloudAuth, type AccountStatus } from './cloud/auth';
+import { fetchLogTail, sendProblemReport } from './cloud/report';
+import { ErrorReporter, sentryFactory, systemOs } from './cloud/sentry';
+import { SessionStore } from './cloud/sessionStore';
+import { anonContribSender, contribAnswer, contributedFile, Contributor, localContribApi } from './cloud/contrib';
+import { CloudSync, localSyncApi, MatchEndWatch, stateFile, supabaseSyncDb } from './cloud/sync';
 import { applyAutostart, applyFirstRun, startMode } from './autostart';
+import { planRelaunch } from './relaunch';
 import { setLanguage, setSystemTags, t } from './i18n';
 import { logPath, newSessionId, ShellLog } from './log';
 import {
+  AccountApi,
   asksAutostart,
   canAutostart,
   CHANNELS,
   diagnosticsArgs,
   formatListing,
+  backupSnapshots,
   restoreLeftovers,
   restoreLeftoversMessage,
+  ReportsLink,
   SettingsService,
   trustedSender,
   type BridgeSettings,
   type Saved,
 } from './settings';
+import type { ReportOutcome } from './cloud/report';
 import { DB_NAME, resolveDataDir, serverCommand, ServerController, type ServerState } from './server';
-import { settleAiFeatures, ShellStore } from './store';
-import { StatusTray, type UpdateMenu } from './tray';
+import { ensureInstallId, settleAiFeatures, ShellStore } from './store';
+import { StatusTray, type LiveSnapshot, type UpdateMenu } from './tray';
 import { updaterAvailability, UpdateService, type UpdateStatus } from './updater';
 import { appMenuTemplate, MainWindow } from './window';
 
@@ -56,6 +71,20 @@ if (typeof electron.app !== 'object' || electron.app === null) {
 const { app, BrowserWindow, Menu, Tray, dialog, ipcMain, nativeImage, screen, shell } = electron;
 const packaged = app.isPackaged;
 const onWindowsStore = process.windowsStore === true;
+
+// The window's `spellcheck: false` (window.ts) does not reach a session:
+// outside macOS every session downloads a Hunspell dictionary from Google
+// for each of its languages, a request the privacy page does not list.
+// Disabling the spellchecker alone does not stop it (measured, Electron 44);
+// an empty language list does. Every session, not only the default one:
+// electron-updater makes its own (`fromPartition('electron-updater')`), and
+// its first update check downloaded the dictionary. Both calls are no-ops on
+// macOS, which uses the system's spellchecker.
+function quietSpellchecker(ses: Electron.Session): void {
+  ses.setSpellCheckerEnabled(false);
+  ses.setSpellCheckerLanguages([]);
+}
+app.on('session-created', quietSpellchecker);
 const canStartWithSystem = canAutostart({
   platform: process.platform,
   packaged,
@@ -78,6 +107,10 @@ try {
 } catch {
   // the log says why below, and the server's start fails visibly
 }
+
+/** How long the first spawn of the server waits for a stored session to be read. */
+const RESTORE_WAIT_MS = 3000;
+const matchEnd = new MatchEndWatch();
 
 const session = newSessionId();
 const shellLog = new ShellLog(logPath(dataDir), { session, echo: !packaged });
@@ -147,12 +180,28 @@ function run(): void {
   setSystemTags(() => app.getPreferredSystemLanguages());
   setLanguage(store.get().language ?? 'system');
 
-  const server = new ServerController({
+  // S11: the SDK is loaded when a client is first made, never on a build or a
+  // launch that sends nothing (importing it reads `electron.app`).
+  const sentryLog = shellLog.child('shell.reports');
+  const reportFactory: ReturnType<typeof sentryFactory> = (options) =>
+    sentryFactory(require('@sentry/electron/main') as typeof import('@sentry/electron/main'))(options);
+  // No route exposes the player's names, so the shell scrubs by rule alone.
+  const reportNames = (): string[] => [];
+  const errors = new ErrorReporter({
+    dsn: cloudConfig.sentryDsnDesktop,
+    release: app.getVersion(),
+    factory: reportFactory,
+    names: reportNames,
+    log: sentryLog,
+  });
+
+  const server: ServerController = new ServerController({
     command,
     dataDir,
     session,
     env: process.env,
     verbose: () => Boolean(store.get().diagnostic),
+    serveEnv: () => reports.env(),
     rememberedPort: () => store.get().port,
     rememberPort: (port) => {
       store.update({ port });
@@ -225,6 +274,7 @@ function run(): void {
       window?.showError(shellLog.scrub(logPath(dataDir)), block);
       return false;
     }
+    serverSpawned = true;
     server.start();
     return true;
   };
@@ -261,7 +311,22 @@ function run(): void {
     }
   };
 
-  const settings = new SettingsService({
+  // DB4: no Supabase project in this build, no CloudAuth, no backup and no
+  // network. Made once Electron is ready (`safeStorage` is not usable before).
+  let auth: CloudAuth | null = null;
+  let cloudAccount: CloudAccount | null = null;
+  let contributor: Contributor | null = null;
+  const account = new AccountApi(
+    () => auth,
+    store,
+    randomUUID,
+    () => t('auth.error.failed'),
+    () => t('auth.error.signOutFailed'),
+    shellLog.child('shell.account'),
+    () => cloudAccount?.details() ?? null,
+  );
+
+  const settings: SettingsService = new SettingsService({
     run: (args, options) => server.run(args, options),
     stopServer: () => server.stop(),
     startServer: () => {
@@ -277,6 +342,7 @@ function run(): void {
     askAutostart: asksAutostart(process.platform, onWindowsStore, canStartWithSystem),
     canAutostart: canStartWithSystem,
     windowsStore: onWindowsStore,
+    canContribute: Boolean(cloudConfig.supabase),
     newestBackup: (dir) => {
       try {
         const stat = fs.statSync(path.join(dir, `${DB_NAME}.backup`));
@@ -290,6 +356,24 @@ function run(): void {
         return fs.readdirSync(dir).filter((name) => name.startsWith(`${DB_NAME}.backup`) && !name.includes('.tmp.')).length;
       } catch {
         return 0;
+      }
+    },
+    listBackups: (dir) => {
+      try {
+        return backupSnapshots(
+          DB_NAME,
+          fs.readdirSync(dir),
+          (name) => {
+            try {
+              return fs.statSync(path.join(dir, name));
+            } catch {
+              return null;
+            }
+          },
+          (name) => path.join(dir, name),
+        );
+      } catch {
+        return [];
       }
     },
     now: () => new Date(),
@@ -310,12 +394,28 @@ function run(): void {
       liveWindow()?.win.webContents.send(CHANNELS.changed, next);
     },
     updateStatus,
+    account: () => account.state(),
     setUpdateChecks: (on) => {
       updates?.setEnabled(on);
       tray?.setUpdate(updateMenu());
     },
     log: shellLog.child('shell.settings'),
   });
+
+  // DB8: consent and the signed-in user reach the server as environment at
+  // spawn, so a change of either restarts it. The account module calls
+  // `reports.setConsent` and `reports.setUser`.
+  // Before the server's first spawn its environment is read at that spawn, so
+  // a change then needs no restart (the restored user, set below).
+  let serverSpawned = false;
+  const reports: ReportsLink = new ReportsLink(
+    store,
+    errors,
+    // The server's own project: this DSN only ever reaches its environment.
+    cloudConfig.sentryDsnLocalApi,
+    () => (serverSpawned ? settings.restartFor('error-report settings changed') : Promise.resolve()),
+    sentryLog,
+  );
 
   // A status change rebuilds the tray menu and sends the page its settings.
   const onUpdateStatus = (): void => {
@@ -375,6 +475,30 @@ function run(): void {
     return restarting;
   };
 
+  // Restart now (S8): the quit path itself. `app.relaunch()` only schedules a
+  // start for when the process has exited, and `app.quit()` goes through
+  // `before-quit`, which stops the server and the error reporter first. The
+  // single-instance lock is not freed: the new copy starts after this one
+  // exits. `planRelaunch` decides; this only executes.
+  let relaunching = false;
+  const relaunch = (): Promise<Saved> => {
+    const plan = planRelaunch({
+      stopping,
+      relaunching,
+      updateState: updateStatus().state,
+      argv: process.argv,
+      env: process.env,
+    });
+    if (plan.action === 'noop') return Promise.resolve({ ok: true });
+    if (plan.action === 'refused') return Promise.resolve({ ok: false, error: t('settings.closing') });
+    if (plan.action === 'update') return restartToUpdate();
+    relaunching = true;
+    log.info('relaunching');
+    app.relaunch(plan.options);
+    app.quit();
+    return Promise.resolve({ ok: true });
+  };
+
   // Only the dashboard, on the running server's origin, is answered.
   const trusted = (event: electron.IpcMainEvent | electron.IpcMainInvokeEvent): boolean => {
     const ok = trustedSender(event.senderFrame?.url ?? '', server.port);
@@ -395,13 +519,49 @@ function run(): void {
   handle(CHANNELS.pickFolder, refusedNull, () => settings.pickFolder());
   handle(CHANNELS.pickFile, refusedNull, () => settings.pickFile());
   handle(CHANNELS.backUpNow, refusedSaved, () => settings.backUpNow());
+  handle(CHANNELS.listBackups, () => [], () => settings.listBackups());
   handle(CHANNELS.restoreFrom, refusedSaved, (file: string) => settings.restoreFrom(String(file)));
   handle(CHANNELS.appSet, refusedSaved, (change: Parameters<SettingsService['setApp']>[0]) => settings.setApp(change));
   handle(CHANNELS.appCheckForUpdates, refusedSaved, () => checkForUpdates());
   handle(CHANNELS.appRestartToUpdate, refusedSaved, () => restartToUpdate());
+  handle(CHANNELS.appRelaunch, refusedSaved, () => relaunch());
   handle(CHANNELS.appExportDiagnostics, refusedSaved, () => exportDiagnostics());
   handle(CHANNELS.appRecheck, refusedSaved, () => settings.recheck());
   handle(CHANNELS.appFirstData, refusedSaved, () => settings.firstData());
+  handle(CHANNELS.accountStatus, () => ({ available: false }) as const, () => account.state());
+  handle(CHANNELS.accountSignIn, () => ({ ok: false, error: 'auth.error.failed', message: t('ipc.refused') }) as const, (provider: unknown) => account.signIn(provider));
+  handle(CHANNELS.accountSignOut, refusedSaved, () => account.signOut());
+  const refusedAccount = (): AccountReply => ({ ok: false, error: 'unavailable' });
+  const noAccount = (): Promise<AccountReply> => Promise.resolve(refusedAccount());
+  handle(CHANNELS.accountSetProfile, refusedAccount, (change: unknown) => cloudAccount?.setProfile(change) ?? noAccount());
+  handle(CHANNELS.accountExport, refusedAccount, () => cloudAccount?.exportData() ?? noAccount());
+  handle(CHANNELS.accountDeleteHistory, refusedAccount, () => cloudAccount?.deleteCloudHistory() ?? noAccount());
+  handle(CHANNELS.accountDelete, refusedAccount, () => cloudAccount?.deleteAccount() ?? noAccount());
+  handle(CHANNELS.accountReadProfile, refusedAccount, () => cloudAccount?.readProfileAgain() ?? noAccount());
+  // DB9: dropped without consent; the answer says whether it was captured.
+  handle(CHANNELS.reportError, () => false, (payload: unknown) => errors.captureRendererError(payload));
+  handle(CHANNELS.reportProblem, (): ReportOutcome => 'failed', (payload: unknown) => {
+    const port = server.port;
+    return sendProblemReport(payload, {
+      dsn: cloudConfig.sentryDsnDesktop,
+      release: app.getVersion(),
+      factory: reportFactory,
+      userId: reports.userId,
+      logTail: () => (port === null ? Promise.resolve(null) : fetchLogTail((url, init) => fetch(url, init), port)),
+      names: reportNames,
+      log: sentryLog,
+    });
+  });
+  // S13: the answer is stored whether or not this build can upload; off stops a running upload at once.
+  handle(CHANNELS.contribSet, refusedSaved, (input: unknown): Saved => {
+    const answer = contribAnswer(input, new Date());
+    if (!answer) return { ok: false, error: t('settings.notSaved') };
+    if (!store.update({ contribute: answer })) return { ok: false, error: t('settings.notSaved') };
+    if (answer.yes) void contributor?.run();
+    else contributor?.stop();
+    settings.contributeChanged();
+    return { ok: true };
+  });
   handle(CHANNELS.appFinishOnboarding, refusedSaved, () => settings.finishOnboarding());
   handle(CHANNELS.appShowDataFolder, refusedSaved, () => settings.showDataFolder());
   handle(CHANNELS.appShowLogs, refusedSaved, (): Saved => {
@@ -420,9 +580,11 @@ function run(): void {
   }
   process.on('uncaughtExceptionMonitor', (error) => {
     log.error('uncaught exception in the main process', { error });
+    errors.captureException(error);
   });
   process.on('unhandledRejection', (reason) => {
     log.error('unhandled rejection in the main process', { reason: String(reason) });
+    errors.captureException(reason);
   });
 
   app.on('second-instance', () => {
@@ -447,20 +609,24 @@ function run(): void {
     }
     stopping = true;
     log.info('quitting: stopping the server');
-    void server.stop().finally(() => {
+    void Promise.allSettled([server.stop(), errors.shutdown()]).then(() => {
       readyToQuit = true;
       app.quit();
     });
   });
   app.on('will-quit', () => {
     updates?.dispose();
+    cloudAccount?.dispose();
+    contributor?.stop();
+    void auth?.dispose();
     tray?.destroy();
     tray = null;
     log.info('quit');
     shellLog.close();
   });
 
-  void app.whenReady().then(() => {
+  void app.whenReady().then(async () => {
+    quietSpellchecker(electron.session.defaultSession);
     log.info('displays', screen.getAllDisplays().map((display) => ({
       id: display.id,
       bounds: display.bounds,
@@ -475,6 +641,77 @@ function run(): void {
       },
       (error: unknown) => log.warn('gpu info unavailable', { error: String(error) }),
     );
+
+    let restoredAccount: Promise<AccountStatus> | null = null;
+    if (cloudConfig.supabase) {
+      const cloud = new CloudAuth({
+        supabase: cloudConfig.supabase,
+        fetch: (input, init) => electron.net.fetch(input as string, init),
+        storage: new SessionStore({
+          dir: app.getPath('userData'),
+          safeStorage: electron.safeStorage,
+          platform: process.platform,
+          log: shellLog.child('shell.session'),
+        }),
+        openExternal: (url) => shell.openExternal(url),
+        focusApp: () => window?.open(),
+        log: shellLog.child('shell.auth'),
+      });
+      auth = cloud;
+      cloud.onChange(() => settings.accountChanged());
+      const restored = cloud.ready().then((status) => {
+        settings.accountChanged();
+        return status;
+      });
+
+      const userData = app.getPath('userData');
+      const osInfo = systemOs();
+      let accountRef: CloudAccount | null = null;
+      const sync = new CloudSync({
+        db: supabaseSyncDb(cloud.client),
+        local: localSyncApi((url, init) => fetch(url, init), server, shellLog.child('shell.sync')),
+        file: stateFile(userData),
+        currentUser: () => (cloud.status().signedIn ? cloud.status().userId : null),
+        enabled: () => accountRef?.syncEnabled() ?? false,
+        installId: () => ensureInstallId(store, randomUUID),
+        appVersion: app.getVersion(),
+        os: `${osInfo.name} ${osInfo.version}`,
+        now: () => new Date(),
+        onStatus: () => settings.accountChanged(),
+        log: shellLog.child('shell.sync'),
+      });
+      accountRef = new CloudAccount({
+        auth: cloud,
+        db: supabaseAccountDb(cloud.client),
+        sync,
+        reports,
+        saveJson: async (defaultName, text) => {
+          const options: electron.SaveDialogOptions = { defaultPath: defaultName, filters: [{ name: 'JSON', extensions: ['json'] }] };
+          const target = window ? await dialog.showSaveDialog(window.win, options) : await dialog.showSaveDialog(options);
+          if (target.canceled || !target.filePath) return false;
+          await fs.promises.writeFile(target.filePath, text, { encoding: 'utf8', mode: 0o600 });
+          return true;
+        },
+        now: () => new Date(),
+        changed: () => settings.accountChanged(),
+        restored,
+        log: shellLog.child('shell.account'),
+      });
+      cloudAccount = accountRef;
+      restoredAccount = restored;
+    }
+
+    // DB14: uploads come from here alone, and only in a build with a project (DB4).
+    if (cloudConfig.supabase) {
+      contributor = new Contributor({
+        local: localContribApi((url, init) => fetch(url, init), server),
+        send: anonContribSender(cloudConfig.supabase, (url, init) => electron.net.fetch(url, init)),
+        file: contributedFile(app.getPath('userData')),
+        answer: () => store.get().contribute,
+        makeId: randomUUID,
+        log: shellLog.child('shell.contrib'),
+      });
+    }
 
     Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate(packaged)));
     window = new MainWindow(
@@ -504,14 +741,32 @@ function run(): void {
           if (image.isEmpty()) log.warn('tray icon missing', { name });
           return image;
         },
-        fetch: (input, init) => fetch(input, init),
+        // DB6: the tray's `/api/live` answers also tell the backup a match ended.
+        fetch: async (input, init) => {
+          const response = await fetch(input, init);
+          if (cloudAccount || contributor) {
+            void response
+              .clone()
+              .json()
+              .then(
+                (live: unknown) => matchEnd.note(response.ok ? (live as LiveSnapshot) : null, Date.now()),
+                () => false,
+              )
+              .then((ended) => {
+                if (!ended) return;
+                void cloudAccount?.matchEnded();
+                void contributor?.run();
+              });
+          }
+          return response;
+        },
       },
       {
         open: () => window?.open(),
-        settings: () => window?.open('/settings'),
-        // The result shows in Settings' App section.
+        settings: () => window?.open('/settings/general'),
+        // The result shows in Settings' General group.
         checkForUpdates: () => {
-          window?.open('/settings');
+          window?.open('/settings/general');
           void checkForUpdates();
         },
         restartToUpdate: () => {
@@ -523,6 +778,11 @@ function run(): void {
           void exportDiagnostics().then((result) => {
             if (!result.ok) void dialog.showErrorBox(t('diagnostics.title'), result.error);
           });
+        },
+        // The dialog is the page's: show the window and tell it.
+        reportProblem: () => {
+          window?.open();
+          liveWindow()?.win.webContents.send(CHANNELS.reportProblemRequested);
         },
         showLogs: () => {
           void shell.openPath(path.join(dataDir, 'logs')).then((error) => {
@@ -550,6 +810,9 @@ function run(): void {
       tray.setUpdate(updateMenu());
     }
 
+    // Before the server starts: a cached yes makes its client now.
+    void reports.start();
+
     // The first page load reads the settings synchronously, so they come first.
     const settingsLoaded = settings.refresh();
     let previous: ServerState['kind'] = server.state.kind;
@@ -562,6 +825,9 @@ function run(): void {
           if (!firstDataChecked) {
             firstDataChecked = true;
             void settings.startFirstDataIfMissing();
+            // The app start's backup run needs the local API.
+            void cloudAccount?.start();
+            void contributor?.run();
           }
         });
       }
@@ -570,6 +836,15 @@ function run(): void {
       else if (state.kind === 'starting' && previous === 'failed') window?.showLoading();
       previous = state.kind;
     });
+    // The restored user reaches the server's first spawn, so no restart
+    // follows it; a session slower to read than this is set by the account
+    // module's start instead, at the cost of one restart.
+    // Neither a failed session read nor a failed reports update may keep the
+    // server from starting.
+    if (restoredAccount) {
+      const user = await restoredUser(restoredAccount, RESTORE_WAIT_MS, shellLog.child('shell.account'));
+      if (user) await reports.setUser(user).catch((error: unknown) => log.warn('the restored user could not reach the error reports', { error: String(error) }));
+    }
     startUnlessBlocked();
   });
 }

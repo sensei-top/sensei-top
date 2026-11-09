@@ -10,6 +10,14 @@
     "ai": "Recursos de IA",
     "credits": "Sobre e créditos"
   },
+  "groups": {
+    "general": "Geral",
+    "sources": "Fontes",
+    "backup": "Backup",
+    "account": "Conta",
+    "writing": "Escrita",
+    "about": "Sobre"
+  },
   "language": {
     "label": "Idioma",
     "system": "Do sistema",
@@ -107,15 +115,21 @@
     "backUpNow": "Fazer backup agora",
     "backingUp": "Fazendo backup",
     "backedUp": "Backup feito",
-    "restore": "Restaurar de um arquivo de backup",
+    "restore": "Restaurar de um backup",
+    "chooseOther": "Escolher outro arquivo",
     "restoring": "Restaurando",
     "restoreTitle": "Restaurar deste arquivo?",
     "keepWhatIsHere": "Manter o que está aqui",
     "restoreFromFile": "Restaurar do arquivo",
-    "restoreBody": "Toda partida no aplicativo é substituída pelo que o arquivo contém. Para manter o que está aqui agora, faça um backup antes."
+    "restoreBody": "Toda partida no aplicativo é substituída pelo que o arquivo contém. Para manter o que está aqui agora, faça um backup antes.",
+    "restartNow": "Reiniciar agora",
+    "cloudTitle": "Cópia na nuvem",
+    "cloudSignedOut": "Entre em <account>Configurações → Conta</account> para guardar uma cópia na nuvem."
   },
   "app": {
     "subtitle": "Como o aplicativo abre, fecha e se mantém atualizado.",
+    "aboutTitle": "Versão e diagnóstico",
+    "aboutSubtitle": "Qual versão é esta, e o que enviar quando algo der errado.",
     "version": "Versão {{version}}",
     "startWindows": "Abrir quando o Windows iniciar",
     "startLogin": "Abrir quando você entrar no computador",

@@ -26,11 +26,12 @@
 // is the only way to reach anything.
 //
 // Menu: Open, Settings, Check for updates, Show logs, Export diagnostics,
-// Quit. "Check for updates" (S14) is enabled when the updater runs here and
-// its switch is on; it opens Settings and starts a check, so the result shows
-// in the App section. Once an update is downloaded, "Restart to update"
-// appears above Quit. "Export diagnostics" runs the same function as
-// Settings' button.
+// Report a problem, Quit. "Check for updates" (S14) is enabled when the
+// updater runs here and its switch is on; it opens Settings and starts a
+// check, so the result shows in the App section. Once an update is
+// downloaded, "Restart to update" appears above Quit. "Export diagnostics"
+// runs the same function as Settings' button. "Report a problem", like
+// Settings, waits for the server: its dialog is the page's.
 //
 // Only `import type` from electron here: the constructors arrive in
 // `TrayDeps`, so vitest loads this file without Electron.
@@ -128,6 +129,7 @@ export interface TrayActions {
   restartToUpdate: () => void;
   showLogs: () => void;
   exportDiagnostics: () => void;
+  reportProblem: () => void;
   quit: () => void;
 }
 
@@ -140,7 +142,7 @@ export interface UpdateMenu {
 
 export const NO_UPDATES: UpdateMenu = { canCheck: false, ready: false };
 
-/** The menu for `state`. Settings needs the dashboard, so it waits for the server. */
+/** The menu for `state`. Settings and Report a problem need the dashboard, so they wait for the server. */
 export function menuTemplate(state: TrayState, actions: TrayActions, update: UpdateMenu = NO_UPDATES): MenuItemConstructorOptions[] {
   const serving = state !== 'failed' && state !== 'starting' && state !== 'down';
   return [
@@ -151,6 +153,7 @@ export function menuTemplate(state: TrayState, actions: TrayActions, update: Upd
     { label: t('tray.menu.checkForUpdates'), enabled: update.canCheck, click: actions.checkForUpdates },
     { label: t('tray.menu.showLogs'), click: actions.showLogs },
     { label: t('tray.menu.exportDiagnostics'), click: actions.exportDiagnostics },
+    { label: t('tray.menu.reportProblem'), enabled: serving, click: actions.reportProblem },
     { type: 'separator' },
     ...(update.ready ? [{ label: t('tray.menu.restartToUpdate'), click: actions.restartToUpdate }] : []),
     { label: t('tray.menu.quit'), click: actions.quit },

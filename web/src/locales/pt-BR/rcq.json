@@ -1,4 +1,7 @@
 {
+  "page": {
+    "reading": "Lendo sua lista…"
+  },
   "freshness": {
     "sentence": "{{source}}: {{event}}, {{fetched}}",
     "noEvent": "nenhum evento ainda",

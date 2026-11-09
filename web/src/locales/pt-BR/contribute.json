@@ -1,0 +1,50 @@
+{
+  "heading": "Ajudar a montar as estatísticas",
+  "disclosure": {
+    "noAccount": "Não precisa de conta, e sua resposta fica neste PC.",
+    "what": "Com sim, seus jogos, passados e futuros, vão para um acervo privado do qual são feitas as estatísticas do próprio Sensei Top, sem nada que identifique você ou seu oponente.",
+    "where": "O acervo fica no Brasil, sem ligação com nenhuma conta, e seus jogos são enviados sem seu login.",
+    "final": "Nada num jogo enviado diz quem o enviou. Depois de enviado, ele não pode ser mostrado a você, copiado nem apagado, nem mesmo se você apagar sua conta.",
+    "stop": "Você pode desligar isso a qualquer momento em Configurações, e nada mais é enviado depois disso."
+  },
+  "age": {
+    "label": "Tenho 13 anos ou mais. Se tenho menos de 18, um dos meus pais ou o meu responsável deixou que eu envie os meus jogos.",
+    "small": "Este PC guarda que você confirmou isso, e quando."
+  },
+  "answer": {
+    "yes": "Enviar meus jogos",
+    "no": "Não enviar"
+  },
+  "hint": {
+    "age": "Para enviar seus jogos, confirme antes sua idade, acima.",
+    "waitsWelcome": "Responda cada pergunta acima para ir para o Início."
+  },
+  "failure": {
+    "notSaved": "Sua resposta não foi salva, e nenhum jogo é enviado. Tente de novo.",
+    "stillSending": "Sua resposta não foi salva, então seus jogos continuam sendo enviados. Tente de novo."
+  },
+  "page": {
+    "lead": "Esta versão do Sensei Top faz uma pergunta nova, uma vez só. Até você responder, nenhum jogo é enviado.",
+    "hintAnswer": "Responda a pergunta para ir para o Início.",
+    "later": "Decidir depois",
+    "laterNote": "Nenhum jogo é enviado. Você pode responder quando quiser em Configurações, em Ajudar a montar as estatísticas."
+  },
+  "settings": {
+    "description": "Envia seus jogos, sem nada que identifique você ou seu oponente, para o acervo do qual são feitas as estatísticas do Sensei Top. Um jogo enviado não pode ser apagado.",
+    "state": {
+      "on": "Ligado desde {{date}}.",
+      "off": "Desligado desde {{date}}.",
+      "unanswered": "Ainda sem resposta, então nenhum jogo é enviado.",
+      "turnedOn": "Ligado. Os jogos que você jogou enquanto estava desligado também são enviados, e depois cada jogo novo.",
+      "turnedOff": "Desligado. Nenhum jogo a mais é enviado deste PC, nem mesmo um que ainda estava esperando. Os jogos já enviados continuam no acervo."
+    },
+    "failure": {
+      "turnOn": "Ajudar a montar as estatísticas não foi ligado, e nenhum jogo é enviado. Tente de novo.",
+      "turnOff": "Ajudar a montar as estatísticas não foi desligado, então continua ligado. Tente de novo."
+    },
+    "dialog": {
+      "title": "Enviar seus jogos para ajudar a montar as estatísticas?",
+      "hint": "Para enviar seus jogos, confirme sua idade."
+    }
+  }
+}

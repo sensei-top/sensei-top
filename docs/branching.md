@@ -139,8 +139,12 @@ branch stops.
    `.github/workflows/desktop.yml`) on the public repository, and only
    there. Watch it finish, then check that the release holds `latest.yml`
    and `latest-linux.yml`: they are what an installed copy's updater reads,
-   and a release without them reaches nobody. The very first snapshot is
-   the exception: GitHub does not evaluate a workflow for the push that
+   and a release without them reaches nobody. Check too that the
+   `build-config:` line in the linux and windows jobs' logs names all
+   four `SENSEI_TOP_*` variables: a build without them has no account,
+   and is green all the same (develop's run #14 logged "no cloud
+   variables set" before the repository had the secrets). The very
+   first snapshot is the exception: GitHub does not evaluate a workflow for the push that
    introduces its file, and that push carries `desktop.yml` and the tag
    together, so no run starts (0.7.0, 2026-10-13). Delete the tag on the
    public repository and push it again at the same commit; the second

@@ -6,7 +6,7 @@ import type { TFunction } from '../i18n'
 import { useFormats, useMtgoPickGroups, useMtgoPickHints } from '../api'
 import type { MtgoPickGroup, MtgoPickGroups, MtgoUnsurePick } from '../api'
 import { PickGroupCard } from '../components/mtgo/PickGroupCard'
-import { Button, EmptyState, ErrorNote, Loading, TextLink } from '../components/ui'
+import { Button, EmptyState, ErrorNote, OutlineCard, Skeleton, TextLink } from '../components/ui'
 import type { SelectOption } from '../components/ui'
 import { formatName } from '../lib/decks'
 import { mtgoFormatsOf } from '../lib/mtgoPick'
@@ -136,6 +136,29 @@ function Groups({
   )
 }
 
+/** The page's pending state: the intro's lines reserved, then the frame of
+ *  the first group's section, whose heading is not a card's title. */
+function PicksOutline() {
+  const { t } = useTranslation()
+  return (
+    <div className="space-y-8">
+      <div className="max-w-3xl space-y-2">
+        <Skeleton className="h-[calc(var(--text-lead)*1.45*3)] w-full" />
+        <Skeleton className="h-[calc(var(--text-body)*1.5)] w-1/3" />
+        {/* The empty status line's place: it adds the stack's gap. */}
+        <div />
+      </div>
+      <section className="space-y-4">
+        <div className="space-y-1">
+          <Skeleton className="h-[calc(var(--text-title)*1.25)] w-1/4" />
+          <Skeleton className="h-[calc(var(--text-caption)*1.4)] w-1/2" />
+        </div>
+        <OutlineCard words={t('mtgo.page.reading')} height="h-72" />
+      </section>
+    </div>
+  )
+}
+
 /** Every MTGO match still waiting for a deck, grouped by the saved list that
  *  holds most of the cards played in it: the groups that fit, the
  *  ones close to a list (collapsed), and the matches to pick one at a time.
@@ -148,7 +171,7 @@ export function MtgoPicksView() {
   const [now] = useState(() => Date.now())
   const [done, setDone] = useState<{ written: number; list: string } | null>(null)
 
-  if (query.isPending) return <Loading />
+  if (query.isPending) return <PicksOutline />
   if (query.error) return <ErrorNote error={query.error} />
   const data = query.data
   const formats = mtgoFormatsOf(formatsQuery.data).map((format) => ({ value: format, label: format }))
@@ -181,7 +204,7 @@ export function MtgoPicksView() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="arrive space-y-8">
       <div className="max-w-3xl space-y-2">
         {data.waiting > 0 && (
           <>

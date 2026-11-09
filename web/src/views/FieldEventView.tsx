@@ -1,7 +1,7 @@
 import { Trans, useTranslation } from 'react-i18next'
 import { isNotFound, useMetagameEvent } from '../api'
 import { EventDeckList } from '../components/field/EventDeckList'
-import { Card, EmptyState, ErrorNote, Loading, TextLink } from '../components/ui'
+import { Card, EmptyState, ErrorNote, OutlineCard, Skeleton, TextLink } from '../components/ui'
 import { kindWords, readLine, sourceLines, standing, type SourceLine } from '../lib/fieldEvent'
 import { formatIsoDateShort, useNow } from '../lib/time'
 
@@ -20,6 +20,22 @@ function SourceCredit({ line }: { line: SourceLine }) {
   }
 }
 
+/** The page's pending state: the name and the source lines reserved, then
+ *  the decks' card. */
+function EventOutline() {
+  const { t } = useTranslation()
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <Skeleton className="h-[calc(var(--text-heading)*1.15)] w-full" />
+        <Skeleton className="h-[calc(var(--text-caption)*1.4)] w-full" />
+      </div>
+      <Skeleton className="h-[calc(var(--text-caption)*1.4)] w-full" />
+      <OutlineCard words={t('field.page.reading')} height="h-160" />
+    </div>
+  )
+}
+
 /** One stored event, top to bottom: its name, its date, format and kind, the
  *  source line or lines, a league's note (tier C), the read line when one
  *  applies, and every deck in the API's order. An address with no event says
@@ -28,7 +44,7 @@ export function FieldEventView({ eventKey }: { eventKey: string | undefined }) {
   const { t } = useTranslation()
   const query = useMetagameEvent(eventKey)
   const now = useNow()
-  if (query.isPending && query.fetchStatus !== 'idle') return <Loading />
+  if (query.isPending && query.fetchStatus !== 'idle') return <EventOutline />
   if (!eventKey || isNotFound(query.error)) {
     return (
       <EmptyState
@@ -43,7 +59,7 @@ export function FieldEventView({ eventKey }: { eventKey: string | undefined }) {
   }
   if (query.error) return <ErrorNote error={query.error} />
   const event = query.data
-  if (!event) return <Loading />
+  if (!event) return <EventOutline />
 
   const date = event.date ? formatIsoDateShort(event.date, now) : null
   const kind = kindWords(event.tier, t)
@@ -52,7 +68,7 @@ export function FieldEventView({ eventKey }: { eventKey: string | undefined }) {
   const standingsOnly = !event.decks.some((deck) => deck.main.length > 0)
 
   return (
-    <div className="space-y-4">
+    <div className="arrive space-y-4">
       <div className="space-y-1">
         <h2 className="font-display text-heading text-ink">{event.name}</h2>
         {under && <p className="text-caption text-muted">{under}</p>}

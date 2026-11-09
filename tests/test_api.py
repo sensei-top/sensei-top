@@ -3685,8 +3685,9 @@ def test_a_pick_row_for_an_arena_match_never_overrides_its_deck(mtgo_pick_db):
 
 def test_core_alone_writes_only_the_picks(hide_ai):
     """AGENTS.md rule 6's core half: with ``ai/`` hidden, the only non-GET
-    routes are the user's picks. The full allowlist, authored prose included,
-    is ``tests/ai/test_write_allowlist.py``."""
+    routes are the user's picks and the pulled cloud backup, which writes
+    ``cloud_match`` and those picks. The full allowlist, authored prose
+    included, is ``tests/ai/test_write_allowlist.py``."""
     app = create_app("unused.db")
     writers = {
         (route.path, method)
@@ -3698,6 +3699,7 @@ def test_core_alone_writes_only_the_picks(hide_ai):
         ("/api/matches/{match_id}/opponent-deck", "PUT"),
         ("/api/matches/{match_id}/mtgo-pick", "PUT"),
         ("/api/mtgo/picks", "PUT"),
+        ("/api/sync/pulled", "PUT"),
     }
 
 
@@ -3744,6 +3746,9 @@ def test_a_guide_for_a_deck_with_no_format_is_200_with_a_null_field_format(clien
     assert body["field"]["fmt"] is None
     assert body["field"]["shares"] == []
     assert FORMAT_UNKNOWN_GAP in body["gaps"]
+    # gap_codes rides beside gaps, one per gap; the format note has no code.
+    assert len(body["gap_codes"]) == len(body["gaps"])
+    assert body["gap_codes"][body["gaps"].index(FORMAT_UNKNOWN_GAP)] is None
 
 
 def test_current_match_read_for_a_match_with_no_format_has_a_format_unknown_hand(

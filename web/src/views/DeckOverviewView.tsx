@@ -4,12 +4,58 @@ import { Link, useLocation } from 'react-router'
 import { useDeckMatches, useDeckVersions, type Match } from '../api'
 import { DeckMatchesCard } from '../components/DeckMatchesCard'
 import { VersionSwitcher } from '../components/VersionSwitcher'
-import { Button, Card, Chip, DataTable, EmptyState, ErrorNote, Loading } from '../components/ui'
+import { Button, Card, Chip, DataTable, EmptyState, ErrorNote, OutlineCard } from '../components/ui'
 import { mergeNewestFirst, rankRows, versionDays, versionRecord } from '../lib/deckOverview'
 import { formatCount, useNow } from '../lib/time'
 import { placeById } from '../shell/places'
 
 const MINUTE = 60_000
+
+/** The "By rank" card's reserved block, for eight rank rows: the loaded
+ *  card's title and line, its header, eight rows of padding, line and rule,
+ *  less the frame's label (the label's line is 1.5 of its token). The row count
+ *  is the deck's ranks and cannot be known here: a deck with fewer, or
+ *  with fewer than two ranks (no card), moves the page. */
+const RANK_HEIGHT =
+  'h-[calc(var(--text-title)*1.25+var(--text-caption)*2.8+var(--text-body)*12-var(--text-chip)*1.5+var(--spacing)*41.5)]'
+
+/** The same block for a tile whose detail wraps to a second line under the
+ *  `lg` breakpoint, where the tiles are three to a row, and not from it. */
+export const STAT_TILE_BLOCK_WRAPS_UNDER_LG =
+  'h-[calc(var(--text-stat)*1.1+var(--text-caption)*2.8-var(--spacing)*3)] lg:h-[calc(var(--text-stat)*1.1+var(--text-caption)*1.4-var(--spacing)*3)]'
+
+/** The versions card's reserved height by how many versions it lists, from
+ *  two: the loaded card's title and line, less the frame's label, plus per
+ *  version the link's two lines, its padding and the row's (the first row
+ *  carries the Newest chip, a little taller). Eight or more share the last. */
+const VERSIONS_HEIGHT = [
+  'h-[calc(var(--text-title)*1.25+var(--text-caption)*1.4*3+var(--text-body)*1.5*2-var(--text-chip)*1.5+var(--spacing)*12.75)]',
+  'h-[calc(var(--text-title)*1.25+var(--text-caption)*1.4*4+var(--text-body)*1.5*3-var(--text-chip)*1.5+var(--spacing)*19.5)]',
+  'h-[calc(var(--text-title)*1.25+var(--text-caption)*1.4*5+var(--text-body)*1.5*4-var(--text-chip)*1.5+var(--spacing)*26.25)]',
+  'h-[calc(var(--text-title)*1.25+var(--text-caption)*1.4*6+var(--text-body)*1.5*5-var(--text-chip)*1.5+var(--spacing)*33)]',
+  'h-[calc(var(--text-title)*1.25+var(--text-caption)*1.4*7+var(--text-body)*1.5*6-var(--text-chip)*1.5+var(--spacing)*39.75)]',
+  'h-[calc(var(--text-title)*1.25+var(--text-caption)*1.4*8+var(--text-body)*1.5*7-var(--text-chip)*1.5+var(--spacing)*46.5)]',
+  'h-[calc(var(--text-title)*1.25+var(--text-caption)*1.4*9+var(--text-body)*1.5*8-var(--text-chip)*1.5+var(--spacing)*53.25)]',
+]
+
+/** The Overview's frames while its matches load, in the place of its body:
+ *  `versionCount` is the versions the versions card lists, 0 when it is
+ *  not drawn. */
+export function DeckOverviewFrames({ versionCount }: { versionCount: number }) {
+  const { t } = useTranslation()
+  return (
+    <>
+      <OutlineCard label={t('decks.overview.rank.title')} height={RANK_HEIGHT} />
+      {versionCount > 1 && (
+        <OutlineCard
+          label={t('decks.overview.versions.title')}
+          height={VERSIONS_HEIGHT[Math.min(versionCount, 8) - 2]}
+        />
+      )}
+      <OutlineCard label={t('decks.matches.title')} words={t('decks.reading')} height="h-140" />
+    </>
+  )
+}
 
 /** A deck's Overview, over the versions the address chose (`versionIds`,
  *  every version when `version` is `null`), top to bottom: the version
@@ -51,7 +97,7 @@ export function DeckOverviewView({
 
   let body
   if (matches.error) body = <ErrorNote error={matches.error} />
-  else if (matches.isPending) body = <Loading />
+  else if (matches.isPending) body = <DeckOverviewFrames versionCount={version == null ? deckIds.length : 0} />
   else if (inHand.length === 0 && version != null) {
     body = (
       <EmptyState
@@ -119,7 +165,7 @@ export function DeckOverviewView({
   }
 
   return (
-    <div className="space-y-8">
+    <div className={`${matches.isPending ? '' : 'arrive '}space-y-8`}>
       {switcher}
       {body}
     </div>

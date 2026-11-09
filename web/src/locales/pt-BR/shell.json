@@ -12,11 +12,13 @@
   "notFound": "Esta página não existe",
   "titles": {
     "mtgoPicks": "Escolher decks do MTGO",
-    "welcome": "Boas-vindas"
+    "welcome": "Boas-vindas",
+    "accountWelcome": "Escolha o que sua conta faz"
   },
   "homeLink": "{{product}}, início",
   "skipLink": "Pular para a página",
   "trackerDown": "O tracker não está rodando, então nada de novo pode ser carregado. O que está na tela é o que foi carregado por último. Este aviso some quando o tracker voltar a responder.",
+  "restarting": "Aplicando suas mudanças, já voltamos…",
   "footer": {
     "local": "Seu histórico de partidas fica guardado neste computador. Não é preciso ter conta.",
     "credits": "Créditos"
@@ -26,7 +28,14 @@
     "matchInProgress": "partida em andamento,",
     "more": "Mais",
     "morePlaces": "Mais páginas",
-    "close": "Fechar"
+    "close": "Fechar",
+    "signIn": "Entrar"
+  },
+  "cardData": {
+    "percent": "Dados dos cards · {{pct}}%",
+    "downloading": "Dados dos cards · baixando",
+    "saving": "Dados dos cards · salvando",
+    "failed": "Dados dos cards · não terminou"
   },
   "liveStatus": {
     "down": "Tracker parado",

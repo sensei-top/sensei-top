@@ -12,7 +12,7 @@ export { Chip, type ChipVariant } from './Chip'
 export { DataTable } from './DataTable'
 export { DeckTile } from './DeckTile'
 export { Dialog } from './Dialog'
-export { Disclosure } from './Disclosure'
+export { Disclosure, MoreAbout } from './Disclosure'
 export { EmptyState } from './EmptyState'
 export { Field } from './Field'
 export { Finding, type FindingWeight } from './Finding'
@@ -23,6 +23,7 @@ export {
   type OnboardingStep,
   type OnboardingStepState,
 } from './OnboardingSteps'
+export { OutlineCard, PAIRING_TILE_BLOCK, STAT_TILE_BLOCK } from './Outline'
 export { PageHeader } from './PageHeader'
 export { SectionLabel } from './SectionLabel'
 export { Segmented, type SegmentedOption } from './Segmented'

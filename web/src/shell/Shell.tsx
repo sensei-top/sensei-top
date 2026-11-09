@@ -1,12 +1,21 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, Outlet, ScrollRestoration, useLocation, useMatches } from 'react-router'
+import { Link, Outlet, ScrollRestoration, useLocation, useMatches, useNavigate } from 'react-router'
 import { useLive } from '../api'
 import { useShell } from '../bridge'
+import { FeedbackPill } from '../components/FeedbackPill'
+import { ReportProblemDialog } from '../components/ReportProblemDialog'
 import { BrandGlyph, Callout, TextLink } from '../components/ui'
+import { ACCOUNT_WELCOME_PATH, consentState, needsConsent } from '../lib/accountWelcome'
+import { CONTRIBUTE_KEEPS, CONTRIBUTE_PATH, contribPageDue } from '../lib/contribute'
+import { POLICY_VERSION } from '../lib/policy'
+import { matchIdOf, pageOf, ReportProblemContext, signedInOf, type ReportOpener } from '../lib/reportProblem'
 import { BottomBar } from './BottomBar'
+import { CardDataChip } from './CardDataChip'
 import { LiveStatus } from './LiveStatus'
+import { RestartScreen } from './RestartScreen'
+import { mainNotice, useRestartScreen } from './restarting'
 import { documentTitle, layoutName, placeAt, PRODUCT_NAME, type RouteHandle } from './places'
 import { Rail } from './Rail'
 
@@ -55,14 +64,72 @@ function SkipLink() {
 export function Shell() {
   const { t } = useTranslation()
   const live = useLive()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const matches = useMatches()
   const handle = matches[matches.length - 1]?.handle as RouteHandle | undefined
-  const hasShell = useShell() !== null
+  const shell = useShell()
+  const hasShell = shell !== null
+  const navigate = useNavigate()
+  const notice = mainNotice(useRestartScreen(shell?.app?.settings.restarting === true), live.isError)
+  // A signed-in user with no profile, or answers given under an older
+  // policy, is asked first; the consent screen itself is never redirected.
+  // From setup it carries the step, to come back to it.
+  const consentDue = needsConsent(shell?.app?.settings, POLICY_VERSION)
+  useEffect(() => {
+    if (consentDue && pathname !== ACCOUNT_WELCOME_PATH)
+      void navigate(ACCOUNT_WELCOME_PATH, { replace: true, state: consentState(pathname, search) })
+  }, [consentDue, pathname, search, navigate])
+  // The one-time "Help build the stats" page: at most once per page load, so
+  // a failed write of `contribAsked` followed by Decide later cannot bring
+  // the person back to it.
+  const contribDue = contribPageDue(shell?.app?.settings, consentDue)
+  const contribSent = useRef(false)
+  useEffect(() => {
+    if (!contribDue || contribSent.current) return
+    if ((CONTRIBUTE_KEEPS as readonly string[]).includes(pathname)) return
+    contribSent.current = true
+    void navigate(CONTRIBUTE_PATH, { replace: true })
+  }, [contribDue, pathname, navigate])
+  // The report dialog: one for the shell, remounted (`key`) per opening so
+  // each starts with an empty draft. Only a shell that sends reports has it.
+  const reportProblem = shell?.reportProblem
+  const onReportProblem = shell?.onReportProblem
+  const signedIn = signedInOf(shell?.app?.settings.account)
+  const [report, setReport] = useState({
+    opening: 0,
+    open: false,
+    message: null as string | null,
+    signedIn: false,
+    page: null as string | null,
+    matchId: null as string | null,
+  })
+  // Where the person is when they open it, read at that moment, so the
+  // opener keeps its identity as they move about.
+  const here = useRef({ page: null as string | null, matchId: null as string | null })
+  here.current = {
+    page: pageOf(pathname),
+    matchId: matchIdOf(matches[matches.length - 1]?.params as { id?: string } | undefined, pathname),
+  }
+  const opener = useMemo<ReportOpener | null>(
+    () =>
+      reportProblem
+        ? {
+            open: (message) =>
+              setReport((now) =>
+                now.open ? now : { opening: now.opening + 1, open: true, message, signedIn, ...here.current },
+              ),
+          }
+        : null,
+    [reportProblem, signedIn],
+  )
+  useEffect(() => onReportProblem?.(() => opener?.open(null)), [onReportProblem, opener])
   const notFound = matches.some((match) => (match.handle as RouteHandle | undefined)?.notFound)
   const place = notFound ? null : placeAt(pathname)
   const { name, title } = layoutName(place, handle, hasShell, t)
   const focus = place?.id === 'live'
+  // The welcome's pages (`bare`) are the steps alone: the person finishes
+  // or leaves them by their own buttons, not by the rail.
+  const bare = handle?.bare === true && !notFound
 
   // The heartbeat is the only thing on a timer (current-match/read, ridden by
   // CurrentMatchView, is the one scoped exception — see its own hook). When
@@ -92,73 +159,107 @@ export function Shell() {
   }, [place, t, title])
 
   return (
-    <div className="min-h-screen bg-plane md:flex">
-      <SkipLink />
-      <Rail current={place} />
+    <ReportProblemContext.Provider value={opener}>
+      <div className="min-h-screen bg-plane md:flex">
+        <SkipLink />
+        {!bare && <Rail current={place} />}
 
-      {/* Under 48rem the bottom bar is fixed over the window's foot, so the
-          column leaves its height free under the footer. */}
-      <div
-        className={`flex min-h-screen min-w-0 flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0 ${
-          focus ? 'md:h-screen md:overflow-hidden' : ''
-        }`}
-      >
-        {/* The strip under 48rem, sticky, on surface-1; the bar from 48rem
-            up, on the plane. In focus mode the bar leaves the screen and its
-            name stays for a screen reader. */}
-        <header
-          className={`sticky top-0 z-20 shrink-0 border-b border-line bg-surface md:static md:border-0 md:bg-transparent ${
-            focus ? 'md:sr-only' : ''
+        {/* Under 48rem the bottom bar is fixed over the window's foot, so the
+            column leaves its height free under the footer. */}
+        <div
+          className={`flex min-h-screen min-w-0 flex-1 flex-col ${bare ? '' : 'pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0'} ${
+            focus ? 'md:h-screen md:overflow-hidden' : ''
           }`}
         >
-          <div className={`${COLUMN} flex items-center gap-3 py-2.5 md:pt-7 md:pb-0`}>
-            <Link
-              to="/"
-              aria-label={t('shell.homeLink', { product: PRODUCT_NAME })}
-              className="flex size-9 shrink-0 items-center justify-center rounded-control text-accent md:hidden"
-            >
-              <BrandGlyph size={24} />
-            </Link>
-            <h1 className="min-w-0 flex-1 truncate font-display text-title text-ink md:text-heading">{name}</h1>
-            <LiveStatus className={focus ? 'md:hidden' : ''} />
-          </div>
-        </header>
-
-        <main
-          id="page"
-          tabIndex={-1}
-          className={`${COLUMN} flex-1 py-5 md:py-7 ${
-            focus ? 'md:flex md:min-h-0 md:flex-col md:overflow-hidden md:py-3' : ''
-          }`}
-        >
-          {live.isError && (
-            <div className="mb-4 shrink-0">
-              <Callout tone="warn">{t('shell.trackerDown')}</Callout>
+          {/* The strip under 48rem, sticky, on surface-1; the bar from 48rem
+              up, on the plane. In focus mode the bar leaves the screen and its
+              name stays for a screen reader. */}
+          <header
+            className={`sticky top-0 z-20 shrink-0 border-b border-line bg-surface md:static md:border-0 md:bg-transparent ${
+              focus ? 'md:sr-only' : ''
+            }`}
+          >
+            {/* A bare page's name stands over its centred card (`max-w-3xl`,
+                as the welcome pages draw it), on the card's own left edge. */}
+            <div className={`${COLUMN} py-2.5 md:pt-7 md:pb-0`}>
+              <div className={`flex items-center gap-3 ${bare ? 'mx-auto max-w-3xl' : 'min-h-8'}`}>
+                <Link
+                  to="/"
+                  aria-label={t('shell.homeLink', { product: PRODUCT_NAME })}
+                  className="flex size-9 shrink-0 items-center justify-center rounded-control text-accent md:hidden"
+                >
+                  <BrandGlyph size={24} />
+                </Link>
+                <h1 className="min-w-0 flex-1 truncate font-display text-title text-ink md:text-heading">{name}</h1>
+                {!bare && <CardDataChip className={focus ? 'md:hidden' : ''} />}
+                {!bare && <LiveStatus className={focus ? 'md:hidden' : ''} />}
+              </div>
             </div>
+          </header>
+
+          <main
+            id="page"
+            tabIndex={-1}
+            className={`${COLUMN} flex-1 py-5 md:py-7 ${
+              focus ? 'md:flex md:min-h-0 md:flex-col md:overflow-hidden md:py-3' : ''
+            }`}
+          >
+            {notice === 'trackerDown' && (
+              <div className="mb-4 shrink-0">
+                <Callout tone="warn">{t('shell.trackerDown')}</Callout>
+              </div>
+            )}
+            {notice === 'restarting' && <RestartScreen />}
+            {/* In focus mode the page fills what the callout leaves, and a live
+                view's own h-full column measures against this box. Hidden, not
+                unmounted, under the restart screen: a page waiting on the
+                restart (the welcome's Send, a Settings save) keeps its state
+                and finishes what it started. */}
+            <div
+              hidden={notice === 'restarting'}
+              className={focus ? 'md:flex md:min-h-0 md:flex-1 md:flex-col' : undefined}
+            >
+              <Outlet />
+            </div>
+          </main>
+
+          {!bare && (
+            <footer className={`shrink-0 border-t border-line ${focus ? 'md:hidden' : ''}`}>
+              {/* Wizards' notice is the welcome catalogue's, one sentence in one
+                  place. */}
+              <div
+                className={`${COLUMN} flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-4 text-caption text-muted ${
+                  // Keeps Credits clear of the fixed Feedback pill: change both together.
+                  opener ? 'md:pr-[calc(2.25rem+8.5rem)]' : ''
+                }`}
+              >
+                <p className="min-w-0 max-w-prose flex-1">
+                  {t('shell.footer.local')} {t('welcome.intro.wizardsNotice')}
+                </p>
+                <TextLink href="/settings/about#credits" className="shrink-0">
+                  {t('shell.footer.credits')}
+                </TextLink>
+              </div>
+            </footer>
           )}
-          {/* In focus mode the page fills what the callout leaves, and a live
-              view's own h-full column measures against this box. */}
-          <div className={focus ? 'md:flex md:min-h-0 md:flex-1 md:flex-col' : undefined}>
-            <Outlet />
-          </div>
-        </main>
+        </div>
 
-        <footer className={`shrink-0 border-t border-line ${focus ? 'md:hidden' : ''}`}>
-          {/* Wizards' notice is the welcome catalogue's, one sentence in one
-              place. */}
-          <div className={`${COLUMN} flex flex-wrap items-baseline gap-x-3 gap-y-1 py-4 text-caption text-muted`}>
-            <p className="min-w-0 flex-1">
-              {t('shell.footer.local')} {t('welcome.intro.wizardsNotice')}
-            </p>
-            <TextLink href="/settings#credits" className="shrink-0">
-              {t('shell.footer.credits')}
-            </TextLink>
-          </div>
-        </footer>
+        {!bare && <BottomBar current={place} />}
+        {!bare && !focus && <FeedbackPill />}
+        <ScrollRestoration />
+        {reportProblem && report.opening > 0 && (
+          <ReportProblemDialog
+            key={report.opening}
+            open={report.open}
+            onOpenChange={(open) => setReport((now) => ({ ...now, open }))}
+            send={reportProblem}
+            signedIn={report.signedIn}
+            message={report.message}
+            page={report.page}
+            matchId={report.matchId}
+          />
+        )}
       </div>
-
-      <BottomBar current={place} />
-      <ScrollRestoration />
-    </div>
+    </ReportProblemContext.Provider>
   )
 }

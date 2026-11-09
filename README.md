@@ -23,12 +23,15 @@ computer and turns them into a dashboard: every match and game, turn by
 turn, your record with each deck and against each archetype, and what the
 real tournament metagame looks like next to it.
 
-- **Your matches stay on your computer.** No account, no upload; the
-  dashboard runs on your own machine and answers nobody else. The one
-  exception is a report you ask to generate with your own key, which
-  sends that match to the model you configured.
-- **Free, with no account.** The tracker is free now and later, and
-  nothing free asks you to sign up. The [Microsoft Store](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN) build of
+- **Your matches stay on your computer unless you say yes.** Sensei Top
+  works fully without an account. A free, optional account adds cloud
+  backup of your match history and error reports, each a yes of its own;
+  contributing your games to the stats is a separate yes and needs no
+  account. The dashboard runs on your own machine and answers nobody
+  else, and a report you ask to generate with your own key sends that
+  match to the model you configured.
+- **Free, with no account needed.** The tracker is free now and later,
+  and none of it asks you to sign up. The [Microsoft Store](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN) build of
   the same app is free now and priced later, and an optional paid tier is
   planned after that; the [roadmap](ROADMAP.md) says what each one is.
 - **Read-only towards both clients.** It reads their log files and never
@@ -130,7 +133,7 @@ Each change is checked before it is merged:
   account ID or local path reaches it.
 - **Real games.** Nothing is released before the maintainer has run it
   against their own Arena and Magic Online games, and release builds are
-  tried by a small group of testers on Windows and a Steam Deck.
+  tried by a small group of testers on Windows and Linux.
 
 This is about how the app is made. The app itself never sends anything to
 a model unless you set a Claude key of your own and press a button that

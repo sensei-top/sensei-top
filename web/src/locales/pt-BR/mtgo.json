@@ -13,6 +13,7 @@
   },
   "range": "{{from}} – {{to}}",
   "page": {
+    "reading": "Lendo suas partidas do MTGO…",
     "intro": "O log do MTGO não diz qual deck você jogou. Estas partidas estão agrupadas pela lista salva que contém mais dos cards que você jogou em cada uma; confirme um grupo e toda partida nele conta para essa lista.",
     "waiting_one": "{{matches}} precisa de um deck.",
     "waiting_other": "{{matches}} precisam de um deck.",

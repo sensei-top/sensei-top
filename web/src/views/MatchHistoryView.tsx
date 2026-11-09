@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useLive, useMatches } from '../api'
 import { MatchesSummary } from '../components/MatchesSummary'
 import { MatchRow } from '../components/MatchRow'
-import { Button, Card, EmptyState, ErrorNote, Loading } from '../components/ui'
+import { Button, Card, EmptyState, ErrorNote, OutlineCard } from '../components/ui'
 import type { TFunction } from '../i18n'
 import { formatCount } from '../lib/time'
 import { placeById } from '../shell/places'
@@ -13,6 +13,21 @@ const MATCH_LIST_LIMIT = 500
 
 /** Rows shown at first, and added by each press of the button. */
 const STEP = 50
+
+/** The page's pending state: the band's three tiles and the list's card. */
+function HistoryOutline() {
+  const { t } = useTranslation()
+  return (
+    <div className="space-y-8">
+      <div className="grid gap-4 md:grid-cols-3">
+        <OutlineCard label={t('matches.summary.matchesWon')} height="h-10" />
+        <OutlineCard label={t('matches.summary.gamesWon')} height="h-10" />
+        <OutlineCard label={t('decks.strip.playDraw')} height="h-10" />
+      </div>
+      <OutlineCard words={t('matches.history.reading')} height="h-96" />
+    </div>
+  )
+}
 
 /** The words over the rows: how many are listed, of how many in hand. */
 function listCaption(inHand: number, shown: number, full: boolean, t: TFunction): string {
@@ -35,11 +50,11 @@ export function MatchHistoryView({ deckId, source }: { deckId?: string; source?:
   const live = useLive()
   const [shown, setShown] = useState(STEP)
 
-  if (matches.isPending) return <Loading />
+  if (matches.isPending) return <HistoryOutline />
   if (matches.error) return <ErrorNote error={matches.error} />
   if (!matches.data.length) {
     // Until the heartbeat answers, which empty state applies is unknown.
-    if (live.isPending) return <Loading />
+    if (live.isPending) return <HistoryOutline />
     // The heartbeat counts every match recorded, from every source: none
     // at all is the first case, some elsewhere the second.
     const recorded = live.data?.matches ?? 0
@@ -68,7 +83,7 @@ export function MatchHistoryView({ deckId, source }: { deckId?: string; source?:
   const left = inHand.length - rows.length
 
   return (
-    <div className="space-y-8">
+    <div className="arrive space-y-8">
       <MatchesSummary matches={inHand} full={full} deckId={deckId} source={source} />
       <Card>
         <p className="mb-3 text-caption text-muted">{listCaption(inHand.length, rows.length, full, t)}</p>

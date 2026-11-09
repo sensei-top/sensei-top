@@ -1,6 +1,6 @@
 # Frontend: the pages
 
-The dashboard page by page: Home, Matches and a match's views, the current-match reads, the opponent-deck read, the MTGO picks, the match report, Decks, the RCQ page, the Deck guide, Field and Coach. Cut from [docs/frontend.md](frontend.md), which keeps the rules every page follows.
+The dashboard page by page: Home, Matches and a match's views, the current-match reads, the opponent-deck read, the MTGO picks, the match report, Decks, the account's pages, the RCQ page, the Deck guide, Field and Coach. Cut from [docs/frontend.md](frontend.md), which keeps the rules every page follows.
 
 ## Home
 
@@ -11,6 +11,15 @@ only, the last session, three things worth a look, the MTGO matches that
 still need a deck, the recent matches beside the win rate by week, the deck
 tiles, and the field beside a pointer to the coach. A part with nothing to
 show is not drawn, and the part beside it takes the row.
+
+**The sign-in offer.** Above the first part, in first run too, one quiet
+line: "Sign in to keep a copy of your history in the cloud.", a Sign in link
+to `/settings/account` and a dismiss ×. It stands while the build has an
+account, nobody is signed in, the welcome was seen and `signInDismissed` is
+unset (`shell/signInOffer.ts`, `signInOffered`); each condition false hides
+it. The rail's Sign in item, above Settings, shares the condition. The ×
+sets the flag and removes both the line and the rail item; the rail item
+has no dismiss of its own.
 
 The components in `components/home/` only draw. **Every count on Home is
 a pure function in `lib/home.ts`**, of the API's rows and a clock handed
@@ -28,7 +37,7 @@ Matches still lists it.
 | `/api/guide/decks` | `useGuideDecks` | the deck tiles, one per deck |
 | `/api/review/leaks?source=all` | `useLeaks` | the pattern |
 | `/api/formats` | `useFormats` | the default format, whose field Home shows |
-| `/api/metagame/status?format=` | `useMetagameStatus` | that format's reset, where the field's window starts |
+| `/api/metagame/status?format=` | `useMetagameStatus` | that format's reset (the Field page's `reset` option; Home's window ignores it) |
 | `/api/metagame/presence?format=` | `useMetaPresence` | that format's field |
 | `/api/matches/{id}` | `useMatchArt` | card art alone, seven matches at most |
 | `/api/mtgo/needs-pick` | `useMtgoNeedsPick` | the Needs a deck card |
@@ -125,17 +134,32 @@ comes first; the 30-day line follows under its own `SectionLabel`, "Last
 30 days", behind a rule, so the two records are not read as one.
 
 **The three things** are the first three that exist of, in this order
-(`threeThings`): the last finished match; the first pattern that costs
+(`homeSlots`): the last finished match; the first pattern that costs
 the viewer (`firstPattern`: the leak finder's first whose win rate with it
 is below the rate without); the field. Fewer when fewer exist, never a filler. A candidate whose
 request failed still takes its place, as the failure.
 
 While they load, each slot renders as soon as its own data answers
-(`thingSlots`): a slot still waiting shows its card frame, its place and
+(`homeSlots`): a slot still waiting shows its card frame, its place and
 label, and a loading line ("Looking for a pattern in your matches…",
 "Reading the field…") over the skeleton, so it never reads as an empty
 card. A pending slot holds its place, so none moves when another arrives;
-the pattern's request never holds back the field's, nor the reverse. A slot that answers with nothing drops out, and the one after it moves up a place and takes its number: the one move the row makes, because never a filler outranks holding a place.
+the pattern's request never holds back the field's, nor the reverse; the one exception is the deck card, which takes the pattern's slot as a pending card ("Comparing your deck with the field…") until the field's requests answer, since they decide whether it can name an unmet archetype. A slot that answers with nothing drops out, and the one after it moves up a place and takes its number: the one move the row makes, because never a filler outranks holding a place.
+
+**The fallbacks** (`homeSlots`) fill an empty slot with a card from data
+Home already holds, in the same place: with no pattern, **Your deck** takes
+the pattern's slot (`deckSlot`: the newest match's deck, its record and match
+count in the list, and the default format's most-played archetype in the
+field's tier that the deck has not met, linking that pairing; with no corpus,
+no unmet one, or a newest match in another format, the card says when the deck
+was last played and links the deck; no deck on the newest match, no card).
+With no field, **Next step** takes the field's slot (`nextStep`), the first
+that applies: card data not downloaded or downloading (the shell's
+`firstData` and `rulesText`; Settings, Sources), exactly one week with a match
+(no button), fewer than `PATTERN_MATCHES` (20) won or lost matches with a
+deck (no button; `PATTERN_SIDE` is `review/leaks.py`'s `MIN_SAMPLE`). A "Next
+step" with nothing that applies draws no card. The deck card waits for the
+field's requests; the order stays match, pattern or deck, field or next.
 
 A pattern's title and sentence are Home's own words, by the leak
 finder's code (`patternWords` in `lib/patterns.ts`).
@@ -193,29 +217,32 @@ played" would be. The marks are computed over every identity
 `/api/guide/decks` returns, before the five are chosen, so a tile reads
 the same on both pages even when its twin is not on Home.
 
-**The field** (`homeField`) is the default format's, the one
-`/api/formats` names (`docs/frontend.md`, "Filters are in the address"), and both of its
+**The field** (`homeField`) is the default format's, the one `/api/formats`
+names (`docs/frontend.md`, "Filters are in the address"), and both of its
 titles name it: the card is "The Modern field, and you against it"
-(`FieldAgainstYou`), and as one of the three things it reads "Two decks
-are 41% of the Modern field" (`fieldTitle`, `ThreeThings.tsx`). It is
-read from the first ranked tier with lists in the window — A, then B,
-then C, then D (`firstTierWithLists`), the same rule the Field page's
-default share uses. Six decks at most, each a `FieldRow`
-(`components/field/`), the row the Field page draws too. The window
-starts at the format's reset, else 90 days back, which is the Field
-page's own default: a bare `/field` and Home ask `useMetaPresence` with
-the same window and format, so they share one request. Under each deck's
-name is the viewer's record against it in the same window
+(`FieldAgainstYou`), and as one of the three things it reads "Two decks are
+41% of the Modern field" (`fieldTitle`, `ThreeThings.tsx`). It is read from
+the Field page's default tier (`defaultTier` in `lib/field.ts`: B when it
+has lists in the window, else the first ranked tier that does), which
+`HomeView` passes to `homeField`. Six decks at most, each a `FieldRow`
+(`components/field/`), the row the Field page draws too. The window is the
+Field page's default (`defaultWindow`: the last 15 days, the reset or not),
+so "Open the field" lands on the same numbers: a bare `/field` and Home ask
+`useMetaPresence` with the same window and format, so they share one
+request. A deck's matchup records keep their own window: the reset, else the
+last 365 days, because a per-matchup rate needs the volume. Under each
+deck's name is the viewer's record against it in the same window
 (`recordAgainst`), counted over the finished matches in the same format
 (`matchesInFormat`: a match's `format` from `/api/matches`; a match with
 none counts toward no format) whose opponent carries both that row's
-archetype key and its label, for one deck: the deck of the newest match
-in the format that has one, in every version of it. With no such match
-the record is over every deck in the format. The art is the newest
-finished match in the format against the first row's deck. The card
-names whichever tier it landed on in words (`tierKind` in `lib/field.ts`, the `field.tier.kind` keys): "paper
-tournaments of 64+ players" for A, "MTGO challenges" for B, "MTGO
-leagues" for C, "paper tournaments under 64 players" for D.
+archetype key and its label, for one deck: the deck of the newest match in
+the format that has one, in every version of it. With no such match the
+record is over every deck in the format. The art is the newest finished
+match in the format against the first row's deck. The card names whichever
+tier it landed on in words (`tierKind` in `lib/field.ts`, the
+`field.tier.kind` keys): "paper tournaments of 64+ players" for A, "MTGO
+challenges" for B, "MTGO leagues" for C, "paper tournaments under 64
+players" for D.
 
 ### Art
 
@@ -308,12 +335,13 @@ says what will appear and what causes it:
 - **Matches** tells "No matches yet" from "No match fits these filters"
   by the heartbeat's count of matches, and the second offers "Show every
   match". With no match in the list the summary band is not drawn. Until the
-  heartbeat has answered, an empty list shows `Loading`, since the page
+  heartbeat has answered, an empty list shows the page's outline, since the page
   cannot yet tell the two apart.
 - **Coach** shows the empty state alone, with too few matches and no
   report written before, and only once the coach has answered: a
   request that failed says it failed. A report written before is
   still shown when the matches are too few.
+- **Home's three things** have no empty state: an empty pattern or field slot takes its fallback ("The session, and the three things"), and with no fallback that applies the row is shorter, never a filler.
 - **Field** says that the server downloads tournament results on its own
   while it runs, and that `sensei-top meta` does it from the command line.
 
@@ -353,6 +381,19 @@ same row. On Matches the row carries one more caption, the event in
 words and the rank. From 48rem up a row is a grid (when, result, the
 opponent's deck, the viewer's deck, event and rank); under that it
 stacks.
+
+**A restored match** (`Match.restored`) is one pulled back from the
+user's cloud history that this install has no log of (`cloud_match`, read
+through `v_cloud_match`, migration 073). Its row is a plain element with a
+"Restored" chip beside the result and links nowhere: it has no report,
+replay or turns, and `/api/matches/{id}` 404s for it. What the cloud does
+not carry is null, never guessed: the end time, the rank, the opponent's
+colours and the best-of-three split. A local match with the same id always
+hides the restored one. Restored matches count in the match-level
+win-rate views (`v_deck_winrate`, `v_deck_identity_winrate`,
+`v_matchup_winrate`), under a `deck_key` of `cloud:` and the deck's name
+with no `deck_id`; the game-level views and the deck pages stay
+local-only, and a deck filter leaves restored rows out.
 
 **The event in words** is `eventLabel` (`lib/events.ts`). The names
 known are written out in a table. Any other id is respelled and never
@@ -669,8 +710,8 @@ simply absent.
 ## The match report
 
 `/matches/:id` is the report: `MatchDetailView` draws the way back to
-the list, the hero, and `MatchReportPanel`
-(`components/MatchReportPanel.tsx`), which renders
+the list, the hero, an MTGO match's deck pick, `AgainstCard` and
+`MatchReportPanel` (`components/MatchReportPanel.tsx`), which renders
 `GET /api/matches/{id}/report`. The games turn by turn are on the
 replay's page, one address further. AGENTS.md rule 5 and
 `docs/review.md`, "The match report, and its optional narrative",
@@ -678,16 +719,34 @@ say why advice is given after a match and not during one.
 
 **The hero** (`components/match/MatchHero.tsx`) has Home's shape: the
 art at the right with a fade to the left, on top with a fade down under
-48rem, and no word on the picture. The art is a card the opponent cast:
-the one whose first cast came latest in the match, as on Home
-(`castCards`, `lib/matchArt.ts`), or the viewer's own when
-the opponent cast nothing, or none. The words are a label line (the
+48rem, and no word on the picture. The art is a card the viewer cast:
+the one whose first cast came latest in the match (`castCards`,
+`lib/matchArt.ts`), or, when the match cast nothing, the deck identity's
+`art_grp_id` (`resolveDeck` over `useGuideDecks`, read in the hero). While
+the identities load and the match has a deck, the art box is reserved as
+the wash so the hero does not jump; if they resolve to no card the box
+drops and the words take the width. The words are a label line (the
 event in words, when), the report's headline and subhead, then the two
 decks: the viewer's as `MatchRow` writes it, the opponent's as
 `OpponentDeckLabel`, which is the way to correct it. Last, a `Button`
 that leads to the replay. Until the report has arrived, or when it has
 nothing to say, the title is the result and the games' count from the
 match itself.
+
+**Against <archetype>** (`AgainstCard`, in `MatchDetailView`) is a card
+between the hero (and an MTGO match's pick) and the report, drawn only for
+a lost match whose opponent is a named archetype and whose deck resolves to
+an identity (`againstLink`, `lib/pairing.ts`); any other match has none.
+Its title names the archetype as the hero does (`opponentLabelText` over
+the match's `opponent_label`, so the raw key never shows and the title does
+not change as the matches load; only a match with no label falls back to
+the pairing's heading). Under it, this deck's record against the archetype
+from the same row the pairing page reads (`pairingMatches` over the
+identity's versions, in the match's format, then `matchupRowOver`), left
+out while unread or when no match against it has finished; and, with AI
+features on, whether its matchup brief is written (`briefWritten`, from
+coverage's row; nothing for a status that says neither). A button leads to
+the pairing (`pairingAddress`).
 
 **The games** (`components/match/GameCard.tsx`): one `Card` per game of
 `summary.games` (`review/summary.py`, `docs/review.md`), in game order,
@@ -764,6 +823,99 @@ no command-line importer: a match review is read once, about a game
 already played, so a stored narrative comes only from the generate
 button (`docs/review.md`).
 
+## The account's pages
+
+Shell-level screens, all in the desktop shell and none in a browser. The
+shell's half is `docs/desktop.md`, "Account and sync", "Error reports" and
+"Contributed games".
+
+**The consent screen** (`/account/welcome`, `pages/AccountWelcomePage.tsx`,
+title `accountWelcome`, a child of the layout like `/welcome`). The layout
+sends a signed-in user there (`needsConsent`) when the account's profile is
+`none`, or is `read` with a `consentVersion` that is missing or older than
+`POLICY_VERSION` (`lib/policy.ts`, the privacy policy's date); never when the
+build has no account, nobody is signed in, the profile could not be read, or
+the answers were given under a newer version than this install knows (asking
+again would write the older one back). The screen is never redirected from
+itself. Answered or skipped, it goes Home, or back to the setup step it
+interrupted, which the redirect from `/welcome` carries in the navigation
+state (`consentState`, `afterConsent`): a first sign-in on Welcome's first
+step otherwise skips the rest of setup. Its kind is fixed when it opens, since the shell publishes the
+profile before `setProfile` replies. It asks its questions over a few
+steps (`stepsOf`), drawn bare (`docs/frontend.md`, "The welcome's bare
+pages"), with the first-run Welcome's "Step n of m" caption, an `h2`
+heading and Back and Next at the foot; the steps live in the page, not the
+address, since nothing is saved until Continue on the last one. A step
+shows a lead line and its control; what is kept, where and for how long
+sits under the control in a collapsed "More about this" `Disclosure` (where
+the account itself is kept opens the first step's), never what a choice
+costs: the transfer box's agree and withdraw lines and the line that a sent
+game can't be deleted (`account.welcome.contribute.final`) stay in view,
+while its law and IP lines fold inside the box under "More about this"; the
+error-reports dialog does the same, withdraw visible, law and IP folded. *first*
+steps through the age confirmation, then the three choices, none
+pre-ticked: cloud backup and coach history together (`keep`, the two things
+kept at Supabase), then error reports alone, since the transfer box opens
+under them; each step's Next waits on its answers (`stepHint`). *returning*
+(a policy change) steps through the same two with the earlier answers
+pre-selected, and shows the
+policy-change sentence only when `account.policyChanges.<version>` exists.
+Choosing Send for error reports needs the transfer consent box ticked, and
+the two together are the only way `consentErrors` is written true. On a
+first sign-in, while no "Help build the stats" answer is stored, that
+question is the last step, opening with the line that says it is not one of
+the account's choices, and the age box covers it. "Skip and don't create an
+account" stays at the foot of every step, with the note that the three
+choices need an account, and that no match is backed up yet (sync waits on
+a read profile with the backup consent, so before the last step nothing
+is): it skips them all and deletes the just-made
+account; "Help build the stats", which needs none, goes unanswered there
+and is left to the one-time question or Settings. A returning user has Sign out there instead. A profile
+other than `none` or `read` goes Home.
+
+**The one-time question** (`/contribute`, `pages/ContributePage.tsx`, title
+`contribute.heading`). It and Welcome's last step ask through
+`ContributeQuestion`, whose text (`ContributeDisclosure`) keeps three lines on
+the page (no account needed, what a yes sends, and that a sent game can't be
+deleted) and folds where the pool is and how to stop under "More about this"
+(`MoreAbout`, the consent screen's fold too). Welcome's last step, which
+names no account, folds the no-account line as well (`foldNoAccount`); its
+age and wait hints share one line, and the yes it keeps off names that line
+as its description. Settings' dialog shows its four
+lines in full. It is due (`contribPageDue`) only when the build can
+upload, onboarding is finished, nothing is stored, the page was never shown,
+the consent screen is not due, and a signed-in account's profile has been
+read (a missing or `unknown` one waits, so the one ask is never spent before
+the consent check). The layout redirects to it at most once per page load,
+and never from `/welcome`, `/account/welcome` or itself. Mounting it sets
+`contribAsked`, so Decide later, closing the window and Go to Home all mean
+it does not show again; Settings still asks. A failed write only means it may
+show again at the next launch.
+
+**Settings → Backup's second card.** "Cloud copy" holds the cloud history
+switch (the profile's `consentSync`, written the way Account writes the
+other choices) and its status line; signed out it is one line linking to
+Settings → Account, and with no profile read it is not drawn. After a restore the first card's note carries Restart
+now, which calls `app.relaunch()` and shows a refusal's sentence under the
+buttons. A later phase lists the snapshots by date.
+
+**Settings → Account and its dialogs.** `docs/frontend.md`, "Settings", says
+what the section holds. The three dialogs are Delete my cloud history (says
+that every backed-up match is deleted, this PC's matches stay, the backup
+turns off, turning it on uploads everything again, and that it cannot be
+undone; Cancel is focused; a failure line depends on whether the switch is
+off), Delete my account, and the error-reports transfer consent. The delete
+IPC is not called until the confirm button is pressed.
+
+**The error screen** (`pages/ErrorPage.tsx`) is the `ErrorBoundary` of every
+route in `routes.tsx`, the layout's too, so it can render where the layout is
+not mounted and mounts its own report dialog. It says something went wrong,
+offers Reload and, in a shell that sends reports, Report a problem, and says
+whether the error was sent already (only with error reports on; it is
+reported once per thrown object, since a boundary's catch does not reach
+`window`). Errors that do reach `window` are forwarded by
+`lib/errorReports.ts`'s `forwardErrors`.
+
 ## Decks
 
 `/decks` (`pages/DecksPage.tsx`) is one tile per deck, an identity of
@@ -778,15 +930,20 @@ rate), the format in words with how many versions when there is more
 than one (`tileDetail`), when it was
 last played, and its art: a card the viewer cast in the deck's newest
 finished match of the same 500-match list Home reads, one card per
-page. A deck with no finished match in that list keeps the empty art
-box; nothing more is asked for it. When two or more tiles share a name
-(a rebuilt deck is a second Arena deck, so a second tile), the one played
-most recently carries the "Newest" chip (`newest`) and each other shows
-"played Sep 3 to 14" (`playedRange`, `versionDays`) where "last played"
-would be, keeping "last played" when the list was played on one day only.
-Nothing is folded together. The grid is Home's own: two to a
-row under 48rem, three from there, five from 64rem. With no deck at
-all, "No decks yet".
+page. A deck with no finished match in that list, or whose cast cards are
+all taken, wears its identity's `art_grp_id` (`tileArt`, which takes it
+even when another tile has it); with that null too, the wash. Until the
+matches list and the tile's match detail have arrived the tile shows the
+wash, never the fallback, so no art moves when data arrives. A deck's
+pages (`DeckLayout`) open on a band showing the identity's `art_grp_id`
+at the right, fading left, or the wash when it is null. When two or more
+tiles share a name (a rebuilt deck is a second Arena deck, so a second
+tile), the one played most recently carries the "Newest" chip (`newest`)
+and each other shows "played Sep 3 to 14" (`playedRange`, `versionDays`)
+where "last played" would be, keeping "last played" when the list was
+played on one day only. Same-name tiles are never merged into one. The
+grid is Home's own: two to a row under 48rem, three from there, five from
+64rem. With no deck at all, "No decks yet".
 
 Two `Select`s sit above the grid, both kept in the address as
 `useFilters` keeps its own and left out at their defaults. **`?format=`**:
@@ -803,6 +960,22 @@ played; Matches is finished matches, most first; every tie goes to the
 later last played, a tile with no date last. The art is picked in the
 route's order over every tile, so a tile's art does not change with the
 sort or the filter.
+
+**`?q=`** searches the decks on the page: a deck matches when the trimmed
+query, ignoring case and accents, is a substring of its name or of any of
+its identity's `card_names` (an unnamed deck matches on its cards only).
+The address keeps the query trimmed and drops `?q=` when it is empty; the
+box holds its own text, starts from the address and is reset only when
+the address's `?q=` changes under it. It combines with `?format=` and `?sort=`,
+filters data the page already has, and when nothing matches "No deck
+matches “q”." is drawn as an `EmptyState`. Decks with fewer than 5
+finished matches (`FOLD_MIN_MATCHES`: the tile's wins plus losses, draws
+aside, which under five is the record the tile shows) fold, after the
+grid and in the same sort, into one collapsed disclosure that reads
+"Fewer than 5 matches · N decks". N counts only the tiles matching the
+query, and a fold with none is hidden, not unmounted. When every deck in
+the chosen format would fold, none does. The fold's open state is local,
+and a query never opens or closes it.
 
 A tile leads to `deckAddress(key)`: `/decks/` and the identity's own
 key (`addressSegment`, its colon written bare). `/decks/:id` and the
@@ -949,7 +1122,20 @@ tournament format known for the deck (coverage's `fmt` null,
 `matchups.brief.formatUnknown`), too few tournament lists to write from
 yet, or not written with a "Build the prompt" button. A prompt the route
 answers `format_unknown` or `no_consensus` says the same in the prompt's
-place. Last, the deck's Matches card, this pairing's matches alone.
+place. Then the deck's Matches card, this pairing's matches alone. Last,
+**What you brought in before**: what this deck boarded in its last
+matches against the archetype, drawn by `PastBoardingList`
+(`components/PastBoardingList.tsx`, the list Live's sideboard card also
+draws, there under its own "Last time vs" heading). It is read by the
+deck's whole identity (`usePastBoarding`,
+`GET /api/guide/{key}/past-boarding/{archetype}`), across every version and
+format, whatever `?version=` or `?format=` the address chose. Only an
+`archetype:` pairing asks. While the request is pending the card draws
+nothing and holds no place, which is why it sits last: its arrival moves
+nothing above it. An empty answer (an archetype never faced, or
+MTGO, which has no boarding) draws no card (the request is still made); a
+failed request draws the page's
+`ErrorNote`.
 
 **`MatchRow withDeck={false}`** is what both the Overview's and a
 pairing's Matches card draw (`DeckMatchesCard`, shared by both): the
@@ -1268,10 +1454,10 @@ The page draws no chart: every number is a row, a table or a tile.
 
 **The defaults.** The format is `/api/formats`' `default`, the format of
 the viewer's most recent match that has one, else Standard (`docs/frontend.md`, "Filters are
-in the address"). The window is the format's reset when the status has
-one, else 90 days; `?window=reset` with no reset known means 90 days.
-The tier is the first ranked tier with lists in the window, A, then B,
-then C, then D — Home's own rule (`firstTierWithLists`). `?pairs=` is
+in the address"). The window is the last 15 days; the format's reset
+stays an option in the select, and `?window=reset` with no reset known
+means 15 days. The tier is B when it has lists in the window, else the
+first ranked tier that does (`firstTierWithLists`: A, B, C, D). `?pairs=` is
 `A` when tier A has lists in the window, else `AB` when tier B has, else
 `ABD`. Every metagame read names the format. The status waits for
 `/api/formats`, and the three metagame reads (`useMetaPresence`,

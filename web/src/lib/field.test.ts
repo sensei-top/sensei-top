@@ -145,9 +145,10 @@ describe('the format', () => {
 })
 
 describe('the window', () => {
-  it('opens on the reset when one is known, else on 90 days', () => {
-    expect(windowOf(null, RESET)).toBe('reset')
-    expect(windowOf(null, null)).toBe(90)
+  it('opens on 15 days, the reset or not', () => {
+    expect(windowOf(null, RESET)).toBe(15)
+    expect(windowOf(null, null)).toBe(15)
+    expect(windowOf('reset', RESET)).toBe('reset')
   })
 
   it('reads a day count the select offers', () => {
@@ -155,15 +156,15 @@ describe('the window', () => {
     expect(windowOf('365', null)).toBe(365)
   })
 
-  it('takes ?window=reset with no reset known as 90 days', () => {
-    expect(windowOf('reset', null)).toBe(90)
-    expect(metaWindowOf(windowOf('reset', null), null)).toEqual({ days: 90 })
+  it('takes ?window=reset with no reset known as 15 days', () => {
+    expect(windowOf('reset', null)).toBe(15)
+    expect(metaWindowOf(windowOf('reset', null), null)).toEqual({ days: 15 })
   })
 
   it('falls back to the default on a value it does not know', () => {
-    expect(windowOf('14', RESET)).toBe('reset')
-    expect(windowOf('forever', null)).toBe(90)
-    expect(windowOf('', RESET)).toBe('reset')
+    expect(windowOf('14', RESET)).toBe(15)
+    expect(windowOf('forever', null)).toBe(15)
+    expect(windowOf('', RESET)).toBe(15)
   })
 
   it('asks the API for the reset as since and a day count as days', () => {
@@ -201,13 +202,15 @@ describe('the tier and the pairs', () => {
   const leaguesAndSmallPaper = [presence('c1', 'C', 2), presence('d1', 'D', 7)]
   const smallPaperOnly = [presence('a1', 'A', 0), presence('d1', 'D', 7)]
 
-  it('defaults to paper 64+ when it has lists', () => {
-    expect(defaultTier(allTiers)).toBe('A')
-    expect(tierOf(null, allTiers)).toBe('A')
+  it('defaults to challenges when they have lists, paper 64+ too', () => {
+    expect(defaultTier(allTiers)).toBe('B')
+    expect(tierOf(null, allTiers)).toBe('B')
+    expect(defaultTier(noPaper)).toBe('B')
   })
 
-  it('defaults to challenges when paper 64+ has none', () => {
-    expect(defaultTier(noPaper)).toBe('B')
+  it('falls back to the first tier with lists when challenges have none', () => {
+    expect(defaultTier([presence('a1', 'A', 3), presence('b1', 'B', 0), presence('c1', 'C', 2)])).toBe('A')
+    expect(defaultTier([presence('b1', 'B', 0), presence('c1', 'C', 2)])).toBe('C')
   })
 
   it('defaults to leagues before smaller paper', () => {
@@ -226,7 +229,7 @@ describe('the tier and the pairs', () => {
 
   it('falls back to the default on a tier it does not know', () => {
     expect(tierOf('E', noPaper)).toBe('B')
-    expect(tierOf('a', allTiers)).toBe('A')
+    expect(tierOf('a', allTiers)).toBe('B')
   })
 
   it('counts pairs from the first step with lists: paper 64+, then challenges, then smaller paper', () => {

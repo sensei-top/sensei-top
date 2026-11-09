@@ -33,7 +33,11 @@ match's page; that choice outlives every rebuild. See
 left beside it. Use `sensei-top restore`, which moves it aside; see
 [Backups](backups.md#restoring-one).
 
-**Reporting a bug.** The diagnostics export in Settings, under App (or
+**Reporting a bug.** In the desktop app, Report a problem (the tray,
+Settings → About, or an error message) sends a few lines and, if you tick
+it, the last 500 lines of the app's log, once you agree to the transfer;
+it works without an account. A from-source run has no Report a problem.
+The diagnostics export in Settings → About (or
 `sensei-top diagnostics --out FILE`) writes a zip of the app's logs and a
 report. It never includes your database, any key or your MTGO handle, and
 the player names that older versions' MTGO warnings wrote into the log are

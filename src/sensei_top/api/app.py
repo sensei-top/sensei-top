@@ -28,8 +28,9 @@ dataclass-to-wire-model translation; ``models/`` the response models, grouped
 by router, the shared ones in ``common.py``; ``routes/`` one
 ``APIRouter`` per file, registered in ``create_app`` in an order the schema
 depends on, then ``sensei_top.ai``'s when it is installed; ``providers.py``
-the seams ``ai/`` fills; ``dashboard.py`` the mount that serves the built
-dashboard.
+the seams ``ai/`` fills; ``progress.py`` the in-memory stage-progress
+registry and the route that reads it; ``dashboard.py`` the mount that serves
+the built dashboard.
 """
 
 from __future__ import annotations
@@ -50,9 +51,12 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from sensei_top.api.dashboard import DashboardFiles
 from sensei_top.api.guard import LoopbackGuard
+from sensei_top.api.progress import ProgressRegistry
+from sensei_top.api.progress import router as progress_router
 from sensei_top.api.providers import NO_PROVIDERS
 from sensei_top.api.routes import (
     cards,
+    contrib,
     current_match,
     guide,
     matches,
@@ -62,6 +66,7 @@ from sensei_top.api.routes import (
     mtgo_picks,
     rcq,
     review,
+    sync,
 )
 from sensei_top.i18n import _, use_language
 
@@ -166,6 +171,7 @@ def create_app(db_path: str | Path, watcher: object | None = None) -> FastAPI:
     app.state.corpus_prior_cache = {}      # _cached_corpus_prior
     app.state.mana_source_cache = {}       # _cached_mana_source_grp_ids
     app.state.report_cache = None          # _shared_report_cache, None until built
+    app.state.progress = ProgressRegistry()  # api/progress.py, never the database
 
     # Paths in the generated OpenAPI schema (web/openapi.json) are
     # insertion-ordered, so this order is part of the contract, not tidiness.
@@ -179,6 +185,9 @@ def create_app(db_path: str | Path, watcher: object | None = None) -> FastAPI:
     app.include_router(guide.router)
     app.include_router(rcq.router)
     app.include_router(cards.router)
+    app.include_router(sync.router)
+    app.include_router(contrib.router)
+    app.include_router(progress_router)
     app.state.providers = NO_PROVIDERS
     # Never a static import: lint-imports reads only import statements, and
     # core must start with ai/ deleted (docs/architecture.md, "Who may know what").

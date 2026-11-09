@@ -484,7 +484,7 @@ wording:
   sits where the gradient has arrived.
 - **Every piece of art leads to the whole card**, which carries the
   artist's name and the copyright line: the button in the art's corner
-  shows it on hover, on keyboard focus and on tap. The Credits page says
+  (lucide `Info`) shows it on hover, on keyboard focus and on tap. The Credits page says
   so (`credits.ts`).
 - **Neither picture is ever behind a paywall.** Scryfall's terms forbid one
   in front of their data.
@@ -557,9 +557,14 @@ end never shows. Home's `WeeklyWinrate` is the example
 (`docs/frontend.md`'s "Charts"). Turning the motion off is not the cure:
 `isAnimationActive={false}` stays out.
 
+**Arrival.** `.arrive` (`index.css`) fades a page's content in over
+160 ms, opacity only, on the element that replaces an outline
+(`docs/frontend.md`, "Data fetching"); the outline reserved the layout, so
+nothing moves. It is off under `prefers-reduced-motion`.
+
 The one thing that is still respected is the standing web accessibility
 convention, `prefers-reduced-motion: reduce`. It turns off
-`.transition-chrome`, every `animate-pulse` (the live dot, the
+`.transition-chrome`, `.arrive`, every `animate-pulse` (the live dot, the
 `Skeleton` shimmer and the indeterminate `Meter`), the turn of `Disclosure`'s chevron, the slide of a
 `Switch`'s disc (120ms), and `SectionNav`'s own scroll: `goToSection`
 checks the media query itself, since `window.scrollTo`'s `behavior` option

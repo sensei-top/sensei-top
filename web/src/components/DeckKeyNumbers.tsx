@@ -2,9 +2,26 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DECK_MATCH_LIMIT, useDeckMatches, useDeckPlayDraw } from '../api'
 import { deckKeyNumbers, playDrawTotals } from '../lib/deckOverview'
-import { NBSP } from '../lib/matchups'
 import { formatCount } from '../lib/time'
-import { ErrorNote, StatTile } from './ui'
+import { ErrorNote, OutlineCard, STAT_TILE_BLOCK, StatTile } from './ui'
+
+/** The strip's place while it waits: its three tiles' frames and the note.
+ *  It carries no `role="status"` and no pulse: the page's body has the one
+ *  line of words. The layout draws it before the deck is known, and
+ *  `DeckKeyNumbers` while its reads load, so the two are one tree. */
+export function StripFrames() {
+  const { t } = useTranslation()
+  return (
+    <div className="space-y-2 pt-2">
+      <div className="grid gap-4 md:grid-cols-3">
+        <OutlineCard label={t('decks.strip.matches')} height={STAT_TILE_BLOCK} />
+        <OutlineCard label={t('decks.strip.games')} height={STAT_TILE_BLOCK} />
+        <OutlineCard label={t('decks.strip.playDraw')} height={STAT_TILE_BLOCK} />
+      </div>
+      <p className="text-caption text-muted">{t('decks.overview.playDrawNote')}</p>
+    </div>
+  )
+}
 
 /** The deck strip, under the deck's name on every tab: Matches, Games and
  *  Play vs draw (`deckKeyNumbers`), over the versions the tab reads, then
@@ -13,7 +30,7 @@ import { ErrorNote, StatTile } from './ui'
  *
  *  The layout and the Overview ask for the same matches with the same
  *  query, so the strip costs no second request. While either read is
- *  pending the strip holds its own height, its labels and empty tiles, so
+ *  pending the strip holds its own height, as `StripFrames`, so
  *  the tabs under it do not jump; where a loaded detail wraps (some widths
  *  between 768 and about 1100 px, depending on the text and language), the
  *  tabs move once by that line. When either fails, the strip's place is
@@ -35,27 +52,18 @@ export function DeckKeyNumbers({ versionIds }: { versionIds: string[] }) {
   if (error) return <ErrorNote error={error} />
 
   const full = (matches.data ?? []).some((list) => list.length >= DECK_MATCH_LIMIT)
-  const labels = [t('decks.strip.matches'), t('decks.strip.games'), t('decks.strip.playDraw')]
+  if (!tiles) return <StripFrames />
 
   return (
     <div className="space-y-2 pt-2">
-      {tiles ? (
-        <div className="grid gap-4 md:grid-cols-3">
-          {tiles.map((tile) => (
-            <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} muted={tile.thin} />
-          ))}
-        </div>
-      ) : (
-        <div className="grid animate-pulse gap-4 md:grid-cols-3" role="status" aria-label={t('common.loading')}>
-          {labels.map((label) => (
-            // A plain space collapses the value and detail lines, and the tabs would jump.
-            <StatTile key={label} label={label} value={NBSP} detail={NBSP} />
-          ))}
-        </div>
-      )}
+      <div className="grid gap-4 md:grid-cols-3">
+        {tiles.map((tile) => (
+          <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} muted={tile.thin} />
+        ))}
+      </div>
       <p className="text-caption text-muted">
         {t('decks.overview.playDrawNote')}
-        {tiles && full && ` ${t('matches.summary.counted', { n: formatCount(inHand?.length ?? 0) })}`}
+        {full && ` ${t('matches.summary.counted', { n: formatCount(inHand?.length ?? 0) })}`}
       </p>
     </div>
   )

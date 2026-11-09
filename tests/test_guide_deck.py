@@ -6,11 +6,14 @@ nothing previously read back.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
 from sensei_top.db import open_database
 from sensei_top.guide.deck import deck_format, list_identities, resolve
+from sensei_top.projector.matches import project
+from sensei_top.reader.mtgo_decks import ingest_deck_dir
 
 
 @pytest.fixture
@@ -292,3 +295,102 @@ def test_deck_format_breaks_a_tie_by_the_most_recent_match(conn):
     conn.commit()
 
     assert deck_format(conn, "deck:dek1") == "Pioneer"
+
+
+def _insert_card(conn, grp_id, name, type_line):
+    conn.execute(
+        "INSERT INTO cards (grp_id, name, type_line) VALUES (?, ?, ?)",
+        (grp_id, name, type_line),
+    )
+
+
+def test_art_is_the_most_played_non_land_and_names_are_the_known_maindeck(conn):
+    # 3 x grp 10 (land), 2 x 20, 2 x 15 (tie: lower grp_id wins), 1 x 30, 1 x 99 (unknown)
+    cards = {"maindeck": [10, 10, 10, 20, 20, 15, 15, 30, 99], "sideboard": [40]}
+    _insert_deck(conn, "h", name="D", cards=cards)
+    _insert_guid(conn, "h", "g")
+    _insert_match(conn, "m", "h", "win", "2026-08-13T00:00:00")
+    _insert_card(conn, 10, "Island", "Basic Land - Island")
+    _insert_card(conn, 20, "Beta", "Creature - Elf")
+    _insert_card(conn, 15, "Alpha", "Instant")
+    _insert_card(conn, 30, "Gamma", "Artifact")
+    _insert_card(conn, 40, "Side", "Sorcery")
+    conn.commit()
+
+    identity = list_identities(conn)[0]
+    assert identity.art_grp_id == 15
+    assert identity.card_names == ("Alpha", "Beta", "Gamma", "Island")
+
+
+def test_art_is_none_when_no_card_type_is_known(conn):
+    _insert_deck(conn, "h", name="D", cards={"maindeck": [5, 5, 6], "sideboard": []})
+    _insert_guid(conn, "h", "g")
+    _insert_match(conn, "m", "h", "win", "2026-08-13T00:00:00")
+    _insert_card(conn, 5, "Typeless", None)
+    conn.commit()
+
+    identity = list_identities(conn)[0]
+    assert identity.art_grp_id is None
+    assert identity.card_names == ("Typeless",)
+
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _seed_fixture_cards(conn):
+    conn.executemany(
+        "INSERT INTO cards (grp_id, name, type_line) VALUES (:grp_id, :name, :type_line)",
+        json.loads((FIXTURES / "mtgo_deck_cards.json").read_text(encoding="utf-8")),
+    )
+
+
+def _project_dek(conn, tmp_path, fixture):
+    folder = tmp_path / "decks"
+    folder.mkdir()
+    (folder / fixture).write_bytes((FIXTURES / fixture).read_bytes())
+    ingest_deck_dir(conn, folder)
+    project(conn)
+    deck_id = conn.execute("SELECT deck_id FROM decks").fetchone()["deck_id"]
+    _insert_mtgo_match(conn, "mt", "2026-09-20T00:00:00", pick_deck_id=deck_id)
+    conn.commit()
+    return list_identities(conn)[0]
+
+
+def test_the_sample_deck_art_is_its_lowest_grp_id_four_of_non_land(conn, tmp_path):
+    # mtgo_deck_sample.dek: eight non-lands are played x4 (Smaug 103489, Momo
+    # 97303, Nova Hellkite 96722, Clarion Conqueror 95520, Voice of Victory
+    # 95549, Sarkhan 95638, Magmatic Hellkite 95631, Burst Lightning 93905);
+    # the tie goes to the lowest grp_id.
+    _seed_fixture_cards(conn)
+    identity = _project_dek(conn, tmp_path, "mtgo_deck_sample.dek")
+    assert identity.art_grp_id == 93905
+    assert identity.card_names == tuple(sorted({
+        "Plains", "Smaug the Magnificent", "Erode", "Momo, Friendly Flier",
+        "Multiversal Passage", "Nova Hellkite", "Clarion Conqueror",
+        "Voice of Victory", "Maelstrom of the Spirit Dragon",
+        "Twinmaw Stormbrood", "Sarkhan, Dragon Ascendant", "Magmatic Hellkite",
+        "Sunbillow Verge", "Cavern of Souls", "Sacred Foundry",
+        "Inspiring Vantage", "Burst Lightning", "Mountain",
+    }))
+
+
+def test_the_double_faced_deck_leaves_out_the_names_arena_lacks(conn, tmp_path):
+    # mtgo_deck_double_faced.dek: nine non-lands (MDFCs included, front face
+    # a spell) are x4; the lowest grp_id is Preordain 37388. Lotus Bloom and
+    # Disrupting Shoal are not in the card list, so they are not named.
+    _seed_fixture_cards(conn)
+    identity = _project_dek(conn, tmp_path, "mtgo_deck_double_faced.dek")
+    assert identity.art_grp_id == 37388
+    assert len(identity.card_names) == 16
+    assert "Lotus Bloom" not in identity.card_names
+    assert "Beyeen Veil // Beyeen Coast" in identity.card_names
+
+
+def test_a_modal_double_faced_card_counts_as_a_non_land(conn):
+    # fixture card 73234 is "Instant // Land"; 87435 is a plain Land played more
+    _seed_fixture_cards(conn)
+    _insert_deck(conn, "h", name="D", cards={"maindeck": [87435, 87435, 87435, 73234, 73234]})
+    _insert_guid(conn, "h", "g")
+    _insert_match(conn, "m", "h", "win", "2026-08-13T00:00:00")
+    conn.commit()
+    assert list_identities(conn)[0].art_grp_id == 73234

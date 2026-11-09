@@ -437,9 +437,10 @@ not overlooked. The licence was AGPL from 2026-09-27, proprietary "for now"
 from 2026-10-01, and AGPL again from 2026-10-07; no copy was published in
 between, so no user ever held the proprietary notice.
 
-Since 2026-11-02 this project plans hosted services, reached through a
-free, optional account; none is built yet (`BACKLOG.md`, BL-100 to
-BL-102). The decision supersedes what this section used to say: that
+Since 2026-11-02 this project has hosted services, reached through a
+free, optional account: the account, cloud history, error reports and
+contributed games are built; the rules coach is not (`BACKLOG.md`,
+BL-101). The decision supersedes what this section used to say: that
 nothing hosted writes for the user, that nothing free needs an account,
 and that nothing reports back. The tracker keeps working fully without
 the account. What each part receives:
@@ -461,6 +462,19 @@ the account. What each part receives:
   match pulled onto another install is stored as received, and a match
   that install read from its own log wins over it (AGENTS.md rule 6).
   Only the two picks can conflict, and the newer one wins.
+- **Contributed games** (the same Supabase project, in a schema the API
+  does not expose), when "Help build the stats" is on in Settings. It is
+  not one of the account's choices: it works the same with or without an
+  account, the yes stays on the PC, and a game is sent without the
+  sign-in. One record per finished game, filed under a random code made on
+  the machine: the deck, each turn's plays, the result, the week and the
+  archetype each deck was named, and, on Arena only, the rank class, the
+  opening hand kept and each turn's draws and life totals.
+  Never the match id, a handle, a deck's name, a time finer than the week,
+  or a raw event. A record is built by the local API
+  (`docs/architecture.md`, "Contributed games") and sent by the shell.
+  Nothing links the code to a person, so a sent game cannot be shown back,
+  copied or deleted, not even by deleting the account.
 - **Error reports** (Sentry), when "Send error reports" is on, or one at a
   time through Report a problem: crashes and errors, scrubbed by the same
   code that redacts the diagnostics bundle (profile paths, emails, tokens,
@@ -509,21 +523,28 @@ call out in rule 5's sense, and neither ever sees a match. A diagnostics
 bundle exists only as a file the user makes and sends by hand, redacted
 before it is written.
 
-These statements are true of the app as it ships today and become false
-in the build that ships the account, so they are rewritten in that build
-and not before: "no account, no upload" in the README and the dashboard's
-footer (`docs/frontend.md` quotes it); the third and fourth promises in
-`SECURITY.md`, that nothing calls a paid API without a configured key and
-that no match data leaves the machine except the prompt of a report the
-user asked for; the first item of the "What never leaves your machine"
-card and the item about collecting or sharing matches in the "What is not
-planned" card, on the site's home page in both languages
-(`site/index.html`, `site/pt-br/index.html`); the privacy pages, which
-name every request the app makes and gain Supabase, Sentry and the coach
-API (`tests/test_site.py` pins them); the paragraph on the only
-measurement in `docs/status.md`, "What works today"; and the claim under
+These statements were true of the app before the account and became
+false in the build that shipped it, so they were rewritten in that build:
+"no account, no upload" in the README; the fourth promise in
+`SECURITY.md`, that no match data leaves the machine except the prompt of
+a report the user asked for; the first item of the "What never leaves
+your machine" card (now "What leaves your machine, and when") and the
+items about collecting or sharing matches and about an account for
+anything free in the "What is not planned" card, on the site's home page
+in both languages (`site/index.html`, `site/pt-br/index.html`); the
+matching item on the Untapped comparison page, in both languages
+(`site/untapped/`, `site/pt-br/untapped/`); and the paragraph on the
+only measurement in `docs/status.md`, "What works today". The privacy
+and terms pages went first, in a site hotfix live before the beta: they
+name every request the app makes and gained Supabase and Sentry
+(`tests/test_site.py` pins them). The dashboard's
+footer, "No account needed" (`docs/frontend.md` quotes it), stayed as it
+was: it is still true. Each "no account" claim became one shared
+sentence, word for word everywhere: "Sensei Top works fully without an
+account. A free, optional account adds cloud backup of your match history
+and error reports." The build that ships the rules coach adds the coach
+to that sentence where a page may name it, adds the coach API to the
+privacy pages, and revisits the third promise in `SECURITY.md`, that
+nothing calls a paid API without a configured key, and the claim under
 "What calls out, and what it sends" that per-route tests cover what
-leaves the machine. Each "no account" claim becomes one shared sentence,
-word for word everywhere: "Sensei Top works fully without an account. A
-free, optional account adds cloud backup of your match history, error
-reports, and the AI rules coach."
+leaves the machine.

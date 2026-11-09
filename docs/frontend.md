@@ -66,7 +66,7 @@ the icon is named once.
 
 ### Widths
 
-The dashboard is a desktop app, never a phone one (`ROADMAP.md`, "Never").
+The dashboard is a desktop app, never a phone one (`docs/status.md`, "Not planned").
 A view is designed, reviewed and screenshotted at 1008 px and up, the
 common floor for a responsive desktop app, and the shell's window cannot
 be made narrower (`MIN_SIZE` in `desktop/src/window.ts`). Nothing new is
@@ -84,10 +84,20 @@ posts and links, so it stays responsive (`docs/frontend-site.md`).
 
 `shell/Shell.tsx` is the layout route every place renders in.
 
+- **The Feedback pill** (`FeedbackPill`, fixed at the bottom right) opens
+  Report a problem from any page. It is absent on the bare pages, on Live in
+  focus mode, under 48rem, and in the browser: it shows only in the desktop
+  shell, where the shell sends reports. While it shows, the footer row gets
+  end padding (`md:pr-[calc(2.25rem+8.5rem)]`, changed together with the
+  pill) so Credits stays clear of it.
+
 - **From 48rem up**: the rail (`shell/Rail.tsx`, 84 px wide) and beside it
   one column, capped at `max-w-[1196px]`, that holds the bar, the page and
   the footer on the same edges. The rail is the glyph as a link Home, then
-  each place as an icon over its label, with Settings at the bottom. The
+  each place as an icon over its label, with Settings at the bottom. While
+  `signInOffered` holds (`shell/signInOffer.ts`), a Sign in item (`LogIn`
+  icon, links `/settings/account`, not a `PLACES` entry) sits above Settings
+  and takes over its `mt-auto`. The
   bar is the place's name, which is the page's one `h1`, and the live
   status.
 - **Under 48rem**: a strip that stays at the top of the window (the glyph,
@@ -179,7 +189,10 @@ typed ("Unnamed deck", muted, when it has none), the field's name for
 it under that once the guide names an archetype whose spaced name
 differs from the typed one (`fieldNameLine`), one more line under both
 (`lib/decks.ts`'s `deckLine`: the format in words and when it was last
-played, joined by `·` and left out part by part when unknown), the deck
+played, joined by `·` and left out part by part when unknown), all on a
+band whose art, at the right with a fade to the left, is the identity's
+`art_grp_id`, or the wash when that is null or the identity is pending,
+the band holding its height meanwhile; the deck
 strip (`components/DeckKeyNumbers.tsx`: Matches, Games and Play vs draw
 over the versions the tab reads, `docs/frontend-pages.md`, "Decks") and
 the navigation between Overview, Matchups, Guide and RCQ.
@@ -237,6 +250,12 @@ alone and the words are its name. The dot's colour is decoration: the words
 are the fact. Nothing is drawn until the first heartbeat has answered
 either way.
 
+Left of the pill, `shell/CardDataChip.tsx` shows the card-data download while
+the desktop shell runs it (`docs/desktop.md`, "Card data starts on its own"):
+nothing in a browser, idle or done. `MatchRow` reads the same state, so an
+opponent with no deck named yet says "Named once card data arrives" while it
+runs.
+
 "In progress" is one rule, in `lib/liveMatch.ts`, for the live status, the
 dot on Live and the Live page's own strip. A current match that started 90
 minutes ago or more (`LIKELY_ABANDONED_MINUTES`) is more likely abandoned
@@ -247,6 +266,19 @@ notice over the page (a `Callout`, `tone="warn"`): the tracker is not
 running, and what is on screen is what was last loaded. It goes once the
 tracker answers again.
 
+A restart the desktop shell makes on purpose shows the restart screen
+instead (`web/src/shell/RestartScreen.tsx`): the top sways on its point and hops
+now and then (`.top-spin`, `.top-hop` in `index.css`, still under reduced
+motion) over one status line, "Applying your changes, back in a moment…"
+(`shell.restarting`). It shows while `AppSettings.restarting` is true
+(`docs/desktop.md`, "Which saves restart the server") and until one more
+heartbeat has answered after it (`web/src/shell/restarting.ts`), so the notice the
+failed beats left never flashes before the page comes back. The page stays
+mounted under it, `hidden`, so a button waiting on the restart, the account
+welcome's Send or a Settings save, keeps its state and finishes. A crash
+restart never sets the flag and keeps the notice. The header's pill still
+says "Tracker not running" meanwhile, which is true.
+
 ### Focus mode
 
 Live is in focus mode from 48rem up. The bar and the footer go and the
@@ -256,7 +288,20 @@ it is, so every place is one click away, and the place's name stays as the
 `h1` for a screen reader. Under 48rem the page scrolls like any other.
 
 Focus mode is read from the address (`Shell.tsx`'s `focus`). No control
-turns it on or off.
+turns it on or off. The Feedback pill is absent in it too (see "The layout").
+
+### The welcome's bare pages
+
+The welcome's pages, `/welcome`, `/account/welcome` and `/contribute`, are
+drawn bare (the route handle's `bare`): the page's name and the page alone,
+with no rail, bottom bar, status chip or footer. Each page is finished or
+left by its own buttons: `/welcome` opened again from Settings (once
+`onboarded`) has a Close back to Settings beside its heading, since stepping
+to the end is not a way out; the first run has none. Both welcome cards are
+centred (`mx-auto max-w-3xl`), and the shell draws a bare page's name in
+the same width, so it stands on the card's left edge. `/welcome`'s first step carries Wizards'
+notice itself, so the footer's copy of it is not missed. A bare page has no
+Feedback pill either.
 
 ### The footer and the credits
 
@@ -289,28 +334,58 @@ same change.
 
 ### Settings
 
-`/settings` is `pages/SettingsPage.tsx` over `views/SettingsView.tsx`.
-The page reads five things, `useShell()`, `useLLMStatus()`, the density, the
-Live advice switch and `useAiFeatures()`, and draws its own Language section,
-which reads `useLanguage()`, first, above the view; the view then draws the
-sections in this order, each an `h2` over its cards, with an id an address can
-name:
+Settings is six groups, each at its own address. `routes.tsx` puts
+`pages/SettingsLayout.tsx` at `/settings`, with a child per group, and the
+layout draws the groups this build shows as a vertical list on the left
+(`NavLink`, the current one `bg-surface3 text-ink`; `sticky top-4`, so it stays
+in view while a long group scrolls) and the group's page on the right. Each
+child is `pages/SettingsPage.tsx` over `views/SettingsView.tsx`, given a
+`group` (`SettingsView` with none, as `SurfacesView` uses it, draws every
+section). The page reads five things, `useShell()`, `useLLMStatus()`, the
+density, the Live advice switch and `useAiFeatures()`; the view is the one
+place that holds the `Shell`. `lib/settings.ts` holds the table
+(`SETTINGS_GROUPS`) and `inGroup`, which says whether a group draws a
+section.
+
+| Group | Address | Shown when | Sections, in order |
+|---|---|---|---|
+| General | `/settings/general` | always | Language, Appearance, Live, then the App's general half |
+| Sources | `/settings/sources` | a desktop shell | Sources |
+| Backup | `/settings/backup` | a desktop shell | Backup |
+| Account | `/settings/account` | a desktop shell whose build has an account | Account, then Help build the stats |
+| Writing | `/settings/writing` | always | AI features, then Writing while it is on |
+| About | `/settings/about` | always | the App's about half, then About and credits |
+
+Bare `/settings` redirects, in place of a history entry, to the group of its
+hash (`groupOfHash`: `language`, `appearance`, `live-settings` and `app` to
+General; `sources`; `backup`; `account` and `contribute` to Account; `writing`
+and `ai-settings` to Writing; `app-about` and `credits` to About) with the hash kept, so
+`ScrollRestoration` brings the section into view, and to General when there is
+no hash or it names nothing. A group this build does not show redirects to
+General. The footer's "Credits" link, `/settings#credits`, lands this way.
+
+Each group opens on its controls: the shell's `h1` is the page's title and the
+first `h2` is the group's first section. Sections, each an `h2` over its
+cards, with an id an address can name:
 
 | Section | Id | Component | Drawn when |
 |---|---|---|---|
 | Language | `language` | `settings/LanguageSection.tsx` | always |
-| Sources | `sources` | `settings/SourcesSection.tsx` | a desktop shell |
-| Writing | `writing` | `ai/settings/WritingSection.tsx` | AI features on; with no shell, its `WritingStatus` |
-| Backup | `backup` | `settings/BackupSection.tsx` | a desktop shell |
-| App | `app` | `settings/AppSection.tsx` | a desktop shell |
 | Appearance | `appearance` | the page's own | always |
 | Live | `live-settings` | the page's own | always |
+| App (general) | `app` | `settings/AppSection.tsx`'s `AppGeneral` | a desktop shell |
+| Sources | `sources` | `settings/SourcesSection.tsx` | a desktop shell |
+| Backup | `backup` | `settings/BackupSection.tsx` | a desktop shell |
+| Account | `account` | `settings/AccountSection.tsx` | a desktop shell whose build has an account (`account.available`) |
+| Help build the stats | `contribute` | `settings/ContributeSection.tsx` | a desktop shell whose build can upload (`canContribute`) |
 | AI features | `ai-settings` | the page's own | always |
+| Writing | `writing` | `ai/settings/WritingSection.tsx` | AI features on; with no shell, its `WritingStatus` |
+| Version and diagnostics (the App's about half) | `app-about` | `settings/AppSection.tsx`'s `AppAbout` | a desktop shell |
 | About and credits | `credits` | `CreditsView` | always |
 
 Language, Appearance, Live, AI features and About and credits are drawn with or
-without a shell. Language is drawn by the page above the view; Appearance, Live,
-AI features and About and credits reach the view as its children. Language is a
+without a shell. The page draws Language, Appearance, Live and AI features
+itself, handed to the view as `lead`, and About and credits as its children. Language is a
 `Segmented` (System, English, Português (Brasil)) over `i18n.ts`'s
 `useLanguage`. The choice is kept in a shell's `shell.json` (written through
 `app.set({ language })`, and the shell's publish of it wins at the next start),
@@ -332,8 +407,8 @@ description says what goes: the coach, written reports and guides, matchup
 briefs and the prompts that write them; nothing already written is deleted.
 Writing is drawn only while it is on.
 
-**In a browser, `/settings` is Language, Writing, Appearance, Live, AI features
-and About and credits.** Writing is then one card of sentences from `GET
+**In a browser, Settings is General (Language, Appearance, Live), Writing (AI
+features, then Writing as sentences) and About (About and credits).** Writing is then one card of sentences from `GET
 /api/llm/status`: a Claude key is set and which model writes, by its id as the
 API gives it; or none is set, and what the app does then (the prompt is copied,
 the answer pasted back). Nothing in it can be changed there: the key is set in
@@ -391,7 +466,9 @@ card's last line (`RestartNote`) until the page is left.
 
 The App section is the shell's own preferences, which the server
 never reads: starting with the system, recording with the window
-closed on Linux, the update check and diagnostic mode. Its actions go
+closed on Linux and the update check, in General; the version, diagnostic
+mode and the log buttons are its about half, "Version and diagnostics", under
+About. Its actions go
 through `app.set`, never `save()`. "Export diagnostics" answers
 `{ ok: true }` when the person cancels the shell's dialog too, so the
 section never says the export happened.
@@ -412,7 +489,20 @@ the failed backup's sentences name.
 - **A `Switch` or a `Select` saves on change** (`SavingSwitch`,
   `SavingSelect`, in `settings/SaveButton.tsx`). It is disabled while
   the save is in flight; when the save fails it goes back to what is
-  saved and the failure's sentence is under it.
+  saved and the failure's sentence is under it. When it works, "Saved"
+  shows beside it, in the same row, for two seconds in a polite
+  `role="status"` region (`SavedNote`) that is always on the page and
+  keeps its width, so it is announced and nothing moves; nothing
+  animates, so reduced motion needs no case. Contribute's switch and the
+  Live advice switch do the same (`WithSaved`, `useSavedFlash`; `runSave`
+  is the one save-then-flash rule).
+- **Folding.** An explanatory paragraph of more than one sentence keeps
+  its first sentence and folds the rest, unchanged, under `MoreAbout`. A
+  control's own description — the line under a switch, a select or a card
+  title, saying what it does — stays whole: a disclosure under every
+  control adds more than it hides. Never folded, wherever it sits: a
+  sentence that says where data goes, under which consent, or what a
+  switch sends.
 - **Text fields save by the card's one button** (`SaveButton`): disabled
   until something in the card differs from what is saved, "Saving" in
   flight, "Saved" for two seconds after. A failure's sentence is the
@@ -453,19 +543,66 @@ the failed backup's sentences name.
 - **Backup.** The last backup as a sentence, when and how large
   (`sizeOf`, `lib/size.ts`), or a `warn` callout when it failed; the
   folder; how many copies are kept (3, 7, 14 or 30); "Back up now";
-  "Restore from a backup file", which asks first.
-- **App.** The version; "Start when Windows starts" ("Start when you
-  log in" elsewhere), shown only where the copy can start at login, which
-  is not the Linux tarball, and not the Microsoft Store build, which shows
-  a note pointing to Windows' Startup settings instead; on Linux, "Keep
-  running when the window is closed"; "Check for updates" with "Check now"
-  and one sentence on where the update stands, or that sentence alone
-  where the copy cannot update itself; "Restart to update" once one has
-  downloaded; "Diagnostic mode";
-  "Show logs" and "Export diagnostics", with one caption that says what
-  the export holds and that matches are never in it; last, the sentence
-  naming the welcome steps and "Go through them again", a link to
-  `/welcome`.
+  "Restore from a backup", which lists the copies in the backup folder by
+  date and time (`formatDayTime`), offers "Choose another file" for one
+  kept elsewhere, and opens the file picker directly when the folder has
+  none; it asks first and, once restored,
+  offers Restart now (`app.relaunch()`; a refusal's sentence shows under
+  the buttons). A second card, Cloud copy, holds the `consentSync` switch
+  and its status line; signed out, one line linking to
+  Settings → Account; with no profile read, not drawn.
+- **App**, drawn in two halves, each its own card and state. `AppGeneral`
+  (General): "Start when Windows starts" ("Start when you log in"
+  elsewhere), shown only where the copy can start at login, which is not
+  the Linux tarball and not the Microsoft Store build, which shows a note
+  pointing to Windows' Startup settings in the switch's place; on Linux, "Keep running when the window is closed";
+  "Check for updates" with "Check now" and one sentence on where the update
+  stands, or that sentence alone where the copy cannot update itself;
+  "Restart to update" once one has downloaded; last, the sentence naming
+  the welcome steps and "Go through them again", a link to `/welcome`.
+  `AppAbout` (About): the version; "Diagnostic mode"; "Show logs" and
+  "Export diagnostics", with one caption that says what the export holds
+  and that matches are never in it; "Report a problem", where the shell
+  sends reports (below). `AppSection` is both, one after the other.
+
+- **Account**, in a build that has an account (`docs/desktop.md`, "Account
+  and sync"). Signed out, "Sign in with Google" and "Sign in with Discord",
+  both off while one waits on the browser, the pressed one saying so;
+  signed in, the email, two choices as `SavingSwitch`es (error
+  reports, coach history), or Try again when the profile could not be read,
+  Export and Sign out, then under their own heading
+  "Delete my cloud history" and "Delete my account", quiet buttons like the
+  rest (no danger fill: `docs/design-system.md`). Each delete and the error
+  reports' transfer consent sit behind a `Dialog` with the safe button
+  focused and a destructive one that names the action. A note says when the
+  session is not kept (no system keyring) and why. The section reads
+  `app.settings.account` and calls `app.account`; a delete's own publication
+  of the new state does not redraw it while the call runs. A save never
+  records a policy version older than the profile's. The wording of each
+  answer is in `docs/frontend-pages.md`, "The account's pages".
+- **Help build the stats**, in a build that can upload: one switch, outside
+  Account, with a state line. A turn-on opens a dialog (what is sent, that
+  past games are included, that a sent game cannot be deleted, the age rule)
+  only when nothing is stored, the stored yes lacks the age confirmation or
+  it was given under an older `POLICY_VERSION`; a turn-off keeps the stored
+  age confirmation and version.
+- **Report a problem** is a button in "Version and diagnostics" (About), on every `ErrorNote`, on the
+  error screen and in the Feedback pill, in a shell that sends reports. It opens
+  `components/ReportProblemDialog.tsx`: a Bug/Idea choice, the text, "attach the last 500 lines
+  of the log", and the consent, with the rest (what the report holds, the
+  log's scrubbing, where Sentry keeps it) under "More about this". The consent
+  is a checkbox above Send, asked at every press, unless the dialog is signed
+  in with the profile read, `consentErrors` on and `consentVersion >=
+  POLICY_VERSION` (`standingConsentOf`): then it is one line naming Sentry and
+  the United States, no checkbox. Signed out, or with the profile unknown, the
+  box always shows. An Idea hides the log box and the technical detail and sends neither
+  (`attachLog` false, no detail). The report sends `kind`, `page` (the
+  address path, no query) and, on a match's pages, `matchId`. On a match's
+  pages the dialog also shows a line, "About: the match of <date>, <deck> vs
+  <opponent>" (the date alone when the deck or opponent is null): it is shown
+  and not sent; only the match's ID goes. The error screen passes the path it
+  was showing, and the match's ID when that is a match's page. It sends through the bridge's `reportProblem` only, and works signed out. The
+  shell mounts one dialog (`useReportProblem()`), remounted per opening.
 
 The Overlay section went with the pivot. An Arena overlay is planned again
 (`BACKLOG.md`'s BL-098), and it gets its section back when one is built.
@@ -503,12 +640,12 @@ first can be passed over. Wording is the view's own, written for the
 first run: each step's body, labels and buttons aside, stays under 30
 words in English (plan 23's budget; no test pins it). It repeats
 nothing from Settings but its controls (`FolderField`, `SaveButton`,
-`RestartNote`, `PressButton`, `SavingSwitch`, and `BackupSection`'s
-`RestoreButton` with its confirming dialog).
+`RestartNote`, `PressButton`, `SavingSwitch`, `SignInButtons`, and
+`BackupSection`'s `RestoreButton` with its confirming dialog).
 
 | Step | Reads | Calls |
 |---|---|---|
-| Start | `useLanguage()`'s resolved language, pre-selected; `welcome.intro.wizardsNotice`; `app.settings.update`, for which update sentence the list shows | `setLanguage(language)` (`i18n.ts`), which writes the shell's `language` through `app.set`, not through `actions`; links to `/settings#credits`; `pickFile()`, Settings' own restore dialog, then `restoreFrom(path)` |
+| Start | `useLanguage()`'s resolved language, pre-selected; `welcome.intro.wizardsNotice`; `app.settings.update`, for which update sentence the list shows | `setLanguage(language)` (`i18n.ts`), which writes the shell's `language` through `app.set`, not through `actions`; links to `/settings#credits`; under "Used Sensei Top before?", in a build with an account, signed out, `signIn(provider)` first, since a backed-up history comes back on its own after it; signed in, a line saying so; then `pickFile()`, Settings' own restore dialog, then `restoreFrom(path)` |
 | Which do you play? | `app.settings.plays`, for the pressed tile | `app.set({ plays })`, then the first step the choice keeps |
 | Arena | `sources.arenaLog` (`path`, `detailedLogs`) | `app.recheck()` |
 | Magic Online | `sources.mtgoHandle`, `mtgoDir`, `mtgoDeckDir`, `mtgoFound` | `save({ sources: { mtgoHandle, mtgoDir, mtgoDeckDir } })`, `pickFolder()` |
@@ -560,6 +697,14 @@ Notes the table does not carry:
   never sees it, and never in a browser, which has no Welcome. Go to
   Home waits for a press of one of the two answers, which saves
   `aiFeatures` through `app.set`.
+- **Ready asks a second question: Help build the stats**, set apart under
+  the AI features one, only when the build can upload (`canContribute`) and
+  no answer is stored when the run begins (`contribAskedOnWelcome`). Go to
+  Home waits for it as it does for the AI question. It states that past
+  games are included, that a sent game cannot be deleted and the age rule,
+  with a confirmation a yes needs. An install that was onboarded before this
+  question existed sees it once, as `/contribute` (`docs/frontend-pages.md`,
+  "The account's pages").
 - **Ready holds the two preferences**: the update check, where the
   build has an updater, and autostart, where the shell asks. Both are
   preferences, and Ready is where the person stops reading. Ready
@@ -668,6 +813,8 @@ One file per primitive, all re-exported from `index.ts`, so every
   (both in "Card images", below).
 - **Waiting and failing.** `Loading` (a shape-holding `Skeleton`, not
   bare "Loading…" text), `Skeleton` and `ErrorNote`.
+- **A page's outline.** `OutlineCard` (`ui/Outline.tsx`).
+  See "Data fetching", "A page's outline".
 - **Text.** `Prose` (inline `**bold**` and `` `code` `` only, which is
   all a narrative needs), `TextBlock` (a wrapped `pre` in the
   interface face, for a prompt, a command or exported Markdown, which
@@ -713,6 +860,10 @@ with `staleTime: 'static'`. A query that is static is not asked again by
 an invalidation, so the heartbeat below passes it by. That is right for
 what it reads, the cards of a match that is over, and for nothing that
 can still change: see `docs/frontend-pages.md`, "Home".
+
+**A page's outline.** A view whose whole page is pending returns its own outline, not `Loading`: one `OutlineCard label height` per card the loaded page will draw, laid out the way it lays them out, under whatever the loaded page draws above its cards (a back link, a tab row), drawn for real when it needs no data and reserved at its size when it does. The page's main frame also takes `words={t('…reading')}`, the one `role="status"` line of words, a key of the page's namespace such as `matches.history.reading`, centred in its block. A frame's `label` reuses the key of the card's own title, never a label inside that card (the replay's frame is "Turn by turn", not "Opening hand"); omit it for a card without one. `height` is a Tailwind height class close to the loaded card's. The test is that nothing moves when the data arrives. The loaded page's root takes `arrive` (`index.css`; a 160 ms fade, none under reduced motion). The generic `Loading` stays for a card inside a page. A pending check that gates an empty state (Matches waiting on the heartbeat) returns the same outline.
+
+**The progress poll.** The Guide's and the Coach's queries are the slow ones. Each one's `queryFn` runs under `withProgress`, which makes a new UUID for that fetch, passes it as `?progress=` and remembers it in a module map under the query's stringified key. It is made inside the `queryFn`, never when a hook renders: the deck layout and the Guide page share one `['guide', key]` fetch, and a retry or a refetch after a language change runs the same function again, so each fetch is polled under its own key and a stage the server still holds from an earlier build is never read as this one's. While the query is pending, `useStageProgress(queryKey, pending)` reads `/api/progress/{uuid}` for the latest UUID in that map (`pollProgress`, a `QueryObserver`): the first read after 0.5 s, or at once when the page takes over a fetch that is already being polled, then every 500 ms, and it stops the moment the query settles. Each cached record carries the UUID it was read for, so a page taking over keeps that fetch's stage, while a record left by an earlier fetch of the same query is never used; a poll with no data yet reports nothing, rather than "no progress". A 404 is "not started yet", never an error (`readRecord`), and the outline keeps its line of words until a stage is recorded. Then `stageRows` turns the three stages into a list, `StageProgress`, drawn as the children of the main frame's `OutlineCard`: the stages before the current one ticked, the current one with `done of total` only when both are known, no bar and no percentage. The children sit in the same `role="status"` element as the words, so the page keeps one live region and the list is announced there, not twice. The Coach has two slow queries; the report's frame carries the list while it is pending, the writing card's after it. While the deck layout is itself pending (the deck's identities or versions) on the Guide's address, it draws the Guide's own pending page (`GuidePending`), so nothing moves when the page takes over.
 
 **Auto-refresh is heartbeat-driven, not poll-everything.** `/api/live` returns
 two tokens, deliberately separate:

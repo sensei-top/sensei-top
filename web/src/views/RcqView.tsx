@@ -11,7 +11,7 @@ import { useAi } from '../ai/registry'
 import { InputsCard } from '../components/rcq/InputsCard'
 import { PreviewCard } from '../components/rcq/PreviewCard'
 import { RcqResult } from '../components/rcq/RcqResult'
-import { ErrorNote, Loading } from '../components/ui'
+import { ErrorNote, OutlineCard } from '../components/ui'
 import {
   browserStorage,
   expectedOptions,
@@ -23,6 +23,18 @@ import {
   writeInputs,
   type RcqInputs,
 } from '../lib/rcq'
+
+/** The page's pending state: the frames of the two cards above the write
+ *  button, which the loaded page draws after the guide answers. */
+function RcqOutline() {
+  const { t } = useTranslation()
+  return (
+    <div className="space-y-6">
+      <OutlineCard label={t('rcq.inputs.title')} words={t('rcq.page.reading')} height="h-144" />
+      <OutlineCard label={t('rcq.preview.title')} height="h-64" />
+    </div>
+  )
+}
 
 /** A deck's RCQ prep: the 75 the player will register and the archetypes
  *  they expect, read back by the preview, then one button that writes a
@@ -79,7 +91,7 @@ export function RcqView({ deckKey }: { deckKey: string }) {
   const preview = useRcqPreview(deckKey, settled, settledKey)
   const current = preview.data != null && !preview.isPlaceholderData && settledKey === key
 
-  if (guide.isPending) return <Loading />
+  if (guide.isPending) return <RcqOutline />
   if (guide.error) return <ErrorNote error={guide.error} />
 
   // What the write and the pasted answer both send: the list as typed with the
@@ -94,7 +106,7 @@ export function RcqView({ deckKey }: { deckKey: string }) {
     : null
 
   return (
-    <div className="space-y-6">
+    <div className="arrive space-y-6">
       <InputsCard
         inputs={inputs}
         onChange={change}

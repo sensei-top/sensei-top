@@ -59,7 +59,9 @@
   "row": {
     "resultScore": "{{result}} {{score}}",
     "unrecognizedDeck": "Deck não reconhecido",
-    "showed": "mostrou {{card}}"
+    "showed": "mostrou {{card}}",
+    "namedLater": "Identificado quando os dados dos cards chegarem",
+    "restored": "Restaurada"
   },
   "summary": {
     "matchesWon": "Partidas",
@@ -137,7 +139,7 @@
     "theirExile": "Exílio do oponente",
     "active": "Ativo",
     "life": "de vida",
-    "unattributed": "O Arena nunca disse qual assento era o seu nesta sessão, então os dois lados não podem ser distinguidos. Os cards foram registrados; de quem eram, não.",
+    "unattributed": "O Arena nunca disse qual assento era seu nesta sessão, então os dois lados não podem ser distinguidos. Os cards foram registrados; de quem eram, não.",
     "legendNew": "Novo: entrou no campo de batalha neste turno.",
     "legendDrawn": "Comprado: você o comprou neste turno."
   },
@@ -155,11 +157,18 @@
     "everyOther": "Todas as outras observações ({{n}})",
     "every": "Todas as observações ({{n}})",
     "pairing": "Este matchup",
+    "against": {
+      "title": "Contra {{archetype}}",
+      "record": "Com este deck, seu histórico contra ele é {{record}}.",
+      "briefWritten": "O briefing deste matchup já está escrito.",
+      "briefMissing": "Ainda não há briefing para este matchup.",
+      "open": "Abrir o matchup"
+    },
     "gapsTitle": "O que este relatório não conseguiu ver",
     "gapsSubtitle": "Não é prova de que algo deu errado, só de que este leitor não conseguiu dizer.",
     "showOther_one": "Mostrar a outra",
     "showOther_other": "Mostrar as outras {{n}}",
-    "lineNote": "A linha é a sua posição, turno a turno: vida, mesa, mão e mana pesadas em um só número. Acima de zero você está na frente.",
+    "lineNote": "A linha é sua posição, turno a turno: vida, mesa, mão e mana pesadas em um só número. Acima de zero você está na frente.",
     "dotNote": "O ponto é a maior virada do jogo.",
     "showNumbers": "Mostrar os números",
     "game": "Jogo",
@@ -171,6 +180,7 @@
     "nothingToReport": "Nada a relatar nesta partida: pouco dela foi registrado."
   },
   "history": {
+    "reading": "Lendo suas partidas…",
     "capFullShowing": "Mostrando {{shown}} das {{inHand}} partidas mais recentes",
     "capFull": "As {{inHand}} partidas mais recentes",
     "capOne": "1 partida",
@@ -186,6 +196,7 @@
     "stops": "A lista para nas {{n}} partidas mais recentes."
   },
   "detail": {
+    "reading": "Lendo esta partida…",
     "all": "Todas as partidas"
   },
   "replay": {

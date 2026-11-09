@@ -94,8 +94,13 @@ command's stdin, never in its arguments. The shell alone writes
 the window is closed", start with the system, the daily update check,
 diagnostic mode, the language, which clients the user plays (`plays`,
 `arena` and/or `mtgo`; missing means both, so an install from before it
-behaves as before), whether onboarding is finished and whether the AI
-features show (`aiFeatures`). A missing `aiFeatures` is undecided: the
+behaves as before), whether onboarding is finished, whether the AI
+features show (`aiFeatures`), the install's random `installId` (made at
+the first sign-in, never replaced), the cached yes to error reports
+(`consentErrors`, set from the account's profile), the answer to
+"Help build the stats" (`contribute`: `yes`, `policyVersion`, `answeredAt`,
+`ageConfirmed`; absent or `null` is not asked, and sends nothing) and
+`contribAsked`, which says the one-time page for that question was shown, `signInDismissed`, which says the user dismissed the offer to sign in (like `contribAsked`, only `true` is stored and nothing un-sets it). A missing `aiFeatures` is undecided: the
 page reads it as off and Welcome asks. Once per launch, before the first
 publish, an install with `onboarded: true` and no key is settled to true
 (`settleAiFeatures`), since it never sees Welcome again; any other install
@@ -104,14 +109,51 @@ reads it. It is read once at launch and written whole through a temporary
 file and a rename, a key it does not know is carried through every write,
 and a file that is not JSON is moved aside as `shell.json.bad`.
 
+**The restore's list.** Settings → Backup restores from a dated list, not
+a file picker: the `listBackups` call reads the backup folder (the `backup.dir`
+the settings cache holds) and answers each slot, `<db>.backup` and
+`<db>.backup.<n>`, as `{path, at, bytes}` with `at` the file's modification
+time, newest first (`backupSnapshots` in `settings.ts`, pure). Temporary
+copies and any other name in the folder are left out, since the folder may be
+shared. The page shows each by `formatDayTime` and hands the chosen `path` to
+`restoreFrom`. A folder with no slot, or one that cannot be read, answers `[]`
+and the page goes straight to the file picker. With copies listed, the list
+offers "Choose another file" for a backup kept elsewhere; Welcome's button,
+"Restore from a backup file" (`welcome.start.restore`), stays a picker.
+
+**Restart now.** After a restore the page offers it, and the `relaunch` call
+takes the quit path: `main.ts` schedules the new start with `app.relaunch()`
+and calls `app.quit()`, so `before-quit` stops the server and the error
+reporter before the process exits and the new copy starts. The
+single-instance lock is not freed first: the new copy starts only after this
+one has exited, and freeing it earlier would let a launch during the server's
+stop become a second instance. `desktop/src/relaunch.ts` decides, Electron-free: the
+AppImage is started by its own path when `APPIMAGE` is set, and `--hidden`
+is dropped from the arguments so a copy started at login does not restart
+looking closed. With an update downloaded (`ready`) it calls `restartToUpdate`
+instead, since a quit with install-on-quit armed would race the silent
+installer on Windows. It is refused while a quit is already stopping the
+server, and a second call while a relaunch is scheduled does nothing.
+
 **Which saves restart the server.** The server reads the Arena log path, the
 date order, the MTGO handle, game-log folder and deck folder, and the backup
 directory and count only at its start, so saving any of them restarts it and
 the page reconnects. So does turning diagnostic mode on or off, which adds
 `--verbose` to `serve` and a DEBUG level to the shell log, and a restore
 (the server is stopped while `restore` runs, and stays stopped when the
-restore stops partway with files under `.replaced` names). The model, the
-keys and every other `shell.json` preference do not restart it.
+restore stops partway with files under `.replaced` names). So does a change
+of the error-report consent or of the signed-in user, since the server is
+spawned with both (`ReportsLink`, "Error reports" below); a change that
+leaves the server's environment as it was does not. The model, the keys and
+every other `shell.json` preference do not restart it.
+
+Every one of these sets `AppSettings.restarting` for its stop and start
+(`SettingsService.whileRestarting`), the restore for its whole stop,
+`restore` and start, and clears it however the restart ends; the page shows
+its restart screen meanwhile, not the tracker-down notice
+(`docs/frontend.md`, "The live status"). A crash restart (`server.ts`) never sets
+it. The change is sent only once the settings have been read, like every
+`updateChanged`.
 
 **The shell log.** `logs/shell.log` in the data directory, beside the
 server's `sensei-top.log`, in the same line format (`src/sensei_top/logs.py`) so the two merge by time:
@@ -183,11 +225,21 @@ is refused). After a restore that succeeded, a `done` or `failed`
 state goes back to `idle`, since it described the replaced database,
 and the check runs again against the restored one.
 
+**The download shows where the user is.** `shell/CardDataChip.tsx`, left of
+the live status in the header, reads `firstData` from the bridge
+(`shell/cardData.ts`'s `useCardData`) while it runs: "Card data · 43%" with
+a total, "downloading" without one, "saving"; "didn't finish" after a
+failure. Each links to Settings → Sources. Idle, done and a browser (no
+bridge) draw nothing. The Guide's scope card and an opponent shown as
+"Unknown deck" read the same state and say they wait for it.
+
 Pinned by `tests/test_cli.py`, "serve's handshake with a parent process",
 and, for the shell's side, `desktop/src/server.test.ts` (port choice,
 restart budget, stop order), `store.test.ts`, `log.test.ts`,
 `settings.test.ts` (which saves restart, when card data starts on its
-own, a restore stopping a download) and `updater.test.ts`.
+own, a restore stopping a download, and, under "the error-reports link",
+the cases where a consent or user change restarts the server and the ones
+where it does not) and `updater.test.ts`.
 
 ### The frozen server
 
@@ -269,13 +321,233 @@ to a bug report"; the desktop shell drives both.
   [--with-player-log] [--list]`** (`diagnostics.py`). The zip holds
   `doctor.json`, `config.toml` with every `api_key` and `[mtgo] handle` removed (rebuilt
   from the parsed tables, never by text substitution), `row_counts.json`, the app's
-  log files and, on request, the shell's log and `Player.log`. Paths inside
-  it are written with `~` for the home directory, as `logs.py` writes them.
-  No log line names a player: the MTGO projector's warnings carry counts,
-  game numbers and card names instead (`ParsedMatch.warnings`), and the ones
-  0.7.0 and earlier wrote with a handle in them are masked as the logs are
-  copied in (`_LEGACY_MTGO`), since a log keeps them until it rotates.
+  log files and, on request, the shell's log and `Player.log`.
+  Every text member goes through `scrub.scrub_text` (`scrub.py`): the home
+  directory becomes `~`, a profile folder (Windows, Wine's `Z:\home`, UNC,
+  `/media`) `<user>`, emails `<email>`, bearer and JWT tokens, `sk-ant-` and key-shaped values `<token>`, Arena user
+  IDs `<id>`, and every name `known_names` finds (the configured MTGO handle,
+  the user's own Arena screen name and id from the stored sign-ins, every
+  opponent's name and id) `<name>`; a name with a `#NNNNN` suffix also
+  scrubs its bare part. A name under three characters is not
+  substituted, or one short handle would shred a log. No log line names a
+  player: the MTGO projector's warnings carry counts, game numbers and card
+  names instead (`ParsedMatch.warnings`), and the ones 0.7.0 and earlier wrote
+  with a handle in them are masked by the same pass (`_LEGACY_MTGO`), since a
+  log keeps them until it rotates. The rules are pinned by
+  `tests/fixtures/scrub_vectors.json`, which the shell's own scrubber
+  (`desktop/src/cloud/scrub.ts`) reads too. `Player.log`, when asked for, is copied as written.
   The database never goes in. `--list` prints each entry and its size and
   writes nothing; an existing `--out` file is refused.
 
-Pinned by `tests/test_doctor.py`.
+- **`GET /api/diagnostics/log-tail?lines=500`** (`api/routes/meta.py`,
+  `diagnostics.log_tail`). The last `lines` lines (1 to 2000) of the app's log
+  as plain text, read across the rotated files and scrubbed as above; empty
+  with no log. Read-only.
+
+Pinned by `tests/test_doctor.py` and `tests/test_scrub.py`.
+
+### Account and sync
+
+The free, optional account: sign-in, the cloud backup of the match history
+and the actions on both. All of it lives in the Electron main process,
+`desktop/src/cloud/`; the local API holds only the half that reads and
+writes the database (`docs/architecture.md`, "Cloud sync"), and the page
+asks the shell through the bridge (`docs/frontend.md`, "Settings").
+
+| Module | Holds |
+|---|---|
+| the generated build config, `config.ts` | what this build was made with; `config.ts` is the only reader |
+| `auth.ts`, `sessionStore.ts` | the sign-in and where the session is kept |
+| `sync.ts` | the push and the pull, and their two state files |
+| `account.ts` | the profile, export, the two deletes, and what a sign-in starts |
+| `sentry.ts`, `scrub.ts`, `report.ts` | error reports ("Error reports") |
+| `contrib.ts` | contributed games ("Contributed games") |
+
+**The build decides whether any of it exists.** The build config module is
+generated by `scripts/build-config.mjs` from the build's environment
+(`SENSEI_TOP_SUPABASE_URL`, `…_ANON_KEY`, `…_SENTRY_DSN_DESKTOP`,
+`…_SENTRY_DSN_LOCAL_API`) and is gitignored. A variable that is unset or
+blank is absent. The Supabase URL is the bare project address: one with a
+path, a query or a fragment (a copied data API address) fails the build, naming
+the variable but never printing its value. With no Supabase project
+the dashboard draws no Account section and the shell makes no upload; with
+no DSN, no error report. A build from source never reaches the production
+project unless its builder supplies the variables.
+The release job (`desktop.yml`) reads the four from the public
+repository's Actions secrets of the same names.
+
+**Every outbound call from main goes through Electron's `net.fetch`**,
+which uses Chromium's network stack and the system proxy. It is passed to
+supabase-js as its `fetch`, so a Chromium net-log capture shows
+everything main sends. The local-API half of error reports and the page
+send nothing of their own.
+
+**Sign-in** (`auth.ts`) uses the PKCE flow in the system browser, never in
+an Electron window. The shell listens on the first free of three fixed
+loopback ports, `53682`, `53683` and `53684`, at `/auth/callback`; all three
+are in the project's redirect allow-list. It exchanges the callback's code for a
+session and closes the listener. One callback is taken per sign-in, and it
+gives up after five minutes. The tab shows a small page in the shell's
+language. After a good callback the app's window comes to the front (the
+`focusApp` dependency, wired to the window's `open()` with no path, so the
+dashboard stays on its page) and that page tries to close its tab after 1.5
+seconds with an inline script; a browser that refuses leaves the sentence
+standing. A failed callback does neither. An address the provider has
+not verified is refused, and the raw error goes to the log only.
+
+**The session is stored by the system.** `sessionStore.ts` writes it to
+`session.bin` in `userData` encrypted by `safeStorage` (the keyring on
+Linux, DPAPI on Windows), owner-only. On Linux with no keyring,
+`safeStorage` falls back to a fixed-password backend while still reporting
+encryption as available; the shell treats that as no encryption. The
+session is then never written: the person signs in at each launch, and
+Settings → Account says why. The PKCE code verifier is held in memory in
+every case.
+
+**The backup** (`sync.ts`) runs only while the profile's `consent_sync` is
+on:
+
+- At the app's start (with a pull), after a sign-in (a pull only on an
+  install that never pulled for that account), when a match ends (the tray's
+  5-second `/api/live` poll sees it leave a match; the profile is read again
+  first, so a backup another install turned off sends nothing more), and when
+  a profile write turns it on (with a pull). A run the local API failed (an
+  error answer, or no answer in 60 s) runs again two minutes later, up to
+  five times in a row, and any other run cancels that retry: a first
+  install's card download holds the database's write lock for about four and
+  a half minutes, and the next match end may be hours away.
+- *Push.* `GET /api/sync/payloads` returns every match with a digest.
+  `sync-state.json` in `userData` keeps the `match_id → digest` last pushed;
+  what differs goes up in batches of 100, so a re-projection or a pick is
+  caught, which a timestamp alone would miss. The map is written after each
+  batch the cloud accepted and never before, so a failed batch is sent again
+  at the next trigger. A payload over 4 KB is left out with a warning. A push
+  carries `deleted_at: null`, which puts a match back in the backup. The
+  state belongs to one account.
+- *Pull.* Rows newer than a cursor, oldest first, in pages of 100, each page
+  handed to `PUT /api/sync/pulled` before the cursor moves past it. The
+  cursor is the last row's `(updated_at, match_id)`, since rows one statement
+  wrote share a time. Each pull **starts five minutes before the cursor**: a
+  transaction's timestamp is when it started, so one that commits after a
+  pull moved the cursor can carry an earlier time. The window is pulled
+  again, which is harmless because the local save is idempotent (an upsert, a
+  delete, a pick applied only when strictly newer). A transaction open longer
+  than the overlap can still be missed. A pulled row marked deleted drops
+  that match's digest.
+- The cloud stamps `updated_at` and `last_seen` itself, so a clock that is
+  behind cannot write below another install's cursor, and refuses a write to
+  `matches` or `devices` while the profile's `consent_sync` is off, so an
+  install that still believes the backup is on cannot revive deleted rows.
+  After a run, the install's `devices` row carries its random ID, the app
+  version, the operating system and when it synced, nothing more.
+
+**Delete my cloud history** turns the backup off before it deletes: the
+backup is held off and a running one let finish, `consent_sync` is written
+false, then the cloud deletes, then the sync state is cleared. A failed
+delete leaves the backup off, and the page's failure line says so. Turning
+the backup back on uploads every match again. On another install the pull
+that turning it on runs sees the deleted rows and drops their digests, to
+the same effect. A PC that still holds a stale "on" profile skips the
+turn-on pull and uploads again only at its next app start; nothing is lost.
+**Export** saves the JSON of the cloud function `export_my_data` where the
+person picks. **Delete my account** has the cloud delete the account first;
+only then are the sync state removed, error reports turned off and the
+session signed out.
+
+A reply to the page carries a code, never text; the page words it. A
+profile that could not be read is `unknown`, not `none`, so a failed request
+never asks the consent questions again; it is read again when a match ends,
+or when Settings' Try again calls `readProfileAgain`. `consented_at` and
+`age_confirmed_at` are this machine's time, and the age confirmation is
+written once, by the first profile write.
+
+### Error reports
+
+Two reporters, each sending only with the user's yes to "Send error
+reports" (the profile's `consent_errors`, cached in `shell.json` as
+`consentErrors`) and only in a build that has its DSN. Neither sends a
+match, a name or a path: both scrub with the same rules
+(`tests/fixtures/scrub_vectors.json`, read by `tests/test_scrub.py` and
+`desktop/src/cloud/scrub.test.ts`; a rule changes in both places or in
+neither).
+
+**The shell** (`sentry.ts`, `scrub.ts`, `report.ts`) runs `@sentry/electron`
+in main only. No client exists unless consent is on and a DSN is set; turning
+it on starts one at once and turning it off drops it. It builds a
+`NodeClient` on a scope of its own, not the SDK's `init`, which registers a
+protocol and IPC handlers that throw once the app is ready or when registered
+twice. `dataCollection` with user info off replaces `sendDefaultPii`, with no
+sessions and no tracing. An event carries the SDK's name and version, the
+`environment`, the `level`, the `platform`, the app version as `release`, the
+operating system, the scrubbed message and stack, and the account's ID when
+signed in; a renderer error adds `tags.process`. The Node runtime context,
+the `trace` context (its id pair would link events), `server_name`, the
+breadcrumbs and `modules` are removed. Either hook throwing drops the
+event, so a failed scrub never sends unscrubbed text. The page forwards its
+`error` and `unhandledrejection` events, and a route error boundary's
+errors, over the bridge (`reportError`); main drops them with consent off.
+No Sentry SDK is in `web/`, which also runs in plain browsers and whose
+policy blocks one.
+
+**The local API** (`telemetry.py`) starts only when the DSN, consent
+(`SENSEI_TOP_SENTRY_CONSENT=1`) and the user's ID
+(`SENSEI_TOP_SENTRY_USER`) were passed as environment at the server's spawn;
+the shell always passes all three, blank when consent is off, and restarts
+the server when any changes (`ReportsLink`). It reports only 500s and raised
+exceptions, with no breadcrumbs, sessions or tracing. `data_collection`
+replaces the deprecated `send_default_pii` (sentry-sdk 2.73). The request's
+URL and the event's transaction are the matched route's **template**
+(`/api/matches/{match_id}`), never a path with IDs, and the query string is
+dropped. The watcher child's errors are not reported: the SDK initialises
+after the fork. An exception message or a log line that carries an ID is
+not scrubbed by the template rule; the text rules of `scrub.py` apply to it.
+
+**Report a problem** (`report.ts`) sends one feedback event through a client
+made for it and closed after, whatever the toggle says, so it works signed
+out (the ID goes only when signed in). It is in the tray, in Settings → App
+and on every `ErrorNote` and the error screen in the desktop shell. Each
+press asks the transfer consent, except when the user is signed in
+with error reports on under the current policy: that consent covers the
+reports they send themselves, and the dialog says so in place of the box.
+The text is capped at 4000 characters and
+scrubbed here and again by the client; with "attach the last 500 lines of
+the log" ticked, the attachment is `GET /api/diagnostics/log-tail`, already
+scrubbed by the server and scrubbed again here. A tail that cannot be read
+leaves the report without it, not unsent. The payload also carries `kind`
+(`bug` or `idea`; `bug` when absent, so an older dashboard still works; any other value refuses the report),
+`page` (the address path, no query) and, on a match's page, `matchId`: the
+event is tagged `kind` and `page`, and `match_id` goes in its `feedback`
+context; `cleanEvent` keeps those and nothing else new. An idea never
+attaches the log, even if `attachLog` arrives true; a malformed `page` or
+`matchId` is dropped, not refused. A closed queue means the event
+left, not that Sentry accepted it.
+
+### Contributed games
+
+Anonymous records of finished games, sent only on a yes to "Help build the
+stats" and only from the packaged shell's main process (`contrib.ts`). A
+from-source or command-line install never contributes, and a build without a
+Supabase project does not offer the question (`canContribute`).
+
+- **The answer** is `shell.json`'s `contribute`: `yes`, the policy version it
+  was given under, when, and `ageConfirmed`. Nothing runs without a yes and
+  the age confirmation together. A yes keeps running under the version it was
+  given; a change to what records carry does not ask again.
+- **The sent flags** are `contributed.json` in `userData`, a set of
+  `match_id:game_number` keys, beside `shell.json`. A shell reset can send
+  games again.
+- **A run**, at start and when a match ends: `GET /api/contrib/games` lists
+  the finished games' keys, those not in `contributed.json` are fetched from
+  `GET /api/contrib/records` 50 at a time (`docs/architecture.md`,
+  "Contributed games"), and each batch is sent through the cloud function
+  `contribute_games`. Its keys are written after the call succeeded and never
+  before. A run asked for while one runs merges into the next.
+- **The call carries the anon key and no session.** The function is granted
+  to `anon` alone, and a session header would tie the record to an account.
+  Each record gets a fresh `randomUUID()` for the call, never written down
+  and never reused. The cloud refuses over 50 records a call or 64 KB a
+  record; one bad element refuses its whole call, so the batch is retried one
+  record at a time and a record refused alone is left out with a warning.
+- **Turning it off** aborts at once. A batch in flight has its answer
+  discarded and its keys are not marked: it was sent or it was not, and
+  nothing more goes.

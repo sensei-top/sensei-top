@@ -1,0 +1,75 @@
+{
+  "open": "Report a problem",
+  "dialog": {
+    "title": "Report a problem",
+    "titleIdea": "Suggest an idea",
+    "kind": {
+      "label": "What is it?",
+      "bug": "Bug",
+      "idea": "Idea"
+    },
+    "about": {
+      "match": "About: the match of {{date}}, {{deck}} vs {{opponent}}",
+      "matchDate": "About: the match of {{date}}"
+    },
+    "intro": "Nothing is sent until you press Send. It works with or without an account, whether or not error reports are on.",
+    "holds": "The report holds what you write, the page you were on, the app version and your system. From a match's page it also carries that match's ID.",
+    "signedIn": "You're signed in, so it's linked to your account by an internal ID, never by your email.",
+    "signedOut": "You're not signed in, so it carries no account ID.",
+    "kept": "Sentry keeps it for 30 days.",
+    "text": {
+      "label": "What went wrong?",
+      "placeholder": "What were you doing, and what happened instead?",
+      "counter": "{{chars}} of 4,000 characters",
+      "tooLong": "Shorten it to 4,000 characters or fewer.",
+      "ideaLabel": "What's your idea?",
+      "ideaPlaceholder": "What would you like Sensei Top to do, and where?"
+    },
+    "detail": "Technical detail, sent with your report:",
+    "log": {
+      "label": "Attach the last 500 lines of the app's log",
+      "scrubbed": "This is Sensei Top's own log, never Arena's or MTGO's. Your user name in file paths, email addresses, keys and tokens, Arena account IDs, Magic Online names and opponents' names are removed before it's sent.",
+      "remains": "It can still name cards, decks and files, and when things happened. With Diagnostic mode on, it holds much more, including the whole text of any prompt sent to Claude."
+    },
+    "transfer": {
+      "where": "Sentry stores reports in the United States, which has no data-protection law like Brazil's LGPD. Authorities there may be able to reach the reports under US law, and your rights may be harder to enforce there.",
+      "ip": "Sentry doesn't store your IP address, but works out an approximate location from it first.",
+      "agree": "I agree that this report is sent to Sentry, in the United States.",
+      "decline": "If you don't agree, the report isn't sent. While error reports are off, you're asked for each report."
+    },
+    "consent": {
+      "standing": "Sent to Sentry, in the United States, as you agreed when you turned on error reports.",
+      "withdraw": "To be asked before each report, turn off Send error reports in Settings, under Account."
+    },
+    "hint": {
+      "noText": "Write what went wrong to send the report.",
+      "notAgreed": "To send the report, agree to sending it to the United States.",
+      "noTextIdea": "Write your idea to send it."
+    },
+    "send": "Send report",
+    "sending": "Sending",
+    "cancel": "Cancel",
+    "close": "Close",
+    "result": {
+      "sent": "Your report was sent. Thank you.",
+      "sentWithoutLog": "Your report was sent, but without the log: Sensei Top couldn't read it.",
+      "unavailable": "This version of Sensei Top can't send reports. You can write to contact@senseitop.com instead.",
+      "invalid": "The report couldn't be sent. Write what went wrong, in 4,000 characters or fewer, and try again.",
+      "failed": "Your report couldn't be sent. Your text is still here, so try again in a moment.",
+      "sentIdea": "Your idea was sent. Thank you."
+    },
+    "sendIdea": "Send idea"
+  },
+  "settings": {
+    "description": "Sends us one report each time you press it, with or without an account, whether or not error reports are on."
+  },
+  "error": {
+    "title": "Something went wrong",
+    "body": "This page stopped working. Reload it to carry on. Sensei Top keeps recording your matches meanwhile.",
+    "reload": "Reload",
+    "sent": "A report of this error was sent automatically, because Send error reports is on.",
+    "notSent": "This error wasn't sent. To tell us about it, use Report a problem.",
+    "pending": "This error is sent automatically only if Send error reports is on."
+  },
+  "feedback": "Feedback"
+}

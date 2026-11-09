@@ -26,6 +26,7 @@ const actions: WelcomeActions = {
   pickFolder: () => Promise.resolve(null),
   pickFile: () => Promise.resolve(null),
   restoreFrom: ok,
+  signIn: () => Promise.resolve({ ok: false, error: 'auth.error.cancelled', message: '' } as const),
 }
 
 type Sources = ShellSettings['sources']
@@ -52,11 +53,17 @@ function app(change: Partial<AppSettings> = {}): AppSettings {
     update: { state: 'idle' },
     onboarded: false,
     aiFeatures: true,
+    canContribute: false,
+    contribAsked: false,
+    signInDismissed: false,
+    contribute: null,
+    account: { available: false },
     askAutostart: false,
     canAutostart: true,
     windowsStore: false,
     rulesText: null,
     firstData: { state: 'idle' },
+    restarting: false,
     version: '1.0.0',
     platform: 'linux',
     ...change,
@@ -94,6 +101,12 @@ const withFirstData = (firstData: FirstData, rulesText: number | null = null) =>
 const GUIDE = 'aria-label="In Arena, open Options, then Account, and tick Detailed Logs (Plugin Support). Then close Arena and start it again."'
 
 describe('the frame', () => {
+  it('has a Close back to Settings only once onboarding is done, the first run having no way out but its steps', () => {
+    expect(render('plays').html).not.toContain('>Close<')
+    const { html } = render('plays', { app: app({ onboarded: true }) })
+    expect(html).toMatch(/href="\/settings\/general"[^>]*>Close</)
+  })
+
   it('numbers each step out of five when both clients are played, under its heading', () => {
     expect(render('start').text).toContain('Step 1 of 5 Welcome to Sensei Top')
     expect(render('plays').text).toContain('Step 2 of 5 Which do you play?')
@@ -205,7 +218,7 @@ describe('Start', () => {
   it('links to the credits inside the disclosure', () => {
     const { html } = render('start')
     const inside = html.slice(html.indexOf('<details'), html.indexOf('</details>'))
-    expect(inside).toMatch(/href="\/settings#credits"[^>]*>Settings, under About and credits<\/a>/)
+    expect(inside).toMatch(/href="\/settings\/about#credits"[^>]*>Settings, under About and credits<\/a>/)
   })
 
   it('says so where the copy does not update itself', () => {
@@ -216,9 +229,40 @@ describe('Start', () => {
 
   it('offers the restore, also while card data downloads', () => {
     const { text } = render('start')
-    expect(text).toContain('Used Sensei Top before? Restore a backup')
+    expect(text).toContain('Used Sensei Top before? Restore from a backup file')
+    expect(text).not.toContain('Sign in')
     const running = render('start', { app: withFirstData({ state: 'running', line: null }) }).html
-    expect(running).toMatch(/<button(?![^>]*\sdisabled="")[^>]*>Restore a backup</)
+    expect(running).toMatch(/<button(?![^>]*\sdisabled="")[^>]*>Restore from a backup file</)
+  })
+
+  const account = (signedIn: boolean): AppSettings['account'] => ({
+    available: true,
+    signedIn,
+    userId: signedIn ? 'u1' : null,
+    email: null,
+    provider: null,
+    persistence: { kept: true },
+  })
+
+  it('offers the sign-in before the file for someone with an account to bring back', () => {
+    const { text } = render('start', { app: app({ account: account(false) }) })
+    const order = [
+      'Used Sensei Top before?',
+      'Sign in to bring back the matches backed up to your account.',
+      'Sign in with Google',
+      'Sign in with Discord',
+      'Kept a backup file instead?',
+      'Restore from a backup file',
+    ].map((words) => text.indexOf(words))
+    expect(order.every((at) => at >= 0)).toBe(true)
+    expect(order).toEqual([...order].sort((a, b) => a - b))
+  })
+
+  it('says the history comes back by itself once signed in', () => {
+    const { text } = render('start', { app: app({ account: account(true) }) })
+    expect(text).toContain('the matches in your account come back by themselves')
+    expect(text).not.toContain('Sign in with Google')
+    expect(text).toContain('Restore from a backup file')
   })
 })
 
@@ -292,7 +336,7 @@ describe('Arena', () => {
   })
 
   it('no longer carries the restore', () => {
-    expect(render('arena').text).not.toContain('Restore a backup')
+    expect(render('arena').text).not.toContain('Restore from a backup file')
   })
 })
 
@@ -475,5 +519,57 @@ describe('the AI features question', () => {
 
   it('is on no other step', () => {
     expect(render('start', { app: app({ aiFeatures: null }) }).text).not.toContain(question)
+  })
+})
+
+describe('the Help build the stats question', () => {
+  const body = 'Saying yes sends your games, past and future, to a private pool'
+  const home = (html: string) => {
+    const at = html.indexOf('>Go to Home<')
+    return html.slice(html.lastIndexOf('<button', at), at)
+  }
+
+  it('sits after the AI question on the Done step, nothing pressed, the age box unticked', () => {
+    const { text, html } = render('done', { app: app({ aiFeatures: null, canContribute: true }) })
+    expect(text).toContain('Help build the stats')
+    expect(text).toContain(body)
+    expect(text).toContain("can't be shown to you, copied or deleted")
+    // Where the pool is and how to stop sit under More about this.
+    const fold = html.slice(html.indexOf('<details'), html.indexOf('</details>'))
+    expect(fold).toContain('More about this')
+    expect(fold).toContain('The pool is kept in Brazil')
+    expect(fold).toContain('You can turn it off at any time')
+    expect(fold).not.toContain("can't be shown to you")
+    expect(text).toContain("I'm 13 or older.")
+    expect(text).toContain('This PC keeps that you confirmed this, and when.')
+    expect(html).toContain('>Send my games<')
+    expect(html).toContain('>Don&#x27;t send<')
+    expect(html.match(/aria-pressed="true"/g)).toBeNull()
+    expect(html).not.toContain('checked=""')
+    expect(html.indexOf('Leave them off')).toBeLessThan(html.indexOf('Help build the stats'))
+    expect(html.indexOf('Help build the stats')).toBeLessThan(html.indexOf('Check for a new version once a day'))
+  })
+
+  it('makes Go to Home wait and says so', () => {
+    const { text, html } = render('done', { app: app({ canContribute: true }) })
+    expect(home(html)).toContain('disabled=""')
+    expect(text).toContain('Answer each question above to go to Home.')
+  })
+
+  it('is hidden without canContribute, and Go to Home is free', () => {
+    const { text, html } = render('done', { app: app({ canContribute: false }) })
+    expect(text).not.toContain(body)
+    expect(home(html)).not.toContain('disabled=""')
+  })
+
+  it('is not asked of an install that already answered', () => {
+    const contribute = { yes: false, policyVersion: '2026-11-03', answeredAt: '2026-11-04T00:00:00Z', ageConfirmed: false }
+    const { text, html } = render('done', { app: app({ canContribute: true, contribute }) })
+    expect(text).not.toContain(body)
+    expect(home(html)).not.toContain('disabled=""')
+  })
+
+  it('is on no other step', () => {
+    expect(render('start', { app: app({ canContribute: true }) }).text).not.toContain(body)
   })
 })

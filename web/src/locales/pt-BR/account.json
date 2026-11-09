@@ -1,0 +1,184 @@
+{
+  "welcome": {
+    "intro": "Sua conta é gratuita. Os próximos passos perguntam sobre três coisas que ela pode fazer, e nada vem escolhido: cada uma só acontece se você disser sim.",
+    "stored": "Sua conta guarda seu e-mail, nome e foto vindos do Google ou do Discord, e estas respostas. Ela fica na Supabase, em São Paulo, Brasil.",
+    "changed": "A Política de Privacidade mudou em {{date}}: {{changes}}",
+    "kept": "Suas respostas anteriores já vêm escolhidas e valem até você clicar em Continuar.",
+    "age": {
+      "label": "Tenho 13 anos ou mais. Se tenho menos de 18, um dos meus pais ou o meu responsável deixou que eu tenha uma conta e, se eu quiser, envie os meus jogos.",
+      "small": "Guardamos que você confirmou sua idade, e quando.",
+      "title": "Sua conta"
+    },
+    "sync": {
+      "title": "Fazer backup do meu histórico de partidas",
+      "what": "O resumo traz quando a partida foi jogada, o formato, seu deck, o resultado e os cards do oponente que você viu.",
+      "where": "Fica na Supabase, em São Paulo, até você apagá-lo ou apagar sua conta. Seus logs do Arena e do MTGO, nomes e chat nunca são enviados.",
+      "yes": "Fazer backup",
+      "no": "Não fazer backup",
+      "lead": "Faz backup de um resumo de cada partida, para que ele sobreviva a uma reinstalação e chegue aos seus outros PCs."
+    },
+    "errors": {
+      "title": "Enviar relatórios de erro",
+      "what": "O relatório traz o erro, onde no código ele aconteceu, a versão do aplicativo e seu sistema.",
+      "linked": "Ele leva um ID interno da conta, nunca seu e-mail. Nomes, chaves e caminhos de arquivo são removidos antes, e ele é guardado por 30 dias.",
+      "yes": "Enviar",
+      "no": "Não enviar",
+      "lead": "Quando algo dá errado, o aplicativo envia um relatório ao Sentry, nos Estados Unidos."
+    },
+    "transfer": {
+      "title": "Enviar relatórios de erro para os Estados Unidos",
+      "law": "Os relatórios vão para os Estados Unidos, que não têm uma lei de proteção de dados como a LGPD. As autoridades de lá podem conseguir acessá-los com base na lei dos Estados Unidos, e pode ser mais difícil fazer valer seus direitos lá.",
+      "ip": "O Sentry não guarda seu endereço IP, mas antes deduz dele uma localização aproximada.",
+      "agree": "Concordo que os relatórios de erro, e os que eu enviar por conta própria, sejam enviados ao Sentry, nos Estados Unidos.",
+      "withdraw": "Sem isso, nada é enviado automaticamente, e cada relatório que você envia por conta própria pergunta antes. Você pode revogar a qualquer momento, desligando os relatórios de erro."
+    },
+    "coach": {
+      "title": "Guardar meu histórico do treinador",
+      "kept": "Elas ficam na Supabase, no Brasil, até você apagá-las ou apagar sua conta.",
+      "off": "Desligado, só ficam guardados quando você perguntou, qual modelo respondeu e quanto custou, por 90 dias.",
+      "yes": "Guardar",
+      "no": "Não guardar",
+      "lead": "O treinador de regras chega numa versão futura. Com isto ligado, suas perguntas e as respostas dele ficam guardadas para você poder relê-las."
+    },
+    "policy": {
+      "lead": "O que é guardado, onde e por quanto tempo:",
+      "link": "Política de Privacidade ({{date}})"
+    },
+    "contribute": {
+      "title": "Ajudar a montar as estatísticas",
+      "storedNo": "Você disse não a isto em {{date}}. Pode manter essa resposta ou mudá-la aqui.",
+      "apart": "Esta não é uma escolha da conta: funciona do mesmo jeito sem conta, e sua resposta fica neste PC.",
+      "pool": "O acervo fica no Brasil, sem ligação com nenhuma conta, e seus jogos são enviados sem seu login.",
+      "final": "Nada num jogo enviado diz quem o enviou. Depois de enviado, ele não pode ser mostrado a você, copiado nem apagado, nem mesmo se você apagar sua conta.",
+      "off": "Você pode desligar isso em Configurações a qualquer momento, e nada mais é enviado depois disso.",
+      "yes": "Enviar meus jogos",
+      "no": "Não enviar",
+      "lead": "Com sim, seus jogos, passados e futuros, vão para um acervo privado do qual são feitas as estatísticas do próprio Sensei Top, sem nada que identifique você ou seu oponente."
+    },
+    "continue": "Continuar",
+    "working": "Salvando",
+    "hint": {
+      "transfer": "Para enviar relatórios de erro, concorde com o envio para os Estados Unidos, ou escolha Não enviar.",
+      "age": "Confirme sua idade para seguir.",
+      "answer": "Escolha uma resposta para seguir.",
+      "answers": "Responda às duas perguntas para seguir."
+    },
+    "decline": "Pular e não criar uma conta",
+    "declineNote": "Backup, relatórios de erro e histórico do treinador precisam de uma conta. Pular deixa tudo desligado e apaga a conta que este login acabou de criar. Nenhuma partida foi para o backup ainda, e suas partidas neste PC continuam.",
+    "signOut": "Sair da conta",
+    "error": {
+      "failed": "Suas respostas não foram salvas, e nada foi alterado. Tente de novo.",
+      "declineFailed": "A conta não foi apagada, e nada foi alterado. Tente de novo.",
+      "signOutFailed": "Você não saiu da conta. Tente de novo."
+    },
+    "later": "Você pode mudar qualquer resposta depois em Configurações, na seção Conta.",
+    "keep": {
+      "title": "O que sua conta guarda"
+    }
+  },
+  "settings": {
+    "title": "Conta",
+    "unavailable": "Esta versão do Sensei Top não tem conta.",
+    "signedOut": "Uma conta é gratuita e opcional. O Sensei Top funciona do mesmo jeito sem ela. Com ela, você pode fazer backup do seu histórico de partidas, levá-lo para outro PC e escolher se envia relatórios de erro.",
+    "noPassword": "Não há senha do Sensei Top: você entra com o Google ou com o Discord.",
+    "signInGoogle": "Entrar com o Google",
+    "signInDiscord": "Entrar com o Discord",
+    "signingIn": "Aguardando o navegador",
+    "waiting": "Termine de entrar no seu navegador. O Sensei Top espera até 5 minutos.",
+    "signInFailed": "O login não terminou. Tente de novo.",
+    "signedInAs": "Conectado como {{email}}, pelo {{provider}}.",
+    "signedInWith": "Conectado pelo {{provider}}.",
+    "unanswered": "Você ainda não respondeu às perguntas da sua conta. Até responder, nada é enviado para backup nem como relatório de erro.",
+    "answerNow": "Responder agora",
+    "unknown": "Não foi possível ler suas escolhas na sua conta. O Sensei Top tenta de novo depois da sua próxima partida, ou você pode tentar agora.",
+    "retry": "Tentar de novo",
+    "retryFailed": "Ainda não foi possível lê-las. Tente de novo daqui a pouco.",
+    "backup": {
+      "label": "Fazer backup do meu histórico de partidas",
+      "description": "Envia um resumo de cada partida, para seu histórico sobreviver a uma reinstalação e chegar aos seus outros PCs. Fica guardado até você apagá-lo."
+    },
+    "errors": {
+      "label": "Enviar relatórios de erro",
+      "description": "Envia um relatório ao Sentry, nos Estados Unidos, quando algo dá errado. Guardado por 30 dias. Com ele ligado, os relatórios que você envia por conta própria não perguntam antes."
+    },
+    "coach": {
+      "label": "Guardar meu histórico do treinador",
+      "description": "Salva suas perguntas ao treinador de regras e as respostas dele, para você poder relê-las. O treinador chega numa versão futura."
+    },
+    "turningOff": "Desligar uma escolha a interrompe dali em diante. Para remover o que já foi enviado, use Apagar histórico na nuvem.",
+    "sync": {
+      "off": "O backup está desligado. Seu histórico de partidas fica só neste PC.",
+      "none": "Nenhum backup feito ainda.",
+      "running": "Fazendo backup…",
+      "done_one": "{{n}} partida deste PC no backup. Último backup {{when}}.",
+      "done_other": "{{n}} partidas deste PC no backup. Último backup {{when}}.",
+      "doneUndated_one": "{{n}} partida deste PC no backup.",
+      "doneUndated_other": "{{n}} partidas deste PC no backup.",
+      "error": {
+        "cloud": "O último backup parou porque não foi possível falar com sua conta. O Sensei Top tenta de novo quando a próxima partida terminar.",
+        "localApi": "O último backup parou porque o Sensei Top não conseguiu ler as partidas deste PC. Ele tenta de novo em alguns minutos e quando a próxima partida terminar.",
+        "disk": "O último backup parou porque o Sensei Top não conseguiu salvar o registro do backup neste PC. Ele tenta de novo quando a próxima partida terminar."
+      }
+    },
+    "export": {
+      "button": "Exportar meus dados na nuvem",
+      "description": "Salva tudo o que há na sua conta num arquivo JSON, onde você escolher.",
+      "saved": "Seus dados na nuvem foram salvos.",
+      "failed": "A exportação não terminou. Tente de novo."
+    },
+    "deleteHeading": "Apagar seus dados",
+    "history": {
+      "button": "Apagar histórico na nuvem",
+      "description": "Apaga as partidas salvas na sua conta e desliga o backup. As partidas deste PC continuam.",
+      "done_one": "{{n}} partida apagada do seu histórico na nuvem. O backup está desligado.",
+      "done_other": "{{n}} partidas apagadas do seu histórico na nuvem. O backup está desligado.",
+      "removed": "Elas são removidas de vez depois de 30 dias, quando seus outros PCs já tiverem sabido disso."
+    },
+    "deleteAccount": {
+      "button": "Apagar conta",
+      "description": "Apaga sua conta e tudo o que há nela. As partidas deste PC continuam."
+    },
+    "signOut": {
+      "button": "Sair da conta",
+      "description": "O backup para neste PC até você entrar de novo. Suas partidas continuam."
+    },
+    "persistence": {
+      "noKeyring": "Este sistema não tem um chaveiro, então o Sensei Top não guarda seu login, e você vai entrar de novo cada vez que abrir o aplicativo. O backup só roda enquanto você está conectado.",
+      "keyringHint": "Com um chaveiro configurado (como o GNOME Keyring ou o KWallet), o aplicativo guarda seu login, criptografado.",
+      "noEncryption": "Este sistema não consegue criptografar seu login, então o Sensei Top não o guarda, e você vai entrar de novo cada vez que abrir o aplicativo. O backup só roda enquanto você está conectado."
+    }
+  },
+  "dialog": {
+    "cancel": "Cancelar",
+    "working": "Aguarde"
+  },
+  "deleteHistory": {
+    "title": "Apagar seu histórico na nuvem?",
+    "body1": "Isso apaga todas as partidas salvas na sua conta. As partidas deste PC continuam onde estão.",
+    "body2": "O backup também é desligado, então nada é enviado de novo até você religá-lo. Se religar, todas as partidas deste PC são enviadas outra vez.",
+    "body3": "Não é possível desfazer.",
+    "confirm": "Apagar histórico na nuvem",
+    "failed": {
+      "historyOn": "Seu histórico na nuvem não foi apagado, e nada mudou. Tente de novo.",
+      "historyOff": "Seu histórico na nuvem não foi apagado. O backup está desligado, então nada mais é enviado. Tente de novo."
+    }
+  },
+  "deleteAccount": {
+    "title": "Apagar sua conta?",
+    "body1": "Isso apaga sua conta do Sensei Top e tudo o que há nela: seu perfil e suas escolhas, os PCs ligados a ela e todas as partidas salvas nela. Ela sai do nosso banco de dados na hora.",
+    "body2": "As partidas deste PC continuam onde estão. Os jogos que você enviou para Ajudar a montar as estatísticas também: nada neles diz que são seus, então não há como encontrá-los para apagar. Os relatórios de erro já enviados ficam no Sentry até serem apagados, 30 dias depois do envio.",
+    "body3": "Você vai sair da conta neste PC. Ajudar a montar as estatísticas continua como você deixou, porque não precisa de conta.",
+    "body4": "Não é possível desfazer.",
+    "confirm": "Apagar conta",
+    "failed": "Sua conta não foi apagada, e nada mudou. Tente de novo.",
+    "done": "Sua conta foi apagada."
+  },
+  "policyChanges": {
+    "2026-11-07": "seu sim aos relatórios de erro agora também vale para os relatórios que você envia por conta própria, e um relatório diz de qual página veio."
+  },
+  "errorsDialog": {
+    "title": "Enviar relatórios de erro para os Estados Unidos?",
+    "withdraw": "Isso também vale para os relatórios que você envia por conta própria, que deixam de perguntar antes. Você pode revogar isso a qualquer momento, desligando os relatórios de erro.",
+    "confirm": "Concordar e enviar relatórios"
+  }
+}

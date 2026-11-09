@@ -5,6 +5,7 @@ import { eventLabel, resultWord } from '../lib/events'
 import { opponentNamed, ownScore, startOf } from '../lib/home'
 import { opponentLabelText } from '../lib/opponent'
 import { formatDayTime } from '../lib/time'
+import { useCardData } from '../shell/cardData'
 import { Chip, type ChipVariant, ManaPips } from './ui'
 
 const VARIANT: Record<string, ChipVariant> = {
@@ -21,7 +22,9 @@ const GRID_WITH_EVENT = 'md:grid-cols-[7.5rem_6.5rem_minmax(0,3fr)_minmax(0,2fr)
 const GRID_WITHOUT_DECK = 'md:grid-cols-[7.5rem_6.5rem_minmax(0,1fr)]'
 
 /** One match, the whole row the way into it; nothing inside it takes a
- *  press of its own. The score puts the viewer's own games first. With
+ *  press of its own. A restored match (`restored`, pulled back from the cloud)
+ *  is a plain row with a "Restored" chip beside the result: there is no
+ *  report, replay or turns to open. The score puts the viewer's own games first. With
  *  `withEvent` (Matches, not Home) the row ends in one caption: the event
  *  in words, then the rank when there is one. With no event there is no
  *  caption, rank or no rank: the route gives an MTGO match the Arena rank
@@ -49,14 +52,12 @@ export function MatchRow({
     ? `${match.rank_class}${match.rank_level != null ? ` ${match.rank_level}` : ''}`
     : null
   const event = withEvent ? eventLabel(match.event_id, t) : null
+  const className = `-mx-2 flex min-h-[44px] flex-col gap-1 rounded-control px-2 py-2 md:grid ${
+    withEvent ? GRID_WITH_EVENT : withDeck ? GRID : GRID_WITHOUT_DECK
+  } md:items-center md:gap-3`
   const eventAndRank = event ? [event, rank].filter(Boolean).join(' · ') : ''
-  return (
-    <Link
-      to={`/matches/${encodeURIComponent(match.match_id)}`}
-      className={`-mx-2 flex min-h-[44px] flex-col gap-1 rounded-control px-2 py-2 transition-chrome hover:bg-surface3 md:grid ${
-        withEvent ? GRID_WITH_EVENT : withDeck ? GRID : GRID_WITHOUT_DECK
-      } md:items-center md:gap-3`}
-    >
+  const content = (
+    <>
       <span className="flex flex-wrap items-center gap-2 md:contents">
         <span className="text-caption text-muted tabular-nums">{start != null ? formatDayTime(start) : ''}</span>
         <span>
@@ -69,15 +70,29 @@ export function MatchRow({
               {t('matches.result.notFinished')}
             </Chip>
           )}
+          {match.restored && (
+            <span className="ml-1">
+              <Chip size="sm" muted>
+                {t('matches.row.restored')}
+              </Chip>
+            </span>
+          )}
         </span>
       </span>
       <OpponentDeck match={match} />
       {withDeck && (
         <span className={`min-w-0 text-caption break-words ${match.deck_name ? 'text-ink2' : 'text-muted'}`}>
-          {match.deck_id != null ? (match.deck_name ?? t('common.unnamedDeck')) : null}
+          {match.deck_id != null || match.restored ? (match.deck_name ?? t('common.unnamedDeck')) : null}
         </span>
       )}
       {eventAndRank && <span className="min-w-0 text-caption break-words text-muted">{eventAndRank}</span>}
+    </>
+  )
+  return match.restored ? (
+    <div className={className}>{content}</div>
+  ) : (
+    <Link to={`/matches/${encodeURIComponent(match.match_id)}`} className={`${className} transition-chrome hover:bg-surface3`}>
+      {content}
     </Link>
   )
 }
@@ -89,6 +104,7 @@ function OpponentDeck({ match }: { match: Match }) {
   const { t } = useTranslation()
   const named = opponentNamed(match) && match.opponent_label
   const shown = match.opponent_source === 'colors' && match.opponent_label
+  const cardData = useCardData()
   return (
     <span className="flex min-w-0 items-center gap-2">
       <ManaPips colors={match.opponent_colors} />
@@ -103,7 +119,9 @@ function OpponentDeck({ match }: { match: Match }) {
             </span>
           </>
         ) : (
-          <span className="text-body text-muted">{t('common.unknownDeck')}</span>
+          <span className="text-body text-muted">
+            {cardData?.state === 'running' ? t('matches.row.namedLater') : t('common.unknownDeck')}
+          </span>
         )}
       </span>
     </span>

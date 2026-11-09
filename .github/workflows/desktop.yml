@@ -87,6 +87,12 @@ jobs:
         env:
           BUILD_VERSION: ${{ inputs.version }}
           BUILD_UPDATE_URL: ${{ inputs.update_url }}
+          # The account's project and the error reports' DSNs (scripts/build-config.mjs).
+          # A secret that is not set comes through blank, and the build leaves it out.
+          SENSEI_TOP_SUPABASE_URL: ${{ secrets.SENSEI_TOP_SUPABASE_URL }}
+          SENSEI_TOP_SUPABASE_ANON_KEY: ${{ secrets.SENSEI_TOP_SUPABASE_ANON_KEY }}
+          SENSEI_TOP_SENTRY_DSN_DESKTOP: ${{ secrets.SENSEI_TOP_SENTRY_DSN_DESKTOP }}
+          SENSEI_TOP_SENTRY_DSN_LOCAL_API: ${{ secrets.SENSEI_TOP_SENTRY_DSN_LOCAL_API }}
       # One day: the private repository's Actions storage is metered by GB-day and its
       # 0.5 GB went in five days of hand-run builds (469 MB each). Download the same day.
       - uses: actions/upload-artifact@v7
@@ -156,6 +162,12 @@ jobs:
         env:
           BUILD_VERSION: ${{ inputs.version }}
           BUILD_UPDATE_URL: ${{ inputs.update_url }}
+          # The account's project and the error reports' DSNs (scripts/build-config.mjs).
+          # A secret that is not set comes through blank, and the build leaves it out.
+          SENSEI_TOP_SUPABASE_URL: ${{ secrets.SENSEI_TOP_SUPABASE_URL }}
+          SENSEI_TOP_SUPABASE_ANON_KEY: ${{ secrets.SENSEI_TOP_SUPABASE_ANON_KEY }}
+          SENSEI_TOP_SENTRY_DSN_DESKTOP: ${{ secrets.SENSEI_TOP_SENTRY_DSN_DESKTOP }}
+          SENSEI_TOP_SENTRY_DSN_LOCAL_API: ${{ secrets.SENSEI_TOP_SENTRY_DSN_LOCAL_API }}
       - uses: actions/upload-artifact@v7
         with:
           name: sensei-top-linux

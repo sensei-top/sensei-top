@@ -2,33 +2,53 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AppChange, AppSettings, Saved } from '../../bridge'
 import { failureOf, settle, updateSentence } from '../../lib/settings'
+import { useReportProblem } from '../../lib/reportProblem'
+import type { TFunction } from '../../i18n'
 import { useNow } from '../../lib/time'
 import { Button, Card } from '../ui'
 import { PressButton, SavingSwitch } from './SaveButton'
 
-/** The shell's own preferences in one card: its version, whether it starts
- *  with the system (where the copy can start at login), keeps running with
- *  the window closed (Linux only), checks for updates and writes a detailed
- *  log, then the buttons for the logs and the diagnostics zip. The server
- *  never reads any of it, so a change goes through `set`, never the config.
- *  Only a shell has any of it, so with no shell the page does not draw this
- *  section. Its last row links to the welcome steps. With no functions to
- *  call, every value is text and there is nothing to press. */
-export function AppSection({
-  app,
-  set,
-  checkForUpdates,
-  restartToUpdate,
-  showLogs,
-  exportDiagnostics,
-}: {
+/** The shell's own preferences, in the two halves Settings draws apart.
+ *  `AppGeneral` is what a person sets: starting with the system (where the
+ *  copy can start at login), keeping running with the window closed (Linux
+ *  only), checking for updates with Check now and Restart to update, and the
+ *  link to the welcome steps; where the Store build has no start-at-login
+ *  switch it shows its note in the switch's place. `AppAbout` is the version, the
+ *  detailed log, then the buttons for the logs, the diagnostics zip and
+ *  Report a problem. The server never reads any of it, so a change goes
+ *  through `set`, never the config. Only a shell has any of it, so with no
+ *  shell the page draws neither. With no functions to call, every value is
+ *  text and there is nothing to press. */
+export type AppProps = {
   app: AppSettings
   set?: (change: AppChange) => Promise<Saved>
   checkForUpdates?: () => Promise<Saved>
   restartToUpdate?: () => Promise<Saved>
   showLogs?: () => Promise<Saved>
   exportDiagnostics?: () => Promise<Saved>
-}) {
+}
+
+/** Both halves, one after the other: what a page with no groups draws. */
+export function AppSection(props: AppProps) {
+  return (
+    <div className="space-y-4">
+      <AppGeneral {...props} />
+      <AppAbout {...props} />
+    </div>
+  )
+}
+
+/** A button's action, its failure sentence handed to `say`; true when it worked. */
+function pressing(t: TFunction) {
+  return (action: () => Promise<Saved>, say: (sentence: string | null) => void) => async (): Promise<boolean> => {
+    say(null)
+    const sentence = failureOf(await settle(action(), t), t)
+    say(sentence)
+    return sentence === null
+  }
+}
+
+export function AppGeneral({ app, set, checkForUpdates, restartToUpdate }: AppProps) {
   const { t } = useTranslation()
   // A failed press is shown until the update state next changes: a check the
   // button did not start (the tray, the daily timer) moves the state on and
@@ -44,18 +64,10 @@ export function AppSection({
   }
   const now = useNow()
   const sentence = updateSentence(app.update, now, t)
-  const [failure, setFailure] = useState<string | null>(null)
-  const press =
-    (action: () => Promise<Saved>, say: (sentence: string | null) => void) => async (): Promise<boolean> => {
-      say(null)
-      const sentence = failureOf(await settle(action(), t), t)
-      say(sentence)
-      return sentence === null
-    }
+  const press = pressing(t)
   return (
     <Card title={t('settings.sections.app')} subtitle={t('settings.app.subtitle')} className="max-w-3xl">
       <div className="space-y-5">
-        <p className="text-body text-ink2">{t('settings.app.version', { version: app.version })}</p>
         {app.windowsStore && <p className="text-body text-ink2">{t('settings.app.startStore')}</p>}
         {app.canAutostart && (
           <SavingSwitch
@@ -119,13 +131,33 @@ export function AppSection({
             </>
           )}
         </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="text-body text-ink2">{t('settings.app.welcomeSteps')}</p>
+          <Button variant="quiet" className="min-h-[44px]" href="/welcome">
+            {t('settings.app.welcomeAgain')}
+          </Button>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+export function AppAbout({ app, set, showLogs, exportDiagnostics }: AppProps) {
+  const { t } = useTranslation()
+  const report = useReportProblem()
+  const [failure, setFailure] = useState<string | null>(null)
+  const press = pressing(t)
+  return (
+    <Card title={t('settings.app.aboutTitle')} subtitle={t('settings.app.aboutSubtitle')} className="max-w-3xl">
+      <div className="space-y-5">
+        <p className="text-body text-ink2">{t('settings.app.version', { version: app.version })}</p>
         <SavingSwitch
           label={t('settings.app.diagnostic')}
           description={t('settings.app.diagnosticDescription')}
           checked={app.diagnostic}
           onSave={set && ((on) => set({ diagnostic: on }))}
         />
-        {(showLogs || exportDiagnostics) && (
+        {(showLogs || exportDiagnostics || report) && (
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               {showLogs && (
@@ -146,17 +178,17 @@ export function AppSection({
                   onPress={press(exportDiagnostics, setFailure)}
                 />
               )}
+              {report && (
+                <Button variant="quiet" className="min-h-[44px]" onClick={() => report.open(null)}>
+                  {t('report.open')}
+                </Button>
+              )}
             </div>
             {failure && <p className="break-words text-caption text-loss">{failure}</p>}
-            <p className="text-caption text-muted">{t('settings.app.exportNote')}</p>
+            {(showLogs || exportDiagnostics) && <p className="text-caption text-muted">{t('settings.app.exportNote')}</p>}
+            {report && <p className="text-caption text-muted">{t('report.settings.description')}</p>}
           </div>
         )}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <p className="text-body text-ink2">{t('settings.app.welcomeSteps')}</p>
-          <Button variant="quiet" className="min-h-[44px]" href="/welcome">
-            {t('settings.app.welcomeAgain')}
-          </Button>
-        </div>
       </div>
     </Card>
   )

@@ -1,10 +1,11 @@
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage } from '../api'
+import { useDeckMatches, useDeckVersions, useFieldRecords, useGuideCoverage, usePastBoarding } from '../api'
 import { useAi } from '../ai/registry'
+import { PastBoardingList } from '../components/PastBoardingList'
 import { DeckMatchesCard } from '../components/DeckMatchesCard'
 import { VersionSwitcher } from '../components/VersionSwitcher'
-import { BackLink, Button, EmptyState, ErrorNote, Loading, ManaPips, StatTile } from '../components/ui'
+import { BackLink, Button, Card, EmptyState, ErrorNote, ManaPips, OutlineCard, PAIRING_TILE_BLOCK, Skeleton, STAT_TILE_BLOCK, StatTile } from '../components/ui'
 import { coverageName } from '../lib/brief'
 import { deckAddress } from '../lib/decks'
 import { archetypeKeyOf, matchupRowOver } from '../lib/matchups'
@@ -21,6 +22,75 @@ import { useNow } from '../lib/time'
 import { placeById } from '../shell/places'
 
 const MINUTE = 60_000
+
+/** The heading's place while the matches load. */
+function PairingHeadingSkeleton() {
+  return (
+    <div>
+      <Skeleton className="h-[calc(var(--text-title)*1.25)] w-1/3" />
+      <Skeleton className="h-[calc(var(--text-caption)*1.4)] w-1/4" />
+    </div>
+  )
+}
+
+/** Record, Games and Game 1 in the three-column row under `lg`, where they
+ *  need no second line; from `lg` they do, like the others. */
+const PAIRING_FIRST_TILE_BLOCK =
+  'h-[calc(var(--text-stat)*1.1+var(--text-caption)*1.4-var(--spacing)*3)] lg:h-[calc(var(--text-stat)*1.1+var(--text-caption)*2.8-var(--spacing)*3)]'
+
+/** The tiles' frames while the matches load, in the loaded row's grid. */
+function PairingTileFrames() {
+  const { t } = useTranslation()
+  return (
+    <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+      <OutlineCard label={t('matchups.pairing.record')} height={PAIRING_FIRST_TILE_BLOCK} />
+      <OutlineCard label={t('matchups.pairing.games')} height={PAIRING_FIRST_TILE_BLOCK} />
+      <OutlineCard label={t('matchups.pairing.game1')} height={PAIRING_FIRST_TILE_BLOCK} />
+      <OutlineCard label={t('matchups.pairing.postboard')} height={PAIRING_TILE_BLOCK} />
+      <OutlineCard label={t('matchups.pairing.inTournaments')} height={PAIRING_TILE_BLOCK} />
+    </div>
+  )
+}
+
+/** The matches' frame while they load; it carries the page's words. */
+function PairingMatchesFrame() {
+  const { t } = useTranslation()
+  return <OutlineCard label={t('decks.matches.title')} words={t('matchups.reading')} height="h-140" />
+}
+
+/** The pairing's pending page for the deck layout, which has no context
+ *  yet: the same children, in the same places, as the loaded view's root.
+ *  `switcher` is the version row, real or reserved; `brief` goes between
+ *  the tiles and the matches when the caller has it. */
+export function PairingOutline({
+  deckKey,
+  version,
+  switcher,
+  brief,
+}: {
+  deckKey: string
+  version: string | null
+  switcher: ReactNode
+  brief?: ReactNode
+}) {
+  const { t } = useTranslation()
+  return (
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <p className="text-caption">
+          <BackLink href={withVersion(`${deckAddress(deckKey)}/matchups`, version)}>
+            {t('matchups.pairing.allMatchups')}
+          </BackLink>
+        </p>
+        <PairingHeadingSkeleton />
+      </div>
+      {switcher}
+      <PairingTileFrames />
+      {brief}
+      <PairingMatchesFrame />
+    </div>
+  )
+}
 
 /** One deck against one opponent's deck (`opponentKey`, a Matchups row's
  *  `opponent_key`), over the versions the address chose (`versionIds`,
@@ -43,7 +113,11 @@ const MINUTE = 60_000
  *  and the format, so a change of version keeps the switcher's `<select>`,
  *  and the focus on it; only the Matches card is keyed on the version, so
  *  its rows start again at ten. The brief is the deck's, not a version's,
- *  and is not keyed on it. */
+ *  and is not keyed on it. Last, below the Matches card, comes what the
+ *  deck boarded in its last matches against the archetype
+ *  (`PastBoardingList`), read by the deck's whole identity whatever version
+ *  or format the address chose; it draws nothing while pending or when the
+ *  answer is empty, so its arrival moves nothing above it. */
 export function PairingView({
   deckKey,
   versionIds,
@@ -62,6 +136,7 @@ export function PairingView({
   const { deckIds, versions } = useDeckVersions(deckKey, versionIds)
   const matches = useDeckMatches(versionIds)
   const now = useNow()
+  const pastBoarding = usePastBoarding(deckKey, archetypeKeyOf(opponentKey))
   // The days move with the minute, not with every second's re-render.
   const minute = Math.floor(now / MINUTE) * MINUTE
 
@@ -70,7 +145,10 @@ export function PairingView({
   const coverage = useGuideCoverage(deckKey)
   // The field in the deck's own format: nothing is asked until coverage
   // answers, or when the deck has none.
-  const fieldByKey = useFieldRecords(coverage.data?.fmt)
+  const field = useFieldRecords(coverage.data?.fmt)
+  const fieldByKey = field.records
+  // The format is unknown while coverage loads, and the field is then still to come.
+  const fieldLoading = field.pending || coverage.isPending
 
   const against = useMemo(
     () => (matches.data ? pairingMatches(opponentKey, matches.data, format) : []),
@@ -96,8 +174,10 @@ export function PairingView({
   let body
   let matchesCard = null
   if (matches.error) body = <ErrorNote error={matches.error} />
-  else if (matches.isPending) body = <Loading />
-  else if (against.length === 0 && version != null) {
+  else if (matches.isPending) {
+    body = <PairingTileFrames />
+    matchesCard = <PairingMatchesFrame />
+  } else if (against.length === 0 && version != null) {
     body = (
       <EmptyState
         icon={icon}
@@ -119,9 +199,18 @@ export function PairingView({
       // `lg`, as Home's and Decks' five-column grids: under 64rem, 1008–1023 px
       // included, five tiles wrap three and two.
       <div className={`grid gap-4 md:grid-cols-3 ${tiles.length > 3 ? 'lg:grid-cols-5' : ''}`}>
-        {tiles.map((tile) => (
-          <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} muted={tile.muted} />
-        ))}
+        {tiles.map((tile, i) =>
+          // The field's tile is the last; while its figures load it keeps its loaded height.
+          fieldLoading && archetypeKeyOf(opponentKey) != null && i === tiles.length - 1 ? (
+            <OutlineCard
+              key={tile.label}
+              label={tile.label}
+              height={tiles.length > 3 ? PAIRING_TILE_BLOCK : STAT_TILE_BLOCK}
+            />
+          ) : (
+            <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} muted={tile.muted} />
+          ),
+        )}
       </div>
     ) : (
       <EmptyState
@@ -134,13 +223,14 @@ export function PairingView({
   }
 
   return (
-    <div className="space-y-8">
+    <div className={`${matches.isPending ? '' : 'arrive '}space-y-8`}>
       <div className="space-y-2">
         <p className="text-caption">
           <BackLink href={withVersion(`${deckAddress(deckKey)}/matchups`, version)}>
             {t('matchups.pairing.allMatchups')}
           </BackLink>
         </p>
+        {matches.isPending && !matches.error && <PairingHeadingSkeleton />}
         {headingReady && (
           <div>
             <h3 className="flex flex-wrap items-center gap-x-2 gap-y-1 font-display text-title">
@@ -156,6 +246,16 @@ export function PairingView({
       {body}
       {ai && <ai.PairingBrief deckKey={deckKey} opponentKey={opponentKey} />}
       {matchesCard}
+      {pastBoarding.error ? (
+        <ErrorNote error={pastBoarding.error} />
+      ) : (
+        pastBoarding.data &&
+        pastBoarding.data.length > 0 && (
+          <Card title={t('matchups.pairing.pastBoarding.title')}>
+            <PastBoardingList entries={pastBoarding.data} />
+          </Card>
+        )
+      )}
     </div>
   )
 }

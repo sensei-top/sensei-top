@@ -140,9 +140,10 @@ def _heroic() -> list[Path]:
     ``defaultSettings`` in ``heroic/config.json``: ``winePrefix``, and the
     folders ``defaultWinePrefixDir`` and ``defaultWinePrefix``
     (``HeroicGamesLauncher@main``, ``src/backend/constants/paths.ts:8,23,29``,
-    ``game_config.ts:36,290,308-309``, ``config.ts:344-356,404-407``). Also the
-    default folders ``~/Games/Heroic/Prefixes`` and ``.../Prefixes/default``
-    (``paths.ts:32-37,39``, ``config.ts:305-307``). The Flatpak
+    ``game_config.ts:36,290,308-309``, ``backend/config.ts:344-356,404-407``).
+    Also the default folders ``~/Games/Heroic/Prefixes`` and
+    ``.../Prefixes/default`` (``paths.ts:32-37,39``,
+    ``backend/config.ts:305-307``). The Flatpak
     ``com.heroicgameslauncher.hgl`` config path is inferred from the XDG
     mapping.
     """

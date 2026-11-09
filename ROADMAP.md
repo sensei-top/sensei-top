@@ -1,24 +1,27 @@
 # Roadmap
 
-What Sensei Top is building, in the order it is building it, and what it
-will not build. Dates are not promised: one maintainer works on this in
-their spare time, and the order moves when players ask for something
-louder than the plan expected. Vote and argue in
+What Sensei Top is building, in the order it is building it. What it will
+not build, and why, is in [docs/status.md](docs/status.md#not-planned).
+Dates are not promised: one maintainer works on this in their spare time,
+and the order moves when players ask for something louder than the plan
+expected. Vote and argue in
 [Discussions](https://github.com/sensei-top/sensei-top/discussions).
 
 The tracker is free and works fully without an account, now and later:
 your match history, your record in every matchup, the leak finder, the
 turn-by-turn replay, and written guides through a prompt you paste into
-any assistant or through a key of your own. [Next](#next), a free,
-optional account adds a backup of your match history, error reports you
-choose to send, and a rules coach that answers with the rule numbers it
+any assistant or through a key of your own. A free, optional account
+adds a backup of your match history and error reports you choose to send,
+and [next](#next) a rules coach that answers with the rule numbers it
 relied on. Two paid things are planned, and neither takes any of that
 away. The Microsoft Store build is the same app as the free download,
 [listed free](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN) since
 2026-10-21 and priced later, for anyone who would rather support the
 project that way. Later, an [optional paid tier](#later) adds deeper
-features and a monthly allowance of written reports. If the tracker earns
-a place in your routine, [donations](#donations) keep it maintained.
+features and a monthly allowance of written reports. Both are
+[on hold](#on-hold) until more players use the tracker, and nothing is
+sold before then. If the tracker earns a place in your routine,
+[donations](#donations) keep it maintained.
 
 What it is for: one tracker for both Arena and Magic Online, on Windows
 and Linux (the Steam Deck included), that shares none of your matches
@@ -31,12 +34,15 @@ The order below follows from that.
 1.0.0 shipped on 2026-10-17, with the Windows installer, the Linux
 AppImage, updates that apply themselves, and Brazilian Portuguese beside
 English. Since then: games 1 and 2–3 apart in every matchup, fixes to how
-Magic Online's log is read, and Arena found on more Linux setups
+Magic Online's log is read, Arena found on more Linux setups, and in 1.4.0
+a free, optional account. Sign in with Google or Discord, or never: it
+backs up your match history and sends error reports, each only if you
+turn it on, on one screen where nothing is ticked for you
 ([CHANGELOG.md](CHANGELOG.md)). What comes before the next release:
 
 1. **The Microsoft Store build** of the same app, which the Store signs,
-   [listed free](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN) since 2026-10-21. It is priced once Microsoft
-   confirms an individual developer may sell and the other blockers clear. The direct
+   [listed free](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN) since 2026-10-21. Its price is
+   [on hold](#on-hold). The direct
    download stays unsigned for now: the open-source signing programme
    asks for more public use first. (BL-070, BL-072)
 
@@ -44,18 +50,13 @@ Magic Online's log is read, and Arena found on more Linux setups
 
 In this order, unless Discussions says otherwise.
 
-1. **A free, optional account, and a rules coach.** Sign in with Google,
-   or never: the tracker keeps working fully without it. The account
-   adds a backup of your match history, so it survives a reinstall and
-   reaches your other computers, and error reports, each only if you
-   turn it on, on one screen where nothing is ticked for you. The rules
-   coach answers rules and card questions in English, on the website and
-   in the app, and cites the rule numbers it used. It is a hosted AI
+1. **A rules coach**, for players signed in to the free account. It
+   answers rules and card questions in English, on the website and in
+   the app, and cites the rule numbers it used. It is a hosted AI
    model, so each answer says it may be wrong and to ask a judge at a
    tournament, and there is a daily limit per player. The coach is never
    sent your matches. An "AI features" switch in Settings hides the
-   coach and the written guides. Testers get the account first, and both
-   go public together. (BL-100, BL-101, BL-102)
+   coach and the written guides. (BL-101, BL-102)
 2. **An overlay for Arena.** The Live page's reads in a window of the
    tracker's own, on top of the game, under the rule below for events. It
    draws over Arena and never injects into it. Magic Online does not get
@@ -110,48 +111,21 @@ In this order, unless Discussions says otherwise.
   prompt. It is gated by feature, never by your rank or the events you
   play. It is the only thing that asks for an account, made when you
   subscribe: a code sent to your email, or Google, Discord or X. The free
-  tracker, the copy prompt and your own key stay as they are. (BL-006)
+  tracker, the copy prompt and your own key stay as they are. Preparing
+  it is [on hold](#on-hold). (BL-006)
 - **A Discord server**, once there are enough people to staff one.
   Discussions on GitHub come first.
 
-## Never
+## On hold
 
-These are decisions, not gaps. Each one was considered and refused.
-
-- **Live advice during an event.** In an Arena event (paid events,
-  drafts, the Arena Open, Directs, Qualifiers, a Direct Challenge) the Live
-  page shows what any tracker shows: your library, draw odds, the cards
-  your opponent has revealed and what deck they point to. Keep advice, hand
-  reads and play-arounds appear in casual games, on the ranked ladder and
-  between games, and a switch in Settings hides them everywhere. Until
-  October 2026 the ladder got none either. The rules that could reach a
-  tracker are the
-  [Digital Tournament Rules](https://blogs.magicjudges.org/rules/dtr/) and
-  the [Digital Infraction Procedure Guide](https://blogs.magicjudges.org/rules/dipg/2-2/):
-  they allow deck tracking software that shows no private information,
-  they count play advice from an outside source as outside assistance, and
-  they govern tournaments, which the ladder is not. On the ladder only
-  [Wizards' Terms](https://company.wizards.com/en/legal/terms) apply, and
-  they treat every tracker alike. The terms of the
-  [Arena Open](https://magic.wizards.com/en/news/mtg-arena/arena-open-terms-and-conditions)
-  and [Arena Direct](https://magic.wizards.com/en/news/mtg-arena/arena-direct-terms-and-conditions)
-  say nothing of trackers either way, so events keep the stricter line.
-- **Reading the memory of, injecting into or automating either client.**
-  The tracker reads the log files Arena and MTGO already write, with
-  Arena's own Detailed Logs setting on, and nothing else.
-- **Pooling or sharing your matches.** Not by default, and not as an
-  opt-in: your match history is never contributed to us for analysis or
-  to a shared dataset, and nobody else ever sees it. Two things leave your
-  computer, each only when you ask: a report you generate with your own
-  key, which sends that match to the model you configured, and, with the
-  account, a backup of your match summaries that only you can read. The
-  matchup numbers from outside your own games come from published
-  tournament results.
-- **Draft.** The draft assistant was removed in October 2026 and is not
-  coming back in this project.
-- **Mobile.** iOS makes log reading impossible and Android impractical.
-- **Alchemy and Brawl.** Games in them still appear in your history, but
-  no field data or format-specific feature is built for them.
+Since 2026-11-09, everything that only prepares selling waits: the Store
+listing's price, the paid tier, and the questions to Microsoft, Daybreak
+and TopDeck.gg that only a sale raises (BL-070, BL-006, BL-077, BL-078).
+The tracker is too small today for either paid thing to pay for the work
+it takes, so that work goes to what brings players instead. It is taken
+up again when about 100 installs a day check for updates or 1,000 players
+use the tracker in a month, whichever comes first, and the decision is
+looked at again on 2027-03-01. Below that, it stays on hold through 2027.
 
 ## Where it comes from
 

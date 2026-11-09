@@ -3,28 +3,31 @@ import { translator } from '../i18n'
 import type { DeckIdentityOut, LeakOut, Match, MetaPresence } from '../api'
 import type { DetailedLogs } from '../bridge'
 import {
+  deckSlot,
   detailedLogsNag,
   fieldWindowStart,
   firstPattern,
   firstRunSteps,
   homeDecks,
   homeField,
+  homeSlots,
   isFirstRun,
   lastFinished,
   lastSession,
   lastThirtyDays,
   liveState,
   mtgoOnly,
+  newestHasDeck,
+  nextStep,
   opponentNamed,
   ownScore,
   recentMatches,
   sessionHeadline,
-  thingSlots,
-  threeThings,
   weekStart,
   weeklyWinrate,
 } from './home'
 import { decksTiles } from './decks'
+import { defaultTier, defaultWindow, shareRows, windowStartOf } from './field'
 
 // The zone is America/New_York (vitest.config.ts). Every timestamp below is
 // bare, so the log's own local clock: 04:00 UTC is midnight in New York
@@ -192,6 +195,12 @@ describe('the matches Home names', () => {
     expect(lastFinished([rows[1]])).toBeNull()
   })
 
+  it('never takes a restored match as the last one', () => {
+    const withRestored = [...rows, match('cloud', '2026-10-01T10:00:00', 'win', { restored: true })]
+    expect(lastFinished(withRestored)!.match_id).toBe('new')
+    expect(lastFinished([withRestored[4]])).toBeNull()
+  })
+
   it('lists the newest matches, finished or not', () => {
     expect(ids(recentMatches(rows))).toEqual(['live', 'new', 'old'])
     expect(ids(recentMatches(rows, 2))).toEqual(['live', 'new'])
@@ -216,43 +225,38 @@ describe('scores', () => {
   })
 })
 
-describe('threeThings', () => {
-  it('takes the match, the pattern and the field, in that order', () => {
-    expect(threeThings({ match: true, pattern: true, field: true })).toEqual(['match', 'pattern', 'field'])
-    expect(threeThings({ match: true, pattern: false, field: true })).toEqual(['match', 'field'])
-  })
+describe('homeSlots', () => {
+  const none = { pattern: false, field: false }
+  const nothing = { deck: false, next: false }
 
-  it('shows fewer than three rather than a filler', () => {
-    expect(threeThings({ match: true, pattern: false, field: false })).toEqual(['match'])
-    expect(threeThings({ match: false, pattern: false, field: false })).toEqual([])
-  })
-})
-
-describe('thingSlots', () => {
   it('keeps a pending pattern slot without holding back the field slot', () => {
-    // The pattern's request is out; the field's has answered with a field.
-    const slots = thingSlots(
-      { match: true, pattern: false, field: true },
-      { pattern: true, field: false },
-    )
-    expect(slots).toEqual(['match', 'pattern', 'field'])
+    expect(
+      homeSlots({ match: true, pattern: false, field: true }, { pattern: true, field: false }, nothing),
+    ).toEqual(['match', 'pattern', 'field'])
   })
 
   it('keeps a pending field slot after a pattern that has answered', () => {
     expect(
-      thingSlots({ match: true, pattern: true, field: false }, { pattern: false, field: true }),
+      homeSlots({ match: true, pattern: true, field: false }, { pattern: false, field: true }, nothing),
     ).toEqual(['match', 'pattern', 'field'])
   })
 
-  it('drops a slot that answered with nothing, as threeThings does', () => {
-    const none = { pattern: false, field: false }
-    expect(thingSlots({ match: true, pattern: false, field: true }, none)).toEqual(['match', 'field'])
+  it('drops a slot that answered with nothing and has no fallback', () => {
+    expect(homeSlots({ match: true, pattern: false, field: true }, none, nothing)).toEqual(['match', 'field'])
+    expect(
+      homeSlots({ match: true, pattern: false, field: false }, { pattern: false, field: true }, nothing),
+    ).toEqual(['match', 'field'])
   })
 
-  it('drops a pattern that answered empty while the field is still pending', () => {
-    expect(
-      thingSlots({ match: true, pattern: false, field: false }, { pattern: false, field: true }),
-    ).toEqual(['match', 'field'])
+  it('moves no card while the field loads and then answers', () => {
+    const has = { match: true, pattern: false, field: false }
+    const fallback = { deck: true, next: true }
+    const loading = homeSlots(has, { pattern: false, field: true }, fallback)
+    const noField = homeSlots(has, none, fallback)
+    const field = homeSlots({ ...has, field: true }, none, fallback)
+    expect(loading).toEqual(['match', 'deck', 'field'])
+    expect(field).toEqual(loading)
+    expect(noField).toEqual(['match', 'deck', 'next'])
   })
 })
 
@@ -437,15 +441,8 @@ describe('homeDecks', () => {
 })
 
 describe('fieldWindowStart', () => {
-  const now = new Date(2026, 8, 28, 12, 0, 0).getTime()
-
   it('is the reset’s date at the viewer’s midnight', () => {
-    expect(fieldWindowStart('2026-09-01', now)).toBe(new Date(2026, 8, 1).getTime())
-  })
-
-  it('is 90 days before the clock without a reset', () => {
-    expect(fieldWindowStart(null, now)).toBe(now - 90 * DAY)
-    expect(fieldWindowStart('last month', now)).toBe(now - 90 * DAY)
+    expect(fieldWindowStart('2026-09-01')).toBe(new Date(2026, 8, 1).getTime())
   })
 })
 
@@ -466,6 +463,15 @@ describe('homeField', () => {
     row('B', 'league', 50),
     row('C', 'undefeated', 90),
   ]
+  it('orders equal-share decks by name, the way the Field page does', () => {
+    const tied = [row('A', 'z', 14), row('A', 'a', 14), row('A', 'top', 20)]
+    const home = homeField(tied, [], identities, false, startFor(null), 15, 'Standard', 'A')!
+    expect(home.rows.map((r) => r.presence.archetype_key)).toEqual(['top', 'a', 'z'])
+    expect(shareRows(tied, 'A').map((r) => r.archetype_key)).toEqual(['top', 'a', 'z'])
+  })
+
+  // The window as a page asks for it: the reset, else the last 15 days.
+  const startFor = (reset: string | null) => (reset ? windowStartOf('reset', reset, now) : windowStartOf(15, null, now))
   const against = (id: string, startedAt: string, result: string | null, deckId: string | null, key: string) =>
     match(id, startedAt, result, { deck_id: deckId, format: 'Standard', opponent_key: `archetype:${key}`, opponent_label: key })
   const matches = [
@@ -478,22 +484,34 @@ describe('homeField', () => {
   ]
 
   it('is null with no lists in any tier', () => {
-    expect(homeField([], matches, identities, null, false, now, 'Standard')).toBeNull()
-    expect(homeField([row('A', 'none', 0), row('D', 'empty', 0)], matches, identities, null, false, now, 'Standard')).toBeNull()
+    expect(homeField([], matches, identities, false, startFor(null), 15, 'Standard', defaultTier([]))).toBeNull()
+    expect(homeField([row('A', 'none', 0), row('D', 'empty', 0)], matches, identities, false, now - 15 * DAY, 15, 'Standard', 'B')).toBeNull()
   })
 
   it('reads leagues before smaller paper, and smaller paper when it alone has lists', () => {
     const leaguesAndSmallPaper = [row('D', 'small-paper', 12), row('C', 'undefeated', 90), row('A', 'none', 0)]
-    expect(homeField(leaguesAndSmallPaper, matches, identities, null, false, now, 'Standard')!.tier).toBe('C')
+    expect(homeField(leaguesAndSmallPaper, matches, identities, false, startFor(null), 15, 'Standard', defaultTier(leaguesAndSmallPaper))!.tier).toBe('C')
     const smallPaperOnly = [row('A', 'none', 0), row('D', 'small-paper', 12)]
-    const field = homeField(smallPaperOnly, matches, identities, null, false, now, 'Standard')!
+    const field = homeField(smallPaperOnly, matches, identities, false, startFor(null), 15, 'Standard', defaultTier(smallPaperOnly))!
     expect(field.tier).toBe('D')
     expect(field.lists).toBe(12)
   })
 
+  it('never takes a restored match for its art', () => {
+    const cloud = match('cloud', '2026-09-28T10:00:00', 'win', {
+      restored: true,
+      deck_id: null,
+      format: 'Standard',
+      opponent_key: 'archetype:big',
+      opponent_label: 'big',
+    })
+    const field = homeField(presence, [cloud, ...matches], identities, false, startFor('2026-09-01'), 15, 'Standard', 'A')!
+    expect(field.artMatchId).toBe('1')
+  })
+
   it('ignores a newer match in another format, for the deck and for the record', () => {
     const other = { ...against('7', '2026-09-28T10:00:00', 'loss', 'b1', 'big'), format: 'Modern' as const }
-    const field = homeField(presence, [other, ...matches], identities, '2026-09-01', false, now, 'Standard')!
+    const field = homeField(presence, [other, ...matches], identities, false, startFor('2026-09-01'), 15, 'Standard', 'A')!
     expect(field.deck).toEqual({ name: 'Izzet', deckIds: new Set(['a1', 'a2']) })
     expect(field.rows[0].record).toEqual({ played: 2, won: 1, losses: 1 })
     expect(field.topTwo).toEqual({ played: 3, won: 2, losses: 1 })
@@ -507,25 +525,41 @@ describe('homeField', () => {
       ...matches,
       { ...against('old', '2026-08-01T20:00:00', 'win', 'a1', 'big'), format: 'Modern' as const },
     ]
-    expect(homeField(presence, full, identities, '2026-08-15', true, now, 'Standard')!.listShort).toBe(false)
+    expect(homeField(presence, full, identities, true, startFor('2026-08-15'), 15, 'Standard', 'A')!.listShort).toBe(false)
   })
 
-  it('reads the highest tier with lists, its decks the most played first', () => {
-    const field = homeField(presence, matches, identities, '2026-09-01', false, now, 'Standard')!
-    expect(field.tier).toBe('A')
-    expect(field.rows.map((entry) => entry.presence.archetype_key)).toEqual(['big', 'small'])
-    expect(field.lists).toBe(15)
-    expect(homeField(presence.slice(2), matches, identities, null, false, now, 'Standard')!.tier).toBe('B')
+  it('reads the tier it is given, its decks the most played first', () => {
+    const asA = homeField(presence, matches, identities, false, startFor('2026-09-01'), 15, 'Standard', 'A')!
+    expect(asA.tier).toBe('A')
+    expect(asA.rows.map((entry) => entry.presence.archetype_key)).toEqual(['big', 'small'])
+    expect(asA.lists).toBe(15)
+    expect(homeField(presence, matches, identities, false, now, 15, 'Standard', 'C')!.rows[0].presence.archetype_key).toBe('undefeated')
+  })
+
+  it('is null when the tier it is given has no list', () => {
+    expect(homeField(presence.slice(0, 3), matches, identities, false, now, 15, 'Standard', 'B')).toBeNull()
+  })
+
+  it('follows the Field page: its default tier and its 15-day window', () => {
+    const start = windowStartOf(defaultWindow(null), null, now)
+    expect(start).toBe(now - 15 * DAY)
+    const field = homeField(presence, matches, identities, false, start, 15, 'Standard', defaultTier(presence))!
+    expect(field.tier).toBe('B')
+    expect(field.windowStart).toBe(now - 15 * DAY)
+    // Inside the 15 days (since Sep 13), against "big" with the Izzet deck:
+    // matches 1 and 2; 4 is another deck's, 5 is older, 6 is unfinished.
+    const big = homeField([row('B', 'big', 9)], matches, identities, false, start, 15, 'Standard', 'B')!
+    expect(big.rows[0].record).toEqual({ played: 2, won: 1, losses: 1 })
   })
 
   it('counts every list of the tier, not only the rows shown', () => {
-    const field = homeField(presence, matches, identities, null, false, now, 'Standard', 1)!
+    const field = homeField(presence, matches, identities, false, startFor(null), 15, 'Standard', 'A', 1)!
     expect(field.rows).toHaveLength(1)
     expect(field.lists).toBe(15)
   })
 
   it('gives the record of the newest match’s deck, every version of it, inside the window', () => {
-    const field = homeField(presence, matches, identities, '2026-09-01', false, now, 'Standard')!
+    const field = homeField(presence, matches, identities, false, startFor('2026-09-01'), 15, 'Standard', 'A')!
     expect(field.deck).toEqual({ name: 'Izzet', deckIds: new Set(['a1', 'a2']) })
     // Against "big": matches 1 and 2. Match 4 was another deck's, 5 began
     // 23:59:59 local the day before the reset (one second outside the
@@ -534,26 +568,19 @@ describe('homeField', () => {
     expect(field.rows[1].record).toEqual({ played: 1, won: 1, losses: 0 })
     expect(field.topTwo).toEqual({ played: 3, won: 2, losses: 1 })
     expect(field.windowStart).toBe(new Date(2026, 8, 1).getTime())
-    expect(field.reset).toBe('2026-09-01')
-  })
-
-  it('reaches back 90 days without a reset', () => {
-    const field = homeField(presence, matches, identities, null, false, now, 'Standard')!
-    expect(field.reset).toBeNull()
-    expect(field.windowStart).toBe(now - 90 * DAY)
-    expect(field.rows[0].record).toEqual({ played: 3, won: 2, losses: 1 })
+    expect(field.days).toBe(15)
   })
 
   it('counts every deck’s matches when no match has a deck', () => {
     const deckless = matches.map((entry) => ({ ...entry, deck_id: null }))
-    const field = homeField(presence, deckless, identities, '2026-09-01', false, now, 'Standard')!
+    const field = homeField(presence, deckless, identities, false, startFor('2026-09-01'), 15, 'Standard', 'A')!
     expect(field.deck).toBeNull()
     expect(field.rows[0].record).toEqual({ played: 3, won: 2, losses: 1 })
   })
 
   it('takes a deck of no identity by its own id and name', () => {
     const stray = [match('s', '2026-09-28T11:30:00', 'win', { deck_id: 'z9', deck_name: 'Stray', format: 'Standard' }), ...matches]
-    expect(homeField(presence, stray, identities, null, false, now, 'Standard')!.deck).toEqual({
+    expect(homeField(presence, stray, identities, false, startFor(null), 15, 'Standard', 'A')!.deck).toEqual({
       name: 'Stray',
       deckIds: new Set(['z9']),
     })
@@ -567,20 +594,22 @@ describe('homeField', () => {
       labelled('newer-other', '2026-09-27T20:00:00', 'Sultai Control'),
       labelled('older-own', '2026-09-20T20:00:00', 'Jeskai Control'),
     ]
-    expect(homeField(rows, pair, identities, null, false, now, 'Standard')!.artMatchId).toBe('older-own')
+    expect(homeField(rows, pair, identities, false, startFor(null), 15, 'Standard', defaultTier(rows))!.artMatchId).toBe('older-own')
   })
 
   it('takes the first row’s art from the newest finished match against it, whatever the deck', () => {
-    expect(homeField(presence, matches, identities, '2026-09-01', false, now, 'Standard')!.artMatchId).toBe('1')
-    expect(homeField(presence, matches.slice(3), identities, '2026-09-01', false, now, 'Standard')!.artMatchId).toBe('4')
+    expect(homeField(presence, matches, identities, false, startFor('2026-09-01'), 15, 'Standard', 'A')!.artMatchId).toBe('1')
+    expect(homeField(presence, matches.slice(3), identities, false, startFor('2026-09-01'), 15, 'Standard', 'A')!.artMatchId).toBe('4')
   })
 
   it('says when a full list does not reach back to the window’s start', () => {
-    // The oldest match listed is August 31, before the reset of September 1
-    // and after the start of a window of 90 days.
-    expect(homeField(presence, matches, identities, '2026-09-01', true, now, 'Standard')!.listShort).toBe(false)
-    expect(homeField(presence, matches, identities, null, true, now, 'Standard')!.listShort).toBe(true)
-    expect(homeField(presence, matches, identities, null, false, now, 'Standard')!.listShort).toBe(false)
+    // The oldest match listed is August 31: before the reset of September 1
+    // and before the start of the last 15 days (September 13), so the list
+    // reaches back in both; after a reset of August 15, so it falls short.
+    expect(homeField(presence, matches, identities, true, startFor('2026-09-01'), 15, 'Standard', 'A')!.listShort).toBe(false)
+    expect(homeField(presence, matches, identities, true, startFor(null), 15, 'Standard', 'A')!.listShort).toBe(false)
+    expect(homeField(presence, matches, identities, true, startFor('2026-08-15'), 15, 'Standard', 'A')!.listShort).toBe(true)
+    expect(homeField(presence, matches, identities, false, startFor(null), 15, 'Standard', 'A')!.listShort).toBe(false)
   })
 })
 
@@ -620,5 +649,79 @@ describe('detailedLogsNag', () => {
 
   it('never asks an MTGO-only player', () => {
     expect(detailedLogsNag(sources('/log', 'disabled'), ['mtgo'])).toBe(false)
+  })
+})
+
+describe('the fallbacks after one match', () => {
+  const identities = [{ key: 'Izzet', name: 'Izzet', deck_ids: ['a1'] } as DeckIdentityOut]
+  const row = (key: string, decks: number) =>
+    ({ tier: 'B', archetype_key: key, label: key, decks }) as unknown as MetaPresence
+  const one = [
+    match('1', '2026-09-27T20:00:00', 'loss', {
+      deck_id: 'a1',
+      format: 'Standard',
+      opponent_key: 'archetype:met',
+      opponent_label: 'met',
+    }),
+  ]
+  const corpus = [row('met', 30), row('unmet', 20), row('rare', 5)]
+  const none = { pattern: false, field: false }
+
+  it('names the most played archetype the deck has not met, with a corpus', () => {
+    const slot = deckSlot(identities, one, corpus, 'Standard')!
+    expect(slot).toMatchObject({ key: 'Izzet', wins: 0, losses: 1, played: 1 })
+    expect(slot.unmet).toEqual({ archetypeKey: 'archetype:unmet', label: 'unmet', format: 'Standard' })
+  })
+
+  it('names none without a corpus, or when the match is in another format', () => {
+    expect(deckSlot(identities, one, [], 'Standard')!.unmet).toBeNull()
+    expect(deckSlot(identities, one, corpus, 'Modern')!.unmet).toBeNull()
+    expect(deckSlot(identities, one, [row('met', 30)], 'Standard')!.unmet).toBeNull()
+  })
+
+  it('compares an archetype by key and label together', () => {
+    const labelled = (label: string) => ({ tier: 'B', archetype_key: 'control', label, decks: 30 }) as unknown as MetaPresence
+    const jeskai = [
+      match('1', '2026-09-27T20:00:00', 'win', {
+        deck_id: 'a1',
+        format: 'Standard',
+        opponent_key: 'archetype:control',
+        opponent_label: 'Jeskai Control',
+      }),
+    ]
+    const slot = deckSlot(identities, jeskai, [labelled('Jeskai Control'), labelled('Sultai Control')], 'Standard')!
+    expect(slot.unmet?.label).toBe('Sultai Control')
+  })
+
+  it('knows from the matches alone whether the newest names a deck', () => {
+    expect(newestHasDeck(one)).toBe(true)
+    expect(newestHasDeck([match('2', '2026-09-27T20:00:00', 'win')])).toBe(false)
+    expect(newestHasDeck([])).toBe(false)
+  })
+
+  it('draws no deck card when the newest match has no deck', () => {
+    expect(deckSlot(identities, [match('2', '2026-09-27T20:00:00', 'win')], corpus, 'Standard')).toBeNull()
+  })
+
+  it('puts the deck in the pattern slot and the next step in the field slot', () => {
+    const has = { match: true, pattern: false, field: false }
+    expect(homeSlots(has, none, { deck: true, next: true })).toEqual(['match', 'deck', 'next'])
+    expect(homeSlots(has, none, { deck: true, next: false })).toEqual(['match', 'deck'])
+    expect(homeSlots({ ...has, pattern: true, field: true }, none, { deck: true, next: true })).toEqual([
+      'match',
+      'pattern',
+      'field',
+    ])
+    expect(homeSlots(has, { pattern: false, field: true }, { deck: true, next: true })).toEqual(['match', 'deck', 'field'])
+  })
+
+  it('picks the next step in order', () => {
+    const weeks = (played: number[]) => played.map((n) => ({ played: n }) as never)
+    expect(nextStep({ cardData: 'missing', weeks: weeks([1]), matches: one })).toEqual({ kind: 'cardData' })
+    expect(nextStep({ cardData: 'running', weeks: weeks([1]), matches: one })).toEqual({ kind: 'cardDataRunning' })
+    expect(nextStep({ cardData: null, weeks: weeks([0, 1]), matches: one })).toEqual({ kind: 'secondWeek' })
+    expect(nextStep({ cardData: null, weeks: weeks([1, 2]), matches: one })).toEqual({ kind: 'patterns', count: 1 })
+    const twenty = Array.from({ length: 20 }, (_, i) => match(`m${i}`, '2026-09-27T20:00:00', 'win', { deck_id: 'a1' }))
+    expect(nextStep({ cardData: null, weeks: weeks([1, 2]), matches: twenty })).toBeNull()
   })
 })

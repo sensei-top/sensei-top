@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import type { MetagameStatus } from '../api'
 import { useFormats, useLive, useMatches, useMetaMatchups, useMetaPresence, useMetaWinrate, useMetagameEvents, useMetagameStatus } from '../api'
@@ -9,7 +9,7 @@ import { MatchupsCard } from '../components/field/MatchupsCard'
 import { ShareCard } from '../components/field/ShareCard'
 import { SourcesDisclosure } from '../components/field/SourcesDisclosure'
 import { WinrateCard } from '../components/field/WinrateCard'
-import { Callout, EmptyState, ErrorNote, Loading, Prose, TextLink } from '../components/ui'
+import { Callout, EmptyState, ErrorNote, OutlineCard, Prose, Skeleton, TextLink } from '../components/ui'
 import type { FieldParam, FieldParams, Pairs, Tier } from '../lib/field'
 import {
   PAIRS,
@@ -45,6 +45,58 @@ import { useNow } from '../lib/time'
 import { placeById } from '../shell/places'
 
 const MINUTE = 60_000
+
+/** The controls row's place before the format is known: the select's 44 px,
+ *  `FieldControls`' `space-y-1`, and the caption's line (`text-caption` at
+ *  1.4). */
+function ControlsReserve() {
+  return (
+    <div className="space-y-1">
+      <Skeleton className="h-[44px] w-full" />
+      <Skeleton className="h-[calc(var(--text-caption)*1.4)] w-full" />
+    </div>
+  )
+}
+
+/** The tiles row as the loaded `FieldTiles` grid draws it: two cards, the
+ *  first over two columns. */
+function TilesOutline() {
+  const { t } = useTranslation()
+  return (
+    <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid md:col-span-2">
+        <OutlineCard label={t('field.tiles.mostPlayed')} height="h-14" />
+      </div>
+      <OutlineCard label={t('field.tiles.againstTwo')} height="h-14" />
+    </div>
+  )
+}
+
+/** The frames of the cards under the controls, for the pending page. */
+function FieldFrames() {
+  const { t } = useTranslation()
+  return (
+    <>
+      <TilesOutline />
+      <OutlineCard label={t('field.share.title')} words={t('field.page.reading')} height="h-195" />
+      <OutlineCard label={t('field.events.title')} height="h-152" />
+      <OutlineCard label={t('field.winrate.title')} height="h-144" />
+      <OutlineCard label={t('field.matchups.title')} height="h-224" />
+    </>
+  )
+}
+
+/** The pending page before the format is known: the controls' reserved place,
+ *  then the frames. Once it is known the page keeps the loaded root and the
+ *  real controls instead, so a change of format keeps the select's focus. */
+function FieldOutline({ head }: { head: ReactNode }) {
+  return (
+    <div className="space-y-6">
+      {head}
+      <FieldFrames />
+    </div>
+  )
+}
 
 /** One warn callout per source whose fetch is paused, its words the hold
  *  line's. Nothing when none is. */
@@ -132,7 +184,7 @@ export function FieldView({
   const pairRows = useMemo(() => (matchups.data ? matchupRows(matchups.data) : undefined), [matchups.data])
 
   if (formats.error) return <ErrorNote error={formats.error} />
-  if (!formats.data || !format) return <Loading />
+  if (!formats.data || !format) return <FieldOutline head={<ControlsReserve />} />
 
   // Drawn above whatever the page holds, the empty state too, so the viewer
   // can switch away from a format with nothing in it.
@@ -167,7 +219,7 @@ export function FieldView({
     return (
       <div className="space-y-6">
         {controls(false)}
-        <Loading />
+        <FieldFrames />
       </div>
     )
   if (status.error)
@@ -197,7 +249,13 @@ export function FieldView({
   const fieldPart = (() => {
     if (presence.error) return <ErrorNote error={presence.error} />
     if (matches.error) return <ErrorNote error={matches.error} />
-    if (!presenceRows || !tier || !counted) return <Loading />
+    if (!presenceRows || !tier || !counted)
+      return (
+        <>
+          <TilesOutline />
+          <OutlineCard label={t('field.share.title')} height="h-195" />
+        </>
+      )
     const lists = listCount(share)
     return (
       <>
@@ -224,43 +282,51 @@ export function FieldView({
       </>
     )
   })()
-  const eventsPart = (
-    <EventsCard
-      // Prefixed: a tier and a pairs value can both be A, and these are siblings.
-      key={`events:${format}:${window}:${tier}`}
-      rows={events.data}
-      isPending={tier == null || events.isPending}
-      error={tier == null ? presence.error : events.error}
-      kind={kind}
-      when={words.when}
-      action={tier ? shareAction(tier, window, reset, minute, t) : null}
-      now={minute}
-    />
-  )
+  const eventsError = tier == null ? presence.error : events.error
+  const eventsPart =
+    !eventsError && (tier == null || events.isPending) ? (
+      <OutlineCard label={t('field.events.title')} height="h-152" />
+    ) : (
+      <EventsCard
+        // Prefixed: a tier and a pairs value can both be A, and these are siblings.
+        key={`events:${format}:${window}:${tier}`}
+        rows={events.data}
+        isPending={tier == null || events.isPending}
+        error={tier == null ? presence.error : events.error}
+        kind={kind}
+        when={words.when}
+        action={tier ? shareAction(tier, window, reset, minute, t) : null}
+        now={minute}
+      />
+    )
 
   return (
-    <div className="space-y-6">
+    <div className="arrive space-y-6">
       {controls(true)}
       {fieldPart}
       {eventsPart}
       {winrate.error ? (
         <ErrorNote error={winrate.error} />
       ) : winrate.isPending ? (
-        <Loading />
+        <OutlineCard label={t('field.winrate.title')} height="h-144" />
       ) : (
         <WinrateCard key={`${format}:${window}`} rows={winrates} when={words.when} action={words.short} />
       )}
-      <MatchupsCard
-        key={`pairs:${format}:${window}:${pairs ?? ''}`}
-        pairs={pairs}
-        rows={pairRows}
-        isPending={pairs == null || matchups.isPending}
-        error={pairs == null ? presence.error : matchups.error}
-        next={pairs != null && presenceRows != null ? nextPairs(pairs, presenceRows) : null}
-        when={words.when}
-        action={words.short}
-        onPairs={(value) => setParam('pairs', presenceRows ? paramFor(value, defaultPairs(presenceRows)) : value)}
-      />
+      {!(pairs == null ? presence.error : matchups.error) && (pairs == null || matchups.isPending) ? (
+        <OutlineCard label={t('field.matchups.title')} height="h-224" />
+      ) : (
+        <MatchupsCard
+          key={`pairs:${format}:${window}:${pairs ?? ''}`}
+          pairs={pairs}
+          rows={pairRows}
+          isPending={pairs == null || matchups.isPending}
+          error={pairs == null ? presence.error : matchups.error}
+          next={pairs != null && presenceRows != null ? nextPairs(pairs, presenceRows) : null}
+          when={words.when}
+          action={words.short}
+          onPairs={(value) => setParam('pairs', presenceRows ? paramFor(value, defaultPairs(presenceRows)) : value)}
+        />
+      )}
       <div className="space-y-2">
         <PausedHolds status={status.data} now={minute} />
         {/* Outside the disclosure: TopDeck.gg's terms ask for a visible credit. */}

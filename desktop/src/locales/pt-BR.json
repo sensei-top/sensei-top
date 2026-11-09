@@ -12,6 +12,7 @@
   "tray.menu.checkForUpdates": "Verificar atualizações",
   "tray.menu.showLogs": "Mostrar os logs",
   "tray.menu.exportDiagnostics": "Exportar diagnóstico",
+  "tray.menu.reportProblem": "Relatar um problema",
   "tray.menu.restartToUpdate": "Reiniciar para atualizar",
   "tray.menu.quit": "Sair",
   "menu.edit": "Editar",
@@ -33,6 +34,7 @@
   "settings.notAKey": "Isso não é uma chave.",
   "settings.cannotSave": "Isso não pode ser salvo.",
   "settings.notSaved": "A configuração não pôde ser salva.",
+  "settings.closing": "O Sensei Top já está fechando.",
   "settings.keyNotSaved": "A chave não pôde ser salva.",
   "settings.notRead": "As configurações não puderam ser lidas.",
   "settings.folderNotOpened": "A pasta não pôde ser aberta.",
@@ -51,5 +53,15 @@
   "update.checkFailed": "A verificação falhou. O motivo está no log.",
   "update.off": "As atualizações estão desligadas nesta cópia.",
   "update.nothingReady": "Nenhuma atualização está pronta para instalar.",
-  "update.installFailed": "A atualização não pôde ser instalada. O motivo está no log."
+  "update.installFailed": "A atualização não pôde ser instalada. O motivo está no log.",
+  "auth.callback.doneTitle": "Você entrou no Sensei Top",
+  "auth.callback.done": "Você entrou na sua conta. Pode fechar esta aba e voltar ao Sensei Top.",
+  "auth.callback.failedTitle": "O login não terminou",
+  "auth.callback.failed": "O login não terminou. Feche esta aba e tente de novo pelo Sensei Top.",
+  "auth.error.unverifiedEmail": "Esta conta não tem um e-mail verificado. Verifique o endereço no serviço com que você entrou e entre de novo.",
+  "auth.error.cancelled": "O login foi cancelado.",
+  "auth.error.timeout": "O login expirou depois de 5 minutos. Tente de novo.",
+  "auth.error.noPort": "O login precisa de uma das portas {ports} deste computador, e todas estão em uso. Feche o programa que as usa e tente de novo.",
+  "auth.error.failed": "O login não terminou. Tente de novo.",
+  "auth.error.signOutFailed": "A saída da conta não terminou. Tente de novo."
 }

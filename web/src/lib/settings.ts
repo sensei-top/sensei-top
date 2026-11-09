@@ -122,3 +122,74 @@ export function updateSentence(update: UpdateStatus, now: number, t: TFunction):
  *  model's id as it came, `'loading'` while it is asked, `'failed'` when
  *  it did not answer. */
 export type WritingStatusAnswer = { configured: boolean; model: string | null } | 'loading' | 'failed'
+
+/** Settings' groups, each at its own address, `/settings/<id>`. */
+export type SettingsGroupId = 'general' | 'sources' | 'backup' | 'account' | 'writing' | 'about'
+
+/** The groups in the sub-nav's order, each with its label's key and whether
+ *  a build shows it: `sources` and `backup` need the shell, `account` a
+ *  build whose account is available; the rest always show. */
+export const SETTINGS_GROUPS: readonly {
+  id: SettingsGroupId
+  label: string
+  shows: (build: SettingsBuild) => boolean
+}[] = [
+  { id: 'general', label: 'settings.groups.general', shows: () => true },
+  { id: 'sources', label: 'settings.groups.sources', shows: (build) => build.shell },
+  { id: 'backup', label: 'settings.groups.backup', shows: (build) => build.shell },
+  { id: 'account', label: 'settings.groups.account', shows: (build) => build.account },
+  { id: 'writing', label: 'settings.groups.writing', shows: () => true },
+  { id: 'about', label: 'settings.groups.about', shows: () => true },
+]
+
+/** What decides which groups show: a shell, and an account available in it. */
+export type SettingsBuild = { shell: boolean; account: boolean }
+
+/** The groups this build shows, in the sub-nav's order. */
+export function shownGroups(build: SettingsBuild): SettingsGroupId[] {
+  return SETTINGS_GROUPS.filter((group) => group.shows(build)).map((group) => group.id)
+}
+
+const GROUP_OF_SECTION: Record<string, SettingsGroupId> = {
+  language: 'general',
+  appearance: 'general',
+  'live-settings': 'general',
+  app: 'general',
+  'app-about': 'about',
+  sources: 'sources',
+  backup: 'backup',
+  account: 'account',
+  contribute: 'account',
+  writing: 'writing',
+  'ai-settings': 'writing',
+  credits: 'about',
+}
+
+/** The group holding the section a hash names, with or without its `#`;
+ *  `null` for a hash that names no section. Also the group a section id
+ *  belongs to. */
+export function groupOfHash(hash: string): SettingsGroupId | null {
+  const id = hash.startsWith('#') ? hash.slice(1) : hash
+  return Object.hasOwn(GROUP_OF_SECTION, id) ? GROUP_OF_SECTION[id] : null
+}
+
+/** Whether a page showing `group` draws the section `id`: one in that
+ *  group, and every one with no group. */
+export function inGroup(id: string, group: SettingsGroupId | undefined): boolean {
+  return group === undefined || groupOfHash(id) === group
+}
+
+/** Where a Settings address goes instead, or `null` to stay. Bare
+ *  `/settings` goes to the group of its hash, the hash kept so the section
+ *  scrolls into view, or to General; a group this build does not show goes
+ *  to General. */
+export function settingsRedirect(pathname: string, hash: string, build: SettingsBuild): string | null {
+  const shown = shownGroups(build)
+  const rest = pathname.replace(/^\/settings\/?/, '').replace(/\/$/, '')
+  if (rest === '') {
+    const group = groupOfHash(hash)
+    return `/settings/${group && shown.includes(group) ? group : 'general'}${hash}`
+  }
+  const known = SETTINGS_GROUPS.some((group) => group.id === rest)
+  return known && !shown.includes(rest as SettingsGroupId) ? '/settings/general' : null
+}

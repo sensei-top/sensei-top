@@ -1,6 +1,6 @@
 """AGENTS.md rule 6's full allowlist, with ``ai/`` mounted. Its core half,
 ``tests/test_api.py::test_core_alone_writes_only_the_picks``, asserts the
-picks alone without it.
+picks and the pulled cloud backup alone without it.
 """
 
 from fastapi.routing import iter_route_contexts
@@ -32,6 +32,8 @@ def test_only_authored_artifact_routes_write():
         ("/api/matches/{match_id}/opponent-deck", "PUT"),
         ("/api/matches/{match_id}/mtgo-pick", "PUT"),
         ("/api/mtgo/picks", "PUT"),
+        # Pulled cloud backup: cloud_match, and the two picks above.
+        ("/api/sync/pulled", "PUT"),
         ("/api/matches/{match_id}/report/narrative", "POST"),
         ("/api/review/leaks/narrative", "POST"),
         ("/api/guide/{key}/narrative", "POST"),

@@ -12,11 +12,13 @@
   "notFound": "No such page",
   "titles": {
     "mtgoPicks": "Pick MTGO decks",
-    "welcome": "Welcome"
+    "welcome": "Welcome",
+    "accountWelcome": "Choose what your account does"
   },
   "homeLink": "{{product}}, home",
   "skipLink": "Skip to the page",
   "trackerDown": "The tracker is not running, so nothing new can load. What is on screen is what was last loaded. This notice goes away once the tracker answers again.",
+  "restarting": "Applying your changes, back in a moment…",
   "footer": {
     "local": "Your match history is kept on this computer. No account needed.",
     "credits": "Credits"
@@ -26,7 +28,14 @@
     "matchInProgress": "match in progress,",
     "more": "More",
     "morePlaces": "More places",
-    "close": "Close"
+    "close": "Close",
+    "signIn": "Sign in"
+  },
+  "cardData": {
+    "percent": "Card data · {{pct}}%",
+    "downloading": "Card data · downloading",
+    "saving": "Card data · saving",
+    "failed": "Card data · didn't finish"
   },
   "liveStatus": {
     "down": "Tracker not running",

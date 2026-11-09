@@ -1,4 +1,5 @@
 {
+  "reading": "Reading your decks…",
   "format": {
     "bestOfThree": "{{format}}, best of three"
   },
@@ -25,6 +26,11 @@
     },
     "formatLabel": "Format",
     "allFormats": "All formats",
+    "searchLabel": "Search decks",
+    "searchPlaceholder": "Deck or card name",
+    "noMatch": "No deck matches “{{q}}”.",
+    "fewer_one": "Fewer than {{min}} matches · {{count}} deck",
+    "fewer_other": "Fewer than {{min}} matches · {{count}} decks",
     "sortLabel": "Sort by",
     "sort": {
       "lastPlayed": "Last played",
@@ -102,6 +108,14 @@
     "staleDefault": "The evidence has changed since."
   },
   "guide": {
+    "reading": "Putting the guide together…",
+    "stage": {
+      "label": "Progress",
+      "matches": "Reading your matches",
+      "matchesCount": "Reading your matches · {{done}} of {{total}}",
+      "field": "Reading the field",
+      "together": "Putting the guide together"
+    },
     "sectionsNav": "Guide sections",
     "problemOrphan": "{{archetype}}: {{message}}",
     "sections": {
@@ -187,6 +201,9 @@
       "tournamentLists": "Tournament lists",
       "rulesText": "Rules text",
       "fieldSince": "Field since",
+      "waitsPercent": "This guide waits for card data · {{pct}}%",
+      "waits": "This guide waits for card data",
+      "download": "Download card data in Settings → Sources",
       "resetOn": "Format reset on <strong>{{date}}</strong>. {{detectedFrom}}."
     },
     "field": {

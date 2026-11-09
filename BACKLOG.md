@@ -18,9 +18,10 @@ Each item has an ID heading, then one label line with four keys:
 - `type`: `feat`, `fix`, `perf`, `refactor`, `docs` or `chore`, the
   Conventional Commits words, so an item's type is the type of the commit
   that closes it.
-- `priority`: `P1` is on `ROADMAP.md`'s Now or Next, or puts a wrong number
-  in front of the user; `P2` is to do when its area is next touched; `P3`
-  waits on evidence or is optional.
+- `priority`: `P1` is taken first, in the order `ROADMAP.md` gives, or
+  puts a wrong number in front of the user; `P2` comes after every `P1`,
+  in the same order; `P3` waits until `P1` and `P2` are done, or on
+  evidence, or is optional.
 - `status`: `ready`, `needs-decision`, `needs-data` (a capture or a fixture
   is missing, rule 7), `blocked` (on a person or a party outside the code)
   or `in-progress`.
@@ -47,7 +48,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-103
+Next ID: BL-109
 
 ## Features
 
@@ -75,9 +76,9 @@ never fetched.
 
 ### BL-002 · A CSV export and a definition on every column
 
-type: feat · priority: P1 · status: ready · area: api web i18n
+type: feat · priority: P3 · status: ready · area: api web i18n
 
-Next 4. A CSV export of the user's own matches, games and per-deck numbers
+A CSV export of the user's own matches, games and per-deck numbers
 (an unknown value is an empty cell, never 0); a one-line definition on each
 table column; and the help tour below, with an entry that cites Arena's own
 article on Detailed Logs for community tools and says the app reads only the
@@ -91,9 +92,9 @@ other trackers charge for.
 
 ### BL-003 · The help pages' tour of the dashboard
 
-type: feat · priority: P1 · status: needs-decision · area: site i18n
+type: feat · priority: P2 · status: needs-decision · area: site i18n
 
-Next 4, with the export above: the help pages' tour of the dashboard
+The help pages' tour of the dashboard
 (`site/help/`): what each page shows, in both languages, linked from the
 welcome steps' last step, Ready. The first cut (2026-10-13) covers
 installing, the first run, Magic Online, troubleshooting and the problem
@@ -117,11 +118,12 @@ drawn.
 
 type: feat · priority: P1 · status: ready · area: projector guide web
 
-Next 3. Per-card win rates from the user's own games: in the opening hand,
+Per-card win rates from the user's own games: in the opening hand,
 drawn and cast, with n beside every rate. Today `key_card_timing`
 (`docs/guide.md`) covers maindeck cards with 3 or more copies only.
 
-**Why deferred:** Next in order. An undone cast no longer counts (plan 29).
+**Why deferred:** Behind the `P1` items ordered before it. An undone cast
+no longer counts (plan 29).
 
 **Needs:** The user's own opening hand and draws per game, computed in the
 rebuild with NULL where the hand is unknown (rules 3 and 4); fixture tests
@@ -131,7 +133,7 @@ rebuild with NULL where the hand is unknown (rules 3 and 4); fixture tests
 
 type: feat · priority: P1 · status: blocked · area: guide archetypes web
 
-Sideboard help without a model (decided 2026-10-07; `ROADMAP.md`'s Next 2):
+Sideboard help without a model (decided 2026-10-07):
 candidate ins by a card-role rule over the 75 (answers, threats, hate by the
 opponent's archetype), and a link to a sideboard guide for the pairing from
 the Skill Issue Magic guide index. No generated outs. The user's own
@@ -155,15 +157,19 @@ The optional subscription (decided 2026-10-12, `AGENTS.md` rule 5,
 `docs/llm.md`, "What is hosted, and what it receives"): gated by feature,
 never by rank or event type; a monthly report allowance inside it, never
 tokens, credits or a prepaid balance; a hosted proxy holding the
-maintainer's key; the free account BL-100 builds, used at checkout. The
+maintainer's key; the free account, used at checkout. The
 free tracker, the copy prompt and the user's own key stay free beside it.
 
 **Why deferred:** Deferred until around 3,000 monthly active users, which
 the launch's own counts measure. Not part of the account and rules coach
 decided on 2026-11-02, which plan no paywall.
 
+**Frozen (2026-11-09):** with the rest of the selling work, under "Outside
+the code". The trigger there reopens the preparation; the subscription
+itself still waits for around 3,000 monthly active users.
+
 **Needs:** Which features it holds. A merchant of record (Paddle). The
-account (BL-100). X sign-in's terms, unread. Daybreak's Fansite license
+account, released in 1.4.0. X sign-in's terms, unread. Daybreak's Fansite license
 agreement if §14.3 asks for one. The notice Anthropic's Commercial Terms
 (D.3) require, that outputs are not to be relied on without checking, shown
 to subscribers. A line in rule 5 for the allowance.
@@ -183,8 +189,8 @@ brief, coverage and sideboard-plan cards get a generate route with it.
 
 **Why deferred:** The repositioning made the user's own credential the only
 writing path, and "any model" was the research's second-most-asked thing
-after "no account". Moved from Next to Later on 2026-10-19: the 2026-10-19
-tracker research found no demand either way. Not started.
+after "no account". Moved out of the roadmap's order on 2026-10-19: the
+2026-10-19 tracker research found no demand either way. Not started.
 
 **Needs:** Its plan (`~/.claude/plans/release-16-provider-adapter.md`,
 outline). One adapter per protocol under `ai/llm/`, `claude_config.py` widened,
@@ -201,7 +207,7 @@ to it since the repository went public; notarization when donations cover
 the Apple fee.
 
 **Why deferred:** Linux and Windows ship first (decided 2026-10-07); moved
-from Next to Later on 2026-10-19, behind wider Linux discovery.
+out of the roadmap's order on 2026-10-19, behind wider Linux discovery.
 
 **Needs:** A plan of its own: plan 6, now done, left macOS out of scope.
 
@@ -258,13 +264,13 @@ part of the 2026-10-01 pivot; Alchemy and Brawl stay out.
 
 **Needs:** What plan 13 built per format (legality, archetype rules, corpus
 prior, consensus, field), and a corpus source for formats that have no MTGO
-events. `ROADMAP.md` keeps them in Later (2026-10-19).
+events. Out of the roadmap's order since 2026-10-19.
 
 ### BL-013 · MTGO on the Live page
 
 type: feat · priority: P1 · status: ready · area: table api web mtgo
 
-Next 5. MTGO on the Live page: the opponent's revealed cards during a game (MTGO
+MTGO on the Live page: the opponent's revealed cards during a game (MTGO
 appends to the game log every 1–8 s mid-game, median 2.3 s, and never
 rewrites what it wrote) and the between-games plan (see `docs/status.md`,
 "Limited on purpose").
@@ -343,8 +349,8 @@ Caution cards: the cards to watch for from the opponent's leading candidate
 deck, with rules text on expand. The brief and the sideboard plan cover part
 of it.
 
-**Why deferred:** Seen in the tracker research (2026-10-19); in
-`ROADMAP.md`'s Later.
+**Why deferred:** Seen in the tracker research (2026-10-19); out
+of the roadmap's order.
 
 **Needs:** Its own design: where it sits on Live (and whether it is advice
 under `table/queues.py`'s rule), and its source (the candidate's consensus
@@ -357,8 +363,8 @@ type: feat · priority: P3 · status: needs-decision · area: web api
 Finding history faster: date presets (7, 30, 90 days, a custom range), a
 search, matches grouped by day, league runs with their trophies.
 
-**Why deferred:** Seen in the tracker research (2026-10-19); in
-`ROADMAP.md`'s Later.
+**Why deferred:** Seen in the tracker research (2026-10-19); out
+of the roadmap's order.
 
 **Needs:** A check of what the Matches page and Home's session block already
 do, then a design per piece; league runs need the log's event records read.
@@ -427,42 +433,18 @@ threshold for screw that a fixture can pin.
 
 type: feat · priority: P1 · status: needs-decision · area: desktop web table
 
-Next 2. An overlay for Arena only: the Live page's reads in a window of the
+An overlay for Arena only: the Live page's reads in a window of the
 tracker's own, on top of the game. MTGO does not get one.
 
 **Why deferred:** The user reversed "no overlay" on 2026-11-02 and put it first
-in `ROADMAP.md`'s Next the same day; it is second since the account and the
-rules coach (BL-100, BL-101) went first. Not started: it has no design yet.
+in the roadmap's order the same day; the account, the rules coach and the
+work after them (BL-101 to BL-106, BL-004) have gone ahead of it since. Not
+started: it has no design yet.
 
 **Needs:** Its own design: which reads it carries, how a window stays over the
 game on Windows and on Linux under Wine or Proton, and how Arena's fullscreen
 modes affect that. It holds to two standing rules: never injecting into the
 client (`ROADMAP.md`, "Never"), and the event rule (`table/queues.py`).
-
-### BL-100 · A free, optional account, with cloud history and error reports
-
-type: feat · priority: P1 · status: blocked · area: desktop api web site legal
-
-A free, optional account (Google sign-in through Supabase Auth) that adds
-cloud history and error reports, each a separate yes on one consent screen
-with nothing pre-ticked (decided 2026-11-02; AGENTS.md rules 5 and 6;
-`docs/llm.md`, "What is hosted, and what it receives"). Electron's main
-process holds the session and syncs; the local API builds the payloads
-and stores pulled matches in a new `cloud_match` table; Sentry in the
-shell and the local API, gated on consent; Report a problem; Settings →
-Account with export and delete; a restored marker in the match list.
-MTGO matches sync once their deck is picked. Notes and tags are not
-built, and installs run from source get no sync.
-
-**Why deferred:** Waits on setup only the user can do: the domain, the
-Supabase project and its region, the Google OAuth consent screen (about a
-week to approve), the Sentry projects, and the privacy policy and terms
-the consent screen links to.
-
-**Needs:** Its plan (`~/.claude/plans/release-40-coach-and-accounts.md`,
-sub-plan B, an outline). Supabase's CLI and Docker on the development
-machine, the user's call. The rewrite of every statement `docs/llm.md`
-lists as false once the account ships, in the same build.
 
 ### BL-101 · The rules coach
 
@@ -486,8 +468,8 @@ cap and kill switch tested. Until then the hosted coach is limited to
 beta testers' accounts. The eval's gold set is the user's to write.
 
 **Needs:** Its plan (sub-plans C and E of
-`~/.claude/plans/release-40-coach-and-accounts.md`). The account
-(BL-100). An OpenAI account with a hard monthly limit. The Fan Content
+`~/.claude/plans/release-40-coach-and-accounts.md`). The account,
+released in 1.4.0. An OpenAI account with a hard monthly limit. The Fan Content
 Policy notice in the site's footer and the app's About.
 
 ### BL-102 · The AI package and its switch
@@ -509,6 +491,96 @@ database or settings file means on (decided 2026-11-02).
 `~/.claude/plans/release-40-coach-and-accounts.md`).
 `config_path` moved out of the credential module into core `config.py`
 first, since a dozen modules that have nothing to do with a model import it.
+
+### BL-103 · Contributing games
+
+type: feat · priority: P1 · status: in-progress · area: desktop api web site legal
+
+A yes of its own, with or without an account, that sends the player's
+games, past and new, to a private pool Sensei Top's own features are built
+from, as the published policy's "Contributing your games" describes: one
+record per game, built on the device and stripped of every handle, account
+and user ID, under a random code made fresh for that game, sent without the
+sign-in. The pool is `contrib.games` in Supabase, written only through an
+anonymous `security definer` function that nobody can read back from; the
+shell remembers which games it sent in its own `userData`, so no migration
+and no change to rule 6 (decided 2026-11-03).
+
+**Why deferred:** Built with the account on
+`feature/accounts-sync`. It waits on the same final verification, against
+the hosted Supabase project and on the Windows VM.
+
+### BL-104 · Deleting an inactive account
+
+type: feat · priority: P2 · status: blocked · area: api legal
+
+An account nobody has signed in to for 24 months is deleted, after an
+email 30 days before that says so and how to keep it. Not built with the
+account: it needs an email sender, which nothing else in the app
+has yet. The first account can turn 24 months old in late 2028, so this is
+due well before then, not now (decided 2026-11-03).
+
+**Why deferred:** No email sender exists, and no account is old enough to
+need it.
+
+**Needs:** An email provider and its entry in the privacy policy's "Who
+handles your data"; a scheduled job in the coach repository's Supabase
+project.
+
+### BL-105 · Compacting the contributed-games pool
+
+type: perf · priority: P2 · status: blocked · area: api legal
+
+The contributed-games pool (BL-103) starts as one Postgres table, sharing
+Supabase Free's 500 MB with account backup. Before the pool reaches about
+150 MB (its size function in the coach repository, read in the weekly
+measuring), a scheduled job packs its older records into large
+compressed Parquet files in Supabase Storage, in the same São Paulo
+project, and deletes those rows.
+A file's timestamp then dates thousands of games at once, so the policy's
+"we do not record when a game arrives" still holds; the policy's "in our
+database" changes to name the storage in the same release (decided
+2026-11-03; plan 40B, DB13).
+
+**Why deferred:** The beta's pool is far below the threshold.
+
+**Needs:** The pool (BL-103) live; Supabase Storage prices and limits read
+again at the time; the policy wording change.
+
+### BL-106 · A new card set's release
+
+type: chore · priority: P1 · status: ready · area: cards archetypes metagame guide
+
+The next card set reaches Arena and MTGO before the app has been checked
+against it. Several parts read the card pool or the format as of a date:
+the card database and its images (`cards.py`, `card_images.py`), the
+archetype definitions, the tournament corpus and the deck guide's
+format-reset detection. What a user sees on release day has not been
+checked: cards without a name or image, an opponent's deck left unnamed
+or named from the old format, and field and guide reads built on results
+from before the set. Nobody has checked which of these recovers on its
+own, and when. Added as urgent by the user (2026-11-06).
+
+**Why deferred:** Taken right after the 1.3.0 release (decided 2026-11-06).
+Not started.
+
+**Needs:** The set's name and its release dates on Arena and MTGO, and
+whether a rotation or a ban comes with it; a `Player.log` captured after
+Arena's set update, if a parsing rule turns out to need changing (rule 7).
+
+### BL-108 · Notes and tags on a match, synced with the account
+
+type: feat · priority: P3 · status: needs-decision · area: desktop api web
+
+The account (released in 1.4.0) was planned to carry the user's own notes
+and tags on a match to their other computers, beside the match history.
+Neither notes nor tags exist in the app yet, so there was nothing to sync:
+the free account shipped without them. Building them means a new
+authored-artifact table, so rule 6's allowlist grows (a design change, not
+a patch), and a sync payload for each.
+
+**Why deferred:** Split out of the account's item when it closed with
+1.4.0 (2026-11-09). No player has asked for notes or tags yet.
 
 ## Bugs
 
@@ -947,9 +1019,20 @@ Each of those items says what the other party's own pages already answer, as
 read on that day, and what is left to ask. The user sends each question.
 Such an item closes when the answer is recorded in `docs/attribution.md`.
 
+**Frozen since 2026-11-09:** the work that only serves selling. That is the
+Store listing's price (BL-070), the subscription (BL-006), the question to
+Microsoft about selling from an Individual account, and the Daybreak and
+TopDeck.gg questions (BL-077, BL-078), which only a sale raises. At the
+app's present size neither paid thing can pay for the work it takes, so
+what brings users comes first. Each of these is `P3` and is picked up again
+when the updater's feed counts about 100 active installs a day or the app
+has 1,000 monthly active users, whichever comes first. The freeze is
+reviewed on 2027-03-01; below the trigger it holds through 2027. BL-076 is
+not frozen, because the free download reads those definitions too.
+
 ### BL-070 · The Microsoft Store listing
 
-type: chore · priority: P1 · status: blocked · area: release legal
+type: chore · priority: P3 · status: blocked · area: release legal
 
 The paid Microsoft Store listing (decided 2026-10-12, `ROADMAP.md`): the
 Store build is the same app as the free download, listed free at release and
@@ -965,6 +1048,9 @@ submitted on 2026-10-21 and passed certification the same day: the listing
 (Store ID 9NZ5GQMCG1ZN) is live and free, in every market. What is left is
 the price. The maintainer stays an individual, not a company, until income
 asks otherwise.
+
+**Frozen (2026-11-09):** the price, and the question to Microsoft with it,
+wait for the trigger under "Outside the code". The listing stays up, free.
 
 **Needs:** Microsoft's answer on selling from an Individual developer
 account, whose eligibility text names "non-commercial purposes" and "not in
@@ -1078,11 +1164,13 @@ the use the maintainer proposed MIT for, so the free download does not block
 on the answer. The paid Store build and the subscription (2026-10-12) sell
 an app that names decks from these definitions, so neither is sold until the
 file lands. If it never does, deck naming falls back to the corpus read plus
-rules written here.
+rules written here. Not frozen with the selling work (2026-11-09): the free
+download names decks from these definitions too, so the comment on issue
+148 is still worth sending.
 
 ### BL-077 · Daybreak's terms for mtgo.com
 
-type: chore · priority: P2 · status: blocked · area: legal mtgo
+type: chore · priority: P3 · status: blocked · area: legal mtgo
 
 Daybreak's terms for mtgo.com (2026-10-05). Read in full: the ToS
 (2026-07-13), the MTGO EULA (2022-05-31), the API Policy on the Census page
@@ -1109,9 +1197,12 @@ MTGO documentation lists no decklist collection, while its page source names
 five; a service id the user registers settles whether they exist, and only a
 "no" turns into a question for Daybreak.
 
+**Frozen (2026-11-09):** every question left here is raised by a sale or by
+a hosted feed, and neither is being built. See "Outside the code".
+
 ### BL-078 · TopDeck.gg's terms
 
-type: chore · priority: P2 · status: blocked · area: legal metagame
+type: chore · priority: P3 · status: blocked · area: legal metagame
 
 TopDeck.gg (2026-10-05, closed 2026-10-07, open again 2026-10-12). Read in
 full: the API page (undated, API version 2026-07), the site's Terms and
@@ -1128,3 +1219,6 @@ say its content "is not for resale" and forbid use that would "in any way
 exploit any of the content"; only the API page's grant answers it today, and
 the question to TopDeck should quote both. The fetch runs on the user's own
 key.
+
+**Frozen (2026-11-09):** the one open question is raised only by a sale.
+See "Outside the code".

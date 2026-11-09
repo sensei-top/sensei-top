@@ -21,12 +21,12 @@
         "terms": "GPL-3.0. Baixados por cada cópia, nunca embutidos nem redistribuídos por este projeto."
       },
       "topdeck": {
-        "taken": "Resultados de torneios, pela API deles e com a sua própria chave gratuita.",
+        "taken": "Resultados de torneios, pela API deles e com sua própria chave gratuita.",
         "terms": "Usados sob os termos da API do TopDeck.gg, lidos em 2026-10-05: uso gratuito, com um crédito visível e um link de volta obrigatórios, dentro dos limites de requisições."
       },
       "mtgo": {
         "taken": "As páginas públicas de resultados dos eventos nos formatos que você acompanha: listas, colocações e chaves. Os nomes dos jogadores são descartados quando a página é lida e nunca armazenados.",
-        "terms": "Lidas conforme os Termos de Serviço da Daybreak e o EULA do MTGO em 2026-10-05: baixadas devagar pela sua própria cópia, para o seu próprio uso, e mostradas com um link para a página de cada evento no mtgo.com."
+        "terms": "Lidas conforme os Termos de Serviço da Daybreak e o EULA do MTGO em 2026-10-05: baixadas devagar pela sua própria cópia, para seu próprio uso, e mostradas com um link para a página de cada evento no mtgo.com."
       },
       "anthropic": {
         "taken": "A API do Claude, só quando você configura uma chave e aperta um botão de escrever.",
