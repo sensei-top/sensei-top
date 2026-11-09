@@ -38,6 +38,14 @@ that leaves the machine is a report the user
 asks for with their own key (and, since 2026-11-02, the user's own
 cloud backup, above). The order itself is `ROADMAP.md`'s alone.
 
+**The freeze, 2026-11-09.** Nothing is sold, and nothing that only
+prepares a sale is worked on, until the updater's feed counts about 100
+active installs a day or the app has 1,000 monthly active users, whichever
+comes first. Reviewed on 2027-03-01; below the trigger it holds through
+2027. The paid tier below is still the plan for that day, unchanged.
+`BACKLOG.md`, "Outside the code", lists what is frozen, and `ROADMAP.md`,
+"On hold", says it to players.
+
 **The paid tier, 2026-10-12.** Amends the repositioning below: the licence
 stays AGPL-3.0-only and the tracker stays free with no account (an
 optional one since 2026-11-02, above), and two paid things are planned. The Microsoft Store listing is the same build as

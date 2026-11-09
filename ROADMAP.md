@@ -18,8 +18,10 @@ away. The Microsoft Store build is the same app as the free download,
 [listed free](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN) since
 2026-10-21 and priced later, for anyone who would rather support the
 project that way. Later, an [optional paid tier](#later) adds deeper
-features and a monthly allowance of written reports. If the tracker earns
-a place in your routine, [donations](#donations) keep it maintained.
+features and a monthly allowance of written reports. Both are
+[on hold](#on-hold) until more players use the tracker, and nothing is
+sold before then. If the tracker earns a place in your routine,
+[donations](#donations) keep it maintained.
 
 What it is for: one tracker for both Arena and Magic Online, on Windows
 and Linux (the Steam Deck included), that shares none of your matches
@@ -36,8 +38,8 @@ Magic Online's log is read, and Arena found on more Linux setups
 ([CHANGELOG.md](CHANGELOG.md)). What comes before the next release:
 
 1. **The Microsoft Store build** of the same app, which the Store signs,
-   [listed free](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN) since 2026-10-21. It is priced once Microsoft
-   confirms an individual developer may sell and the other blockers clear. The direct
+   [listed free](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN) since 2026-10-21. Its price is
+   [on hold](#on-hold). The direct
    download stays unsigned for now: the open-source signing programme
    asks for more public use first. (BL-070, BL-072)
 
@@ -111,9 +113,21 @@ In this order, unless Discussions says otherwise.
   prompt. It is gated by feature, never by your rank or the events you
   play. It is the only thing that asks for an account, made when you
   subscribe: a code sent to your email, or Google, Discord or X. The free
-  tracker, the copy prompt and your own key stay as they are. (BL-006)
+  tracker, the copy prompt and your own key stay as they are. Preparing
+  it is [on hold](#on-hold). (BL-006)
 - **A Discord server**, once there are enough people to staff one.
   Discussions on GitHub come first.
+
+## On hold
+
+Since 2026-11-09, everything that only prepares selling waits: the Store
+listing's price, the paid tier, and the questions to Microsoft, Daybreak
+and TopDeck.gg that only a sale raises (BL-070, BL-006, BL-077, BL-078).
+The tracker is too small today for either paid thing to pay for the work
+it takes, so that work goes to what brings players instead. It is taken
+up again when about 100 installs a day check for updates or 1,000 players
+use the tracker in a month, whichever comes first, and the decision is
+looked at again on 2027-03-01. Below that, it stays on hold through 2027.
 
 ## Where it comes from
 
