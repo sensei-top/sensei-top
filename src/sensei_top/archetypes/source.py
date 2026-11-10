@@ -219,7 +219,8 @@ def refresh_archetypes(
 ) -> RefreshResult:
     """Update the cached definitions if they are stale. Never raises.
 
-    Called at ``serve`` start, where a missing network must cost nothing: an
+    Called from ``serve``'s hourly loop (``cli.py::_start_archetype_refresh``),
+    where a missing network must cost nothing: an
     offline machine keeps whatever it fetched last time, and a first run with
     no cache at all simply leaves every opponent unclassified until the next
     attempt succeeds.

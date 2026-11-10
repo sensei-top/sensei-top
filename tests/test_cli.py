@@ -1223,3 +1223,77 @@ def test_guide_has_no_prompt_import_or_author_flag(capsys):
     assert "--markdown" in help_text
     for flag in ("--prompt", "--import", "--author"):
         assert flag not in help_text
+
+
+class _FakeChild:
+    """Stands in for the card data child: alive until the test ends it."""
+
+    pid = 4242
+
+    def __init__(self, conn) -> None:
+        self.conn = conn
+        self.alive = False
+        self.exitcode: int | None = None
+
+    def start(self) -> None:
+        self.alive = True
+
+    def is_alive(self) -> bool:
+        return self.alive
+
+    def finish(self, exitcode: int) -> None:
+        if exitcode == 0:
+            from sensei_top.cards import upsert_cards
+            upsert_cards(self.conn, [])
+        self.alive, self.exitcode = False, exitcode
+
+
+def test_serve_downloads_card_data_once_a_new_set_reaches_the_client(tmp_path):
+    """Serve's reference loop starts the Scryfall download in a child
+    when card data is due, one child at a time, and an hour after a failure
+    rather than on the next tick."""
+    from sensei_top.cards import upsert_cards
+
+    db_path = tmp_path / "t.db"
+    conn = open_database(db_path)
+    conn.execute(
+        "INSERT INTO cards (grp_id, name, type_line, oracle_text, rarity, set_code, colors) "
+        "VALUES (1, 'Island', 'Basic Land — Island', '({T}: Add {U}.)', 'common', 'DMU', '[]')"
+    )
+    upsert_cards(conn, [])
+    children: list[_FakeChild] = []
+    now = [0.0]
+
+    def start(path):
+        assert path == db_path
+        children.append(_FakeChild(conn))
+        return children[-1]
+
+    step = cli_module._CardDataRefresh(
+        db_path, start=start, retry_seconds=3600, clock=lambda: now[0]
+    )
+    step()
+    assert children == []                     # nothing new without rules text
+
+    conn.execute(
+        "INSERT INTO cards (grp_id, name, type_line, rarity, set_code, colors) "
+        "VALUES (2, 'New From The Set', 'Creature — Vulcan', 'rare', 'TRK', '[]')"
+    )
+    step()
+    step()
+    assert len(children) == 1                 # one child, still running
+
+    children[0].finish(1)
+    step()
+    now[0] = 3599
+    step()
+    assert len(children) == 1                 # failed: waits the hour
+
+    now[0] = 3600
+    step()
+    assert len(children) == 2
+    children[1].finish(0)
+    step()
+    step()
+    assert len(children) == 2                 # done: the baseline moved
+    conn.close()

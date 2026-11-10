@@ -62,6 +62,8 @@ falls back to downloading Scryfall's if Arena is not installed here. The
 deck guide also needs rules text and format legality, which only Scryfall
 has: run `uv run sensei-top cards --scryfall` at least once.
 The installed app does this on its own the first time it finds no
-rules text.
+rules text. After that, `serve` downloads it again on its own once a day, and
+within minutes when an Arena update brings cards it has no rules text for,
+such as a new set.
 
 Next: [the dashboard](dashboard.md).
