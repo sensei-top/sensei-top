@@ -325,7 +325,10 @@ A failing poll is recorded and the loop continues. A watcher that dies silently
 during a session is worse than one that logs an error and keeps going.
 
 **`serve`'s other threads are not the watcher's.** The archetype refresh
-(once, at startup), the reference refresh (every five minutes), the
+(every hour, downloading once a day), the reference refresh (every five
+minutes; it also downloads card data again, in a child process, when a new
+set reaches the installed client and once a day besides:
+`cli.py::_CardDataRefresh`), the
 corpus refresh (a tick every five minutes) and the daily backup
 each run on a thread of their own, with a connection of their own,
 whether or not `--watch` is given, and each has a flag that turns it off:
@@ -992,7 +995,7 @@ Each table has one owner, and confusing their lifecycles is how data gets destro
 | Reader | `raw_events`, `ingest_state`, `header_date_order` | `raw_events` append-only but for an undated row taking its date ("Idempotency"), the other two updated in place (`docs/arena-log.md`, "Timestamps", for the third); never deleted |
 | Projector | `decks`, `matches`, `games`, `turns`, `turn_zones`, `card_events`, `deck_guids`, `opponent_archetype`, `game_decks`, `rank_snapshot`, `combat_attacks`, `combat_blocks`, `damage_events`, `life_events` | Deleted and recomputed by every `project()` |
 | Format inference | `match_format_fit`, `match_format_inference` | Deleted and recomputed by every `classify_matches()`, which runs right after `project()`; `project()` itself never touches them. MTGO matches only |
-| Downloaded reference | `cards`, `card_legality`, `mtgo_card`, `archetypes`, `archetype_fetch`, `meta_event`, `meta_fetch`, `meta_fetch_source`, `meta_deck`, `meta_round_match` | Never deleted — a rebuild must not throw away a fetch |
+| Downloaded reference | `cards`, `card_legality`, `mtgo_card`, `card_data_fetch`, `archetypes`, `archetype_fetch`, `meta_event`, `meta_fetch`, `meta_fetch_source`, `meta_deck`, `meta_round_match` | Never deleted — a rebuild must not throw away a fetch |
 | Metagame classifier | `meta_deck_archetype` | Deleted and recomputed by every `classify_meta_decks()`, same reasoning as `opponent_archetype` |
 | Corpus fetchers | `meta_fetch_hold` | Written only by the mtgo.com and TopDeck fetchers: a refusal, a 429 or a 503 writes the source's row, and a completed run deletes it. `project()` never reads it, and a rebuild leaves it alone |
 | Bookkeeping | `projection_state`, `backup_state` | Updated in place, by the watcher and by `backup/` respectively; never deleted — `project()` never touches them |

@@ -438,7 +438,7 @@ tracker's own, on top of the game. MTGO does not get one.
 
 **Why deferred:** The user reversed "no overlay" on 2026-11-02 and put it first
 in the roadmap's order the same day; the account, the rules coach and the
-work after them (BL-101 to BL-106, BL-004) have gone ahead of it since. Not
+work after them (BL-101 to BL-105, a new set's release, BL-004) have gone ahead of it since. Not
 started: it has no design yet.
 
 **Needs:** Its own design: which reads it carries, how a window stays over the
@@ -546,27 +546,6 @@ database" changes to name the storage in the same release (decided
 
 **Needs:** The pool (BL-103) live; Supabase Storage prices and limits read
 again at the time; the policy wording change.
-
-### BL-106 · A new card set's release
-
-type: chore · priority: P1 · status: ready · area: cards archetypes metagame guide
-
-The next card set reaches Arena and MTGO before the app has been checked
-against it. Several parts read the card pool or the format as of a date:
-the card database and its images (`cards.py`, `card_images.py`), the
-archetype definitions, the tournament corpus and the deck guide's
-format-reset detection. What a user sees on release day has not been
-checked: cards without a name or image, an opponent's deck left unnamed
-or named from the old format, and field and guide reads built on results
-from before the set. Nobody has checked which of these recovers on its
-own, and when. Added as urgent by the user (2026-11-06).
-
-**Why deferred:** Taken right after the 1.3.0 release (decided 2026-11-06).
-Not started.
-
-**Needs:** The set's name and its release dates on Arena and MTGO, and
-whether a rotation or a ban comes with it; a `Player.log` captured after
-Arena's set update, if a parsing rule turns out to need changing (rule 7).
 
 ### BL-108 · Notes and tags on a match, synced with the account
 
