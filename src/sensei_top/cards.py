@@ -25,7 +25,7 @@ the grpIds this table lacks (the Cube-pack gap, at the end). The Scryfall leg
 desktop app's first-run download — and until it does, rules text and legality
 stay NULL. After that, ``serve`` runs it again on its own when a patch brings
 cards the last download could not fill, and once a day besides, which is what
-catches a set's release day (``card_data_due``, BL-106).
+catches a set's release day (``card_data_due``).
 
 Scryfall's ``default_cards`` export is the right one: it lists every English
 printing, and ``arena_id`` (the same number as Arena's ``grpId``) is attached
@@ -661,7 +661,7 @@ def card_data_due(conn: sqlite3.Connection) -> str | None:
     or None when it shouldn't. Only a database that had card data from
     Scryfall before is ever due; one that never had any is the desktop app's
     first-run download (docs/desktop.md, "Card data starts on its own"). Two
-    things make it due (BL-106):
+    things make it due:
 
     - More of the installed client's cards lack rules text now than the last
       download left: an Arena patch brought cards, often a new set, whose

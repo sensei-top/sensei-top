@@ -438,7 +438,7 @@ tracker's own, on top of the game. MTGO does not get one.
 
 **Why deferred:** The user reversed "no overlay" on 2026-11-02 and put it first
 in the roadmap's order the same day; the account, the rules coach and the
-work after them (BL-101 to BL-106, BL-004) have gone ahead of it since. Not
+work after them (BL-101 to BL-105, a new set's release, BL-004) have gone ahead of it since. Not
 started: it has no design yet.
 
 **Needs:** Its own design: which reads it carries, how a window stays over the

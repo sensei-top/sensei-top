@@ -1,5 +1,5 @@
 -- 074_card_data_fetch.sql — when card data last came from Scryfall, and how many
--- of the installed client's cards it left without rules text (BL-106).
+-- of the installed client's cards it left without rules text.
 --
 -- A new card set reaches the installed client first: serve's reference refresh
 -- imports its names within minutes of the patch, with no rules text and no

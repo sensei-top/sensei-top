@@ -219,7 +219,7 @@ nothing. There is no retry within a launch; Ready and Settings' Card
 data card show a failure with Try again. Later downloads are not the
 shell's: once card data exists, `serve` downloads it again itself when a
 new set reaches the installed client, and once a day besides
-(`cli.py::_CardDataRefresh`, BL-106),
+(`cli.py::_CardDataRefresh`),
 with no meter; the Card data count changes when it finishes. The download prints JSON
 lines for its bytes and its save stage, parsed into
 `FirstData.progress`. **A restore stops a running download** rather

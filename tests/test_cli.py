@@ -1249,7 +1249,7 @@ class _FakeChild:
 
 
 def test_serve_downloads_card_data_once_a_new_set_reaches_the_client(tmp_path):
-    """BL-106: serve's reference loop starts the Scryfall download in a child
+    """Serve's reference loop starts the Scryfall download in a child
     when card data is due, one child at a time, and an hour after a failure
     rather than on the next tick."""
     from sensei_top.cards import upsert_cards

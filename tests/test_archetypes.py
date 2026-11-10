@@ -255,7 +255,7 @@ def test_a_rebuild_does_not_discard_downloaded_definitions(conn, monkeypatch):
 
 
 def test_serve_keeps_asking_for_fresh_definitions_while_it_runs(tmp_path, monkeypatch):
-    """BL-106: a new set's archetypes reach MTGOFormatData days after the set,
+    """A new set's archetypes reach MTGOFormatData days after the set,
     and the desktop app can stay open that long, so ``serve`` asks again on a
     loop rather than once at startup. A failed tick is not the last one, and
     only an update reclassifies."""

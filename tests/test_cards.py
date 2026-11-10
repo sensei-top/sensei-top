@@ -1556,7 +1556,7 @@ def _client_card(conn, grp_id: int, name: str, type_line: str) -> None:
 
 
 def test_card_data_is_due_again_once_a_new_set_reaches_the_client(conn):
-    """BL-106. A patch brings a set's names and nothing else; serve downloads
+    """A patch brings a set's names and nothing else; serve downloads
     Scryfall again when more client cards lack rules text than the last
     download left. Tokens never count, and a database that never had card data
     is the desktop's first-run download, not this."""
@@ -1588,7 +1588,7 @@ def test_a_download_from_before_the_baseline_was_recorded_is_due_once(conn):
 
 
 def test_the_name_backfill_finds_a_card_by_its_name_through_an_index(conn):
-    """BL-106. The save matches tens of thousands of names one statement at a
+    """The save matches tens of thousands of names one statement at a
     time. Without an index each one scanned all of `cards`, and a real
     database's save held the write lock for over twelve minutes, long enough
     to stall the live ingest of a game being played while serve downloads on
@@ -1604,7 +1604,7 @@ def test_the_name_backfill_finds_a_card_by_its_name_through_an_index(conn):
 
 
 def test_card_data_a_day_old_is_due_again(conn):
-    """BL-106. Arena ships a set's names a week or so before its release, and
+    """Arena ships a set's names a week or so before its release, and
     Scryfall marks them not legal in Standard until release day (Star Trek,
     2026-11-02 and 11-10), so the rules-text count never moves when the
     legality does. A download over a day old is due whatever that count says."""

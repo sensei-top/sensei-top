@@ -1558,7 +1558,7 @@ def _start_archetype_refresh(
 
     A loop rather than one check at startup, because the desktop app can stay
     open for days, and a new card set's archetypes reach MTGOFormatData some
-    time after the set itself does (BL-106). ``refresh_archetypes`` downloads
+    time after the set itself does. ``refresh_archetypes`` downloads
     only when its copy is older than a day, so most ticks send nothing.
 
     On its own thread with its own connection, because SQLite connections
@@ -1637,7 +1637,7 @@ def _download_card_data(db_path: Path, verbose: bool) -> None:
 class _CardDataRefresh:
     """``_start_reference_refresh``'s second step: download Scryfall's card
     data again when a new set has reached the installed client, and once a
-    day besides, which is what catches a set's release day (BL-106).
+    day besides, which is what catches a set's release day.
 
     The client patch brings the set's names, which the first step imports
     within minutes, but not its rules text or legality: without those an MTGO
