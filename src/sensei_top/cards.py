@@ -21,8 +21,11 @@ alone, through ``refresh_arena_cards``: ``cli.py::_start_reference_refresh``
 calls it on a background thread at startup, then again on any tick of its
 loop that finds the client database's path or mtime changed. It imports only
 the grpIds this table lacks (the Cube-pack gap, at the end). The Scryfall leg
-(2) is the user's own call — ``sensei-top cards --scryfall`` once, and until
-they do, rules text and legality stay NULL.
+(2) runs first on the user's call — ``sensei-top cards --scryfall``, or the
+desktop app's first-run download — and until it does, rules text and legality
+stay NULL. After that, ``serve`` runs it again on its own when a patch brings
+cards the last download could not fill, and once a day besides, which is what
+catches a set's release day (``card_data_due``, BL-106).
 
 Scryfall's ``default_cards`` export is the right one: it lists every English
 printing, and ``arena_id`` (the same number as Arena's ``grpId``) is attached
@@ -505,8 +508,8 @@ def _backfill_by_name(
         conn.execute("CREATE TEMP TABLE _direct (grp_id INTEGER PRIMARY KEY)")
         conn.executemany("INSERT OR IGNORE INTO _direct VALUES (?)", ((g,) for g in direct))
         conn.execute(
-            "CREATE TEMP TABLE _name_legality "
-            "(name TEXT NOT NULL, format TEXT NOT NULL, legality TEXT NOT NULL)"
+            "CREATE TEMP TABLE _name_legality (name TEXT NOT NULL, format TEXT NOT NULL, "
+            "legality TEXT NOT NULL, PRIMARY KEY (name, format)) WITHOUT ROWID"
         )
         conn.executemany(
             "INSERT INTO _name_legality VALUES (?, ?, ?)",
@@ -617,7 +620,73 @@ def upsert_cards(
     print(f"{mtgo_written} MTGO printing(s) stored in mtgo_card")
     print(f"{synthetic} MTGO-only card(s) stored under a negative grp_id")
     print(f"{dropped} legality value(s) outside the four known ones dropped")
+    _record_card_data_fetch(conn)
     return written
+
+
+# The installed client's own cards that carry no rules text: positive grpIds
+# (Arena's), tokens aside, since Scryfall's name backfill never fills a token row.
+_MISSING_RULES_TEXT_SQL = """
+    SELECT COUNT(*) FROM cards
+     WHERE grp_id > 0 AND oracle_text IS NULL
+       AND COALESCE(type_line, '') NOT LIKE '%Token%'
+"""
+
+
+# How old the last Scryfall download may get before serve fetches it again
+# (`card_data_due`), as an SQLite date modifier.
+_CARD_DATA_MAX_AGE = "-1 day"
+
+
+def missing_rules_text(conn: sqlite3.Connection) -> int:
+    """How many of the installed client's cards, tokens aside, have no rules
+    text. Some always do, since Scryfall never fills a client-only printing; the
+    count grows when a patch brings a new set, whose names
+    `refresh_arena_cards` imports with nothing else."""
+    return conn.execute(_MISSING_RULES_TEXT_SQL).fetchone()[0]
+
+
+def _record_card_data_fetch(conn: sqlite3.Connection) -> None:
+    """Note a finished Scryfall run and what it left without rules text, the
+    baseline `card_data_due` compares against (migrations/074_card_data_fetch.sql)."""
+    conn.execute(
+        "INSERT OR REPLACE INTO card_data_fetch (id, fetched_at, missing_rules_text) "
+        "VALUES (1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), ?)",
+        (missing_rules_text(conn),),
+    )
+
+
+def card_data_due(conn: sqlite3.Connection) -> str | None:
+    """Why Scryfall's export should be downloaded again, on no one's button,
+    or None when it shouldn't. Only a database that had card data from
+    Scryfall before is ever due; one that never had any is the desktop app's
+    first-run download (docs/desktop.md, "Card data starts on its own"). Two
+    things make it due (BL-106):
+
+    - More of the installed client's cards lack rules text now than the last
+      download left: an Arena patch brought cards, often a new set, whose
+      names `refresh_arena_cards` imported with nothing else. A database whose
+      last download predates migration 074 has no baseline, so any card
+      without rules text makes it due once.
+    - The last download is over a day old. Rules text alone would miss a set's
+      release: Arena ships a set's names a week or so ahead, and Scryfall marks
+      them not legal in Standard until release day, so the count above never
+      moves when the legality does. A ban or an errata moves nothing either.
+      Scryfall rebuilds its export about twice a day; once a day is the
+      slowest that still catches release day.
+    """
+    if conn.execute("SELECT 1 FROM cards WHERE oracle_text IS NOT NULL LIMIT 1").fetchone() is None:
+        return None
+    row = conn.execute(
+        "SELECT missing_rules_text, fetched_at < strftime('%Y-%m-%dT%H:%M:%SZ', 'now', ?) "
+        "FROM card_data_fetch WHERE id = 1",
+        (_CARD_DATA_MAX_AGE,),
+    ).fetchone()
+    if missing_rules_text(conn) > (row[0] if row is not None else 0):
+        return "client cards have no rules text"
+    if row is not None and row[1]:
+        return "the last download is over a day old"
+    return None
 
 
 @dataclasses.dataclass(slots=True)

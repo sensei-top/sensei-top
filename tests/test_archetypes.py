@@ -252,3 +252,42 @@ def test_a_rebuild_does_not_discard_downloaded_definitions(conn, monkeypatch):
     source.store_archetypes(conn, files)
     project(conn)
     assert conn.execute("SELECT COUNT(*) FROM archetypes").fetchone()[0] == 1
+
+
+def test_serve_keeps_asking_for_fresh_definitions_while_it_runs(tmp_path, monkeypatch):
+    """BL-106: a new set's archetypes reach MTGOFormatData days after the set,
+    and the desktop app can stay open that long, so ``serve`` asks again on a
+    loop rather than once at startup. A failed tick is not the last one, and
+    only an update reclassifies."""
+    import threading
+
+    import sensei_top.archetypes as archetypes
+    from sensei_top import cli
+    from sensei_top.metagame import auto
+
+    db_path = tmp_path / "t.db"
+    open_database(db_path).close()
+    answers = iter([RuntimeError("database is locked"), "fresh", "updated"])
+    reclassified = threading.Event()
+    calls: list[str] = []
+
+    def refresh(conn):
+        answer = next(answers, "fresh")
+        calls.append("refresh")
+        if isinstance(answer, Exception):
+            raise answer
+        return source.RefreshResult(status=answer)
+
+    monkeypatch.setattr(archetypes, "refresh_archetypes", refresh)
+    monkeypatch.setattr(archetypes, "classify_matches", lambda conn: calls.append("matches"))
+    monkeypatch.setattr(auto, "reclassify_corpus", lambda conn: reclassified.set())
+
+    stop = threading.Event()
+    thread = cli._start_archetype_refresh(db_path, interval=0.01, stop=stop)
+    assert reclassified.wait(5)
+    stop.set()
+    thread.join(5)
+
+    assert not thread.is_alive()
+    assert (thread.name, thread.daemon) == ("archetype-refresh", True)
+    assert calls[:4] == ["refresh", "refresh", "refresh", "matches"]

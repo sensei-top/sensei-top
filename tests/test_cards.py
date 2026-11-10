@@ -20,6 +20,7 @@ from sensei_top.cards import (
     _CountingReader,
     arena_card_database_path,
     arena_cards_missing,
+    card_data_due,
     import_arena_cards,
     print_progress,
     refresh_arena_cards,
@@ -1543,3 +1544,82 @@ def test_cards_progress_flag_reaches_the_fetch_and_the_save_event(tmp_path, monk
     assert seen["as_json"] is True
     first = capsys.readouterr().out.splitlines()[0]
     assert json.loads(first) == {"progress": {"stage": "save"}}
+
+
+def _client_card(conn, grp_id: int, name: str, type_line: str) -> None:
+    """A row as the installed-client import leaves it: a name, no rules text."""
+    conn.execute(
+        "INSERT INTO cards (grp_id, name, type_line, rarity, set_code, colors) "
+        "VALUES (?, ?, ?, 'common', 'TRK', '[]')",
+        (grp_id, name, type_line),
+    )
+
+
+def test_card_data_is_due_again_once_a_new_set_reaches_the_client(conn):
+    """BL-106. A patch brings a set's names and nothing else; serve downloads
+    Scryfall again when more client cards lack rules text than the last
+    download left. Tokens never count, and a database that never had card data
+    is the desktop's first-run download, not this."""
+    _client_card(conn, 5001, "Client Only", "Creature — Human")
+    assert not card_data_due(conn)          # never downloaded: not this path's job
+
+    upsert_cards(conn, [card(oracle_text="({T}: Add {U}.)")])
+    assert not card_data_due(conn)          # the download left one card without text
+
+    _client_card(conn, 5002, "Spirit", "Token Creature — Spirit")
+    assert not card_data_due(conn)          # a new token is not a new card
+
+    _client_card(conn, 5003, "New From The Set", "Creature — Vulcan")
+    assert card_data_due(conn)
+
+    upsert_cards(conn, [card(oracle_text="({T}: Add {U}.)")])
+    assert not card_data_due(conn)          # Scryfall had nothing for it: no second ask
+
+
+def test_a_download_from_before_the_baseline_was_recorded_is_due_once(conn):
+    """A database whose card data predates migration 074 has no baseline, so
+    any client card without rules text asks for one download."""
+    upsert_cards(conn, [card(oracle_text="({T}: Add {U}.)")])
+    conn.execute("DELETE FROM card_data_fetch")
+    assert not card_data_due(conn)
+
+    _client_card(conn, 5001, "Client Only", "Creature — Human")
+    assert card_data_due(conn)
+
+
+def test_the_name_backfill_finds_a_card_by_its_name_through_an_index(conn):
+    """BL-106. The save matches tens of thousands of names one statement at a
+    time. Without an index each one scanned all of `cards`, and a real
+    database's save held the write lock for over twelve minutes, long enough
+    to stall the live ingest of a game being played while serve downloads on
+    its own."""
+    for sql in (
+        "UPDATE cards SET oracle_text = COALESCE(oracle_text, ?) WHERE name = ?",
+        "SELECT grp_id FROM cards WHERE name = ?",
+    ):
+        plan = " ".join(
+            row[3] for row in conn.execute(f"EXPLAIN QUERY PLAN {sql}", ("x",) * sql.count("?"))
+        )
+        assert "cards_name" in plan, plan
+
+
+def test_card_data_a_day_old_is_due_again(conn):
+    """BL-106. Arena ships a set's names a week or so before its release, and
+    Scryfall marks them not legal in Standard until release day (Star Trek,
+    2026-11-02 and 11-10), so the rules-text count never moves when the
+    legality does. A download over a day old is due whatever that count says."""
+    upsert_cards(conn, [card(oracle_text="({T}: Add {U}.)")])
+    assert card_data_due(conn) is None
+
+    conn.execute(
+        "UPDATE card_data_fetch SET fetched_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-23 hours')"
+    )
+    assert card_data_due(conn) is None
+
+    conn.execute(
+        "UPDATE card_data_fetch SET fetched_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-25 hours')"
+    )
+    assert card_data_due(conn) == "the last download is over a day old"
+
+    upsert_cards(conn, [card(oracle_text="({T}: Add {U}.)")])
+    assert card_data_due(conn) is None

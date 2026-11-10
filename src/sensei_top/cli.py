@@ -48,10 +48,12 @@ import os
 import socket
 import sys
 import threading
+import time
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sensei_top import logs
 from sensei_top.archetypes.source import ARCHIVE_URL
@@ -1537,37 +1539,66 @@ def cmd_guide(args) -> None:
         print(markdown)
 
 
-def _start_archetype_refresh(db_path: Path) -> None:
-    """Freshen the archetype definitions in the background, best-effort.
+# How often `_start_archetype_refresh`'s loop asks whether the definitions are
+# stale. A tick with a fresh cache is one SELECT; a stale one is one download
+# (`archetypes.source.MAX_AGE_SECONDS`, a day). So a long session picks up a new
+# set's archetypes within a day and an hour, and an offline machine tries at most
+# once an hour.
+_ARCHETYPE_REFRESH_INTERVAL = 3600.0
+
+
+def _start_archetype_refresh(
+    db_path: Path,
+    *,
+    interval: float = _ARCHETYPE_REFRESH_INTERVAL,
+    stop: threading.Event | None = None,
+) -> threading.Thread:
+    """Keep the archetype definitions fresh while ``serve`` runs, best-effort:
+    one check every ``interval`` seconds, the first at once.
+
+    A loop rather than one check at startup, because the desktop app can stay
+    open for days, and a new card set's archetypes reach MTGOFormatData some
+    time after the set itself does (BL-106). ``refresh_archetypes`` downloads
+    only when its copy is older than a day, so most ticks send nothing.
 
     On its own thread with its own connection, because SQLite connections
     belong to the thread that opened them and because startup must not wait on
-    the network. Every failure is swallowed: an offline machine keeps the
-    definitions it already has, and a machine that never had any simply shows
-    colours instead of archetype names.
+    the network. Every failure is logged and the next tick tries again: an
+    offline machine keeps the definitions it already has, and a machine that
+    never had any simply shows colours instead of archetype names.
 
     New definitions rename the stored corpus's decks as well as the user's
     opponents, so an update reclassifies both. ``reclassify_corpus`` takes a
     lock the corpus refresh's thread shares, since that thread reclassifies
-    after a store on a connection of its own.
+    after a store on a connection of its own. ``stop`` ends the loop, which
+    only a test does: ``serve`` lets the thread die with the process.
     """
+    halt = stop if stop is not None else threading.Event()
+
+    def tick() -> None:
+        from sensei_top.archetypes import classify_matches, refresh_archetypes
+        from sensei_top.metagame.auto import reclassify_corpus
+
+        conn = connect(db_path)
+        try:
+            if refresh_archetypes(conn).status == "updated":
+                classify_matches(conn)
+                reclassify_corpus(conn)
+        finally:
+            conn.close()
 
     def run() -> None:
-        try:
-            from sensei_top.archetypes import classify_matches, refresh_archetypes
-            from sensei_top.metagame.auto import reclassify_corpus
-
-            conn = connect(db_path)
+        while True:
             try:
-                if refresh_archetypes(conn).status == "updated":
-                    classify_matches(conn)
-                    reclassify_corpus(conn)
-            finally:
-                conn.close()
-        except Exception as exc:                      # never fatal: startup must not care
-            logging.getLogger(__name__).warning("archetype refresh skipped: %s", exc)
+                tick()
+            except Exception as exc:                  # never fatal: the next tick tries again
+                logging.getLogger(__name__).warning("archetype refresh skipped: %s", exc)
+            if halt.wait(interval):
+                return
 
-    threading.Thread(target=run, name="archetype-refresh", daemon=True).start()
+    thread = threading.Thread(target=run, name="archetype-refresh", daemon=True)
+    thread.start()
+    return thread
 
 
 # How often `_start_reference_refresh`'s loop re-checks each of its steps.
@@ -1577,13 +1608,109 @@ def _start_archetype_refresh(db_path: Path) -> None:
 _REFERENCE_REFRESH_INTERVAL = 300.0
 
 
+# How long serve waits after a failed card data download before trying again:
+# the export is about 100 MB, so an offline machine must not fetch it every tick.
+_CARD_DATA_RETRY_SECONDS = 3600.0
+
+
+def _download_card_data(db_path: Path, verbose: bool) -> None:
+    """The child ``_CardDataRefresh`` starts: ``cards --scryfall``'s download
+    and save, in a process of its own, so its minutes of parsing never hold the
+    API's GIL (the watcher's reason, ``docs/architecture.md``, "Live mode's two
+    cadences"). A failure ends the child with a non-zero exit code, which the
+    parent reads."""
+    from sensei_top import procs
+
+    if not procs.die_with_parent():
+        return
+    logs.install(db_path, "cards", verbose=verbose)
+    from sensei_top.cards import fetch_default_cards, upsert_cards
+
+    conn = connect(db_path)
+    try:
+        upsert_cards(conn, fetch_default_cards())
+    finally:
+        conn.close()
+
+
+@dataclass
+class _CardDataRefresh:
+    """``_start_reference_refresh``'s second step: download Scryfall's card
+    data again when a new set has reached the installed client, and once a
+    day besides, which is what catches a set's release day (BL-106).
+
+    The client patch brings the set's names, which the first step imports
+    within minutes, but not its rules text or legality: without those an MTGO
+    match showing a new card has no format and no opponent deck name, and the
+    reads built on rules text skip the card. ``cards.card_data_due`` says when;
+    this runs the download in a child process, one at a time, and after a
+    failure waits ``retry_seconds`` before the next.
+
+    ``start`` makes the child: a process-like object with ``start``,
+    ``is_alive``, ``exitcode`` and ``pid``. Tests hand in a fake.
+    """
+
+    __name__ = "refresh_card_data_step"   # the loop's warning names a step by it
+
+    db_path: Path
+    start: Callable[[Path], Any] | None = None
+    retry_seconds: float = _CARD_DATA_RETRY_SECONDS
+    clock: Callable[[], float] = field(default=time.monotonic)
+    _child: Any = field(default=None, init=False)
+    _job: int | None = field(default=None, init=False)
+    _not_before: float = field(default=0.0, init=False)
+
+    def _spawn(self, db_path: Path) -> Any:
+        # Spawn, never fork: this runs on a thread, after serve's other
+        # threads have started (procs.py, trap 6). The thread lives as long as
+        # serve, so the child's PR_SET_PDEATHSIG holds (trap 1).
+        context = multiprocessing.get_context("spawn")
+        verbose = logging.getLogger().level <= logging.DEBUG
+        return context.Process(
+            target=_download_card_data, args=(db_path, verbose),
+            name="card-data", daemon=True,
+        )
+
+    def __call__(self) -> None:
+        from sensei_top import procs
+        from sensei_top.cards import card_data_due
+
+        log = logging.getLogger(__name__)
+        if self._child is not None:
+            if self._child.is_alive():
+                return
+            if self._child.exitcode != 0:
+                self._not_before = self.clock() + self.retry_seconds
+                log.warning(
+                    "card data download ended with exit code %s; trying again in an hour",
+                    self._child.exitcode,
+                )
+            else:
+                log.info("card data downloaded again")
+            procs.close_job(self._job)
+            self._child, self._job = None, None
+        if self.clock() < self._not_before:
+            return
+        conn = connect(self.db_path)
+        try:
+            reason = card_data_due(conn)
+        finally:
+            conn.close()
+        if reason is None:
+            return
+        log.info("downloading card data from Scryfall: %s", reason)
+        child = (self.start or self._spawn)(self.db_path)
+        child.start()
+        self._child = child
+        self._job = procs.kill_with_this_process(child.pid)
+
+
 def _start_reference_refresh(db_path: Path) -> None:
     """Freshen locally-sourced reference data in the background, best-effort
-    — but a repeating loop rather than the one-shot check
-    ``_start_archetype_refresh`` above runs: that one fires once at startup
-    and is done, while the installed Arena client can be patched at any point
-    during a long ``serve --watch`` session, so this one keeps checking on its
-    own thread for as long as the process runs.
+    — a repeating loop, like ``_start_archetype_refresh`` above, because the
+    installed Arena client can be patched at any point during a long ``serve
+    --watch`` session, so this one keeps checking on its own thread for as
+    long as the process runs.
 
     Written as a list of steps, each a no-argument callable run in order on
     every tick, so a later step can be appended without restructuring this
@@ -1621,7 +1748,7 @@ def _start_reference_refresh(db_path: Path) -> None:
                 "Arena card database re-imported: %d row(s) new", imported
             )
 
-    steps = [refresh_arena_cards_step]
+    steps = [refresh_arena_cards_step, _CardDataRefresh(db_path)]
 
     def run() -> None:
         while True:
@@ -1752,9 +1879,9 @@ def _start_corpus_refresh(
 def _start_backup(db_path: Path):
     """Starts the daily backup schedule -- structurally a sibling of
     ``_start_archetype_refresh`` above, but unlike it this returns a handle
-    rather than firing a thread and forgetting it. That one is a one-shot
-    check that either finishes or gets abandoned at process exit with
-    nothing left mid-write; this one runs for as long as
+    ``serve`` keeps rather than firing a thread and forgetting it. That one's
+    writes are short transactions, each rolled back whole by SQLite if the
+    process exits mid-write; this one runs for as long as
     ``serve`` does and can be in the middle of a multi-minute ``VACUUM INTO``
     when a shutdown arrives, so ``cmd_serve`` needs a ``stop()`` to call in
     its own ``finally`` rather than trusting the daemon thread flag alone.

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The app downloads card data again on its own once a day, and a few
+  minutes after an Arena update that brings new cards, so a new set's
+  cards get their rules text, and turn legal on release day, without a
+  press of "Download again".
+- The archetype definitions that name an opponent's deck are checked every
+  hour while the app is open, not only when it starts, so a new set's
+  decks get their names without restarting the app.
+
+### Fixed
+
+- Saving downloaded card data takes seconds instead of over ten minutes on
+  a long match history, and no longer holds up the tracking of a game being
+  played while it runs.
+
 ## [1.4.0] - 2026-11-09
 
 ### Added
