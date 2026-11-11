@@ -437,9 +437,10 @@ An overlay for Arena only: the Live page's reads in a window of the
 tracker's own, on top of the game. MTGO does not get one.
 
 **Why deferred:** The user reversed "no overlay" on 2026-11-02 and put it first
-in the roadmap's order the same day; the account, the rules coach and the
-work after them (BL-101 to BL-105, a new set's release, BL-004) have gone ahead of it since. Not
-started: it has no design yet.
+in the roadmap's order the same day; the account, the AI switch,
+contributed games, a new set's release and BL-004 have gone ahead of it
+since, and the rules coach stands before it. Not started: it has no design
+yet.
 
 **Needs:** Its own design: which reads it carries, how a window stays over the
 game on Windows and on Linux under Wine or Proton, and how Arena's fullscreen
@@ -448,7 +449,7 @@ client (`ROADMAP.md`, "Never"), and the event rule (`table/queues.py`).
 
 ### BL-101 · The rules coach
 
-type: feat · priority: P1 · status: blocked · area: web desktop site legal
+type: feat · priority: P1 · status: ready · area: web desktop site legal
 
 A hosted rules coach that answers rules and card-interaction questions in
 English, with the rule numbers it relied on, on the website and in a tab
@@ -461,54 +462,20 @@ repository holds the ingest, the retrieval, the API and a public eval
 suite. The app's tab needs a name: the existing Coach page is the
 cross-deck report.
 
-**Why deferred:** Public only once the launch gate holds: Google sign-in
-on the website and in the app, the consent screens, privacy policy and
-terms live, the eval gate passed on the production model, and the budget
-cap and kill switch tested. Until then the hosted coach is limited to
-beta testers' accounts. The eval's gold set is the user's to write.
+**Why deferred:** Not started. What it stood on is in production: the
+account, the consent screens, and the privacy policy and terms that
+describe it (1.4.0), and the "AI features" switch that hides it (1.3.0).
+The coach repository holds only the account's Supabase project so far: no
+ingest, retrieval, API or evals.
 
-**Needs:** Its plan (sub-plans C and E of
-`~/.claude/plans/release-40-coach-and-accounts.md`). The account,
-released in 1.4.0. An OpenAI account with a hard monthly limit. The Fan Content
-Policy notice in the site's footer and the app's About.
-
-### BL-102 · The AI package and its switch
-
-type: feat · priority: P1 · status: ready · area: llm api web review guide brief coach
-
-An "AI features" switch in Settings that hides the rules coach, every
-prompt-based feature (the match report's and the leak finder's prose,
-the deck and RCQ guides, the matchup briefs, the cross-deck coach report)
-and every mention of AI, while the local analyzers behind them stay. The
-code behind them moves into a package of its own, in Python and in the
-dashboard, which the core never imports; CI runs the core's tests with
-the package absent. A fresh install asks on its first run; an existing
-database or settings file means on (decided 2026-11-02).
-
-**Why deferred:** Not started. Nothing outside the code blocks it.
-
-**Needs:** Its plan (sub-plan D of
-`~/.claude/plans/release-40-coach-and-accounts.md`).
-`config_path` moved out of the credential module into core `config.py`
-first, since a dozen modules that have nothing to do with a model import it.
-
-### BL-103 · Contributing games
-
-type: feat · priority: P1 · status: in-progress · area: desktop api web site legal
-
-A yes of its own, with or without an account, that sends the player's
-games, past and new, to a private pool Sensei Top's own features are built
-from, as the published policy's "Contributing your games" describes: one
-record per game, built on the device and stripped of every handle, account
-and user ID, under a random code made fresh for that game, sent without the
-sign-in. The pool is `contrib.games` in Supabase, written only through an
-anonymous `security definer` function that nobody can read back from; the
-shell remembers which games it sent in its own `userData`, so no migration
-and no change to rule 6 (decided 2026-11-03).
-
-**Why deferred:** Built with the account on
-`feature/accounts-sync`. It waits on the same final verification, against
-the hosted Supabase project and on the Windows VM.
+**Needs:** Its plans, sub-plans C and E of
+`~/.claude/plans/release-40-coach-and-accounts.md`, neither yet written
+out. Going public, not the build, also waits on the launch gate: Google
+sign-in on the website, the eval gate passed on the production model (its
+gold set is the user's to write), an OpenAI account with a hard monthly
+limit, the budget cap and kill switch tested, and the Fan Content Policy
+notice in the app's About (the site's footer has it). Until then the
+hosted coach is limited to beta testers' accounts.
 
 ### BL-104 · Deleting an inactive account
 
@@ -531,9 +498,9 @@ project.
 
 type: perf · priority: P2 · status: blocked · area: api legal
 
-The contributed-games pool (BL-103) starts as one Postgres table, sharing
-Supabase Free's 500 MB with account backup. Before the pool reaches about
-150 MB (its size function in the coach repository, read in the weekly
+The contributed-games pool ("Help build the stats", released in 1.4.0)
+is one Postgres table, sharing Supabase Free's 500 MB with account
+backup. Before the pool reaches about 150 MB (its size function in the coach repository, read in the weekly
 measuring), a scheduled job packs its older records into large
 compressed Parquet files in Supabase Storage, in the same São Paulo
 project, and deletes those rows.
@@ -542,10 +509,10 @@ A file's timestamp then dates thousands of games at once, so the policy's
 database" changes to name the storage in the same release (decided
 2026-11-03; plan 40B, DB13).
 
-**Why deferred:** The beta's pool is far below the threshold.
+**Why deferred:** The pool is far below the threshold.
 
-**Needs:** The pool (BL-103) live; Supabase Storage prices and limits read
-again at the time; the policy wording change.
+**Needs:** Supabase Storage prices and limits read again at the time; the
+policy wording change.
 
 ### BL-108 · Notes and tags on a match, synced with the account
 

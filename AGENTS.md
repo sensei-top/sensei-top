@@ -136,7 +136,7 @@ One line each; the detail is in the doc named, and
      foreign `Host` or `Origin` and any non-GET request without the
      dashboard's `X-Tracker-Client` header, pinned by `tests/test_guard.py`.
 
-   **The free, optional account** (released in 1.4.0; the coach, BL-101, is being built) adds
+   **The free, optional account** (released in 1.4.0; the coach, BL-101, is not started) adds
    cloud history, error reports and the hosted rules coach, each its own yes;
    no sync payload carries a raw event, handle or chat, and the coach gets no
    match: `docs/llm.md`, "What is hosted, and what it receives".
