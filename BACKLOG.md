@@ -456,8 +456,9 @@ English, with the rule numbers it relied on, on the website and in a tab
 of the app, for signed-in players (decided 2026-11-02; `docs/llm.md`,
 "What is hosted, and what it receives"). It answers from the
 Comprehensive Rules and Scryfall's Oracle cards and rulings, through
-OpenAI's gpt-5-nano with hard questions escalated to gpt-5-mini, under
-per-player daily limits, a monthly budget and a kill switch. Its own
+Anthropic's Claude Haiku 5.5, with the hard questions sent to whichever
+setup the evals choose (decided 2026-11-03, replacing the spec's OpenAI),
+under per-player daily limits, a monthly budget and a kill switch. Its own
 repository holds the ingest, the retrieval, the API and a public eval
 suite. The app's tab needs a name: the existing Coach page is the
 cross-deck report.
@@ -472,9 +473,10 @@ ingest, retrieval, API or evals.
 `~/.claude/plans/release-40-coach-and-accounts.md`, neither yet written
 out. Going public, not the build, also waits on the launch gate: Google
 sign-in on the website, the eval gate passed on the production model (its
-gold set is the user's to write), an OpenAI account with a hard monthly
-limit, the budget cap and kill switch tested, and the Fan Content Policy
-notice in the app's About (the site's footer has it). Until then the
+gold set is the user's to write), the budget cap and kill switch tested,
+and the Fan Content Policy notice in the app's About (the site's footer
+has it). The Anthropic Console workspace with its US$10 monthly spend
+limit already exists. Until then the
 hosted coach is limited to beta testers' accounts.
 
 ### BL-104 · Deleting an inactive account
