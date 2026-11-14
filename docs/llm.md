@@ -499,8 +499,8 @@ What does not change: the five narrative routes still use the user's own
 credential or the copied prompt, on the user's own machine, and never go
 through the coach API, so the exception at the top of this document stays
 exact. An "AI features" switch hides the coach and every prompt feature
-together, and the code behind them moves into a package of its own that
-the core never imports (BL-102).
+together, and the code behind them is a package of its own, `ai/`, that
+the core never imports (both since 1.3.0).
 
 The paid subscription planned on 2026-10-12 (`BACKLOG.md`, BL-006) is not
 part of this and is not built: no paywall is planned for the account or
