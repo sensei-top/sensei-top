@@ -900,3 +900,82 @@ def test_a_version_1_previous_report_gets_the_not_comparable_line(conn):
     ) in p.prompt
     assert "metrics are unreadable" not in p.prompt
     assert "old focus" in p.prompt
+
+
+# --- Rules notes -------------------------------------------------------------
+
+DIVIDER = "\n\n---\n\n"
+LANDFALL_QUESTION = "How does landfall work on Test Bear?"
+
+
+def _bear_cards(monkeypatch):
+    """Stands in for ``coach_cards``; returns the ``decklists`` it was given."""
+    from sensei_top.ai import rules_questions
+
+    received = []
+
+    def stand_in(conn, decklists):
+        received.append(decklists)
+        return rules_questions.FeatureCards(
+            (rules_questions.CardRow("Test Bear", "Creature — Bear", "", ("Landfall",)),), (),
+        )
+
+    monkeypatch.setattr(rules_questions, "coach_cards", stand_in)
+    return received
+
+
+def _store_bear_note(conn):
+    from sensei_top.ai import rules_notes
+
+    rules_notes.store(conn, [rules_notes.RulesNote(
+        LANDFALL_QUESTION, "2026-11-01", "answered",
+        {"verdict": "Once per land.", "explanation": "It triggers on each land.",
+         "citations": [{"type": "rule", "ref": "207.2c", "quote": "q"}], "out_of_scope": False},
+        "high", "2026-11-17T00:00:00Z",
+    )])
+    conn.commit()
+
+
+def _ten(conn):
+    for i in range(10):
+        _insert_match(
+            conn, f"m{i}", "win" if i % 2 == 0 else "loss",
+            started_at=f"2026-0{1 + i % 9}-0{1 + i % 9}T00:00:00",
+        )
+    conn.commit()
+
+
+def test_the_prompt_without_a_note_is_the_one_built_without_notes(conn, monkeypatch):
+    from sensei_top.ai.review.narrative import _wrap_prompt
+
+    received = _bear_cards(monkeypatch)
+    _ten(conn)
+    p = build_coach_prompt(conn, fmt="Standard")
+    assert received == [p.evidence.decklists]
+    assert p.prompt == _wrap_prompt(system_prompt("Standard"), p.context)
+    assert p.copied.startswith(p.prompt + DIVIDER + "Answer with")
+
+
+def test_a_stored_note_puts_the_block_between_the_evidence_and_the_contract(conn, monkeypatch):
+    from sensei_top.ai import rules_notes
+
+    _bear_cards(monkeypatch)
+    _ten(conn)
+    without = build_coach_prompt(conn, fmt="Standard")
+    _store_bear_note(conn)
+    p = build_coach_prompt(conn, fmt="Standard")
+    block = (
+        rules_notes.RULES_NOTES_HEADING + "\n"
+        f"N1 (high) Q: {LANDFALL_QUESTION} A: Once per land. It triggers on each land. "
+        "(cites 207.2c)\n\n" + rules_notes.CLOSING_INSTRUCTION
+    )
+    assert p.prompt == without.prompt + DIVIDER + block
+    assert p.copied == p.prompt + without.copied[len(without.prompt):]
+    assert p.context_hash == without.context_hash
+    assert p.context == without.context
+
+
+def test_r_and_n_markers_pass_through_unchanged():
+    prose = "## Focus areas\nWork on landfall [N1] and mulligans [R1][N2, N3]."
+    assert clean_report(prose) == prose
+    assert cited_ids(prose, _entries(1)) == ["R1"]
