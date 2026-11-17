@@ -71,8 +71,10 @@ h2 + h3 { margin-top: 0 !important; }
 .toc { display: flex; flex-wrap: wrap; gap: 4px 20px; padding: 12px 0; list-style: none; font-size: 14px; border-block: 1px solid var(--line); }
 .toc li { margin: 0; }
 .note { color: var(--muted); font-size: 14px; }
-/* The privacy and terms pages: a "Not available yet" box, and the tables, which scroll sideways when narrow. */
+/* The privacy and terms pages: a boxed notice, and the tables, which scroll sideways when narrow. */
 .notice { padding: 12px 16px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--surface-1); font-size: 15px; }
+.notice > :first-child { margin-top: 0; }
+.notice > :last-child { margin-bottom: 0; }
 .table-wrap { overflow-x: auto; margin: 0 0 16px; }
 .table-wrap table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.5; }
 .table-wrap th, .table-wrap td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; color: var(--ink-2); }
