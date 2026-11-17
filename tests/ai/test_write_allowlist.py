@@ -47,6 +47,8 @@ def test_only_authored_artifact_routes_write():
         ("/api/matches/{match_id}/report/narrative", "PUT"),
         ("/api/review/leaks/narrative", "PUT"),
         ("/api/coach/narrative", "PUT"),
+        # The hosted coach's rules answers: rules_note, no model call.
+        ("/api/rules-notes", "PUT"),
     }
 
 

@@ -1718,6 +1718,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/rules-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Rules Notes */
+        put: operations["put_rules_notes_api_rules_notes_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5433,6 +5450,41 @@ export interface components {
             /** Grp Id */
             grp_id?: number | null;
         };
+        /** RulesNoteIn */
+        RulesNoteIn: {
+            /** Question */
+            question: string;
+            /** Rules Version */
+            rules_version: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "answered" | "refused";
+            /** Verdict */
+            verdict?: string | null;
+            /** Explanation */
+            explanation?: string | null;
+            /** Citations */
+            citations?: unknown[];
+            /** Confidence */
+            confidence?: string | null;
+            /**
+             * Out Of Scope
+             * @default false
+             */
+            out_of_scope: boolean;
+        };
+        /** RulesNotesIn */
+        RulesNotesIn: {
+            /** Notes */
+            notes: components["schemas"]["RulesNoteIn"][];
+        };
+        /** RulesNotesOut */
+        RulesNotesOut: {
+            /** Question Hashes */
+            question_hashes: string[];
+        };
         /**
          * SideboardCardOut
          * @description One card whose copy count changed between two consecutive games'
@@ -8008,6 +8060,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CoachNarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_rules_notes_api_rules_notes_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RulesNotesIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RulesNotesOut"];
                 };
             };
             /** @description Validation Error */

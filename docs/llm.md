@@ -427,6 +427,23 @@ with it: with no credential configured, the `POST .../narrative`
 routes still answer 503, and a plan's press would have to go through the
 desktop shell, never through this API.
 
+## Rules notes
+
+`rules_note` (migration `075_rules_note.sql`) keeps the hosted coach's answer
+to a rules question the app wrote from card names, so the same question is
+never asked, and paid for, twice. It is keyed by `(question_hash,
+rules_version)`: the hash is the SHA-256 of the question after `strip()` and
+whitespace collapse (`ai/rules_notes.py::question_hash`), and a new rules
+version asks again. `answer_json` is the coach's response as received;
+`confidence` is copied out of it.
+
+`PUT /api/rules-notes` is the only writer (rule 6's allowlist; it calls no
+model). The body carries at most 4 notes, each question at most 500
+characters, each `answered` or `refused`: a `try_again` or `error` outcome
+is 422, never stored and never counted. A newer or equal `asked_at` for the
+same key replaces the row, so a re-store in the same second wins.
+`project()` never reads or deletes the table.
+
 ## What is hosted, and what it receives
 
 This repository is free software, AGPL-3.0-only (`LICENSE`), with
