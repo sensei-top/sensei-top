@@ -475,6 +475,24 @@ def test_the_rcq_guide_reads_the_pasted_list(client, seeded):
     ]
 
 
+def test_rcq_cards_takes_the_evidence_for_rcq_builds(client, seeded):
+    from sensei_top.ai import rules_questions
+    from sensei_top.guide.rcq import build_rcq
+
+    text = "Deck\n4 Mother of Runes\n2 Dazzling Angel\n\nSideboard\n3 Lotus Bloom\n"
+    conn = _db(client)
+    try:
+        evidence = build_rcq(conn, seeded, text, [ARCHETYPE], None)
+        assert rules_questions.rcq_cards(conn, evidence) == rules_questions.for_rcq(
+            conn, seeded, text, expected=[ARCHETYPE],
+        )
+        assert [c.name for c in rules_questions.rcq_cards(conn, evidence).mine] == [
+            MOTHER.name, BLOOM.name, ANGEL.name,
+        ]
+    finally:
+        conn.close()
+
+
 def test_the_coach_with_too_few_matches_has_no_evidence(client):
     out = _post(client, feature="coach").json()
     assert out == {"questions": [], "reason": "no_evidence"}

@@ -43,7 +43,7 @@ def providers() -> Providers:
     """The core seams this package fills (``api/providers.py``); called once
     per ``create_app``."""
     from sensei_top.ai.brief.break_plans import BreakBriefs
-    from sensei_top.ai.guide.rcq_prompt import rcq_prompt
+    from sensei_top.ai.routes.rcq import copy_prompt
     from sensei_top.api.providers import Providers
 
-    return Providers(rcq_prompt=rcq_prompt, break_briefs=BreakBriefs())
+    return Providers(rcq_prompt=copy_prompt, break_briefs=BreakBriefs())

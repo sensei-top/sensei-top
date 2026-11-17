@@ -356,17 +356,10 @@ def for_guide(conn: sqlite3.Connection, key: str, *, report_cache=None) -> Featu
 
 
 @english()
-def for_rcq(
-    conn: sqlite3.Connection, key: str, decklist: str, *,
-    expected: Sequence[str] = (), own: str | None = None, report_cache=None,
-) -> FeatureCards | None:
+def rcq_cards(conn: sqlite3.Connection, evidence) -> FeatureCards:
     """The pasted 75 by copies, and the staples of the archetypes the RCQ
-    prompt shows, the expected ones included. ``None`` for an unknown deck."""
-    evidence = build_rcq(
-        conn, key, decklist, list(expected), own, report_cache=report_cache
-    )
-    if evidence is None:
-        return None
+    prompt shows, the expected ones included, from an ``RcqEvidence`` already
+    built."""
     own_ids = [*evidence.resolved.main_grp_ids, *evidence.resolved.side_grp_ids]
     return FeatureCards(
         _by_grp(conn, own_ids),
@@ -376,6 +369,18 @@ def for_rcq(
             extra=tuple((x.key, f"-- {x.name} --") for x in evidence.expected),
         ),
     )
+
+
+@english()
+def for_rcq(
+    conn: sqlite3.Connection, key: str, decklist: str, *,
+    expected: Sequence[str] = (), own: str | None = None, report_cache=None,
+) -> FeatureCards | None:
+    """``rcq_cards`` for the pasted 75; ``None`` for an unknown deck."""
+    evidence = build_rcq(
+        conn, key, decklist, list(expected), own, report_cache=report_cache
+    )
+    return None if evidence is None else rcq_cards(conn, evidence)
 
 
 def coach_cards(conn: sqlite3.Connection, decklists) -> FeatureCards:

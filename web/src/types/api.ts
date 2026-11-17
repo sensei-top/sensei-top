@@ -5277,6 +5277,11 @@ export interface components {
              * @default false
              */
             answered_for_another_list: boolean;
+            /**
+             * Notes
+             * @description the rules notes the stored guide's text cites with [N<n>], by marker, read from the stored prompt's notes block
+             */
+            notes?: components["schemas"]["RulesNoteOut"][];
         };
         /** RcqMarkdownOut */
         RcqMarkdownOut: {

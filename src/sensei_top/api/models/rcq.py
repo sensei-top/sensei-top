@@ -9,7 +9,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from sensei_top.api.models.common import BoardCardOut, PlanProblemOut
+from sensei_top.api.models.common import BoardCardOut, PlanProblemOut, RulesNoteOut
 from sensei_top.api.models.guide import ListDiffOut
 from sensei_top.api.models.metagame import FormatName
 
@@ -119,6 +119,11 @@ class RcqGuideOut(BaseModel):
         "than the ones stored beside it: copied from the prompt for one, saved after an "
         "edit; "
         "false when it was the same list or that is not known",
+    )
+    notes: list[RulesNoteOut] = Field(
+        default_factory=list,
+        description="the rules notes the stored guide's text cites with [N<n>], by marker, "
+        "read from the stored prompt's notes block",
     )
 
 
