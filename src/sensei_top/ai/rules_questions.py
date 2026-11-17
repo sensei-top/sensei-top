@@ -10,7 +10,7 @@ Traps:
 - A regenerate must ask the same questions, or the cache (``rules_notes``)
   never hits: the builders rank by count then name, and the selection
   has no randomness.
-- ``EVERGREEN`` is the keywords phase 0 graded borderline or worse, not a
+- ``EVERGREEN`` is the keywords a 30-question trial (2026-11-16) graded borderline or worse, not a
   rules source.
 - A hook is a text heuristic: a card with no oracle text has none.
 """

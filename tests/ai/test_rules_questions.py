@@ -1,6 +1,6 @@
 """``ai/rules_questions.py`` and ``POST /api/rules-questions``: the questions a
 feature asks the hosted coach, written from card rows by three templates and
-three filters (phase 0's misses). The card rows have three sources: rows
+three filters (a 30-question trial's misses, 2026-11-16). The card rows have three sources: rows
 copied from ``tests/fixtures/scryfall_*.jsonl`` (and Duress's text from
 ``tests/test_effects.py``); rows written from memory (Negate, Day of
 Judgment, Mindbreak Trap, Skyclave Apparition); and made-up rows, whose names
