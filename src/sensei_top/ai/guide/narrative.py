@@ -214,6 +214,7 @@ def _opponent_sections(
     shown_grp_ids: set[int],
     extra: Sequence[tuple[str, str]] = (),
     extra_intro: str = "",
+    staples_out: list | None = None,
 ) -> None:
     """Append the opponent sections a prompt carries: the field's top
     archetypes by share, then ``extra`` (``(archetype_key, heading)`` pairs,
@@ -222,7 +223,9 @@ def _opponent_sections(
     archetypes this deck has faced most. A key already shown is never shown
     twice, and ``shown_grp_ids`` is updated in place, so oracle text stays
     de-duplicated across every section. ``extra`` empty, this is exactly the
-    deck guide's own opponent half."""
+    deck guide's own opponent half. ``staples_out``, when given, receives
+    ``(consensus card, archetype key, share)`` for every staple a section
+    lists, in listing order, and changes nothing in ``lines``."""
     key_by_name = archetype_key_by_name(conn)
     since = guide.provenance.window_start
 
@@ -238,6 +241,8 @@ def _opponent_sections(
                 return True
             return False
         staples = consensus.staples()
+        if staples_out is not None:
+            staples_out.extend((c, archetype_key, c.share) for c in staples)
         lines.append(heading)
         for card in staples:
             lines.append(f"  {card.copies:.1f}x {card.name} ({card.share:.0%} of decks)")

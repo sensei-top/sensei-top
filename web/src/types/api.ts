@@ -1735,6 +1735,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/rules-questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Rules Questions
+         * @description The questions the feature's prompt would ask the coach, at most 4,
+         *     in the order they are asked. POST only because an RCQ guide carries a
+         *     pasted list; it writes nothing, so it is not on the write allowlist. An
+         *     unknown match or deck is a 404.
+         */
+        post: operations["post_rules_questions_api_rules_questions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5485,6 +5508,61 @@ export interface components {
             /** Question Hashes */
             question_hashes: string[];
         };
+        /** RulesQuestionOut */
+        RulesQuestionOut: {
+            /** Question */
+            question: string;
+            /** Question Hash */
+            question_hash: string;
+            /**
+             * Template
+             * @enum {string}
+             */
+            template: "T1" | "T2" | "T3";
+            /** Answered */
+            answered: boolean;
+        };
+        /**
+         * RulesQuestionsIn
+         * @description What each feature needs: ``match`` a ``match_id``; ``guide`` a ``key``;
+         *     ``rcq`` a ``key`` and a ``decklist`` (``expected`` and ``own`` as the RCQ
+         *     routes take them); ``coach`` nothing (``fmt`` defaults to the dashboard's).
+         *     A missing one is a 422.
+         */
+        RulesQuestionsIn: {
+            /**
+             * Feature
+             * @enum {string}
+             */
+            feature: "match" | "guide" | "rcq" | "coach";
+            /** Match Id */
+            match_id?: string | null;
+            /** Key */
+            key?: string | null;
+            /** Decklist */
+            decklist?: string | null;
+            /**
+             * Expected
+             * @default []
+             */
+            expected: string[];
+            /** Own */
+            own?: string | null;
+            /** Fmt */
+            fmt?: string | null;
+            /**
+             * Rules Version
+             * @description answered means a note under this version; without it, under any
+             */
+            rules_version?: string | null;
+        };
+        /** RulesQuestionsOut */
+        RulesQuestionsOut: {
+            /** Questions */
+            questions: components["schemas"]["RulesQuestionOut"][];
+            /** Reason */
+            reason?: ("no_card_text" | "no_opponent_cards" | "no_questions" | "no_evidence") | null;
+        };
         /**
          * SideboardCardOut
          * @description One card whose copy count changed between two consecutive games'
@@ -8093,6 +8171,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RulesNotesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_rules_questions_api_rules_questions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RulesQuestionsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RulesQuestionsOut"];
                 };
             };
             /** @description Validation Error */

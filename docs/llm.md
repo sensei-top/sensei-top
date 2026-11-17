@@ -444,6 +444,37 @@ is 422, never stored and never counted. A newer or equal `asked_at` for the
 same key replaces the row, so a re-store in the same second wins.
 `project()` never reads or deletes the table.
 
+The app, not a model, writes the questions (`ai/rules_questions.py`), from
+the cards a feature already picks: three templates, T1 "How does <mine>
+interact with <theirs>?", T2 "How does <keyword> work on <card>?" and T3 "What
+happens if my opponent casts <theirs> in response to <mine>?". Phase 0 ran 30
+of them against the local coach (2026-11-16): 50 % were worth a line in a
+prompt, 73 % with the borderline ones, and the misses were the templates', so
+three filters apply: T1 only for a pair with a hook (one's text targets,
+destroys, exiles, counters, returns, sacrifices or deals damage to the other's
+kind, or names its subtype or a keyword it does not carry itself; a clause
+about "another ..." or "... you control" or "from your graveyard", "counter"
+as a noun, the card's own name or "this creature", and a `non<type>` phrase
+are not hooks, "damage to any target" reaches a creature, planeswalker or
+battle, and plural kinds match; a card with no text has none); T2 never for a keyword in
+`EVERGREEN`, phase 0's list and not a rules source; T3 only when theirs is an
+instant or has flash. At most 4 a piece, two T1, one T3, one T2, a free slot
+filled in that order, no card in more than two. The ranking is the feature's
+own count (resolves in the match, copies in the 75, staple share) then name, so
+a regenerate asks the same questions and hits the cache. A match reads the
+snapshot's plays, a guide its 75 and `_opponent_sections`' staples, an RCQ
+guide the pasted 75 and the same staples plus the expected archetypes', the
+coach `CoachEvidence.decklists` (T2 only: it has no opponent cards).
+
+`POST /api/rules-questions` (read-only; POST because an RCQ guide carries a
+pasted list) takes `{feature, match_id | key | decklist (+ expected, own) |
+fmt, rules_version?}` and answers `{questions: [{question, question_hash,
+template, answered}], reason}`. `answered` is a stored note under
+`rules_version`, or under any version without it. `reason` is a key when the
+list is empty: `no_card_text`, `no_opponent_cards`, `no_questions` (every
+candidate filtered out) or `no_evidence` (a coach report's evidence is too
+thin). An unknown match or deck is a 404.
+
 ## What is hosted, and what it receives
 
 This repository is free software, AGPL-3.0-only (`LICENSE`), with
