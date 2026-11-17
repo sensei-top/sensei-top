@@ -407,6 +407,9 @@ whoever writes the review is never left to assume silence means empty
 (rule 4). The leaks prompt carries only the ranked pattern list, never a
 specific match's turns.
 
+When the app holds stored rules notes for the match's cards, the match prompt
+carries their block after the evidence and before the answer contract, outside the context hash (`docs/llm.md`, "Rules notes").
+
 Unlike the deck guide, neither has a CLI import path: a stored
 narrative here comes from the generate button or from an answer pasted
 into the card, since a terminal round trip was never worth adding for a

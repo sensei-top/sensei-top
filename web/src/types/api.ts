@@ -4691,6 +4691,11 @@ export interface components {
              * @description set when something could not be built
              */
             error?: string | null;
+            /**
+             * Notes
+             * @description the rules notes the stored prose cites, by marker; always empty for the leak finder
+             */
+            notes?: components["schemas"]["RulesNoteOut"][];
         };
         /**
          * OpeningHandCardOut
@@ -5497,6 +5502,34 @@ export interface components {
              * @default false
              */
             out_of_scope: boolean;
+        };
+        /**
+         * RulesNoteOut
+         * @description A rules note the prose cites with ``[N<n>]``, read back from the stored
+         *     prompt's notes block and the ``rules_note`` row (``docs/llm.md``, "Rules
+         *     notes").
+         */
+        RulesNoteOut: {
+            /**
+             * Marker
+             * @description N1, N2 ... as the prose cites it
+             */
+            marker: string;
+            /** Question */
+            question: string;
+            /** Verdict */
+            verdict: string;
+            /** Explanation */
+            explanation: string;
+            /** Citations */
+            citations?: string[];
+            /**
+             * Confidence
+             * @description high | medium | low, or null when unrated
+             */
+            confidence?: string | null;
+            /** Rules Version */
+            rules_version: string;
         };
         /** RulesNotesIn */
         RulesNotesIn: {

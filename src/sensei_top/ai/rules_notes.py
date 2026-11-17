@@ -10,10 +10,26 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
+import re
 import sqlite3
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any
+
+log = logging.getLogger(__name__)
+
+RULES_NOTES_HEADING = (
+    "Rules notes (a rules assistant's answers to questions about cards in this "
+    "evidence; each one can be wrong):"
+)
+CLOSING_INSTRUCTION = (
+    "Use a note only where it bears on what you are writing, and only for what it says. "
+    "When a sentence relies on a note, end that sentence with the note's marker in "
+    "brackets, such as [N1]; in a JSON answer, the marker goes inside the text field it "
+    "supports. Never state a note's confidence level."
+)
+_DIVIDER = "\n\n---\n\n"
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,3 +104,124 @@ def lookup(
             answer=json.loads(row[4]), confidence=row[5], asked_at=row[6],
         )
     return found
+
+
+@dataclass(frozen=True, slots=True)
+class PromptNote:
+    """One note as the prompt shows it; ``citations`` already rendered."""
+
+    question: str
+    verdict: str
+    explanation: str
+    citations: tuple[str, ...]
+    confidence: str | None
+    rules_version: str
+
+
+def _flat(text: Any) -> str:
+    return " ".join(str(text or "").split())
+
+
+def _citation(raw: Any) -> str:
+    """A citation as the coach returns it, ``{"type", "ref", "quote"}``, rendered
+    as its ``ref`` (the rule number, or the card's name); a plain string is
+    kept as is."""
+    if isinstance(raw, dict):
+        return _flat(raw.get("ref"))
+    return _flat(raw)
+
+
+def notes_for_prompt(conn: sqlite3.Connection, questions: Sequence[Any]) -> list[PromptNote]:
+    """The stored notes for ``questions`` (``rules_questions.RulesQuestion``,
+    in the order given): latest rules version, only ``answered`` and not
+    ``out_of_scope``; a question with no stored note is skipped."""
+    hashes = [question_hash(q.question) for q in questions]
+    found = lookup(conn, hashes)
+    notes = []
+    for q, digest in zip(questions, hashes, strict=True):
+        note = found.get(digest)
+        if note is None or note.outcome != "answered" or note.answer.get("out_of_scope"):
+            continue
+        verdict = _flat(note.answer.get("verdict"))
+        explanation = _flat(note.answer.get("explanation"))
+        if not verdict and not explanation:
+            continue
+        cites = tuple(c for c in map(_citation, note.answer.get("citations") or []) if c)
+        notes.append(PromptNote(
+            _flat(q.question), verdict, explanation, cites, note.confidence,
+            note.rules_version,
+        ))
+    return notes
+
+
+def render_block(notes: Sequence[PromptNote]) -> str:
+    """The prompt's notes block, or ``""`` for no notes."""
+    if not notes:
+        return ""
+    lines = [RULES_NOTES_HEADING]
+    for n, note in enumerate(notes, 1):
+        answer = " ".join(part for part in (note.verdict, note.explanation) if part)
+        cites = f" (cites {', '.join(note.citations)})" if note.citations else ""
+        lines.append(
+            f"N{n} ({note.confidence or 'unrated'}) Q: {note.question} A: {answer}{cites}"
+        )
+    return "\n".join(lines) + "\n\n" + CLOSING_INSTRUCTION
+
+
+def append_block(prompt: str, block: str) -> str:
+    """``prompt`` then the block after the prompts' divider; ``prompt``
+    itself, byte for byte, when ``block`` is empty."""
+    return f"{prompt}{_DIVIDER}{block}" if block else prompt
+
+
+_LINE_RE = re.compile(r"^(N\d+) \([a-z]+\) Q: (.*?) A: ")
+
+
+def parse_block(prompt: str) -> list[tuple[str, str]]:
+    """``(marker, question)`` for each line of the notes block in ``prompt``,
+    in order; empty when there is no block."""
+    at = prompt.find(RULES_NOTES_HEADING + "\n")
+    if at < 0:
+        return []
+    found = []
+    for line in prompt[at:].split("\n")[1:]:
+        match = _LINE_RE.match(line)
+        if match is None:
+            break
+        found.append((match.group(1), match.group(2)))
+    return found
+
+
+_MARKER_GROUP_RE = re.compile(r"\[N\d+(?:\s*[;,]\s*N\d+)*\]")
+_MARKER_RE = re.compile(r"N\d+")
+
+
+def cited_notes(conn: sqlite3.Connection, prompt: str, text: str) -> list[dict[str, Any]]:
+    """The notes ``text`` cites with ``[N<n>]`` (lone, grouped ``[N1, N3]`` or
+    adjacent), in first-appearance order, deduplicated, as ``RulesNoteOut``
+    fields. A marker the prompt's block never offered, or whose note is gone,
+    is dropped and logged once at WARNING, never raised."""
+    block = dict(parse_block(prompt))
+    cited: list[str] = []
+    for group in _MARKER_GROUP_RE.finditer(text):
+        for marker in _MARKER_RE.findall(group.group()):
+            if marker not in cited:
+                cited.append(marker)
+    found = lookup(conn, [question_hash(q) for q in block.values()])
+    result = []
+    for marker in cited:
+        question = block.get(marker)
+        note = found.get(question_hash(question)) if question is not None else None
+        if note is None:
+            log.warning("text cited rules note %s, which the prompt did not offer", marker)
+            continue
+        result.append({
+            "marker": marker,
+            "question": _flat(question),
+            "verdict": _flat(note.answer.get("verdict")),
+            "explanation": _flat(note.answer.get("explanation")),
+            "citations": [c for c in map(_citation, note.answer.get("citations") or []) if c],
+            "confidence": note.confidence,
+            "rules_version": note.rules_version,
+        })
+    return result

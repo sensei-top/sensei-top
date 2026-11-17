@@ -475,6 +475,23 @@ list is empty: `no_card_text`, `no_opponent_cards`, `no_questions` (every
 candidate filtered out) or `no_evidence` (a coach report's evidence is too
 thin). An unknown match or deck is a 404.
 
+A prompt carries the stored notes for its questions as one block after the
+evidence and before the answer contract, separated by the prompts' `\n\n---\n\n`
+divider, and only when at least one note qualifies (`answered`, not
+`out_of_scope`, latest rules version); with none, the prompt is byte for byte
+what it was. The block is `RULES_NOTES_HEADING`, then one line per note,
+`N<n> (<confidence>) Q: ... A: <verdict> <explanation> (cites ...)`, numbered in
+the order the questions are asked and counting only the notes included, then
+the closing instruction asking the writer to end a sentence that relies on a
+note with `[N<n>]`, never to state a confidence level. `ai/rules_notes.py`
+renders (`render_block`), reads back (`parse_block`) and resolves the markers
+the prose used (`cited_notes`; an unknown marker is dropped with a warning,
+never raised). The block sits outside every context hash, so storing a note
+never makes a stored piece stale. The stored prompt already carries the block,
+so `GET` parses it and returns the cited notes beside the prose as `notes`
+(`RulesNoteOut`); no column was added. A pasted answer is stored with the copied prompt rebuilt when it is pasted, not the one copied; a note stored for the same question in between can renumber the block, so a marker in that answer may point at a different note. The coach is asked on the Copy press, before the prompt is built, so this needs a second press elsewhere between Copy and Paste, and it is accepted. The match report is the first prompt to
+carry it; the leak finder never does and returns `notes: []`.
+
 ## What is hosted, and what it receives
 
 This repository is free software, AGPL-3.0-only (`LICENSE`), with
