@@ -35,9 +35,10 @@ from __future__ import annotations
 
 import json
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
+from sensei_top.ai import rules_notes
 from sensei_top.ai.answers import answer_format, guide_for
 from sensei_top.ai.guide.plans import PlanProblem, validate_plans
 from sensei_top.ai.review.narrative import NarrativeError
@@ -435,15 +436,22 @@ def _parse_json_object(raw: str | dict) -> dict:
 
 
 @english()
-def full_prompt(guide: DeckGuide, *, conn, answer_contract: bool = True) -> str | None:
+def full_prompt(
+    guide: DeckGuide, *, conn, answer_contract: bool = True,
+    notes_block: Callable[[], str] | None = None,
+) -> str | None:
     """The complete text to hand an assistant: the framing, then the
-    evidence, then the answer contract (``answers.py``) naming this deck's
+    evidence, then the text ``notes_block()`` returns
+    (``rules_notes.render_block``) when it is not empty, called only once
+    there is a context, then the answer contract (``answers.py``) naming this deck's
     guide and the 75 it is written for. ``answer_contract=False`` is the
     generate route's prompt, which leaves the contract out. ``None`` when
     there is nothing to write about, same as ``build_guide_context``."""
     context = build_guide_context(guide, conn=conn)
     if context is None:
         return None
+    if notes_block is not None:
+        context = rules_notes.append_block(context, notes_block())
     if not answer_contract:
         return _wrap_json_prompt(SYSTEM_PROMPT, _GUIDE_TOOL["input_schema"], context)
     # Imported here: ai/brief/store.py imports this module.

@@ -194,6 +194,17 @@ def parse_block(prompt: str) -> list[tuple[str, str]]:
 
 _MARKER_GROUP_RE = re.compile(r"\[N\d+(?:\s*[;,]\s*N\d+)*\]")
 _MARKER_RE = re.compile(r"N\d+")
+_STRIP_RE = re.compile(
+    r"^[ \t]*" + _MARKER_GROUP_RE.pattern + r"[ \t]*|[ \t]*" + _MARKER_GROUP_RE.pattern,
+    re.MULTILINE,
+)
+
+
+def strip_markers(text: str) -> str:
+    """``text`` without its ``[N<n>]`` markers (lone or grouped) and the
+    spaces before them (after them, for one that starts the text or a line),
+    for a reader that carries no notes."""
+    return _STRIP_RE.sub("", text)
 
 
 def cited_notes(conn: sqlite3.Connection, prompt: str, text: str) -> list[dict[str, Any]]:

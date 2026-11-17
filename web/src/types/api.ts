@@ -2928,6 +2928,11 @@ export interface components {
              * @description set when something could not be built
              */
             error?: string | null;
+            /**
+             * Notes
+             * @description the rules notes the stored guide's text cites with [N<n>], by marker, read from the stored prompt's notes block
+             */
+            notes?: components["schemas"]["RulesNoteOut"][];
         };
         /** HTTPValidationError */
         HTTPValidationError: {

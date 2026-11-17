@@ -332,12 +332,9 @@ def _staples(
 
 
 @english()
-def for_guide(conn: sqlite3.Connection, key: str, *, report_cache=None) -> FeatureCards | None:
+def guide_cards(conn: sqlite3.Connection, guide) -> FeatureCards:
     """The deck's 75 by copies, and the staples of the archetypes its prompt
-    shows. ``None`` for an unknown deck."""
-    guide = build_deck_guide(conn, key, report_cache=report_cache)
-    if guide is None:
-        return None
+    shows, from a ``DeckGuide`` already built."""
     cards = guide.provenance.deck.current_cards
     own_ids = [*(cards.get("maindeck") or []), *(cards.get("sideboard") or [])]
     diff = guide.list_diff
@@ -349,6 +346,13 @@ def for_guide(conn: sqlite3.Connection, key: str, *, report_cache=None) -> Featu
             own_key=diff.archetype_key if diff is not None else None,
         ),
     )
+
+
+@english()
+def for_guide(conn: sqlite3.Connection, key: str, *, report_cache=None) -> FeatureCards | None:
+    """``guide_cards`` for the deck ``key``; ``None`` for an unknown deck."""
+    guide = build_deck_guide(conn, key, report_cache=report_cache)
+    return None if guide is None else guide_cards(conn, guide)
 
 
 @english()

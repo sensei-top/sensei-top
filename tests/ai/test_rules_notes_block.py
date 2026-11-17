@@ -136,3 +136,11 @@ def test_an_unknown_marker_is_dropped_with_one_warning(tmp_path, caplog):
     assert [c["marker"] for c in cited] == ["N1"]
     assert [r.levelno for r in caplog.records] == [logging.WARNING]
     assert cited_notes(conn, "no block here", "[N1]") == []
+
+
+def test_strip_markers_removes_lone_and_grouped_markers_and_the_space_before():
+    assert rules_notes.strip_markers("Plan text [N1].") == "Plan text."
+    assert rules_notes.strip_markers("A [N1, N3] and B [N2][N4]; done") == "A and B; done"
+    assert rules_notes.strip_markers("[N1] Start.") == "Start."
+    assert rules_notes.strip_markers("Foo.\n[N2] bar") == "Foo.\nbar"
+    assert rules_notes.strip_markers("No marker, [R1] stays") == "No marker, [R1] stays"

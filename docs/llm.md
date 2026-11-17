@@ -494,8 +494,8 @@ it is pasted, not the one copied; a note stored for the same question in between
 can renumber the block, so a marker in that answer may point at a different
 note. The coach is asked on the Copy press, before the prompt is built, so this
 needs a second press elsewhere between Copy and Paste, and it is accepted. The
-match report and the coach report carry it (the coach's questions are the kept
-decks' only); the leak finder never does and returns `notes: []`.
+match report, the coach report and the deck guide carry it (the coach's questions are the kept
+decks' only); the leak finder never does and returns `notes: []`. A matchup plan the deck guide writes into `matchup_brief` keeps its markers in storage; the brief's read strips them, since the brief carries no notes.
 
 ## What is hosted, and what it receives
 

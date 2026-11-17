@@ -300,3 +300,153 @@ def test_generate_guide_narrative_converges_with_the_paste_parser(
     assert brief_row is not None
     assert brief_row["prose"] == "Board in sweepers."
     conn.close()
+
+
+# --- Rules notes -------------------------------------------------------------
+
+LANDFALL_QUESTION = "How does landfall work on Test Bear?"
+DIVIDER = "\n\n---\n\n"
+
+
+@pytest.fixture
+def asked(monkeypatch):
+    """A card source whose only question is the landfall one; records the
+    deck key of the guide the route hands it."""
+    from sensei_top.ai import rules_questions
+
+    keys = []
+
+    def guide_cards(conn, guide):
+        keys.append(guide.provenance.deck.key)
+        return rules_questions.FeatureCards(
+            (rules_questions.CardRow("Test Bear", "Creature — Bear", "", ("Landfall",)),), (),
+        )
+
+    monkeypatch.setattr(rules_questions, "guide_cards", guide_cards)
+    return keys
+
+
+def _store_note(client):
+    from sensei_top.ai import rules_notes
+
+    conn = _db(client)
+    rules_notes.store(conn, [rules_notes.RulesNote(
+        LANDFALL_QUESTION, "2026-11-01", "answered",
+        {"verdict": "Once per land.", "explanation": "It triggers on each land.",
+         "citations": [{"type": "card", "ref": "Test Bear", "quote": "q"}], "out_of_scope": False},
+        "medium", "2026-11-17T00:00:00Z",
+    )])
+    conn.commit()
+    conn.close()
+
+
+def _expected_block():
+    from sensei_top.ai import rules_notes
+
+    return (
+        rules_notes.RULES_NOTES_HEADING + "\n"
+        "N1 (medium) Q: " + LANDFALL_QUESTION
+        + " A: Once per land. It triggers on each land. (cites Test Bear)"
+        + "\n\n" + rules_notes.CLOSING_INSTRUCTION
+    )
+
+
+def test_the_prompt_without_a_note_is_unchanged_and_with_one_carries_the_block(client, key, asked):
+    without = _guide_prompt(client, key)
+    assert asked == [key]
+    from sensei_top.ai.guide import narrative as guide_narrative
+    from sensei_top.guide.bundle import build_deck_guide
+
+    conn = _db(client)
+    try:
+        assert without == guide_narrative.full_prompt(build_deck_guide(conn, key), conn=conn)
+    finally:
+        conn.close()
+    assert "Rules notes (" not in without
+    _store_note(client)
+    with_note = _guide_prompt(client, key)
+    block = DIVIDER + _expected_block()
+    assert with_note.count(block) == 1
+    assert with_note.replace(block, "") == without
+    # After the evidence, before the answer contract.
+    assert with_note.index(block) < with_note.index(CONTRACT)
+
+
+def test_a_stored_note_does_not_make_a_stored_guide_stale(client, key, asked):
+    prompt = _guide_prompt(client, key)
+    resp = client.put(f"/api/guide/{key}/narrative", json={"answer": _answer(prompt, _GUIDE)})
+    assert resp.status_code == 200
+    _store_note(client)
+    out = client.get(f"/api/guide/{key}/narrative").json()
+    assert out["status"] == "ok" and out["stale"] is False and out["notes"] == []
+
+
+def test_a_pasted_guide_citing_a_note_returns_it_on_put_and_get(client, key, asked):
+    _store_note(client)
+    prompt = _guide_prompt(client, key)
+    body = {**_GUIDE, "fix": "Deploy earlier [N1].", "checklist": ["Am I racing? [N2]"]}
+    put = client.put(f"/api/guide/{key}/narrative", json={"answer": _answer(prompt, body)}).json()
+    expected = [{
+        "marker": "N1", "question": LANDFALL_QUESTION, "verdict": "Once per land.",
+        "explanation": "It triggers on each land.", "citations": ["Test Bear"],
+        "confidence": "medium", "rules_version": "2026-11-01",
+    }]
+    assert put["notes"] == expected
+    assert client.get(f"/api/guide/{key}/narrative").json()["notes"] == expected
+
+
+def test_generate_sends_the_block_and_returns_the_cited_note(monkeypatch, client, key, asked):
+    _store_note(client)
+    monkeypatch.setattr(llm_config_module, "load", lambda: LLMConfig(api_key="k"))
+    sent = []
+
+    def fake(prompt, schema, *, cfg, label):
+        sent.append(prompt)
+        return Completion(
+            text=json.dumps({**_GUIDE, "engine": "Landfall pays off [N1]."}),
+            model="claude-opus-5", input_tokens=1, output_tokens=1, cost_usd=0.01,
+        )
+
+    monkeypatch.setattr(llm_client_module, "write_json", fake)
+    out = client.post(f"/api/guide/{key}/narrative").json()
+    assert asked[0] == key
+    assert sent[0].endswith(DIVIDER + _expected_block())
+    assert out["prompt"] == sent[0]
+    assert [n["marker"] for n in out["notes"]] == ["N1"]
+    assert client.get(f"/api/guide/{key}/narrative").json()["stale"] is False
+
+
+def test_the_guide_is_built_once_per_request(monkeypatch, client, key, asked):
+    from sensei_top.ai import rules_questions
+    from sensei_top.ai.routes import guide as guide_routes
+
+    built = []
+    real = guide_routes.build_deck_guide
+
+    def counting(*args, **kwargs):
+        built.append(args[1])
+        return real(*args, **kwargs)
+
+    # rules_questions binds its own name: a route that went back to for_guide
+    # would build through that one.
+    monkeypatch.setattr(guide_routes, "build_deck_guide", counting)
+    monkeypatch.setattr(rules_questions, "build_deck_guide", counting)
+    _store_note(client)
+    client.get(f"/api/guide/{key}/narrative")
+    assert built == [key]
+    prompt = _guide_prompt(client, key)
+    built.clear()
+    client.put(f"/api/guide/{key}/narrative", json={"answer": _answer(prompt, _GUIDE)})
+    assert built == [key]
+
+    built.clear()
+    monkeypatch.setattr(llm_config_module, "load", lambda: LLMConfig(api_key="k"))
+    monkeypatch.setattr(
+        llm_client_module, "write_json",
+        lambda prompt, schema, *, cfg, label: Completion(
+            text=json.dumps(_GUIDE), model="claude-opus-5",
+            input_tokens=1, output_tokens=1, cost_usd=0.01,
+        ),
+    )
+    assert client.post(f"/api/guide/{key}/narrative").status_code == 200
+    assert built == [key]
