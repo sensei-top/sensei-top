@@ -16,9 +16,11 @@ const VARIABLES = {
   supabaseAnonKey: 'SENSEI_TOP_SUPABASE_ANON_KEY',
   sentryDsnDesktop: 'SENSEI_TOP_SENTRY_DSN_DESKTOP',
   sentryDsnLocalApi: 'SENSEI_TOP_SENTRY_DSN_LOCAL_API',
+  coachUrl: 'SENSEI_TOP_COACH_URL',
 };
 
-const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'cloud', 'build-config.ts');
+// `SENSEI_TOP_BUILD_CONFIG_OUT` lets a test write elsewhere than the real file.
+const out = process.env.SENSEI_TOP_BUILD_CONFIG_OUT || join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'cloud', 'build-config.ts');
 
 // The Supabase URL is the project's bare address: the auth and data paths
 // are added to it. A copied API URL (`…/rest/v1/`) still parses, so the
@@ -38,6 +40,18 @@ function supabaseUrlProblem(value) {
   return null;
 }
 
+// The coach's address is called with the person's access token, so only an
+// https one is shipped; the message names the variable, never the value.
+function coachUrlProblem(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    return 'is not a URL';
+  }
+  return url.protocol === 'https:' ? null : 'is not an https address';
+}
+
 const fields = [];
 const found = [];
 for (const [field, variable] of Object.entries(VARIABLES)) {
@@ -45,6 +59,13 @@ for (const [field, variable] of Object.entries(VARIABLES)) {
   if (value === '') continue;
   if (field === 'supabaseUrl') {
     const problem = supabaseUrlProblem(value);
+    if (problem) {
+      console.error(`build-config: ${variable} ${problem}`);
+      process.exit(1);
+    }
+  }
+  if (field === 'coachUrl') {
+    const problem = coachUrlProblem(value);
     if (problem) {
       console.error(`build-config: ${variable} ${problem}`);
       process.exit(1);

@@ -24,6 +24,7 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 import type { AccountReply, ProfileChange } from './cloud/account';
+import type { CoachResult } from './cloud/coach';
 import type { ReportOutcome } from './cloud/report';
 import type { AccountSignInReply, AccountState, AppChange, BackupSnapshot, BridgeSettings, DeepPartial, KeyName, Saved, ShellSettings } from './settings';
 
@@ -55,6 +56,7 @@ const CHANNEL = {
   accountDelete: 'sensei-top:account-delete',
   accountReadProfile: 'sensei-top:account-read-profile',
   contribSet: 'sensei-top:contrib-set',
+  coachAsk: 'sensei-top:coach-ask',
   reportError: 'sensei-top:report-error',
   reportProblem: 'sensei-top:report-problem',
   reportProblemRequested: 'sensei-top:report-problem-requested',
@@ -100,6 +102,10 @@ if (location.protocol === 'http:') {
     },
     /** Plan 40b S13: the answer to "help build the stats"; off stops any upload at once. */
     contribSet: (answer: { yes: boolean; policyVersion: string; ageConfirmed: boolean }): Promise<Saved> => ipcRenderer.invoke(CHANNEL.contribSet, answer),
+    /** Release plan 40e S11: 1-4 rules questions to the hosted coach; one result each, never a throw. */
+    coach: {
+      ask: (questions: string[]): Promise<CoachResult[]> => ipcRenderer.invoke(CHANNEL.coachAsk, questions),
+    },
     reportError: (error: { name: string; message: string; stack: string | null }): Promise<boolean> => ipcRenderer.invoke(CHANNEL.reportError, error),
     reportProblem: (report: { text: string; attachLog: boolean; kind?: 'bug' | 'idea'; page?: string; matchId?: string }): Promise<ReportOutcome> => ipcRenderer.invoke(CHANNEL.reportProblem, report),
     /** Calls `listener` when the tray's "Report a problem" was chosen; returns a function that stops it. */

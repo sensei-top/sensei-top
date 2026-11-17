@@ -27,6 +27,7 @@ import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { CoachClient, type CoachResult } from './cloud/coach';
 import { cloudConfig } from './cloud/config';
 import { CloudAccount, restoredUser, supabaseAccountDb, type AccountReply } from './cloud/account';
 import { CloudAuth, type AccountStatus } from './cloud/auth';
@@ -315,6 +316,17 @@ function run(): void {
   // network. Made once Electron is ready (`safeStorage` is not usable before).
   let auth: CloudAuth | null = null;
   let cloudAccount: CloudAccount | null = null;
+  const coach = new CoachClient({
+    url: cloudConfig.coach,
+    accessToken: async () => {
+      const client = auth?.client ?? null;
+      if (!client) return null;
+      const { data } = await client.auth.getSession();
+      return data.session?.access_token ?? null;
+    },
+    fetch: (url, init) => electron.net.fetch(url, init),
+    log: shellLog.child('shell.coach'),
+  });
   let contributor: Contributor | null = null;
   const account = new AccountApi(
     () => auth,
@@ -538,6 +550,12 @@ function run(): void {
   handle(CHANNELS.accountDeleteHistory, refusedAccount, () => cloudAccount?.deleteCloudHistory() ?? noAccount());
   handle(CHANNELS.accountDelete, refusedAccount, () => cloudAccount?.deleteAccount() ?? noAccount());
   handle(CHANNELS.accountReadProfile, refusedAccount, () => cloudAccount?.readProfileAgain() ?? noAccount());
+  // Release plan 40e S11: the coach answers every question, with a reason when it cannot.
+  handle(
+    CHANNELS.coachAsk,
+    (): CoachResult[] => [],
+    (questions: unknown) => coach.ask(questions),
+  );
   // DB9: dropped without consent; the answer says whether it was captured.
   handle(CHANNELS.reportError, () => false, (payload: unknown) => errors.captureRendererError(payload));
   handle(CHANNELS.reportProblem, (): ReportOutcome => 'failed', (payload: unknown) => {
