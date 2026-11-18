@@ -225,4 +225,15 @@ describe('parseInline', () => {
       text(' now [see below]'),
     ])
   })
+
+  it('reads [N2] as a citation beside [R4]', () => {
+    expect(parseInline('as argued [R4][N2], and [N10].')).toEqual([
+      text('as argued '),
+      cite('R4'),
+      cite('N2'),
+      text(', and '),
+      cite('N10'),
+      text('.'),
+    ])
+  })
 })

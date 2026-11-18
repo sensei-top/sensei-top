@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode, useContext } from 'react'
 import { Skeleton } from './Skeleton'
 import { useTranslation } from 'react-i18next'
 import { useReportProblem } from '../../lib/reportProblem'
 import { Button } from './Button'
+import { NoteMarkerContext } from '../../lib/noteMarker'
 
 /** The one raised surface. `elevation={2}` is a block nested inside another
  *  Card: the fill steps up, and it takes neither border nor shadow. Each
@@ -67,9 +68,11 @@ export function Card({
 /** Inline `**bold**` / `` `code` `` only — narrative prose (the deck guide,
  *  the live matchup brief) needs no more, and this avoids pulling in a
  *  Markdown renderer for a handful of spans. Shared rather than duplicated
- *  between the two narrative-rendering views that use it. */
+ *  between the two narrative-rendering views that use it. `[N<n>]` is a rules note's chip
+ *  when a `RulesNotesProvider` above knows it. */
 export function Prose({ text }: { text: string }) {
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g)
+  const renderMarker = useContext(NoteMarkerContext)
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[N\d+\])/g)
   return (
     <p className="whitespace-pre-wrap text-body text-ink2">
       {parts.map((part, i) => {
@@ -87,6 +90,8 @@ export function Prose({ text }: { text: string }) {
             </code>
           )
         }
+        const marker = /^\[N(\d+)\]$/.exec(part)
+        if (marker) return <Fragment key={i}>{renderMarker(marker[1])}</Fragment>
         return part
       })}
     </p>

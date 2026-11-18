@@ -78,5 +78,11 @@
     "doneEmpty": "Card data is in.",
     "failed": "The card data download failed: {{reason}}",
     "tryAgain": "Try again"
+  },
+  "confidence": {
+    "high": "high",
+    "medium": "medium",
+    "low": "low",
+    "unknown": "unknown"
   }
 }
