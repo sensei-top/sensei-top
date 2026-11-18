@@ -115,6 +115,20 @@ class LLMStatus(BaseModel):
     model: str | None = Field(None, description="the model a generate call would use")
 
 
+class RulesNoteOut(BaseModel):
+    """A rules note the prose cites with ``[N<n>]``, read back from the stored
+    prompt's notes block and the ``rules_note`` row (``docs/llm.md``, "Rules
+    notes")."""
+
+    marker: str = Field(description="N1, N2 ... as the prose cites it")
+    question: str
+    verdict: str
+    explanation: str
+    citations: list[str] = Field(default_factory=list)
+    confidence: str | None = Field(None, description="high | medium | low, or null when unrated")
+    rules_version: str
+
+
 class NarrativeResponse(BaseModel):
     """The narrative's answer, or why there isn't one yet. Shared by the
     match-report and leak-finder narrative routes — both are "one prose
@@ -149,6 +163,11 @@ class NarrativeResponse(BaseModel):
     )
     stale: bool = Field(False, description="the evidence has changed since this was written")
     error: str | None = Field(None, description="set when something could not be built")
+    notes: list[RulesNoteOut] = Field(
+        default_factory=list,
+        description="the rules notes the stored prose cites, by marker; always empty for the "
+        "leak finder",
+    )
 
 
 class LeakOut(BaseModel):

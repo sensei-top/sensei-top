@@ -1718,6 +1718,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/rules-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Rules Notes */
+        put: operations["put_rules_notes_api_rules_notes_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rules-questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Rules Questions
+         * @description The questions the feature's prompt would ask the coach, at most 4,
+         *     in the order they are asked. POST only because an RCQ guide carries a
+         *     pasted list; it writes nothing, so it is not on the write allowlist. An
+         *     unknown match or deck is a 404.
+         */
+        post: operations["post_rules_questions_api_rules_questions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2016,6 +2056,11 @@ export interface components {
              * @description set when something could not be built
              */
             error?: string | null;
+            /**
+             * Notes
+             * @description the rules notes the stored prose cites with [N<n>], by marker, read from the stored prompt's notes block
+             */
+            notes?: components["schemas"]["RulesNoteOut"][];
         };
         /**
          * CoachReportSummary
@@ -2883,6 +2928,11 @@ export interface components {
              * @description set when something could not be built
              */
             error?: string | null;
+            /**
+             * Notes
+             * @description the rules notes the stored guide's text cites with [N<n>], by marker, read from the stored prompt's notes block
+             */
+            notes?: components["schemas"]["RulesNoteOut"][];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -4651,6 +4701,11 @@ export interface components {
              * @description set when something could not be built
              */
             error?: string | null;
+            /**
+             * Notes
+             * @description the rules notes the stored prose cites, by marker; always empty for the leak finder
+             */
+            notes?: components["schemas"]["RulesNoteOut"][];
         };
         /**
          * OpeningHandCardOut
@@ -5222,6 +5277,11 @@ export interface components {
              * @default false
              */
             answered_for_another_list: boolean;
+            /**
+             * Notes
+             * @description the rules notes the stored guide's text cites with [N<n>], by marker, read from the stored prompt's notes block
+             */
+            notes?: components["schemas"]["RulesNoteOut"][];
         };
         /** RcqMarkdownOut */
         RcqMarkdownOut: {
@@ -5432,6 +5492,124 @@ export interface components {
             name: string;
             /** Grp Id */
             grp_id?: number | null;
+        };
+        /** RulesNoteIn */
+        RulesNoteIn: {
+            /** Question */
+            question: string;
+            /** Rules Version */
+            rules_version: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "answered" | "refused";
+            /** Verdict */
+            verdict?: string | null;
+            /** Explanation */
+            explanation?: string | null;
+            /** Citations */
+            citations?: unknown[];
+            /** Confidence */
+            confidence?: string | null;
+            /**
+             * Out Of Scope
+             * @default false
+             */
+            out_of_scope: boolean;
+        };
+        /**
+         * RulesNoteOut
+         * @description A rules note the prose cites with ``[N<n>]``, read back from the stored
+         *     prompt's notes block and the ``rules_note`` row (``docs/llm.md``, "Rules
+         *     notes").
+         */
+        RulesNoteOut: {
+            /**
+             * Marker
+             * @description N1, N2 ... as the prose cites it
+             */
+            marker: string;
+            /** Question */
+            question: string;
+            /** Verdict */
+            verdict: string;
+            /** Explanation */
+            explanation: string;
+            /** Citations */
+            citations?: string[];
+            /**
+             * Confidence
+             * @description high | medium | low, or null when unrated
+             */
+            confidence?: string | null;
+            /** Rules Version */
+            rules_version: string;
+        };
+        /** RulesNotesIn */
+        RulesNotesIn: {
+            /** Notes */
+            notes: components["schemas"]["RulesNoteIn"][];
+        };
+        /** RulesNotesOut */
+        RulesNotesOut: {
+            /** Question Hashes */
+            question_hashes: string[];
+        };
+        /** RulesQuestionOut */
+        RulesQuestionOut: {
+            /** Question */
+            question: string;
+            /** Question Hash */
+            question_hash: string;
+            /**
+             * Template
+             * @enum {string}
+             */
+            template: "T1" | "T2" | "T3";
+            /** Answered */
+            answered: boolean;
+        };
+        /**
+         * RulesQuestionsIn
+         * @description What each feature needs: ``match`` a ``match_id``; ``guide`` a ``key``;
+         *     ``rcq`` a ``key`` and a ``decklist`` (``expected`` and ``own`` as the RCQ
+         *     routes take them); ``coach`` nothing (``fmt`` defaults to the dashboard's).
+         *     A missing one is a 422.
+         */
+        RulesQuestionsIn: {
+            /**
+             * Feature
+             * @enum {string}
+             */
+            feature: "match" | "guide" | "rcq" | "coach";
+            /** Match Id */
+            match_id?: string | null;
+            /** Key */
+            key?: string | null;
+            /** Decklist */
+            decklist?: string | null;
+            /**
+             * Expected
+             * @default []
+             */
+            expected: string[];
+            /** Own */
+            own?: string | null;
+            /** Fmt */
+            fmt?: string | null;
+            /**
+             * Rules Version
+             * @description answered means a note under this version; without it, under any
+             */
+            rules_version?: string | null;
+        };
+        /** RulesQuestionsOut */
+        RulesQuestionsOut: {
+            /** Questions */
+            questions: components["schemas"]["RulesQuestionOut"][];
+            /** Reason */
+            reason?: ("no_card_text" | "no_opponent_cards" | "no_questions" | "no_evidence") | null;
         };
         /**
          * SideboardCardOut
@@ -8008,6 +8186,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CoachNarrativeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_rules_notes_api_rules_notes_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RulesNotesIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RulesNotesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_rules_questions_api_rules_questions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RulesQuestionsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RulesQuestionsOut"];
                 };
             };
             /** @description Validation Error */

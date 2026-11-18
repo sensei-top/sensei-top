@@ -1,9 +1,13 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLLMStatus } from '../../api'
+import { useQueryClient } from '@tanstack/react-query'
+import { useLLMStatus, type NarrativeResponse } from '../../api'
 import { Button, Card } from '../../components/ui'
 import { writerFrom } from '../../lib/writer'
+import type { CopyPressed } from '../CopyPromptCard'
+import { RulesNotesProvider } from '../notes/context'
 import { GenerateCard } from '../GenerateCard'
+import { notesMissing, useRulesNotesPress } from '../rulesNotes'
 import {
   useGenerateMatchReportNarrative,
   usePasteMatchReportNarrative,
@@ -19,6 +23,14 @@ export function ReportNarrativeCard({ matchId }: { matchId: string }) {
   const llmStatus = useLLMStatus()
   const generate = useGenerateMatchReportNarrative()
   const paste = usePasteMatchReportNarrative()
+  const queryClient = useQueryClient()
+  const press = useRulesNotesPress({ feature: 'match', match_id: matchId, expected: [] })
+  const beforeCopy = async (): Promise<CopyPressed> => {
+    const outcome = await press()
+    const key = ['match-report-narrative-prompt', matchId]
+    if (outcome.stored > 0) await queryClient.refetchQueries({ queryKey: key })
+    return { prompt: queryClient.getQueryData<NarrativeResponse>(key)?.prompt ?? null, missing: notesMissing(outcome) }
+  }
 
   if (!open) {
     return (
@@ -35,6 +47,7 @@ export function ReportNarrativeCard({ matchId }: { matchId: string }) {
 
   const body = prompt.data
   return (
+    <RulesNotesProvider notes={body?.notes}>
     <GenerateCard
       title={t('matches.report.coachTitle')}
       subtitle={t('matches.report.coachSubtitle')}
@@ -55,6 +68,9 @@ export function ReportNarrativeCard({ matchId }: { matchId: string }) {
       generating={generate.isPending}
       generateError={generate.error?.message}
       save={(answer) => paste.mutateAsync({ matchId, answer })}
+      beforeRun={press}
+      beforeCopy={beforeCopy}
     />
+    </RulesNotesProvider>
   )
 }

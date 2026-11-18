@@ -733,7 +733,7 @@ def _run_watcher(
 ) -> None:
     """``WatcherProcess``'s process entry point.
 
-    Module-level (not a bound method or a closure) so it pickles under both
+    Module-level (not a bound method or a closure) so it can be pickled under both
     the ``fork`` and ``spawn`` start methods. ``LiveIngester`` stops on a
     ``threading.Event``, so a small bridging thread waits on ``stop_conn``,
     the read end of a one-way pipe from ``serve``, and relays whatever

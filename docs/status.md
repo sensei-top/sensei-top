@@ -16,10 +16,11 @@ against the code and against the others, and every row below re-read
 **Coach and accounts, 2026-11-02.** Supersedes four lines the entries
 below drew: rule 5's "nothing hosted writes for the user", "nothing free
 needs an account", "no telemetry", and the site never saying "AI".
-Planned, not built: a free, optional account with Google sign-in, which
-adds a backup of the match history and error reports, each its own yes,
-and a hosted rules coach that answers rules and card questions with cited
-rule numbers and is never sent a match (`BACKLOG.md`'s BL-101 and BL-102;
+Built since: a free, optional account with Google sign-in, which adds a
+backup of the match history and error reports, each its own yes (1.4.0),
+and the "AI features" switch (1.3.0). Being tested, test accounts only: a
+hosted rules coach that answers questions about a report's cards with
+cited rule numbers and is never sent a match (`BACKLOG.md`'s BL-109;
 AGENTS.md rules 5 and 6; `docs/llm.md`, "What is hosted, and what it
 receives"). The tracker keeps working fully without an account. The copy
 prompt and the user's own key stay as they are, and an "AI features"

@@ -26,9 +26,11 @@ promises. A way to break any of them is what we most want to hear about:
    `Host` or `Origin`, and refuses any request that changes something
    unless it carries the dashboard's own header
    (`src/sensei_top/api/guard.py`).
-3. **Nothing calls a paid API without a configured key and a button
-   press.** Anything that makes the application call a paid API on its
-   own, on a schedule, or on another page's behalf is a vulnerability.
+3. **Nothing calls a paid API without a button press**, and then only
+   with a configured key, or, for the rules coach, with the terms agreed
+   at sign-in and the rules notes switched on in Settings. Anything that
+   makes the application call a paid API on its own, on a schedule, or on
+   another page's behalf is a vulnerability.
 4. **No match data leaves the machine without the user's yes**: the prompt
    of a report the user asked to generate ([docs/llm.md](docs/llm.md)),
    the cloud backup the user turned on, and the games the user agreed to

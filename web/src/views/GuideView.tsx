@@ -136,7 +136,9 @@ export function GuideView({ deckKey }: { deckKey: string }) {
     'guide-write': ai && <ai.NarrativeAndExport guideKey={deckKey} response={response} />,
   }
 
-  return (
+  // One provider over every section, so the chip reaches each `Prose`
+  // below, the plan and list cards included; AI off, a marker draws nothing.
+  const page = (
     // The root is the block that holds every section, so the strip, sticky
     // inside it, stays stuck the whole length of the page. From 64rem it is
     // a grid, the sections at the left and the column at the right:
@@ -158,4 +160,5 @@ export function GuideView({ deckKey }: { deckKey: string }) {
       </div>
     </div>
   )
+  return ai ? <ai.RulesNotesProvider notes={response?.notes}>{page}</ai.RulesNotesProvider> : page
 }

@@ -33,13 +33,13 @@ export function headlineOpponentText(
 export function confidenceLabel(confidence: string, t: TFunction): string {
   switch (confidence) {
     case 'high':
-      return t('live.confidence.high')
+      return t('common.confidence.high')
     case 'medium':
-      return t('live.confidence.medium')
+      return t('common.confidence.medium')
     case 'low':
-      return t('live.confidence.low')
+      return t('common.confidence.low')
     case 'unknown':
-      return t('live.confidence.unknown')
+      return t('common.confidence.unknown')
     default:
       return confidence
   }

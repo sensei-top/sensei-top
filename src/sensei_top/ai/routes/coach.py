@@ -27,11 +27,13 @@ from __future__ import annotations
 import dataclasses
 import logging
 import re
+import sqlite3
 from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from sensei_top import claude_config as llm_config
+from sensei_top.ai import rules_notes
 from sensei_top.ai.answers import PASTED_AUTHOR, coach_for
 from sensei_top.ai.coach.canon import ALLOWED_DOMAINS, CANON
 from sensei_top.ai.coach.evidence import (
@@ -77,7 +79,7 @@ from sensei_top.api.models.coach import (
     RateModel,
     TurningBucketOut,
 )
-from sensei_top.api.models.common import PastedAnswerIn
+from sensei_top.api.models.common import PastedAnswerIn, RulesNoteOut
 from sensei_top.api.models.metagame import FormatName
 from sensei_top.api.progress import progress_reporter
 from sensei_top.api.sql import _shared_report_cache, default_format
@@ -236,13 +238,17 @@ def _sources_out(sources: list, prose: str) -> list[CoachSource]:
     return result
 
 
-def _report_out(report: CoachReport, *, prompt: str | None, stale: bool) -> CoachNarrativeResponse:
+def _report_out(
+    conn: sqlite3.Connection, report: CoachReport, *, prompt: str | None, stale: bool,
+) -> CoachNarrativeResponse:
     """The one conversion both GET routes, the POST route and the PUT route
     build their response from — not ``narrative.py``'s ``NarrativeEnvelope``,
     which has no room for a coach report's ``id``, ``effort``, token counts
     and resolved sources. ``clean_report`` strips any narration a report's
     own call left before its first heading — stored prose stays verbatim, so
     this runs here, the one place all four routes pass their prose through.
+    The notes are resolved from this row's own stored prompt and prose, never
+    the current prompt: ``coach_report`` keeps every row.
     """
     return CoachNarrativeResponse(
         status="ok",
@@ -261,6 +267,10 @@ def _report_out(report: CoachReport, *, prompt: str | None, stale: bool) -> Coac
         web_search_requests=report.web_search_requests,
         sources=_sources_out(report.sources, report.prose),
         stale=stale,
+        notes=[
+            RulesNoteOut(**note)
+            for note in rules_notes.cited_notes(conn, report.prompt, report.prose)
+        ],
     )
 
 
@@ -339,7 +349,7 @@ def coach_narrative(
     latest = latest_coach_report(conn, fmt)
     if latest is not None:
         stale = p is not None and latest.context_hash != p.context_hash
-        return _report_out(latest, prompt=p.copied if p is not None else None, stale=stale)
+        return _report_out(conn, latest, prompt=p.copied if p is not None else None, stale=stale)
     if p is not None:
         return CoachNarrativeResponse(status="prompt", format=fmt, prompt=p.copied)
     return CoachNarrativeResponse(status="no_report", format=fmt)
@@ -358,7 +368,7 @@ def coach_narrative_by_id(report_id: int, conn: Conn) -> CoachNarrativeResponse:
         raise HTTPException(
             status_code=404, detail=_("No coach report with id {id}.").format(id=report_id),
         )
-    return _report_out(report, prompt=report.prompt, stale=False)
+    return _report_out(conn, report, prompt=report.prompt, stale=False)
 
 
 @router.post("/api/coach/narrative", response_model=CoachNarrativeResponse, tags=["coach"])
@@ -434,7 +444,7 @@ def generate_coach_narrative(
 
     stored = read_coach_report(conn, new_id[0])
     assert stored is not None
-    return _report_out(stored, prompt=p.prompt, stale=False)
+    return _report_out(conn, stored, prompt=p.prompt, stale=False)
 
 
 @router.put("/api/coach/narrative", response_model=CoachNarrativeResponse, tags=["coach"])
@@ -486,5 +496,5 @@ def paste_coach_narrative(
     stored = read_coach_report(conn, new_id[0])
     assert stored is not None
     return _report_out(
-        stored, prompt=p.copied, stale=stored.context_hash != p.context_hash,
+        conn, stored, prompt=p.copied, stale=stored.context_hash != p.context_hash,
     )

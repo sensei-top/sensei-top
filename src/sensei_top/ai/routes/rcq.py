@@ -6,9 +6,11 @@ is core's (``api/routes/rcq.py``)."""
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable
 
 from fastapi import APIRouter, HTTPException, Request
 
+from sensei_top.ai import rules_notes, rules_questions
 from sensei_top.ai.answers import PASTED_AUTHOR, rcq_for
 from sensei_top.ai.guide.rcq_authored import StoredRcq, latest_rcq, write_rcq
 from sensei_top.ai.guide.rcq_markdown import render_rcq
@@ -21,6 +23,7 @@ from sensei_top.ai.guide.rcq_prompt import (
     rcq_prompt,
 )
 from sensei_top.ai.llm import client as llm_client
+from sensei_top.ai.routes.guide import _strings
 from sensei_top.ai.routes.narrative import (
     check_pasted_length,
     read_pasted,
@@ -29,7 +32,7 @@ from sensei_top.ai.routes.narrative import (
     unreadable_answer,
 )
 from sensei_top.api.deps import Conn, WritableConn
-from sensei_top.api.models.common import BoardCardOut, PlanProblemOut
+from sensei_top.api.models.common import BoardCardOut, PlanProblemOut, RulesNoteOut
 from sensei_top.api.models.rcq import (
     RcqFlexNoteOut,
     RcqGenerateIn,
@@ -66,7 +69,7 @@ def _narrative_out(n: RcqNarrative) -> RcqNarrativeOut:
     )
 
 
-def _guide_out(stored: StoredRcq) -> RcqGuideOut:
+def _guide_out(conn: sqlite3.Connection, stored: StoredRcq) -> RcqGuideOut:
     # The answer's context against the list stored beside it (migration 069):
     # unknown, for a generated guide or an older prompt's answer, is not
     # "another list".
@@ -78,6 +81,10 @@ def _guide_out(stored: StoredRcq) -> RcqGuideOut:
         cost_usd=stored.cost_usd, decklist_text=stored.decklist_text,
         expected=list(stored.expected), guide=_narrative_out(stored.guide),
         answered_for_another_list=another,
+        notes=[
+            RulesNoteOut(**n)
+            for n in rules_notes.cited_notes(conn, stored.prompt, "\n".join(_strings(stored.guide)))
+        ],
     )
 
 
@@ -97,7 +104,29 @@ def _evidence_and_prompt(
     )
     if evidence is None:
         return None, None
-    return evidence, rcq_prompt(evidence, conn=conn, answer_contract=answer_contract)
+
+    return evidence, rcq_prompt(
+        evidence, conn=conn, answer_contract=answer_contract,
+        notes_block=_notes_block_for(conn, evidence),
+    )
+
+
+def _notes_block_for(conn: sqlite3.Connection, evidence: RcqEvidence) -> Callable[[], str]:
+    """The prompt's notes block, built from the evidence already in hand."""
+
+    def notes_block() -> str:
+        cards = rules_questions.rcq_cards(conn, evidence)
+        questions = rules_questions.build_questions(cards.mine, cards.theirs)
+        return rules_notes.render_block(rules_notes.notes_for_prompt(conn, questions))
+
+    return notes_block
+
+
+@english()
+def copy_prompt(evidence: RcqEvidence, *, conn) -> str:
+    """The copied prompt the preview route asks for (``Providers.rcq_prompt``):
+    carries the same notes block the paste route stores."""
+    return rcq_prompt(evidence, conn=conn, notes_block=_notes_block_for(conn, evidence))
 
 
 def _newest_event(evidence: RcqEvidence) -> str | None:
@@ -149,7 +178,7 @@ def generate_rcq(
     )
     stored = latest_rcq(conn, key)
     assert stored is not None
-    return _guide_out(stored)
+    return _guide_out(conn, stored)
 
 
 @router.put("/api/guide/{key}/rcq/narrative", response_model=RcqGuideOut, tags=["guide"])
@@ -197,7 +226,7 @@ def paste_rcq(
     )
     stored = latest_rcq(conn, key)
     assert stored is not None
-    return _guide_out(stored)
+    return _guide_out(conn, stored)
 
 
 @router.get("/api/guide/{key}/rcq", response_model=RcqGuideOut, tags=["guide"])
@@ -209,7 +238,7 @@ def rcq_latest(key: str, conn: Conn) -> RcqGuideOut:
             status="none", id=None, generated_at=None, model=None, cost_usd=None,
             decklist_text=None, expected=[], guide=None,
         )
-    return _guide_out(stored)
+    return _guide_out(conn, stored)
 
 
 @router.get("/api/guide/{key}/rcq/markdown", response_model=RcqMarkdownOut, tags=["guide"])

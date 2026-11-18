@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from sensei_top.api.models.common import RulesNoteOut
 from sensei_top.api.models.metagame import FormatName
 
 
@@ -250,3 +251,8 @@ class CoachNarrativeResponse(BaseModel):
         "for the latest report"
     )
     error: str | None = Field(None, description="set when something could not be built")
+    notes: list[RulesNoteOut] = Field(
+        default_factory=list,
+        description="the rules notes the stored prose cites with [N<n>], by marker, read from "
+        "the stored prompt's notes block",
+    )

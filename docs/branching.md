@@ -141,7 +141,7 @@ branch stops.
    and `latest-linux.yml`: they are what an installed copy's updater reads,
    and a release without them reaches nobody. Check too that the
    `build-config:` line in the linux and windows jobs' logs names all
-   four `SENSEI_TOP_*` variables: a build without them has no account,
+   five `SENSEI_TOP_*` variables: a build without them has no account,
    and is green all the same (develop's run #14 logged "no cloud
    variables set" before the repository had the secrets). The very
    first snapshot is the exception: GitHub does not evaluate a workflow for the push that

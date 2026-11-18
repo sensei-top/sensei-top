@@ -13,6 +13,7 @@ export interface RawBuildConfig {
   readonly supabaseAnonKey?: string;
   readonly sentryDsnDesktop?: string;
   readonly sentryDsnLocalApi?: string;
+  readonly coachUrl?: string;
 }
 
 export interface SupabaseConfig {
@@ -26,6 +27,8 @@ export interface CloudConfig {
   readonly supabase: SupabaseConfig | null;
   readonly sentryDsnDesktop: string | null;
   readonly sentryDsnLocalApi: string | null;
+  /** The rules coach's base URL, no trailing slash; `null` unless https. */
+  readonly coach: string | null;
 }
 
 function present(value: string | undefined): string | null {
@@ -48,10 +51,20 @@ export function parseBuildConfig(raw: RawBuildConfig): CloudConfig {
       // not a URL: no project
     }
   }
+  let coach: string | null = null;
+  const coachUrl = present(raw.coachUrl);
+  if (coachUrl) {
+    try {
+      if (new URL(coachUrl).protocol === 'https:') coach = coachUrl.replace(/\/+$/, '');
+    } catch {
+      // not a URL: no coach
+    }
+  }
   return {
     supabase,
     sentryDsnDesktop: present(raw.sentryDsnDesktop),
     sentryDsnLocalApi: present(raw.sentryDsnLocalApi),
+    coach,
   };
 }
 

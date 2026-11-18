@@ -247,6 +247,12 @@ foreign `Origin` or without the dashboard's `X-Tracker-Client` header before
 it reaches the route, so another page open in your browser cannot trigger a
 metered call.
 
+The rules coach's questions are not among these calls. The local API
+builds them (`POST /api/rules-questions`) and stores the answers
+(`PUT /api/rules-notes`) but calls nothing out; the desktop shell sends
+them, from the same button press, to the coach API, which pays for the
+model call ("What is hosted, and what it receives").
+
 `GET /api/llm/status`, which tells the dashboard whether to offer a generate
 button ("The fallback"), is `ai/routes/status.py`, mounted only when `ai/` is
 installed (`docs/architecture.md`, "Who may know what"); without it the
@@ -427,6 +433,76 @@ with it: with no credential configured, the `POST .../narrative`
 routes still answer 503, and a plan's press would have to go through the
 desktop shell, never through this API.
 
+## Rules notes
+
+`rules_note` (migration `075_rules_note.sql`) keeps the hosted coach's answer
+to a rules question the app wrote from card names, so the same question is
+never asked, and paid for, twice. It is keyed by `(question_hash,
+rules_version)`: the hash is the SHA-256 of the question after `strip()` and
+whitespace collapse (`ai/rules_notes.py::question_hash`), and a new rules
+version asks again. `answer_json` is the coach's response as received;
+`confidence` is copied out of it.
+
+`PUT /api/rules-notes` is the only writer (rule 6's allowlist; it calls no
+model). The body carries at most 4 notes, each question at most 500
+characters, each `answered` or `refused`: a `try_again` or `error` outcome
+is 422, never stored and never counted. A newer or equal `asked_at` for the
+same key replaces the row, so a re-store in the same second wins.
+`project()` never reads or deletes the table.
+
+The app, not a model, writes the questions (`ai/rules_questions.py`), from
+the cards a feature already picks: three templates, T1 "How does <mine>
+interact with <theirs>?", T2 "How does <keyword> work on <card>?" and T3 "What
+happens if my opponent casts <theirs> in response to <mine>?". Phase 0 ran 30
+of them against the local coach (2026-11-16): 50 % were worth a line in a
+prompt, 73 % with the borderline ones, and the misses were the templates', so
+three filters apply: T1 only for a pair with a hook (one's text targets,
+destroys, exiles, counters, returns, sacrifices or deals damage to the other's
+kind, or names its subtype or a keyword it does not carry itself; a clause
+about "another ..." or "... you control" or "from your graveyard", "counter"
+as a noun, the card's own name or "this creature", and a `non<type>` phrase
+are not hooks, "damage to any target" reaches a creature, planeswalker or
+battle, and plural kinds match; a card with no text has none); T2 never for a keyword in
+`EVERGREEN`, phase 0's list and not a rules source; T3 only when theirs is an
+instant or has flash. At most 4 a piece, two T1, one T3, one T2, a free slot
+filled in that order, no card in more than two. The ranking is the feature's
+own count (resolves in the match, copies in the 75, staple share) then name, so
+a regenerate asks the same questions and hits the cache. A match reads the
+snapshot's plays, a guide its 75 and `_opponent_sections`' staples, an RCQ
+guide the pasted 75 and the same staples plus the expected archetypes', the
+coach `CoachEvidence.decklists` (T2 only: it has no opponent cards).
+
+`POST /api/rules-questions` (read-only; POST because an RCQ guide carries a
+pasted list) takes `{feature, match_id | key | decklist (+ expected, own) |
+fmt, rules_version?}` and answers `{questions: [{question, question_hash,
+template, answered}], reason}`. `answered` is a stored note under
+`rules_version`, or under any version without it. `reason` is a key when the
+list is empty: `no_card_text`, `no_opponent_cards`, `no_questions` (every
+candidate filtered out) or `no_evidence` (a coach report's evidence is too
+thin). An unknown match or deck is a 404.
+
+A prompt carries the stored notes for its questions as one block after the
+evidence and before the answer contract, separated by the prompts' `\n\n---\n\n`
+divider, and only when at least one note qualifies (`answered`, not
+`out_of_scope`, latest rules version); with none, the prompt is byte for byte
+what it was. The block is `RULES_NOTES_HEADING`, then one line per note,
+`N<n> (<confidence>) Q: ... A: <verdict> <explanation> (cites ...)`, numbered in
+the order the questions are asked and counting only the notes included, then the
+closing instruction asking the writer to end a sentence that relies on a note
+with `[N<n>]`, never to state a confidence level. `ai/rules_notes.py` renders
+(`render_block`), reads back (`parse_block`) and resolves the markers the prose
+used (`cited_notes`; an unknown marker is dropped with a warning, never raised).
+The block sits outside every context hash, so storing a note never makes a
+stored piece stale. The stored prompt already carries the block, so `GET` parses
+it and returns the cited notes beside the prose as `notes` (`RulesNoteOut`); no
+column was added. A pasted answer is stored with the copied prompt rebuilt when
+it is pasted, not the one copied; a note stored for the same question in between
+can renumber the block, so a marker in that answer may point at a different
+note. The coach is asked on the Copy press, before the prompt is built, so this
+needs a second press elsewhere between Copy and Paste, and it is accepted. The
+match report, the coach report, the deck guide and the RCQ guide carry it (the coach's questions are the kept
+decks' only); the brief and the leak finder never do, and the leak finder returns `notes: []`. A matchup plan the deck guide writes into `matchup_brief` keeps its markers in storage; the brief's read strips them, since the brief carries no notes.
+
 ## What is hosted, and what it receives
 
 This repository is free software, AGPL-3.0-only (`LICENSE`), with
@@ -439,19 +515,20 @@ between, so no user ever held the proprietary notice.
 
 Since 2026-11-02 this project has hosted services, reached through a
 free, optional account: the account, cloud history, error reports and
-contributed games are built; the rules coach is not (`BACKLOG.md`,
-BL-101). The decision supersedes what this section used to say: that
+contributed games are built; the rules coach is built and being tested,
+on test accounts only (`BACKLOG.md`, BL-109). The decision supersedes what this section used to say: that
 nothing hosted writes for the user, that nothing free needs an account,
 and that nothing reports back. The tracker keeps working fully without
 the account. What each part receives:
 
-- **The account** (Supabase Auth, Google sign-in only, with the openid,
-  email and profile scopes): an email, a sign-in identity, an age
-  confirmation (13 and over), and the player's three choices, each with
-  the policy version and the time it was given. One screen asks them
-  right after the first sign-in, none pre-ticked; each can be changed in
-  Account, in the app or on the website, and a new policy version asks
-  again.
+- **The account** (Supabase Auth, Google or Discord sign-in): an email, a
+  sign-in identity, an age confirmation (13 and over), the agreement to
+  the terms and the privacy policy with the time it was given
+  (`terms_agreed_at`), and the player's choices, each with the policy
+  version. One screen asks them right after the first sign-in, none
+  pre-ticked, and Continue waits for both agreement boxes; the choices
+  can be changed in Account, in the app or on the website, and a new
+  policy version asks for the agreement again.
 - **Cloud history** (Supabase, one row per match behind row-level
   security, so only its owner reads it), when "Back up my match history"
   is on: a summary of each match built from the projections, about 1.5 KB
@@ -481,13 +558,21 @@ the account. What each part receives:
   account ids and opponent names removed), with the account id as the
   Sentry user, never the email. The raw log is never attached.
 - **The rules coach** (the coach API, the one server this project runs,
-  on a subdomain of the site's domain): the player's rules or card
-  question, and never a match. It answers from the Comprehensive Rules and
-  Scryfall's card data through OpenAI's models, paid from a monthly budget
-  the maintainer sets, behind per-player daily limits, a daily cap for
-  everyone and a kill switch, all checked before every model call. The
-  question's text is kept only when "Keep my coach history" is on;
-  otherwise only the day's count is.
+  on Google Cloud in São Paulo): a few questions about the cards in a
+  report, built from card names by templates that carry no names, dates,
+  results or chat, and never a match. The app asks them when the player
+  presses Write it with Claude or Copy the prompt on a report, while
+  signed in, with the terms agreed and "Add rules notes to my reports" on
+  in Settings; ticking the terms is the consent to sending the questions
+  to Anthropic in the United States, and the switch is its withdrawal. It
+  answers from the Comprehensive Rules and Scryfall's card data through
+  Anthropic's Claude models, paid from a monthly budget the maintainer
+  sets, behind per-player daily limits, a daily cap for everyone and a
+  kill switch, all checked before every model call. The answers come back
+  as rules notes, stored locally (`rules_note`) and cited in the report as
+  `[N<n>]`. The server keeps no question or answer text: one record per
+  question (day, outcome, model, lengths, cost, rules version) and a
+  daily count, deleted after 90 days or with the account.
 
 Electron's main process holds the session, in the operating system's
 encrypted storage, and does the pushing and pulling. The Python server
@@ -499,8 +584,8 @@ What does not change: the five narrative routes still use the user's own
 credential or the copied prompt, on the user's own machine, and never go
 through the coach API, so the exception at the top of this document stays
 exact. An "AI features" switch hides the coach and every prompt feature
-together, and the code behind them moves into a package of its own that
-the core never imports (BL-102).
+together, and the code behind them is a package of its own, `ai/`, that
+the core never imports (both since 1.3.0).
 
 The paid subscription planned on 2026-10-12 (`BACKLOG.md`, BL-006) is not
 part of this and is not built: no paywall is planned for the account or
@@ -542,9 +627,9 @@ footer, "No account needed" (`docs/frontend.md` quotes it), stayed as it
 was: it is still true. Each "no account" claim became one shared
 sentence, word for word everywhere: "Sensei Top works fully without an
 account. A free, optional account adds cloud backup of your match history
-and error reports." The build that ships the rules coach adds the coach
-to that sentence where a page may name it, adds the coach API to the
-privacy pages, and revisits the third promise in `SECURITY.md`, that
-nothing calls a paid API without a configured key, and the claim under
-"What calls out, and what it sends" that per-route tests cover what
-leaves the machine.
+and error reports." The build that ships the rules coach leaves that
+sentence and the home page as they are, by the maintainer's decision to
+describe the coach in the terms, privacy policy, help and Credits rather
+than in the pitch; it adds the coach API to the privacy and terms pages
+and rewords the third promise in `SECURITY.md` to name the coach's
+conditions beside a configured key.

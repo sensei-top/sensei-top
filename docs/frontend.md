@@ -569,7 +569,8 @@ the failed backup's sentences name.
   and sync"). Signed out, "Sign in with Google" and "Sign in with Discord",
   both off while one waits on the browser, the pressed one saying so;
   signed in, the email, two choices as `SavingSwitch`es (error
-  reports, coach history), or Try again when the profile could not be read,
+  reports, and "Add rules notes to my reports", the withdrawal of the
+  rules coach's transfer consent), or Try again when the profile could not be read,
   Export and Sign out, then under their own heading
   "Delete my cloud history" and "Delete my account", quiet buttons like the
   rest (no danger fill: `docs/design-system.md`). Each delete and the error
@@ -815,8 +816,9 @@ One file per primitive, all re-exported from `index.ts`, so every
   bare "Loading…" text), `Skeleton` and `ErrorNote`.
 - **A page's outline.** `OutlineCard` (`ui/Outline.tsx`).
   See "Data fetching", "A page's outline".
-- **Text.** `Prose` (inline `**bold**` and `` `code` `` only, which is
-  all a narrative needs), `TextBlock` (a wrapped `pre` in the
+- **Text.** `Prose` (inline `**bold**`, `` `code` `` and a `[N<n>]` rules-note
+  marker, which draws that note's chip when a `RulesNotesProvider` above
+  knows `n` and nothing otherwise; all a narrative needs), `TextBlock` (a wrapped `pre` in the
   interface face, for a prompt, a command or exported Markdown, which
   never lets a page scroll sideways; `docs/design-system.md` has its
   tokens) and `Tooltip` (one sentence about a word, open on hover and
@@ -1101,6 +1103,20 @@ a key of the viewer's writes, else nobody. Neither row draws a lock, a
 badge or a price, and the button's words do not change with the writer.
 The `POST .../narrative` routes answer 503 with no key configured.
 
+Both cards take a rules-notes press (`ai/rulesNotes.ts`, `docs/llm.md`):
+`GenerateCard`'s `beforeRun` is `() => Promise<NotesOutcome>`, and
+`beforeCopy` is `() => Promise<CopyPressed>` (`{ prompt, missing }`),
+handed on to `CopyPromptCard`, which also takes it. The card runs the press
+and then does its act, the generate or the copy, whatever the press did
+(`pressThenAct`: a rejection too): a failure never blocks either. The copy
+uses `prompt`, the page's prompt query refetched after the press, so the
+text copied carries the notes just stored; `null` keeps the one on
+screen. Each card draws at most one line, "Written without rules notes.",
+when the press asked and got no answer, the same line for every reason:
+never the reason and never a quota. A press the gate skipped (no shell,
+signed out, consent older than the policy, notes off) draws nothing, for
+that is the player's own state; the reason goes to the debug log only.
+
 The deck guide's narrative is structured rather than a prose blob, so
 its caller (`ai/guide/WriteAndExport.tsx`) passes no `narrative` and lets
 `generatedAt` alone say that something is stored (`GenerateCard`'s
@@ -1291,7 +1307,8 @@ says and not what a press does. `components/home/SessionHero.tsx` and
 caption and image label from its own catalogue) have one each in the same
 pattern, and so does `components/settings/AppSection.tsx`, which checks
 which rows the App section draws depending on `canAutostart` and
-`windowsStore`; no other component has a test, and a hook that reads a
+`windowsStore`; `components/ui/Card.tsx`'s `Prose` has one, beside it, for its note
+markers, known and unknown; no other component has a test, and a hook that reads a
 query or the address (`useFilters`, `useMatchInProgress`) has none either: what a page
 looks like and does is still checked in a browser. Four tests sit outside
 `src/`, in `scripts/`, and they are the dashboard tests that touch the

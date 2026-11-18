@@ -71,12 +71,19 @@ export interface ProfileRow {
   age_confirmed_at: string;
   consent_sync: boolean;
   consent_errors: boolean;
-  consent_coach_history: boolean;
   consent_version: string;
   consented_at: string;
+  /** When the Terms of Use were agreed to; `null` before they were. */
+  terms_agreed_at: string | null;
+  /** The rules-notes switch; a column that defaults to on, so absent reads as on. */
+  rules_notes?: boolean;
 }
 
-export type ConsentPatch = Pick<ProfileRow, 'consent_sync' | 'consent_errors' | 'consent_coach_history' | 'consent_version' | 'consented_at'>;
+/** `terms_agreed_at` is in a patch only when the agreement step wrote it, so
+ *  a Settings write never moves it; `rules_notes` only when the switch did.
+ *  `consent_coach_history` is never written: the column stays, unused. */
+export type ConsentPatch = Pick<ProfileRow, 'consent_sync' | 'consent_errors' | 'consent_version' | 'consented_at'> &
+  Partial<Pick<ProfileRow, 'terms_agreed_at' | 'rules_notes'>>;
 
 /** The cloud's half: the profile and the rights functions. */
 export interface AccountDb {
@@ -89,7 +96,7 @@ export interface AccountDb {
   deleteAccount(): Promise<void>;
 }
 
-const PROFILE_COLUMNS = 'user_id,age_confirmed_at,consent_sync,consent_errors,consent_coach_history,consent_version,consented_at';
+const PROFILE_COLUMNS = 'user_id,age_confirmed_at,consent_sync,consent_errors,consent_version,consented_at,terms_agreed_at,rules_notes';
 
 function failure(what: string, error: { message?: string; code?: string }): Error {
   return new Error(`${what}: ${error.code ?? ''} ${error.message ?? ''}`.trim());
@@ -137,9 +144,11 @@ export type ProfileState =
       ageConfirmedAt: string;
       consentSync: boolean;
       consentErrors: boolean;
-      consentCoachHistory: boolean;
       consentVersion: string;
       consentedAt: string;
+      termsAgreedAt: string | null;
+      /** Whether rules notes are on for the account. */
+      rulesNotes: boolean;
     };
 
 /** What `AccountState` adds for a signed-in account. */
@@ -160,25 +169,31 @@ export type AccountReply = { ok: true; cancelled?: boolean; deleted?: number } |
 export interface ProfileChange {
   consentSync: boolean;
   consentErrors: boolean;
-  consentCoachHistory: boolean;
   /** The privacy policy's version the answers were given under. */
   policyVersion: string;
+  /** The rules-notes switch; left out, the account's value stays. */
+  rulesNotes?: boolean;
   /** Required by the first write, ignored after it. */
   ageConfirmed?: boolean;
+  /** `true` from the agreement step: `terms_agreed_at` is written with the version. */
+  termsAgreed?: boolean;
 }
 
 export function parseProfileChange(value: unknown): ProfileChange | null {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
-  if (typeof raw.consentSync !== 'boolean' || typeof raw.consentErrors !== 'boolean' || typeof raw.consentCoachHistory !== 'boolean') return null;
+  if (typeof raw.consentSync !== 'boolean' || typeof raw.consentErrors !== 'boolean') return null;
   if (typeof raw.policyVersion !== 'string' || !POLICY_VERSION_PATTERN.test(raw.policyVersion)) return null;
   if (raw.ageConfirmed !== undefined && typeof raw.ageConfirmed !== 'boolean') return null;
+  if (raw.termsAgreed !== undefined && typeof raw.termsAgreed !== 'boolean') return null;
+  if (raw.rulesNotes !== undefined && typeof raw.rulesNotes !== 'boolean') return null;
   return {
     consentSync: raw.consentSync,
     consentErrors: raw.consentErrors,
-    consentCoachHistory: raw.consentCoachHistory,
     policyVersion: raw.policyVersion,
     ...(raw.ageConfirmed === undefined ? {} : { ageConfirmed: raw.ageConfirmed }),
+    ...(raw.termsAgreed === undefined ? {} : { termsAgreed: raw.termsAgreed }),
+    ...(raw.rulesNotes === undefined ? {} : { rulesNotes: raw.rulesNotes }),
   };
 }
 
@@ -189,9 +204,10 @@ function toState(row: ProfileRow | null): ProfileState {
     ageConfirmedAt: row.age_confirmed_at,
     consentSync: row.consent_sync === true,
     consentErrors: row.consent_errors === true,
-    consentCoachHistory: row.consent_coach_history === true,
     consentVersion: row.consent_version,
     consentedAt: row.consented_at,
+    termsAgreedAt: row.terms_agreed_at ?? null,
+    rulesNotes: row.rules_notes !== false,
   };
 }
 
@@ -361,19 +377,26 @@ export class CloudAccount {
     const patch: ConsentPatch = {
       consent_sync: change.consentSync,
       consent_errors: change.consentErrors,
-      consent_coach_history: change.consentCoachHistory,
       consent_version: change.policyVersion,
       consented_at: at,
+      ...(change.termsAgreed === true ? { terms_agreed_at: at } : {}),
+      ...(change.rulesNotes === undefined ? {} : { rules_notes: change.rulesNotes }),
     };
     let row: ProfileRow;
     try {
       if (current.state === 'none') {
         if (change.ageConfirmed !== true) return { ok: false, error: 'ageNotConfirmed' };
-        row = { user_id: user, age_confirmed_at: at, ...patch };
+        row = { user_id: user, age_confirmed_at: at, terms_agreed_at: null, ...patch };
         await this.deps.db.insertProfile(row);
       } else {
         await this.deps.db.updateProfile(user, patch);
-        row = { user_id: user, age_confirmed_at: current.state === 'read' ? current.ageConfirmedAt : at, ...patch };
+        row = {
+          user_id: user,
+          age_confirmed_at: current.state === 'read' ? current.ageConfirmedAt : at,
+          terms_agreed_at: current.state === 'read' ? current.termsAgreedAt : null,
+          rules_notes: current.state === 'read' ? current.rulesNotes : true,
+          ...patch,
+        };
       }
     } catch (error) {
       this.log.warn('account: the profile could not be written', { error: String(error) });
@@ -447,7 +470,6 @@ export class CloudAccount {
         {
           consentSync: false,
           consentErrors: current.consentErrors,
-          consentCoachHistory: current.consentCoachHistory,
           policyVersion: current.consentVersion,
         },
         current,

@@ -29,10 +29,14 @@
         "terms": "Read against Daybreak's Terms of Service and the MTGO EULA on 2026-10-05: fetched slowly by your own copy, for your own use, and shown with a link to each event's page on mtgo.com."
       },
       "anthropic": {
-        "taken": "The Claude API, only when you configure a key and press a generate button.",
-        "terms": "Your own account and key, under Anthropic's terms."
+        "taken": "The Claude API, when you configure a key and press a generate button; and, while you're signed in, through the rules coach, which asks it about the cards in a report.",
+        "terms": "With your key: your own account, under Anthropic's terms. Through the rules coach: Sensei Top's account, under Anthropic's Commercial Terms."
       }
     }
+  },
+  "account": {
+    "heading": "With an account",
+    "body": "Everything above works without an account. While you're signed in, the account can also send your match backup and error reports, if you turned them on, and, when you press Write it with Claude or Copy the prompt on a report, a few questions about its cards, which the app asks the rules coach. The coach runs on Google Cloud, in São Paulo, and passes the questions to Anthropic, in the United States, whose Claude models write the answers. The Privacy Policy and the Terms of Use say what each one carries."
   },
   "fonts": {
     "heading": "Fonts and symbols",

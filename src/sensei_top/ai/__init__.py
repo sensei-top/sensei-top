@@ -22,11 +22,20 @@ if TYPE_CHECKING:
 def routers() -> list[APIRouter]:
     """The AI routers, which ``create_app`` mounts after core's and before
     the dashboard's catch-all; the order is the generated schema's."""
-    from sensei_top.ai.routes import brief, coach, guide, leaks, match_report, rcq, status
+    from sensei_top.ai.routes import (
+        brief,
+        coach,
+        guide,
+        leaks,
+        match_report,
+        rcq,
+        rules_notes,
+        status,
+    )
 
     return [
         status.router, match_report.router, leaks.router, guide.router,
-        brief.router, rcq.router, coach.router,
+        brief.router, rcq.router, coach.router, rules_notes.router,
     ]
 
 
@@ -34,7 +43,7 @@ def providers() -> Providers:
     """The core seams this package fills (``api/providers.py``); called once
     per ``create_app``."""
     from sensei_top.ai.brief.break_plans import BreakBriefs
-    from sensei_top.ai.guide.rcq_prompt import rcq_prompt
+    from sensei_top.ai.routes.rcq import copy_prompt
     from sensei_top.api.providers import Providers
 
-    return Providers(rcq_prompt=rcq_prompt, break_briefs=BreakBriefs())
+    return Providers(rcq_prompt=copy_prompt, break_briefs=BreakBriefs())

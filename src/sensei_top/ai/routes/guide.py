@@ -3,10 +3,12 @@
 
 from __future__ import annotations
 
+import dataclasses
 import sqlite3
 
 from fastapi import APIRouter, HTTPException, Request
 
+from sensei_top.ai import rules_notes, rules_questions
 from sensei_top.ai.answers import PASTED_AUTHOR, guide_for
 from sensei_top.ai.brief.from_guide import store_guide_matchups
 from sensei_top.ai.brief.store import corpus_commit, list_hash
@@ -27,7 +29,7 @@ from sensei_top.ai.routes.narrative import (
 )
 from sensei_top.api.convert import _guide_narrative_out
 from sensei_top.api.deps import Conn, WritableConn
-from sensei_top.api.models.common import PastedAnswerIn
+from sensei_top.api.models.common import PastedAnswerIn, RulesNoteOut
 from sensei_top.api.models.guide import GuideNarrativeResponse
 from sensei_top.api.routes.guide import _no_deck
 from sensei_top.api.sql import _shared_report_cache
@@ -52,9 +54,32 @@ def _guide_and_prompt(
     deck_guide = build_deck_guide(conn, key, report_cache=_shared_report_cache(request, conn))
     if deck_guide is None:
         return None, None
+
+    def notes_block() -> str:
+        cards = rules_questions.guide_cards(conn, deck_guide)
+        questions = rules_questions.build_questions(cards.mine, cards.theirs)
+        return rules_notes.render_block(rules_notes.notes_for_prompt(conn, questions))
+
     return deck_guide, guide_narrative.full_prompt(
-        deck_guide, conn=conn, answer_contract=answer_contract,
+        deck_guide, conn=conn, answer_contract=answer_contract, notes_block=notes_block,
     )
+
+
+def _strings(value) -> list[str]:
+    """Every string in a stored narrative, in field order."""
+    if dataclasses.is_dataclass(value) and not isinstance(value, type):
+        value = [getattr(value, f.name) for f in dataclasses.fields(value)]
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, (list, tuple)):
+        return [text for item in value for text in _strings(item)]
+    return []
+
+
+def _notes_cited(conn: sqlite3.Connection, authored, narrative) -> list[RulesNoteOut]:
+    """The notes the stored guide's text cites, from its own stored prompt."""
+    text = "\n".join(_strings(narrative))
+    return [RulesNoteOut(**n) for n in rules_notes.cited_notes(conn, authored.prompt, text)]
 
 
 @router.get(
@@ -102,6 +127,7 @@ def _stored_guide_response(
         author=authored.author,
         cost_usd=authored.cost_usd,
         stale=authored.list_hash != list_hash(deck_guide.provenance.deck.current_cards),
+        notes=_notes_cited(conn, authored, narrative),
     )
 
 
@@ -181,6 +207,7 @@ def generate_guide_narrative(
         author=authored.author,
         cost_usd=authored.cost_usd,
         stale=False,
+        notes=_notes_cited(conn, authored, stored_narrative),
     )
 
 

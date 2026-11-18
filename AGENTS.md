@@ -136,8 +136,8 @@ One line each; the detail is in the doc named, and
      foreign `Host` or `Origin` and any non-GET request without the
      dashboard's `X-Tracker-Client` header, pinned by `tests/test_guard.py`.
 
-   **The free, optional account** (released in 1.4.0; the coach, BL-101, is being built) adds
-   cloud history, error reports and the hosted rules coach, each its own yes;
+   **The free, optional account** (1.4.0; the rules coach, 1.5.0, on test accounts, BL-109) adds cloud history and
+   error reports, each its own yes, and the rules coach, consented to with the terms at sign-in and turned off in Settings;
    no sync payload carries a raw event, handle or chat, and the coach gets no
    match: `docs/llm.md`, "What is hosted, and what it receives".
 
@@ -169,21 +169,22 @@ One line each; the detail is in the doc named, and
    current slot, because each report is measured against the one before it),
    `rcq_guide` (a tournament-day guide written for one decklist the user
    pasted; like `coach_report` it keeps every row, because each one is the
-   record of a specific event's preparation), and
-   `cloud_match` (a match pulled back from the user's own cloud history,
-   stored as received, never derived; a match read from this install's own
-   log always wins over it). Nothing on this allowlist is ever read by
-   `project()`. `tests/ai/test_write_allowlist.py` pins this allowlist route
-   by route, and `tests/test_api.py` that core alone mounts only the picks'
-   — an addition to either is a design change, not a patch.
+   record of a specific event's preparation), `cloud_match` (a match pulled
+   back from the user's own cloud history, stored as received, never
+   derived; a match read from this install's own log always wins over it),
+   and `rules_note` (the hosted coach's answer to a rules question built
+   from card names, stored as received so it is never asked or paid for
+   twice). Nothing on this allowlist is ever read by `project()`.
+   `tests/ai/test_write_allowlist.py` pins this allowlist route by route,
+   and `tests/test_api.py` that core alone mounts only the picks' — an
+   addition to either is a design change, not a patch.
 7. **Every parsing rule needs a fixture-backed test.** The log format changes
    without notice; tests against real captured logs are the only early warning.
 8. **Derive test expectations from the data, not from the code.** Read the
    fixture to find the right answer — via `fixture_peek.py`, or
-   `scripts/mtgo_probe.py` for the MTGO fixture (see "Expensive files"
-   above), never by opening the log directly. Never run the code and
-   copy its output into an assertion — that tests only that the code does
-   what it does.
+   `scripts/mtgo_probe.py` for the MTGO fixture (see "Expensive files" above),
+   never by opening the log directly. Never run the code and copy its output
+   into an assertion — that tests only that the code does what it does.
 
 ## Running it
 
@@ -191,9 +192,8 @@ One line each; the detail is in the doc named, and
     cd web && pnpm dev         # Vite dev server at :5173, proxies /api to :8000
     uv run sensei-top cards --scryfall   # rules text + legality; the deck guide needs this at least once (docs/guide.md); the installed-client path never carries either
 
-Every command appends its warnings to `logs/sensei-top.log` beside the
-database it opens (`data/logs/` for the real one); `--verbose` adds the
-debug lines.
+Every command appends its warnings to `logs/sensei-top.log` beside the database
+it opens (`data/logs/` for the real one); `--verbose` adds the debug lines.
 
 ## Before you finish
 

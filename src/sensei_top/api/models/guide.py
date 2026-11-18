@@ -11,7 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from sensei_top.api.models.common import BoardCardOut, LeakOut, PlanProblemOut
+from sensei_top.api.models.common import BoardCardOut, LeakOut, PlanProblemOut, RulesNoteOut
 
 # See guide/bundle.py for the assembly this section translates. Each model
 # mirrors a guide/ or brief/ dataclass, minus what the dashboard never reads,
@@ -207,6 +207,11 @@ class GuideNarrativeResponse(BaseModel):
     )
     stale: bool = Field(False, description="the 75 has changed since this was written")
     error: str | None = Field(None, description="set when something could not be built")
+    notes: list[RulesNoteOut] = Field(
+        default_factory=list,
+        description="the rules notes the stored guide's text cites with [N<n>], by marker, "
+        "read from the stored prompt's notes block",
+    )
 
 
 class GuideMarkdownOut(BaseModel):

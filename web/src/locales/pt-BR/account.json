@@ -1,9 +1,9 @@
 {
   "welcome": {
-    "intro": "Sua conta é gratuita. Os próximos passos perguntam sobre três coisas que ela pode fazer, e nada vem escolhido: cada uma só acontece se você disser sim.",
-    "stored": "Sua conta guarda seu e-mail, nome e foto vindos do Google ou do Discord, e estas respostas. Ela fica na Supabase, em São Paulo, Brasil.",
-    "changed": "A Política de Privacidade mudou em {{date}}: {{changes}}",
-    "kept": "Suas respostas anteriores já vêm escolhidas e valem até você clicar em Continuar.",
+    "intro": "Sua conta é gratuita. Primeiro, concorde com os termos dela. Depois, duas perguntas tratam de coisas que ela pode fazer, e nada vem escolhido: cada uma só acontece se você disser sim.",
+    "stored": "Sua conta guarda seu e-mail, nome e foto vindos do Google ou do Discord, estas respostas e, para cada pergunta que o aplicativo faz ao treinador de regras, um registro sem o texto dela. Ela fica na Supabase, em São Paulo, Brasil.",
+    "changed": "Os Termos de Uso e a Política de Privacidade mudaram em {{date}}: {{changes}}",
+    "kept": "Suas respostas anteriores às perguntas já vêm escolhidas e valem até você clicar em Continuar.",
     "age": {
       "label": "Tenho 13 anos ou mais. Se tenho menos de 18, um dos meus pais ou o meu responsável deixou que eu tenha uma conta e, se eu quiser, envie os meus jogos.",
       "small": "Guardamos que você confirmou sua idade, e quando.",
@@ -32,14 +32,6 @@
       "agree": "Concordo que os relatórios de erro, e os que eu enviar por conta própria, sejam enviados ao Sentry, nos Estados Unidos.",
       "withdraw": "Sem isso, nada é enviado automaticamente, e cada relatório que você envia por conta própria pergunta antes. Você pode revogar a qualquer momento, desligando os relatórios de erro."
     },
-    "coach": {
-      "title": "Guardar meu histórico do treinador",
-      "kept": "Elas ficam na Supabase, no Brasil, até você apagá-las ou apagar sua conta.",
-      "off": "Desligado, só ficam guardados quando você perguntou, qual modelo respondeu e quanto custou, por 90 dias.",
-      "yes": "Guardar",
-      "no": "Não guardar",
-      "lead": "O treinador de regras chega numa versão futura. Com isto ligado, suas perguntas e as respostas dele ficam guardadas para você poder relê-las."
-    },
     "policy": {
       "lead": "O que é guardado, onde e por quanto tempo:",
       "link": "Política de Privacidade ({{date}})"
@@ -61,10 +53,10 @@
       "transfer": "Para enviar relatórios de erro, concorde com o envio para os Estados Unidos, ou escolha Não enviar.",
       "age": "Confirme sua idade para seguir.",
       "answer": "Escolha uma resposta para seguir.",
-      "answers": "Responda às duas perguntas para seguir."
+      "agree": "Concorde com os Termos de Uso e confirme que leu a Política de Privacidade para seguir."
     },
     "decline": "Pular e não criar uma conta",
-    "declineNote": "Backup, relatórios de erro e histórico do treinador precisam de uma conta. Pular deixa tudo desligado e apaga a conta que este login acabou de criar. Nenhuma partida foi para o backup ainda, e suas partidas neste PC continuam.",
+    "declineNote": "Backup e relatórios de erro precisam de uma conta. Pular deixa tudo desligado e apaga a conta que este login acabou de criar. Nenhuma partida foi para o backup ainda, e suas partidas neste PC continuam.",
     "signOut": "Sair da conta",
     "error": {
       "failed": "Suas respostas não foram salvas, e nada foi alterado. Tente de novo.",
@@ -74,6 +66,13 @@
     "later": "Você pode mudar qualquer resposta depois em Configurações, na seção Conta.",
     "keep": {
       "title": "O que sua conta guarda"
+    },
+    "refuse": "Até você concordar, o aplicativo não pergunta nada ao treinador de regras. Se não concordar, você pode exportar os seus dados e apagar a sua conta aqui, ou sair da conta; suas partidas neste PC continuam.",
+    "agree": {
+      "terms": "Concordo com os <terms>Termos de Uso</terms> e com o envio das perguntas do treinador de regras sobre os meus cards à Anthropic, nos Estados Unidos, enquanto eu estiver conectado.",
+      "privacy": "Li a <privacy>Política de Privacidade</privacy>.",
+      "why": "O treinador de regras vem com a conta. A Anthropic guarda as perguntas dele nos Estados Unidos, que não têm uma lei de proteção de dados como a LGPD, e pode tratá-las em outros países. <transfer>Os termos dizem o que é enviado e qual é o risco.</transfer> Você pode desligar as notas de regras em Configurações, e o Sensei Top funciona por completo sem conta.",
+      "small": "Guardamos que você concordou, com qual versão e quando."
     }
   },
   "settings": {
@@ -101,9 +100,9 @@
       "label": "Enviar relatórios de erro",
       "description": "Envia um relatório ao Sentry, nos Estados Unidos, quando algo dá errado. Guardado por 30 dias. Com ele ligado, os relatórios que você envia por conta própria não perguntam antes."
     },
-    "coach": {
-      "label": "Guardar meu histórico do treinador",
-      "description": "Salva suas perguntas ao treinador de regras e as respostas dele, para você poder relê-las. O treinador chega numa versão futura."
+    "rulesNotes": {
+      "label": "Acrescentar notas de regras aos meus relatórios",
+      "description": "Enquanto você está conectado, envia algumas perguntas sobre os cards de cada relatório que você escreve ao treinador de regras, e dele à Anthropic, nos Estados Unidos. Desligado, nada é perguntado ao treinador, em nenhum PC, e os relatórios saem sem notas de regras."
     },
     "turningOff": "Desligar uma escolha a interrompe dali em diante. Para remover o que já foi enviado, use Apagar histórico na nuvem.",
     "sync": {
@@ -174,6 +173,7 @@
     "done": "Sua conta foi apagada."
   },
   "policyChanges": {
+    "2026-11-18": "o treinador de regras agora vem com a conta. Enquanto você está conectado, o aplicativo pode enviar à Anthropic, nos Estados Unidos, perguntas sobre os cards de um relatório que você escreve. Os Termos de Uso tratam disso, você pode desligar as notas de regras em Configurações, e Guardar meu histórico do treinador não existe mais.",
     "2026-11-07": "seu sim aos relatórios de erro agora também vale para os relatórios que você envia por conta própria, e um relatório diz de qual página veio."
   },
   "errorsDialog": {

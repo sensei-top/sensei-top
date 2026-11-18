@@ -7,6 +7,7 @@ import sqlite3
 
 from fastapi import APIRouter, HTTPException
 
+from sensei_top.ai import rules_notes, rules_questions
 from sensei_top.ai.answers import PASTED_AUTHOR, match_for
 from sensei_top.ai.review import narrative, narrative_store
 from sensei_top.ai.routes.narrative import (
@@ -18,7 +19,7 @@ from sensei_top.ai.routes.narrative import (
     run_authored_write,
 )
 from sensei_top.api.deps import Conn, WritableConn
-from sensei_top.api.models.common import NarrativeResponse, PastedAnswerIn
+from sensei_top.api.models.common import NarrativeResponse, PastedAnswerIn, RulesNoteOut
 from sensei_top.api.routes.matches import _no_match
 from sensei_top.api.sql import _consensus_window, match_format
 from sensei_top.i18n import _, english
@@ -77,6 +78,24 @@ def _field_context(
     )
 
 
+def _notes_block(conn: sqlite3.Connection, match_id: str) -> str:
+    """The prompt's rules-notes block for this match: the notes already stored
+    for the questions ``rules_questions`` asks of its cards, or ``""``. Outside
+    the context hash, so storing a note never makes a stored report stale."""
+    cards = rules_questions.for_match(conn, match_id)
+    questions = rules_questions.build_questions(cards.mine, cards.theirs)
+    return rules_notes.render_block(rules_notes.notes_for_prompt(conn, questions))
+
+
+def _notes_cited(conn: sqlite3.Connection, match_id: str) -> list[RulesNoteOut]:
+    stored = narrative_store.read_match_narrative(conn, match_id)
+    if stored is None:
+        return []
+    return [
+        RulesNoteOut(**note) for note in rules_notes.cited_notes(conn, stored.prompt, stored.prose)
+    ]
+
+
 def _match_report_narrative_spec(conn: sqlite3.Connection, match_id: str) -> NarrativeSpec:
     # English throughout, not just the serializer: the report and snapshot
     # are built here, and their findings' text is what the prompt quotes.
@@ -89,12 +108,20 @@ def _match_report_narrative_spec(conn: sqlite3.Connection, match_id: str) -> Nar
         field = _field_context(conn, match_id, fmt, consensus_since)
         return narrative.build_narrative_context(report, snap, field=field)
 
+    block: list[str] = []
+
+    def notes_block() -> str:
+        if not block:
+            block.append(_notes_block(conn, match_id))
+        return block[0]
+
     return NarrativeSpec(
         build_context=build_context,
-        full_prompt=narrative.full_prompt,
+        full_prompt=lambda context: narrative.full_prompt(context, notes_block=notes_block()),
         copied_prompt=lambda context: narrative.copied_prompt(
             context, answer_for=match_for(match_id),
             context_hash=narrative_store.context_hash(context),
+            notes_block=notes_block(),
         ),
         read_stored=lambda: narrative_store.read_match_narrative(conn, match_id),
         context_hash=narrative_store.context_hash,
@@ -124,6 +151,7 @@ def match_report_narrative(match_id: str, conn: Conn) -> NarrativeResponse:
     return NarrativeResponse(
         status=env.status, narrative=env.content, prompt=env.prompt,
         model=env.who, generated_at=env.when, cost_usd=env.cost_usd, stale=env.stale,
+        notes=_notes_cited(conn, match_id) if env.status == "ok" else [],
     )
 
 
@@ -158,6 +186,7 @@ def generate_match_report_narrative(match_id: str, conn: WritableConn) -> Narrat
     return NarrativeResponse(
         status=env.status, narrative=env.content, prompt=env.prompt,
         model=env.who, generated_at=env.when, cost_usd=env.cost_usd, stale=env.stale,
+        notes=_notes_cited(conn, match_id) if env.status == "ok" else [],
     )
 
 
@@ -202,4 +231,5 @@ def paste_match_report_narrative(
         status="ok", narrative=stored.prose, prompt=prompt, model=stored.model,
         generated_at=stored.generated_at, cost_usd=stored.cost_usd,
         stale=stored.context_hash != spec.context_hash(context),
+        notes=_notes_cited(conn, match_id),
     )

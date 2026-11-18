@@ -18,5 +18,12 @@
     "writing": "Writing… {{elapsed}} s",
     "rewrite": "Rewrite with Claude",
     "write": "Write it with Claude"
+  },
+  "rulesNotes": {
+    "missing": "Written without rules notes.",
+    "disclosure": "AI answer, may be wrong. Check the cited rules; at a tournament, ask a judge.",
+    "title": "Rules note",
+    "cited": "Cited rules",
+    "open": "Open rules note {{n}}"
   }
 }

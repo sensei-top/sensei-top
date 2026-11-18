@@ -1,6 +1,7 @@
 """AGENTS.md rule 6's full allowlist, with ``ai/`` mounted. Its core half,
 ``tests/test_api.py::test_core_alone_writes_only_the_picks``, asserts the
-picks and the pulled cloud backup alone without it.
+picks and the pulled cloud backup alone without it. A read-only POST is
+listed apart, in ``read_only_posts``, and pinned to the query_only connection.
 """
 
 from fastapi.routing import iter_route_contexts
@@ -28,7 +29,10 @@ def test_only_authored_artifact_routes_write():
         for method in (route.methods or ())
         if method not in ("GET", "HEAD")
     }
-    assert writers == {
+    # Read-only; POST only because the RCQ case carries a pasted list.
+    read_only_posts = {("/api/rules-questions", "POST")}
+    assert read_only_posts <= writers
+    assert writers - read_only_posts == {
         ("/api/matches/{match_id}/opponent-deck", "PUT"),
         ("/api/matches/{match_id}/mtgo-pick", "PUT"),
         ("/api/mtgo/picks", "PUT"),
@@ -47,6 +51,8 @@ def test_only_authored_artifact_routes_write():
         ("/api/matches/{match_id}/report/narrative", "PUT"),
         ("/api/review/leaks/narrative", "PUT"),
         ("/api/coach/narrative", "PUT"),
+        # The hosted coach's rules answers: rules_note, no model call.
+        ("/api/rules-notes", "PUT"),
     }
 
 
@@ -55,3 +61,15 @@ def test_openapi_schema_names_the_narrative_route():
     the match report's narrative endpoint the dashboard calls."""
     schema = create_app("unused.db").openapi()
     assert "/api/matches/{match_id}/report/narrative" in schema["paths"]
+
+
+def test_rules_questions_route_opens_the_query_only_connection():
+    from sensei_top.api.deps import get_conn, get_writable_conn
+
+    app = create_app("unused.db")
+    route = next(
+        r for r in iter_route_contexts(app.routes) if r.path == "/api/rules-questions"
+    )
+    calls = {d.call for d in route.dependant.dependencies}
+    assert get_conn in calls
+    assert get_writable_conn not in calls

@@ -29,6 +29,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
+from sensei_top.ai import rules_notes, rules_questions
 from sensei_top.ai.answers import answer_format, coach_for, prose_schema
 from sensei_top.ai.coach.canon import ALLOWED_DOMAINS, CanonEntry, entries_for
 from sensei_top.ai.coach.evidence import (
@@ -540,10 +541,11 @@ def build_coach_context(
 
 
 @english()
-def full_prompt(context: str, fmt: str) -> str:
+def full_prompt(context: str, fmt: str, *, notes_block: str = "") -> str:
     """The complete text to hand an assistant: ``system_prompt(fmt)``
-    framing, then the evidence itself."""
-    return _wrap_prompt(system_prompt(fmt), context)
+    framing, then the evidence itself, then ``notes_block``
+    (``rules_notes.render_block``) when it is not empty."""
+    return rules_notes.append_block(_wrap_prompt(system_prompt(fmt), context), notes_block)
 
 
 _CITATION_GROUP_RE = re.compile(r"\[R\d+(?:\s*[;,]\s*R\d+)*\]")
@@ -657,7 +659,12 @@ def build_coach_prompt(
     evidence_only_context = build_coach_context(evidence, entries, None, ())
 
     context_hash = _context_hash(evidence_only_context)
-    prompt = full_prompt(context, fmt)
+    # The rules-notes block stays outside the hash: storing a note must not
+    # make a stored report stale.
+    cards = rules_questions.coach_cards(conn, evidence.decklists)
+    questions = rules_questions.build_questions(cards.mine, cards.theirs)
+    notes_block = rules_notes.render_block(rules_notes.notes_for_prompt(conn, questions))
+    prompt = full_prompt(context, fmt, notes_block=notes_block)
     # ``prompt`` is what a POST sends and stores; ``copied`` is the same text
     # plus the answer contract, for the card's copy button.
     schema = prose_schema("markdown with the headings named above")
