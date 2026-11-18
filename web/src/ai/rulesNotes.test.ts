@@ -9,7 +9,7 @@ const account = (profile: Record<string, unknown> = {}): AccountState =>
   ({
     available: true,
     signedIn: true,
-    profile: { state: 'read', consentVersion: POLICY_VERSION, rulesNotes: true, ...profile },
+    profile: { state: 'read', consentVersion: POLICY_VERSION, termsAgreedAt: '2026-12-02T00:00:00Z', rulesNotes: true, ...profile },
   }) as unknown as AccountState
 
 const answer = (question: string, extra: Record<string, unknown> = {}): CoachResult =>
@@ -50,6 +50,7 @@ describe('the gate', () => {
     ['no coach in the shell', {} as Shell, account(), 'unavailable'],
     ['signed out', { coach: { ask: vi.fn() } } as unknown as Shell, { available: true, signedIn: false } as AccountState, 'signedOut'],
     ['no account in the build', { coach: { ask: vi.fn() } } as unknown as Shell, { available: false } as AccountState, 'signedOut'],
+    ['terms never agreed to', { coach: { ask: vi.fn() } } as unknown as Shell, account({ termsAgreedAt: null }), 'consent'],
     ['consent older than the policy', { coach: { ask: vi.fn() } } as unknown as Shell, account({ consentVersion: '2026-11-07' }), 'consent'],
     ['notes off', { coach: { ask: vi.fn() } } as unknown as Shell, account({ rulesNotes: false }), 'notesOff'],
   ])('skips, asking nothing: %s', async (_name, shell, acc, reason) => {

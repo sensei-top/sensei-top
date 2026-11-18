@@ -74,9 +74,14 @@ export interface ProfileRow {
   consent_coach_history: boolean;
   consent_version: string;
   consented_at: string;
+  /** When the Terms of Use were agreed to; `null` before they were. */
+  terms_agreed_at: string | null;
 }
 
-export type ConsentPatch = Pick<ProfileRow, 'consent_sync' | 'consent_errors' | 'consent_coach_history' | 'consent_version' | 'consented_at'>;
+/** `terms_agreed_at` is in a patch only when the agreement step wrote it, so
+ *  a Settings write never moves it. */
+export type ConsentPatch = Pick<ProfileRow, 'consent_sync' | 'consent_errors' | 'consent_coach_history' | 'consent_version' | 'consented_at'> &
+  Partial<Pick<ProfileRow, 'terms_agreed_at'>>;
 
 /** The cloud's half: the profile and the rights functions. */
 export interface AccountDb {
@@ -89,7 +94,7 @@ export interface AccountDb {
   deleteAccount(): Promise<void>;
 }
 
-const PROFILE_COLUMNS = 'user_id,age_confirmed_at,consent_sync,consent_errors,consent_coach_history,consent_version,consented_at';
+const PROFILE_COLUMNS = 'user_id,age_confirmed_at,consent_sync,consent_errors,consent_coach_history,consent_version,consented_at,terms_agreed_at';
 
 function failure(what: string, error: { message?: string; code?: string }): Error {
   return new Error(`${what}: ${error.code ?? ''} ${error.message ?? ''}`.trim());
@@ -140,6 +145,7 @@ export type ProfileState =
       consentCoachHistory: boolean;
       consentVersion: string;
       consentedAt: string;
+      termsAgreedAt: string | null;
     };
 
 /** What `AccountState` adds for a signed-in account. */
@@ -165,6 +171,8 @@ export interface ProfileChange {
   policyVersion: string;
   /** Required by the first write, ignored after it. */
   ageConfirmed?: boolean;
+  /** `true` from the agreement step: `terms_agreed_at` is written with the version. */
+  termsAgreed?: boolean;
 }
 
 export function parseProfileChange(value: unknown): ProfileChange | null {
@@ -173,12 +181,14 @@ export function parseProfileChange(value: unknown): ProfileChange | null {
   if (typeof raw.consentSync !== 'boolean' || typeof raw.consentErrors !== 'boolean' || typeof raw.consentCoachHistory !== 'boolean') return null;
   if (typeof raw.policyVersion !== 'string' || !POLICY_VERSION_PATTERN.test(raw.policyVersion)) return null;
   if (raw.ageConfirmed !== undefined && typeof raw.ageConfirmed !== 'boolean') return null;
+  if (raw.termsAgreed !== undefined && typeof raw.termsAgreed !== 'boolean') return null;
   return {
     consentSync: raw.consentSync,
     consentErrors: raw.consentErrors,
     consentCoachHistory: raw.consentCoachHistory,
     policyVersion: raw.policyVersion,
     ...(raw.ageConfirmed === undefined ? {} : { ageConfirmed: raw.ageConfirmed }),
+    ...(raw.termsAgreed === undefined ? {} : { termsAgreed: raw.termsAgreed }),
   };
 }
 
@@ -192,6 +202,7 @@ function toState(row: ProfileRow | null): ProfileState {
     consentCoachHistory: row.consent_coach_history === true,
     consentVersion: row.consent_version,
     consentedAt: row.consented_at,
+    termsAgreedAt: row.terms_agreed_at ?? null,
   };
 }
 
@@ -364,16 +375,22 @@ export class CloudAccount {
       consent_coach_history: change.consentCoachHistory,
       consent_version: change.policyVersion,
       consented_at: at,
+      ...(change.termsAgreed === true ? { terms_agreed_at: at } : {}),
     };
     let row: ProfileRow;
     try {
       if (current.state === 'none') {
         if (change.ageConfirmed !== true) return { ok: false, error: 'ageNotConfirmed' };
-        row = { user_id: user, age_confirmed_at: at, ...patch };
+        row = { user_id: user, age_confirmed_at: at, terms_agreed_at: null, ...patch };
         await this.deps.db.insertProfile(row);
       } else {
         await this.deps.db.updateProfile(user, patch);
-        row = { user_id: user, age_confirmed_at: current.state === 'read' ? current.ageConfirmedAt : at, ...patch };
+        row = {
+          user_id: user,
+          age_confirmed_at: current.state === 'read' ? current.ageConfirmedAt : at,
+          terms_agreed_at: current.state === 'read' ? current.termsAgreedAt : null,
+          ...patch,
+        };
       }
     } catch (error) {
       this.log.warn('account: the profile could not be written', { error: String(error) });

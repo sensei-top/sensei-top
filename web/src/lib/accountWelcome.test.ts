@@ -18,6 +18,7 @@ import {
   stepHint,
   stepsOf,
   storedNo,
+  termsUrl,
   withErrors,
   type Answer,
   type Draft,
@@ -38,6 +39,8 @@ const read = (over: Partial<Extract<ProfileState, { state: 'read' }>> = {}): Pro
 
 const answered = (over: Partial<Draft> = {}): Draft => ({
   age: true,
+  terms: true,
+  privacy: true,
   sync: true,
   errors: false,
   coach: false,
@@ -50,7 +53,7 @@ describe('the consent screen on a first sign-in', () => {
   const draft = initialDraft({ state: 'none' })
 
   it('starts with nothing ticked or chosen', () => {
-    expect(draft).toEqual({ age: false, sync: null, errors: null, coach: null, transfer: false, contribute: null })
+    expect(draft).toEqual({ age: false, terms: false, privacy: false, sync: null, errors: null, coach: null, transfer: false, contribute: null })
     expect(kindOf({ state: 'none' })).toBe('first')
   })
 
@@ -112,6 +115,7 @@ describe('the transfer consent record', () => {
       consentErrors: true,
       consentCoachHistory: false,
       policyVersion: VERSION,
+      termsAgreed: true,
       ageConfirmed: true,
     })
     expect('ageConfirmed' in profileChange('returning', draft, VERSION)).toBe(false)
@@ -127,11 +131,13 @@ describe('the consent screen for a returning user', () => {
     expect(kindOf(read())).toBe('returning')
   })
 
-  it('starts with Continue enabled, and shows only the transfer hint when the box is cleared', () => {
+  it('starts with Continue off until the agreement, then on, and shows only the transfer hint when the box is cleared', () => {
     const start = initialDraft(read({ consentErrors: true }))
-    expect(canContinue('returning', start, false)).toBe(true)
-    expect(hintFor('returning', { ...start, transfer: false }, false)).toBe('transfer')
-    expect(canContinue('returning', initialDraft(read()), false)).toBe(true)
+    expect(canContinue('returning', start, false)).toBe(false)
+    const agreed = { ...start, terms: true, privacy: true }
+    expect(canContinue('returning', agreed, false)).toBe(true)
+    expect(hintFor('returning', { ...agreed, transfer: false }, false)).toBe('transfer')
+    expect(canContinue('returning', { ...initialDraft(read()), terms: true, privacy: true }, false)).toBe(true)
   })
 })
 
@@ -248,13 +254,14 @@ describe('the steps of the consent screen', () => {
   it('asks the age first and the stats last on a first sign-in, only the account questions on a return', () => {
     expect(stepsOf('first', true)).toEqual(['age', 'keep', 'errors', 'contribute'])
     expect(stepsOf('first', false)).toEqual(['age', 'keep', 'errors'])
-    expect(stepsOf('returning', true)).toEqual(['keep', 'errors'])
+    expect(stepsOf('returning', true)).toEqual(['agree', 'keep', 'errors'])
   })
 
   it('holds each step until it is answered', () => {
     const empty = initialDraft({ state: 'none' })
     expect(stepHint('age', empty)).toBe('age')
-    expect(stepHint('age', { ...empty, age: true })).toBeNull()
+    expect(stepHint('age', { ...empty, age: true })).toBe('agree')
+    expect(stepHint('age', { ...empty, age: true, terms: true, privacy: true })).toBeNull()
     for (const step of ['errors', 'contribute'] as const) {
       expect(stepHint(step, empty)).toBe('answer')
       expect(stepHint(step, { ...empty, [step]: false })).toBeNull()
@@ -276,7 +283,45 @@ describe('the steps of the consent screen', () => {
   })
 
   it('lets a returning user through every step as the answers stand', () => {
-    const draft = initialDraft(read({ consentErrors: true }))
+    const draft = { ...initialDraft(read({ consentErrors: true })), terms: true, privacy: true }
     for (const step of stepsOf('returning', false)) expect(stepHint(step, draft)).toBeNull()
+  })
+})
+
+describe('the agreement step', () => {
+  it('starts both boxes unticked, for a first sign-in and for a return whatever was agreed before', () => {
+    for (const profile of [{ state: 'none' } as ProfileState, read({ consentErrors: true })]) {
+      const draft = initialDraft(profile)
+      expect([draft.terms, draft.privacy]).toEqual([false, false])
+    }
+  })
+
+  it('is the returning user\'s first step, and the first sign-in\'s age step holds the boxes', () => {
+    expect(stepsOf('returning', false)[0]).toBe('agree')
+    expect(stepsOf('first', false)[0]).toBe('age')
+  })
+
+  it('keeps Continue off until both boxes are ticked, whatever else is answered', () => {
+    for (const kind of ['first', 'returning'] as const) {
+      expect(canContinue(kind, answered({ terms: false }), false)).toBe(false)
+      expect(canContinue(kind, answered({ privacy: false }), false)).toBe(false)
+      expect(hintFor(kind, answered({ terms: false }), false)).toBe('agree')
+      expect(canContinue(kind, answered(), false)).toBe(true)
+    }
+    const returning = initialDraft(read())
+    expect(stepHint('agree', returning)).toBe('agree')
+    expect(stepHint('agree', { ...returning, terms: true })).toBe('agree')
+    expect(stepHint('agree', { ...returning, terms: true, privacy: true })).toBeNull()
+  })
+
+  it('records the agreement in the profile write only with both boxes ticked', () => {
+    expect(profileChange('returning', answered(), VERSION).termsAgreed).toBe(true)
+    expect(profileChange('returning', answered({ terms: false }), VERSION).termsAgreed).toBe(false)
+  })
+
+  it('points the terms page at the site in the language', () => {
+    expect(termsUrl('pt-BR')).toBe('https://senseitop.com/pt-br/terms/')
+    expect(termsUrl('en')).toBe('https://senseitop.com/terms/')
+    expect(termsUrl(undefined)).toBe('https://senseitop.com/terms/')
   })
 })

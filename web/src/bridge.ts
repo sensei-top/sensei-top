@@ -117,6 +117,8 @@ export type ProfileState =
       /** The privacy policy's version the answers were given under. */
       consentVersion: string
       consentedAt: string
+      /** When the Terms of Use were agreed to; `null` before they were. */
+      termsAgreedAt?: string | null
       /** Whether rules notes are on for the account; absent from a shell that
        *  does not read it, which reads as on. */
       rulesNotes?: boolean
@@ -172,6 +174,10 @@ export type ProfileChange = {
   policyVersion: string
   /** Required by the first write, ignored after it. */
   ageConfirmed?: boolean
+  /** `true` only from the agreement step with both boxes ticked: writes
+   *  `terms_agreed_at` in the same update as the version. Settings writes
+   *  leave it out. */
+  termsAgreed?: boolean
 }
 
 /** The account calls; resolves once the sign-in ended (up to five minutes). */

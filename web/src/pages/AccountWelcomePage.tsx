@@ -1,7 +1,9 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 import { useShell } from '../bridge'
+import { DeleteAccountDialog } from '../components/settings/AccountDialogs'
+import { deleteControls, exportLine, type DeleteFailure } from '../components/settings/accountLogic'
 import { Button, Card, MoreAbout, Segmented, TextLink } from '../components/ui'
 import {
   afterConsent,
@@ -14,6 +16,7 @@ import {
   privacyUrl,
   profileChange,
   stepHint,
+  termsUrl,
   stepsOf,
   withErrors,
   type Answer,
@@ -110,9 +113,13 @@ function Questions({ open }: { open: Opening }) {
   const steps = stepsOf(kind, contributeShown)
   const [at, setAt] = useState(0)
   const [draft, setDraft] = useState<Draft>(open.draft)
-  const [busy, setBusy] = useState<'continue' | 'leave' | null>(null)
+  const [busy, setBusy] = useState<'continue' | 'leave' | 'export' | null>(null)
   const [saved, setSaved] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
+  const [dialog, setDialog] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteFailure, setDeleteFailure] = useState<DeleteFailure | null>(null)
+  const [exportResult, setExportResult] = useState<'saved' | 'failed' | null>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const transferId = useId()
   const moved = useRef(false)
@@ -169,6 +176,39 @@ function Questions({ open }: { open: Opening }) {
       return failureOf(await settle(app.account.signOut(), t), t)
     })
 
+  // Both buttons work while agreement is due: they are the way out for a
+  // returning user who does not agree.
+  const deleteAccount = deleteControls({
+    kind: 'account',
+    call: async () => {
+      setDeleting(true)
+      setDeleteFailure(null)
+      try {
+        return await app.account.deleteAccount()
+      } finally {
+        setDeleting(false)
+      }
+    },
+    profileNow: () => undefined,
+    close: () => setDialog(false),
+    settled: (outcome) => {
+      if (outcome.ok) void navigate(afterConsent(location.state), { replace: true })
+      else setDeleteFailure(outcome.failure)
+    },
+  })
+  const onExport = async () => {
+    setBusy('export')
+    setExportResult(null)
+    let reply: Awaited<ReturnType<typeof app.account.exportData>> | null
+    try {
+      reply = await app.account.exportData()
+    } catch {
+      reply = null
+    }
+    setExportResult(exportLine(reply))
+    setBusy(null)
+  }
+
   const go = (by: number) => {
     setFailure(null)
     setAt((current) => current + by)
@@ -176,7 +216,9 @@ function Questions({ open }: { open: Opening }) {
   const hintText =
     hint === 'age'
       ? t('account.welcome.hint.age')
-      : hint === 'transfer'
+      : hint === 'agree'
+        ? t('account.welcome.hint.agree')
+        : hint === 'transfer'
         ? t('account.welcome.hint.transfer')
         : hint === 'answer'
           ? t('account.welcome.hint.answer')
@@ -194,6 +236,38 @@ function Questions({ open }: { open: Opening }) {
   const kept = at === 0 && kind === 'returning' && (
     <p className="max-w-prose text-body text-ink2">{t('account.welcome.kept')}</p>
   )
+  const agreement = (
+    <div className="space-y-3">
+      {(['terms', 'privacy'] as const).map((box) => (
+        <label key={box} className="flex max-w-prose items-start gap-3 text-body text-ink">
+          <input
+            type="checkbox"
+            className="mt-1 size-4 shrink-0 accent-accent"
+            checked={draft[box]}
+            disabled={busy !== null}
+            onChange={(event) => change({ [box]: event.target.checked })}
+          />
+          <span>
+            <Trans
+              i18nKey={`account.welcome.agree.${box}`}
+              components={{
+                terms: <TextLink href={termsUrl(i18n.resolvedLanguage)} />,
+                privacy: <TextLink href={privacyUrl(i18n.resolvedLanguage)} />,
+              }}
+            />
+          </span>
+        </label>
+      ))}
+      <p className="max-w-prose text-caption text-muted">
+        <Trans
+          i18nKey="account.welcome.agree.why"
+          components={{ transfer: <TextLink href={`${termsUrl(i18n.resolvedLanguage)}#sending-the-coachs-questions`} /> }}
+        />
+      </p>
+      <p className="max-w-prose text-caption text-muted">{t('account.welcome.agree.small')}</p>
+      {kind === 'returning' && <p className="max-w-prose text-body text-ink2">{t('account.welcome.refuse')}</p>}
+    </div>
+  )
   const openerMore = at === 0 && (
     <>
       <p>{t('account.welcome.stored')}</p>
@@ -208,7 +282,7 @@ function Questions({ open }: { open: Opening }) {
           <div className="space-y-1">
             <p className="text-caption text-muted">{t('welcome.frame.step', { n: at + 1, total: steps.length })}</p>
             <h2 ref={heading} tabIndex={-1} className="font-display text-title text-ink outline-none">
-              {t(`account.welcome.${step}.title`)}
+              {t(`account.welcome.${step === 'agree' ? 'age' : step}.title`)}
             </h2>
           </div>
 
@@ -227,10 +301,18 @@ function Questions({ open }: { open: Opening }) {
                 />
                 <span>{t('account.welcome.age.label')}</span>
               </label>
+              {agreement}
               <MoreAbout>
                 {openerMore}
                 <p>{t('account.welcome.age.small')}</p>
               </MoreAbout>
+            </div>
+          )}
+
+          {step === 'agree' && (
+            <div className="space-y-3">
+              {agreement}
+              <MoreAbout>{openerMore}</MoreAbout>
             </div>
           )}
 
@@ -382,10 +464,42 @@ function Questions({ open }: { open: Opening }) {
                   ? t('account.welcome.decline')
                   : t('account.welcome.signOut')}
             </Button>
+            {kind === 'returning' && (
+              <>
+                <Button variant="quiet" className="min-h-[44px]" disabled={busy !== null} onClick={() => void onExport()}>
+                  {busy === 'export' ? t('account.welcome.working') : t('account.settings.export.button')}
+                </Button>
+                <Button
+                  variant="quiet"
+                  className="min-h-[44px]"
+                  aria-haspopup="dialog"
+                  disabled={busy !== null}
+                  onClick={() => {
+                    setDeleteFailure(null)
+                    setDialog(true)
+                  }}
+                >
+                  {t('account.settings.deleteAccount.button')}
+                </Button>
+                {exportResult === 'saved' && <p className="text-caption text-ink2">{t('account.settings.export.saved')}</p>}
+                {exportResult === 'failed' && (
+                  <p role="alert" className="break-words text-caption text-loss">
+                    {t('account.settings.export.failed')}
+                  </p>
+                )}
+              </>
+            )}
             {kind === 'first' && <p className="max-w-prose text-caption text-muted">{t('account.welcome.declineNote')}</p>}
           </div>
         </div>
       </Card>
+      <DeleteAccountDialog
+        open={dialog}
+        busy={deleting}
+        failure={deleteFailure}
+        onCancel={deleteAccount.cancel}
+        onConfirm={() => void deleteAccount.confirm()}
+      />
     </div>
   )
 }

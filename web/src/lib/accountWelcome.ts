@@ -7,9 +7,13 @@ export const ACCOUNT_WELCOME_PATH = '/account/welcome'
 export type Answer = boolean | null
 
 /** What the screen holds before Continue. `transfer` is the box under
- *  "Send error reports" and means nothing unless `errors` is `true`. */
+ *  "Send error reports" and means nothing unless `errors` is `true`.
+ *  `terms` and `privacy` are the two agreement boxes, unticked for both
+ *  kinds: an earlier agreement never pre-ticks them. */
 export type Draft = {
   age: boolean
+  terms: boolean
+  privacy: boolean
   sync: Answer
   errors: Answer
   coach: Answer
@@ -31,6 +35,8 @@ export function initialDraft(profile: ProfileState): Draft {
   if (profile.state === 'read') {
     return {
       age: false,
+      terms: false,
+      privacy: false,
       sync: profile.consentSync,
       errors: profile.consentErrors,
       coach: profile.consentCoachHistory,
@@ -38,7 +44,7 @@ export function initialDraft(profile: ProfileState): Draft {
       contribute: null,
     }
   }
-  return { age: false, sync: null, errors: null, coach: null, transfer: false, contribute: null }
+  return { age: false, terms: false, privacy: false, sync: null, errors: null, coach: null, transfer: false, contribute: null }
 }
 
 /** Sets the error-reports answer. Leaving `Send` unticks the transfer box,
@@ -58,10 +64,16 @@ export function storedNo(kind: Kind, contribute: Contribute | null): Contribute 
   return showContribute(kind, contribute) && contribute && !contribute.yes ? contribute : null
 }
 
-/** Why Continue is off, as the one hint shown: `answers` while the age or
- *  an answer is missing (first sign-in), `transfer` while `Send` stands
- *  without the box. `null` when Continue is on. */
-export function hintFor(kind: Kind, draft: Draft, contributeShown: boolean): 'answers' | 'transfer' | null {
+/** Whether both agreement boxes are ticked. */
+export function agreed(draft: Draft): boolean {
+  return draft.terms && draft.privacy
+}
+
+/** Why Continue is off, as the one hint shown: `agree` until both
+ *  agreement boxes are ticked, `answers` while the age or an answer is
+ *  missing (first sign-in), `transfer` while `Send` stands without the box.
+ *  `null` when Continue is on. */
+export function hintFor(kind: Kind, draft: Draft, contributeShown: boolean): 'agree' | 'answers' | 'transfer' | null {
   if (kind === 'first') {
     const missing =
       !draft.age ||
@@ -71,6 +83,7 @@ export function hintFor(kind: Kind, draft: Draft, contributeShown: boolean): 'an
       (contributeShown && draft.contribute === null)
     if (missing) return 'answers'
   }
+  if (!agreed(draft)) return 'agree'
   if (draft.errors === true && !draft.transfer) return 'transfer'
   return null
 }
@@ -79,27 +92,30 @@ export function canContinue(kind: Kind, draft: Draft, contributeShown: boolean):
   return hintFor(kind, draft, contributeShown) === null
 }
 
-/** One step of the screen. `keep` asks the two things the account keeps
- *  at Supabase, the backup and the coach history; error reports have a step
- *  of their own, since the transfer box opens under them. */
-export type Step = 'age' | 'keep' | 'errors' | 'contribute'
+/** One step of the screen. `agree` is a returning user's first step, the
+ *  two agreement boxes; a first sign-in's `age` step holds them under the
+ *  age box. `keep` asks the two things the account keeps at Supabase, the
+ *  backup and the coach history; error reports have a step of their own,
+ *  since the transfer box opens under them. */
+export type Step = 'agree' | 'age' | 'keep' | 'errors' | 'contribute'
 
-/** The steps shown, in order: a first sign-in starts with the age and ends
- *  with "Help build the stats" when it is asked; a returning user answers
- *  the account's questions only. */
+/** The steps shown, in order: every one starts with the agreement (the age
+ *  step on a first sign-in, `agree` on a return); a first sign-in ends with
+ *  "Help build the stats" when it is asked. */
 export function stepsOf(kind: Kind, contributeShown: boolean): Step[] {
   const questions: Step[] = ['keep', 'errors']
-  if (kind === 'returning') return questions
+  if (kind === 'returning') return ['agree', ...questions]
   return ['age', ...questions, ...(contributeShown ? (['contribute'] as const) : [])]
 }
 
 /** Why a step's Next (or the last step's Continue) is off, as the one hint
- *  shown: `age` until the box is ticked, `answers` until both of `keep`'s
- *  questions are answered, `answer` until a one-question step is,
- *  `transfer` while `Send` stands without the transfer box. `null` when the
- *  step is answered. */
-export function stepHint(step: Step, draft: Draft): 'age' | 'answers' | 'answer' | 'transfer' | null {
-  if (step === 'age') return draft.age ? null : 'age'
+ *  shown: `age` until the box is ticked, `agree` until both agreement boxes
+ *  are, `answers` until both of `keep`'s questions are answered, `answer`
+ *  until a one-question step is, `transfer` while `Send` stands without the
+ *  transfer box. `null` when the step is answered. */
+export function stepHint(step: Step, draft: Draft): 'age' | 'agree' | 'answers' | 'answer' | 'transfer' | null {
+  if (step === 'agree') return agreed(draft) ? null : 'agree'
+  if (step === 'age') return !draft.age ? 'age' : agreed(draft) ? null : 'agree'
   if (step === 'keep') return draft.sync === null || draft.coach === null ? 'answers' : null
   const answer = draft[step]
   if (answer === null) return 'answer'
@@ -117,6 +133,7 @@ export function profileChange(kind: Kind, draft: Draft, policyVersion: string): 
     consentErrors: draft.errors === true && draft.transfer,
     consentCoachHistory: draft.coach === true,
     policyVersion,
+    termsAgreed: agreed(draft),
   }
   if (kind === 'first') change.ageConfirmed = draft.age
   return change
@@ -189,6 +206,11 @@ export function introLines(kind: Kind, hasChanges: boolean): 'intro' | 'changed'
 /** The privacy page of the site, in the dashboard's language. */
 export function privacyUrl(language: string | undefined): string {
   return language?.startsWith('pt') ? 'https://senseitop.com/pt-br/privacy/' : 'https://senseitop.com/privacy/'
+}
+
+/** The terms of use page of the site, in the dashboard's language. */
+export function termsUrl(language: string | undefined): string {
+  return language?.startsWith('pt') ? 'https://senseitop.com/pt-br/terms/' : 'https://senseitop.com/terms/'
 }
 
 /** The policy's date from its version (`YYYY-MM-DD`), as a local date so a

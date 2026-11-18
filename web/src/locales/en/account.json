@@ -1,9 +1,9 @@
 {
   "welcome": {
-    "intro": "Your account is free. The next steps ask about three things it can do, and nothing is chosen for you: each happens only if you say yes.",
-    "stored": "Your account holds your email, name and picture from Google or Discord, and these answers. It's kept at Supabase, in São Paulo, Brazil.",
-    "changed": "The privacy policy changed on {{date}}: {{changes}}",
-    "kept": "Your earlier answers are already chosen and apply until you press Continue.",
+    "intro": "Your account is free. First, agree to its terms. Then two questions ask about things it can do, and nothing is chosen for you: each happens only if you say yes.",
+    "stored": "Your account holds your email, name and picture from Google or Discord, these answers, and, for each question the app asks the rules coach, a record without its text. It's kept at Supabase, in São Paulo, Brazil.",
+    "changed": "The Terms of Use and the Privacy Policy changed on {{date}}: {{changes}}",
+    "kept": "Your earlier answers to the questions are already chosen and apply until you press Continue.",
     "age": {
       "label": "I'm 13 or older. If I'm under 18, a parent or guardian has said I can have an account and, if I choose to, send my games.",
       "small": "We store that you confirmed your age, and when.",
@@ -61,10 +61,11 @@
       "transfer": "To send error reports, agree to sending them to the United States, or choose Don't send.",
       "age": "Confirm your age to go on.",
       "answer": "Choose an answer to go on.",
-      "answers": "Answer both questions to go on."
+      "answers": "Answer both questions to go on.",
+      "agree": "Agree to the Terms of Use and confirm you've read the Privacy Policy to go on."
     },
     "decline": "Skip and don't create an account",
-    "declineNote": "Backup, error reports and coach history need an account. Skipping leaves them off and deletes the account this sign-in just made. No match has been backed up yet, and the matches on this PC stay.",
+    "declineNote": "Backup and error reports need an account. Skipping leaves them off and deletes the account this sign-in just made. No match has been backed up yet, and the matches on this PC stay.",
     "signOut": "Sign out",
     "error": {
       "failed": "Your answers were not saved, and nothing was changed. Try again.",
@@ -74,6 +75,13 @@
     "later": "You can change any answer later in Settings, under Account.",
     "keep": {
       "title": "What your account keeps"
+    },
+    "refuse": "Until you agree, the app asks the rules coach nothing. If you don't agree, you can export your data and delete your account here, or sign out; the matches on this PC stay.",
+    "agree": {
+      "terms": "I agree to the <terms>Terms of Use</terms> and to sending the rules coach's questions about my cards to Anthropic, in the United States, while I'm signed in.",
+      "privacy": "I've read the <privacy>Privacy Policy</privacy>.",
+      "why": "The rules coach comes with the account. Anthropic keeps its questions in the United States, which has no data-protection law like Brazil's LGPD, and may process them in other countries. <transfer>The terms say what is sent and what the risk is.</transfer> You can turn rules notes off in Settings, and Sensei Top works fully without an account.",
+      "small": "We store that you agreed, to which version, and when."
     }
   },
   "settings": {

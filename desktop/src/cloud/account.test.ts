@@ -36,6 +36,7 @@ function profile(userId: string, over: Partial<ProfileRow> = {}): ProfileRow {
     consent_coach_history: false,
     consent_version: '2026-11-01',
     consented_at: '2026-01-01T00:00:00.000Z',
+    terms_agreed_at: null,
     ...over,
   };
 }
@@ -264,6 +265,7 @@ describe('following the account', () => {
         consentCoachHistory: false,
         consentVersion: '2026-11-01',
         consentedAt: '2026-01-01T00:00:00.000Z',
+        termsAgreedAt: null,
       },
       sync: SYNC_STATUS,
     });
@@ -439,6 +441,7 @@ describe('the profile write', () => {
         consent_coach_history: true,
         consent_version: '2026-11-01',
         consented_at: NOW,
+        terms_agreed_at: null,
       },
     ]);
     expect(h.applies.at(-1)).toEqual({ consent: false });
@@ -463,6 +466,39 @@ describe('the profile write', () => {
 
     expect(await h.account.setProfile({ ...CHANGE, consentSync: false })).toEqual({ ok: true });
     expect(h.account.syncEnabled()).toBe(false);
+  });
+
+  it('writes terms_agreed_at and consent_version in one update, only from the agreement step', async () => {
+    const h = harness();
+    await h.account.start();
+    expect(await h.account.setProfile({ ...CHANGE, policyVersion: '2026-12-01', termsAgreed: true })).toEqual({ ok: true });
+    expect(h.updates).toEqual([
+      {
+        userId: USER,
+        patch: {
+          consent_sync: true,
+          consent_errors: false,
+          consent_coach_history: true,
+          consent_version: '2026-12-01',
+          consented_at: NOW,
+          terms_agreed_at: NOW,
+        },
+      },
+    ]);
+    expect(h.account.details().profile).toMatchObject({ state: 'read', termsAgreedAt: NOW, consentVersion: '2026-12-01' });
+
+    // A later Settings write does not move it.
+    expect(await h.account.setProfile({ ...CHANGE, policyVersion: '2026-12-01', consentErrors: true })).toEqual({ ok: true });
+    expect(h.updates[1]!.patch).not.toHaveProperty('terms_agreed_at');
+    expect(h.account.details().profile).toMatchObject({ termsAgreedAt: NOW });
+  });
+
+  it('writes terms_agreed_at on a first profile, and refuses a non-boolean flag', async () => {
+    const h = harness(signedIn(OTHER));
+    await h.account.start();
+    expect(await h.account.setProfile({ ...CHANGE, ageConfirmed: true, termsAgreed: 1 })).toEqual({ ok: false, error: 'invalid' });
+    expect(await h.account.setProfile({ ...CHANGE, ageConfirmed: true, termsAgreed: true })).toEqual({ ok: true });
+    expect(h.inserts[0]).toMatchObject({ user_id: OTHER, consent_version: '2026-11-01', terms_agreed_at: NOW });
   });
 
   it('changes nothing when the cloud refuses the write', async () => {
@@ -724,7 +760,7 @@ describe('the cloud adapter', () => {
     expect(requests[0]!.url.pathname).toBe('/rest/v1/profiles');
     expect(requests[0]!.url.searchParams.get('user_id')).toBe(`eq.${USER}`);
     expect(requests[0]!.url.searchParams.get('select')).toBe(
-      'user_id,age_confirmed_at,consent_sync,consent_errors,consent_coach_history,consent_version,consented_at',
+      'user_id,age_confirmed_at,consent_sync,consent_errors,consent_coach_history,consent_version,consented_at,terms_agreed_at',
     );
   });
 

@@ -45,12 +45,13 @@ export async function pressThenAct<T>(
 
 /** Why the press does not ask at all, or `null` when it may. Consent is the
  *  profile's version at or after the policy's (`YYYY-MM-DD` compares as a
- *  date); a profile with no `rulesNotes` field reads as on. */
+ *  date) and the Terms of Use agreed to (`termsAgreedAt` set; Settings can
+ *  raise the version without it); a profile with no `rulesNotes` field reads as on. */
 export function gateReason(shell: Shell | null, account: AccountState | undefined, policyVersion: string = POLICY_VERSION): string | null {
   if (!shell?.coach) return 'unavailable'
   if (!account?.available || !account.signedIn) return 'signedOut'
   const profile = account.profile
-  if (profile?.state !== 'read' || profile.consentVersion < policyVersion) return 'consent'
+  if (profile?.state !== 'read' || profile.consentVersion < policyVersion || !profile.termsAgreedAt) return 'consent'
   if (profile.rulesNotes === false) return 'notesOff'
   return null
 }
