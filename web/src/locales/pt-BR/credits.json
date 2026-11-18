@@ -29,10 +29,14 @@
         "terms": "Lidas conforme os Termos de Serviço da Daybreak e o EULA do MTGO em 2026-10-05: baixadas devagar pela sua própria cópia, para seu próprio uso, e mostradas com um link para a página de cada evento no mtgo.com."
       },
       "anthropic": {
-        "taken": "A API do Claude, só quando você configura uma chave e aperta um botão de escrever.",
-        "terms": "Sua própria conta e chave, sob os termos da Anthropic."
+        "taken": "A API do Claude, quando você configura uma chave e aperta um botão de escrever; e, enquanto você está conectado, pelo treinador de regras, que pergunta a ela sobre os cards de um relatório.",
+        "terms": "Com a sua chave: sua própria conta, sob os termos da Anthropic. Pelo treinador de regras: a conta do Sensei Top, sob os Commercial Terms da Anthropic."
       }
     }
+  },
+  "account": {
+    "heading": "Com uma conta",
+    "body": "Tudo acima funciona sem conta. Enquanto você está conectado, a conta também pode enviar o backup das partidas e os relatórios de erro, se você os ligou, e, quando você aperta Escrever com o Claude ou Copiar o prompt num relatório, algumas perguntas sobre os cards dele, que o aplicativo faz ao treinador de regras. O treinador roda no Google Cloud, em São Paulo, e repassa as perguntas à Anthropic, nos Estados Unidos, cujos modelos Claude escrevem as respostas. A Política de Privacidade e os Termos de Uso dizem o que cada um leva."
   },
   "fonts": {
     "heading": "Fontes tipográficas e símbolos",
