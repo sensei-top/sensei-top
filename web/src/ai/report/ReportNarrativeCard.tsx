@@ -5,6 +5,7 @@ import { useLLMStatus, type NarrativeResponse } from '../../api'
 import { Button, Card } from '../../components/ui'
 import { writerFrom } from '../../lib/writer'
 import type { CopyPressed } from '../CopyPromptCard'
+import { RulesNotesProvider } from '../notes/context'
 import { GenerateCard } from '../GenerateCard'
 import { notesMissing, useRulesNotesPress } from '../rulesNotes'
 import {
@@ -46,6 +47,7 @@ export function ReportNarrativeCard({ matchId }: { matchId: string }) {
 
   const body = prompt.data
   return (
+    <RulesNotesProvider notes={body?.notes}>
     <GenerateCard
       title={t('matches.report.coachTitle')}
       subtitle={t('matches.report.coachSubtitle')}
@@ -69,5 +71,6 @@ export function ReportNarrativeCard({ matchId }: { matchId: string }) {
       beforeRun={press}
       beforeCopy={beforeCopy}
     />
+    </RulesNotesProvider>
   )
 }

@@ -10,6 +10,7 @@ import { LeaksNarrativeCard } from './guide/LeaksNarrativeCard'
 import { RcqWrite } from './guide/RcqWrite'
 import { ReportNarrativeCard } from './report/ReportNarrativeCard'
 import { NarrativeAndExport } from './guide/WriteAndExport'
+import { RulesNotesProvider } from './notes/context'
 import { WritingSection, WritingStatus } from './settings/WritingSection'
 
 const SURFACES = {
@@ -30,6 +31,7 @@ const SURFACES = {
   NarrativeAndExport,
   WritingSection,
   WritingStatus,
+  RulesNotesProvider,
 } as const
 
 /** The AI surfaces a page outside `ai/` may draw. */

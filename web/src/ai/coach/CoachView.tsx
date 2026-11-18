@@ -249,7 +249,7 @@ function ReportDocument({
           </p>
         )}
       </div>
-      {report.narrative && <CoachReport prose={report.narrative} sources={report.sources ?? []} />}
+      {report.narrative && <CoachReport prose={report.narrative} sources={report.sources ?? []} notes={report.notes} />}
     </>
   )
 }

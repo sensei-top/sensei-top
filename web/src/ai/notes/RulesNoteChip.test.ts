@@ -1,4 +1,4 @@
-import { createElement } from 'react'
+import { type ComponentProps, createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { Prose } from '../../components/ui/Card'
@@ -18,7 +18,13 @@ const note = (marker: string, confidence: string | null): RulesNote => ({
 })
 
 const render = (text: string, notes: RulesNote[]) =>
-  renderToStaticMarkup(createElement(RulesNotesProvider, { notes }, createElement(Prose, { text })))
+  renderToStaticMarkup(
+    createElement(
+      RulesNotesProvider,
+      { notes } as unknown as ComponentProps<typeof RulesNotesProvider>,
+      createElement(Prose, { text }),
+    ),
+  )
 
 // The markup escapes an apostrophe, so compare against the escaped line.
 const escaped = (line: string) => line.replace(/'/g, '&#x27;')

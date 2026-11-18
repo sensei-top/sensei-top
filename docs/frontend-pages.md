@@ -719,7 +719,7 @@ say why advice is given after a match and not during one.
 
 The "Coach's summary" card (`ai/report/ReportNarrativeCard.tsx`) presses
 rules notes for `feature: 'match'` before it writes or copies, and refetches
-its prompt query before the copy (`docs/frontend.md`, "Writing prose").
+its prompt query before the copy (`docs/frontend.md`, "Writing prose: `GenerateCard` and `CopyPromptCard`").
 
 **The hero** (`components/match/MatchHero.tsx`) has Home's shape: the
 art at the right with a fade to the left, on top with a fade down under

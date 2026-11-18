@@ -815,8 +815,9 @@ One file per primitive, all re-exported from `index.ts`, so every
   bare "Loading…" text), `Skeleton` and `ErrorNote`.
 - **A page's outline.** `OutlineCard` (`ui/Outline.tsx`).
   See "Data fetching", "A page's outline".
-- **Text.** `Prose` (inline `**bold**` and `` `code` `` only, which is
-  all a narrative needs), `TextBlock` (a wrapped `pre` in the
+- **Text.** `Prose` (inline `**bold**`, `` `code` `` and a `[N<n>]` rules-note
+  marker, which draws that note's chip when a `RulesNotesProvider` above
+  knows `n` and nothing otherwise; all a narrative needs), `TextBlock` (a wrapped `pre` in the
   interface face, for a prompt, a command or exported Markdown, which
   never lets a page scroll sideways; `docs/design-system.md` has its
   tokens) and `Tooltip` (one sentence about a word, open on hover and
@@ -1305,7 +1306,8 @@ says and not what a press does. `components/home/SessionHero.tsx` and
 caption and image label from its own catalogue) have one each in the same
 pattern, and so does `components/settings/AppSection.tsx`, which checks
 which rows the App section draws depending on `canAutostart` and
-`windowsStore`; no other component has a test, and a hook that reads a
+`windowsStore`; `components/ui/Card.tsx`'s `Prose` has one, beside it, for its note
+markers, known and unknown; no other component has a test, and a hook that reads a
 query or the address (`useFilters`, `useMatchInProgress`) has none either: what a page
 looks like and does is still checked in a browser. Four tests sit outside
 `src/`, in `scripts/`, and they are the dashboard tests that touch the
