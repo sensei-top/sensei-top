@@ -49,7 +49,7 @@ describe('the gate', () => {
     ['no shell', null, account(), 'unavailable'],
     ['no coach in the shell', {} as Shell, account(), 'unavailable'],
     ['signed out', { coach: { ask: vi.fn() } } as unknown as Shell, { available: true, signedIn: false } as AccountState, 'signedOut'],
-    ['no account in the build', { coach: { ask: vi.fn() } } as unknown as Shell, { available: false }, 'signedOut'],
+    ['no account in the build', { coach: { ask: vi.fn() } } as unknown as Shell, { available: false } as AccountState, 'signedOut'],
     ['consent older than the policy', { coach: { ask: vi.fn() } } as unknown as Shell, account({ consentVersion: '2026-11-07' }), 'consent'],
     ['notes off', { coach: { ask: vi.fn() } } as unknown as Shell, account({ rulesNotes: false }), 'notesOff'],
   ])('skips, asking nothing: %s', async (_name, shell, acc, reason) => {

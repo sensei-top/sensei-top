@@ -1101,6 +1101,20 @@ a key of the viewer's writes, else nobody. Neither row draws a lock, a
 badge or a price, and the button's words do not change with the writer.
 The `POST .../narrative` routes answer 503 with no key configured.
 
+Both cards take a rules-notes press (`ai/rulesNotes.ts`, `docs/llm.md`):
+`GenerateCard`'s `beforeRun` is `() => Promise<NotesOutcome>`, and
+`beforeCopy` is `() => Promise<CopyPressed>` (`{ prompt, missing }`),
+handed on to `CopyPromptCard`, which also takes it. The card runs the press
+and then does its act, the generate or the copy, whatever the press did
+(`pressThenAct`: a rejection too): a failure never blocks either. The copy
+uses `prompt`, the page's prompt query refetched after the press, so the
+text copied carries the notes just stored; `null` keeps the one on
+screen. Each card draws at most one line, "Written without rules notes.",
+when the press asked and got no answer, the same line for every reason:
+never the reason and never a quota. A press the gate skipped (no shell,
+signed out, consent older than the policy, notes off) draws nothing, for
+that is the player's own state; the reason goes to the debug log only.
+
 The deck guide's narrative is structured rather than a prose blob, so
 its caller (`ai/guide/WriteAndExport.tsx`) passes no `narrative` and lets
 `generatedAt` alone say that something is stored (`GenerateCard`'s

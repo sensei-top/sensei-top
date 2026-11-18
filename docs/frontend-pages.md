@@ -717,6 +717,10 @@ replay's page, one address further. AGENTS.md rule 5 and
 `docs/review.md`, "The match report, and its optional narrative",
 say why advice is given after a match and not during one.
 
+The "Coach's summary" card (`ai/report/ReportNarrativeCard.tsx`) presses
+rules notes for `feature: 'match'` before it writes or copies, and refetches
+its prompt query before the copy (`docs/frontend.md`, "Writing prose").
+
 **The hero** (`components/match/MatchHero.tsx`) has Home's shape: the
 art at the right with a fade to the left, on top with a fade down under
 48rem, and no word on the picture. The art is a card the viewer cast:
@@ -1151,7 +1155,9 @@ deck whole and drops `?version=`. `/decks/:id/guide/rcq`, its address in
 search and hash. It hands the deck key to `RcqView` (`views/RcqView.tsx`, parts
 in `components/rcq/`; pure helpers in `lib/rcq.ts`); the write-and-paste
 card is `RcqWrite` (`ai/guide/RcqWrite.tsx`), drawn through `useAi()`,
-while the preview and the stored guide are core. Inputs card: the
+while the preview and the stored guide are core. `RcqWrite` presses rules notes for
+`feature: 'rcq'` with the pasted list and the picks before it writes or
+copies, and a copy takes the settled preview's refetched prompt. Inputs card: the
 pasted 75 (prefilled with the deck's list, editable), the expected
 archetypes as chips from `/api/metagame/presence` over the last 14 days
 of the deck's format (`CHIP_WINDOW_DAYS`; the format is the guide's
@@ -1177,6 +1183,10 @@ reads `deckKey` from the deck layout's outlet context and hands it to
 another deck starts the page afresh. The view has no deck picker of its
 own: the deck comes from the address alone, and the Guide reads the deck
 whole, whichever version was played.
+
+The write card (`ai/guide/WriteAndExport.tsx`) presses rules notes for
+`feature: 'guide'` before it writes or copies; a copy takes the refetched
+guide narrative's prompt.
 
 **The sections, and where they live.** `GuideView` reads `useGuide` and
 `useGuideNarrative`, then draws whichever sections `guideSections`
@@ -1555,6 +1565,10 @@ positive integer written in digits is that report, anything else is
 unknown). The page keys the view by the parameter, so moving between
 reports starts the model picker fresh. What the coach measures and what it
 leaves out is `docs/coach.md`; this section is what the page draws.
+
+The writing card presses rules notes for `feature: 'coach'`, with the
+page's format, before it writes or copies, and a copy takes the refetched
+narrative query's prompt.
 
 `/coach` is one format's page, and reads `?format=` as Field does
 (`docs/frontend.md`, "Filters are in the address"): `useCoachFormat` gives the address's
