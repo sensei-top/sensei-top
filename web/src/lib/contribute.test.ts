@@ -193,7 +193,7 @@ describe('the Settings switch', () => {
   })
   it('skips the dialog for an age-confirmed answer under the current or a newer policy', () => {
     expect(dialogNeeded(stored({ yes: false, policyVersion: '2026-11-03' }), '2026-11-03')).toBe(false)
-    expect(dialogNeeded(stored({ policyVersion: '2026-12-01' }), '2026-11-03')).toBe(false)
+    expect(dialogNeeded(stored({ policyVersion: '2026-11-18' }), '2026-11-03')).toBe(false)
   })
   it('turns on with the age confirmed and the current version', () => {
     expect(turnOnAnswer('v')).toEqual({ yes: true, policyVersion: 'v', ageConfirmed: true })

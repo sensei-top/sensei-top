@@ -469,23 +469,23 @@ describe('the profile write', () => {
   it('writes terms_agreed_at and consent_version in one update, only from the agreement step', async () => {
     const h = harness();
     await h.account.start();
-    expect(await h.account.setProfile({ ...CHANGE, policyVersion: '2026-12-01', termsAgreed: true })).toEqual({ ok: true });
+    expect(await h.account.setProfile({ ...CHANGE, policyVersion: '2026-11-18', termsAgreed: true })).toEqual({ ok: true });
     expect(h.updates).toEqual([
       {
         userId: USER,
         patch: {
           consent_sync: true,
           consent_errors: false,
-          consent_version: '2026-12-01',
+          consent_version: '2026-11-18',
           consented_at: NOW,
           terms_agreed_at: NOW,
         },
       },
     ]);
-    expect(h.account.details().profile).toMatchObject({ state: 'read', termsAgreedAt: NOW, consentVersion: '2026-12-01' });
+    expect(h.account.details().profile).toMatchObject({ state: 'read', termsAgreedAt: NOW, consentVersion: '2026-11-18' });
 
     // A later Settings write does not move it.
-    expect(await h.account.setProfile({ ...CHANGE, policyVersion: '2026-12-01', consentErrors: true })).toEqual({ ok: true });
+    expect(await h.account.setProfile({ ...CHANGE, policyVersion: '2026-11-18', consentErrors: true })).toEqual({ ok: true });
     expect(h.updates[1]!.patch).not.toHaveProperty('terms_agreed_at');
     expect(h.account.details().profile).toMatchObject({ termsAgreedAt: NOW });
   });

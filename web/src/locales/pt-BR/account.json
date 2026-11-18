@@ -173,7 +173,7 @@
     "done": "Sua conta foi apagada."
   },
   "policyChanges": {
-    "2026-12-01": "o treinador de regras agora vem com a conta. Enquanto você está conectado, o aplicativo pode enviar à Anthropic, nos Estados Unidos, perguntas sobre os cards de um relatório que você escreve. Os Termos de Uso tratam disso, você pode desligar as notas de regras em Configurações, e Guardar meu histórico do treinador não existe mais.",
+    "2026-11-18": "o treinador de regras agora vem com a conta. Enquanto você está conectado, o aplicativo pode enviar à Anthropic, nos Estados Unidos, perguntas sobre os cards de um relatório que você escreve. Os Termos de Uso tratam disso, você pode desligar as notas de regras em Configurações, e Guardar meu histórico do treinador não existe mais.",
     "2026-11-07": "seu sim aos relatórios de erro agora também vale para os relatórios que você envia por conta própria, e um relatório diz de qual página veio."
   },
   "errorsDialog": {

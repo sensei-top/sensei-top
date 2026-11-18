@@ -473,9 +473,9 @@ accounts only.
 
 **Needs:** The deploy in the coach repository's hosting document ("The
 steps"), with its migration live before the desktop build that reads
-`terms_agreed_at` and `rules_notes` ships; the real policy date in place
-of the provisional 2026-12-01 and the Anthropic quotes re-checked; the
-email to existing accounts seven days before the release. Going public
+`terms_agreed_at` and `rules_notes` ships; the Anthropic quotes re-checked
+against the live pages (the policy date is 2026-11-18); the one beta
+tester told before they update. Going public
 also waits on the eval gate passed on the production model, the budget
 cap and kill switch tested, and the Fan Content Policy notice in the app's
 About (the site's footer and the Welcome page have it).
