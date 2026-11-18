@@ -1,9 +1,9 @@
 {
   "welcome": {
-    "intro": "Your account is free. The next steps ask about three things it can do, and nothing is chosen for you: each happens only if you say yes.",
-    "stored": "Your account holds your email, name and picture from Google or Discord, and these answers. It's kept at Supabase, in São Paulo, Brazil.",
-    "changed": "The privacy policy changed on {{date}}: {{changes}}",
-    "kept": "Your earlier answers are already chosen and apply until you press Continue.",
+    "intro": "Your account is free. First, agree to its terms. Then two questions ask about things it can do, and nothing is chosen for you: each happens only if you say yes.",
+    "stored": "Your account holds your email, name and picture from Google or Discord, these answers, and, for each question the app asks the rules coach, a record without its text. It's kept at Supabase, in São Paulo, Brazil.",
+    "changed": "The Terms of Use and the Privacy Policy changed on {{date}}: {{changes}}",
+    "kept": "Your earlier answers to the questions are already chosen and apply until you press Continue.",
     "age": {
       "label": "I'm 13 or older. If I'm under 18, a parent or guardian has said I can have an account and, if I choose to, send my games.",
       "small": "We store that you confirmed your age, and when.",
@@ -32,14 +32,6 @@
       "agree": "I agree that error reports, and the reports I send myself, go to Sentry, in the United States.",
       "withdraw": "Without this, nothing is sent automatically, and each report you send yourself asks first. You can withdraw it at any time by turning error reports off."
     },
-    "coach": {
-      "title": "Keep my coach history",
-      "kept": "They're kept at Supabase, in Brazil, until you delete them or your account.",
-      "off": "With it off, only when you asked, which model answered and what it cost are kept, for 90 days.",
-      "yes": "Keep",
-      "no": "Don't keep",
-      "lead": "The rules coach comes in a later version. With this on, your questions and its answers are kept so you can reread them."
-    },
     "policy": {
       "lead": "What is stored, where and for how long:",
       "link": "Privacy policy ({{date}})"
@@ -61,10 +53,10 @@
       "transfer": "To send error reports, agree to sending them to the United States, or choose Don't send.",
       "age": "Confirm your age to go on.",
       "answer": "Choose an answer to go on.",
-      "answers": "Answer both questions to go on."
+      "agree": "Agree to the Terms of Use and confirm you've read the Privacy Policy to go on."
     },
     "decline": "Skip and don't create an account",
-    "declineNote": "Backup, error reports and coach history need an account. Skipping leaves them off and deletes the account this sign-in just made. No match has been backed up yet, and the matches on this PC stay.",
+    "declineNote": "Backup and error reports need an account. Skipping leaves them off and deletes the account this sign-in just made. No match has been backed up yet, and the matches on this PC stay.",
     "signOut": "Sign out",
     "error": {
       "failed": "Your answers were not saved, and nothing was changed. Try again.",
@@ -74,6 +66,13 @@
     "later": "You can change any answer later in Settings, under Account.",
     "keep": {
       "title": "What your account keeps"
+    },
+    "refuse": "Until you agree, the app asks the rules coach nothing. If you don't agree, you can export your data and delete your account here, or sign out; the matches on this PC stay.",
+    "agree": {
+      "terms": "I agree to the <terms>Terms of Use</terms> and to sending the rules coach's questions about my cards to Anthropic, in the United States, while I'm signed in.",
+      "privacy": "I've read the <privacy>Privacy Policy</privacy>.",
+      "why": "The rules coach comes with the account. Anthropic keeps its questions in the United States, which has no data-protection law like Brazil's LGPD, and may process them in other countries. <transfer>The terms say what is sent and what the risk is.</transfer> You can turn rules notes off in Settings, and Sensei Top works fully without an account.",
+      "small": "We store that you agreed, to which version, and when."
     }
   },
   "settings": {
@@ -101,9 +100,9 @@
       "label": "Send error reports",
       "description": "Sends a report to Sentry, in the United States, when something goes wrong. Kept for 30 days. With it on, the reports you send yourself don't ask first."
     },
-    "coach": {
-      "label": "Keep my coach history",
-      "description": "Saves your questions to the rules coach and its answers so you can reread them. The coach comes in a later version."
+    "rulesNotes": {
+      "label": "Add rules notes to my reports",
+      "description": "While you're signed in, sends a few questions about the cards in each report you write to the rules coach, and on to Anthropic, in the United States. Off, the coach is asked nothing, on every PC, and reports have no rules notes."
     },
     "turningOff": "Turning a choice off stops it from then on. To remove what was already uploaded, use Delete cloud history.",
     "sync": {
@@ -174,6 +173,7 @@
     "done": "Your account was deleted."
   },
   "policyChanges": {
+    "2026-11-18": "the rules coach now comes with the account. While you're signed in, the app can send Anthropic, in the United States, questions about the cards in a report you write. The Terms of Use set this out, you can turn rules notes off in Settings, and Keep my coach history is gone.",
     "2026-11-07": "your yes to error reports now also covers the reports you send yourself, and a report says which page it came from."
   },
   "errorsDialog": {

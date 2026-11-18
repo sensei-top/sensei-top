@@ -115,6 +115,11 @@ export const credits = {
     closing: 'credits.dataSources.closing',
   },
 
+  account: {
+    heading: 'credits.account.heading',
+    body: 'credits.account.body',
+  },
+
   fonts: {
     heading: 'credits.fonts.heading',
     opening: 'credits.fonts.opening',

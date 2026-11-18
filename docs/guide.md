@@ -301,6 +301,12 @@ the one parser both round trips converge on:
   `context`, the hash of the 75 the prompt was built from, so a guide
   answered for an older list reads as out of date.
 
+When a stored rules note answers one of the prompt's questions (the deck guide's
+and the RCQ guide's alike), the prompt carries a notes block after its evidence
+and before the answer contract, and the writer cites it as `[N<n>]` inside a text
+field; staleness stays the 75's hash, which no prompt text enters, and `notes` is read from the stored
+prompt and every string of the stored narrative (`docs/llm.md`, "Rules notes").
+
 Either way the result stores the deck-level half in `deck_narrative`
 (`ai/guide/authored.py`) and every matchup plan in `matchup_brief`, so one
 write also fills the Live page. See `docs/brief.md`.

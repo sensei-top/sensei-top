@@ -127,7 +127,8 @@ export function parseReport(text: string): ReportSection[] {
  *  an em, the `]` of a link's label. */
 type Stop = '**' | '*' | ']'
 
-const CITE_RE = /^\[R(\d+)\]/
+// `[R<n>]` cites a source, `[N<n>]` a rules note; the label keeps the letter.
+const CITE_RE = /^\[([RN])(\d+)\]/
 // A bare url stops at a space and at a character that is markup here or
 // that a url does not carry unescaped: `*`, a backtick, `<`, `>`, `[`, `]`.
 const BARE_URL_RE = /^https?:\/\/[^\s*`<>[\]]+/i
@@ -276,7 +277,7 @@ function scan(s: string, start: number, stops: Stop[], failed: Set<string>, inLa
       // `[R4](https://…)` is a link labelled R4, not a citation.
       if (cite && s[i + cite[0].length] !== '(') {
         flush()
-        nodes.push({ kind: 'cite', label: `R${cite[1]}` })
+        nodes.push({ kind: 'cite', label: `${cite[1]}${cite[2]}` })
         i += cite[0].length
         continue
       }
@@ -294,7 +295,7 @@ function scan(s: string, start: number, stops: Stop[], failed: Set<string>, inLa
       failed.add(key)
       if (cite) {
         flush()
-        nodes.push({ kind: 'cite', label: `R${cite[1]}` })
+        nodes.push({ kind: 'cite', label: `${cite[1]}${cite[2]}` })
         i += cite[0].length
         continue
       }
@@ -331,8 +332,8 @@ function scan(s: string, start: number, stops: Stop[], failed: Set<string>, inLa
  *  (`` `…` ``); `link` (`[label](url)`, only for an `http:`/`https:`
  *  url, parentheses inside it balanced), with children that hold no
  *  `link`, `url` or `cite` (those characters stay text); `url`, a bare
- *  `http(s)://` run, not ending in any of `.,;:)`; `cite`, `[R` digits
- *  `]`, labelled `R4`, unless a `(url)` follows it, which makes it a
+ *  `http(s)://` run, not ending in any of `.,;:)`; `cite`, `[R` or `[N` digits
+ *  `]`, labelled `R4` or `N2`, unless a `(url)` follows it, which makes it a
  *  link's label. A marker that does not close stays text, and `_` is
  *  never emphasis. */
 export function parseInline(text: string): Inline[] {

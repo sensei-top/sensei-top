@@ -11,8 +11,10 @@ import dataclasses
 import hashlib
 import json
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass
 
+from sensei_top.ai import rules_notes
 from sensei_top.ai.answers import rcq_for
 from sensei_top.ai.guide.narrative import (
     BoardCard,
@@ -205,10 +207,15 @@ def rcq_context(parsed: ParsedList, expected_keys) -> str:
 
 
 @english()
-def rcq_prompt(evidence: RcqEvidence, *, conn, answer_contract: bool = True) -> str:
+def rcq_prompt(
+    evidence: RcqEvidence, *, conn, answer_contract: bool = True,
+    notes_block: Callable[[], str] | None = None,
+) -> str:
     """The complete text to hand an assistant: the framing, the evidence —
     the deck guide's own evidence, with the pasted 75 in place of the
-    identity's current list — then the answer contract (``answers.py``)
+    identity's current list — then the text ``notes_block()`` returns
+    (``rules_notes.render_block``) when it is not empty, called only once the
+    context is built, then the answer contract (``answers.py``)
     naming this deck's RCQ guide, with ``rcq_context`` as its ``context``,
     so a pasted answer says which list it was written for.
     ``answer_contract=False`` is the generate route's prompt, which puts the
@@ -315,8 +322,11 @@ def rcq_prompt(evidence: RcqEvidence, *, conn, answer_contract: bool = True) -> 
         ),
     )
 
+    context = "\n".join(lines)
+    if notes_block is not None:
+        context = rules_notes.append_block(context, notes_block())
     return _wrap_json_prompt(
-        RCQ_SYSTEM_PROMPT, _RCQ_TOOL["input_schema"], "\n".join(lines),
+        RCQ_SYSTEM_PROMPT, _RCQ_TOOL["input_schema"], context,
         answer_for=rcq_for(deck.key) if answer_contract else None,
         written_for=(
             rcq_context(evidence.parsed, evidence.expected_keys) if answer_contract else None

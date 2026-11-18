@@ -10,12 +10,6 @@
   "cardsSeen_other": "{{count}} cards vistos",
   "cardsLeft_one": "{{count}} card restante",
   "cardsLeft_other": "{{count}} cards restantes",
-  "confidence": {
-    "high": "alta",
-    "medium": "média",
-    "low": "baixa",
-    "unknown": "desconhecida"
-  },
   "times": {
     "once": "uma vez",
     "twice": "duas vezes",

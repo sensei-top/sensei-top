@@ -412,6 +412,7 @@ describe('small readers', () => {
     expect(uses('deleteCloudHistory', 'accountDeleteHistory')).toBe(true);
     expect(uses('deleteAccount', 'accountDelete')).toBe(true);
     expect(uses('readProfileAgain', 'accountReadProfile')).toBe(true);
+    expect(uses('ask', 'coachAsk')).toBe(true);
     expect(uses('reportError', 'reportError')).toBe(true);
     expect(uses('reportProblem', 'reportProblem')).toBe(true);
   });

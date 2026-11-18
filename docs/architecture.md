@@ -1001,7 +1001,7 @@ Each table has one owner, and confusing their lifecycles is how data gets destro
 | Bookkeeping | `projection_state`, `backup_state` | Updated in place, by the watcher and by `backup/` respectively; never deleted — `project()` never touches them |
 | The user | `opponent_deck_override`, `mtgo_match_pick` | Never deleted — their own pick for their own match: the opponent's deck for either client, and the user's own deck and format for an MTGO match, which MTGO's log never names. A newer pick pulled from the user's cloud history can replace a local one ("Cloud sync") |
 | Cloud history | `cloud_match` | Written only by `PUT /api/sync/pulled` ("Cloud sync"); `project()` never reads or deletes it, and a row is hidden, not removed, once the match is read from this install's own log |
-| Authored prose | `deck_narrative`, `matchup_brief`, `match_narrative`, `leaks_narrative`, `coach_report`, `rcq_guide` | Never deleted by `project()` — written, not derived, so a rebuild could not recompute them |
+| Authored prose | `deck_narrative`, `matchup_brief`, `match_narrative`, `leaks_narrative`, `coach_report`, `rcq_guide`, `rules_note` | Never deleted by `project()` — written, not derived, so a rebuild could not recompute them |
 
 `meta_event` (downloaded reference) gained three read dates in
 `migrations/061_meta_fetch_hold.sql`: `lists_read_at`, when a read of

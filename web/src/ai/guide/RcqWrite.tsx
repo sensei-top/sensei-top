@@ -1,7 +1,10 @@
 import { useTranslation } from 'react-i18next'
-import { useLLMStatus, useRcqGuide, type RcqGenerateIn } from '../../api'
+import { useQueryClient } from '@tanstack/react-query'
+import { useLLMStatus, useRcqGuide, type RcqGenerateIn, type RcqPreviewOut } from '../../api'
 import { writerFrom } from '../../lib/writer'
+import type { CopyPressed } from '../CopyPromptCard'
 import { GenerateCard } from '../GenerateCard'
+import { notesMissing, useRulesNotesPress } from '../rulesNotes'
 import { useGenerateRcq, usePasteRcq } from '../hooks'
 
 /** The RCQ page's write and paste-an-answer card. `sent` is the list as
@@ -24,6 +27,22 @@ export function RcqWrite({
   const llmStatus = useLLMStatus()
   const generate = useGenerateRcq()
   const paste = usePasteRcq()
+  const queryClient = useQueryClient()
+  const press = useRulesNotesPress({
+    feature: 'rcq',
+    key: deckKey,
+    decklist: sent.decklist,
+    expected: sent.expected,
+    own: sent.own,
+  })
+  // The preview behind `prompt` is the one active query of this deck's.
+  const beforeCopy = async (): Promise<CopyPressed> => {
+    const outcome = await press()
+    const key = ['rcq-preview', deckKey]
+    if (outcome.stored > 0) await queryClient.refetchQueries({ queryKey: key, type: 'active' })
+    const active = queryClient.getQueryCache().findAll({ queryKey: key, type: 'active' })[0]
+    return { prompt: (active?.state.data as RcqPreviewOut | undefined)?.prompt ?? null, missing: notesMissing(outcome) }
+  }
   const response = stored.data?.status === 'ok' ? stored.data : undefined
   const changed = response?.decklist_text != null && response.decklist_text.trim() !== sent.decklist.trim()
   // The stored answer's own prompt was for another list than the one saved
@@ -48,6 +67,8 @@ export function RcqWrite({
       generating={generate.isPending}
       generateError={generate.error?.message}
       save={(answer) => paste.mutateAsync({ key: deckKey, inputs: sent, answer })}
+      beforeRun={press}
+      beforeCopy={beforeCopy}
     />
   )
 }

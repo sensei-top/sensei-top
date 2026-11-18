@@ -83,7 +83,7 @@ function NoticesDisclosure() {
  *  was. */
 export function CreditsView() {
   const { t } = useTranslation()
-  const { wizards, dataSources, fonts, software, program } = credits
+  const { wizards, dataSources, account, fonts, software, program } = credits
   return (
     <div className="max-w-3xl space-y-6">
       <Card title={wizards.heading}>
@@ -112,6 +112,10 @@ export function CreditsView() {
           ))}
         </ul>
         <p className="mt-4 text-caption text-muted">{t(dataSources.closing)}</p>
+      </Card>
+
+      <Card title={t(account.heading)}>
+        <p className="text-body text-ink2">{t(account.body)}</p>
       </Card>
 
       <Card title={t(fonts.heading)}>

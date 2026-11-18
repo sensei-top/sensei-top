@@ -9,6 +9,7 @@ from sensei_top.ai.brief.store import (
     Brief,
     PlayAround,
     Staple,
+    briefs_for_deck,
     is_stale,
     list_hash,
     read_brief,
@@ -121,3 +122,11 @@ def test_problems_round_trip(conn):
     conn.commit()
     back = read_brief(conn, "guid:abc", "mardu_discard")
     assert back.problems == (PlanProblem(archetype="Mardu Discard", message="unbalanced"),)
+
+
+def test_read_strips_rules_note_markers_but_the_stored_prose_and_the_guide_list_keep_them(conn):
+    write_brief(conn, _brief(prose="Race them early [N1]. Hold removal [N2, N3]."))
+    assert read_brief(conn, "guid:abc", "mardu_discard").prose == "Race them early. Hold removal."
+    stored = conn.execute("SELECT prose FROM matchup_brief").fetchone()[0]
+    assert stored == "Race them early [N1]. Hold removal [N2, N3]."
+    assert briefs_for_deck(conn, "guid:abc")[0].prose == stored

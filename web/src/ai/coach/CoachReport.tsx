@@ -3,6 +3,16 @@ import type { CoachSource } from '../../api'
 import { citationOf, hostOf, readingOrder } from './coach'
 import { type Block, type Inline, parseReport } from '../../lib/markdown'
 import { Card, SectionLabel, TextLink } from '../../components/ui'
+import { type RulesNote, useRulesNote } from '../../lib/noteMarker'
+import { RulesNoteChip } from '../notes/RulesNoteChip'
+import { RulesNotesProvider } from '../notes/context'
+
+/** An `N<n>` citation: that note's chip, nothing when no provider above
+ *  knows it. */
+function NoteCite({ n }: { n: string }) {
+  const note = useRulesNote(n)
+  return note ? <RulesNoteChip note={note} /> : null
+}
 
 /** A report's inline tree, drawn. A link's label holds no link, url or
  *  citation (`parseInline` sees to it), so one link never sits inside
@@ -45,6 +55,8 @@ function InlineNodes({ nodes, sources }: { nodes: Inline[]; sources: CoachSource
               </TextLink>
             )
           case 'cite': {
+            const noteN = /^N(\d+)$/.exec(node.label)
+            if (noteN) return <NoteCite key={i} n={noteN[1]} />
             const text = `[${node.label}]`
             const target = citationOf(node.label, sources)
             if (target == null) {
@@ -186,9 +198,18 @@ function SourcesBody({ sources }: { sources: CoachSource[] }) {
  *  such as `[R4]` is a muted link to that reading entry. The section
  *  titled "Sources", in any case, lists `sources` in place of its own
  *  prose when there are any; a report with none keeps its own text. */
-export function CoachReport({ prose, sources }: { prose: string; sources: CoachSource[] }) {
+export function CoachReport({
+  prose,
+  sources,
+  notes,
+}: {
+  prose: string
+  sources: CoachSource[]
+  notes?: readonly RulesNote[] | null
+}) {
   const sections = parseReport(prose)
   return (
+    <RulesNotesProvider notes={notes}>
     <div className="space-y-4">
       {sections.map((section, i) => {
         const isSources = section.title?.toLowerCase() === 'sources'
@@ -203,5 +224,6 @@ export function CoachReport({ prose, sources }: { prose: string; sources: CoachS
         )
       })}
     </div>
+    </RulesNotesProvider>
   )
 }

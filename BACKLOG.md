@@ -449,35 +449,36 @@ client (`ROADMAP.md`, "Never"), and the event rule (`table/queues.py`).
 
 ### BL-101 · The rules coach
 
-type: feat · priority: P1 · status: ready · area: web desktop site legal
+type: feat · priority: P1 · status: blocked · area: web desktop site legal
 
-A hosted rules coach that answers rules and card-interaction questions in
-English, with the rule numbers it relied on, on the website and in a tab
-of the app, for signed-in players (decided 2026-11-02; `docs/llm.md`,
-"What is hosted, and what it receives"). It answers from the
-Comprehensive Rules and Scryfall's Oracle cards and rulings, through
-Anthropic's Claude Haiku 5.5, with the hard questions sent to whichever
-setup the evals choose (decided 2026-11-03, replacing the spec's OpenAI),
-under per-player daily limits, a monthly budget and a kill switch. Its own
-repository holds the ingest, the retrieval, the API and a public eval
-suite. The app's tab needs a name: the existing Coach page is the
-cross-deck report.
+A hosted rules coach for signed-in players (decided 2026-11-02, narrowed
+2026-11-12 to an internal service with no page or tab of its own;
+`docs/llm.md`, "What is hosted, and what it receives"). When a player
+presses Write it with Claude or Copy the prompt on a match report, a deck
+guide, an RCQ guide or the coach report, the app asks it a few questions
+about the report's cards; its answers, with the rule numbers they rely
+on, come back as rules notes the report cites as `[N<n>]`. It answers
+from the Comprehensive Rules and Scryfall's Oracle cards and rulings
+through Anthropic's Claude models, under per-player daily limits, a
+monthly budget and a kill switch. Ticking the terms at sign-in is the
+consent to sending the questions to Anthropic; "Add rules notes to my
+reports" in Settings turns it off. Its own repository holds the ingest,
+the retrieval, the API and the eval suite.
 
-**Why deferred:** Not started. What it stood on is in production: the
-account, the consent screens, and the privacy policy and terms that
-describe it (1.4.0), and the "AI features" switch that hides it (1.3.0).
-The coach repository holds only the account's Supabase project so far: no
-ingest, retrieval, API or evals.
+**Why deferred:** Built on both sides (plan 40E, 2026-11-17): the coach
+API, the app's questions, notes and chip, the agreement step and the
+switch, and the terms, privacy, help and Credits text. Not deployed:
+the coach API and its migration are not live, so the feature is on test
+accounts only.
 
-**Needs:** Its plans, sub-plans C and E of
-`~/.claude/plans/release-40-coach-and-accounts.md`, neither yet written
-out. Going public, not the build, also waits on the launch gate: Google
-sign-in on the website, the eval gate passed on the production model (its
-gold set is the user's to write), the budget cap and kill switch tested,
-and the Fan Content Policy notice in the app's About (the site's footer
-has it). The Anthropic Console workspace with its US$10 monthly spend
-limit already exists. Until then the
-hosted coach is limited to beta testers' accounts.
+**Needs:** The deploy in the coach repository's hosting document ("The
+steps"), with its migration live before the desktop build that reads
+`terms_agreed_at` and `rules_notes` ships; the Anthropic quotes re-checked
+against the live pages (the policy date is 2026-11-18); the one beta
+tester told before they update. Going public
+also waits on the eval gate passed on the production model, the budget
+cap and kill switch tested, and the Fan Content Policy notice in the app's
+About (the site's footer and the Welcome page have it).
 
 ### BL-104 · Deleting an inactive account
 

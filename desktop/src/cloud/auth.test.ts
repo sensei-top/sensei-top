@@ -509,7 +509,7 @@ describe('SessionStore', () => {
 
 describe('parseBuildConfig', () => {
   it('is absent with nothing set, or with only one of the two Supabase values', () => {
-    expect(parseBuildConfig({})).toEqual({ supabase: null, sentryDsnDesktop: null, sentryDsnLocalApi: null });
+    expect(parseBuildConfig({})).toEqual({ coach: null, supabase: null, sentryDsnDesktop: null, sentryDsnLocalApi: null });
     expect(parseBuildConfig({ supabaseUrl: 'https://p.example.invalid' }).supabase).toBeNull();
     expect(parseBuildConfig({ supabaseUrl: '  ', supabaseAnonKey: 'k' }).supabase).toBeNull();
   });
@@ -527,6 +527,7 @@ describe('parseBuildConfig', () => {
         sentryDsnDesktop: 'https://d@sentry.example.invalid/1',
       }),
     ).toEqual({
+      coach: null,
       supabase: { url: 'http://127.0.0.1:54321', anonKey: 'k' },
       sentryDsnDesktop: 'https://d@sentry.example.invalid/1',
       sentryDsnLocalApi: null,

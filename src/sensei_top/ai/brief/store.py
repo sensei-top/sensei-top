@@ -11,11 +11,13 @@ nothing in this project writes a brief on its own (AGENTS.md non-negotiable
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
 import sqlite3
 from dataclasses import dataclass
 
+from sensei_top.ai import rules_notes
 from sensei_top.ai.guide.narrative import BoardCard
 from sensei_top.ai.guide.plans import PlanProblem
 from sensei_top.ai.llm.provenance import upsert_authored
@@ -146,12 +148,19 @@ def _brief_from_row(row: sqlite3.Row) -> Brief:
     )
 
 
+def without_markers(brief: Brief) -> Brief:
+    """``brief`` with its prose stripped of ``[N<n>]`` rules-note markers. The
+    stored prose keeps them verbatim (the deck guide that wrote it cites its
+    notes); a brief carries no notes, so every read but the guide's strips."""
+    return dataclasses.replace(brief, prose=rules_notes.strip_markers(brief.prose))
+
+
 def read_brief(conn: sqlite3.Connection, deck_key: str, archetype_key: str) -> Brief | None:
     row = conn.execute(
         "SELECT * FROM matchup_brief WHERE deck_key = ? AND archetype_key = ?",
         (deck_key, archetype_key),
     ).fetchone()
-    return _brief_from_row(row) if row is not None else None
+    return without_markers(_brief_from_row(row)) if row is not None else None
 
 
 def write_brief(conn: sqlite3.Connection, brief: Brief) -> None:
@@ -202,6 +211,8 @@ def corpus_commit(conn: sqlite3.Connection) -> str | None:
 
 
 def briefs_for_deck(conn: sqlite3.Connection, deck_key: str) -> list[Brief]:
+    """Prose keeps its ``[N<n>]`` markers verbatim, for ``narrative_for``;
+    any other reader strips them with ``without_markers``."""
     rows = conn.execute(
         "SELECT * FROM matchup_brief WHERE deck_key = ? ORDER BY generated_at DESC", (deck_key,)
     ).fetchall()

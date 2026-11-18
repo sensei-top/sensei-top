@@ -9,6 +9,7 @@ import { markdownFileName } from '../../lib/rcq'
 import { useNow } from '../../lib/time'
 import { shownAuthor, writtenLine } from '../../lib/written'
 import { useAiFeatures } from '../../shell/aiFeatures'
+import { useAi } from '../../ai/registry'
 import { Button, Callout, Card, Chip, Prose, type ChipVariant } from '../ui'
 import { PlanBody } from '../guide/WrittenCards'
 
@@ -129,11 +130,12 @@ export function RcqResult({ deckKey, response }: { deckKey: string; response: Rc
   const { t } = useTranslation()
   const now = useNow()
   const [aiOn] = useAiFeatures()
+  const ai = useAi()
   const guide = response.guide
   if (response.status !== 'ok' || guide == null) return null
   const line = writtenLine(shownAuthor(response.model, aiOn), response.generated_at, now, t)
 
-  return (
+  const body = (
     <div className="space-y-6">
       <Card title={t('rcq.result.gamePlan')} subtitle={line ?? undefined}>
         <Prose text={guide.game_plan} />
@@ -147,4 +149,5 @@ export function RcqResult({ deckKey, response }: { deckKey: string; response: Rc
       <CarryCard deckKey={deckKey} response={response} />
     </div>
   )
+  return ai ? <ai.RulesNotesProvider notes={response.notes}>{body}</ai.RulesNotesProvider> : body
 }

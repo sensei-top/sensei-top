@@ -18,9 +18,9 @@ below drew: rule 5's "nothing hosted writes for the user", "nothing free
 needs an account", "no telemetry", and the site never saying "AI".
 Built since: a free, optional account with Google sign-in, which adds a
 backup of the match history and error reports, each its own yes (1.4.0),
-and the "AI features" switch (1.3.0). Not built: a hosted rules coach that
-answers rules and card questions with cited rule numbers and is never sent
-a match (`BACKLOG.md`'s BL-101;
+and the "AI features" switch (1.3.0). Being tested, test accounts only: a
+hosted rules coach that answers questions about a report's cards with
+cited rule numbers and is never sent a match (`BACKLOG.md`'s BL-101;
 AGENTS.md rules 5 and 6; `docs/llm.md`, "What is hosted, and what it
 receives"). The tracker keeps working fully without an account. The copy
 prompt and the user's own key stay as they are, and an "AI features"

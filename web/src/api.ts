@@ -650,7 +650,7 @@ const CLIENT_HEADERS = { 'X-Tracker-Client': 'dashboard' } as const
 /** A refusal is an `ApiError`, its message the API's `detail` when that
  *  is a sentence; a request that got no answer at all rejects with
  *  `fetch`'s own error, which is how a paste box tells the two apart. */
-async function put<T>(path: string, body: unknown): Promise<T> {
+export async function put<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(new URL(path, window.location.origin), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'Accept-Language': apiLanguage(), ...CLIENT_HEADERS },

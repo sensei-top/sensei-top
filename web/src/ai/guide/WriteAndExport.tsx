@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useQueryClient } from '@tanstack/react-query'
 import { useLLMStatus } from '../../api'
 import { useGenerateGuideNarrative, useGuideMarkdown, usePasteGuideNarrative } from '../hooks'
 import type { GuideNarrativeResponse } from '../../api'
@@ -7,7 +8,9 @@ import { useCopied } from '../../lib/clipboard'
 import { saveMarkdown } from '../../lib/download'
 import { writerFrom } from '../../lib/writer'
 import { Button, Card, Loading, TextBlock } from '../../components/ui'
+import type { CopyPressed } from '../CopyPromptCard'
 import { GenerateCard } from '../GenerateCard'
+import { notesMissing, useRulesNotesPress } from '../rulesNotes'
 
 /** Write and export: the card that writes the guide (with Claude when a
  *  credential is configured, `docs/llm.md`, or through the prompt and an
@@ -27,6 +30,14 @@ export function NarrativeAndExport({
   const llmStatus = useLLMStatus()
   const generate = useGenerateGuideNarrative()
   const paste = usePasteGuideNarrative()
+  const queryClient = useQueryClient()
+  const press = useRulesNotesPress({ feature: 'guide', key: guideKey, expected: [] })
+  const beforeCopy = async (): Promise<CopyPressed> => {
+    const outcome = await press()
+    const key = ['guide-narrative', guideKey]
+    if (outcome.stored > 0) await queryClient.refetchQueries({ queryKey: key })
+    return { prompt: queryClient.getQueryData<GuideNarrativeResponse>(key)?.prompt ?? null, missing: notesMissing(outcome) }
+  }
 
   return (
     <div className="space-y-6">
@@ -51,6 +62,8 @@ export function NarrativeAndExport({
         generating={generate.isPending}
         generateError={generate.error?.message}
         save={(answer) => paste.mutateAsync({ key: guideKey, answer })}
+        beforeRun={press}
+        beforeCopy={beforeCopy}
       />
 
       <Card title={t('decks.guide.export.title')} subtitle={t('decks.guide.export.subtitle')}>

@@ -65,15 +65,18 @@ function keep(profile: Read): ProfileChange {
   return {
     consentSync: profile.consentSync,
     consentErrors: profile.consentErrors,
-    consentCoachHistory: profile.consentCoachHistory,
     policyVersion: versionFor(profile),
   }
 }
 
-/** The write for the backup or coach-history switch: every other answer as
- *  it is. */
-export function switchChange(profile: Read, field: 'consentSync' | 'consentCoachHistory', on: boolean): ProfileChange {
+/** The write for the backup switch: every other answer as it is. */
+export function switchChange(profile: Read, field: 'consentSync', on: boolean): ProfileChange {
   return { ...keep(profile), [field]: on }
+}
+
+/** The write for the rules-notes switch: the other answers as they are. */
+export function rulesNotesChange(profile: Read, on: boolean): ProfileChange {
+  return { ...keep(profile), rulesNotes: on }
 }
 
 /** The write for the error-reports switch. Turning it on is the transfer

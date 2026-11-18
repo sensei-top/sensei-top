@@ -501,3 +501,115 @@ def test_a_post_with_no_format_stores_the_resolved_default(monkeypatch, tmp_path
     ).fetchone()
     conn.close()
     assert stored[0] == "Modern"
+
+
+# --- Rules notes -------------------------------------------------------------
+
+LANDFALL_QUESTION = "How does landfall work on Test Bear?"
+
+
+@pytest.fixture
+def noted(monkeypatch, tmp_path, make_client):
+    """The ten-match client, its database path, and one card whose only
+    question is the landfall one."""
+    from sensei_top.ai import rules_questions
+
+    monkeypatch.setattr(
+        rules_questions, "coach_cards",
+        lambda conn, decklists: rules_questions.FeatureCards(
+            (rules_questions.CardRow("Test Bear", "Creature — Bear", "", ("Landfall",)),), (),
+        ),
+    )
+    db_path = tmp_path / "noted.db"
+    conn = open_database(db_path)
+    for i in range(10):
+        _insert_match(
+            conn, f"m{i}", "win" if i % 2 == 0 else "loss",
+            started_at=f"2026-0{1 + i % 9}-0{1 + i % 9}T00:00:00",
+        )
+    conn.commit()
+    conn.close()
+    with make_client(create_app(db_path)) as c:
+        yield c, db_path
+
+
+def _store_note(db_path):
+    from sensei_top.ai import rules_notes
+
+    conn = open_database(db_path)
+    rules_notes.store(conn, [rules_notes.RulesNote(
+        LANDFALL_QUESTION, "2026-11-01", "answered",
+        {"verdict": "Once per land.", "explanation": "It triggers on each land.",
+         "citations": [{"type": "card", "ref": "Test Bear", "quote": "q"}], "out_of_scope": False},
+        "medium", "2026-11-17T00:00:00Z",
+    )])
+    conn.commit()
+    conn.close()
+
+
+def _pasted(prompt, prose):
+    import json
+    import re
+
+    header = {
+        name: json.loads(re.search(rf'^  "{name}": ("[^"]*"),?$', prompt, re.MULTILINE).group(1))
+        for name in ("for", "context")
+    }
+    return json.dumps({**header, "answer": {"prose": prose}})
+
+
+def test_a_stored_note_does_not_make_a_stored_report_stale(noted):
+    client, db_path = noted
+    prompt = client.get("/api/coach/narrative").json()["prompt"]
+    client.put("/api/coach/narrative", json={"answer": _pasted(prompt, "## Focus areas\nFine.")})
+    _store_note(db_path)
+    out = client.get("/api/coach/narrative").json()
+    assert out["status"] == "ok" and out["stale"] is False and out["notes"] == []
+
+
+def test_each_report_resolves_its_notes_from_its_own_prompt(noted):
+    client, db_path = noted
+    first = client.put("/api/coach/narrative", json={
+        "answer": _pasted(client.get("/api/coach/narrative").json()["prompt"],
+                          "## Focus areas\nNo notes here [N1]."),
+    }).json()
+    assert first["notes"] == []  # the prompt it was written from offered none
+    _store_note(db_path)
+    prompt = client.get("/api/coach/narrative").json()["prompt"]
+    assert "N1 (medium) Q: " + LANDFALL_QUESTION in prompt
+    second = client.put("/api/coach/narrative", json={
+        "answer": _pasted(prompt, "## Focus areas\nLandfall pays off [N1]. Also [N2]."),
+    }).json()
+    expected = [{
+        "marker": "N1", "question": LANDFALL_QUESTION, "verdict": "Once per land.",
+        "explanation": "It triggers on each land.", "citations": ["Test Bear"],
+        "confidence": "medium", "rules_version": "2026-11-01",
+    }]
+    assert second["notes"] == expected
+    assert client.get("/api/coach/narrative").json()["notes"] == expected
+    assert client.get(f"/api/coach/narrative/{second['id']}").json()["notes"] == expected
+    assert client.get(f"/api/coach/narrative/{first['id']}").json()["notes"] == []
+
+
+def test_generate_sends_the_block_and_returns_the_cited_note(monkeypatch, noted):
+    from sensei_top.ai import rules_notes
+
+    client, db_path = noted
+    _store_note(db_path)
+    monkeypatch.setattr(llm_config_module, "load_coach", lambda: LLMConfig(api_key="k"))
+    sent = []
+
+    def fake(prompt, *, cfg, label, allowed_domains, max_searches=8):
+        sent.append(prompt)
+        return Completion(
+            text="## Focus areas\nLandfall [N1] and [R1].", model="claude-opus-5",
+            input_tokens=1, output_tokens=1, cost_usd=0.01,
+        )
+
+    monkeypatch.setattr(llm_client_module, "write_report", fake)
+    out = client.post("/api/coach/narrative").json()
+    assert sent[0].endswith(rules_notes.CLOSING_INSTRUCTION)
+    assert out["prompt"] == sent[0]
+    assert [n["marker"] for n in out["notes"]] == ["N1"]
+    assert [s["label"] for s in out["sources"] if s["kind"] == "reading"] == ["R1"]
+    assert client.get("/api/coach/narrative").json()["stale"] is False

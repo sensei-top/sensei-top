@@ -60,9 +60,11 @@ section ids, so a link to `#report` works on either.
 
 The privacy policy and the terms of use are legal documents, and their text
 is the approved draft's, word for word: a change to either is made in the
-draft and reviewed there first, never in the HTML alone. They describe the
-free account before it exists, in boxes marked "Not yet available"
-(`.notice`), and carry tables (`.table-wrap`, which scrolls sideways on a
+draft and reviewed there first, never in the HTML alone. The rules coach's
+details live in the terms, where the subsection on sending its questions
+abroad is boxed (`.notice`): ticking the terms box at sign-in is the consent
+to that transfer, and the "Add rules notes to my reports" switch in Settings
+is its withdrawal. They carry tables (`.table-wrap`, which scrolls sideways on a
 narrow screen rather than squeezing). They use `<strong>` only, since the
 account's labels are not in the catalogues yet. They are the one place the
 site says "AI", because Anthropic's terms require the coach to say an AI

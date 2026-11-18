@@ -113,10 +113,14 @@ export type ProfileState =
       ageConfirmedAt: string
       consentSync: boolean
       consentErrors: boolean
-      consentCoachHistory: boolean
       /** The privacy policy's version the answers were given under. */
       consentVersion: string
       consentedAt: string
+      /** When the Terms of Use were agreed to; `null` before they were. */
+      termsAgreedAt?: string | null
+      /** Whether rules notes are on for the account; absent from a shell that
+       *  does not read it, which reads as on. */
+      rulesNotes?: boolean
     }
 
 /** `localApi`: the local server did not answer; `cloud`: the account's
@@ -164,11 +168,17 @@ export type AccountReply = { ok: true; cancelled?: boolean; deleted?: number } |
 export type ProfileChange = {
   consentSync: boolean
   consentErrors: boolean
-  consentCoachHistory: boolean
   /** The privacy policy's version the answers were given under. */
   policyVersion: string
+  /** The rules-notes switch (Settings only): left out, the account's value
+   *  stays as it is. */
+  rulesNotes?: boolean
   /** Required by the first write, ignored after it. */
   ageConfirmed?: boolean
+  /** `true` only from the agreement step with both boxes ticked: writes
+   *  `terms_agreed_at` in the same update as the version. Settings writes
+   *  leave it out. */
+  termsAgreed?: boolean
 }
 
 /** The account calls; resolves once the sign-in ended (up to five minutes). */
@@ -299,11 +309,47 @@ export type ShellReports = {
   onReportProblem(listener: () => void): () => void
 }
 
+/** Why the coach did not answer a question, as the shell words it. */
+export type CoachReason =
+  | 'unavailable'
+  | 'signedOut'
+  | 'notEnabled'
+  | 'notesOff'
+  | 'limit'
+  | 'busy'
+  | 'budget'
+  | 'paused'
+  | 'offline'
+  | 'failed'
+
+/** The coach's answer to one question; the fields but `question`, `ok` and
+ *  `outcome` are `null` on `try_again` or a refusal before retrieval. */
+export type CoachResult =
+  | {
+      question: string
+      ok: true
+      outcome: string
+      verdict: string | null
+      explanation: string | null
+      citations: unknown[] | null
+      confidence: string | null
+      out_of_scope: boolean | null
+      rules_version: string | null
+    }
+  | { question: string; ok: false; reason: CoachReason }
+
+/** The hosted rules coach. Absent from a shell that has none. */
+export type ShellCoach = {
+  /** 1-4 questions; one result each, in order, and never a throw. */
+  ask(questions: string[]): Promise<CoachResult[]>
+}
+
 /** One local backup: the file `restoreFrom` takes, when it was made (ISO)
  *  and its size in bytes. */
 export type BackupSnapshot = { path: string; at: string; bytes: number }
 
 export type Shell = Partial<ShellReports> & {
+  coach?: ShellCoach
   settings: ShellSettings
   app?: ShellApp
   /** Never carries a key: a key is set by `setKey` alone. */

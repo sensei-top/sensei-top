@@ -12,7 +12,13 @@ from sensei_top.ai.answers import PASTED_AUTHOR, brief_for, coverage_for
 from sensei_top.ai.brief.coverage import Coverage, build_coverage
 from sensei_top.ai.brief.importer import import_brief, import_briefs
 from sensei_top.ai.brief.narrative import NarrativeError, full_multi_prompt, full_prompt
-from sensei_top.ai.brief.store import briefs_for_deck, is_stale, list_hash, read_brief
+from sensei_top.ai.brief.store import (
+    briefs_for_deck,
+    is_stale,
+    list_hash,
+    read_brief,
+    without_markers,
+)
 from sensei_top.ai.routes.narrative import (
     check_pasted_length,
     read_pasted,
@@ -75,7 +81,7 @@ def guide_briefs(key: str, conn: Conn) -> list[MatchupBriefOut]:
     "no such deck", and a brief list is naturally empty for a deck
     that has never faced a classified opponent yet.
     """
-    return [_matchup_brief_out(b) for b in briefs_for_deck(conn, key)]
+    return [_matchup_brief_out(without_markers(b)) for b in briefs_for_deck(conn, key)]
 
 
 @router.get("/api/guide/{key}/coverage", response_model=CoverageOut, tags=["guide"])

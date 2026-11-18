@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ApiError } from '../api'
 import { useCopied } from '../lib/clipboard'
 import { Button, Card, TextBlock } from '../components/ui'
+import { pressThenAct } from './rulesNotes'
 
 /** Stores an answer pasted into the card: the card's `PUT`, one of the
  *  `usePaste…` mutations in `api.ts`, closed over everything but the
@@ -10,6 +11,10 @@ import { Button, Card, TextBlock } from '../components/ui'
  *  have refetched; a refusal rejects with `ApiError`, whose message is
  *  the server's sentence, and any other rejection reads as no answer. */
 export type SaveAnswer = (answer: string) => Promise<unknown>
+
+/** What `beforeCopy` hands back: the prompt refetched after the rules-notes
+ *  press (`null` keeps the one on screen), and whether the notes are missing. */
+export type CopyPressed = { prompt: string | null; missing: boolean }
 
 /** The no-credential path for every narrative surface, and the only path
  *  for the matchup brief (which has no generate button at all,
@@ -38,6 +43,7 @@ export function CopyPromptCard({
   loading = false,
   error,
   save,
+  beforeCopy,
   accent = false,
   children,
 }: {
@@ -48,6 +54,9 @@ export function CopyPromptCard({
   error?: string | null
   /** The card's `PUT`; without it the card draws no box to paste into. */
   save?: SaveAnswer
+  /** Runs before the copy (the rules-notes press). A rejection does not stop
+   *  the copy: the prompt on screen is copied and the missing line is drawn. */
+  beforeCopy?: () => Promise<CopyPressed>
   /** A written narrative is an authored/metered artefact even before one
    *  exists here — `GenerateCard` forwards this when nobody writes the
    *  report, so the accent tint marks "this
@@ -63,6 +72,7 @@ export function CopyPromptCard({
         loading={loading}
         error={error}
         save={save}
+        beforeCopy={beforeCopy}
       >
         {children}
       </CopyPromptBody>
@@ -84,6 +94,7 @@ export function CopyPromptBody({
   loading = false,
   error,
   save,
+  beforeCopy,
   children,
 }: {
   prompt: string | null | undefined
@@ -91,11 +102,34 @@ export function CopyPromptBody({
   error?: string | null
   /** The card's `PUT`; without it the card draws no box to paste into. */
   save?: SaveAnswer
+  /** Runs before the copy (the rules-notes press). A rejection does not stop
+   *  the copy: the prompt on screen is copied and the missing line is drawn. */
+  beforeCopy?: () => Promise<CopyPressed>
   children?: React.ReactNode
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const promptCopy = useCopied()
+  const [pressing, setPressing] = useState(false)
+  const [missing, setMissing] = useState(false)
+
+  const onCopy = async () => {
+    setPressing(true)
+    try {
+      setMissing(
+        await pressThenAct(
+          beforeCopy,
+          (pressed) => pressed.missing,
+          (pressed) => {
+            const text = pressed?.prompt ?? prompt
+            if (text) promptCopy.copy(text)
+          },
+        ),
+      )
+    } finally {
+      setPressing(false)
+    }
+  }
 
   return (
     <>
@@ -104,8 +138,8 @@ export function CopyPromptBody({
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <Button
           variant="primary"
-          onClick={() => prompt && promptCopy.copy(prompt)}
-          disabled={!prompt || loading}
+          onClick={() => void onCopy()}
+          disabled={!prompt || loading || pressing}
         >
           {promptCopy.copied
             ? t('prompts.copy.copied')
@@ -122,6 +156,8 @@ export function CopyPromptBody({
           {open ? t('prompts.copy.hidePrompt') : t('prompts.copy.showPrompt')}
         </Button>
       </div>
+
+      {missing && <p className="mt-3 text-caption text-muted">{t('prompts.rulesNotes.missing')}</p>}
 
       {error && <p className="mt-3 text-body text-loss">{error}</p>}
 

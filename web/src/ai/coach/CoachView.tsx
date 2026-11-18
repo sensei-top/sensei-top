@@ -21,7 +21,9 @@ import {
 } from '../hooks'
 import { CoachReport } from './CoachReport'
 import { Profile } from './cards/Profile'
+import type { CopyPressed } from '../CopyPromptCard'
 import { GenerateCard } from '../GenerateCard'
+import { notesMissing, useRulesNotesPress } from '../rulesNotes'
 import { isPasted } from '../../lib/written'
 import { Callout, Card, EmptyState, ErrorNote, Loading, OutlineCard, Select, Skeleton, TextLink } from '../../components/ui'
 import {
@@ -247,7 +249,7 @@ function ReportDocument({
           </p>
         )}
       </div>
-      {report.narrative && <CoachReport prose={report.narrative} sources={report.sources ?? []} />}
+      {report.narrative && <CoachReport prose={report.narrative} sources={report.sources ?? []} notes={report.notes} />}
     </>
   )
 }
@@ -281,6 +283,12 @@ function LatestCoach() {
   const rows = stageRows(narrative.isPending ? narrativeStages : coachStages, 'coach', t)
   const generate = useGenerateCoachNarrative()
   const paste = usePasteCoachNarrative()
+  const press = useRulesNotesPress({ feature: 'coach', fmt: format, expected: [] })
+  const beforeCopy = async (): Promise<CopyPressed> => {
+    const outcome = await press()
+    const fresh = outcome.stored > 0 ? (await narrative.refetch()).data?.prompt : undefined
+    return { prompt: fresh ?? null, missing: notesMissing(outcome) }
+  }
   // The day in a title changes with the year alone: read the clock once.
   const [now] = useState(() => Date.now())
   // null means "the configured default"; see ModelSelect above.
@@ -362,6 +370,8 @@ function LatestCoach() {
               generating={generate.isPending}
               generateError={generate.error?.message}
               save={(answer) => paste.mutateAsync({ format, answer })}
+              beforeRun={press}
+              beforeCopy={beforeCopy}
               emptyNote={null}
               controls={
                 models.length > 0 ? (

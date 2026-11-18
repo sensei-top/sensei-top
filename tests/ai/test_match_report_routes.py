@@ -17,9 +17,10 @@ from types import SimpleNamespace
 import pytest
 
 from sensei_top import claude_config as llm_config_module
+from sensei_top.ai import rules_notes, rules_questions
 from sensei_top.ai.llm import client as llm_client_module
 from sensei_top.ai.llm.client import Completion
-from sensei_top.ai.review import narrative
+from sensei_top.ai.review import narrative, narrative_store
 from sensei_top.ai.routes import match_report as match_report_routes
 from sensei_top.api.app import create_app
 from sensei_top.claude_config import LLMConfig
@@ -440,3 +441,110 @@ def test_generate_match_report_narrative_404s_with_nothing_to_narrate(monkeypatc
     resp = client.post(f"/api/matches/{MATCH_WIN}/report/narrative")
     assert resp.status_code == 404
 
+
+
+# --- Rules notes -------------------------------------------------------------
+
+BOLT = rules_questions.CardRow(
+    "Test Bolt", "Instant", "Test Bolt deals 3 damage to target creature."
+)
+BEAR = rules_questions.CardRow(
+    "Test Bear", "Creature \u2014 Bear", "Whenever Test Bear attacks, you gain 1 life."
+)
+NOTE_QUESTION = "How does Test Bolt interact with Test Bear?"
+DIVIDER = "\n\n---\n\n"
+
+
+@pytest.fixture
+def with_cards(monkeypatch):
+    monkeypatch.setattr(
+        rules_questions, "for_match",
+        lambda conn, match_id: rules_questions.FeatureCards((BOLT,), (BEAR,)),
+    )
+
+
+def _store_note(client, question=NOTE_QUESTION, **fields):
+    conn = _db(client)
+    note = rules_notes.RulesNote(
+        question, "2026-11-01", "answered",
+        {"verdict": "Yes.", "explanation": "Damage is dealt on resolution.",
+         "citations": [{"type": "rule", "ref": "120.3", "quote": "q"}],
+         "out_of_scope": False, **fields},
+        "high", "2026-11-17T00:00:00Z",
+    )
+    rules_notes.store(conn, [note])
+    conn.commit()
+    conn.close()
+
+
+def test_the_prompt_without_a_stored_note_is_the_one_built_without_notes(
+    client, match_id, with_cards
+):
+    conn = _db(client)
+    context = match_report_routes._match_report_narrative_spec(conn, match_id).build_context()
+    conn.close()
+    today = narrative.copied_prompt(
+        context, answer_for=f"match:{match_id}",
+        context_hash=narrative_store.context_hash(context),
+    )
+    assert client.get(_match_path(match_id)).json()["prompt"] == today
+
+
+def test_a_stored_note_puts_the_block_between_the_evidence_and_the_contract(
+    client, match_id, with_cards
+):
+    without = client.get(_match_path(match_id)).json()["prompt"]
+    _store_note(client)
+    prompt = client.get(_match_path(match_id)).json()["prompt"]
+    block = rules_notes.RULES_NOTES_HEADING
+    assert block in prompt and "N1 (high) Q: " + NOTE_QUESTION in prompt
+    assert prompt.index(narrative.UNTRACKED) < prompt.index(block) < prompt.index(CONTRACT)
+    block_text = prompt[prompt.index(block):prompt.index(DIVIDER + "Answer with")]
+    assert prompt.replace(DIVIDER + block_text, "") == without
+    assert _header(prompt) == _header(without)
+
+
+def test_a_stored_note_does_not_make_a_stored_report_stale(client, match_id, with_cards):
+    prompt = client.get(_match_path(match_id)).json()["prompt"]
+    client.put(_match_path(match_id), json={"answer": _answer(prompt, _prose("Fine."))})
+    _store_note(client)
+    out = client.get(_match_path(match_id)).json()
+    assert out["status"] == "ok" and out["stale"] is False
+    assert out["notes"] == []
+
+
+def test_the_get_returns_the_note_the_stored_prose_cites(client, match_id, with_cards):
+    _store_note(client)
+    prompt = client.get(_match_path(match_id)).json()["prompt"]
+    text = "The bolt kills the bear on resolution [N1]. Also see [N4]."
+    resp = client.put(_match_path(match_id), json={"answer": _answer(prompt, _prose(text))})
+    assert resp.status_code == 200
+    for out in (resp.json(), client.get(_match_path(match_id)).json()):
+        assert out["notes"] == [{
+            "marker": "N1", "question": NOTE_QUESTION, "verdict": "Yes.",
+            "explanation": "Damage is dealt on resolution.", "citations": ["120.3"],
+            "confidence": "high", "rules_version": "2026-11-01",
+        }]
+
+
+def test_generate_sends_the_block_without_the_contract(
+    monkeypatch, client, match_id, with_cards
+):
+    _store_note(client)
+    sent = []
+    monkeypatch.setattr(llm_config_module, "load", lambda: LLMConfig(api_key="k"))
+
+    def fake(prompt, *, cfg, label):
+        sent.append(prompt)
+        return Completion(
+            text="Bolt first [N1].", model="claude-opus-5", input_tokens=1,
+            output_tokens=1, cost_usd=0.001,
+        )
+
+    monkeypatch.setattr(llm_client_module, "write_prose", fake)
+    out = client.post(_match_path(match_id)).json()
+    assert rules_notes.RULES_NOTES_HEADING in sent[0] and CONTRACT not in sent[0]
+    assert sent[0].endswith(rules_notes.CLOSING_INSTRUCTION)
+    assert out["prompt"] == sent[0]
+    assert [n["marker"] for n in out["notes"]] == ["N1"]
+    assert client.get(_match_path(match_id)).json()["stale"] is False

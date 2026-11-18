@@ -33,6 +33,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from sensei_top.ai.answers import answer_format, prose_schema
+from sensei_top.ai.rules_notes import append_block
 from sensei_top.i18n import english
 from sensei_top.review.findings import Finding, MatchReport
 from sensei_top.review.snapshot import MatchSnapshot
@@ -88,22 +89,25 @@ def _wrap_prompt(system_prompt: str, context: str) -> str:
 
 
 @english()
-def full_prompt(context: str) -> str:
+def full_prompt(context: str, *, notes_block: str = "") -> str:
     """The complete text to hand an assistant: the framing, then the
-    evidence ``build_narrative_context`` returns. The generate path
+    evidence ``build_narrative_context`` returns, then ``notes_block``
+    (``rules_notes.render_block``) when it is not empty. The generate path
     (``POST``) sends this; the copyable prompt is ``copied_prompt``.
     """
-    return _wrap_prompt(SYSTEM_PROMPT, context)
+    return append_block(_wrap_prompt(SYSTEM_PROMPT, context), notes_block)
 
 
 @english()
-def copied_prompt(context: str, *, answer_for: str, context_hash: str) -> str:
+def copied_prompt(
+    context: str, *, answer_for: str, context_hash: str, notes_block: str = ""
+) -> str:
     """``full_prompt`` plus the answer contract (``answers.answer_format``),
     for the prompt the card offers to copy. The generate path keeps
     ``full_prompt``: its reply is stored as prose whole, so it must not be
     asked for a JSON object."""
     return (
-        f"{full_prompt(context)}\n\n---\n\n"
+        f"{full_prompt(context, notes_block=notes_block)}\n\n---\n\n"
         f"{answer_format(answer_for, context_hash, prose_schema('plain prose'))}"
     )
 

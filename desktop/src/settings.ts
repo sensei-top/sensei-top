@@ -204,6 +204,7 @@ export const CHANNELS = {
   accountDelete: 'sensei-top:account-delete',
   accountReadProfile: 'sensei-top:account-read-profile',
   contribSet: 'sensei-top:contrib-set',
+  coachAsk: 'sensei-top:coach-ask',
   reportError: 'sensei-top:report-error',
   reportProblem: 'sensei-top:report-problem',
   /** Main to page: the tray's "Report a problem" was chosen. */

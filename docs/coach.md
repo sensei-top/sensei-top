@@ -440,6 +440,12 @@ verbatim — the stack, counters and continuous effects, attachments, exact
 phase/step, and the opponent's hand. Combat *is* projected
 (`migrations/014_combat.sql`), so it is not on that list.
 
+When a stored rules note answers one of the kept decks' questions, the prompt
+carries a notes block after its evidence and before the answer contract, and the report cites it as `[N<n>]` beside
+`[R<n>]`; the block sits outside `context_hash`, `clean_report` and `cited_ids`
+leave `[N<n>]` alone, and each row's `notes` are read from its own stored
+prompt and prose (`docs/llm.md`, "Rules notes").
+
 **Two things the measured reports show that the design didn't expect.** Both
 were seen on real data on 2026-09-22. Both are fixed at read time, since
 stored prose stays verbatim and neither report can be rewritten in place.
