@@ -11,7 +11,7 @@ import json
 import shutil
 import sqlite3
 from dataclasses import asdict
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
@@ -115,6 +115,17 @@ def test_topdeck_with_no_standings_is_tier_c():
 
 def tree_entry(path: str, sha: str = "abc123") -> dict:
     return {"path": path, "type": "blob", "sha": sha}
+
+
+def recent_mtgo_path(days_ago: int, name: str) -> tuple[str, str]:
+    """An MTGO file path dated ``days_ago`` before today, and its ISO date.
+
+    ``refresh_metagame`` keeps only files inside a window that ends today, so
+    a test that runs a refresh needs dates that stay inside it; a fixed date
+    fell out of the 90-day window on 2026-11-14.
+    """
+    day = datetime.now(UTC).date() - timedelta(days=days_ago)
+    return f"Tournaments/MTGO/{day:%Y/%m/%d}/{name}", day.isoformat()
 
 
 def test_select_paths_keeps_only_configured_sources_in_window():
@@ -461,15 +472,17 @@ def test_a_failed_fetch_keeps_the_cached_corpus(conn, monkeypatch):
 def test_refresh_skips_files_whose_blob_sha_is_unchanged(conn, monkeypatch):
     """Incremental by content: a refresh must not re-fetch a file that has
     not changed upstream, even inside the window."""
+    path_a, date_a = recent_mtgo_path(3, "standard-a.json")
+    path_b, _ = recent_mtgo_path(2, "standard-b.json")
     stored = ParsedEvent(
-        event_id="Tournaments/MTGO/2026/08/15/standard-a.json", source="MTGO", name="A",
-        event_date="2026-08-15", format="Standard", tier="C", standings_rows=0, uri=None,
+        event_id=path_a, source="MTGO", name="A",
+        event_date=date_a, format="Standard", tier="C", standings_rows=0, uri=None,
         blob_sha="unchanged-sha",
     )
     source.store_events(conn, [stored])
 
     tree = [tree_entry(stored.event_id, sha="unchanged-sha"),
-            tree_entry("Tournaments/MTGO/2026/08/16/standard-b.json", sha="new-sha")]
+            tree_entry(path_b, sha="new-sha")]
     monkeypatch.setattr(source, "resolve_commit_sha", lambda *a, **k: "commit1")
     monkeypatch.setattr(source, "list_tree", lambda *a, **k: tree)
 
@@ -486,7 +499,7 @@ def test_refresh_skips_files_whose_blob_sha_is_unchanged(conn, monkeypatch):
     monkeypatch.setattr(source, "fetch_event", fake_fetch_event)
     result = source.refresh_metagame(conn, force=True)
     assert result.status == "updated"
-    assert fetched_paths == ["Tournaments/MTGO/2026/08/16/standard-b.json"]
+    assert fetched_paths == [path_b]
     assert conn.execute("SELECT COUNT(*) FROM meta_event").fetchone()[0] == 2
 
 
@@ -501,10 +514,8 @@ def test_refresh_records_the_pinned_commit_sha(conn, monkeypatch):
 
 def test_a_bad_file_upstream_is_skipped_not_fatal(conn, monkeypatch):
     monkeypatch.setattr(source, "resolve_commit_sha", lambda *a, **k: "commit1")
-    monkeypatch.setattr(
-        source, "list_tree",
-        lambda *a, **k: [tree_entry("Tournaments/MTGO/2026/08/15/standard-broken.json")],
-    )
+    broken, _ = recent_mtgo_path(2, "standard-broken.json")
+    monkeypatch.setattr(source, "list_tree", lambda *a, **k: [tree_entry(broken)])
 
     def boom(commit_sha, path):
         raise OSError("connection reset")

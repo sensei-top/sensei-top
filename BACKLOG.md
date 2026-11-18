@@ -48,7 +48,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-109
+Next ID: BL-110
 
 ## Features
 
@@ -447,39 +447,6 @@ game on Windows and on Linux under Wine or Proton, and how Arena's fullscreen
 modes affect that. It holds to two standing rules: never injecting into the
 client (`ROADMAP.md`, "Never"), and the event rule (`table/queues.py`).
 
-### BL-101 · The rules coach
-
-type: feat · priority: P1 · status: blocked · area: web desktop site legal
-
-A hosted rules coach for signed-in players (decided 2026-11-02, narrowed
-2026-11-12 to an internal service with no page or tab of its own;
-`docs/llm.md`, "What is hosted, and what it receives"). When a player
-presses Write it with Claude or Copy the prompt on a match report, a deck
-guide, an RCQ guide or the coach report, the app asks it a few questions
-about the report's cards; its answers, with the rule numbers they rely
-on, come back as rules notes the report cites as `[N<n>]`. It answers
-from the Comprehensive Rules and Scryfall's Oracle cards and rulings
-through Anthropic's Claude models, under per-player daily limits, a
-monthly budget and a kill switch. Ticking the terms at sign-in is the
-consent to sending the questions to Anthropic; "Add rules notes to my
-reports" in Settings turns it off. Its own repository holds the ingest,
-the retrieval, the API and the eval suite.
-
-**Why deferred:** Built on both sides (plan 40E, 2026-11-17): the coach
-API, the app's questions, notes and chip, the agreement step and the
-switch, and the terms, privacy, help and Credits text. Not deployed:
-the coach API and its migration are not live, so the feature is on test
-accounts only.
-
-**Needs:** The deploy in the coach repository's hosting document ("The
-steps"), with its migration live before the desktop build that reads
-`terms_agreed_at` and `rules_notes` ships; the Anthropic quotes re-checked
-against the live pages (the policy date is 2026-11-18); the one beta
-tester told before they update. Going public
-also waits on the eval gate passed on the production model, the budget
-cap and kill switch tested, and the Fan Content Policy notice in the app's
-About (the site's footer and the Welcome page have it).
-
 ### BL-104 · Deleting an inactive account
 
 type: feat · priority: P2 · status: blocked · area: api legal
@@ -530,6 +497,23 @@ a patch), and a sync payload for each.
 
 **Why deferred:** Split out of the account's item when it closed with
 1.4.0 (2026-11-09). No player has asked for notes or tags yet.
+
+### BL-109 · The rules coach for every account
+
+type: feat · priority: P1 · status: blocked · area: desktop site legal
+
+The rules coach shipped in 1.5.0 (2026-11-18) answering only the accounts
+on the coach API's allow list; every other signed-in player's
+reports read as they did in 1.4.1 (`docs/llm.md`, "What is hosted, and
+what it receives"). Opening it to every account is `COACH_OPEN=1` on the
+coach API, and the terms' "Being tested" paragraph changed in a release.
+
+**Why deferred:** Split out of the rules coach's item when it closed
+with 1.5.0, shipped to test accounts.
+
+**Needs:** The coach repository's eval gate passed on the production
+model, and the Fan Content Policy notice in the app's About (the site's
+footer and the Welcome page have it).
 
 ## Bugs
 
