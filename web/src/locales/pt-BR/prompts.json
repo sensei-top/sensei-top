@@ -18,5 +18,12 @@
     "writing": "Escrevendo… {{elapsed}} s",
     "rewrite": "Reescrever com o Claude",
     "write": "Escrever com o Claude"
+  },
+  "rulesNotes": {
+    "missing": "Escrito sem notas de regras.",
+    "disclosure": "Resposta de IA, pode estar errada. Confira as regras citadas; num torneio, pergunte a um juiz.",
+    "title": "Nota de regras",
+    "cited": "Regras citadas",
+    "open": "Abrir a nota de regras {{n}}"
   }
 }

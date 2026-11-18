@@ -4,7 +4,8 @@ import { useNow } from '../lib/time'
 import type { Writer } from '../lib/writer'
 import { writtenNote } from '../lib/written'
 import { Button, Card, Prose, TextBlock } from '../components/ui'
-import { CopyPromptCard, type SaveAnswer } from './CopyPromptCard'
+import { CopyPromptCard, type CopyPressed, type SaveAnswer } from './CopyPromptCard'
+import { notesMissing, pressThenAct, type NotesOutcome } from './rulesNotes'
 
 /** A report's card, drawn by who writes the report (`writer`), the
  *  generate-button half of the round trip described in `docs/llm.md`.
@@ -35,6 +36,8 @@ export function GenerateCard({
   generating = false,
   generateError,
   save,
+  beforeRun,
+  beforeCopy,
   accent = false,
   controls,
   emptyNote,
@@ -61,6 +64,11 @@ export function GenerateCard({
   /** The card's `PUT` for a pasted answer, handed to `CopyPromptCard` when
    *  nobody writes the report; the writing branch draws no box. */
   save?: SaveAnswer
+  /** The rules-notes press, run before `onGenerate`; it never blocks it, and
+   *  a notes line is drawn when it says notes are missing. */
+  beforeRun?: () => Promise<NotesOutcome>
+  /** The same press for the copying branch, handed to `CopyPromptCard`. */
+  beforeCopy?: () => Promise<CopyPressed>
   /** A written narrative is an authored/metered artefact — accent border
    *  tint, with who-wrote-it/when/cost moved into the card's own header
    *  rather than buried in the body. */
@@ -81,6 +89,8 @@ export function GenerateCard({
   const { t } = useTranslation()
   const [showPrompt, setShowPrompt] = useState(false)
   const [elapsed, setElapsed] = useState(0)
+  const [pressing, setPressing] = useState(false)
+  const [missing, setMissing] = useState(false)
   const now = useNow()
 
   useEffect(() => {
@@ -92,6 +102,15 @@ export function GenerateCard({
     const id = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000)
     return () => clearInterval(id)
   }, [generating])
+
+  const run = async () => {
+    setPressing(true)
+    try {
+      setMissing(await pressThenAct(beforeRun, notesMissing, () => onGenerate()))
+    } finally {
+      setPressing(false)
+    }
+  }
 
   const note = writtenNote({ author: model, authoredAt: generatedAt, costUsd, stale, staleNote, now }, t)
   const empty = emptyNote === undefined ? t('prompts.generate.emptyNote') : emptyNote
@@ -128,6 +147,7 @@ export function GenerateCard({
         loading={loading}
         error={error}
         save={save}
+        beforeCopy={beforeCopy}
         accent={accent}
       >
         {body}
@@ -141,7 +161,7 @@ export function GenerateCard({
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
         {controls}
-        <Button variant="primary" onClick={onGenerate} disabled={generating || !prompt}>
+        <Button variant="primary" onClick={() => void run()} disabled={generating || pressing || !prompt}>
           {generating
             ? t('prompts.generate.writing', { elapsed })
             : hasContent
@@ -157,6 +177,8 @@ export function GenerateCard({
           {showPrompt ? t('prompts.copy.hidePrompt') : t('prompts.copy.showPrompt')}
         </Button>
       </div>
+
+      {missing && <p className="mt-3 text-caption text-muted">{t('prompts.rulesNotes.missing')}</p>}
 
       {(error || generateError) && (
         <p className="mt-3 text-body text-loss">{generateError ?? error}</p>
