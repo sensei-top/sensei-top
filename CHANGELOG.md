@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-18
+
 ### Added
 
 - Rules notes, from the rules coach that comes with the free account:
@@ -521,7 +523,8 @@ The app is the same as 0.7.1's; this release carries the website.
   keeps recording with the window closed, and start-with-Windows as an
   option. On Linux, an AppImage that updates itself in place.
 
-[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/sensei-top/sensei-top/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/sensei-top/sensei-top/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/sensei-top/sensei-top/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/sensei-top/sensei-top/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/sensei-top/sensei-top/compare/v1.2.4...v1.3.0

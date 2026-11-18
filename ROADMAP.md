@@ -56,7 +56,7 @@ In this order, unless Discussions says otherwise.
    model, so each answer says it may be wrong and to ask a judge at a
    tournament, and there is a daily limit per player. The coach is never
    sent your matches. The "AI features" switch in Settings hides it,
-   with the written guides. (BL-101)
+   with the written guides. (BL-109)
 2. **An overlay for Arena.** The Live page's reads in a window of the
    tracker's own, on top of the game, under the rule below for events. It
    draws over Arena and never injects into it. Magic Online does not get

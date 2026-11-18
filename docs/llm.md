@@ -516,7 +516,7 @@ between, so no user ever held the proprietary notice.
 Since 2026-11-02 this project has hosted services, reached through a
 free, optional account: the account, cloud history, error reports and
 contributed games are built; the rules coach is built and being tested,
-on test accounts only (`BACKLOG.md`, BL-101). The decision supersedes what this section used to say: that
+on test accounts only (`BACKLOG.md`, BL-109). The decision supersedes what this section used to say: that
 nothing hosted writes for the user, that nothing free needs an account,
 and that nothing reports back. The tracker keeps working fully without
 the account. What each part receives:
