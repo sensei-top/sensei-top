@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Rules notes, from the rules coach that comes with the free account:
+  while you are signed in, a match report, the cross-deck coach report,
+  a deck guide or an RCQ guide you write, or copy as a prompt, first asks
+  the coach a few questions about how its cards work together, and the
+  report quotes the answers as rules notes, each with its sources. The
+  questions carry card names only, never who played, when, the result,
+  any chat or a player's name. For now the coach answers only a few test
+  accounts; for every other account nothing is sent on, and the reports
+  read as before. Turn it off in Settings, under Account, with "Add rules
+  notes to my reports".
+- Signing in asks you to agree to the terms of use, which now cover the
+  rules coach; an account that signed in before asks once, the next time.
+
+### Changed
+
+- The terms of use and the privacy policy describe the rules coach: what
+  it sends to Anthropic, in the United States, what is kept and for how
+  long, and how to stop it.
+- "Keep my coach history" is gone from the sign-in steps and Settings;
+  "Add rules notes to my reports" takes its place.
+- Credits names the account's services and the rules coach's route to
+  Anthropic.
+
 ## [1.4.1] - 2026-11-10
 
 ### Changed
