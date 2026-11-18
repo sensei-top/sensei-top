@@ -569,7 +569,8 @@ the failed backup's sentences name.
   and sync"). Signed out, "Sign in with Google" and "Sign in with Discord",
   both off while one waits on the browser, the pressed one saying so;
   signed in, the email, two choices as `SavingSwitch`es (error
-  reports, coach history), or Try again when the profile could not be read,
+  reports, and "Add rules notes to my reports", the withdrawal of the
+  rules coach's transfer consent), or Try again when the profile could not be read,
   Export and Sign out, then under their own heading
   "Delete my cloud history" and "Delete my account", quiet buttons like the
   rest (no danger fill: `docs/design-system.md`). Each delete and the error

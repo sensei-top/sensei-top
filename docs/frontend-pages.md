@@ -857,13 +857,18 @@ costs: the transfer box's agree and withdraw lines and the line that a sent
 game can't be deleted (`account.welcome.contribute.final`) stay in view,
 while its law and IP lines fold inside the box under "More about this"; the
 error-reports dialog does the same, withdraw visible, law and IP folded. *first*
-steps through the age confirmation, then the three choices, none
-pre-ticked: cloud backup and coach history together (`keep`, the two things
-kept at Supabase), then error reports alone, since the transfer box opens
-under them; each step's Next waits on its answers (`stepHint`). *returning*
-(a policy change) steps through the same two with the earlier answers
-pre-selected, and shows the
-policy-change sentence only when `account.policyChanges.<version>` exists.
+steps through the age confirmation with the two agreement boxes beside it
+(the terms, whose rules-coach subsection is the transfer consent, and the
+privacy policy), then the choices, none pre-ticked: cloud backup (`keep`),
+then error reports alone, since the transfer box opens under them; each
+step's Next waits on its answers (`stepHint`), and nothing is saved unless
+both agreement boxes are ticked. *returning* (a policy change, or an
+account with no `terms_agreed_at`) starts on the agreement step (`agree`),
+unticked, with the refusal line and Export and Delete account beside Sign
+out, then the same two choices with the earlier answers pre-selected, and
+shows the policy-change sentence only when
+`account.policyChanges.<version>` exists. Continue writes
+`terms_agreed_at` with `consent_version` in one profile update.
 Choosing Send for error reports needs the transfer consent box ticked, and
 the two together are the only way `consentErrors` is written true. On a
 first sign-in, while no "Help build the stats" answer is stored, that

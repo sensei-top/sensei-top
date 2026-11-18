@@ -247,6 +247,12 @@ foreign `Origin` or without the dashboard's `X-Tracker-Client` header before
 it reaches the route, so another page open in your browser cannot trigger a
 metered call.
 
+The rules coach's questions are not among these calls. The local API
+builds them (`POST /api/rules-questions`) and stores the answers
+(`PUT /api/rules-notes`) but calls nothing out; the desktop shell sends
+them, from the same button press, to the coach API, which pays for the
+model call ("What is hosted, and what it receives").
+
 `GET /api/llm/status`, which tells the dashboard whether to offer a generate
 button ("The fallback"), is `ai/routes/status.py`, mounted only when `ai/` is
 installed (`docs/architecture.md`, "Who may know what"); without it the
@@ -509,19 +515,20 @@ between, so no user ever held the proprietary notice.
 
 Since 2026-11-02 this project has hosted services, reached through a
 free, optional account: the account, cloud history, error reports and
-contributed games are built; the rules coach is not (`BACKLOG.md`,
-BL-101). The decision supersedes what this section used to say: that
+contributed games are built; the rules coach is built and being tested,
+on test accounts only (`BACKLOG.md`, BL-101). The decision supersedes what this section used to say: that
 nothing hosted writes for the user, that nothing free needs an account,
 and that nothing reports back. The tracker keeps working fully without
 the account. What each part receives:
 
-- **The account** (Supabase Auth, Google sign-in only, with the openid,
-  email and profile scopes): an email, a sign-in identity, an age
-  confirmation (13 and over), and the player's three choices, each with
-  the policy version and the time it was given. One screen asks them
-  right after the first sign-in, none pre-ticked; each can be changed in
-  Account, in the app or on the website, and a new policy version asks
-  again.
+- **The account** (Supabase Auth, Google or Discord sign-in): an email, a
+  sign-in identity, an age confirmation (13 and over), the agreement to
+  the terms and the privacy policy with the time it was given
+  (`terms_agreed_at`), and the player's choices, each with the policy
+  version. One screen asks them right after the first sign-in, none
+  pre-ticked, and Continue waits for both agreement boxes; the choices
+  can be changed in Account, in the app or on the website, and a new
+  policy version asks for the agreement again.
 - **Cloud history** (Supabase, one row per match behind row-level
   security, so only its owner reads it), when "Back up my match history"
   is on: a summary of each match built from the projections, about 1.5 KB
@@ -551,13 +558,21 @@ the account. What each part receives:
   account ids and opponent names removed), with the account id as the
   Sentry user, never the email. The raw log is never attached.
 - **The rules coach** (the coach API, the one server this project runs,
-  on a subdomain of the site's domain): the player's rules or card
-  question, and never a match. It answers from the Comprehensive Rules and
-  Scryfall's card data through OpenAI's models, paid from a monthly budget
-  the maintainer sets, behind per-player daily limits, a daily cap for
-  everyone and a kill switch, all checked before every model call. The
-  question's text is kept only when "Keep my coach history" is on;
-  otherwise only the day's count is.
+  on Google Cloud in São Paulo): a few questions about the cards in a
+  report, built from card names by templates that carry no names, dates,
+  results or chat, and never a match. The app asks them when the player
+  presses Write it with Claude or Copy the prompt on a report, while
+  signed in, with the terms agreed and "Add rules notes to my reports" on
+  in Settings; ticking the terms is the consent to sending the questions
+  to Anthropic in the United States, and the switch is its withdrawal. It
+  answers from the Comprehensive Rules and Scryfall's card data through
+  Anthropic's Claude models, paid from a monthly budget the maintainer
+  sets, behind per-player daily limits, a daily cap for everyone and a
+  kill switch, all checked before every model call. The answers come back
+  as rules notes, stored locally (`rules_note`) and cited in the report as
+  `[N<n>]`. The server keeps no question or answer text: one record per
+  question (day, outcome, model, lengths, cost, rules version) and a
+  daily count, deleted after 90 days or with the account.
 
 Electron's main process holds the session, in the operating system's
 encrypted storage, and does the pushing and pulling. The Python server
@@ -612,9 +627,9 @@ footer, "No account needed" (`docs/frontend.md` quotes it), stayed as it
 was: it is still true. Each "no account" claim became one shared
 sentence, word for word everywhere: "Sensei Top works fully without an
 account. A free, optional account adds cloud backup of your match history
-and error reports." The build that ships the rules coach adds the coach
-to that sentence where a page may name it, adds the coach API to the
-privacy pages, and revisits the third promise in `SECURITY.md`, that
-nothing calls a paid API without a configured key, and the claim under
-"What calls out, and what it sends" that per-route tests cover what
-leaves the machine.
+and error reports." The build that ships the rules coach leaves that
+sentence and the home page as they are, by the maintainer's decision to
+describe the coach in the terms, privacy policy, help and Credits rather
+than in the pitch; it adds the coach API to the privacy and terms pages
+and rewords the third promise in `SECURITY.md` to name the coach's
+conditions beside a configured key.

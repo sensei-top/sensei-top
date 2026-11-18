@@ -6,10 +6,14 @@ this application uses, what it takes from each, and on what terms.
 
 Sensei Top bundles none of the data below. Each installed copy downloads what
 it needs to the user's own machine.
-Nothing about a user's games is sent to any of these sources, with two
+Nothing about a user's games is sent to any of these sources, with three
 exceptions. A request for a card's picture names that card, so Scryfall
 can see which cards a copy has shown, never when, against whom or with
-what result. The other is the opt-in call `docs/llm.md` describes.
+what result. The second is the opt-in call `docs/llm.md` describes. The
+third is the rules coach's questions about a report's cards, which go to
+Anthropic through the coach server on Google Cloud, only while the user is
+signed in and has the rules notes switched on (`docs/llm.md`, "What is
+hosted, and what it receives").
 
 ## Wizards of the Coast
 

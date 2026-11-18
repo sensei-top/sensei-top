@@ -410,12 +410,9 @@ specific match's turns.
 When the app holds stored rules notes for the match's cards, the match prompt
 carries their block after the evidence and before the answer contract, outside the context hash (`docs/llm.md`, "Rules notes").
 
-Unlike the deck guide, neither has a CLI import path: a stored
-narrative here comes from the generate button or from an answer pasted
-into the card, since a terminal round trip was never worth adding for a
-single match read once. The deck guide and the matchup brief also take
-a CLI import because they describe a deck rather than one game and stay
-useful for as long as the deck does (`docs/brief.md`).
+Neither has a CLI import path, and neither does the deck guide or the
+matchup brief: a stored narrative comes from the generate button or from
+an answer pasted into the card (`docs/brief.md`).
 
 ## What still isn't analyzed
 
