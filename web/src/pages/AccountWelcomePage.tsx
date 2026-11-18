@@ -222,9 +222,7 @@ function Questions({ open }: { open: Opening }) {
         ? t('account.welcome.hint.transfer')
         : hint === 'answer'
           ? t('account.welcome.hint.answer')
-          : hint === 'answers'
-            ? t('account.welcome.hint.answers')
-            : null
+          : null
   // What the account is opens the first step, whichever it is; where it is
   // kept, and that each answer can change later, lead that step's detail.
   const opener = at === 0 && intro !== null && (
@@ -335,23 +333,6 @@ function Questions({ open }: { open: Opening }) {
                 }
               >
                 <p>{t('account.welcome.sync.lead')}</p>
-              </Question>
-              <Question
-                heading={t('account.welcome.coach.title')}
-                label={t('account.welcome.coach.title')}
-                yes={t('account.welcome.coach.yes')}
-                no={t('account.welcome.coach.no')}
-                answer={draft.coach}
-                onAnswer={(coach) => change({ coach })}
-                disabled={busy !== null}
-                more={
-                  <>
-                    <p>{t('account.welcome.coach.kept')}</p>
-                    <p>{t('account.welcome.coach.off')}</p>
-                  </>
-                }
-              >
-                <p>{t('account.welcome.coach.lead')}</p>
               </Question>
               <p className="text-body text-ink2">
                 {t('account.welcome.policy.lead')}{' '}

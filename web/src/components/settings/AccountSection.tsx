@@ -14,7 +14,7 @@ import {
   exportLine,
   profileGate,
   providerName,
-  switchChange,
+  rulesNotesChange,
   type DeleteFailure,
 } from './accountLogic'
 import { PressButton, SavingSwitch } from './SaveButton'
@@ -22,7 +22,7 @@ import { SignInButtons } from './SignInButtons'
 
 /** Settings → Account: signed out, the two sign-in buttons, both off while
  *  one waits on the browser; signed in, the two choices, error reports and
- *  coach history (or Try again when the profile could not be read), Export,
+ *  the rules-notes switch (or Try again when the profile could not be read), Export,
  *  Sign out, and under their own heading the two deletes, each behind its
  *  dialog. The cloud backup switch is Backup's. A delete's own publication
  *  of the new account state does not redraw the section while the call
@@ -219,11 +219,11 @@ export function AccountSection({ state, actions }: { state: AccountState; action
                   }}
                 />
                 <SavingSwitch
-                  label={t('account.settings.coach.label')}
-                  description={t('account.settings.coach.description')}
-                  checked={read.consentCoachHistory}
+                  label={t('account.settings.rulesNotes.label')}
+                  description={t('account.settings.rulesNotes.description')}
+                  checked={read.rulesNotes !== false}
                   disabled={busy || writing}
-                  onSave={(on) => save(switchChange(read, 'consentCoachHistory', on))}
+                  onSave={(on) => save(rulesNotesChange(read, on))}
                 />
                 <p className="max-w-prose text-caption text-muted">{t('account.settings.turningOff')}</p>
               </div>

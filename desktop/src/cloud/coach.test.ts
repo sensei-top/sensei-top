@@ -174,6 +174,37 @@ describe('CoachClient.ask', () => {
   });
 });
 
+describe('the log at every level (build point 18)', () => {
+  it('never records a question or an answer, Diagnostic mode (debug) included', async () => {
+    const secretAnswer = { ...ANSWER, explanation: 'SECRET-EXPLANATION', citations: [{ type: 'rule', ref: '1.1', quote: 'SECRET-QUOTE' }] };
+    const replies: ((q: string) => Reply)[] = [
+      () => ({ status: 200, body: secretAnswer }),
+      () => ({ status: 200, body: { ...secretAnswer, outcome: 'try_again' } }),
+      () => ({ status: 429, body: { code: 'limit', message: 'SECRET-QUESTION-TEXT' } }),
+      () => ({ status: 403, body: { code: 'notes_off', message: 'SECRET-QUESTION-TEXT' } }),
+      () => ({ status: 500, body: { error: 'SECRET-QUESTION-TEXT' } }),
+      () => 'throw',
+    ];
+    const seen = new Set<string>();
+    for (const reply of replies) {
+      const lines: unknown[] = [];
+      const log: Logger = {
+        debug: (...a) => void (seen.add('debug'), lines.push(a)),
+        info: (...a) => void (seen.add('info'), lines.push(a)),
+        warn: (...a) => void (seen.add('warn'), lines.push(a)),
+        error: (...a) => void (seen.add('error'), lines.push(a)),
+      };
+      const { client } = setup(reply, { log });
+      await client.ask(['SECRET-QUESTION-TEXT one', 'SECRET-QUESTION-TEXT two']);
+      await client.ask(['SECRET-QUESTION-TEXT'.padEnd(501, 'x')]);
+      expect(lines.length).toBeGreaterThan(0);
+      expect(JSON.stringify(lines)).not.toContain('SECRET');
+    }
+    // Diagnostic mode is debug: the lines it adds were drawn too.
+    expect([...seen].sort()).toEqual(expect.arrayContaining(['debug', 'info', 'warn']));
+  });
+});
+
 describe('parseBuildConfig coach', () => {
   it('keeps an https URL without trailing slash', () => {
     expect(parseBuildConfig({ coachUrl: ' https://coach.test/ ' }).coach).toBe('https://coach.test');

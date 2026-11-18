@@ -32,14 +32,6 @@
       "agree": "Concordo que os relatórios de erro, e os que eu enviar por conta própria, sejam enviados ao Sentry, nos Estados Unidos.",
       "withdraw": "Sem isso, nada é enviado automaticamente, e cada relatório que você envia por conta própria pergunta antes. Você pode revogar a qualquer momento, desligando os relatórios de erro."
     },
-    "coach": {
-      "title": "Guardar meu histórico do treinador",
-      "kept": "Elas ficam na Supabase, no Brasil, até você apagá-las ou apagar sua conta.",
-      "off": "Desligado, só ficam guardados quando você perguntou, qual modelo respondeu e quanto custou, por 90 dias.",
-      "yes": "Guardar",
-      "no": "Não guardar",
-      "lead": "O treinador de regras chega numa versão futura. Com isto ligado, suas perguntas e as respostas dele ficam guardadas para você poder relê-las."
-    },
     "policy": {
       "lead": "O que é guardado, onde e por quanto tempo:",
       "link": "Política de Privacidade ({{date}})"
@@ -61,7 +53,6 @@
       "transfer": "Para enviar relatórios de erro, concorde com o envio para os Estados Unidos, ou escolha Não enviar.",
       "age": "Confirme sua idade para seguir.",
       "answer": "Escolha uma resposta para seguir.",
-      "answers": "Responda às duas perguntas para seguir.",
       "agree": "Concorde com os Termos de Uso e confirme que leu a Política de Privacidade para seguir."
     },
     "decline": "Pular e não criar uma conta",
@@ -109,9 +100,9 @@
       "label": "Enviar relatórios de erro",
       "description": "Envia um relatório ao Sentry, nos Estados Unidos, quando algo dá errado. Guardado por 30 dias. Com ele ligado, os relatórios que você envia por conta própria não perguntam antes."
     },
-    "coach": {
-      "label": "Guardar meu histórico do treinador",
-      "description": "Salva suas perguntas ao treinador de regras e as respostas dele, para você poder relê-las. O treinador chega numa versão futura."
+    "rulesNotes": {
+      "label": "Acrescentar notas de regras aos meus relatórios",
+      "description": "Enquanto você está conectado, envia algumas perguntas sobre os cards de cada relatório que você escreve ao treinador de regras, e dele à Anthropic, nos Estados Unidos. Desligado, nada é perguntado ao treinador, em nenhum PC, e os relatórios saem sem notas de regras."
     },
     "turningOff": "Desligar uma escolha a interrompe dali em diante. Para remover o que já foi enviado, use Apagar histórico na nuvem.",
     "sync": {

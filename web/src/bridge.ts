@@ -113,7 +113,6 @@ export type ProfileState =
       ageConfirmedAt: string
       consentSync: boolean
       consentErrors: boolean
-      consentCoachHistory: boolean
       /** The privacy policy's version the answers were given under. */
       consentVersion: string
       consentedAt: string
@@ -169,9 +168,11 @@ export type AccountReply = { ok: true; cancelled?: boolean; deleted?: number } |
 export type ProfileChange = {
   consentSync: boolean
   consentErrors: boolean
-  consentCoachHistory: boolean
   /** The privacy policy's version the answers were given under. */
   policyVersion: string
+  /** The rules-notes switch (Settings only): left out, the account's value
+   *  stays as it is. */
+  rulesNotes?: boolean
   /** Required by the first write, ignored after it. */
   ageConfirmed?: boolean
   /** `true` only from the agreement step with both boxes ticked: writes

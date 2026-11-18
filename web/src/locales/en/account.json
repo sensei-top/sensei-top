@@ -32,14 +32,6 @@
       "agree": "I agree that error reports, and the reports I send myself, go to Sentry, in the United States.",
       "withdraw": "Without this, nothing is sent automatically, and each report you send yourself asks first. You can withdraw it at any time by turning error reports off."
     },
-    "coach": {
-      "title": "Keep my coach history",
-      "kept": "They're kept at Supabase, in Brazil, until you delete them or your account.",
-      "off": "With it off, only when you asked, which model answered and what it cost are kept, for 90 days.",
-      "yes": "Keep",
-      "no": "Don't keep",
-      "lead": "The rules coach comes in a later version. With this on, your questions and its answers are kept so you can reread them."
-    },
     "policy": {
       "lead": "What is stored, where and for how long:",
       "link": "Privacy policy ({{date}})"
@@ -61,7 +53,6 @@
       "transfer": "To send error reports, agree to sending them to the United States, or choose Don't send.",
       "age": "Confirm your age to go on.",
       "answer": "Choose an answer to go on.",
-      "answers": "Answer both questions to go on.",
       "agree": "Agree to the Terms of Use and confirm you've read the Privacy Policy to go on."
     },
     "decline": "Skip and don't create an account",
@@ -109,9 +100,9 @@
       "label": "Send error reports",
       "description": "Sends a report to Sentry, in the United States, when something goes wrong. Kept for 30 days. With it on, the reports you send yourself don't ask first."
     },
-    "coach": {
-      "label": "Keep my coach history",
-      "description": "Saves your questions to the rules coach and its answers so you can reread them. The coach comes in a later version."
+    "rulesNotes": {
+      "label": "Add rules notes to my reports",
+      "description": "While you're signed in, sends a few questions about the cards in each report you write to the rules coach, and on to Anthropic, in the United States. Off, the coach is asked nothing, on every PC, and reports have no rules notes."
     },
     "turningOff": "Turning a choice off stops it from then on. To remove what was already uploaded, use Delete cloud history.",
     "sync": {

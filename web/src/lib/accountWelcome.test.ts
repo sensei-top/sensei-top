@@ -31,9 +31,9 @@ const read = (over: Partial<Extract<ProfileState, { state: 'read' }>> = {}): Pro
   ageConfirmedAt: '2026-10-01T00:00:00Z',
   consentSync: true,
   consentErrors: false,
-  consentCoachHistory: true,
   consentVersion: VERSION,
   consentedAt: '2026-10-01T00:00:00Z',
+  termsAgreedAt: '2026-10-01T00:00:00Z',
   ...over,
 })
 
@@ -43,7 +43,6 @@ const answered = (over: Partial<Draft> = {}): Draft => ({
   privacy: true,
   sync: true,
   errors: false,
-  coach: false,
   transfer: false,
   contribute: null,
   ...over,
@@ -53,7 +52,7 @@ describe('the consent screen on a first sign-in', () => {
   const draft = initialDraft({ state: 'none' })
 
   it('starts with nothing ticked or chosen', () => {
-    expect(draft).toEqual({ age: false, terms: false, privacy: false, sync: null, errors: null, coach: null, transfer: false, contribute: null })
+    expect(draft).toEqual({ age: false, terms: false, privacy: false, sync: null, errors: null, transfer: false, contribute: null })
     expect(kindOf({ state: 'none' })).toBe('first')
   })
 
@@ -61,7 +60,7 @@ describe('the consent screen on a first sign-in', () => {
     expect(canContinue('first', draft, false)).toBe(false)
     expect(canContinue('first', answered(), false)).toBe(true)
     expect(canContinue('first', answered({ age: false }), false)).toBe(false)
-    for (const field of ['sync', 'errors', 'coach'] as const) {
+    for (const field of ['sync', 'errors'] as const) {
       const missing: Answer = null
       expect(canContinue('first', answered({ [field]: missing }), false)).toBe(false)
     }
@@ -109,11 +108,10 @@ describe('the transfer consent record', () => {
   })
 
   it('carries the answers, the policy version and, on a first profile only, the age', () => {
-    const draft = answered({ sync: true, errors: true, transfer: true, coach: false })
+    const draft = answered({ sync: true, errors: true, transfer: true })
     expect(profileChange('first', draft, VERSION)).toEqual({
       consentSync: true,
       consentErrors: true,
-      consentCoachHistory: false,
       policyVersion: VERSION,
       termsAgreed: true,
       ageConfirmed: true,
@@ -124,8 +122,8 @@ describe('the transfer consent record', () => {
 
 describe('the consent screen for a returning user', () => {
   it('pre-selects the earlier answers, and ticks the box when error reports were on', () => {
-    const on = initialDraft(read({ consentSync: false, consentErrors: true, consentCoachHistory: true }))
-    expect(on).toMatchObject({ sync: false, errors: true, coach: true, transfer: true, age: false })
+    const on = initialDraft(read({ consentSync: false, consentErrors: true }))
+    expect(on).toMatchObject({ sync: false, errors: true, transfer: true, age: false })
     const off = initialDraft(read({ consentErrors: false }))
     expect(off).toMatchObject({ errors: false, transfer: false })
     expect(kindOf(read())).toBe('returning')
@@ -185,6 +183,12 @@ describe('when the shell layout sends the user to the consent screen', () => {
   it('does for no profile, and for answers under another version', () => {
     expect(needsConsent(settings(signedIn({ state: 'none' })), VERSION)).toBe(true)
     expect(needsConsent(settings(signedIn(read({ consentVersion: '2026-01-01' }))), VERSION)).toBe(true)
+  })
+
+  it('re-asks when the terms were never agreed to, whatever the version', () => {
+    expect(needsConsent(settings(signedIn(read({ termsAgreedAt: null }))), VERSION)).toBe(true)
+    expect(needsConsent(settings(signedIn(read({ termsAgreedAt: undefined }))), VERSION)).toBe(true)
+    expect(needsConsent(settings(signedIn(read({ consentVersion: '2026-11-04', termsAgreedAt: null }))), VERSION)).toBe(true)
   })
 
   it('re-asks only for an older version, never a newer one, and a missing version is older', () => {
@@ -268,12 +272,11 @@ describe('the steps of the consent screen', () => {
     }
   })
 
-  it('holds the keep step until both of its questions are answered', () => {
+  it('holds the keep step until the backup question is answered, and no other', () => {
     const empty = initialDraft({ state: 'none' })
-    expect(stepHint('keep', empty)).toBe('answers')
-    expect(stepHint('keep', { ...empty, sync: true })).toBe('answers')
-    expect(stepHint('keep', { ...empty, coach: false })).toBe('answers')
-    expect(stepHint('keep', { ...empty, sync: true, coach: false })).toBeNull()
+    expect(stepHint('keep', empty)).toBe('answer')
+    expect(stepHint('keep', { ...empty, sync: false })).toBeNull()
+    expect(stepHint('keep', { ...empty, sync: true })).toBeNull()
   })
 
   it('holds the error-reports step while Send stands without the transfer box', () => {

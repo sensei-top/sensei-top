@@ -215,7 +215,6 @@ describe('whether a standing consent replaces the box', () => {
     ageConfirmedAt: '2026-01-01',
     consentSync: false,
     consentErrors: true,
-    consentCoachHistory: false,
     consentVersion: POLICY_VERSION,
     consentedAt: '2026-01-01',
     ...change,

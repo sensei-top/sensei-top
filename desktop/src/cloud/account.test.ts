@@ -33,7 +33,6 @@ function profile(userId: string, over: Partial<ProfileRow> = {}): ProfileRow {
     age_confirmed_at: '2026-01-01T00:00:00.000Z',
     consent_sync: true,
     consent_errors: true,
-    consent_coach_history: false,
     consent_version: '2026-11-01',
     consented_at: '2026-01-01T00:00:00.000Z',
     terms_agreed_at: null,
@@ -247,7 +246,7 @@ function harness(start: AccountStatus = signedIn(USER), rows: Record<string, Pro
   };
 }
 
-const CHANGE = { consentSync: true, consentErrors: false, consentCoachHistory: true, policyVersion: '2026-11-01' };
+const CHANGE = { consentSync: true, consentErrors: false, policyVersion: '2026-11-01' };
 
 describe('following the account', () => {
   it('handles the restored account at start: user and consent in one step, a backup with a pull', async () => {
@@ -262,10 +261,10 @@ describe('following the account', () => {
         ageConfirmedAt: '2026-01-01T00:00:00.000Z',
         consentSync: true,
         consentErrors: true,
-        consentCoachHistory: false,
         consentVersion: '2026-11-01',
         consentedAt: '2026-01-01T00:00:00.000Z',
         termsAgreedAt: null,
+        rulesNotes: true,
       },
       sync: SYNC_STATUS,
     });
@@ -438,7 +437,6 @@ describe('the profile write', () => {
         age_confirmed_at: NOW,
         consent_sync: true,
         consent_errors: false,
-        consent_coach_history: true,
         consent_version: '2026-11-01',
         consented_at: NOW,
         terms_agreed_at: null,
@@ -457,7 +455,7 @@ describe('the profile write', () => {
     expect(h.updates).toEqual([
       {
         userId: USER,
-        patch: { consent_sync: true, consent_errors: true, consent_coach_history: true, consent_version: '2026-11-01', consented_at: NOW },
+        patch: { consent_sync: true, consent_errors: true, consent_version: '2026-11-01', consented_at: NOW },
       },
     ]);
     expect(h.account.details().profile).toMatchObject({ state: 'read', ageConfirmedAt: '2026-01-01T00:00:00.000Z', consentedAt: NOW });
@@ -478,7 +476,6 @@ describe('the profile write', () => {
         patch: {
           consent_sync: true,
           consent_errors: false,
-          consent_coach_history: true,
           consent_version: '2026-12-01',
           consented_at: NOW,
           terms_agreed_at: NOW,
@@ -491,6 +488,21 @@ describe('the profile write', () => {
     expect(await h.account.setProfile({ ...CHANGE, policyVersion: '2026-12-01', consentErrors: true })).toEqual({ ok: true });
     expect(h.updates[1]!.patch).not.toHaveProperty('terms_agreed_at');
     expect(h.account.details().profile).toMatchObject({ termsAgreedAt: NOW });
+  });
+
+  it('writes rules_notes only from the switch, reads it back, and refuses a non-boolean', async () => {
+    const h = harness();
+    await h.account.start();
+    expect(h.account.details().profile).toMatchObject({ rulesNotes: true });
+    expect(await h.account.setProfile({ ...CHANGE, rulesNotes: false })).toEqual({ ok: true });
+    expect(h.updates[0]!.patch).toMatchObject({ rules_notes: false });
+    expect(h.account.details().profile).toMatchObject({ rulesNotes: false });
+    // Any later write that leaves it out keeps it as it is, and never sends coach history.
+    expect(await h.account.setProfile({ ...CHANGE, consentErrors: true })).toEqual({ ok: true });
+    expect(h.updates[1]!.patch).not.toHaveProperty('rules_notes');
+    expect(h.updates[1]!.patch).not.toHaveProperty('consent_coach_history');
+    expect(h.account.details().profile).toMatchObject({ rulesNotes: false });
+    expect(await h.account.setProfile({ ...CHANGE, rulesNotes: 'no' })).toEqual({ ok: false, error: 'invalid' });
   });
 
   it('writes terms_agreed_at on a first profile, and refuses a non-boolean flag', async () => {
@@ -549,7 +561,7 @@ describe('the rights actions', () => {
     expect(h.updates).toEqual([
       {
         userId: USER,
-        patch: { consent_sync: false, consent_errors: true, consent_coach_history: false, consent_version: '2026-11-01', consented_at: NOW },
+        patch: { consent_sync: false, consent_errors: true, consent_version: '2026-11-01', consented_at: NOW },
       },
     ]);
     // The same error-reports answer: `ReportsLink` restarts nothing for it.
@@ -760,14 +772,14 @@ describe('the cloud adapter', () => {
     expect(requests[0]!.url.pathname).toBe('/rest/v1/profiles');
     expect(requests[0]!.url.searchParams.get('user_id')).toBe(`eq.${USER}`);
     expect(requests[0]!.url.searchParams.get('select')).toBe(
-      'user_id,age_confirmed_at,consent_sync,consent_errors,consent_coach_history,consent_version,consented_at,terms_agreed_at',
+      'user_id,age_confirmed_at,consent_sync,consent_errors,consent_version,consented_at,terms_agreed_at,rules_notes',
     );
   });
 
   it('inserts and updates the profile row', async () => {
     const { db, requests } = client(() => new Response(null, { status: 201 }));
     await db.insertProfile(profile(USER));
-    const patch: ConsentPatch = { consent_sync: false, consent_errors: false, consent_coach_history: false, consent_version: '1', consented_at: NOW };
+    const patch: ConsentPatch = { consent_sync: false, consent_errors: false, consent_version: '1', consented_at: NOW };
     await db.updateProfile(USER, patch);
     expect(requests.map((r) => [r.method, r.url.pathname])).toEqual([
       ['POST', '/rest/v1/profiles'],

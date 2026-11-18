@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { AccountActions, AccountReply, ProfileState, SyncStatus } from '../../bridge'
 import '../../i18n'
 import { POLICY_VERSION } from '../../lib/policy'
-import { deleteControls, attemptGuard, errorsChange, errorsControls, exportLine, historyFailure, profileGate, switchChange, syncLine } from './accountLogic'
+import { deleteControls, attemptGuard, errorsChange, errorsControls, exportLine, historyFailure, profileGate, rulesNotesChange, switchChange, syncLine } from './accountLogic'
 import { AccountSection } from './AccountSection'
 
 const read = (over: Partial<Extract<ProfileState, { state: 'read' }>> = {}): Extract<ProfileState, { state: 'read' }> => ({
@@ -13,7 +13,6 @@ const read = (over: Partial<Extract<ProfileState, { state: 'read' }>> = {}): Ext
   ageConfirmedAt: '2026-10-01T00:00:00Z',
   consentSync: true,
   consentErrors: false,
-  consentCoachHistory: false,
   consentVersion: POLICY_VERSION,
   consentedAt: '2026-10-01T00:00:00Z',
   ...over,
@@ -95,7 +94,7 @@ describe('the error-reports transfer dialog', () => {
     expect(settled).toHaveBeenCalledWith({ ok: true })
     expect(save).toHaveBeenCalledTimes(1)
     expect(save.mock.calls[0]).toEqual([
-      { consentSync: true, consentErrors: true, consentCoachHistory: false, policyVersion: POLICY_VERSION },
+      { consentSync: true, consentErrors: true, policyVersion: POLICY_VERSION },
     ])
   })
 
@@ -104,9 +103,34 @@ describe('the error-reports transfer dialog', () => {
     expect(change).toEqual({
       consentSync: false,
       consentErrors: true,
-      consentCoachHistory: false,
       policyVersion: '2099-01-01',
     })
+  })
+})
+
+describe('the rules-notes switch', () => {
+  it('writes only its own answer, the others as they are, never an older version', () => {
+    const change = rulesNotesChange(read({ consentErrors: true, consentVersion: '2099-01-01' }), false)
+    expect(change).toEqual({ consentSync: true, consentErrors: true, policyVersion: '2099-01-01', rulesNotes: false })
+    expect(rulesNotesChange(read(), true).rulesNotes).toBe(true)
+  })
+
+  it('draws on for a profile without the field and off for false, and no coach-history switch', () => {
+    const draw = (profile: ProfileState) =>
+      renderToStaticMarkup(
+        createElement(
+          MemoryRouter,
+          null,
+          createElement(AccountSection, {
+            state: { available: true, signedIn: true, userId: 'u', email: null, provider: 'google', persistence: { kept: true }, profile, sync: { running: false, lastSyncAt: null, backedUp: 0, lastError: null } },
+            actions: {} as AccountActions,
+          }),
+        ),
+      )
+    const on = draw(read())
+    expect(on).toContain('Add rules notes to my reports')
+    expect(on).not.toContain('coach history')
+    expect(on.match(/aria-checked="true"/g)?.length ?? 0).toBeGreaterThan(draw(read({ rulesNotes: false })).match(/aria-checked="true"/g)?.length ?? 0)
   })
 })
 

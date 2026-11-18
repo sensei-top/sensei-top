@@ -67,7 +67,7 @@ describe('the Cloud copy card', () => {
     const html = draw({
       available: true,
       signedIn: true,
-      profile: { state: 'read', consentSync: false, consentErrors: false, consentCoachHistory: false },
+      profile: { state: 'read', consentSync: false, consentErrors: false },
     })
     expect(html).toContain('Back up my match history')
     expect(html).toContain('role="switch"')
