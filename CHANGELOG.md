@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The rules coach answers every signed-in account, not only the test
+  accounts (since 2026-11-18, on the coach's side, with no update
+  needed). The terms of use no longer carry the "Being tested" notice.
+
 ## [1.5.0] - 2026-11-18
 
 ### Added
