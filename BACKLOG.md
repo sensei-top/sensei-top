@@ -498,19 +498,6 @@ a patch), and a sync payload for each.
 **Why deferred:** Split out of the account's item when it closed with
 1.4.0 (2026-11-09). No player has asked for notes or tags yet.
 
-### BL-109 · The Fan Content Policy notice in the app's About
-
-type: feat · priority: P1 · status: ready · area: desktop legal
-
-The rules coach answers every account since 2026-11-18, opened by a
-server switch and the terms on the site, without a desktop release. The
-Fan Content Policy notice the site's footer and the Welcome page carry
-(`web/src/locales/*/welcome.json`, `web/src/credits.ts`) is not yet in
-the app's About, in English and PT-BR.
-
-**Why deferred:** Opening the coach was not held for a desktop release;
-the notice ships with the next one.
-
 ## Bugs
 
 ### BL-025 · A prepare face several cards share
