@@ -55,19 +55,14 @@ In this order, unless Discussions says otherwise.
    tracker's own, on top of the game, under the rule below for events. It
    draws over Arena and never injects into it. Magic Online does not get
    one. (BL-098)
-2. **Sideboard guides, with no generated answers.** The cards in your 75
-   that answer what the opponent's deck does, as candidate ins, and a link
-   to a published sideboard guide for the pairing, found through the Skill
-   Issue Magic guide index, with credit to its author on every link.
-   Nothing is generated and no "outs" are invented. (BL-005)
-3. **Your data out, and every column explained.** Your matches and games
+2. **Your data out, and every column explained.** Your matches and games
    as a CSV file; a one-line definition on every table column; and a tour
    of the dashboard in the help pages, in both languages, which says what
    the tracker reads and that it sends nothing. (BL-002, BL-003)
-4. **MTGO on the Live page**: the opponent's revealed cards during a game
+3. **MTGO on the Live page**: the opponent's revealed cards during a game
    and the between-games plan, read from MTGO's game log the way Arena's
    Live page reads Arena's. (BL-013)
-5. **The known bugs.** Everything [BACKLOG.md](BACKLOG.md) lists as a
+4. **The known bugs.** Everything [BACKLOG.md](BACKLOG.md) lists as a
    bug: a field with no paper results after 2026-08-16 first (BL-032);
    then the rest (BL-025, BL-026,
    BL-027, BL-028, BL-030, BL-031, BL-034, BL-035, BL-037,

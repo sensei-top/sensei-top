@@ -58,7 +58,6 @@ EN = Copy(
     dates="Dates are not promised.",
     next_items=(
         "An overlay for Arena.",
-        "Sideboard guides, with no generated answers.",
         "Your matches as a CSV file, and every table column explained.",
         "Magic Online on the Live page.",
     ),
@@ -77,7 +76,6 @@ PT = Copy(
     dates="Nenhuma data é prometida.",
     next_items=(
         "Um overlay para o Arena.",
-        "Guias de sideboard, sem respostas geradas.",
         "Suas partidas em um arquivo CSV, e cada coluna das tabelas explicada.",
         "Magic Online na página Ao vivo.",
     ),

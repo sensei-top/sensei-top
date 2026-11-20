@@ -114,26 +114,6 @@ place; screenshots from the demo database through
 pins. Ready's label, `welcome.done.tour`, is in both catalogues already, not
 drawn.
 
-### BL-005 · Sideboard help without a model
-
-type: feat · priority: P1 · status: blocked · area: guide archetypes web
-
-Sideboard help without a model (decided 2026-10-07):
-candidate ins by a card-role rule over the 75 (answers, threats, hate by the
-opponent's archetype), and a link to a sideboard guide for the pairing from
-the Skill Issue Magic guide index. No generated outs. The user's own
-post-board record per matchup came first and is built (plan 28, 2026-10-19).
-
-**Why deferred:** The research's most-wanted feature, and the one every
-competitor sells a model for; the index's creator was asked on 2026-10-07,
-in exchange for credit on each link, and had not answered. Not started.
-
-**Needs:** The creator's yes, recorded in `docs/attribution.md` with a row
-for the index ("Rules for a new source"): the published CSV's address and
-shape, an alias table from the index's archetype names to the corpus keys, a
-scheduled fail-soft fetch kept in cache, never any guide content copied.
-Plan `release-17-sideboard-referrals.md` (outline).
-
 ### BL-006 · The optional subscription
 
 type: feat · priority: P3 · status: blocked · area: llm api web legal
