@@ -608,13 +608,34 @@ describe('reportHeadline', () => {
     })
   })
 
-  it("falls back to Focus areas' first bold sentence", () => {
-    expect(reportHeadline(null, REPORT)).toEqual({ text: 'Mulligan the slow ones.', fromFocus: true })
+  it("falls back to Focus areas' first sub-heading", () => {
+    expect(reportHeadline(null, REPORT)).toEqual({ text: 'Keep fewer sevens', fromFocus: true })
   })
 
   it("then to Focus areas' first sentence when nothing is bold", () => {
     const plain = parseReport('## Focus areas\nKeep fewer sevens. Then more text.')
     expect(reportHeadline('', plain)).toEqual({ text: 'Keep fewer sevens.', fromFocus: true })
+  })
+
+  it("falls back to Focus areas' first sub-heading, number and parenthetical stripped", () => {
+    const md = parseReport(
+      [
+        '## Focus areas',
+        '',
+        '### 1. Closing races before a sweeper resets them (habit)',
+        '',
+        '**Evidence.**',
+        '- Long games: 32% (55/170) against 50%.',
+      ].join('\n'),
+    )
+    expect(reportHeadline(null, md)).toEqual({ text: 'Closing races before a sweeper resets them', fromFocus: true })
+  })
+
+  it('skips a label and takes the first other bold run when there is no sub-heading', () => {
+    const md = parseReport('## Focus areas\n\n**Evidence.**\n- **Stop keeping slow hands in game one.** Because.')
+    expect(reportHeadline(null, md)).toEqual({ text: 'Stop keeping slow hands in game one.', fromFocus: true })
+    const only = parseReport('## Focus areas\n\n- **Stop keeping slow hands in game one.** Because.')
+    expect(reportHeadline(null, only)).toEqual({ text: 'Stop keeping slow hands in game one.', fromFocus: true })
   })
 
   it('is null with no Focus areas', () => {
@@ -632,6 +653,27 @@ describe('drawerTeaser', () => {
 
   it("shows a prose section's lead", () => {
     expect(drawerTeaser(section('Player profile'), 0, t)).toBe('You play fast.')
+  })
+})
+
+describe('drawerTeaser labels', () => {
+  const md = parseReport(
+    [
+      '## Player profile',
+      '',
+      '**Strengths**',
+      '- **Your main Boros build is your best deck.** The line wins 62%.',
+      '',
+      '## Format notes',
+      '',
+      '- **Bans.** The last Standard change was on August 10, 2026, when X and Y were banned ([Wizards](https://example.com)).',
+    ].join('\n'),
+  )
+  it('skips a label-only block and drops a leading label', () => {
+    expect(drawerTeaser(md[0], 0, t)).toBe('Your main Boros build is your best deck.')
+    expect(drawerTeaser(md[1], 0, t)).toBe(
+      'The last Standard change was on August 10, 2026, when X and Y were banned (Wizards).',
+    )
   })
 })
 

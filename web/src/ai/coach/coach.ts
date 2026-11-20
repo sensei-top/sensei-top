@@ -475,6 +475,16 @@ export const FOCUS_SLUG = 'focus-areas'
 export const NUMBERS_SLUG = 'your-numbers'
 export const HISTORY_SLUG = 'every-report'
 
+/** Whether `nodes` open with a label: a bold run of at most 4 words that
+ *  ends in "." or ":" or is the block's whole text ("**Evidence.**"). */
+function leadingLabel(nodes: Inline[]): boolean {
+  const first = nodes[0]
+  if (!first || first.kind !== 'strong') return false
+  const text = inlineText(first.children)
+  if (!text || text.split(' ').length > 4) return false
+  return /[.:]$/.test(text) || inlineText(nodes) === text
+}
+
 function firstStrong(nodes: Inline[]): string | null {
   for (const node of nodes) {
     if (node.kind === 'strong') {
@@ -488,9 +498,24 @@ function firstStrong(nodes: Inline[]): string | null {
   return null
 }
 
+function blockRuns(blocks: ReportSection['blocks']): Inline[][] {
+  return blocks.flatMap((b) => (b.kind === 'list' ? b.items : [b.inline]))
+}
+
+/** A section's text with each block's leading label dropped and a block
+ *  that is only a label skipped; the teaser's source. */
+function unlabelledText(section: ReportSection): string {
+  const parts = blockRuns(section.blocks).map((nodes) =>
+    inlineText(leadingLabel(nodes) ? nodes.slice(1) : nodes),
+  )
+  return parts.filter(Boolean).join(' ')
+}
+
 /** The headline card's words: the stored `headline` when it has any, else
- *  (an older report) Focus areas' first bold sentence, else that section's
- *  first sentence; `null` when the report has no Focus areas. */
+ *  (an older report) Focus areas' first sub-heading, without its list
+ *  number or trailing parenthetical, else the first bold run that is not a
+ *  label, else that section's first sentence; `null` when the report has no
+ *  Focus areas. */
 export function reportHeadline(
   headline: string | null | undefined,
   sections: ReportSection[],
@@ -500,8 +525,15 @@ export function reportHeadline(
   const focus = sectionByTitle(sections, 'Focus areas')
   if (!focus) return null
   for (const block of focus.blocks) {
-    const nodes = block.kind === 'list' ? block.items.flat() : block.inline
-    const bold = firstStrong(nodes)
+    if (block.kind !== 'subhead') continue
+    const text = inlineText(block.inline)
+      .replace(/^\d+[.)]\s*/, '')
+      .replace(/\s*\([^()]*\)$/, '')
+      .trim()
+    if (text) return { text, fromFocus: true }
+  }
+  for (const nodes of blockRuns(focus.blocks)) {
+    const bold = firstStrong(leadingLabel(nodes) ? nodes.slice(1) : nodes)
     if (bold) return { text: bold, fromFocus: true }
   }
   const lead = leadOf(null, sectionText(focus))
@@ -536,7 +568,7 @@ export function drawerTeaser(
     const n = slug === 'sources' && sourceCount > 0 ? sourceCount : countOf(section, rule.prefer)
     if (n > 0) return t(`coach.teaser.${rule.key}`, { count: n, n: formatCount(n) })
   }
-  return leadOf(null, sectionText(section))
+  return leadOf(null, unlabelledText(section))
 }
 
 export type ProfileCard = 'decks' | 'roles' | 'mulligans' | 'met' | 'patterns' | 'turning' | 'field' | 'gaps'

@@ -1699,14 +1699,17 @@ the API's default.
    web), both drawn by `ReportDocument` in `ai/coach/CoachView.tsx`; then
    the **"Top priority this week"** card, the report's stored `headline`
    (the API has already taken that section out of the prose, so it is
-   drawn once), or for an older report Focus areas' first bold sentence,
-   else its first sentence, with a caption saying so
+   drawn once), or for an older report Focus areas' first sub-heading (list number and
+   trailing parenthetical dropped), else its first bold run that is not a
+   label (at most 4 words ending in "." or ":", or alone in its block), else its
+   first sentence, with a caption saying so
    (`reportHeadline`); its "See the evidence" link opens the Focus areas
    drawer. Then one closed drawer per `## ` section of the prose
    (`ai/coach/CoachReport.tsx`), whose closed line is a count where the
    section has countable items ("3 habits", "2 items on the checklist",
    `drawerTeaser`: sub-headings, else list items; the resolved sources for
-   Sources) and otherwise its first sentence (`leadOf`). A
+   Sources) and otherwise its first sentence (`leadOf`), with a leading label dropped
+   and a label-only block skipped. A
    citation in the prose (`[R4]`) is a link to its article, opened in a new
    tab. The last drawer is the sources, the reading-list entries and then the web pages, each a
    `TextLink`.
