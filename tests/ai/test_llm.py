@@ -664,6 +664,17 @@ def test_strict_schema_adds_additional_properties_at_every_object_level():
     assert matchup_items["properties"]["board_in"]["items"]["additionalProperties"] is False
 
 
+def test_guide_schema_requires_the_three_leads():
+    from sensei_top.ai.guide.narrative import _GUIDE_TOOL
+
+    schema = strict_schema(_GUIDE_TOOL["input_schema"])
+    assert {"engine_lead", "fix_lead"} <= set(schema["required"])
+    assert schema["properties"]["engine_lead"]["type"] == "string"
+    matchup_items = schema["properties"]["matchups"]["items"]
+    assert "lead" in matchup_items["required"]
+    assert matchup_items["properties"]["lead"]["type"] == "string"
+
+
 def test_strict_schema_does_not_mutate_its_argument():
     """_GUIDE_TOOL is the documented import contract -- a caller building a
     strict copy for structured outputs must never see the original schema

@@ -403,6 +403,8 @@ fixture-backed scratch database used in `tests/ai/test_llm.py`:
 | Coach report, Fable 5.1 | $3.2292 | Before prompt caching. Picked from the Coach tab's model dropdown, 2026-09-22, over 249 matches at `effort: high`: 238,886 input / 15,206 output tokens and 8 web searches ($0.08). About 3.8× the Opus 5 run: 2× from the per-token price, the rest from 2.2× the billed input through the same `pause_turn` re-sends. Not a controlled comparison — it was the second report, so its prompt also carried the first. See `docs/coach.md` |
 | Coach report, Opus 5.5, cached | $0.5998 | With prompt caching, 2026-10-07, Standard over 360 Standard matches (633 Constructed): 20 uncached input, 42,645 cache-write and 256,003 cache-read tokens (a 298,668-token prompt across the loop), 12,763 output tokens and 8 web searches ($0.08). Uncached, the same counts would have cost about $1.53. The last uncached Opus 5.5 report, 2026-10-02, with the same 8 searches, cost $1.7522 (345,874 input / 14,437 output). Not a controlled comparison: that one predates the per-format report, so its prompt differs |
 
+The deck guide's leads add a few output tokens per call, measured from usage like every other cost.
+
 The first two coach rows predate prompt caching. Only Opus 5.5 was
 re-measured with caching on. The other dropdown models have no cached
 measurement, so the Opus 5 and Fable 5.1 rows overstate what they cost now.

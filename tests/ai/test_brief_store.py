@@ -130,3 +130,12 @@ def test_read_strips_rules_note_markers_but_the_stored_prose_and_the_guide_list_
     stored = conn.execute("SELECT prose FROM matchup_brief").fetchone()[0]
     assert stored == "Race them early [N1]. Hold removal [N2, N3]."
     assert briefs_for_deck(conn, "guid:abc")[0].prose == stored
+
+
+def test_a_later_write_without_a_lead_clears_the_stored_one(conn):
+    write_brief(conn, _brief(lead="Bring in Slagstorm."))
+    assert read_brief(conn, "guid:abc", "mardu_discard").lead == "Bring in Slagstorm."
+
+    write_brief(conn, _brief(prose="A live rewrite."))
+
+    assert read_brief(conn, "guid:abc", "mardu_discard").lead is None

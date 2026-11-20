@@ -369,3 +369,60 @@ def test_build_guide_context_gives_a_shared_staples_oracle_text_once(conn):
     )
     assert context.count("A distinctive oracle sentence.") == 1
     assert context.count("4.0x Shared Staple") == 2
+
+
+_LEADS = {
+    "engine_lead": "Graveyard count discounts every spell.",
+    "fix_lead": "  Deploy a turn earlier.  ",
+}
+
+
+def test_guide_narrative_from_json_reads_the_leads():
+    answer = {
+        **_VALID_NARRATIVE, **_LEADS,
+        "matchups": [{**_VALID_NARRATIVE["matchups"][0], "lead": "Sweep early."}],
+    }
+    result = guide_narrative_from_json(json.dumps(answer), _guide(matches=1))
+    assert result.engine_lead == "Graveyard count discounts every spell."
+    assert result.fix_lead == "Deploy a turn earlier."
+    assert result.matchups[0].lead == "Sweep early."
+
+
+def test_an_answer_without_leads_parses_with_none():
+    result = guide_narrative_from_json(json.dumps(_VALID_NARRATIVE), _guide(matches=1))
+    assert result.engine_lead is None
+    assert result.fix_lead is None
+    assert result.matchups[0].lead is None
+
+
+def test_an_empty_lead_is_none():
+    answer = {**_VALID_NARRATIVE, "engine_lead": "  ", "fix_lead": ""}
+    result = guide_narrative_from_json(json.dumps(answer), _guide(matches=1))
+    assert result.engine_lead is None
+    assert result.fix_lead is None
+
+
+def test_leads_round_trip_through_write_and_read(tmp_path):
+    from sensei_top.ai.guide.authored import read_narrative, write_narrative
+
+    conn = open_database(tmp_path / "leads.db")
+    narrative = guide_narrative_from_json(
+        json.dumps({**_VALID_NARRATIVE, **_LEADS}), _guide(matches=1)
+    )
+    write_narrative(
+        conn, "guid:x", narrative, list_hash="h", prompt="p", author="a", corpus_commit=None
+    )
+    conn.commit()
+    stored = read_narrative(conn, "guid:x")
+    assert stored is not None
+    assert stored.engine_lead == "Graveyard count discounts every spell."
+    assert stored.fix_lead == "Deploy a turn earlier."
+
+    write_narrative(
+        conn, "guid:y", guide_narrative_from_json(json.dumps(_VALID_NARRATIVE), _guide(matches=1)),
+        list_hash="h", prompt="p", author="a", corpus_commit=None,
+    )
+    old = read_narrative(conn, "guid:y")
+    assert old is not None
+    assert old.engine_lead is None
+    assert old.fix_lead is None

@@ -461,10 +461,11 @@ def _deck_guide_out(guide) -> DeckGuideOut:
 def _guide_narrative_out(n) -> GuideNarrativeOut:
     return GuideNarrativeOut(
         engine=n.engine, fix=n.fix,
+        engine_lead=n.engine_lead, fix_lead=n.fix_lead,
         card_notes=[CardNoteOut(card=c.card, verdict=c.verdict, why=c.why) for c in n.card_notes],
         matchups=[
             MatchupPlanOut(
-                archetype=m.archetype, prose=m.prose,
+                archetype=m.archetype, prose=m.prose, lead=m.lead,
                 board_in=[BoardCardOut(card=c.card, n=c.n) for c in m.board_in],
                 board_out=[BoardCardOut(card=c.card, n=c.n) for c in m.board_out],
             )

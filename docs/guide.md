@@ -307,6 +307,15 @@ and before the answer contract, and the writer cites it as `[N<n>]` inside a tex
 field; staleness stays the 75's hash, which no prompt text enters, and `notes` is read from the stored
 prompt and every string of the stored narrative (`docs/llm.md`, "Rules notes").
 
+The answer carries three one-sentence leads beside the long sections:
+`engine_lead`, `fix_lead` and one `lead` on each matchup plan. All three are
+required in `_GUIDE_TOOL`, so a generated answer always has them; the parser
+reads them with `.get`, so an older pasted answer still parses and its leads are
+None (stored NULL, migration 076), never synthesized. The two deck-level leads
+sit in `deck_narrative`, a matchup's in `matchup_brief.lead`; `store.write_brief` writes
+`lead` with the rest of the brief, so a later write without one (a live brief, or an
+older guide answer) clears it to NULL.
+
 Either way the result stores the deck-level half in `deck_narrative`
 (`ai/guide/authored.py`) and every matchup plan in `matchup_brief`, so one
 write also fills the Live page. See `docs/brief.md`.

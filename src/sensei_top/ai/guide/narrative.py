@@ -97,9 +97,19 @@ _GUIDE_TOOL = {
                 "type": "string",
                 "description": "How the deck's engine actually works, from the card text given.",
             },
+            "engine_lead": {
+                "type": "string",
+                "description": "One sentence, at most 25 words: how this deck wins, for a "
+                "player who reads nothing else.",
+            },
             "fix": {
                 "type": "string",
                 "description": "The single biggest leak in the player's own play, and the fix.",
+            },
+            "fix_lead": {
+                "type": "string",
+                "description": "One sentence, at most 25 words: the single change to the "
+                "player's play that matters most.",
             },
             "card_notes": {
                 "type": "array",
@@ -122,6 +132,11 @@ _GUIDE_TOOL = {
                     "type": "object",
                     "properties": {
                         "archetype": {"type": "string"},
+                        "lead": {
+                            "type": "string",
+                            "description": "One sentence, at most 25 words: the plan against "
+                            "this archetype, naming the key card in or out if there is one.",
+                        },
                         "prose": {"type": "string"},
                         "board_in": {
                             "type": "array",
@@ -144,7 +159,7 @@ _GUIDE_TOOL = {
                             },
                         },
                     },
-                    "required": ["archetype", "prose", "board_in", "board_out"],
+                    "required": ["archetype", "lead", "prose", "board_in", "board_out"],
                 },
             },
             "checklist": {
@@ -153,7 +168,9 @@ _GUIDE_TOOL = {
                 "description": "Short questions to ask between rounds.",
             },
         },
-        "required": ["engine", "fix", "card_notes", "matchups", "checklist"],
+        "required": [
+            "engine", "engine_lead", "fix", "fix_lead", "card_notes", "matchups", "checklist",
+        ],
     },
 }
 
@@ -177,6 +194,7 @@ class MatchupPlan:
     prose: str
     board_in: tuple[BoardCard, ...]
     board_out: tuple[BoardCard, ...]
+    lead: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -187,6 +205,14 @@ class GuideNarrative:
     matchups: tuple[MatchupPlan, ...]
     checklist: tuple[str, ...]
     problems: tuple[PlanProblem, ...] = ()
+    engine_lead: str | None = None
+    fix_lead: str | None = None
+
+
+def _lead(raw: dict, key: str) -> str | None:
+    """A lead an old answer lacks, or left empty, is None -- never a guess."""
+    value = raw.get(key)
+    return value.strip() or None if isinstance(value, str) else None
 
 
 def _oracle_text_block(conn, grp_ids: list[int]) -> str:
@@ -367,6 +393,7 @@ def _plan_from(raw: dict) -> MatchupPlan:
         prose=raw["prose"],
         board_in=tuple(BoardCard(c["card"], c["n"]) for c in raw.get("board_in", [])),
         board_out=tuple(BoardCard(c["card"], c["n"]) for c in raw.get("board_out", [])),
+        lead=_lead(raw, "lead"),
     )
 
 
@@ -391,6 +418,8 @@ def _guide_narrative_from_tool_input(raw: dict, guide: DeckGuide) -> GuideNarrat
         matchups=matchups,
         checklist=tuple(raw.get("checklist", [])),
         problems=problems,
+        engine_lead=_lead(raw, "engine_lead"),
+        fix_lead=_lead(raw, "fix_lead"),
     )
 
 

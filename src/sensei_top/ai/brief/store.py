@@ -65,6 +65,9 @@ class Brief:
     input_tokens: int | None = None
     output_tokens: int | None = None
     cost_usd: float | None = None
+    # One sentence naming the plan, from a deck guide's answer; NULL for a
+    # live brief and for a guide answer written without one.
+    lead: str | None = None
 
 
 def list_hash(current_cards: dict) -> str:
@@ -145,6 +148,7 @@ def _brief_from_row(row: sqlite3.Row) -> Brief:
         input_tokens=row["input_tokens"],
         output_tokens=row["output_tokens"],
         cost_usd=row["cost_usd"],
+        lead=row["lead"],
     )
 
 
@@ -188,6 +192,7 @@ def write_brief(conn: sqlite3.Connection, brief: Brief) -> None:
             "input_tokens": brief.input_tokens,
             "output_tokens": brief.output_tokens,
             "cost_usd": brief.cost_usd,
+            "lead": brief.lead,
         },
     )
 

@@ -82,6 +82,7 @@ def store_guide_matchups(
             corpus_commit=store.corpus_commit(conn),
             list_hash=written_for,
             source="guide",
+            lead=plan.lead,
         )
         store.write_brief(conn, brief)
         written += 1

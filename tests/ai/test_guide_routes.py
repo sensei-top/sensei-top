@@ -158,6 +158,24 @@ def test_guide_paste_stores_a_pasted_row_for_the_copied_list(client, key):
     conn.close()
 
 
+def test_guide_leads_come_back_on_get_after_a_paste_and_null_without(client, key):
+    prompt = _guide_prompt(client, key)
+    matchup = {**_GUIDE["matchups"][0], "lead": "Sweep early."}
+    body = {**_GUIDE, "engine_lead": "Spells cost less.", "fix_lead": "Deploy sooner.",
+            "matchups": [matchup]}
+    put = client.put(f"/api/guide/{key}/narrative", json={"answer": _answer(prompt, body)})
+    assert put.status_code == 200
+    for out in (put.json(), client.get(f"/api/guide/{key}/narrative").json()):
+        assert out["guide"]["engine_lead"] == "Spells cost less."
+        assert out["guide"]["fix_lead"] == "Deploy sooner."
+        assert out["guide"]["matchups"][0]["lead"] == "Sweep early."
+
+    client.put(f"/api/guide/{key}/narrative", json={"answer": _answer(prompt, _GUIDE)})
+    guide = client.get(f"/api/guide/{key}/narrative").json()["guide"]
+    assert guide["engine_lead"] is None and guide["fix_lead"] is None
+    assert guide["matchups"][0]["lead"] is None
+
+
 def test_guide_paste_unwraps_a_fence_and_surrounding_text(client, key):
     prompt = _guide_prompt(client, key)
     text = "Here you go:\n```json\n" + _answer(prompt, _GUIDE) + "\n```\nHope that helps."

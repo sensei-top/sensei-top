@@ -2869,8 +2869,18 @@ export interface components {
         GuideNarrativeOut: {
             /** Engine */
             engine: string;
+            /**
+             * Engine Lead
+             * @description one sentence: how the deck wins; null for a guide written without one
+             */
+            engine_lead?: string | null;
             /** Fix */
             fix: string;
+            /**
+             * Fix Lead
+             * @description one sentence: the one change that matters most; null when absent
+             */
+            fix_lead?: string | null;
             /** Card Notes */
             card_notes: components["schemas"]["CardNoteOut"][];
             /** Matchups */
@@ -3934,6 +3944,11 @@ export interface components {
         MatchupPlanOut: {
             /** Archetype */
             archetype: string;
+            /**
+             * Lead
+             * @description one sentence naming the plan; null for a plan written without one
+             */
+            lead?: string | null;
             /** Prose */
             prose: string;
             /** Board In */
