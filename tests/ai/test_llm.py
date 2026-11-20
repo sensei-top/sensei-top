@@ -675,6 +675,16 @@ def test_guide_schema_requires_the_three_leads():
     assert matchup_items["properties"]["lead"]["type"] == "string"
 
 
+def test_summary_schema_is_strict_and_requires_the_four_parts():
+    from sensei_top.ai.review.narrative import _SUMMARY_TOOL
+
+    schema = strict_schema(_SUMMARY_TOOL["input_schema"])
+    assert schema["additionalProperties"] is False
+    assert schema["required"] == ["games", "key_leak", "counter_argument", "confidence"]
+    assert set(schema["properties"]) == set(schema["required"])
+    assert all(p["type"] == "string" for p in schema["properties"].values())
+
+
 def test_strict_schema_does_not_mutate_its_argument():
     """_GUIDE_TOOL is the documented import contract -- a caller building a
     strict copy for structured outputs must never see the original schema

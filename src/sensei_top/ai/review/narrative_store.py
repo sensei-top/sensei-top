@@ -20,6 +20,7 @@ narrative, and imports ``context_hash`` from here rather than duplicating it
 from __future__ import annotations
 
 import hashlib
+import json
 import sqlite3
 from dataclasses import dataclass
 
@@ -49,6 +50,9 @@ class MatchNarrative:
     input_tokens: int | None = None
     output_tokens: int | None = None
     cost_usd: float | None = None
+    # The four parts as written (`{games, key_leak, counter_argument,
+    # confidence}`), or None for a summary stored as one paragraph.
+    sections: dict[str, str] | None = None
 
 
 def write_match_narrative(
@@ -62,6 +66,7 @@ def write_match_narrative(
     input_tokens: int | None = None,
     output_tokens: int | None = None,
     cost_usd: float | None = None,
+    sections_json: str | None = None,
 ) -> None:
     """One row per match: re-generating replaces it, the same "write again
     to revise" story ``deck_narrative`` and ``matchup_brief`` use."""
@@ -71,7 +76,8 @@ def write_match_narrative(
     )
     upsert_authored(
         conn, "match_narrative", {"match_id": match_id},
-        {**record.columns(), "prose": prose, "context_hash": context_hash},
+        {**record.columns(), "prose": prose, "context_hash": context_hash,
+         "sections_json": sections_json},
     )
 
 
@@ -91,4 +97,23 @@ def read_match_narrative(conn: sqlite3.Connection, match_id: str) -> MatchNarrat
         input_tokens=row["input_tokens"],
         output_tokens=row["output_tokens"],
         cost_usd=row["cost_usd"],
+        sections=_sections(row["sections_json"]),
     )
+
+
+def _sections(raw: str | None) -> dict[str, str] | None:
+    """The stored parts, or None for a NULL or unreadable cell: a fail-soft
+    read, the prose beside it is the fallback."""
+    if raw is None:
+        return None
+    try:
+        parts = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    keys = {"games", "key_leak", "counter_argument", "confidence"}
+    if (
+        not isinstance(parts, dict) or set(parts) != keys
+        or not all(isinstance(v, str) for v in parts.values())
+    ):
+        return None
+    return parts

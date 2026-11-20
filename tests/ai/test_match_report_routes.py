@@ -34,14 +34,13 @@ MATCH_LOSS = "fd5624a4-d970-40eb-80aa-fba9d2ce17b3"
 MATCH_WIN = "fa7a4d16-afb7-4094-bae2-111092fc71d2"
 CONTRACT = "Answer with exactly one JSON object"
 OLDER = "0" * 64
-EMPTY_PROSE = "The answer has no text in it."
 BIG = {"answer": "x" * (256 * 1024 + 1)}
 
 
 @pytest.fixture(autouse=True)
 def no_model_call(monkeypatch):
     """A paste route never reaches a model: any call fails the test. The
-    tests that fake the model patch ``write_prose`` after this."""
+    tests that fake the model patch ``write_json`` after this."""
     def boom(*a, **k):
         raise AssertionError("a PUT must not call a model")
 
@@ -160,7 +159,27 @@ def _match_path(match_id):
 
 
 def _prose(text):
+    """The old answer shape, which the match summary no longer accepts."""
     return {"prose": text}
+
+
+PARTS = {
+    "games": "Game 1 turned on the mulligan; game 2 on the missed land drop.",
+    "key_leak": "Keep fewer slow hands on the draw. Both losses start there.",
+    "counter_argument": "The opponent's curve was simply faster than the list could race.",
+    "confidence": "Moderate: two games show it, and a faster draw would change it.",
+}
+JOINED = (
+    "## Games\nGame 1 turned on the mulligan; game 2 on the missed land drop.\n\n"
+    "## Key leak\nKeep fewer slow hands on the draw. Both losses start there.\n\n"
+    "## Counter-argument\n"
+    "The opponent's curve was simply faster than the list could race.\n\n"
+    "## Confidence\nModerate: two games show it, and a faster draw would change it."
+)
+
+
+def _summary(**over):
+    return {**PARTS, **over}
 
 
 # --- GET ---------------------------------------------------------------------
@@ -286,15 +305,15 @@ def test_match_report_paste_stores_and_the_get_serves_it(client, match_id):
     prompt = before["prompt"]
     header = _header(prompt)
     assert header["for"] == f"match:{match_id}"
-    text = "You kept a slow hand on the draw.\n\nMulligan it next time."
 
     resp = client.put(
-        _match_path(match_id), json={"answer": _answer(prompt, _prose(text))},
+        _match_path(match_id), json={"answer": _answer(prompt, _summary())},
     )
     assert resp.status_code == 200
     out = resp.json()
     assert out["status"] == "ok"
-    assert out["narrative"] == text
+    assert out["narrative"] == JOINED
+    assert out["sections"] == PARTS
     assert out["model"] == "pasted"
     assert out["cost_usd"] is None
     assert out["stale"] is False
@@ -306,7 +325,8 @@ def test_match_report_paste_stores_and_the_get_serves_it(client, match_id):
         "SELECT * FROM match_narrative WHERE match_id = ?", (match_id,)
     ).fetchone()
     conn.close()
-    assert row["prose"] == text
+    assert row["prose"] == JOINED
+    assert json.loads(row["sections_json"]) == PARTS
     assert row["model"] == "pasted"
     assert row["context_hash"] == header["context"]
     assert row["input_tokens"] is None and row["output_tokens"] is None
@@ -320,24 +340,33 @@ def test_match_report_paste_written_for_older_evidence_is_stored_stale(client, m
     prompt = client.get(_match_path(match_id)).json()["prompt"]
     resp = client.put(
         _match_path(match_id),
-        json={"answer": _answer(prompt, _prose("Old advice."), context=OLDER)},
+        json={"answer": _answer(prompt, _summary(), context=OLDER)},
     )
     assert resp.status_code == 200
     assert resp.json()["stale"] is True
-    assert client.get(_match_path(match_id)).json()["stale"] is True
+    assert resp.json()["sections"] == PARTS
+    again = client.get(_match_path(match_id)).json()
+    assert again["stale"] is True
+    assert again["sections"] == PARTS
     conn = _db(client)
     assert conn.execute("SELECT context_hash FROM match_narrative").fetchone()[0] == OLDER
     conn.close()
 
 
 @pytest.mark.parametrize("make", [
-    pytest.param(lambda p: json.dumps(_prose("Fine prose.")), id="headerless"),
-    pytest.param(lambda p: _answer(p, _prose("x"), **{"for": "leaks"}), id="another-card"),
+    pytest.param(lambda p: json.dumps(_summary()), id="headerless"),
+    pytest.param(lambda p: _answer(p, _summary(), **{"for": "leaks"}), id="another-card"),
     pytest.param(
-        lambda p: _answer(p, _prose("x"), **{"for": "match:another"}), id="another-match",
+        lambda p: _answer(p, _summary(), **{"for": "match:another"}), id="another-match",
     ),
-    pytest.param(lambda p: _answer(p, {"text": "x"}), id="no-prose-field"),
-    pytest.param(lambda p: _answer(p, _prose("x"), context="edited"), id="edited-context"),
+    pytest.param(lambda p: _answer(p, {"text": "x"}), id="no-parts"),
+    pytest.param(lambda p: _answer(p, _prose("A paragraph.")), id="plain-prose-old-prompt"),
+    pytest.param(
+        lambda p: _answer(p, {k: v for k, v in PARTS.items() if k != "confidence"}),
+        id="a-part-missing",
+    ),
+    pytest.param(lambda p: _answer(p, _summary(key_leak=7)), id="a-part-not-a-string"),
+    pytest.param(lambda p: _answer(p, _summary(), context="edited"), id="edited-context"),
 ])
 def test_match_report_paste_that_does_not_read_is_422_and_stores_nothing(
     client, match_id, make,
@@ -353,29 +382,42 @@ def test_match_report_paste_names_the_card_a_wrong_answer_belongs_to(client, mat
     prompt = client.get(_match_path(match_id)).json()["prompt"]
     resp = client.put(
         _match_path(match_id),
-        json={"answer": _answer(prompt, _prose("x"), **{"for": "leaks"})},
+        json={"answer": _answer(prompt, _summary(), **{"for": "leaks"})},
     )
     assert resp.status_code == 422
     assert "the training plan" in resp.json()["detail"]
 
 
 @pytest.mark.parametrize("text", ["", "  \n\t "])
-def test_match_report_paste_with_empty_prose_is_422(client, match_id, text):
+def test_match_report_paste_with_a_blank_part_is_422(client, match_id, text):
     prompt = client.get(_match_path(match_id)).json()["prompt"]
-    resp = client.put(_match_path(match_id), json={"answer": _answer(prompt, _prose(text))})
+    resp = client.put(
+        _match_path(match_id), json={"answer": _answer(prompt, _summary(games=text))},
+    )
     assert resp.status_code == 422
-    assert resp.json()["detail"] == EMPTY_PROSE
+    assert resp.json()["detail"].startswith("The answer could not be read:")
+    assert _count(client, "match_narrative") == 0
+
+
+def test_match_report_paste_of_plain_prose_is_refused_not_stored_as_prose(client, match_id):
+    """An answer to a prompt copied before the summary had parts."""
+    prompt = client.get(_match_path(match_id)).json()["prompt"]
+    resp = client.put(
+        _match_path(match_id), json={"answer": _answer(prompt, _prose("One paragraph."))},
+    )
+    assert resp.status_code == 422
+    assert resp.json()["detail"].startswith("The answer could not be read:")
     assert _count(client, "match_narrative") == 0
 
 
 def test_match_report_paste_refusal_follows_the_requests_language(client, match_id):
     prompt = client.get(_match_path(match_id)).json()["prompt"]
     resp = client.put(
-        _match_path(match_id), json={"answer": _answer(prompt, _prose(" "))},
+        _match_path(match_id), json={"answer": _answer(prompt, _prose("One paragraph."))},
         headers={"Accept-Language": "pt-BR"},
     )
     assert resp.status_code == 422
-    assert resp.json()["detail"] == "A resposta não tem nenhum texto."
+    assert resp.json()["detail"].startswith("A resposta não pôde ser lida:")
 
 
 def test_match_report_paste_with_nothing_to_write_about_is_404(
@@ -386,7 +428,7 @@ def test_match_report_paste_with_nothing_to_write_about_is_404(
     resp = client.put(
         _match_path(match_id),
         json={"answer": json.dumps({"for": f"match:{match_id}", "context": OLDER,
-                                    "answer": _prose("Text.")})},
+                                    "answer": _summary()})},
     )
     assert resp.status_code == 404
     assert _count(client, "match_narrative") == 0
@@ -410,9 +452,9 @@ def test_match_report_paste_over_256_kb_is_413_before_anything_else(client, matc
 def test_generate_match_report_narrative_stores_and_returns_it(monkeypatch, client):
     monkeypatch.setattr(llm_config_module, "load", lambda: LLMConfig(api_key="k"))
     monkeypatch.setattr(
-        llm_client_module, "write_prose",
-        lambda prompt, *, cfg, label: Completion(
-            text="You won because of X.", model="claude-opus-5",
+        llm_client_module, "write_json",
+        lambda prompt, schema, *, cfg, label: Completion(
+            text=json.dumps(_summary()), model="claude-opus-5",
             input_tokens=500, output_tokens=200, cost_usd=0.0075,
         ),
     )
@@ -421,13 +463,87 @@ def test_generate_match_report_narrative_stores_and_returns_it(monkeypatch, clie
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "ok"
-    assert body["narrative"] == "You won because of X."
+    assert body["narrative"] == JOINED
+    assert body["sections"] == PARTS
     assert body["cost_usd"] == pytest.approx(0.0075)
 
     again = client.get(f"/api/matches/{MATCH_WIN}/report/narrative").json()
     assert again["status"] == "ok"
-    assert again["narrative"] == "You won because of X."
+    assert again["narrative"] == JOINED
+    assert again["sections"] == PARTS
     assert again["stale"] is False
+
+
+def test_generate_asks_for_the_summary_schema_strictly(monkeypatch, client):
+    sent = {}
+    monkeypatch.setattr(llm_config_module, "load", lambda: LLMConfig(api_key="k"))
+
+    def fake(prompt, schema, *, cfg, label):
+        sent.update(prompt=prompt, schema=schema)
+        return Completion(
+            text=json.dumps(_summary()), model="claude-opus-5",
+            input_tokens=1, output_tokens=1, cost_usd=0.001,
+        )
+
+    monkeypatch.setattr(llm_client_module, "write_json", fake)
+    assert client.post(f"/api/matches/{MATCH_WIN}/report/narrative").status_code == 200
+    assert sent["schema"]["additionalProperties"] is False
+    assert set(sent["schema"]["required"]) == set(PARTS)
+    sentence = "Fill each field of the answer's schema; plain sentences, no headings, no lists."
+    assert sentence in sent["prompt"]
+    assert CONTRACT not in sent["prompt"]
+
+
+def test_generate_with_an_answer_that_is_not_the_parts_is_502_and_stores_nothing(
+    monkeypatch, client,
+):
+    monkeypatch.setattr(llm_config_module, "load", lambda: LLMConfig(api_key="k"))
+    monkeypatch.setattr(
+        llm_client_module, "write_json",
+        lambda prompt, schema, *, cfg, label: Completion(
+            text=json.dumps(_prose("One paragraph.")), model="claude-opus-5",
+            input_tokens=1, output_tokens=1, cost_usd=0.001,
+        ),
+    )
+    resp = client.post(f"/api/matches/{MATCH_WIN}/report/narrative")
+    assert resp.status_code == 502
+    assert _count(client, "match_narrative") == 0
+
+
+def test_a_row_whose_sections_lack_a_key_reads_back_with_null_sections(client):
+    prompt = client.get(_match_path(MATCH_WIN)).json()["prompt"]
+    context = _header(prompt)["context"]
+    conn = _db(client)
+    conn.execute(
+        "INSERT INTO match_narrative (match_id, prose, prompt, model, generated_at, "
+        "context_hash, sections_json) VALUES (?, 'Some prose.', 'p', 'm', "
+        "'2026-01-01T00:00:00Z', ?, ?)",
+        (MATCH_WIN, context, json.dumps({"games": "g"})),
+    )
+    conn.commit()
+    conn.close()
+    resp = client.get(_match_path(MATCH_WIN))
+    assert resp.status_code == 200
+    assert resp.json()["narrative"] == "Some prose."
+    assert resp.json()["sections"] is None
+
+
+def test_a_row_stored_as_one_paragraph_reads_back_with_null_sections(client):
+    """A summary written before the parts were stored has no `sections_json`."""
+    prompt = client.get(_match_path(MATCH_WIN)).json()["prompt"]
+    context = _header(prompt)["context"]
+    conn = _db(client)
+    conn.execute(
+        "INSERT INTO match_narrative (match_id, prose, prompt, model, generated_at, "
+        "context_hash) VALUES (?, 'An old paragraph.', 'p', 'm', '2026-01-01T00:00:00Z', ?)",
+        (MATCH_WIN, context),
+    )
+    conn.commit()
+    conn.close()
+    body = client.get(_match_path(MATCH_WIN)).json()
+    assert body["status"] == "ok"
+    assert body["narrative"] == "An old paragraph."
+    assert body["sections"] is None
 
 
 def test_generate_match_report_narrative_404s_with_nothing_to_narrate(monkeypatch, client):
@@ -506,7 +622,7 @@ def test_a_stored_note_puts_the_block_between_the_evidence_and_the_contract(
 
 def test_a_stored_note_does_not_make_a_stored_report_stale(client, match_id, with_cards):
     prompt = client.get(_match_path(match_id)).json()["prompt"]
-    client.put(_match_path(match_id), json={"answer": _answer(prompt, _prose("Fine."))})
+    client.put(_match_path(match_id), json={"answer": _answer(prompt, _summary())})
     _store_note(client)
     out = client.get(_match_path(match_id)).json()
     assert out["status"] == "ok" and out["stale"] is False
@@ -517,7 +633,10 @@ def test_the_get_returns_the_note_the_stored_prose_cites(client, match_id, with_
     _store_note(client)
     prompt = client.get(_match_path(match_id)).json()["prompt"]
     text = "The bolt kills the bear on resolution [N1]. Also see [N4]."
-    resp = client.put(_match_path(match_id), json={"answer": _answer(prompt, _prose(text))})
+    resp = client.put(
+        _match_path(match_id),
+        json={"answer": _answer(prompt, _summary(key_leak=text))},
+    )
     assert resp.status_code == 200
     for out in (resp.json(), client.get(_match_path(match_id)).json()):
         assert out["notes"] == [{
@@ -534,14 +653,14 @@ def test_generate_sends_the_block_without_the_contract(
     sent = []
     monkeypatch.setattr(llm_config_module, "load", lambda: LLMConfig(api_key="k"))
 
-    def fake(prompt, *, cfg, label):
+    def fake(prompt, schema, *, cfg, label):
         sent.append(prompt)
         return Completion(
-            text="Bolt first [N1].", model="claude-opus-5", input_tokens=1,
-            output_tokens=1, cost_usd=0.001,
+            text=json.dumps(_summary(key_leak="Bolt first [N1].")),
+            model="claude-opus-5", input_tokens=1, output_tokens=1, cost_usd=0.001,
         )
 
-    monkeypatch.setattr(llm_client_module, "write_prose", fake)
+    monkeypatch.setattr(llm_client_module, "write_json", fake)
     out = client.post(_match_path(match_id)).json()
     assert rules_notes.RULES_NOTES_HEADING in sent[0] and CONTRACT not in sent[0]
     assert sent[0].endswith(rules_notes.CLOSING_INSTRUCTION)

@@ -777,3 +777,25 @@ def test_migration_076_adds_nullable_guide_lead_columns(tmp_path):
     assert (row[0], row[1]) == (None, None)
     assert conn.execute("SELECT lead FROM matchup_brief").fetchone()[0] is None
     conn.close()
+
+
+def test_migration_077_adds_nullable_summary_fields(tmp_path):
+    """Frozen at 076 with a stored match summary and coach report, migrate
+    forward: the new columns are NULL on the existing rows, never backfilled."""
+    conn = db.connect(tmp_path / "stuck_at_76.db")
+    _migrate_to(conn, through_version=76)
+    conn.execute(
+        "INSERT INTO match_narrative (match_id, prose, prompt, model, generated_at, "
+        "context_hash) VALUES ('m', 'old paragraph', 'p', 'x', 't', 'h')"
+    )
+    conn.execute(
+        "INSERT INTO coach_report (generated_at, model, prompt, prose, sources_json, "
+        "metrics_json, context_hash) VALUES ('t', 'x', 'p', 'old report', '[]', '{}', 'h')"
+    )
+    conn.commit()
+
+    assert 77 in db.migrate(conn)
+
+    assert conn.execute("SELECT sections_json FROM match_narrative").fetchone()[0] is None
+    assert conn.execute("SELECT headline FROM coach_report").fetchone()[0] is None
+    conn.close()

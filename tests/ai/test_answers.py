@@ -493,18 +493,30 @@ def _assert_prose_contract(copied: str, sent: str, for_: str, context: str, desc
     assert copied.endswith(PROSE_TAIL_SENTENCE)
 
 
-def test_the_match_report_prompt_asks_for_prose_and_the_call_does_not(
+def test_the_match_report_copied_prompt_carries_the_contract_and_the_call_does_not(
     monkeypatch, client, db_path,
 ):
     from sensei_top import claude_config as llm_config_module
     from sensei_top.ai.llm import client as llm_client_module
+    from sensei_top.ai.llm.client import Completion
     from sensei_top.ai.review.narrative_store import read_match_narrative
     from sensei_top.claude_config import LLMConfig
 
     match_id = "fa7a4d16-afb7-4094-bae2-111092fc71d2"
+    parts = {
+        "games": "g", "key_leak": "k", "counter_argument": "c", "confidence": "f",
+    }
     sent: list = []
+
+    def write(prompt, schema, *, cfg, label):
+        sent.append(prompt)
+        return Completion(
+            text=json.dumps(parts), model="claude-opus-5", input_tokens=1,
+            output_tokens=1, cost_usd=0.001,
+        )
+
     monkeypatch.setattr(llm_config_module, "load", lambda: LLMConfig(api_key="k"))
-    monkeypatch.setattr(llm_client_module, "write_prose", _fake_prose_writer(sent))
+    monkeypatch.setattr(llm_client_module, "write_json", write)
     assert client.post(f"/api/matches/{match_id}/report/narrative").status_code == 200
 
     conn = open_database(db_path)
@@ -514,10 +526,22 @@ def test_the_match_report_prompt_asks_for_prose_and_the_call_does_not(
         conn.close()
     body = client.get(f"/api/matches/{match_id}/report/narrative").json()
     assert body["stale"] is False
-    _assert_prose_contract(
-        body["prompt"], sent[0], match_for(match_id), stored.context_hash, "plain prose",
-    )
-    # What the POST stored is what it sent: no contract in it either.
+    copied = body["prompt"]
+    # The call's prompt carries no contract; the copied one carries it once,
+    # with this card's own header and the four parts' schema, and no prose tail.
+    assert CONTRACT_OPENING not in sent[0]
+    assert copied.count(CONTRACT_OPENING) == 1
+    header = f'  "for": {json.dumps(match_for(match_id))},\n  "context": "{stored.context_hash}",\n'
+    assert header in copied
+    for name in parts:
+        assert f'"{name}": {{' in copied
+    assert not copied.endswith(PROSE_TAIL_SENTENCE)
+    # Both prompts carry the same evidence: what follows the schema in the
+    # call's prompt is what precedes the contract in the copied one.
+    evidence = sent[0].split("\n\n---\n\n", 1)[1]
+    assert evidence + "\n\n---\n\n" + CONTRACT_OPENING in copied
+    assert "Answer as a single JSON object matching this schema" not in copied
+    # What the POST stored is what it sent.
     assert stored.prompt == sent[0]
 
 

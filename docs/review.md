@@ -385,15 +385,35 @@ but both have a one-click path as well as the copy-paste one:
   (`status: "ok"`; `"prompt"` before; `"no_report"`, and no prompt, when
   there is nothing to narrate).
 - `POST .../narrative` sends the prompt without its answer contract
-  (`full_prompt`; the copied one, `copied_prompt`, ends by asking for one
-  `{"prose": ...}` object) through `llm.write_prose` and
-  stores the answer — `match_narrative` for the per-match route,
-  `leaks_narrative` (a single row; the leak finder here is unscoped) for the
-  leaks route — when a credential is configured. 503 otherwise.
+  (`full_prompt`; the copied one, `copied_prompt`, ends by asking for the
+  answer's JSON) and stores the answer — `match_narrative` for the
+  per-match route, `leaks_narrative` (a single row; the leak finder here is
+  unscoped) for the leaks route — when a credential is configured. 503
+  otherwise. The leaks route goes through `llm.write_prose`, its copied
+  prompt asking for one `{"prose": ...}` object. The match route goes
+  through `llm.write_json`, against the strict form of `_SUMMARY_TOOL`.
 - `PUT .../narrative` stores an answer pasted into the card, read
   through `ai/answers.py` (its `for` line must name this match, or the
   training plan), in the same table, with the author `pasted` and no
   cost. It calls no model (`docs/llm.md`, "Saving a pasted answer").
+
+**The match summary is four stored fields, not a paragraph.**
+`_SUMMARY_TOOL` (`emit_summary`) has four required strings: `games`,
+`key_leak`, `counter_argument`, `confidence`. The system prompt tells the
+model to fill each field in plain sentences, with no headings and no
+lists; each field's own description carries its length. The generate
+reply and a pasted answer's body are read by the same parser,
+`summary_from_json`, which refuses anything else with `NarrativeError`
+(502 on generate, 422 on paste, nothing stored). That includes an old
+copied prompt's `{"prose": ...}` answer, which is refused, never kept as
+one paragraph. The row keeps the four as `match_narrative.sections_json`
+and also keeps `prose`: the four joined under the fixed English headings
+`## Games`, `## Key leak`, `## Counter-argument` and `## Confidence`, so
+every reader of a string (the rules-note citations among them) is
+unchanged. The match route answers with `MatchNarrativeResponse`:
+`NarrativeResponse` plus `sections`, which is null for a row written before
+the column existed (migration 077), whose `narrative` is then its one
+paragraph. The leaks narrative keeps `NarrativeResponse`.
 
 The match prompt (`build_narrative_context(report, snap, field=...)`)
 carries the game's turn-by-turn shape (life/hand/board/power/lands for both

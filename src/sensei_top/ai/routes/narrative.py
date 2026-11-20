@@ -110,9 +110,10 @@ def unreadable_answer(exc: Exception) -> HTTPException:
 
 @dataclass(frozen=True, slots=True)
 class NarrativeEnvelope:
-    """What the match report's and the leak finder's ``NarrativeResponse``
-    is built from; the route maps ``who``/``when`` onto ``model``/
-    ``generated_at``."""
+    """What the match report's and the leak finder's responses are built
+    from; the route maps ``who``/``when`` onto ``model``/``generated_at``.
+    ``content`` is the stored prose; the match route adds its stored parts
+    itself, from its own read."""
 
     status: str
     content: Any = None
@@ -157,7 +158,8 @@ class NarrativeSpec:
     """Everything a prose narrative route (the match report, the leak
     finder) needs beyond the shared control flow below. ``full_prompt`` is
     what ``POST`` sends the model; ``copied_prompt`` is what ``GET`` offers
-    to copy, the same text plus the answer contract. Built fresh per
+    to copy, the same text plus the answer contract. ``schema`` set means a
+    JSON-schema answer (the match summary) instead of prose. Built fresh per
     request by a small helper in the route module that closes over that
     request's own ``conn`` and path params, so this stays a plain function
     rather than a FastAPI dependency.
@@ -170,6 +172,10 @@ class NarrativeSpec:
     context_hash: Callable[[Any], str]
     no_context_detail: str
     label: str
+    # A JSON-schema answer instead of prose: ``POST`` then sends it through
+    # ``llm.write_json`` (made strict here) and hands the reply's text to
+    # ``write`` unparsed. None, the leak finder's case, keeps ``write_prose``.
+    schema: dict | None = None
 
 
 def narrative_get(spec: NarrativeSpec) -> NarrativeEnvelope:
@@ -197,11 +203,14 @@ def narrative_post(
     *,
     write: Callable[[str, Completion, Any], None],
 ) -> NarrativeEnvelope:
-    """``POST .../narrative``: write this route's evidence through
-    ``llm.write_prose`` and store the answer. It sends ``spec.full_prompt``,
-    never the copyable prompt: no answer contract, the reply is prose. The
-    match-report and leak-finder routes vary only what evidence goes in and
-    where the prose lands, both carried by ``spec`` and ``write``.
+    """``POST .../narrative``: write this route's evidence and store the
+    answer. It sends ``spec.full_prompt``, never the copyable prompt: no
+    answer contract. A spec without ``schema`` goes through
+    ``llm.write_prose`` and its reply is prose; one with ``schema`` goes
+    through ``llm.write_json`` against its strict form, and ``write`` parses
+    the reply (the route raises on one it cannot read) rather than storing
+    it as prose. The routes vary only what evidence goes in and where the
+    answer lands, both carried by ``spec`` and ``write``.
     """
     cfg = require_credential()
     context = spec.build_context()
@@ -209,7 +218,12 @@ def narrative_post(
         raise HTTPException(status_code=404, detail=spec.no_context_detail)
     prompt = spec.full_prompt(context)
     try:
-        completion = llm_client.write_prose(prompt, cfg=cfg, label=spec.label)
+        if spec.schema is None:
+            completion = llm_client.write_prose(prompt, cfg=cfg, label=spec.label)
+        else:
+            completion = llm_client.write_json(
+                prompt, llm_client.strict_schema(spec.schema), cfg=cfg, label=spec.label
+            )
     except llm_client.LLMError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 

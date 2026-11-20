@@ -30,9 +30,10 @@ results (``metagame/``), added only when it exists for this match.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 
-from sensei_top.ai.answers import answer_format, prose_schema
+from sensei_top.ai.answers import answer_format
 from sensei_top.ai.rules_notes import append_block
 from sensei_top.i18n import english
 from sensei_top.review.findings import Finding, MatchReport
@@ -52,13 +53,53 @@ SYSTEM_PROMPT = (
     "the match's turn-by-turn shape (life, hand size, board, lands for both sides), both "
     "sides' play sequence, and a local reader's own findings and gaps about the game. "
     "Assign the role explicitly (beatdown or control, and for which side) if the findings "
-    "do not already settle it. Name the turn the game actually turned on and say what "
-    "changed there. State the single highest-leverage change for next time, specific enough "
+    "do not already settle it, in the games field. Name the turn the game actually turned "
+    "on and say what changed there. State the single highest-leverage change for next time, "
+    "specific enough "
     "that the player could argue with it. State your confidence. Never invent a play, a "
     "card, or an observation that is not in the findings or the turn-by-turn data given to "
     "you, and never comment on anything named in the gaps as unobserved, or on combat, the "
     "stack, or the opponent's hand contents — none of that is tracked here for any match. "
-    "Plain prose, no headers, 600-900 words."
+    "Fill each field of the answer's schema; plain sentences, no headings, no lists."
+)
+
+_SUMMARY_TOOL = {
+    "name": "emit_summary",
+    "description": "Return the four written parts of a match summary.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "games": {
+                "type": "string",
+                "description": "One or two sentences per game, in order: what decided it.",
+            },
+            "key_leak": {
+                "type": "string",
+                "description": "The one thing the player most controls and should change. "
+                "Start with that thing in one sentence, then at most two sentences of why, "
+                "citing the findings.",
+            },
+            "counter_argument": {
+                "type": "string",
+                "description": "The strongest reading that the result was not the player's "
+                "doing, in two or three sentences.",
+            },
+            "confidence": {
+                "type": "string",
+                "description": "One sentence: how far the evidence supports the key leak, "
+                "and what would change it.",
+            },
+        },
+        "required": ["games", "key_leak", "counter_argument", "confidence"],
+    },
+}
+
+# The fixed English headings the four parts are joined under into `prose`.
+SECTION_HEADINGS = (
+    ("games", "## Games"),
+    ("key_leak", "## Key leak"),
+    ("counter_argument", "## Counter-argument"),
+    ("confidence", "## Confidence"),
 )
 
 
@@ -90,28 +131,73 @@ def _wrap_prompt(system_prompt: str, context: str) -> str:
 
 @english()
 def full_prompt(context: str, *, notes_block: str = "") -> str:
-    """The complete text to hand an assistant: the framing, then the
-    evidence ``build_narrative_context`` returns, then ``notes_block``
-    (``rules_notes.render_block``) when it is not empty. The generate path
-    (``POST``) sends this; the copyable prompt is ``copied_prompt``.
-    """
-    return append_block(_wrap_prompt(SYSTEM_PROMPT, context), notes_block)
+    """The complete text the generate path (``POST``) sends: the framing,
+    the schema, then the evidence ``build_narrative_context`` returns, then
+    ``notes_block`` (``rules_notes.render_block``) when it is not empty. The
+    copyable prompt is ``copied_prompt``."""
+    framed = (
+        f"{SYSTEM_PROMPT}\n\n"
+        f"Answer as a single JSON object matching this schema, and nothing else:\n"
+        f"{json.dumps(_SUMMARY_TOOL['input_schema'], indent=2)}\n\n---\n\n{context}"
+    )
+    return append_block(framed, notes_block)
 
 
 @english()
 def copied_prompt(
     context: str, *, answer_for: str, context_hash: str, notes_block: str = ""
 ) -> str:
-    """``full_prompt`` plus the answer contract (``answers.answer_format``),
-    for the prompt the card offers to copy. The generate path keeps
-    ``full_prompt``: its reply is stored as prose whole, so it must not be
-    asked for a JSON object."""
+    """The framing and evidence plus the answer contract
+    (``answers.answer_format``, with ``_SUMMARY_TOOL``'s schema), for the
+    prompt the card offers to copy. The schema is said once, in the
+    contract; the generate path's ``full_prompt`` says it before the
+    evidence instead."""
     return (
-        f"{full_prompt(context, notes_block=notes_block)}\n\n---\n\n"
-        f"{answer_format(answer_for, context_hash, prose_schema('plain prose'))}"
+        f"{append_block(_wrap_prompt(SYSTEM_PROMPT, context), notes_block)}\n\n---\n\n"
+        f"{answer_format(answer_for, context_hash, _SUMMARY_TOOL['input_schema'])}"
     )
 
 
+@dataclass(frozen=True, slots=True)
+class MatchSummary:
+    games: str
+    key_leak: str
+    counter_argument: str
+    confidence: str
+
+    @property
+    def prose(self) -> str:
+        """The four parts under ``SECTION_HEADINGS``: what ``match_narrative.prose``
+        holds, so every reader of a plain string keeps working."""
+        return "\n\n".join(
+            f"{heading}\n{getattr(self, name)}" for name, heading in SECTION_HEADINGS
+        )
+
+    def sections_json(self) -> str:
+        return json.dumps(
+            {name: getattr(self, name) for name, _ in SECTION_HEADINGS}, ensure_ascii=False
+        )
+
+
+def summary_from_json(raw: str | dict) -> MatchSummary:
+    """Parse the object ``_SUMMARY_TOOL``'s schema describes — the generate
+    path's reply and a pasted answer's body. ``NarrativeError`` on anything
+    else, including a plain-prose answer (``{"prose": ...}``) from an older
+    copied prompt: it is refused, never stored as one paragraph."""
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise NarrativeError(f"not valid JSON: {exc}") from exc
+    if not isinstance(raw, dict):
+        raise NarrativeError("expected a single JSON object at the top level.")
+    parts = {}
+    for name, _heading in SECTION_HEADINGS:
+        value = raw.get(name)
+        if not isinstance(value, str) or not value.strip():
+            raise NarrativeError(f'expected a non-empty "{name}" string.')
+        parts[name] = value.strip()
+    return MatchSummary(**parts)
 
 
 def _anchor(f: Finding) -> str:
