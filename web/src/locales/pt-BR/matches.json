@@ -157,7 +157,7 @@
       "labels": "O que os rótulos significam"
     },
     "wholeMatch": "Partida inteira",
-    "placeYourTurn": "Jogo {{game}} · seu turno {{turn}}",
+    "placeYourTurn": "Jogo {{game}} · turno {{turn}} (seu turno {{self}})",
     "placeTurn": "Jogo {{game}} · turno {{turn}}",
     "placePartial": "{{place}} · parcialmente oculto",
     "numbersBehind": "Os números por trás",
@@ -221,7 +221,7 @@
     "chartLabel_other": "Sua posição ao longo da partida, turno a turno, com {{n}} observações marcadas",
     "strip": "Observações, por jogo e turno",
     "marker": "Jogo {{game}}, turno {{turn}}, {{severity}}: {{title}}",
-    "markerYourTurn": "Jogo {{game}}, seu turno {{turn}}, {{severity}}: {{title}}",
+    "markerYourTurn": "Jogo {{game}}, turno {{turn}} (seu turno {{self}}), {{severity}}: {{title}}",
     "markerGame": "Jogo {{game}}, {{severity}}: {{title}}",
     "nearest": "O turno {{turn}} não foi registrado, então o marcador fica no turno {{shown}}.",
     "replayTurn": "Replay a partir do turno {{turn}}",

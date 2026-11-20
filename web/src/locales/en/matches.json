@@ -157,7 +157,7 @@
       "labels": "What the labels mean"
     },
     "wholeMatch": "Whole match",
-    "placeYourTurn": "Game {{game}} · your turn {{turn}}",
+    "placeYourTurn": "Game {{game}} · turn {{turn}} (your turn {{self}})",
     "placeTurn": "Game {{game}} · turn {{turn}}",
     "placePartial": "{{place}} · partly hidden",
     "numbersBehind": "The numbers behind it",
@@ -221,7 +221,7 @@
     "chartLabel_other": "Your position across the match, turn by turn, with {{n}} findings marked",
     "strip": "Findings, in game and turn order",
     "marker": "Game {{game}}, turn {{turn}}, {{severity}}: {{title}}",
-    "markerYourTurn": "Game {{game}}, your turn {{turn}}, {{severity}}: {{title}}",
+    "markerYourTurn": "Game {{game}}, turn {{turn}} (your turn {{self}}), {{severity}}: {{title}}",
     "markerGame": "Game {{game}}, {{severity}}: {{title}}",
     "nearest": "Turn {{turn}} was not recorded, so the marker sits at turn {{shown}}.",
     "replayTurn": "Replay from turn {{turn}}",

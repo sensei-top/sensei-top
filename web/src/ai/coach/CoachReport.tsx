@@ -97,7 +97,7 @@ function SectionBody({ blocks, sources }: { blocks: Block[]; sources: CoachSourc
         }
         if (block.kind === 'paragraph') {
           return (
-            <p key={i} className="break-words text-body text-ink2">
+            <p key={i} className="max-w-prose break-words text-body text-ink2">
               <InlineNodes nodes={block.inline} sources={sources} />
             </p>
           )
@@ -107,7 +107,7 @@ function SectionBody({ blocks, sources }: { blocks: Block[]; sources: CoachSourc
             <InlineNodes nodes={item} sources={sources} />
           </li>
         ))
-        const look = 'space-y-1 pl-5 text-body text-ink2 marker:text-muted'
+        const look = 'max-w-prose space-y-1 pl-5 text-body text-ink2 marker:text-muted'
         return block.ordered ? (
           <ol key={i} start={block.start} className={`list-decimal ${look}`}>
             {items}

@@ -777,7 +777,7 @@ quarter at least and never past 1, the index's own bound. The zero line
 is drawn heavier (`ink-2`) than a gridline, since above it you are ahead.
 One sentence under the chart says what the line is.
 
-A marker is a dot on the line at its finding's turn. A turn with no
+A marker is a dot on the line at its finding's turn; a finding with no turn is a diamond instead, a game's flag rather than a reading of the line. Its place label leads with the game's turn, the one the axis shows, and adds the player's own turn after it when known ("Game 1 · turn 12 (your turn 6)"). A turn with no
 point sits on the nearest earlier point, and the open card says so in
 words ("Turn 7 was not recorded, so the marker sits at turn 6"),
 counting turns as the finding's place line does: the player's own when

@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import type { PositionPoint } from '../api'
-import { beatsByFinding, buildTimeline, parseFinding, placeOn, reachOf, routeFindings, type MarkerSource } from './timeline'
+import type { ReportFinding } from '../api'
+import type { TFunction } from '../i18n'
+import {
+  barePlace,
+  beatsByFinding,
+  buildTimeline,
+  markerLabel,
+  parseFinding,
+  placeOn,
+  reachOf,
+  routeFindings,
+  type MarkerSource,
+} from './timeline'
 
 function point(game: number, turn: number, index: number): PositionPoint {
   return { game_number: game, turn_number: turn, self_turn_index: null, index }
@@ -187,5 +199,23 @@ describe('parseFinding', () => {
     expect(parseFinding(null)).toBeNull()
     expect(parseFinding('x')).toBeNull()
     expect(parseFinding('-1')).toBeNull()
+  })
+})
+
+describe('place wording', () => {
+  // Echoes the key and its parameters, so the test reads which wording was chosen.
+  const t = ((key: string, params?: Record<string, unknown>) => `${key}:${JSON.stringify(params)}`) as unknown as TFunction
+  const finding = (turn: number | null, self: number | null) =>
+    ({ game_number: 1, turn_number: turn, self_turn_index: self, title: 'x' }) as unknown as ReportFinding
+
+  it('leads with the game turn and adds the own turn when known', () => {
+    expect(barePlace(finding(12, 6), t)).toBe('matches.report.placeYourTurn:{"game":1,"turn":12,"self":6}')
+    expect(markerLabel(finding(12, 6), 'flag', t)).toBe(
+      'matches.timeline.markerYourTurn:{"game":1,"turn":12,"self":6,"severity":"flag","title":"x"}',
+    )
+  })
+
+  it('keeps the game and turn wording with no own turn', () => {
+    expect(barePlace(finding(12, null), t)).toBe('matches.report.placeTurn:{"game":1,"turn":12}')
   })
 })

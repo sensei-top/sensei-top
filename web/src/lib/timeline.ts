@@ -187,7 +187,9 @@ export function byWeightThenPlace(a: ReportFinding, b: ReportFinding): number {
 /** Where a finding happened, in words, without the partial mark. */
 export function barePlace(f: ReportFinding, t: TFunction): string {
   if (f.game_number == null) return t('matches.report.wholeMatch')
-  if (f.self_turn_index != null) return t('matches.report.placeYourTurn', { game: f.game_number, turn: f.self_turn_index })
+  if (f.turn_number != null && f.self_turn_index != null) {
+    return t('matches.report.placeYourTurn', { game: f.game_number, turn: f.turn_number, self: f.self_turn_index })
+  }
   if (f.turn_number != null) return t('matches.report.placeTurn', { game: f.game_number, turn: f.turn_number })
   return t('matches.game.title', { n: f.game_number })
 }
@@ -203,8 +205,8 @@ export function placeText(f: ReportFinding, t: TFunction): string {
 export function markerLabel(f: ReportFinding, weightWord: string, t: TFunction): string {
   const game = f.game_number ?? 0
   const severity = weightWord
-  if (f.self_turn_index != null) {
-    return t('matches.timeline.markerYourTurn', { game, turn: f.self_turn_index, severity, title: f.title })
+  if (f.turn_number != null && f.self_turn_index != null) {
+    return t('matches.timeline.markerYourTurn', { game, turn: f.turn_number, self: f.self_turn_index, severity, title: f.title })
   }
   if (f.turn_number != null) return t('matches.timeline.marker', { game, turn: f.turn_number, severity, title: f.title })
   return t('matches.timeline.markerGame', { game, severity, title: f.title })

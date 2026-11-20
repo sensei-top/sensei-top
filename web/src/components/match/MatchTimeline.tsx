@@ -169,7 +169,7 @@ const TimelineChart = memo(function TimelineChart({
   return (
     <div role="img" aria-label={label}>
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-        <LineChart data={slots} margin={{ top: LABEL_ROOM, left: 0, right: 12, bottom: 0 }}>
+        <LineChart accessibilityLayer={false} data={slots} margin={{ top: LABEL_ROOM, left: 0, right: 12, bottom: 0 }}>
           <XAxis
             dataKey="x"
             type="number"
@@ -232,7 +232,19 @@ const TimelineChart = memo(function TimelineChart({
                 x={place.x}
                 y={place.y}
                 r={r}
-                shape={(props: { cx?: number; cy?: number }) => (
+                shape={(props: { cx?: number; cy?: number }) =>
+                  place.kind === 'game' ? (
+                    <rect
+                      x={(props.cx ?? 0) - r * 0.85}
+                      y={(props.cy ?? 0) - r * 0.85}
+                      width={r * 1.7}
+                      height={r * 1.7}
+                      transform={`rotate(45 ${props.cx ?? 0} ${props.cy ?? 0})`}
+                      strokeWidth={2}
+                      className={`cursor-pointer ${MARK_CLASS[marker.weight]} ${ring}`}
+                      onClick={() => onSelect(marker.id)}
+                    />
+                  ) : (
                   <circle
                     cx={props.cx}
                     cy={props.cy}
@@ -241,7 +253,8 @@ const TimelineChart = memo(function TimelineChart({
                     className={`cursor-pointer ${MARK_CLASS[marker.weight]} ${ring}`}
                     onClick={() => onSelect(marker.id)}
                   />
-                )}
+                  )
+                }
               />
             )
           })}
