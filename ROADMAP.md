@@ -11,9 +11,8 @@ The tracker is free and works fully without an account, now and later:
 your match history, your record in every matchup, the leak finder, the
 turn-by-turn replay, and written guides through a prompt you paste into
 any assistant or through a key of your own. A free, optional account
-adds a backup of your match history and error reports you choose to send,
-and [next](#next) a rules coach that answers with the rule numbers it
-relied on. Two paid things are planned, and neither takes any of that
+adds a backup of your match history, error reports you choose to send,
+and a rules coach that answers with the rule numbers it relied on. Two paid things are planned, and neither takes any of that
 away. The Microsoft Store build is the same app as the free download,
 [listed free](https://apps.microsoft.com/detail/9NZ5GQMCG1ZN) since
 2026-10-21 and priced later, for anyone who would rather support the
@@ -37,7 +36,9 @@ English. Since then: games 1 and 2–3 apart in every matchup, fixes to how
 Magic Online's log is read, Arena found on more Linux setups, and in 1.4.0
 a free, optional account. Sign in with Google or Discord, or never: it
 backs up your match history and sends error reports, each only if you
-turn it on, on one screen where nothing is ticked for you
+turn it on, on one screen where nothing is ticked for you. In 1.5.0 the
+account brought a rules coach: your reports quote its answers about how
+your cards work together, each with its sources
 ([CHANGELOG.md](CHANGELOG.md)). What comes before the next release:
 
 1. **The Microsoft Store build** of the same app, which the Store signs,
@@ -50,33 +51,26 @@ turn it on, on one screen where nothing is ticked for you
 
 In this order, unless Discussions says otherwise.
 
-1. **A rules coach**, for players signed in to the free account. It
-   answers rules and card questions in English, on the website and in
-   the app, and cites the rule numbers it used. It is a hosted AI
-   model, so each answer says it may be wrong and to ask a judge at a
-   tournament, and there is a daily limit per player. The coach is never
-   sent your matches. The "AI features" switch in Settings hides it,
-   with the written guides. (BL-109)
-2. **An overlay for Arena.** The Live page's reads in a window of the
+1. **An overlay for Arena.** The Live page's reads in a window of the
    tracker's own, on top of the game, under the rule below for events. It
    draws over Arena and never injects into it. Magic Online does not get
    one. (BL-098)
-3. **Sideboard guides, with no generated answers.** The cards in your 75
+2. **Sideboard guides, with no generated answers.** The cards in your 75
    that answer what the opponent's deck does, as candidate ins, and a link
    to a published sideboard guide for the pairing, found through the Skill
    Issue Magic guide index, with credit to its author on every link.
    Nothing is generated and no "outs" are invented. (BL-005)
-4. **Win rates per card**, from your own games: with the card in your
+3. **Win rates per card**, from your own games: with the card in your
    opening hand, drawn, and cast, with the number of games beside each
    rate. (BL-004)
-5. **Your data out, and every column explained.** Your matches and games
+4. **Your data out, and every column explained.** Your matches and games
    as a CSV file; a one-line definition on every table column; and a tour
    of the dashboard in the help pages, in both languages, which says what
    the tracker reads and that it sends nothing. (BL-002, BL-003)
-6. **MTGO on the Live page**: the opponent's revealed cards during a game
+5. **MTGO on the Live page**: the opponent's revealed cards during a game
    and the between-games plan, read from MTGO's game log the way Arena's
    Live page reads Arena's. (BL-013)
-7. **The known bugs.** Everything [BACKLOG.md](BACKLOG.md) lists as a
+6. **The known bugs.** Everything [BACKLOG.md](BACKLOG.md) lists as a
    bug: a field with no paper results after 2026-08-16 first (BL-032);
    then the rest (BL-025, BL-026,
    BL-027, BL-028, BL-030, BL-031, BL-034, BL-035, BL-037,
