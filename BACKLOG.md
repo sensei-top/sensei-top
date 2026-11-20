@@ -48,7 +48,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-113
+Next ID: BL-116
 
 ## Features
 
@@ -494,6 +494,36 @@ API call for it (2026-11-20).
 **Needs:** A decision on whether the closed card is worth that read, then
 either a cheap stored-narrative field on an existing response or a new GET.
 
+### BL-113 · The deck guide is still eleven screens
+
+type: feat · priority: P2 · status: needs-decision · area: web guide
+
+Plan 42 folded the guide's prose and cut it from 12.5–15.3k px to
+9.7–11.6k px at 1600 (Impeccable 23 → 26). What is left: Your play's
+leaks narrative open in full with its own primary button and a card inside
+the card (`PlayCard.tsx`), two open 12–14-row turn tables, and Matchup
+coverage with no row cap. Coverage and The field also give different field
+shares for one archetype (20% and 6%), and two different decks showed the
+same field line ("56%, 967-767 over 272 lists"), which nobody has checked.
+
+**Why deferred:** Out of plan 42's scope (the leaks narrative and coverage
+card); found by its final design review, 2026-11-20.
+
+**Needs:** A decision on folding Your play and capping coverage; a check of
+the two field-share sources and of the identical field line.
+
+### BL-114 · Coach's headline runs past two sentences
+
+type: fix · priority: P3 · status: ready · area: coach
+
+The prompt asks "One thing this week" for one or two sentences. The first
+paid run after migration 077 (Fable 5.1, 2026-11-20) wrote three, about
+300 characters, so the headline card reads as a paragraph. An open Focus
+areas drawer is also still about 1,200 px: its habits don't fold one by one.
+
+**Needs:** A tighter instruction (a word cap), or a cap in the card that
+folds the rest; folding each habit inside the drawer.
+
 ## Bugs
 
 ### BL-025 · A prepare face several cards share
@@ -839,6 +869,20 @@ puts them beside the drawer instead of under it.
 
 **Needs:** A `level` prop on `Card`, as `Callout` has, and `Profile`'s cards
 passing 3.
+
+### BL-115 · Shared prose blocks with no reading width
+
+type: fix · priority: P3 · status: ready · area: web
+
+`Prose` (`components/ui/Card.tsx`) and the finding body
+(`components/ui/Finding.tsx`) run 130–160 characters a line at 1600 px.
+Plan 42 gave Coach's drawers `max-w-prose`; the shared primitives were
+left alone because every page uses them. The same review found
+`Tooltip`'s trigger with no accessible name and `Disclosure` summaries
+18 px tall.
+
+**Needs:** A reading width in `docs/design-system.md`, applied to both
+primitives; a name for the tooltip trigger; a larger disclosure target.
 
 ## Code health
 
