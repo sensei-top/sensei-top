@@ -19,17 +19,22 @@ import {
   useGenerateCoachNarrative,
   usePasteCoachNarrative,
 } from '../hooks'
-import { CoachReport } from './CoachReport'
+import { CoachReport, Drawer, DrawerNav, type DrawerState } from './CoachReport'
+import { useOpenParam } from '../../lib/openParam'
 import { Profile } from './cards/Profile'
 import type { CopyPressed } from '../CopyPromptCard'
 import { GenerateCard } from '../GenerateCard'
 import { notesMissing, useRulesNotesPress } from '../rulesNotes'
 import { isPasted } from '../../lib/written'
-import { Callout, Card, EmptyState, ErrorNote, Loading, OutlineCard, Select, Skeleton, TextLink } from '../../components/ui'
+import { Callout, EmptyState, ErrorNote, Loading, OutlineCard, Select, Skeleton, TextLink } from '../../components/ui'
 import {
   coachAddress,
   coachFormatChoices,
+  HISTORY_SLUG,
+  NUMBERS_SLUG,
   historyDetail,
+  profileCards,
+  reportDrawerList,
   latestOfFormat,
   modelCostNote,
   modelLabel,
@@ -41,6 +46,7 @@ import {
   showHistory,
   useCoachFormat,
 } from './coach'
+import { formatCount } from '../../lib/time'
 import { writerFrom } from '../../lib/writer'
 import { placeById } from '../../shell/places'
 import { StageProgress } from '../../components/StageProgress'
@@ -87,6 +93,7 @@ function HistoryCard({
   format,
   defaultFormat,
   now,
+  state,
 }: {
   reports: CoachReportSummary[]
   models: CoachModelOption[]
@@ -94,11 +101,18 @@ function HistoryCard({
   format: string
   defaultFormat: string
   now: number
+  state: DrawerState
 }) {
   const { t } = useTranslation()
   const latestId = latestOfFormat(reports, format)?.id ?? null
   return (
-    <Card title={t('coach.history.title')}>
+    <Drawer
+      slug={HISTORY_SLUG}
+      title={t('coach.history.title')}
+      teaser={t('coach.teaser.reports', { count: reports.length, n: formatCount(reports.length) })}
+      state={state}
+      level={2}
+    >
       <ul className="divide-y divide-line">
         {reports.map((r) => {
           const title = reportTitle(reportFormat(r), r.generated_at, now, t)
@@ -147,7 +161,7 @@ function HistoryCard({
           )
         })}
       </ul>
-    </Card>
+    </Drawer>
   )
 }
 
@@ -223,10 +237,12 @@ function ReportDocument({
   report,
   models,
   now,
+  state,
 }: {
   report: CoachNarrativeResponse
   models: CoachModelOption[]
   now: number
+  state: DrawerState
 }) {
   const { t } = useTranslation()
   return (
@@ -249,7 +265,15 @@ function ReportDocument({
           </p>
         )}
       </div>
-      {report.narrative && <CoachReport prose={report.narrative} sources={report.sources ?? []} notes={report.notes} />}
+      {report.narrative && (
+        <CoachReport
+          prose={report.narrative}
+          headline={report.headline}
+          sources={report.sources ?? []}
+          notes={report.notes}
+          state={state}
+        />
+      )}
     </>
   )
 }
@@ -293,6 +317,7 @@ function LatestCoach() {
   const [now] = useState(() => Date.now())
   // null means "the configured default"; see ModelSelect above.
   const [model, setModel] = useState<string | null>(null)
+  const drawers = useOpenParam()
 
   const reports = coach.data?.reports ?? []
   const models = coach.data?.models ?? []
@@ -338,12 +363,22 @@ function LatestCoach() {
     )
   }
 
+  const showNumbers = sufficient && evidence != null
+  const numbersN = evidence ? profileCards(evidence, t).length : 0
+  const showHist = showHistory(reports, report?.id ?? null)
+  const navList = [
+    ...(report?.narrative ? reportDrawerList(report.narrative) : []),
+    ...(showNumbers ? [{ slug: NUMBERS_SLUG, title: t('coach.profile.title') }] : []),
+    ...(showHist ? [{ slug: HISTORY_SLUG, title: t('coach.history.title') }] : []),
+  ]
+
   // A cost is said only where a key writes.
   const costNote = writer.by === 'key' ? modelCostNote(model ?? defaultModel, models, reports, t) : null
 
   return (
     <div className={`${coach.isPending || narrative.isPending ? '' : 'arrive '}space-y-6`}>
       {formatControl}
+      {navList.length > 0 && <DrawerNav drawers={navList} state={drawers} />}
       {narrative.isPending ? (
         <ReportFrames rows={rows} writeLabel={t('coach.write.first')} />
       ) : narrative.error ? (
@@ -351,11 +386,11 @@ function LatestCoach() {
       ) : (
         <>
           {report?.stale && (
-            <Callout tone="warn" title={t('coach.stale.title')}>
+            <Callout tone="warn" title={t('coach.stale.title')} level={2}>
               <p>{t('coach.stale.body')}</p>
             </Callout>
           )}
-          {report && <ReportDocument report={report} models={models} now={now} />}
+          {report && <ReportDocument report={report} models={models} now={now} state={drawers} />}
           {coach.isPending ? (
             <MainFrame label={report ? t('coach.write.new') : t('coach.write.first')} height="h-64" rows={rows} />
           ) : (
@@ -401,8 +436,19 @@ function LatestCoach() {
         <ErrorNote error={coach.error} />
       ) : (
         <>
-          {sufficient && evidence && <Profile evidence={evidence} now={now} />}
-          {showHistory(reports, report?.id ?? null) && (
+          {showNumbers && evidence && (
+            <Drawer
+              slug={NUMBERS_SLUG}
+              title={t('coach.profile.title')}
+              teaser={t('coach.teaser.numbers', { count: numbersN, n: formatCount(numbersN) })}
+              state={drawers}
+              level={2}
+              bare
+            >
+              <Profile evidence={evidence} now={now} />
+            </Drawer>
+          )}
+          {showHist && (
             <HistoryCard
               reports={reports}
               models={models}
@@ -410,6 +456,7 @@ function LatestCoach() {
               format={format}
               defaultFormat={formats.data.default}
               now={now}
+              state={drawers}
             />
           )}
         </>
@@ -436,6 +483,7 @@ function EarlierCoach({ report: param }: { report: 'unknown' | number }) {
   const coach = useAnyCoach()
   const formats = useFormats()
   const [now] = useState(() => Date.now())
+  const drawers = useOpenParam()
 
   if (coach.error) return <ErrorNote error={coach.error} />
   if (formats.error) return <ErrorNote error={formats.error} />
@@ -472,12 +520,21 @@ function EarlierCoach({ report: param }: { report: 'unknown' | number }) {
           </TextLink>
         </p>
       </Callout>
+      {stored.data?.status === 'ok' && stored.data.narrative && (
+        <DrawerNav
+          drawers={[
+            ...reportDrawerList(stored.data.narrative),
+            { slug: HISTORY_SLUG, title: t('coach.history.title') },
+          ]}
+          state={drawers}
+        />
+      )}
       {stored.isPending ? (
         <Loading />
       ) : stored.error ? (
         <ErrorNote error={stored.error} />
       ) : stored.data.status === 'ok' ? (
-        <ReportDocument report={stored.data} models={models} now={now} />
+        <ReportDocument report={stored.data} models={models} now={now} state={drawers} />
       ) : null}
       <HistoryCard
         reports={reports}
@@ -486,6 +543,7 @@ function EarlierCoach({ report: param }: { report: 'unknown' | number }) {
         format={own}
         defaultFormat={defaultFormat}
         now={now}
+        state={drawers}
       />
     </div>
   )

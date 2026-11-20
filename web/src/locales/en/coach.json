@@ -144,5 +144,32 @@
     "field": "Reading the field",
     "together": "Putting the report together"
   },
-  "reading": "Putting the report together…"
+  "reading": "Putting the report together…",
+  "headline": {
+    "title": "Top priority this week",
+    "link": "See the evidence",
+    "fromFocus": "Taken from the report's focus areas.",
+    "none": "This report names no single priority. Its focus areas are below."
+  },
+  "drawers": {
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "nav": "Report sections"
+  },
+  "teaser": {
+    "habits_one": "{{n}} habit",
+    "habits_other": "{{n}} habits",
+    "earlier_one": "{{n}} earlier focus area",
+    "earlier_other": "{{n}} earlier focus areas",
+    "drills_one": "{{n}} drill",
+    "drills_other": "{{n}} drills",
+    "checklist_one": "{{n}} item on the checklist",
+    "checklist_other": "{{n}} items on the checklist",
+    "sources_one": "{{n}} source",
+    "sources_other": "{{n}} sources",
+    "numbers_one": "{{n}} table",
+    "numbers_other": "{{n}} tables",
+    "reports_one": "{{n}} report",
+    "reports_other": "{{n}} reports"
+  }
 }

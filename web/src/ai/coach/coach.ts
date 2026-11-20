@@ -25,6 +25,8 @@ import { formatDollars, formatList, formatPercent, formatPrice, formatRecord, WO
 import { formatOf, paramFor } from '../../lib/field'
 import { gapPoints } from '../../lib/guide'
 import { RATE_MIN_MATCHES } from '../../lib/sample'
+import { type Inline, type ReportSection, inlineText, parseReport, sectionByTitle, sectionText } from '../../lib/markdown'
+import { leadOf } from '../../lib/lead'
 import { formatCount, formatIsoDateShort, formatShortDay, parseTimestamp } from '../../lib/time'
 
 /** The report an address names: `'latest'` for `/coach`, the number for
@@ -456,4 +458,109 @@ export function turningTiles(points: TurningBucketOut[], t: TFunction): { lost: 
     }
   })
   return { lost, tiles }
+}
+
+/** A drawer's address slug: the report's heading as written, lower-cased,
+ *  every run of other characters one hyphen. The prompt asks for English
+ *  headings in every language, so the slug of "Focus areas" is the same
+ *  in every report. */
+export function drawerSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+export const FOCUS_SLUG = 'focus-areas'
+export const NUMBERS_SLUG = 'your-numbers'
+export const HISTORY_SLUG = 'every-report'
+
+function firstStrong(nodes: Inline[]): string | null {
+  for (const node of nodes) {
+    if (node.kind === 'strong') {
+      const text = inlineText(node.children)
+      if (text) return text
+    } else if ('children' in node) {
+      const inner = firstStrong(node.children)
+      if (inner) return inner
+    }
+  }
+  return null
+}
+
+/** The headline card's words: the stored `headline` when it has any, else
+ *  (an older report) Focus areas' first bold sentence, else that section's
+ *  first sentence; `null` when the report has no Focus areas. */
+export function reportHeadline(
+  headline: string | null | undefined,
+  sections: ReportSection[],
+): { text: string; fromFocus: boolean } | null {
+  const stored = headline?.trim()
+  if (stored) return { text: stored, fromFocus: false }
+  const focus = sectionByTitle(sections, 'Focus areas')
+  if (!focus) return null
+  for (const block of focus.blocks) {
+    const nodes = block.kind === 'list' ? block.items.flat() : block.inline
+    const bold = firstStrong(nodes)
+    if (bold) return { text: bold, fromFocus: true }
+  }
+  const lead = leadOf(null, sectionText(focus))
+  return lead ? { text: lead, fromFocus: true } : null
+}
+
+function countOf(section: ReportSection, prefer: 'subheads' | 'items'): number {
+  const heads = section.blocks.filter((b) => b.kind === 'subhead').length
+  const items = section.blocks.reduce((n, b) => (b.kind === 'list' ? n + b.items.length : n), 0)
+  return prefer === 'subheads' ? heads || items : items || heads
+}
+
+const TEASERS: Record<string, { key: string; prefer: 'subheads' | 'items' }> = {
+  'focus-areas': { key: 'habits', prefer: 'subheads' },
+  'since-your-last-report': { key: 'earlier', prefer: 'subheads' },
+  'training-plan': { key: 'drills', prefer: 'subheads' },
+  'at-the-lgs': { key: 'checklist', prefer: 'items' },
+  sources: { key: 'sources', prefer: 'items' },
+}
+
+/** A closed drawer's one line: a count where the section has countable
+ *  items ("3 habits"), else its lead. `sourceCount` is the API's resolved
+ *  sources, which stand in for the Sources section's own list. */
+export function drawerTeaser(
+  section: ReportSection,
+  sourceCount: number,
+  t: TFunction,
+): string {
+  const slug = drawerSlug(section.title ?? '')
+  const rule = TEASERS[slug]
+  if (rule) {
+    const n = slug === 'sources' && sourceCount > 0 ? sourceCount : countOf(section, rule.prefer)
+    if (n > 0) return t(`coach.teaser.${rule.key}`, { count: n, n: formatCount(n) })
+  }
+  return leadOf(null, sectionText(section))
+}
+
+export type ProfileCard = 'decks' | 'roles' | 'mulligans' | 'met' | 'patterns' | 'turning' | 'field' | 'gaps'
+
+/** The cards "Your numbers" draws under its tiles, in order; a card with
+ *  nothing to show is left out. `Profile` draws exactly these, and the
+ *  drawer's count is their number. */
+export function profileCards(evidence: CoachEvidenceModel, t: TFunction): ProfileCard[] {
+  const e = evidence
+  const cards: [ProfileCard, boolean][] = [
+    ['decks', e.by_deck.length > 0],
+    ['roles', roleRates(e.by_role, t).length > 0],
+    ['mulligans', mulliganRates(e.mulligans, t).length > 0],
+    ['met', e.by_opponent.length > 0],
+    ['patterns', e.leaks.length > 0 || e.deck_leaks.some((d) => d.leaks.length > 0)],
+    ['turning', e.turning_points.some((p) => p.games > 0)],
+    ['field', e.field.length > 0],
+    ['gaps', e.gaps.length > 0],
+  ]
+  return cards.filter(([, shown]) => shown).map(([card]) => card)
+}
+
+/** The drawers a report's prose makes, in order: every titled `## `
+ *  section, by its English heading's slug. */
+export function reportDrawerList(prose: string): { slug: string; title: string }[] {
+  return parseReport(prose).flatMap((s) => (s.title ? [{ slug: drawerSlug(s.title), title: s.title }] : []))
 }

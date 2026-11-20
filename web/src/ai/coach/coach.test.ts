@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type {
+  CoachEvidenceModel,
   CoachModelOption,
   CoachReportSummary,
   CoachSource,
@@ -10,6 +11,10 @@ import type {
 } from '../../api'
 import {
   citationOf,
+  drawerSlug,
+  drawerTeaser,
+  profileCards,
+  reportHeadline,
   coachDay,
   deckName,
   deckPatternsSummary,
@@ -39,6 +44,7 @@ import {
   turningTiles,
   variantsWords,
 } from './coach'
+import { parseReport } from '../../lib/markdown'
 import { translator } from '../../i18n'
 import { WORD_JOINER } from '../../lib/format'
 import { NBSP } from '../../lib/matchups'
@@ -571,5 +577,92 @@ describe('turningSubtitle', () => {
     expect(turningSubtitle(1, t)).toBe(
       'The turn of yours on which a lost game first slipped, over the 1 lost game where one was found.',
     )
+  })
+})
+
+const REPORT = parseReport(
+  [
+    '## Focus areas',
+    '### Keep fewer sevens',
+    'You kept seven-card hands that lost. **Mulligan the slow ones.** More text.',
+    '### Play around sweepers',
+    'Second habit.',
+    '### Sideboard earlier',
+    'Third habit.',
+    '## At the LGS',
+    '- Sleeves',
+    '- Pen',
+    '## Player profile',
+    'You play fast. You lose to flood.',
+    '## Sources',
+    '- one',
+  ].join('\n'),
+)
+const section = (title: string) => REPORT.find((s) => s.title === title)!
+
+describe('reportHeadline', () => {
+  it('prefers the stored headline', () => {
+    expect(reportHeadline('  Stop mulliganing late.  ', REPORT)).toEqual({
+      text: 'Stop mulliganing late.',
+      fromFocus: false,
+    })
+  })
+
+  it("falls back to Focus areas' first bold sentence", () => {
+    expect(reportHeadline(null, REPORT)).toEqual({ text: 'Mulligan the slow ones.', fromFocus: true })
+  })
+
+  it("then to Focus areas' first sentence when nothing is bold", () => {
+    const plain = parseReport('## Focus areas\nKeep fewer sevens. Then more text.')
+    expect(reportHeadline('', plain)).toEqual({ text: 'Keep fewer sevens.', fromFocus: true })
+  })
+
+  it('is null with no Focus areas', () => {
+    expect(reportHeadline(null, parseReport('## Player profile\nText.'))).toBeNull()
+  })
+})
+
+describe('drawerTeaser', () => {
+  it('counts sub-headings, list items and resolved sources, singular and plural', () => {
+    expect(drawerTeaser(section('Focus areas'), 0, t)).toBe('3\u00a0habits')
+    expect(drawerTeaser(section('At the LGS'), 0, t)).toBe('2\u00a0items on the checklist')
+    expect(drawerTeaser(section('Sources'), 0, t)).toBe('1\u00a0source')
+    expect(drawerTeaser(section('Sources'), 4, t)).toBe('4\u00a0sources')
+  })
+
+  it("shows a prose section's lead", () => {
+    expect(drawerTeaser(section('Player profile'), 0, t)).toBe('You play fast.')
+  })
+})
+
+describe('drawerSlug', () => {
+  it('is the English heading, lower-cased and hyphenated, whatever the case or spacing', () => {
+    expect(drawerSlug('Focus areas')).toBe('focus-areas')
+    expect(drawerSlug('  At the LGS ')).toBe('at-the-lgs')
+    expect(drawerSlug('Since your last report')).toBe('since-your-last-report')
+  })
+})
+
+describe('profileCards', () => {
+  const none = {
+    by_deck: [],
+    by_role: {},
+    mulligans: {},
+    by_opponent: [],
+    leaks: [],
+    deck_leaks: [],
+    turning_points: [],
+    field: [],
+    gaps: [],
+  } as unknown as CoachEvidenceModel
+
+  it('is empty when nothing is drawn under the tiles', () => {
+    expect(profileCards(none, t)).toEqual([])
+  })
+
+  it('counts roles and mulligans apart, and leaves out a card with nothing in it', () => {
+    const rate = { wins: 1, n: 2 } as unknown as RateModel
+    const onlyMulligans = { ...none, mulligans: { kept_seven: rate }, gaps: ['a gap'] } as CoachEvidenceModel
+    expect(profileCards(onlyMulligans, t)).toEqual(['mulligans', 'gaps'])
   })
 })

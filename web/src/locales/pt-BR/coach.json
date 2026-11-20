@@ -144,5 +144,32 @@
     "field": "Lendo o meta",
     "together": "Montando o relatório"
   },
-  "reading": "Montando o relatório…"
+  "reading": "Montando o relatório…",
+  "headline": {
+    "title": "Prioridade desta semana",
+    "link": "Ver as evidências",
+    "fromFocus": "Tirado das áreas de foco do relatório.",
+    "none": "Este relatório não aponta uma prioridade única. As áreas de foco estão abaixo."
+  },
+  "drawers": {
+    "expandAll": "Abrir todas",
+    "collapseAll": "Fechar todas",
+    "nav": "Seções do relatório"
+  },
+  "teaser": {
+    "habits_one": "{{n}} hábito",
+    "habits_other": "{{n}} hábitos",
+    "earlier_one": "{{n}} área de foco anterior",
+    "earlier_other": "{{n}} áreas de foco anteriores",
+    "drills_one": "{{n}} exercício",
+    "drills_other": "{{n}} exercícios",
+    "checklist_one": "{{n}} item no checklist",
+    "checklist_other": "{{n}} itens no checklist",
+    "sources_one": "{{n}} fonte",
+    "sources_other": "{{n}} fontes",
+    "numbers_one": "{{n}} tabela",
+    "numbers_other": "{{n}} tabelas",
+    "reports_one": "{{n}} relatório",
+    "reports_other": "{{n}} relatórios"
+  }
 }

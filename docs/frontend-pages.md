@@ -1607,26 +1607,47 @@ the API's default.
    format with the viewer's matches or a stored report, and always the
    selected one). It stays above "Not enough matches for a report yet"
    too, so a format with too few matches can be left.
-2. **A callout**, when the viewer has played since the report was
-   written.
-3. **The report**, the format's latest: a heading that names its format
+2. **The drawers' controls** (`DrawerNav`): "Expand all", "Collapse all"
+   and a link to each drawer. Every section of the report, "Your numbers"
+   and "Every report" is a closed drawer (`Drawer` in
+   `ai/coach/CoachReport.tsx`: a `<details>` whose heading shows one
+   teaser line while it is closed). Which are open is `?open=<slug>[,<slug>]`
+   (`useOpenParam`); a click, a link and the buttons all write it. A
+   slug is the section's English heading, hyphenated (`drawerSlug`:
+   `focus-areas`, `at-the-lgs`, `your-numbers`, `every-report`), so it is
+   the same in every language and report. A jump link opens its drawer
+   and scrolls to it; its `href` is the page's own address with `?open=`,
+   so a new tab opens the same drawer.
+3. **A callout**, when the viewer has played since the report was
+   written (an `h2`, above the report's own).
+4. **The report**, the format's latest: a heading that names its format
    ("Modern report of Sep 22"; `reportTitle`, and a report stored with no
    format is a Standard report, `reportFormat`) with a byline in one
    caption line (the model, what it cost, how many times it searched the
-   web), both drawn by `ReportDocument` in `ai/coach/CoachView.tsx`; then one
-   card per `## ` section of the prose (`ai/coach/CoachReport.tsx`). A
+   web), both drawn by `ReportDocument` in `ai/coach/CoachView.tsx`; then
+   the **"Top priority this week"** card, the report's stored `headline`
+   (the API has already taken that section out of the prose, so it is
+   drawn once), or for an older report Focus areas' first bold sentence,
+   else its first sentence, with a caption saying so
+   (`reportHeadline`); its "See the evidence" link opens the Focus areas
+   drawer. Then one closed drawer per `## ` section of the prose
+   (`ai/coach/CoachReport.tsx`), whose closed line is a count where the
+   section has countable items ("3 habits", "2 items on the checklist",
+   `drawerTeaser`: sub-headings, else list items; the resolved sources for
+   Sources) and otherwise its first sentence (`leadOf`). A
    citation in the prose (`[R4]`) is a link to its article, opened in a new
-   tab. The last card is the sources, the reading-list entries and then the web pages, each a
+   tab. The last drawer is the sources, the reading-list entries and then the web pages, each a
    `TextLink`.
-4. **The writing card** (`GenerateCard`), after the report because it is
+5. **The writing card** (`GenerateCard`), after the report because it is
    the action and the report is what the page is for. Its subtitle names
    the format whose news Claude searches for. Its picker lists the
    models by name alone; a caption says what the viewer's last report
    with the chosen model cost, when there is one.
-5. **Your numbers** (`ai/coach/cards/Profile.tsx`), the evidence the
+6. **Your numbers** (`ai/coach/cards/Profile.tsx`), a closed drawer
+   ("8 tables": the cards it draws, `profileCards`), the evidence the
    report is written from, drawn only when the coach has enough
    matches. Below.
-6. **Every report**, whenever a stored report is not the one on the page
+7. **Every report**, a closed drawer ("3 reports"), whenever a stored report is not the one on the page
    (`showHistory`): one row a report of any format, newest first, its
    title naming its format. A row's title is a link to that report's
    address; the newest report of the page's own format links to the
@@ -1634,7 +1655,8 @@ the API's default.
    and says so.
 
 `/coach/:id` is a callout with the way back to the latest report of that
-report's format, the report, and the history. It has no writing card and
+report's format, the drawers' controls, the report (headline and drawers as
+above), and the history. It has no writing card and
 no numbers: the numbers are today's, not that report's. The newest
 report of a format goes to that format's address, `/coach` for the
 default format and `/coach?format=` otherwise (`coachAddress`), so a
@@ -1667,7 +1689,10 @@ on the page. A range is written with word joiners round its dash
 break it in two. The coach's matches and games are wins and losses only,
 so a record's losses are the rate's `n` less its wins.
 
-The cards, in order, are in `ai/coach/cards/`:
+The drawer's title is the page's own heading, so `Profile` draws no heading
+of its own; the captions open the body. The cards, in order, are in
+`ai/coach/cards/` (their titles are still `h2`, one level too shallow under
+the drawer, until `Card` takes a level):
 
 1. **Six tiles** (`Profile`, `overallTiles`): matches, games, game 1,
    post-board, on the play, on the draw. Two to a row under 48rem,
