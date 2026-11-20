@@ -48,6 +48,7 @@ from sensei_top.i18n import english
 
 __all__ = [
     "HEADINGS",
+    "HEADLINE_HEADING",
     "SYSTEM_PROMPT",
     "CoachPrompt",
     "build_coach_context",
@@ -56,6 +57,7 @@ __all__ = [
     "clean_report",
     "full_prompt",
     "reading_list",
+    "split_headline",
     "system_prompt",
     "web_sources",
 ]
@@ -100,6 +102,11 @@ _SYSTEM_PROMPT_LINES = [
     "",
     "Write a coaching report in markdown with exactly these section headings, in this order, "
     "and no others:",
+    "",
+    "## One thing this week",
+    "First, before every other section: one or two sentences naming the single habit that "
+    "would win the player the most games right now, drawn from Focus areas. No heading inside "
+    "it, no list.",
     "",
     "## Player profile",
     "Who this player is across decks, roles and matchups — strengths first, then weaknesses, "
@@ -167,8 +174,11 @@ def system_prompt(fmt: str) -> str:
     return SYSTEM_PROMPT.replace("{fmt}", fmt)
 
 
-# The seven "## " section headings, in the order system_prompt requires them.
-# clean_report looks for these; the Coach page splits on any "## " line.
+# The seven "## " section headings of the stored prose, in the order
+# system_prompt requires them, after the headline. clean_report looks for
+# these; the Coach page splits on any "## " line. The headline is not one of
+# them: split_headline lifts it out before the prose is stored.
+HEADLINE_HEADING = "## One thing this week"
 HEADINGS: tuple[str, ...] = (
     "## Player profile",
     "## Since your last report",
@@ -180,10 +190,43 @@ HEADINGS: tuple[str, ...] = (
 )
 
 
+_HEADLINE_START = re.compile(re.escape(HEADLINE_HEADING) + r"[ \t]*(?:\r?\n|$)", re.IGNORECASE)
+_NEXT_HEADING = re.compile(r"(?<!#)##(?!#)")
+
+
+def split_headline(prose: str) -> tuple[str | None, str]:
+    """``(headline, rest)``: the body of the ``## One thing this week``
+    section lifted out of ``prose``, and ``prose`` without it. See
+    docs/coach.md, "The prompt and the report".
+
+    The heading is found anywhere (after an intro line, or glued mid-line
+    to narration, as ``clean_report`` also tolerates), matched on its exact
+    words in any case; ``### One thing this week`` is not it. The section
+    ends at the next ``##`` (with or without a space) or the end. No such section, or one with an
+    empty body, gives ``None``: an empty heading is still removed from
+    ``rest``; an absent one leaves ``prose`` untouched.
+    """
+    start = None
+    for match in _HEADLINE_START.finditer(prose):
+        if match.start() == 0 or prose[match.start() - 1] != "#":
+            start = match
+            break
+    if start is None:
+        return None, prose
+    nxt = _NEXT_HEADING.search(prose, start.end())
+    end = nxt.start() if nxt is not None else len(prose)
+    body = prose[start.end() : end].strip()
+    before = prose[: start.start()].rstrip()
+    after = prose[end:].lstrip()
+    rest = f"{before}\n\n{after}" if before and after else before or after
+    return (body or None), rest
+
+
 def clean_report(prose: str) -> str:
     """Drops any narration a report's own call left before its first
     section heading. See docs/coach.md, "The prompt and the report". Runs at
-    read time only: stored prose stays verbatim.
+    read time only: stored prose is the answer as written minus the lifted
+    headline section, narration included.
 
     Finds the first occurrence of ``"## "`` immediately followed by one of
     ``HEADINGS``' own text, even glued mid-line to whatever narration came

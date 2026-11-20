@@ -198,3 +198,27 @@ def test_extract_focus_section_heading_last():
 def test_extract_focus_section_missing_heading_returns_whole_prose_stripped():
     prose = "\n## Profile\n\nNo focus section here.\n\n"
     assert extract_focus_section(prose) == "## Profile\n\nNo focus section here."
+
+
+def test_headline_round_trips_and_an_unset_one_reads_none(conn):
+    with_one = _write(conn, generated_at="2026-09-01T00:00:00.000Z", headline="Mulligan less.")
+    without = _write(conn, generated_at="2026-09-02T00:00:00.000Z")
+    conn.commit()
+    assert read_coach_report(conn, with_one).headline == "Mulligan less."
+    assert read_coach_report(conn, without).headline is None
+
+
+def test_a_row_written_before_077_reads_a_null_headline(conn):
+    conn.execute(
+        "INSERT INTO coach_report (generated_at, model, prompt, prose, sources_json, "
+        "metrics_json, context_hash) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        ("2026-08-01T00:00:00.000Z", "m", "p", "## Focus areas\nX.", "[]", "{}", "h"),
+    )
+    conn.commit()
+    (report,) = list_coach_reports(conn)
+    assert report.headline is None
+
+
+def test_extract_focus_section_still_finds_focus_areas_in_a_headline_free_prose():
+    prose = "## Player profile\nA.\n\n## Focus areas\nWork on B.\n\n## Training plan\nC."
+    assert extract_focus_section(prose) == "Work on B."

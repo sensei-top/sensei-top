@@ -200,6 +200,54 @@ def test_generate_coach_narrative_stores_citations_and_reading_ids(monkeypatch, 
     assert len(listing2["reports"]) == 2
 
 
+def test_generate_stores_the_headline_apart_from_the_prose(monkeypatch, client):
+    monkeypatch.setattr(llm_config_module, "load_coach", lambda: LLMConfig(api_key="k"))
+    text = (
+        "## One thing this week\nKeep fewer two-landers.\n\n"
+        "## Focus areas\nWork on mulligans."
+    )
+
+    def _fake_write_report(prompt, *, cfg, label, allowed_domains, max_searches=8):
+        return Completion(
+            text=text, model="claude-opus-5", input_tokens=1, output_tokens=1, cost_usd=None,
+        )
+
+    monkeypatch.setattr(llm_client_module, "write_report", _fake_write_report)
+    body = client.post("/api/coach/narrative").json()
+    assert body["headline"] == "Keep fewer two-landers."
+    assert body["narrative"] == "## Focus areas\nWork on mulligans."
+    again = client.get("/api/coach/narrative").json()
+    assert again["headline"] == "Keep fewer two-landers."
+    by_id = client.get(f"/api/coach/narrative/{body['id']}").json()
+    assert by_id["headline"] == "Keep fewer two-landers."
+    assert "One thing this week" not in by_id["narrative"]
+
+
+def test_generate_without_the_section_stores_a_null_headline(monkeypatch, client):
+    monkeypatch.setattr(llm_config_module, "load_coach", lambda: LLMConfig(api_key="k"))
+
+    def _fake_write_report(prompt, *, cfg, label, allowed_domains, max_searches=8):
+        return Completion(
+            text="## Focus areas\nWork on mulligans.", model="claude-opus-5",
+            input_tokens=1, output_tokens=1, cost_usd=None,
+        )
+
+    monkeypatch.setattr(llm_client_module, "write_report", _fake_write_report)
+    body = client.post("/api/coach/narrative").json()
+    assert body["headline"] is None
+    assert body["narrative"] == "## Focus areas\nWork on mulligans."
+
+
+def test_paste_stores_the_headline_apart_from_the_prose(client):
+    prompt = client.get("/api/coach/narrative").json()["prompt"]
+    prose = "Intro line.\n\n## One thing this week\nPlay faster.\n\n## Focus areas\nWork."
+    body = client.put("/api/coach/narrative", json={"answer": _pasted(prompt, prose)}).json()
+    assert body["headline"] == "Play faster."
+    assert "One thing this week" not in body["narrative"]
+    assert "## Focus areas\nWork." in body["narrative"]
+    assert client.get(f"/api/coach/narrative/{body['id']}").json()["headline"] == "Play faster."
+
+
 def test_generate_coach_narrative_stores_and_returns_the_cache_counts(monkeypatch, client):
     monkeypatch.setattr(llm_config_module, "load_coach", lambda: LLMConfig(api_key="k"))
 
@@ -613,3 +661,13 @@ def test_generate_sends_the_block_and_returns_the_cited_note(monkeypatch, noted)
     assert [n["marker"] for n in out["notes"]] == ["N1"]
     assert [s["label"] for s in out["sources"] if s["kind"] == "reading"] == ["R1"]
     assert client.get("/api/coach/narrative").json()["stale"] is False
+
+
+def test_paste_headline_citations_count_as_sources_and_notes(noted):
+    client, db_path = noted
+    _store_note(db_path)
+    prompt = client.get("/api/coach/narrative").json()["prompt"]
+    prose = "## One thing this week\nUse landfall [R1] [N1].\n\n## Focus areas\nWork."
+    body = client.put("/api/coach/narrative", json={"answer": _pasted(prompt, prose)}).json()
+    assert any(s["kind"] == "reading" and s["label"] == "R1" for s in body["sources"])
+    assert [n["marker"] for n in body["notes"]] == ["N1"]

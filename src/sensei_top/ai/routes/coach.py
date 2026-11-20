@@ -47,7 +47,13 @@ from sensei_top.ai.coach.evidence import (
     TurningBucket,
     build_coach_evidence,
 )
-from sensei_top.ai.coach.narrative import build_coach_prompt, cited_ids, clean_report, web_sources
+from sensei_top.ai.coach.narrative import (
+    build_coach_prompt,
+    cited_ids,
+    clean_report,
+    split_headline,
+    web_sources,
+)
 from sensei_top.ai.coach.store import (
     CoachReport,
     latest_coach_report,
@@ -245,8 +251,8 @@ def _report_out(
     build their response from — not ``narrative.py``'s ``NarrativeEnvelope``,
     which has no room for a coach report's ``id``, ``effort``, token counts
     and resolved sources. ``clean_report`` strips any narration a report's
-    own call left before its first heading — stored prose stays verbatim, so
-    this runs here, the one place all four routes pass their prose through.
+    own call left before its first heading — stored prose keeps the narration (it lacks only
+    the headline), so this runs here, the one place all four routes pass their prose through.
     The notes are resolved from this row's own stored prompt and prose, never
     the current prompt: ``coach_report`` keeps every row.
     """
@@ -255,6 +261,7 @@ def _report_out(
         format=report.format,
         id=report.id,
         narrative=clean_report(report.prose),
+        headline=report.headline,
         prompt=prompt,
         model=report.model,
         effort=report.effort,
@@ -269,7 +276,9 @@ def _report_out(
         stale=stale,
         notes=[
             RulesNoteOut(**note)
-            for note in rules_notes.cited_notes(conn, report.prompt, report.prose)
+            for note in rules_notes.cited_notes(
+                conn, report.prompt, f"{report.headline or ''}\n{report.prose}"
+            )
         ],
     )
 
@@ -422,6 +431,7 @@ def generate_coach_narrative(
     ]
     sources.extend(cited_ids(completion.text, p.entries))
 
+    headline, prose = split_headline(completion.text)
     new_id: list[int] = []
 
     def write() -> None:
@@ -429,7 +439,7 @@ def generate_coach_narrative(
             write_coach_report(
                 conn,
                 format=fmt,
-                prose=completion.text, prompt=p.prompt, model=completion.model,
+                prose=prose, headline=headline, prompt=p.prompt, model=completion.model,
                 effort=cfg.effort, sources=sources, metrics=p.metrics,
                 context_hash=p.context_hash, input_tokens=completion.input_tokens,
                 output_tokens=completion.output_tokens,
@@ -476,7 +486,8 @@ def paste_coach_narrative(
     p = build_coach_prompt(conn, fmt=fmt, report_cache=_shared_report_cache(request, conn))
     if p is None:
         raise _too_few_matches()
-    answer, prose = read_pasted_prose(body.answer, coach_for(fmt))
+    answer, text = read_pasted_prose(body.answer, coach_for(fmt))
+    headline, prose = split_headline(text)
 
     new_id: list[int] = []
 
@@ -485,8 +496,8 @@ def paste_coach_narrative(
             write_coach_report(
                 conn,
                 format=fmt,
-                prose=prose, prompt=p.copied, model=PASTED_AUTHOR,
-                sources=list(cited_ids(prose, p.entries)), metrics=p.metrics,
+                prose=prose, headline=headline, prompt=p.copied, model=PASTED_AUTHOR,
+                sources=list(cited_ids(text, p.entries)), metrics=p.metrics,
                 context_hash=answer.context,
             )
         )

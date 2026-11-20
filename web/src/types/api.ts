@@ -2001,6 +2001,11 @@ export interface components {
              */
             narrative?: string | null;
             /**
+             * Headline
+             * @description the report's 'One thing this week' section, lifted out of the prose at store time; null for a report written before it existed or an answer without it
+             */
+            headline?: string | null;
+            /**
              * Prompt
              * @description the full text to write the report from — pass it to POST /api/coach/narrative to generate it with Claude (see docs/llm.md), or into an assistant you already pay for and PUT the answer to /api/coach/narrative. The by-id route serves that report's own stored prompt
              */

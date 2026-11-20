@@ -59,6 +59,9 @@ class CoachReport:
     # 063), never zero.
     cache_creation_input_tokens: int | None = None
     cache_read_input_tokens: int | None = None
+    # The "One thing this week" section lifted out of the prose at store
+    # time (077); None for a row written before 077 or an answer without it.
+    headline: str | None = None
 
 
 def write_coach_report(
@@ -79,6 +82,7 @@ def write_coach_report(
     cache_creation_input_tokens: int | None = None,
     cache_read_input_tokens: int | None = None,
     generated_at: str | None = None,
+    headline: str | None = None,
 ) -> int:
     """Insert one new report for ``format`` and return its id. Never an
     upsert (module docstring)."""
@@ -86,8 +90,8 @@ def write_coach_report(
         "INSERT INTO coach_report "
         "(generated_at, format, model, effort, prompt, prose, sources_json, metrics_json, "
         "context_hash, input_tokens, output_tokens, web_search_requests, cost_usd, "
-        "cache_creation_input_tokens, cache_read_input_tokens) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "cache_creation_input_tokens, cache_read_input_tokens, headline) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             generated_at or now_iso(),
             format,
@@ -104,6 +108,7 @@ def write_coach_report(
             cost_usd,
             cache_creation_input_tokens,
             cache_read_input_tokens,
+            headline,
         ),
     )
     return cur.lastrowid
@@ -127,6 +132,7 @@ def _row_to_report(row: sqlite3.Row) -> CoachReport:
         format=row["format"] if row["format"] is not None else _NULL_FORMAT,
         cache_creation_input_tokens=row["cache_creation_input_tokens"],
         cache_read_input_tokens=row["cache_read_input_tokens"],
+        headline=row["headline"],
     )
 
 

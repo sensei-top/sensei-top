@@ -44,6 +44,7 @@ from sensei_top.ai.coach.narrative import (
     cited_ids,
     clean_report,
     reading_list,
+    split_headline,
     system_prompt,
     web_sources,
 )
@@ -83,6 +84,11 @@ _EXPECTED_SYSTEM_PROMPT = "\n".join([
     "",
     "Write a coaching report in markdown with exactly these section headings, in this order, "
     "and no others:",
+    "",
+    "## One thing this week",
+    "First, before every other section: one or two sentences naming the single habit that "
+    "would win the player the most games right now, drawn from Focus areas. No heading inside "
+    "it, no list.",
     "",
     "## Player profile",
     "Who this player is across decks, roles and matchups — strengths first, then weaknesses, "
@@ -156,6 +162,64 @@ def test_system_prompt_contains_each_heading_in_order():
     positions = [system_prompt("Standard").index(h) for h in HEADINGS]
     assert positions == sorted(positions)
     assert len(positions) == len(HEADINGS) == 7
+
+
+def test_system_prompt_asks_for_the_headline_first_and_names_it_once():
+    prompt = system_prompt("Standard")
+    assert prompt.index("## One thing this week") < prompt.index(HEADINGS[0])
+    assert prompt.count("## One thing this week") == 1
+    assert "one or two sentences naming the single habit" in prompt
+
+
+# --- split_headline -----------------------------------------------------------
+
+
+def test_split_headline_lifts_the_first_section_out():
+    prose = "## One thing this week\nKeep fewer two-landers.\n\n## Player profile\n\nSteady."
+    assert split_headline(prose) == ("Keep fewer two-landers.", "## Player profile\n\nSteady.")
+
+
+def test_split_headline_after_an_intro_line_and_in_any_case():
+    prose = "Checking the format.\n\n## ONE thing This Week\nMulligan less.\n## Focus areas\nX."
+    assert split_headline(prose) == (
+        "Mulligan less.", "Checking the format.\n\n## Focus areas\nX.",
+    )
+
+
+def test_split_headline_glued_to_narration():
+    prose = "Looking things up.## One thing this week\nPlay around less.## Player profile\nA."
+    assert split_headline(prose) == (
+        "Play around less.", "Looking things up.\n\n## Player profile\nA.",
+    )
+
+
+def test_split_headline_in_the_middle_keeps_both_neighbours():
+    prose = "## Player profile\nA.\n\n## One thing this week\nDo B.\n\n## Focus areas\nC."
+    assert split_headline(prose) == ("Do B.", "## Player profile\nA.\n\n## Focus areas\nC.")
+
+
+def test_split_headline_ends_at_a_heading_with_no_space():
+    prose = "## One thing this week\nDo X.\n##Player profile\nA."
+    assert split_headline(prose) == ("Do X.", "##Player profile\nA.")
+
+
+def test_split_headline_absent_leaves_the_prose_unchanged():
+    prose = "## Player profile\nA.\n\n## Focus areas\nC."
+    assert split_headline(prose) == (None, prose)
+
+
+def test_split_headline_empty_is_none_and_the_empty_heading_is_dropped():
+    prose = "## One thing this week\n\n## Player profile\nA."
+    assert split_headline(prose) == (None, "## Player profile\nA.")
+
+
+def test_split_headline_ignores_other_headings_that_contain_its_words():
+    for prose in (
+        "### One thing this week\nX.\n## Player profile\nA.",
+        "## One thing this week and more\nX.\n## Player profile\nA.",
+        "## One thing\nX.",
+    ):
+        assert split_headline(prose) == (None, prose)
 
 
 # --- clean_report -------------------------------------------------------------
