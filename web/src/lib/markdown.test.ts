@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type Inline, parseInline, parseReport } from './markdown'
+import { type Inline, inlineText, parseInline, parseReport, sectionByTitle, sectionText } from './markdown'
 
 // Every line is invented, written in the shapes the stored reports use:
 // `## ` sections, a `### ` subhead, bold lead-ins, `- ` and `1. ` lists,
@@ -235,5 +235,34 @@ describe('parseInline', () => {
       cite('N10'),
       text('.'),
     ])
+  })
+})
+
+describe('inlineText and sectionText', () => {
+  it('flattens emphasis, links and code, and drops citations', () => {
+    expect(inlineText(parseInline('A **bold** and *soft* [site](https://example.com) `x_y` call [R2].'))).toBe(
+      'A bold and soft site x_y call.',
+    )
+  })
+
+  it('reads a section as plain text', () => {
+    const [section] = parseReport('## Plan\n\nFirst **one**.\n\n- a [R1]\n- b')
+    expect(sectionText(section)).toBe('First one. a b')
+  })
+})
+
+describe('sectionByTitle', () => {
+  const sections = parseReport('## Alpha\n\nx\n\n## alpha\n\ny\n\n## Beta\n\nz')
+
+  it('ignores case and surrounding space', () => {
+    expect(sectionByTitle(sections, '  BETA ')?.title).toBe('Beta')
+  })
+
+  it('returns the first match', () => {
+    expect(sectionByTitle(sections, 'alpha')?.title).toBe('Alpha')
+  })
+
+  it('returns undefined when nothing matches', () => {
+    expect(sectionByTitle(sections, 'Gamma')).toBeUndefined()
   })
 })

@@ -151,6 +151,13 @@ nothing while there are no decks. Home takes no filter and reads every
 source, so a player with no Arena match still opens a page with their
 own matches on it.
 
+`?open=a,b` names the drawers a page has open, not a filter:
+`lib/openParam.ts`'s `useOpenParam()` returns the set, `toggle` and
+`setAll`, replaces the history entry like the filters, and deletes the
+param when nothing is open.
+
+`?vs=` names one archetype, the opponent the deck guide is focused on.
+
 `/decks` keeps two in the address: `?format=` (a format among its tiles) and
 `?sort=` (`lastPlayed`, `winRate` or `matches`), each left out at its default
 (`docs/frontend-pages.md`, "Decks").
@@ -758,7 +765,8 @@ One file per primitive, all re-exported from `index.ts`, so every
   finding as a nested block: its weight as a chip, where it happened, a
   title and a body), `Callout` (a nested block that says one thing
   apart from the rest of its card; `tone="warn"` adds a warn-tinted
-  edge and nothing else), `EmptyState` (an optional icon, an optional
+  edge and nothing else; `level` is its title's heading, 3 unless the
+  page's outline needs 2 or 4), `EmptyState` (an optional icon, an optional
   title, one sentence, an optional action; a place's own empty state
   carries that place's icon), `OnboardingSteps` (a short run of steps,
   each done, next or later and saying so in a word; only the step that
