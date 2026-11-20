@@ -114,21 +114,6 @@ place; screenshots from the demo database through
 pins. Ready's label, `welcome.done.tour`, is in both catalogues already, not
 drawn.
 
-### BL-004 · Per-card win rates
-
-type: feat · priority: P1 · status: ready · area: projector guide web
-
-Per-card win rates from the user's own games: in the opening hand,
-drawn and cast, with n beside every rate. Today `key_card_timing`
-(`docs/guide.md`) covers maindeck cards with 3 or more copies only.
-
-**Why deferred:** Behind the `P1` items ordered before it. An undone cast
-no longer counts (plan 29).
-
-**Needs:** The user's own opening hand and draws per game, computed in the
-rebuild with NULL where the hand is unknown (rules 3 and 4); fixture tests
-(rules 7 and 8). On MTGO the opening hand may not be recoverable.
-
 ### BL-005 · Sideboard help without a model
 
 type: feat · priority: P1 · status: blocked · area: guide archetypes web
@@ -438,7 +423,7 @@ tracker's own, on top of the game. MTGO does not get one.
 
 **Why deferred:** The user reversed "no overlay" on 2026-11-02 and put it first
 in the roadmap's order the same day; the account, the AI switch,
-contributed games, a new set's release and BL-004 have gone ahead of it
+contributed games and a new set's release have gone ahead of it
 since, and the rules coach stands before it. Not started: it has no design
 yet.
 

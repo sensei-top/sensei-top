@@ -59,7 +59,6 @@ EN = Copy(
     next_items=(
         "An overlay for Arena.",
         "Sideboard guides, with no generated answers.",
-        "Win rates per card, from your own games.",
         "Your matches as a CSV file, and every table column explained.",
         "Magic Online on the Live page.",
     ),
@@ -79,7 +78,6 @@ PT = Copy(
     next_items=(
         "Um overlay para o Arena.",
         "Guias de sideboard, sem respostas geradas.",
-        "Taxas de vitórias por card, a partir dos seus próprios jogos.",
         "Suas partidas em um arquivo CSV, e cada coluna das tabelas explicada.",
         "Magic Online na página Ao vivo.",
     ),
