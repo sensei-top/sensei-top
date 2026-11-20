@@ -30,18 +30,14 @@ function BackToMatches() {
 }
 
 /** The page's pending state: the back link, drawn for real, then the
- *  frames of the hero, the games row and the report. */
+ *  frames of the hero and the report's timeline. */
 function DetailOutline() {
   const { t } = useTranslation()
   return (
     <div className="space-y-6">
       <BackToMatches />
       <OutlineCard label={t('matches.hero.kicker')} words={t('matches.detail.reading')} height="h-56" />
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-4">
-        <OutlineCard label={t('matches.game.title', { n: 1 })} height="h-[27rem]" />
-        <OutlineCard label={t('matches.game.title', { n: 2 })} height="h-[27rem]" />
-      </div>
-      <OutlineCard label={t('matches.report.stoodOut')} height="h-64" />
+      <OutlineCard label={t('matches.timeline.title')} height="h-[30rem]" />
     </div>
   )
 }

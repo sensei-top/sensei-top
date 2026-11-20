@@ -1201,12 +1201,40 @@ The rules that actually shaped these charts:
   the label carries identity; the custom tooltip exists for exactly this.
 - **Every chart ships its numbers as a table.** A screen reader gets the
   exact numbers, and a reader checking one value never has to eyeball a
-  bar's length. `WeeklyWinrate` and `PositionTrack` keep theirs in a
-  `Disclosure`, "Show the numbers", under the chart.
+  bar's length. `WeeklyWinrate`, `PositionTrack` and the match report's
+  timeline keep theirs in a `Disclosure`, "Show the numbers", under the
+  chart.
 - **A legend is always present for two or more series.** Identity is never
   carried by color alone. The match-detail turn-chart trio shares one legend
   above all three rather than repeating it per chart (`docs/architecture.md`
   is not the place for this — see `docs/frontend-pages.md`, "The match report").
+
+**The composite chart: the match report's timeline.** `MatchTimeline`
+(`components/match/MatchTimeline.tsx`) puts every game of a match on one
+`LineChart`. It is the one chart whose x axis is not a quantity:
+`buildTimeline` (`lib/timeline.ts`) gives each turn a slot on one
+continuous index and opens each game with a slot of its own that has no
+position, so the line breaks there. Each boundary is a `ReferenceLine`
+labelled with the game and its result, drawn in the margin above the
+plot. The ticks show each slot's turn number, and the tooltip names the
+game and the turn. A finding is a `ReferenceDot` drawn by a `shape`
+that gives its circle a fill class (`fill-loss`, `fill-warn`,
+`fill-ink2`), because a class resolves the CSS token while a
+presentation attribute would not. The dot's size reinforces the weight
+as well. The chart always fits the card's width and never scrolls.
+
+Its dots are too small and too close to be the way into a finding, so a
+**marker strip** under the chart is: one button per dot, in game and
+turn order, in a row that scrolls sideways when it outgrows the width.
+The strip is one tab stop, moved through with the arrow keys. Choosing a
+dot or a button writes one address value (`?finding=`), which both read,
+so the two never disagree. The chart is a memoized component that
+renders again on each choice, since the chosen dot is drawn larger. The
+line's own inputs (its data, domains, ticks, formatters and axis props)
+keep their identity across that render, for the reason the clock rule
+above gives: new ones would start the line's motion over.
+`docs/frontend-pages.md`, "The match report", has the routing and the
+card that opens.
 
 The palette is validated by `scripts/validate_palette.py` (WCAG contrast plus
 Machado et al. 2009 colour-vision-deficiency simulation, CIE76 ΔE

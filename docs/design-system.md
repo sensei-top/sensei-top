@@ -28,7 +28,7 @@ disagree.
 | `--edge` | `rgb(150 160 230 / 0.14)` | `border-edge` | a card's border |
 | `--edge-strong` | `rgb(150 160 230 / 0.26)` | `border-edge-strong` | the empty state's dashed edge, the chart tooltip's border |
 | `--ink` | `#f2f3f8` | `text-ink` | never `#fff`, which haloes at distance |
-| `--ink-2` | `#b9bdd0` | `text-ink2` | secondary text; also `PositionTrack`'s zero line |
+| `--ink-2` | `#b9bdd0` | `text-ink2` | secondary text; also `PositionTrack`'s zero line, and a notice's marker on the match timeline |
 | `--muted` | `#989db5` | `text-muted` | labels, captions, chart ticks |
 | `--accent` | `#f4b6e4` | `bg-accent`, `text-accent` | the brand, the primary action, the one item a page leads with ("The accent", below) |
 | `--on-accent` | `#1a1020` | `text-on-accent` | the only text colour on an accent fill |
@@ -37,8 +37,8 @@ disagree.
 | `--series-2` (opponent) | `#f0762f` | `bg-s2` | the opponent |
 | `--series-3` (field) | `#9ee0a8` | `bg-s3` | the field; your lands |
 | `--win` | `#57bd6d` | `text-win` | |
-| `--loss` | `#e66e62` | `text-loss` | |
-| `--warn` | `#d9a13a` | `text-warn` | thin samples, `PlanProblem`, gap notes |
+| `--loss` | `#e66e62` | `text-loss` | a lost result; also a major finding's marker on the match timeline, which the accent never colours |
+| `--warn` | `#d9a13a` | `text-warn` | thin samples, `PlanProblem`, gap notes; also a flag's marker on the match timeline |
 | `--mana-w/u/b/r/g` | `#f0f2c0` `#b5cde3` `#aca29a` `#db8664` `#93b483` | | Mana-project disc colours |
 | `--mana-glyph` | `#111111` | | |
 

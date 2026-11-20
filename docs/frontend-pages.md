@@ -752,64 +752,124 @@ features on, whether its matchup brief is written (`briefWritten`, from
 coverage's row; nothing for a status that says neither). A button leads to
 the pairing (`pairingAddress`).
 
-**The games** (`components/match/GameCard.tsx`): one `Card` per game of
-`summary.games` (`review/summary.py`, `docs/review.md`), in game order,
-in a grid that fits as many columns as hold 16rem each. A card has the
-game's title and its result as a chip (a game with no result carries a
-muted chip that says so); the game's position line, memoized; the facts
-as a `dl` (seat, mulligans, length, how it ended), a fact that is not
-known not drawn; the game's beats, three at most; and a link to that
-game on the replay. The link opens the game at the turn of its first
-beat that has one (`?game=3&turn=7`), so "Replay game 3" lands on what
-the card flagged; with no beat carrying a turn it opens the game bare.
-The hero's button always opens the replay bare. A beat is its label, its meter when it has one
-(`TwoSidedMeter`, `components/ui/Meter.tsx`, in the colours every chart
-uses for the viewer and the opponent), its sentence, and its weight as a
-chip when it is more than a note. A label whose beat carries a
-`definition` wears a `Tooltip` with it: one sentence the server writes
-beside each label (Race, Turned, Stranded, Role, Risk; `docs/review.md`),
-so the word that names the beat is explained where it is read, on hover
-and on keyboard focus. A label with no definition is drawn bare. The same
-sentences are listed once in "About these readings" (below). A game with no position line draws no
-chart and no box for one. Under the grid, one sentence says what the
-line is, and a `Disclosure` holds its numbers as one table.
+Under the hero the report reads in this order: the findings about the
+whole match, the timeline, "About these readings", then "This pairing"
+beside the gaps, and the coach's summary.
+
+**Where each finding goes** (`routeFindings`, `lib/timeline.ts`). A
+game beat is built from one finding (`review/summary.py`'s `_game_beat`),
+so `beatsByFinding` pairs each beat with the finding of the same code,
+game and turn, and the two are one marker, never two. A note that no
+beat was built from goes behind "Every other finding" at the foot of the
+timeline card ("Every finding" when nothing else is shown). Any other
+finding with no game is in "Whole match", a card above the timeline,
+heaviest first; every other one is a marker. So a note that is a beat is
+a marker, and a note that is not stays out of the way, as before.
+
+**The timeline** (`components/match/MatchTimeline.tsx`) is one card,
+"The match, turn by turn". Its chart is one line across every game
+(`docs/frontend.md`, "Charts", says how it is built). Each game opens
+with a boundary line labelled with the game and its result ("Game 2 ·
+Loss"), and the line breaks there, so one game's last turn never joins
+the next game's first. The y axis is one scale for the match: it reaches
+the largest distance from zero in any game, rounded up to a quarter, a
+quarter at least and never past 1, the index's own bound. The zero line
+is drawn heavier (`ink-2`) than a gridline, since above it you are ahead.
+One sentence under the chart says what the line is.
+
+A marker is a dot on the line at its finding's turn. A turn with no
+point sits on the nearest earlier point, and the open card says so in
+words ("Turn 7 was not recorded, so the marker sits at turn 6"),
+counting turns as the finding's place line does: the player's own when
+the place says "your turn" and the shown point has one. A
+finding with a game but no turn, or a turn before the game's first
+point, sits on its game's boundary label. A finding whose game has no
+line is in the strip only. A dot's colour reinforces its weight and
+never carries it alone: `loss` for a major finding, `warn` for a flag,
+`ink-2` for a notice, hollow for a note. The accent never marks a dot,
+because the accent is never data (`docs/design-system.md`, "The accent").
+Its size grows with its weight too.
+
+**The marker strip** under the chart is the way in. It is a row of
+buttons, one per marker, in strip order: by game, a game's own markers
+before its turns', then by turn, heaviest first. Each button is a dot in
+the same colour, where it happened in words ("Game 2 · your turn 3") and
+the finding's title, with its full sentence in its `aria-label` (its
+game, its turn, its weight and its title). The row is one tab stop
+(`role="toolbar"`): the arrow keys, Home and End move between buttons,
+and a caption under the row says so. When the markers outgrow the width,
+the row scrolls sideways and the chart keeps the card's width, so at
+1008 px a long match's strip scrolls while its chart never does. A
+title too long for its button is cut with an ellipsis, and the open
+card says it whole. A dot chosen on the chart scrolls its button into
+view. The dots take the pointer; the chart is one image to a screen
+reader, whose way in is the strip.
+
+**The open finding.** Choosing a marker on the chart or in the strip
+writes `?finding=<index>`, the finding's index in the report, with
+`replace` and `preventScrollReset`, as `useOpenParam` does. A shot or a
+link can open it, and choosing it again closes it. One finding card
+opens under the strip, never a popover. It holds the beat built from it
+when there is one: its label, which wears its definition in a `Tooltip`
+(`BeatLabel`, `components/match/GameCard.tsx`), its meter when it has
+one, and its sentence when that differs from the title. Then the
+finding's detail, its own caveats, the nearest-turn note, the
+partly-hidden line when it is partial, and the numbers behind it. Last
+come a link into the replay at its turn (`?game=2&turn=7`) and a Close
+button that hands focus back to the marker's button.
+
+A finding's weight is a `Chip` through `severityChip`
+(`components/ui/severity.ts`), the mapping the coach draws its own with:
+`decisive` (shown as "Major", so the word never reads as a result) takes
+the `accent` variant, `flag` takes `warn`, `notice` takes `neutral` and
+`note` a muted `neutral`. The label is always the word; colour is
+reinforcement only. A chip is not a chart mark, which is why a major
+finding's chip is the accent and its dot is not. The evidence leaves out
+the rows whose value the title already says (`evidenceIsRedundant`). A
+finding whose `confidence` is `partial` says so in words after where it
+happened. The analyzers' category names are the code's words and are not
+on the page.
+
+**Each game's facts** (`GameFacts`, `components/match/GameCard.tsx`) are
+one row per game under the strip, in game order: the game, its result as
+a chip (a game with no result carries a muted one that says so), seat,
+mulligans, length and how it ended, a fact that is not known not drawn,
+and a link to that game on the replay. The rows are stacked at the
+card's full width rather than aligned under their segments: a short
+game's segment is too narrow at 1008 px to hold its facts. The link
+opens the game at the turn of its first beat that has one
+(`?game=3&turn=7`), and with no beat carrying a turn it opens the game
+bare. The hero's button always opens the replay bare. Last in the card,
+a `Disclosure` holds the line's numbers as one table, game, turn and
+position.
+
+**No line, no marker.** A match with no position recorded, which is
+every MTGO match, says so in the card where the chart would be, and its
+strip still lists its markers. A match with no marker says so where the
+strip would be.
 
 **The position line** is `review/position.py`'s index, which
 `MatchReportOut.position_track` carries; nothing computes it in the
-client. It is the one chart whose zero line carries meaning (ahead or
-behind), so that line is drawn heavier (`ink-2`, 2 px) than a gridline.
-The turning point's own turn is a `ReferenceDot` on it. The replay draws
-the same line larger (`PositionTrack`), and under it three `TurnChart`s
-(life, hand, board) that share one legend, drawn once over the three,
-and one recharts `syncId` (`match-charts-{game_number}`): a turn under
-the pointer on one of them is marked on all three.
-
-**What stood out** holds the findings that weigh more than a note,
-heaviest first, then by game and turn. A finding's weight is a `Chip`
-through `severityChip` (`components/ui/severity.ts`), the mapping the
-coach draws its own with: `decisive` (shown as "Major", so the word never reads as a result) takes the `accent` variant, `flag`
-takes `warn`, `notice` takes `neutral` and `note` a muted `neutral`. The
-label is always the word; colour is reinforcement only. A finding's body
-is its detail, then every caveat, then its evidence behind a
-`Disclosure`, without the rows whose value the title already says
-(`evidenceIsRedundant`). A finding whose `confidence` is `partial` says
-so in words after where it happened, and one line under the list says
-what that means, drawn only when some finding shown is partial. Every
-other finding is under them behind a `Disclosure`, drawn the same way.
-The analyzers' category names are the code's words and are not on the
-page.
+client. The replay draws one game's line larger (`PositionTrack`), with
+the turning point's own turn as a `ReferenceDot`, and under it three
+`TurnChart`s (life, hand, board) that share one legend, drawn once over
+the three, and one recharts `syncId` (`match-charts-{game_number}`): a
+turn under the pointer on one of them is marked on all three.
 
 **About these readings** (`AboutReadings`, in `MatchReportPanel`) is one
-closed `Disclosure` between the games and the findings. It says once what
-the whole match's findings rest on (`report.caveats`, the readings every
-finding of a kind shares; a finding's own caveat is only what is specific
-to it) and, under "What the labels mean", every beat label with its
-sentence (`summary.beat_definitions`, keyed by label). It is not drawn
-when both are empty.
+closed `Disclosure` under the timeline. It says once what the whole
+match's findings rest on (`report.caveats`, the readings every finding
+of a kind shares; a finding's own caveat is only what is specific to it)
+and, under "What the labels mean", every beat label with its sentence
+(`summary.beat_definitions`, keyed by label). It is not drawn when both
+are empty.
 
-**Beside the findings** from 64rem up, under them below that: "This
-pairing" (the matchup's beats, not drawn without beats), the gaps, and
-the coach's summary.
+**This pairing and the gaps** share one row when the column holds two
+cards of 24rem each, and stack when it does not; a card alone takes the
+width. "This pairing" is the matchup's beats, not drawn without
+beats. The coach's summary is under them at full width. Nothing swaps
+columns any more when no finding weighs more than a note: the findings
+are in the timeline, so the order is the same for every match.
 
 **Gaps have a card of their own, "What this report could not see", and
 are never mixed with the findings.** This is rule 4 made visible: a
@@ -818,12 +878,6 @@ report that checked and found it clean. They are `summary.gap_groups`,
 so gaps that share one cause (`Gap.cause`, `docs/review.md`) stand under
 one heading: the cause, with what it blocked under it. Four are shown
 and the rest are behind a `Disclosure`.
-
-**The columns swap when no finding weighs more than a note**, which is
-every MTGO match: from 64rem up the gaps take the wide column and "What
-stood out" heads the narrow one (`GapsLead`). The cards are one grid's
-children at every width, so a card keeps its state when the window
-crosses 64rem. With no gaps either, the report is one column.
 
 `ReportNarrativeCard` (`ai/report/ReportNarrativeCard.tsx`, drawn by
 `MatchReportPanel` through `useAi()`, so with AI off the report has no
