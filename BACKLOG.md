@@ -48,7 +48,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-110
+Next ID: BL-113
 
 ## Features
 
@@ -463,6 +463,37 @@ a patch), and a sync payload for each.
 **Why deferred:** Split out of the account's item when it closed with
 1.4.0 (2026-11-09). No player has asked for notes or tags yet.
 
+### BL-110 · The matchup brief's lead line
+
+type: feat · priority: P3 · status: ready · area: brief web
+
+Migration 076 stores a one-sentence `lead` on `matchup_brief`, and the deck
+guide's sideboard plans fold their reasoning behind it. The matchup brief
+card on a deck's matchup page (`PairingBrief`) still draws the whole plan
+unfolded and never shows the lead.
+
+**Why deferred:** Plan 42 reworked only the guide, Coach and one match's
+report (2026-11-20); the brief card was out of its scope.
+
+**Needs:** `PairingBrief` passes `fold` and the stored `lead` to `PlanBody`,
+as the guide's plans do, with the first-sentence fallback for an older brief.
+
+### BL-111 · A teaser on the closed match summary
+
+type: feat · priority: P3 · status: needs-decision · area: api web
+
+The match summary now has four stored parts, and `summaryTeaser` in
+`web/src/ai/report/summarySections.ts` gives the key leak's first sentence.
+Nothing draws it: the summary card fetches nothing until it is opened, so
+the closed card has no text to show.
+
+**Why deferred:** Showing it means a read of the stored narrative while the
+card is closed, without rebuilding the prompt's context; plan 42 added no
+API call for it (2026-11-20).
+
+**Needs:** A decision on whether the closed card is worth that read, then
+either a cheap stored-narrative field on an existing response or a new GET.
+
 ## Bugs
 
 ### BL-025 · A prepare face several cards share
@@ -797,6 +828,17 @@ was not measured.
 **Needs:** The stamp inside the undated digest, in `compute_digest`, with
 stored undated rows' digests dealt with. Rows without a header can't be
 recomputed.
+
+### BL-112 · Coach's Your numbers cards one heading level too high
+
+type: fix · priority: P3 · status: ready · area: web coach
+
+Since plan 42, "Your numbers" on Coach is a drawer with an `h2` title, and
+the cards inside it keep `Card`'s fixed `h2` titles, so the heading outline
+puts them beside the drawer instead of under it.
+
+**Needs:** A `level` prop on `Card`, as `Callout` has, and `Profile`'s cards
+passing 3.
 
 ## Code health
 
