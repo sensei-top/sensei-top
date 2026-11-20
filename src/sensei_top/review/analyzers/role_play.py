@@ -71,6 +71,7 @@ def _dealt_damage_this_turn(snap: MatchSnapshot, game_number: int, turn_number: 
 def analyze_role_play(snap: MatchSnapshot) -> AnalyzerResult:
     findings: list[Finding] = []
     gaps: list[Gap] = []
+    caveats: list[str] = []
 
     role = _role(snap)
     if role is None:
@@ -102,6 +103,12 @@ def analyze_role_play(snap: MatchSnapshot) -> AnalyzerResult:
                     held_back += 1
             if held_back == 0:
                 continue
+            if not caveats:
+                caveats.append(
+                    _("This reader cannot see combat tricks, blockers held back for a "
+                      "reason, or a hand full of removal worth protecting — a board lead "
+                      "not pressed is sometimes exactly correct play.")
+                )
             findings.append(
                 Finding(
                     code="beatdown_held_back",
@@ -121,11 +128,6 @@ def analyze_role_play(snap: MatchSnapshot) -> AnalyzerResult:
                     evidence=(Evidence("turns_held_back",
                                        _("Turns with a board lead and no damage"),
                                        held_back),),
-                    caveats=(
-                        _("This reader cannot see combat tricks, blockers held back for a "
-                          "reason, or a hand full of removal worth protecting — a board lead "
-                          "not pressed is sometimes exactly correct play."),
-                    ),
                     pattern=_("Held a board lead without attacking"),
                 )
             )
@@ -140,6 +142,12 @@ def analyze_role_play(snap: MatchSnapshot) -> AnalyzerResult:
                 continue
             if max(hand_diffs) > 0:
                 continue
+            if not caveats:
+                caveats.append(
+                    _("Card advantage can also cash out as board state or life total "
+                      "rather than hand size — a removal spell trading one-for-one shows "
+                      "up here as flat, not as a swing.")
+                )
             findings.append(
                 Finding(
                     code="control_never_ahead_on_cards",
@@ -159,11 +167,6 @@ def analyze_role_play(snap: MatchSnapshot) -> AnalyzerResult:
                         Evidence("turns_measured", _("Turns with both hand sizes recorded"),
                                  len(hand_diffs)),
                     ),
-                    caveats=(
-                        _("Card advantage can also cash out as board state or life total "
-                          "rather than hand size — a removal spell trading one-for-one shows "
-                          "up here as flat, not as a swing."),
-                    ),
                     pattern=_("Never held a card-advantage lead as the control deck"),
                 )
             )
@@ -175,4 +178,4 @@ def analyze_role_play(snap: MatchSnapshot) -> AnalyzerResult:
                                     "found nothing.").format(role=role_word(role)),
                          game_number=None))
 
-    return AnalyzerResult(tuple(findings), tuple(gaps))
+    return AnalyzerResult(tuple(findings), tuple(gaps), tuple(caveats))

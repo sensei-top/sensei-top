@@ -31,6 +31,7 @@ OVER_COMMIT_PERMANENTS = 4
 def analyze_information(snap: MatchSnapshot) -> AnalyzerResult:
     findings: list[Finding] = []
     gaps: list[Gap] = []
+    caveats: list[str] = []
 
     if snap.opp_consensus is None:
         cause = "opponent_unclassified" if snap.opponent_archetype_key is None \
@@ -103,6 +104,12 @@ def analyze_information(snap: MatchSnapshot) -> AnalyzerResult:
             peak = max(turns, key=lambda t: t.self_permanents or 0)
             if (peak.self_permanents or 0) < OVER_COMMIT_PERMANENTS:
                 continue
+            if not caveats:
+                caveats.append(
+                    _("Whether the opponent actually held this card in hand at that "
+                      "moment is unknown — this names a real risk taken, not a confirmed "
+                      "punish.")
+                )
             findings.append(
                 Finding(
                     code="over_committed_into_sweeper",
@@ -132,11 +139,6 @@ def analyze_information(snap: MatchSnapshot) -> AnalyzerResult:
                         Evidence("peak_permanents", _("Permanents at the widest point"),
                                  peak.self_permanents),
                     ),
-                    caveats=(
-                        _("Whether the opponent actually held this card in hand at that "
-                          "moment is unknown — this names a real risk taken, not a confirmed "
-                          "punish."),
-                    ),
                     pattern=_("Over-committed the board with a sweeper unaccounted for"),
                 )
             )
@@ -147,4 +149,4 @@ def analyze_information(snap: MatchSnapshot) -> AnalyzerResult:
                                     "staple."),
                          game_number=None))
 
-    return AnalyzerResult(tuple(findings), tuple(gaps))
+    return AnalyzerResult(tuple(findings), tuple(gaps), tuple(caveats))

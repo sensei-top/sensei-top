@@ -27,6 +27,7 @@ STRANDED_HAND_MIN = 3
 def analyze_resources(snap: MatchSnapshot) -> AnalyzerResult:
     findings: list[Finding] = []
     gaps: list[Gap] = []
+    caveats: list[str] = []
 
     for game in snap.games:
         turns = snap.turns_in(game.game_number)
@@ -89,6 +90,11 @@ def analyze_resources(snap: MatchSnapshot) -> AnalyzerResult:
             # across it would measure its own definition, not a real pattern.
             # Pinned by
             # tests/test_leaks.py::test_cards_stranded_in_a_loss_never_reaches_the_leak_ranking.
+            if not caveats:
+                caveats.append(
+                    _("This is the last turn the log recorded, which may not be the game's "
+                      "final turn: a turn at the very end can go unrecorded.")
+                )
             findings.append(
                 Finding(
                     code="cards_stranded_in_a_loss",
@@ -127,10 +133,6 @@ def analyze_resources(snap: MatchSnapshot) -> AnalyzerResult:
                     evidence=(
                         Evidence("stranded_cards", _("Cards in hand at the last recorded turn"),
                                  last_turn.self_hand),
-                    ),
-                    caveats=(
-                        _("This is the last turn the log recorded, which may not be the game's "
-                          "final turn: a turn at the very end can go unrecorded."),
                     ),
                 )
             )
@@ -171,4 +173,4 @@ def analyze_resources(snap: MatchSnapshot) -> AnalyzerResult:
         gaps.append(Gap(ANALYZER, _("Nothing about the resource trade could be measured for "
                                     "this match."), game_number=None))
 
-    return AnalyzerResult(tuple(findings), tuple(gaps))
+    return AnalyzerResult(tuple(findings), tuple(gaps), tuple(caveats))

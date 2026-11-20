@@ -58,6 +58,7 @@ def _race_state(rows: tuple[DamageRow, ...], game_number: int) -> RaceState | No
 def analyze_clock(snap: MatchSnapshot) -> AnalyzerResult:
     findings: list[Finding] = []
     gaps: list[Gap] = []
+    caveats: list[str] = []
 
     if not snap.damage_events:
         gaps.append(
@@ -122,11 +123,12 @@ def analyze_clock(snap: MatchSnapshot) -> AnalyzerResult:
 
         margin = abs(state.self_dealt - state.opp_dealt)
         severity = Severity.DECISIVE if margin >= 10 else Severity.NOTICE
-        caveats = (
-            _("This counts damage dealt to a player only — creature-versus-creature "
-              "combat and life lost to costs (a shockland, a payment) are excluded, "
-              "since neither moves either player closer to winning the race itself."),
-        )
+        if not caveats:
+            caveats.append(
+                _("This counts damage dealt to a player only — creature-versus-creature "
+                  "combat and life lost to costs (a shockland, a payment) are excluded, "
+                  "since neither moves either player closer to winning the race itself.")
+            )
         race_evidence = (
             *evidence,
             Evidence("pace_self", _("Your damage per player-turn"), round(pace_self, 1)),
@@ -153,7 +155,6 @@ def analyze_clock(snap: MatchSnapshot) -> AnalyzerResult:
                     ).format(ours=state.self_dealt, theirs=state.opp_dealt,
                              turn=state.last_turn),
                     evidence=race_evidence,
-                    caveats=caveats,
                     pattern=_("Led the damage race"),
                 )
             )
@@ -173,9 +174,8 @@ def analyze_clock(snap: MatchSnapshot) -> AnalyzerResult:
                     ).format(ours=state.self_dealt, theirs=state.opp_dealt,
                              turn=state.last_turn),
                     evidence=race_evidence,
-                    caveats=caveats,
                     pattern=_("Fell behind in the damage race"),
                 )
             )
 
-    return AnalyzerResult(tuple(findings), tuple(gaps))
+    return AnalyzerResult(tuple(findings), tuple(gaps), tuple(caveats))

@@ -116,7 +116,6 @@ def _opening_findings(snap: MatchSnapshot) -> tuple[list[Finding], list[Gap]]:
                                          "You took {n} mulligans before keeping a hand.",
                                          n).format(n=n),
                     evidence=(Evidence("self_mulligans", _("Mulligans taken"), n),),
-                    caveats=(_(_MULLIGAN_CAVEAT),),
                 )
             )
 
@@ -140,17 +139,20 @@ def _opening_findings(snap: MatchSnapshot) -> tuple[list[Finding], list[Gap]]:
 
 def analyze_frame(snap: MatchSnapshot) -> AnalyzerResult:
     findings, gaps = _opening_findings(snap)
+    caveats = (
+        (_(_MULLIGAN_CAVEAT),) if any(f.code == "mulligan_taken" for f in findings) else ()
+    )
 
     if snap.own_archetype is None:
         gaps.append(Gap(ANALYZER, _("Your own deck did not resolve to a known Standard archetype, "
                                     "so nothing here could compare it to the opponent's."),
                          cause="own_unclassified"))
-        return AnalyzerResult(tuple(findings), tuple(gaps))
+        return AnalyzerResult(tuple(findings), tuple(gaps), caveats)
     if snap.opponent_archetype_key is None:
         gaps.append(Gap(ANALYZER, _("The opponent's deck was not identified as a known archetype "
                                     "for this match, so no field comparison was possible."),
                          cause="opponent_unclassified"))
-        return AnalyzerResult(tuple(findings), tuple(gaps))
+        return AnalyzerResult(tuple(findings), tuple(gaps), caveats)
 
     own = _own_profile(snap.own_cards)
     opp = _consensus_profile(snap.opp_consensus)
@@ -158,12 +160,12 @@ def analyze_frame(snap: MatchSnapshot) -> AnalyzerResult:
         gaps.append(Gap(ANALYZER, _("Too few of this match's cards carry known effect tags to "
                                     "read a role from — see the effect-tagging gap "
                                     "above.")))
-        return AnalyzerResult(tuple(findings), tuple(gaps))
+        return AnalyzerResult(tuple(findings), tuple(gaps), caveats)
     if opp.creature_rate == 0.0 and opp.removal_rate == 0.0 and opp.card_advantage_rate == 0.0:
         gaps.append(Gap(ANALYZER, _("The opponent's archetype consensus carried no creature, "
                                     "removal or card-advantage signal at all, so no role vote "
                                     "could be read from it.")))
-        return AnalyzerResult(tuple(findings), tuple(gaps))
+        return AnalyzerResult(tuple(findings), tuple(gaps), caveats)
 
     votes_beatdown = 0
     votes_control = 0
@@ -248,4 +250,4 @@ def analyze_frame(snap: MatchSnapshot) -> AnalyzerResult:
             ),
         )
     )
-    return AnalyzerResult(tuple(findings), tuple(gaps))
+    return AnalyzerResult(tuple(findings), tuple(gaps), caveats)

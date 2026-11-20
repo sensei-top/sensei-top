@@ -69,10 +69,12 @@ def build_match_report(
 
     findings: list[Finding] = []
     gaps: list[Gap] = []
+    caveats: list[str] = []
     for analyze in ANALYZERS:
         result = analyze(snap)
         findings.extend(result.findings)
         gaps.extend(result.gaps)
+        caveats.extend(c for c in result.caveats if c not in caveats)
 
     # A stable order, not registry order-of-arrival: two runs over the same
     # data must produce byte-identical output (tested directly).
@@ -87,4 +89,5 @@ def build_match_report(
         findings=tuple(findings),
         gaps=tuple(gaps),
         opponent_label=snap.opponent_label,
+        caveats=tuple(caveats),
     )

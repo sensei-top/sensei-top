@@ -78,6 +78,7 @@ def _attribution(
 def analyze_trajectory(snap: MatchSnapshot) -> AnalyzerResult:
     findings: list[Finding] = []
     gaps: list[Gap] = []
+    caveats: list[str] = []
 
     for game in snap.games:
         turns = snap.turns_in(game.game_number)
@@ -167,6 +168,12 @@ def analyze_trajectory(snap: MatchSnapshot) -> AnalyzerResult:
             evidence.append(Evidence("cause_damage", _("Damage taken in that window"),
                                      cause_value))
 
+        if not caveats:
+            caveats.append(
+                _("The position index is a fixed-weight approximation over life, board, "
+                  "hand and mana — not a rules engine, and not a claim about which single "
+                  "play caused the swing.")
+            )
         findings.append(
             Finding(
                 code="turning_point",
@@ -180,15 +187,10 @@ def analyze_trajectory(snap: MatchSnapshot) -> AnalyzerResult:
                 ),
                 detail=detail,
                 evidence=tuple(evidence),
-                caveats=(
-                    _("The position index is a fixed-weight approximation over life, board, "
-                      "hand and mana — not a rules engine, and not a claim about which single "
-                      "play caused the swing."),
-                ),
             )
         )
 
-    return AnalyzerResult(tuple(findings), tuple(gaps))
+    return AnalyzerResult(tuple(findings), tuple(gaps), tuple(caveats))
 
 
 def _turn_before(positions: list[TurnPosition], turning_turn: int) -> int:
