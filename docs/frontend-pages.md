@@ -1283,13 +1283,29 @@ it), then a `DataTable` of every archetype's share. Its `Before` column
 is left out when no row has a pre-reset share. A share too thin to trust
 and a personal record that does not carry over are said in the row's
 caption, in words; a record that does not carry over is muted as well.
+The table shows the top 8 archetypes (`FIELD_TOP`), then `ShowAll`; there
+is no way back once pressed.
 
-**Sideboard plans** (`SideboardPlansCard`, in `WrittenCards.tsx`) is
-the written guide's plan against each archetype it covers, in the
+**Folded prose.** Three blocks fold (How it works, the pattern's fix and
+each plan's reasoning); the List card's notes stay whole. Each is `FoldedProse`: a one-line
+teaser, `leadOf(lead, prose)` (the stored `engine_lead`, `fix_lead` or
+plan `lead`, else the prose's first sentence), over a closed `Disclosure`,
+"Read in full", holding the prose. A stored brief and the RCQ guide draw
+`PlanBody` with the prose whole (`fold` off).
+
+**Sideboard plans** (`SideboardPlansCard`, in `WrittenCards.tsx`) opens
+with a `Select`, the opponent picker (`OpponentFocus.tsx`): "All
+matchups", then each archetype with a plan, most played first (`focusOptions`).
+It is kept in `?vs=<archetype>`, deleted for All matchups; a name with no
+plan is All matchups, with no error (`resolveVs`). All matchups is the
+written guide's plan against each archetype it covers, in the
 guide's own order, each a nested `Card elevation={2}`: the archetype's
-name, then the prose beside a swap of "Bring in" and "Take out" lists.
-From 64rem the prose is the left column and the swap the right one;
-under 64rem the swap comes first. Any problem the plan-validation step
+name, then the folded prose beside a swap of "Bring in" and "Take out"
+lists (the swap stays visible). A chosen archetype is a section of the card
+itself, not a nested card: its title, then `FocusStats` (two `StatTile`s, its share of the field and the player's record against it, both read from the Field card's data, so no extra call; a thin share, a record that does not carry over and a
+never-met archetype are said in the tile's line), then its plan. The names are `h3`s under
+the card's `h2`. From 64rem the prose is the left column and the swap the
+right one; under 64rem the swap comes first. Any problem the plan-validation step
 found is drawn inline in its plan. A problem naming an archetype no plan
 covers is said once, at the top of the card, in a `warn` `Callout`. The
 plan's body, `PlanBody`, is exported: a pairing's stored brief draws it

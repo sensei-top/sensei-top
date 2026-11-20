@@ -198,6 +198,21 @@
       "download": "Baixe os dados dos cards em Configurações → Fontes",
       "resetOn": "Reinício do formato em <strong>{{date}}</strong> ({{detectedFrom}})."
     },
+    "fold": {
+      "more": "Ler na íntegra"
+    },
+    "focus": {
+      "label": "Matchup",
+      "overview": "Todos os matchups",
+      "option": "{{archetype}} · {{share}}",
+      "title": "Contra {{archetype}}",
+      "share": "Fatia do meta",
+      "shareDetail": "das listas de torneio",
+      "shareDetailReset": "das listas de torneio desde o reinício do formato",
+      "record": "Seu histórico",
+      "noRecord": "Nenhuma partida contra ele ainda",
+      "plan": "Plano de sideboard"
+    },
     "field": {
       "title": "O meta",
       "subtitle": "A fatia de cada arquétipo nas listas de torneio, os mais jogados primeiro.",

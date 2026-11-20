@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import type { GuideNarrativeOut, GuideNarrativeResponse } from '../../api'
 import { AiFeaturesContext } from '../../shell/aiFeatures'
-import { HowItWorksCard } from './WrittenCards'
+import { FoldedProse, HowItWorksCard } from './WrittenCards'
 
 const guide = { engine: 'How the deck wins.' } as unknown as GuideNarrativeOut
 
@@ -55,5 +55,26 @@ describe('HowItWorksCard', () => {
 
   it('keeps the pasted-in line when they are off', () => {
     expect(draw('pasted', false)).toContain('Pasted in on Sep 18, 2025.')
+  })
+})
+
+describe('FoldedProse', () => {
+  const drawFolded = (lead: string | null | undefined, prose: string) =>
+    renderToStaticMarkup(createElement(FoldedProse, { lead, prose }))
+
+  it('shows the stored lead as the teaser, the prose behind the fold', () => {
+    const html = drawFolded('Race them.', 'A long account. It goes on.')
+    expect(html).toContain('<p class="text-body text-ink2">Race them.</p>')
+    expect(html).toContain('Read in full')
+    expect(html).toMatch(/<details(?![^>]*\bopen\b)[^>]*>[\s\S]*A long account\. It goes on\.[\s\S]*<\/details>/)
+  })
+
+  it('falls back to the prose\'s first sentence without a lead', () => {
+    const html = drawFolded(null, 'Race them early. Then hold the line.')
+    expect(html).toContain('<p class="text-body text-ink2">Race them early.</p>')
+  })
+
+  it('draws nothing for empty prose', () => {
+    expect(drawFolded('A lead.', '  ')).toBe('')
   })
 })

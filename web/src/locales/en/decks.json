@@ -206,6 +206,21 @@
       "download": "Download card data in Settings → Sources",
       "resetOn": "Format reset on <strong>{{date}}</strong>. {{detectedFrom}}."
     },
+    "fold": {
+      "more": "Read in full"
+    },
+    "focus": {
+      "label": "Matchup",
+      "overview": "All matchups",
+      "option": "{{archetype}} · {{share}}",
+      "title": "Against {{archetype}}",
+      "share": "Field share",
+      "shareDetail": "of the tournament lists",
+      "shareDetailReset": "of the tournament lists since the format reset",
+      "record": "Your record",
+      "noRecord": "No match against it yet",
+      "plan": "Sideboard plan"
+    },
     "field": {
       "title": "The field",
       "subtitle": "Each archetype's share of the tournament lists, most played first.",

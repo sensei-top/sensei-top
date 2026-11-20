@@ -11,6 +11,9 @@ import type {
 } from '../api'
 import {
   categoryLabel,
+  focusOptions,
+  resolveVs,
+  topRows,
   copiesLine,
   differSentence,
   fieldCaption,
@@ -548,5 +551,30 @@ describe('problemSentence', () => {
 
   it('leaves a message that starts with a capital as it is', () => {
     expect(problemSentence(problem('DimirMidrange', 'Too many cards.'), false, t)).toBe('Too many cards.')
+  })
+})
+
+describe('opponent focus', () => {
+  const share = (archetype: string, s: number) => ({ archetype, share: s }) as unknown as ArchetypeShareOut
+  const plans = [{ archetype: 'Rakdos' }, { archetype: 'Izzet' }, { archetype: 'Unlisted' }, { archetype: 'Azorius' }, { archetype: 'Izzet' }]
+  const shares = [share('Azorius', 0.3), share('Rakdos', 0.1), share('Izzet', 0.1), share('Other', 0.5)]
+
+  it('orders the picker by field share, ties in plan order, no-row last, once each', () => {
+    expect(focusOptions(plans, shares).map((o) => o.archetype)).toEqual(['Azorius', 'Rakdos', 'Izzet', 'Unlisted'])
+    expect(focusOptions(plans, shares)[3].share).toBeNull()
+  })
+
+  it('resolves ?vs= to an archetype with a plan, else to All matchups', () => {
+    expect(resolveVs('Izzet', plans)).toBe('Izzet')
+    expect(resolveVs('Other', plans)).toBeNull()
+    expect(resolveVs('', plans)).toBeNull()
+    expect(resolveVs(null, plans)).toBeNull()
+  })
+
+  it('cuts the field to its top 8 until all are asked for', () => {
+    const rows = Array.from({ length: 12 }, (_, i) => i)
+    expect(topRows(rows, false)).toEqual([0, 1, 2, 3, 4, 5, 6, 7])
+    expect(topRows(rows, true)).toHaveLength(12)
+    expect(topRows([1, 2], false)).toEqual([1, 2])
   })
 })
