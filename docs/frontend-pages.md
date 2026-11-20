@@ -769,7 +769,8 @@ chip when it is more than a note. A label whose beat carries a
 `definition` wears a `Tooltip` with it: one sentence the server writes
 beside each label (Race, Turned, Stranded, Role, Risk; `docs/review.md`),
 so the word that names the beat is explained where it is read, on hover
-and on keyboard focus. A label with no definition is drawn bare. A game with no position line draws no
+and on keyboard focus. A label with no definition is drawn bare. The same
+sentences are listed once in "About these readings" (below). A game with no position line draws no
 chart and no box for one. Under the grid, one sentence says what the
 line is, and a `Disclosure` holds its numbers as one table.
 
@@ -797,6 +798,14 @@ what that means, drawn only when some finding shown is partial. Every
 other finding is under them behind a `Disclosure`, drawn the same way.
 The analyzers' category names are the code's words and are not on the
 page.
+
+**About these readings** (`AboutReadings`, in `MatchReportPanel`) is one
+closed `Disclosure` between the games and the findings. It says once what
+the whole match's findings rest on (`report.caveats`, the readings every
+finding of a kind shares; a finding's own caveat is only what is specific
+to it) and, under "What the labels mean", every beat label with its
+sentence (`summary.beat_definitions`, keyed by label). It is not drawn
+when both are empty.
 
 **Beside the findings** from 64rem up, under them below that: "This
 pairing" (the matchup's beats, not drawn without beats), the gaps, and
@@ -826,6 +835,15 @@ the findings, and never a raw hand or graveyard. Unlike the guide it has
 no command-line importer: a match review is read once, about a game
 already played, so a stored narrative comes only from the generate
 button (`docs/review.md`).
+
+A narrative with `sections` (the route's `MatchNarrativeResponse`) is
+drawn as four labelled blocks, Game by game, Key leak, Counter-argument
+and Confidence, through `GenerateCard`'s `renderNarrative` prop (a
+blank part is skipped); the card keeps its stock subtitle. An older
+narrative, with `sections` null, is the one paragraph as before. The
+choice is `summaryBody` (`ai/report/summarySections.ts`). A closed-card
+teaser of the key leak (`summaryTeaser`) is deferred: it would need a
+read of the stored narrative while the card is closed.
 
 ## The account's pages
 

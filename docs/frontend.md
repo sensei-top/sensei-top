@@ -1144,7 +1144,9 @@ stays silent; the button's label is the only feedback either way.
 
 An optional `controls` prop renders a picker in the button row, before
 the "write it" button; the Coach page's model picker (`docs/coach.md`)
-is the one caller so far. What the coach's report and its sources
+is the one caller so far. An optional `renderNarrative(narrative)`
+prop draws a stored narrative in place of `Prose` for one with parts of
+its own (the match summary's); callers without it are unchanged. What the coach's report and its sources
 look like is under `docs/frontend-pages.md`, "Coach".
 
 Given `save`, the card's `PUT` through one of `api.ts`'s `usePaste…`

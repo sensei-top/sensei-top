@@ -144,6 +144,17 @@
     "legendDrawn": "Comprado: você o comprou neste turno."
   },
   "report": {
+    "summary": {
+      "games": "Jogo a jogo",
+      "keyLeak": "Leak principal",
+      "counterArgument": "Contra-argumento",
+      "confidence": "Confiança"
+    },
+    "about": {
+      "title": "Sobre estas leituras",
+      "caveats": "O que sustenta toda observação do mesmo tipo",
+      "labels": "O que os rótulos significam"
+    },
     "wholeMatch": "Partida inteira",
     "placeYourTurn": "Jogo {{game}} · seu turno {{turn}}",
     "placeTurn": "Jogo {{game}} · turno {{turn}}",

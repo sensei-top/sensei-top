@@ -325,6 +325,43 @@ function Games({
   )
 }
 
+/** "About these readings": what the match's findings rest on, said once, and
+ *  what each beat's label means. Closed; not drawn when there is neither. */
+function AboutReadings({ caveats, definitions }: { caveats: string[]; definitions: Record<string, string> }) {
+  const { t } = useTranslation()
+  const labels = Object.entries(definitions)
+  if (caveats.length === 0 && labels.length === 0) return null
+  return (
+    <Disclosure summary={t('matches.report.about.title')}>
+      <div className="space-y-4">
+        {caveats.length > 0 && (
+          <section className="space-y-1">
+            <SectionLabel as="h3">{t('matches.report.about.caveats')}</SectionLabel>
+            <ul className="space-y-1 text-caption text-muted">
+              {caveats.map((caveat, i) => (
+                <li key={i}>{caveat}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {labels.length > 0 && (
+          <section className="space-y-1">
+            <SectionLabel as="h3">{t('matches.report.about.labels')}</SectionLabel>
+            <dl className="space-y-1 text-caption">
+              {labels.map(([label, sentence]) => (
+                <div key={label}>
+                  <dt className="inline font-semibold text-ink2">{label}</dt>
+                  <dd className="inline text-muted">{` ${sentence}`}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
+      </div>
+    </Disclosure>
+  )
+}
+
 /** One empty list, so a game with no line passes the same array each time. */
 const NO_POINTS: PositionPoint[] = []
 
@@ -377,6 +414,7 @@ export function MatchReportPanel({ matchId }: { matchId: string }) {
         turningPoints={turningPoints}
         matchHref={`/matches/${encodeURIComponent(matchId)}`}
       />
+      <AboutReadings caveats={data.caveats ?? []} definitions={summary.beat_definitions ?? {}} />
       {anyStandsOut ? (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
           <StoodOut findings={findings} />

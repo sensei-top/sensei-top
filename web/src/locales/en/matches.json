@@ -144,6 +144,17 @@
     "legendDrawn": "Drawn: you drew it this turn."
   },
   "report": {
+    "summary": {
+      "games": "Game by game",
+      "keyLeak": "Key leak",
+      "counterArgument": "Counter-argument",
+      "confidence": "Confidence"
+    },
+    "about": {
+      "title": "About these readings",
+      "caveats": "What every finding of its kind rests on",
+      "labels": "What the labels mean"
+    },
     "wholeMatch": "Whole match",
     "placeYourTurn": "Game {{game}} · your turn {{turn}}",
     "placeTurn": "Game {{game}} · turn {{turn}}",
