@@ -492,10 +492,6 @@ class SummaryBeat(BaseModel):
     turn_number: int | None = Field(
         None, description="The source finding's player-turn; None when it has none"
     )
-    definition: str | None = Field(
-        None, description="One plain sentence saying what a game beat's label measures; None "
-        "when the label has none, and on every matchup beat"
-    )
 
 
 class SummaryGameLine(BaseModel):
@@ -524,6 +520,11 @@ class MatchSummaryOut(BaseModel):
     matchup: list[SummaryBeat] = Field(default_factory=list)
     games: list[SummaryGameLine] = Field(default_factory=list)
     gap_groups: list[SummaryGapGroup] = Field(default_factory=list)
+    beat_definitions: dict[str, str] = Field(
+        default_factory=dict,
+        description="label -> the one plain sentence saying what that game-beat label "
+        "measures; only labels that appear in games[].beats",
+    )
 
 
 class MatchReportOut(BaseModel):
@@ -534,6 +535,11 @@ class MatchReportOut(BaseModel):
     summary: MatchSummaryOut
     findings: list[ReportFinding]
     gaps: list[ReportGap]
+    caveats: list[str] = Field(
+        default_factory=list,
+        description="readings that apply to every finding of their kind, said once for the "
+        "match; a finding's own caveats are only those specific to it",
+    )
     position_track: list[PositionPoint] = Field(
         default_factory=list,
         description="one point per turn with both life totals recorded; see review/position.py",

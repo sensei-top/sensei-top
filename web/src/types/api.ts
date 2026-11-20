@@ -3834,6 +3834,11 @@ export interface components {
             /** Gaps */
             gaps: components["schemas"]["ReportGap"][];
             /**
+             * Caveats
+             * @description readings that apply to every finding of their kind, said once for the match; a finding's own caveats are only those specific to it
+             */
+            caveats?: string[];
+            /**
              * Position Track
              * @description one point per turn with both life totals recorded; see review/position.py
              */
@@ -3863,6 +3868,13 @@ export interface components {
             games?: components["schemas"]["SummaryGameLine"][];
             /** Gap Groups */
             gap_groups?: components["schemas"]["SummaryGapGroup"][];
+            /**
+             * Beat Definitions
+             * @description label -> the one plain sentence saying what that game-beat label measures; only labels that appear in games[].beats
+             */
+            beat_definitions?: {
+                [key: string]: string;
+            };
         };
         /**
          * MatchSummarySections
@@ -5815,11 +5827,6 @@ export interface components {
              * @description The source finding's player-turn; None when it has none
              */
             turn_number?: number | null;
-            /**
-             * Definition
-             * @description One plain sentence saying what a game beat's label measures; None when the label has none, and on every matchup beat
-             */
-            definition?: string | null;
         };
         /** SummaryGameLine */
         SummaryGameLine: {

@@ -33,7 +33,11 @@ const NO_RESULT: ResultChip = { variant: 'neutral', muted: true }
 
 /** A beat whose severity is already one of the four weights: the caller
  *  maps it (`MatchReportPanel`'s `weightOf`), so no code reaches the page. */
-export type GameBeat = Omit<SummaryBeat, 'severity'> & { severity: FindingWeight }
+export type GameBeat = Omit<SummaryBeat, 'severity'> & {
+  severity: FindingWeight
+  /** The label's sentence, from the summary's `beat_definitions`. */
+  definition?: string
+}
 
 /** A game of the report's summary, its beats weighed. */
 export type WeighedGame = Omit<SummaryGameLine, 'beats'> & { beats: GameBeat[] }

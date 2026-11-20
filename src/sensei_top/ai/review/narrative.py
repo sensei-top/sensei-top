@@ -317,6 +317,11 @@ def build_narrative_context(
             for caveat in f.caveats:
                 lines.append(f"    caveat: {caveat}")
 
+    if report.caveats:
+        lines.append("Readings that apply to the whole match:")
+        for caveat in report.caveats:
+            lines.append(f"- {caveat}")
+
     if report.gaps:
         lines.append("Not evaluated for this match — treat as unknown, not as evidence that")
         lines.append("nothing happened:")

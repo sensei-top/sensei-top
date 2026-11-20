@@ -1606,9 +1606,24 @@ def test_match_report_carries_a_summary_alongside_the_raw_findings(client):
     assert isinstance(summary["gap_groups"], list) and summary["gap_groups"]
 
 
-def test_match_report_beats_carry_their_findings_turn_and_a_definition(client):
+def test_match_report_carries_the_match_level_caveats_once(client):
+    """frame.py's mulligan caveat holds for every mulligan_taken finding, so
+    it rides the report once and is on no finding. The fixture records a
+    mulliganCount of 1 for this match's seat (and Arena omits it when zero,
+    projector/matches.py), so a mulligan_taken finding exists per observed game."""
+    body = client.get(f"/api/matches/{MATCH_WIN}/report").json()
+    caveats = body["caveats"]
+    assert len(set(caveats)) == len(caveats)
+    assert any(f["code"] == "mulligan_taken" for f in body["findings"])
+    mulligan = [c for c in caveats
+                if "shipped" in c and "not in the log" in c]
+    assert len(mulligan) == 1
+    assert not {c for f in body["findings"] for c in f["caveats"]} & set(caveats)
+
+
+def test_match_report_beats_carry_their_findings_turn_and_the_summary_the_definitions(client):
     """A beat's turn is its raw finding's own (same code, same game), and
-    every game-beat label has a definition."""
+    every game-beat label has a definition in the summary's one map."""
     body = client.get(f"/api/matches/{MATCH_WIN}/report").json()
     findings = body["findings"]
     game_beats = [b for g in body["summary"]["games"] for b in g["beats"]]
@@ -1617,7 +1632,10 @@ def test_match_report_beats_carry_their_findings_turn_and_a_definition(client):
         (source,) = [f for f in findings
                      if f["code"] == beat["code"] and f["game_number"] == beat["game_number"]]
         assert beat["turn_number"] == source["turn_number"]
-    assert all(b["definition"] for b in game_beats)
+    definitions = body["summary"]["beat_definitions"]
+    assert {b["label"] for b in game_beats} == set(definitions)
+    assert all(definitions.values())
+    assert all("definition" not in b for b in game_beats)
 
 
 def test_match_report_404s_for_an_unknown_match(client):

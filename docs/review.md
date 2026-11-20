@@ -88,6 +88,17 @@ here that touches `sqlite3`). The registry order in
 itself sorts findings by game, turn, then code, and gaps by game, then
 analyzer, whatever the registry order.
 
+A caveat is a limit on how a finding may be read. One that holds for every
+finding of its kind (the damage race counts player damage only; the
+position index is a fixed-weight formula) is said once, on the analyzer's
+`AnalyzerResult.caveats`, and only when at least one of its findings fired;
+`MatchReport.caveats` is their de-duplicated union in analyzer order. A
+caveat that names something specific to one finding (a number, a card)
+stays on `Finding.caveats`. The API carries both (`report.caveats`,
+`findings[].caveats`), the narrative context prints the match's once under
+"Readings that apply to the whole match:", and the leak finder reads
+neither.
+
 ### `frame.py` — the matchup, and the role it demands
 
 Flores' *Who's the Beatdown?* and Duke's *Role Assignment*: "Misassignment
@@ -261,11 +272,13 @@ gives that a shape a player actually replays a match in:
 
   Each beat also carries its finding's `turn_number` (`None` when the
   finding has none, as `never_behind` doesn't), so the dashboard can open
-  the replay on a flagged turn, and a `definition`: one plain sentence
-  saying what its label measures. The sentences live beside
-  `_GAME_BEAT_LABELS`, one per label rather than per code, so the three
-  race codes share Race's and `turning_point`/`never_behind` share
-  Turned's; a label with none, and every matchup beat, carries `None`.
+  the replay on a flagged turn. A beat carries no definition: the
+  summary's one `beat_definitions` map holds, for each game-beat label that
+  appears, the plain sentence saying what it measures, keyed by the
+  translated label. The sentences live beside `_GAME_BEAT_LABELS`, one per
+  label rather than per code, so the three race codes share Race's and
+  `turning_point`/`never_behind` share Turned's; a label with none is left
+  out of the map, and matchup beats never enter it.
   The words for why a game ended name who, read from the game's own
   result: a 1v1 game is lost by whoever concedes or runs out of time, so a
   concession is "you conceded" on a loss and "your opponent conceded" on a

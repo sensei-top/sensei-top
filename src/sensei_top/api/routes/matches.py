@@ -759,6 +759,7 @@ def match_report(match_id: str, conn: Conn) -> MatchReportOut:
             ReportGap(analyzer=g.analyzer, reason=g.reason, game_number=g.game_number)
             for g in report.gaps
         ],
+        caveats=list(report.caveats),
         position_track=position_track,
         narrative_available=True,
     )

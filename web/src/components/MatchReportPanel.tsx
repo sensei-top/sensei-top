@@ -251,11 +251,13 @@ function replayHref(matchHref: string, game: WeighedGame): string {
  *  any game has a position line, what the line is and its numbers. */
 function Games({
   games,
+  definitions,
   track,
   turningPoints,
   matchHref,
 }: {
   games: SummaryGameLine[]
+  definitions: Record<string, string>
   track: PositionPoint[]
   turningPoints: Map<number, number>
   matchHref: string
@@ -275,9 +277,13 @@ function Games({
     () =>
       games.map((game) => ({
         ...game,
-        beats: (game.beats ?? []).map((beat) => ({ ...beat, severity: weightOf(beat.severity) })),
+        beats: (game.beats ?? []).map((beat) => ({
+          ...beat,
+          severity: weightOf(beat.severity),
+          definition: definitions[beat.label],
+        })),
       })),
-    [games],
+    [games, definitions],
   )
 
   if (games.length === 0) return null
@@ -366,6 +372,7 @@ export function MatchReportPanel({ matchId }: { matchId: string }) {
     <div className="space-y-6">
       <Games
         games={summary.games ?? []}
+        definitions={summary.beat_definitions ?? {}}
         track={data.position_track ?? NO_POINTS}
         turningPoints={turningPoints}
         matchHref={`/matches/${encodeURIComponent(matchId)}`}

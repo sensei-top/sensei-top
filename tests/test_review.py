@@ -1383,3 +1383,28 @@ def test_own_archetype_of_a_deck_with_unresolved_copies_is_not_judged_complete(c
     assert _own_archetype_for(conn, "whole-1").name == "Test Alpha"
     assert _own_archetype_for(conn, "arena-1").name == "Test Alpha"
     assert _own_archetype_for(conn, "short-1") is None
+
+
+def test_beat_definitions_hold_each_present_label_once():
+    """Race (three codes across games) and Turned appear; Role and Stranded
+    don't, so they stay out of the map. No beat carries a definition."""
+    from sensei_top.review import build_summary
+    from sensei_top.review.findings import Category, Confidence, Finding, MatchReport, Severity
+
+    def finding(code, game):
+        return Finding(
+            code=code, analyzer="x", category=Category.CLOCK, severity=Severity.NOTICE,
+            confidence=Confidence.OBSERVED, title="t", detail="d", game_number=game,
+        )
+
+    report = MatchReport(
+        match_id="m", deck_id=None, result="loss",
+        games=tuple(_game(g, result="loss") for g in (1, 2, 3)),
+        findings=(finding("race_ahead", 1), finding("race_behind", 2),
+                  finding("race_even", 3), finding("turning_point", 1)),
+        gaps=(),
+    )
+    summary = build_summary(report)
+    assert sorted(summary.beat_definitions) == ["Race", "Turned"]
+    assert all(summary.beat_definitions.values())
+    assert not any(hasattr(b, "definition") for g in summary.games for b in g.beats)

@@ -10,7 +10,7 @@ plain count of ``MatchReport.games``/``.findings``.
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from sensei_top.i18n import N_, _, decimal, ngettext
 from sensei_top.review.findings import Category, Finding, GameFacts, Gap, MatchReport, Severity
@@ -39,7 +39,7 @@ _GAME_BEAT_LABELS: dict[str, str] = {
 
 # One plain sentence per game-beat label, keyed by the label's msgid, not by
 # code: two codes sharing a label share its definition. A label with no entry
-# gives its beat ``definition=None``.
+# is left out of ``MatchSummary.beat_definitions``.
 _GAME_BEAT_DEFINITIONS: dict[str, str] = {
     "Race": N_("Damage each player dealt to the other this game, yours first. Combat "
                "between creatures doesn't count."),
@@ -111,11 +111,15 @@ def _game_beat_label(code: str) -> str:
     return _(_GAME_BEAT_LABELS[code])
 
 
-def _game_beat_definition(code: str) -> str | None:
-    label = _GAME_BEAT_LABELS[code]
-    if label not in _GAME_BEAT_DEFINITIONS:
-        return None
-    return _(_GAME_BEAT_DEFINITIONS[label])
+def _beat_definitions(labels: set[str]) -> dict[str, str]:
+    """label -> sentence, for the labels present (translated labels, as the
+    beats carry them)."""
+    out: dict[str, str] = {}
+    for code, msgid in _GAME_BEAT_LABELS.items():
+        label = _game_beat_label(code)
+        if label in labels and msgid in _GAME_BEAT_DEFINITIONS:
+            out[label] = _(_GAME_BEAT_DEFINITIONS[msgid])
+    return out
 
 
 def _matchup_label(f: Finding) -> str:
@@ -141,7 +145,6 @@ class Beat:
     game_number: int | None
     meter: tuple[float, float] | None = None  # (self, opp) for a two-sided proportional bar
     turn_number: int | None = None  # the source finding's own, player-turn
-    definition: str | None = None  # the label's one sentence; None when it has none
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,6 +171,7 @@ class MatchSummary:
     matchup: tuple[Beat, ...]
     games: tuple[GameLine, ...]
     gap_groups: tuple[GapGroup, ...]
+    beat_definitions: dict[str, str] = field(default_factory=dict)  # label -> sentence
 
 
 def _reason_text(reason: str | None, result: str | None) -> str | None:
@@ -234,7 +238,7 @@ def _game_beat(f: Finding) -> Beat:
     return Beat(
         code=f.code, label=label, text=text, magnitude=magnitude,
         severity=f.severity, game_number=f.game_number, meter=meter,
-        turn_number=f.turn_number, definition=_game_beat_definition(f.code),
+        turn_number=f.turn_number,
     )
 
 
@@ -346,13 +350,16 @@ def build_summary(report: MatchReport) -> MatchSummary:
 
     matchup_findings.sort(key=lambda f: _SEVERITY_RANK.get(f.severity, 9))
 
+    games = tuple(
+        _game_line(game, findings_by_game.get(game.game_number, []))
+        for game in report.games
+    )
+    labels = {b.label for g in games for b in g.beats}
     return MatchSummary(
         headline=_headline(report),
         subhead=_subhead(report, findings_by_game),
         matchup=tuple(_matchup_beat(f) for f in matchup_findings),
-        games=tuple(
-            _game_line(game, findings_by_game.get(game.game_number, []))
-            for game in report.games
-        ),
+        games=games,
         gap_groups=_group_gaps(report.gaps),
+        beat_definitions=_beat_definitions(labels),
     )
