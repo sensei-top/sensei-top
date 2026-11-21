@@ -373,8 +373,10 @@ def test_the_hero_image_is_the_only_eager_one_on_the_landing(url_path):
             )
             assert (img["width"], img["height"]) == drawn.groups(), img["src"]
         else:
-            matchups = "786" if url_path.startswith("/pt-br") else "759"
-            focal = {"home": "1185", "match-report": "960", "matchups": matchups, "coach": "945"}
+            pt = url_path.startswith("/pt-br")
+            matchups = "786" if pt else "759"
+            match = "1218" if pt else "1194"
+            focal = {"home": "1185", "match-report": match, "matchups": matchups, "coach": "996"}
             name = img["src"].rsplit("/", 1)[1].removesuffix(".webp")
             expected = ("1326", focal[name]) if name in focal else ("1440", "900")
             assert (img["width"], img["height"]) == expected, img["src"]
