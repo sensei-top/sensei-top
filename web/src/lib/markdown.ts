@@ -339,3 +339,45 @@ function scan(s: string, start: number, stops: Stop[], failed: Set<string>, inLa
 export function parseInline(text: string): Inline[] {
   return scan(text, 0, [], new Set(), false).nodes
 }
+
+/** The words of `inline` as plain text, for a teaser: emphasis and a
+ *  link's wrapper dropped but their text kept, `code` text kept, a bare url
+ *  kept, a `cite` dropped (with the space before it). */
+export function inlineText(inline: Inline[]): string {
+  return inline
+    .map((node) => {
+      switch (node.kind) {
+        case 'text':
+        case 'code':
+          return node.text
+        case 'url':
+          return node.url
+        case 'cite':
+          return ''
+        default:
+          return inlineText(node.children)
+      }
+    })
+    .join('')
+    .replace(/\s+/g, ' ')
+    .replace(/ ([.,;:!?])/g, '$1')
+    .trim()
+}
+
+/** The words of a section's blocks as plain text (`inlineText` of each
+ *  paragraph, subhead and list item), joined by single spaces. */
+export function sectionText(section: ReportSection): string {
+  const parts: string[] = []
+  for (const block of section.blocks) {
+    if (block.kind === 'list') for (const item of block.items) parts.push(inlineText(item))
+    else parts.push(inlineText(block.inline))
+  }
+  return parts.filter(Boolean).join(' ')
+}
+
+/** The first section of `sections` titled `title` (case and surrounding
+ *  space ignored), or `undefined`. */
+export function sectionByTitle(sections: ReportSection[], title: string): ReportSection | undefined {
+  const wanted = title.trim().toLowerCase()
+  return sections.find((s) => s.title?.trim().toLowerCase() === wanted)
+}

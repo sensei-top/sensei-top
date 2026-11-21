@@ -130,7 +130,7 @@ export function GuideView({ deckKey }: { deckKey: string }) {
     'guide-your-play': <YourPlayCard guide={guide.data} narrative={narrative} />,
     'guide-the-list': <TheListCard guide={guide.data} narrative={narrative} />,
     'guide-the-field': <FieldCard guide={guide.data} />,
-    'guide-sideboard-plans': narrative && <SideboardPlansCard guide={narrative} />,
+    'guide-sideboard-plans': narrative && <SideboardPlansCard guide={narrative} deck={guide.data} />,
     'guide-matchup-coverage': <MatchupCoverageCard guideKey={deckKey} />,
     'guide-between-rounds': narrative && <BetweenRoundsCard guide={narrative} />,
     'guide-write': ai && <ai.NarrativeAndExport guideKey={deckKey} response={response} />,

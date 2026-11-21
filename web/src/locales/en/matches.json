@@ -39,7 +39,6 @@
   },
   "game": {
     "title": "Game {{n}}",
-    "positionLabel": "Position in game {{n}}, turn by turn",
     "seat": "Seat",
     "onPlay": "On the play",
     "onDraw": "On the draw",
@@ -49,7 +48,9 @@
     "turns_one": "{{n}} turn",
     "turns_other": "{{n}} turns",
     "ended": "Ended",
-    "replay": "Replay game {{n}}"
+    "replay": "Replay game {{n}}",
+    "result": "Result",
+    "factsLabel": "Game {{n}} at a glance"
   },
   "hero": {
     "kicker": "Match report",
@@ -144,16 +145,25 @@
     "legendDrawn": "Drawn: you drew it this turn."
   },
   "report": {
+    "summary": {
+      "games": "Game by game",
+      "keyLeak": "Key leak",
+      "counterArgument": "Counter-argument",
+      "confidence": "Confidence"
+    },
+    "about": {
+      "title": "About these readings",
+      "caveats": "What every finding of its kind rests on",
+      "labels": "What the labels mean"
+    },
     "wholeMatch": "Whole match",
-    "placeYourTurn": "Game {{game}} · your turn {{turn}}",
+    "placeYourTurn": "Game {{game}} · turn {{turn}} (your turn {{self}})",
     "placeTurn": "Game {{game}} · turn {{turn}}",
     "placePartial": "{{place}} · partly hidden",
     "numbersBehind": "The numbers behind it",
     "detail": "Detail",
     "value": "Value",
     "partlyHiddenNote": "Partly hidden: some of what the finding rests on was hidden, not observed, or ambiguous.",
-    "stoodOut": "What stood out",
-    "nothingStoodOut": "Nothing in this match weighed enough to stand out.",
     "everyOther": "Every other finding ({{n}})",
     "every": "Every finding ({{n}})",
     "pairing": "This pairing",
@@ -169,7 +179,6 @@
     "showOther_one": "Show the other one",
     "showOther_other": "Show the other {{n}}",
     "lineNote": "The line is your position, turn by turn: life, board, hand and mana weighed into one number. Above zero you are ahead.",
-    "dotNote": "The dot is the game's largest swing.",
     "showNumbers": "Show the numbers",
     "game": "Game",
     "turn": "Turn",
@@ -177,7 +186,8 @@
     "coachSubtitle": "Each game's shape turn by turn and this report's findings, written into coaching prose.",
     "coachShow": "Show the coach's summary",
     "nothingToReview": "Nothing to review for this match yet.",
-    "nothingToReport": "Nothing to report for this match: too little of it was recorded."
+    "nothingToReport": "Nothing to report for this match: too little of it was recorded.",
+    "wholeMatchSubtitle": "Findings about the match as a whole, not one game."
   },
   "history": {
     "reading": "Reading your matches…",
@@ -203,5 +213,22 @@
     "back": "The match's report",
     "noGames": "No game data was recorded for this match.",
     "gameResult": "Game {{n}} · {{result}}"
+  },
+  "timeline": {
+    "title": "The match, turn by turn",
+    "subtitle": "Your position across every game. Each marker is a finding; pick one to read it.",
+    "chartLabel_one": "Your position across the match, turn by turn, with {{n}} finding marked",
+    "chartLabel_other": "Your position across the match, turn by turn, with {{n}} findings marked",
+    "strip": "Findings, in game and turn order",
+    "marker": "Game {{game}}, turn {{turn}}, {{severity}}: {{title}}",
+    "markerYourTurn": "Game {{game}}, turn {{turn}} (your turn {{self}}), {{severity}}: {{title}}",
+    "markerGame": "Game {{game}}, {{severity}}: {{title}}",
+    "nearest": "Turn {{turn}} was not recorded, so the marker sits at turn {{shown}}.",
+    "replayTurn": "Replay from turn {{turn}}",
+    "close": "Close",
+    "closeLabel": "Close this finding",
+    "keys": "Arrow keys move between findings.",
+    "nonePlaced": "No finding could be placed on a turn of this match.",
+    "noLine": "No position was recorded for this match, so there is no line to draw."
   }
 }

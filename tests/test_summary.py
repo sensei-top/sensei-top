@@ -350,13 +350,13 @@ def test_codes_sharing_a_label_share_its_definition_and_matchup_beats_have_none(
                           findings=findings, opponent_label="Opp")
     summary = build_summary(report)
     by_code = {b.code: b for g in summary.games for b in g.beats}
-    assert by_code["race_behind"].definition == by_code["race_ahead"].definition \
-        == _DEFINITIONS["Race"]
-    assert by_code["turning_point"].definition == by_code["never_behind"].definition \
-        == _DEFINITIONS["Turned"]
+    assert by_code["race_behind"].label == by_code["race_ahead"].label == "Race"
+    assert by_code["turning_point"].label == by_code["never_behind"].label == "Turned"
+    assert summary.beat_definitions == {"Race": _DEFINITIONS["Race"],
+                                        "Turned": _DEFINITIONS["Turned"]}
     assert by_code["turning_point"].turn_number == 5
     assert by_code["never_behind"].turn_number is None
-    assert summary.matchup[0].definition is None
+    assert summary.matchup[0].label not in summary.beat_definitions
 
 
 def test_a_match_level_role_finding_is_labelled_role_without_the_game_beats_definition():
@@ -370,9 +370,10 @@ def test_a_match_level_role_finding_is_labelled_role_without_the_game_beats_defi
     )
     report = MatchReport(match_id="m", deck_id=None, result="win", games=(_game(1),),
                           findings=(uncurated,), opponent_label="Opp")
-    (beat,) = build_summary(report).matchup
+    summary = build_summary(report)
+    (beat,) = summary.matchup
     assert beat.label == "Role"
-    assert beat.definition is None
+    assert "Role" not in summary.beat_definitions
 
 
 # (game, Arena's shared turn) -> which of our own turns that is. We are seat 2
@@ -435,7 +436,7 @@ def test_fixture_beats_carry_their_findings_turn_and_their_labels_definition(db)
                 (source,) = [f for f in report.findings
                              if f.code == beat.code and f.game_number == beat.game_number]
                 assert beat.turn_number == source.turn_number
-                assert beat.definition == _DEFINITIONS[beat.label]
+                assert summary.beat_definitions[beat.label] == _DEFINITIONS[beat.label]
                 seen_turns.add(beat.turn_number is None)
     # The fixture exercises a beat with a turn and one without, and a
     # concession on each side plus a timeout.

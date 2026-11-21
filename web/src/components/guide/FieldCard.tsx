@@ -1,10 +1,12 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DeckGuideOut, PersonalRateOut } from '../../api'
 import { archetypeName } from '../../lib/decks'
-import { fieldCaption } from '../../lib/guide'
+import { FIELD_TOP, fieldCaption, topRows } from '../../lib/guide'
 import { formatPercent, formatRecord } from '../../lib/format'
 import { formatCount } from '../../lib/time'
 import { placeById } from '../../shell/places'
+import { ShowAll } from '../field/ShowAll'
 import { Card, DataTable, EmptyState, StatTile } from '../ui'
 
 /** The tournament field the deck plays into, since the format reset when
@@ -18,6 +20,7 @@ import { Card, DataTable, EmptyState, StatTile } from '../ui'
 export function FieldCard({ guide }: { guide: DeckGuideOut }) {
   const { t } = useTranslation()
   const { field } = guide
+  const [all, setAll] = useState(false)
   const reset = guide.provenance.reset != null
   const personalByArchetype = new Map<string, PersonalRateOut>(field.personal_rates.map((r) => [r.archetype, r]))
 
@@ -91,7 +94,7 @@ export function FieldCard({ guide }: { guide: DeckGuideOut }) {
       <div className="mt-5">
         <DataTable
           columns={columns}
-          rows={field.shares.map((s) => {
+          rows={topRows(field.shares, all).map((s) => {
             const personal = personalByArchetype.get(s.archetype)
             const voided = personal != null && !personal.carryable
             const name = (
@@ -123,6 +126,9 @@ export function FieldCard({ guide }: { guide: DeckGuideOut }) {
             return withBefore ? [name, you, share, before] : [name, you, share]
           })}
         />
+        {!all && field.shares.length > FIELD_TOP && (
+          <ShowAll total={field.shares.length} onShow={() => setAll(true)} />
+        )}
       </div>
     </Card>
   )

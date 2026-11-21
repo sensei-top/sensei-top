@@ -1,7 +1,6 @@
-import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CoachEvidenceModel } from '../../../api'
-import { overallTiles, profileCaption } from '../coach'
+import { overallTiles, profileCaption, profileCards } from '../coach'
 import { Card, StatTile } from '../../../components/ui'
 import { DecksCard } from './DecksCard'
 import { PatternsCard } from './PatternsCard'
@@ -24,20 +23,17 @@ function LeftOutCard({ gaps }: { gaps: string[] }) {
   )
 }
 
-/** "Your numbers", the profile under the report: the free, local evidence
- *  a report is written from (`GET /api/coach`). A section labelled by its
- *  heading; in order, the six overall tiles, by deck, by role and
+/** The body of the "Your numbers" drawer (its heading is the drawer's):
+ *  the free, local evidence a report is written from (`GET /api/coach`);
+ *  in order, its captions, the six overall tiles, by deck, by role and
  *  mulligans, the decks met, the patterns, where lost games turned, the
  *  field, and what the numbers leave out. `now` places a day's year. */
 export function Profile({ evidence, now }: { evidence: CoachEvidenceModel; now: number }) {
   const { t } = useTranslation()
-  const headingId = useId()
+  const cards = new Set(profileCards(evidence, t))
   return (
-    <section aria-labelledby={headingId} className="space-y-4">
+    <div className="space-y-4">
       <div>
-        <h2 id={headingId} className="font-display text-heading text-ink">
-          {t('coach.profile.title')}
-        </h2>
         <p className="text-caption text-muted">{profileCaption(evidence.population, evidence.as_of, now, t)}</p>
         <p className="text-caption text-muted">{t('coach.profile.rangeNote')}</p>
       </div>
@@ -46,13 +42,19 @@ export function Profile({ evidence, now }: { evidence: CoachEvidenceModel; now: 
           <StatTile key={tile.label} label={tile.label} value={tile.value} detail={tile.detail} muted={tile.muted} />
         ))}
       </div>
-      <DecksCard decks={evidence.by_deck} />
-      <RolesAndMulligans byRole={evidence.by_role} mulligans={evidence.mulligans} />
-      <DecksMetCard matchups={evidence.by_opponent} windowStart={evidence.window_start} now={now} />
-      <PatternsCard leaks={evidence.leaks} deckLeaks={evidence.deck_leaks} />
-      <TurningCard points={evidence.turning_points} />
-      <FieldRatesCard field={evidence.field} latestEvent={evidence.field_latest_event} now={now} />
-      <LeftOutCard gaps={evidence.gaps} />
-    </section>
+      {cards.has('decks') && <DecksCard decks={evidence.by_deck} />}
+      {(cards.has('roles') || cards.has('mulligans')) && (
+        <RolesAndMulligans byRole={evidence.by_role} mulligans={evidence.mulligans} />
+      )}
+      {cards.has('met') && (
+        <DecksMetCard matchups={evidence.by_opponent} windowStart={evidence.window_start} now={now} />
+      )}
+      {cards.has('patterns') && <PatternsCard leaks={evidence.leaks} deckLeaks={evidence.deck_leaks} />}
+      {cards.has('turning') && <TurningCard points={evidence.turning_points} />}
+      {cards.has('field') && (
+        <FieldRatesCard field={evidence.field} latestEvent={evidence.field_latest_event} now={now} />
+      )}
+      {cards.has('gaps') && <LeftOutCard gaps={evidence.gaps} />}
+    </div>
   )
 }

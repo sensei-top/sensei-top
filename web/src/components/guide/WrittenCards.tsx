@@ -1,11 +1,14 @@
+import { useSearchParams } from 'react-router'
 import { useTranslation } from 'react-i18next'
-import type { BoardCardOut, GuideNarrativeOut, GuideNarrativeResponse, MatchupPlanOut } from '../../api'
+import type { BoardCardOut, DeckGuideOut, GuideNarrativeOut, GuideNarrativeResponse, MatchupPlanOut } from '../../api'
 import { archetypeName } from '../../lib/decks'
-import { orphanProblems, ownedProblems, problemSentence } from '../../lib/guide'
+import { orphanProblems, ownedProblems, problemSentence, resolveVs } from '../../lib/guide'
+import { leadOf } from '../../lib/lead'
 import { useNow } from '../../lib/time'
 import { shownAuthor, writtenLine } from '../../lib/written'
 import { useAiFeatures } from '../../shell/aiFeatures'
-import { Callout, Card, Prose, SectionLabel } from '../ui'
+import { Callout, Card, Disclosure, Prose, SectionLabel } from '../ui'
+import { FocusStats, OpponentPicker } from './OpponentFocus'
 import { SectionLink } from './SectionNav'
 
 /** The id of the section that writes the guide, which every link to it
@@ -23,6 +26,22 @@ export function NoWrittenGuide() {
         <SectionLink id={WRITE_ID}>{t('decks.guide.write.write')}</SectionLink>
       </p>
     </Callout>
+  )
+}
+
+/** A block of prose folded behind its one-line teaser: `leadOf(lead, prose)`
+ *  on the page, the prose itself in a closed `Disclosure`. Prose with no
+ *  words draws nothing. */
+export function FoldedProse({ lead, prose }: { lead: string | null | undefined; prose: string }) {
+  const { t } = useTranslation()
+  if (prose.trim() === '') return null
+  return (
+    <div className="space-y-2">
+      <p className="text-body text-ink2">{leadOf(lead, prose)}</p>
+      <Disclosure summary={t('decks.guide.fold.more')}>
+        <Prose text={prose} />
+      </Disclosure>
+    </div>
   )
 }
 
@@ -53,7 +72,7 @@ export function HowItWorksCard({
           </Callout>
         </div>
       )}
-      <Prose text={guide.engine} />
+      <FoldedProse lead={guide.engine_lead} prose={guide.engine} />
     </Card>
   )
 }
@@ -85,11 +104,17 @@ export function PlanBody({
   boardOut,
   prose,
   problems,
+  fold = false,
+  lead,
 }: {
   boardIn: BoardCardOut[]
   boardOut: BoardCardOut[]
   prose: string
   problems: string[]
+  /** The guide's plans fold the prose behind a teaser (`lead`, else the
+   *  prose's first sentence); a stored brief and the RCQ guide draw it whole. */
+  fold?: boolean
+  lead?: string | null
 }) {
   const { t } = useTranslation()
   const swap = boardIn.length > 0 || boardOut.length > 0
@@ -115,34 +140,53 @@ export function PlanBody({
         )}
       </div>
       <div className="min-w-0 lg:col-start-1 lg:row-start-1">
-        <Prose text={prose} />
+        {fold ? <FoldedProse lead={lead} prose={prose} /> : <Prose text={prose} />}
       </div>
     </div>
   )
 }
 
-/** One archetype's plan: its name, then its body (`PlanBody`). */
+/** One archetype's plan: its name (an `h3`, under the section card's `h2`),
+ *  then its body (`PlanBody`) folded. */
 function PlanCard({ plan, problems }: { plan: MatchupPlanOut; problems: string[] }) {
   return (
     <Card elevation={2}>
       <h3 className="break-words font-display text-title text-ink">{archetypeName(plan.archetype)}</h3>
-      <PlanBody boardIn={plan.board_in} boardOut={plan.board_out} prose={plan.prose} problems={problems} />
+      <PlanBody boardIn={plan.board_in} boardOut={plan.board_out} prose={plan.prose} lead={plan.lead} problems={problems} fold />
     </Card>
   )
 }
 
-/** The written guide's plan against each archetype, in its own order. A
+/** The written guide's plan against each archetype, in its own order, or
+ *  one archetype's alone when `?vs=` names it (`OpponentPicker`; a name with
+ *  no plan is All matchups, with no error). A
  *  problem whose archetype has no plan (`ai/guide/plans.py`'s `(sideboard)`
  *  check, or a plan the guide does not hold) is said once, at the top. */
-export function SideboardPlansCard({ guide }: { guide: GuideNarrativeOut }) {
+export function SideboardPlansCard({ guide, deck }: { guide: GuideNarrativeOut; deck: DeckGuideOut }) {
   const { t } = useTranslation()
+  const [search, setSearch] = useSearchParams()
+  const focus = resolveVs(search.get('vs'), guide.matchups)
+  const focused = focus == null ? undefined : guide.matchups.find((plan) => plan.archetype === focus)
   const orphans = orphanProblems(guide.problems, guide.matchups)
+  const choose = (archetype: string | null) =>
+    setSearch(
+      (previous) => {
+        const params = new URLSearchParams(previous)
+        if (archetype == null) params.delete('vs')
+        else params.set('vs', archetype)
+        return params
+      },
+      { replace: true, preventScrollReset: true },
+    )
   return (
     <Card
       title={t('decks.guide.sections.sideboardPlans')}
       subtitle={t('decks.guide.written.plansSubtitle')}
     >
       <div className="space-y-3">
+        {guide.matchups.length > 0 && (
+          <OpponentPicker plans={guide.matchups} deck={deck} value={focus} onChange={choose} />
+        )}
         {orphans.length > 0 && (
           <Callout tone="warn" title={t('decks.guide.written.checked')}>
             <div className="space-y-2">
@@ -152,7 +196,26 @@ export function SideboardPlansCard({ guide }: { guide: GuideNarrativeOut }) {
             </div>
           </Callout>
         )}
-        {guide.matchups.map((plan, i) => (
+        {focused && (
+          <div className="space-y-4">
+            <h3 className="break-words font-display text-title text-ink">
+              {t('decks.guide.focus.title', { archetype: archetypeName(focused.archetype) })}
+            </h3>
+            <FocusStats deck={deck} archetype={focused.archetype} />
+            <div>
+              <SectionLabel as="h4">{t('decks.guide.focus.plan')}</SectionLabel>
+              <PlanBody
+                boardIn={focused.board_in}
+                boardOut={focused.board_out}
+                prose={focused.prose}
+                lead={focused.lead}
+                problems={ownedProblems(guide.problems, focused.archetype).map((problem) => problemSentence(problem, false, t))}
+                fold
+              />
+            </div>
+          </div>
+        )}
+        {focus == null && guide.matchups.map((plan, i) => (
           <PlanCard
             key={`${i}-${plan.archetype}`}
             plan={plan}

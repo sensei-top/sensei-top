@@ -170,6 +170,29 @@ class NarrativeResponse(BaseModel):
     )
 
 
+class MatchSummarySections(BaseModel):
+    """The match summary's four written parts, as the model wrote them."""
+
+    games: str = Field(description="what decided each game, in order")
+    key_leak: str = Field(description="the one thing to change, and why")
+    counter_argument: str = Field(
+        description="the strongest reading that it was not the player's doing"
+    )
+    confidence: str = Field(description="how far the evidence supports the key leak")
+
+
+class MatchNarrativeResponse(NarrativeResponse):
+    """``NarrativeResponse`` plus the summary's parts. ``sections`` is null
+    for a summary stored as one paragraph, before the parts were stored;
+    ``narrative`` is then that paragraph, and otherwise the four parts joined
+    under fixed English headings."""
+
+    sections: MatchSummarySections | None = Field(
+        None,
+        description="the four stored parts; null for a summary written before they were stored",
+    )
+
+
 class LeakOut(BaseModel):
     """One recurring pattern from ``review/leaks.py``, ranked by how much it
     moves this player's own win rate — never a percentage without the

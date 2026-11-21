@@ -428,8 +428,19 @@ UUID rule and the progress route are the guide's, described there.
 `SYSTEM_PROMPT` is a template: `system_prompt(fmt)` fills each `{fmt}` with
 the report's format name, so the prompt says which records are that
 format's alone and which are habits read across every format, and tells the
-model never to present one as the other. It fixes seven `## ` headings, in
-order (`ai/coach/narrative.py::HEADINGS`), and the Coach page draws one card
+model never to present one as the other. It asks first for a headline, `##
+One thing this week`: one or two sentences naming the single habit that
+would win the most games, drawn from Focus areas. `split_headline` lifts that
+section out of the answer at store time, on the generate and the paste path
+alike, into `coach_report.headline` (`077_summary_fields.sql`); the stored
+prose keeps only the other sections, and the response's `headline` carries
+it. It finds the heading anywhere (after an intro line, or glued mid-line),
+on its exact words in any case. An answer without it, or with it empty,
+stores a NULL headline, as does every row written before 077; the Coach page
+then falls back to Focus areas. `extract_focus_section` is unchanged. The
+prompt then fixes seven `## ` headings, in
+order (`ai/coach/narrative.py::HEADINGS`, which does not list the headline),
+and the Coach page draws one card
 per `## ` section (`web/src/lib/markdown.ts::parseReport`): Player profile,
 Since your last report (omitted entirely on a first report), Focus areas,
 Training plan, At the LGS, Format notes, Sources. `build_coach_context`
@@ -448,7 +459,8 @@ prompt and prose (`docs/llm.md`, "Rules notes").
 
 **Two things the measured reports show that the design didn't expect.** Both
 were seen on real data on 2026-09-22. Both are fixed at read time, since
-stored prose stays verbatim and neither report can be rewritten in place.
+stored prose is the answer as written minus the lifted headline section, narration
+included, and neither report can be rewritten in place.
 
 - **Narration can swallow the first heading.** Both models narrate their
   searches, each narration in a text block of its own. The Opus 5 report
@@ -468,7 +480,8 @@ stored prose stays verbatim and neither report can be rewritten in place.
   `HEADINGS` entry, even glued mid-line as in the Fable shape, and returns the
   prose from there; `ai/routes/coach.py::_report_out` is the one place all
   four routes' prose passes through it, so the fix reaches every route with no
-  duplicated logic. Stored prose is still verbatim — the row on disk keeps its
+  duplicated logic. Stored prose is the answer as written minus the lifted headline
+  section — the row on disk keeps its
   narration — only what the API returns is trimmed.
 - **No web citations are stored.** Neither report stored a single web
   citation, although the Opus 5 run searched 6 times and the Fable 5.1 run 8.

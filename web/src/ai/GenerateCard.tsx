@@ -41,6 +41,7 @@ export function GenerateCard({
   accent = false,
   controls,
   emptyNote,
+  renderNarrative,
   children,
 }: {
   title: string
@@ -81,6 +82,11 @@ export function GenerateCard({
   /** The sentence shown while nothing is written, "Nothing written yet."
    *  when none is given; `null` shows none. */
   emptyNote?: string | null
+  /** Draws the stored narrative in place of `Prose` over its text, for a
+   *  narrative with parts of its own (the match summary's). Only read when
+   *  `narrative` has text; every other caller leaves it out and is drawn as
+   *  before. */
+  renderNarrative?: (narrative: string) => React.ReactNode
   /** Rendered as part of the card's body, in both branches alike: above
    *  the buttons when someone writes, among `CopyPromptCard`'s children
    *  when not. */
@@ -129,7 +135,7 @@ export function GenerateCard({
       {hasContent
         ? narrative && (
             <div className={note ? 'mt-3' : ''}>
-              <Prose text={narrative} />
+              {renderNarrative ? renderNarrative(narrative) : <Prose text={narrative} />}
             </div>
           )
         : !generating &&

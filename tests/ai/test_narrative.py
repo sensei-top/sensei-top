@@ -16,6 +16,8 @@ really can leave the machine.
 
 from __future__ import annotations
 
+import dataclasses
+
 from sensei_top.ai.review import narrative
 from sensei_top.review.findings import (
     Category,
@@ -82,6 +84,23 @@ def test_narrative_context_lists_findings_with_their_anchor_and_caveats():
     assert "The game turned on your turn 4" in context
     assert "(game 1, your turn 4)" in context
     assert "caveat: Not a claim about which single play caused the swing." in context
+
+
+def test_narrative_context_prints_a_match_caveat_once_after_the_findings():
+    finding = Finding(
+        code="race_ahead", analyzer="clock", category=Category.CLOCK,
+        severity=Severity.NOTICE, confidence=Confidence.OBSERVED,
+        title="You led the race", detail="You dealt more damage.", game_number=1,
+    )
+    other = dataclasses.replace(finding, game_number=2)
+    caveat = "This counts damage dealt to a player only."
+    report = dataclasses.replace(_report(findings=[finding, other]), caveats=(caveat,))
+    context = narrative.build_narrative_context(report, _snap())
+    assert context.count(caveat) == 1
+    assert "caveat:" not in context
+    heading = "Readings that apply to the whole match:"
+    assert f"{heading}\n- {caveat}" in context
+    assert context.index("You led the race") < context.index(heading)
 
 
 def test_narrative_context_states_the_gaps_as_gaps_not_as_silence():

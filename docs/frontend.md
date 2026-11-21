@@ -151,6 +151,13 @@ nothing while there are no decks. Home takes no filter and reads every
 source, so a player with no Arena match still opens a page with their
 own matches on it.
 
+`?open=a,b` names the drawers a page has open, not a filter:
+`lib/openParam.ts`'s `useOpenParam()` returns the set, `toggle` and
+`setAll`, replaces the history entry like the filters, and deletes the
+param when nothing is open.
+
+`?vs=` names one archetype, the opponent the deck guide is focused on.
+
 `/decks` keeps two in the address: `?format=` (a format among its tiles) and
 `?sort=` (`lastPlayed`, `winRate` or `matches`), each left out at its default
 (`docs/frontend-pages.md`, "Decks").
@@ -758,7 +765,8 @@ One file per primitive, all re-exported from `index.ts`, so every
   finding as a nested block: its weight as a chip, where it happened, a
   title and a body), `Callout` (a nested block that says one thing
   apart from the rest of its card; `tone="warn"` adds a warn-tinted
-  edge and nothing else), `EmptyState` (an optional icon, an optional
+  edge and nothing else; `level` is its title's heading, 3 unless the
+  page's outline needs 2 or 4), `EmptyState` (an optional icon, an optional
   title, one sentence, an optional action; a place's own empty state
   carries that place's icon), `OnboardingSteps` (a short run of steps,
   each done, next or later and saying so in a word; only the step that
@@ -1136,7 +1144,9 @@ stays silent; the button's label is the only feedback either way.
 
 An optional `controls` prop renders a picker in the button row, before
 the "write it" button; the Coach page's model picker (`docs/coach.md`)
-is the one caller so far. What the coach's report and its sources
+is the one caller so far. An optional `renderNarrative(narrative)`
+prop draws a stored narrative in place of `Prose` for one with parts of
+its own (the match summary's); callers without it are unchanged. What the coach's report and its sources
 look like is under `docs/frontend-pages.md`, "Coach".
 
 Given `save`, the card's `PUT` through one of `api.ts`'s `usePaste…`
@@ -1191,12 +1201,40 @@ The rules that actually shaped these charts:
   the label carries identity; the custom tooltip exists for exactly this.
 - **Every chart ships its numbers as a table.** A screen reader gets the
   exact numbers, and a reader checking one value never has to eyeball a
-  bar's length. `WeeklyWinrate` and `PositionTrack` keep theirs in a
-  `Disclosure`, "Show the numbers", under the chart.
+  bar's length. `WeeklyWinrate`, `PositionTrack` and the match report's
+  timeline keep theirs in a `Disclosure`, "Show the numbers", under the
+  chart.
 - **A legend is always present for two or more series.** Identity is never
   carried by color alone. The match-detail turn-chart trio shares one legend
   above all three rather than repeating it per chart (`docs/architecture.md`
   is not the place for this — see `docs/frontend-pages.md`, "The match report").
+
+**The composite chart: the match report's timeline.** `MatchTimeline`
+(`components/match/MatchTimeline.tsx`) puts every game of a match on one
+`LineChart`. It is the one chart whose x axis is not a quantity:
+`buildTimeline` (`lib/timeline.ts`) gives each turn a slot on one
+continuous index and opens each game with a slot of its own that has no
+position, so the line breaks there. Each boundary is a `ReferenceLine`
+labelled with the game and its result, drawn in the margin above the
+plot. The ticks show each slot's turn number, and the tooltip names the
+game and the turn. A finding is a `ReferenceDot` drawn by a `shape`
+that gives its circle a fill class (`fill-loss`, `fill-warn`,
+`fill-ink2`), because a class resolves the CSS token while a
+presentation attribute would not. The dot's size reinforces the weight
+as well. The chart always fits the card's width and never scrolls.
+
+Its dots are too small and too close to be the way into a finding, so a
+**marker strip** under the chart is: one button per dot, in game and
+turn order, in a row that scrolls sideways when it outgrows the width.
+The strip is one tab stop, moved through with the arrow keys. Choosing a
+dot or a button writes one address value (`?finding=`), which both read,
+so the two never disagree. The chart is a memoized component that
+renders again on each choice, since the chosen dot is drawn larger. The
+line's own inputs (its data, domains, ticks, formatters and axis props)
+keep their identity across that render, for the reason the clock rule
+above gives: new ones would start the line's motion over.
+`docs/frontend-pages.md`, "The match report", has the routing and the
+card that opens.
 
 The palette is validated by `scripts/validate_palette.py` (WCAG contrast plus
 Machado et al. 2009 colour-vision-deficiency simulation, CIE76 ΔE

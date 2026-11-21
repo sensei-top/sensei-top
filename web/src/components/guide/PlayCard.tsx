@@ -5,9 +5,10 @@ import type { BoardCurve, BoardCurveRow, GameLength, KeyCardTiming, MulliganReco
 import { num, TIMING_BUCKETS, timingLabel, timingRecord, turnsOf, zoneLabel } from '../../lib/guide'
 import { rateOrRecord } from '../../lib/sample'
 import { formatCount } from '../../lib/time'
-import { Card, DataTable, Disclosure, EmptyState, Prose, SectionLabel, StatTile } from '../ui'
+import { Card, DataTable, Disclosure, EmptyState, SectionLabel, StatTile } from '../ui'
 import { useAi } from '../../ai/registry'
 import { LeakCard } from './LeakCard'
+import { FoldedProse } from './WrittenCards'
 
 /** "11 turns", "1 turn", or a dash alone for no median. */
 function turnsValue(median: number | null, t: TFunction): string {
@@ -56,10 +57,12 @@ function PatternsSection({
   leaks,
   leaksAllDecks,
   fix,
+  fixLead,
 }: {
   leaks: LeakOut[]
   leaksAllDecks: LeakOut[]
   fix: string | undefined
+  fixLead: string | null | undefined
 }) {
   const { t } = useTranslation()
   const acrossSummary = t('decks.guide.play.across', {
@@ -71,7 +74,7 @@ function PatternsSection({
       <SectionLabel className="mb-2">{t('decks.guide.play.patterns')}</SectionLabel>
       {fix && (
         <div className="mb-3">
-          <Prose text={fix} />
+          <FoldedProse lead={fixLead} prose={fix} />
         </div>
       )}
       {leaks.length === 0 ? (
@@ -232,7 +235,7 @@ export function YourPlayCard({
       <div className="space-y-6">
         <FourTiles mulligans={mulligans} gameLength={gameLength} />
 
-        <PatternsSection leaks={guide.leaks} leaksAllDecks={guide.leaks_all_decks} fix={narrative?.fix} />
+        <PatternsSection leaks={guide.leaks} leaksAllDecks={guide.leaks_all_decks} fix={narrative?.fix} fixLead={narrative?.fix_lead} />
 
         {ai && <ai.LeaksNarrativeCard />}
 

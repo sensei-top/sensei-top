@@ -167,6 +167,9 @@ class CardNoteOut(BaseModel):
 
 class MatchupPlanOut(BaseModel):
     archetype: str
+    lead: str | None = Field(
+        None, description="one sentence naming the plan; null for a plan written without one"
+    )
     prose: str
     board_in: list[BoardCardOut]
     board_out: list[BoardCardOut]
@@ -174,7 +177,13 @@ class MatchupPlanOut(BaseModel):
 
 class GuideNarrativeOut(BaseModel):
     engine: str
+    engine_lead: str | None = Field(
+        None, description="one sentence: how the deck wins; null for a guide written without one"
+    )
     fix: str
+    fix_lead: str | None = Field(
+        None, description="one sentence: the one change that matters most; null when absent"
+    )
     card_notes: list[CardNoteOut]
     matchups: list[MatchupPlanOut]
     checklist: list[str]

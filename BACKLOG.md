@@ -48,7 +48,7 @@ When you finish an item, delete it in the commit that finishes it, with a
 user-visible change also gets its line in `CHANGELOG.md`. There is no Done
 section.
 
-Next ID: BL-110
+Next ID: BL-116
 
 ## Features
 
@@ -463,6 +463,67 @@ a patch), and a sync payload for each.
 **Why deferred:** Split out of the account's item when it closed with
 1.4.0 (2026-11-09). No player has asked for notes or tags yet.
 
+### BL-110 · The matchup brief's lead line
+
+type: feat · priority: P3 · status: ready · area: brief web
+
+Migration 076 stores a one-sentence `lead` on `matchup_brief`, and the deck
+guide's sideboard plans fold their reasoning behind it. The matchup brief
+card on a deck's matchup page (`PairingBrief`) still draws the whole plan
+unfolded and never shows the lead.
+
+**Why deferred:** Plan 42 reworked only the guide, Coach and one match's
+report (2026-11-20); the brief card was out of its scope.
+
+**Needs:** `PairingBrief` passes `fold` and the stored `lead` to `PlanBody`,
+as the guide's plans do, with the first-sentence fallback for an older brief.
+
+### BL-111 · A teaser on the closed match summary
+
+type: feat · priority: P3 · status: needs-decision · area: api web
+
+The match summary now has four stored parts, and `summaryTeaser` in
+`web/src/ai/report/summarySections.ts` gives the key leak's first sentence.
+Nothing draws it: the summary card fetches nothing until it is opened, so
+the closed card has no text to show.
+
+**Why deferred:** Showing it means a read of the stored narrative while the
+card is closed, without rebuilding the prompt's context; plan 42 added no
+API call for it (2026-11-20).
+
+**Needs:** A decision on whether the closed card is worth that read, then
+either a cheap stored-narrative field on an existing response or a new GET.
+
+### BL-113 · The deck guide is still eleven screens
+
+type: feat · priority: P2 · status: needs-decision · area: web guide
+
+Plan 42 folded the guide's prose and cut it from 12.5–15.3k px to
+9.7–11.6k px at 1600 (Impeccable 23 → 26). What is left: Your play's
+leaks narrative open in full with its own primary button and a card inside
+the card (`PlayCard.tsx`), two open 12–14-row turn tables, and Matchup
+coverage with no row cap. Coverage and The field also give different field
+shares for one archetype (20% and 6%), and two different decks showed the
+same field line ("56%, 967-767 over 272 lists"), which nobody has checked.
+
+**Why deferred:** Out of plan 42's scope (the leaks narrative and coverage
+card); found by its final design review, 2026-11-20.
+
+**Needs:** A decision on folding Your play and capping coverage; a check of
+the two field-share sources and of the identical field line.
+
+### BL-114 · Coach's headline runs past two sentences
+
+type: fix · priority: P3 · status: ready · area: coach
+
+The prompt asks "One thing this week" for one or two sentences. The first
+paid run after migration 077 (Fable 5.1, 2026-11-20) wrote three, about
+300 characters, so the headline card reads as a paragraph. An open Focus
+areas drawer is also still about 1,200 px: its habits don't fold one by one.
+
+**Needs:** A tighter instruction (a word cap), or a cap in the card that
+folds the rest; folding each habit inside the drawer.
+
 ## Bugs
 
 ### BL-025 · A prepare face several cards share
@@ -797,6 +858,31 @@ was not measured.
 **Needs:** The stamp inside the undated digest, in `compute_digest`, with
 stored undated rows' digests dealt with. Rows without a header can't be
 recomputed.
+
+### BL-112 · Coach's Your numbers cards one heading level too high
+
+type: fix · priority: P3 · status: ready · area: web coach
+
+Since plan 42, "Your numbers" on Coach is a drawer with an `h2` title, and
+the cards inside it keep `Card`'s fixed `h2` titles, so the heading outline
+puts them beside the drawer instead of under it.
+
+**Needs:** A `level` prop on `Card`, as `Callout` has, and `Profile`'s cards
+passing 3.
+
+### BL-115 · Shared prose blocks with no reading width
+
+type: fix · priority: P3 · status: ready · area: web
+
+`Prose` (`components/ui/Card.tsx`) and the finding body
+(`components/ui/Finding.tsx`) run 130–160 characters a line at 1600 px.
+Plan 42 gave Coach's drawers `max-w-prose`; the shared primitives were
+left alone because every page uses them. The same review found
+`Tooltip`'s trigger with no accessible name and `Disclosure` summaries
+18 px tall.
+
+**Needs:** A reading width in `docs/design-system.md`, applied to both
+primitives; a name for the tooltip trigger; a larger disclosure target.
 
 ## Code health
 

@@ -18,6 +18,7 @@ import {
   type GuideNarrativeResponse,
   type MatchupBriefOut,
   type MatchupBriefResponse,
+  type MatchNarrativeResponse,
   type NarrativeResponse,
   type RcqGenerateIn,
   type RcqGuideOut,
@@ -259,7 +260,7 @@ export const usePasteBrief = () => {
 export const useReportNarrativePrompt = (matchId: string, enabled: boolean) =>
   useQuery({
     queryKey: ['match-report-narrative-prompt', matchId],
-    queryFn: () => get<NarrativeResponse>(`/api/matches/${matchId}/report/narrative`),
+    queryFn: () => get<MatchNarrativeResponse>(`/api/matches/${matchId}/report/narrative`),
     enabled,
   })
 
@@ -274,7 +275,7 @@ export const useGenerateMatchReportNarrative = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (matchId: string) =>
-      post<NarrativeResponse>(`/api/matches/${matchId}/report/narrative`),
+      post<MatchNarrativeResponse>(`/api/matches/${matchId}/report/narrative`),
     onSuccess: (_data, matchId) => {
       queryClient.invalidateQueries({ queryKey: ['match-report-narrative-prompt', matchId] })
     },
@@ -286,7 +287,7 @@ export const usePasteMatchReportNarrative = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ matchId, answer }: { matchId: string; answer: string }) =>
-      putPasted<NarrativeResponse>({ card: 'match', matchId }, answer),
+      putPasted<MatchNarrativeResponse>({ card: 'match', matchId }, answer),
     onSuccess: (_data, { matchId }) =>
       queryClient.invalidateQueries({ queryKey: ['match-report-narrative-prompt', matchId] }),
   })

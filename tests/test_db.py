@@ -751,3 +751,51 @@ def test_migration_063_adds_unbackfilled_coach_cache_token_counts(tmp_path):
         " ORDER BY id DESC LIMIT 1"
     ).fetchone()) == (9000, 0)
     conn.close()
+
+
+def test_migration_076_adds_nullable_guide_lead_columns(tmp_path):
+    """Frozen at 075 with a stored guide and brief, migrate forward: the
+    leads are NULL on the existing rows, never backfilled."""
+    conn = db.connect(tmp_path / "stuck_at_75.db")
+    _migrate_to(conn, through_version=75)
+    conn.execute(
+        "INSERT INTO deck_narrative (deck_key, list_hash, engine, fix, card_notes_json, "
+        "checklist_json, problems_json, prompt, author, authored_at) "
+        "VALUES ('k', 'h', 'e', 'f', '[]', '[]', '[]', 'p', 'a', 't')"
+    )
+    conn.execute(
+        "INSERT INTO matchup_brief (deck_key, archetype_key, list_hash, prose, "
+        "play_around_json, board_in_json, board_out_json, staples_json, problems_json, "
+        "prompt, model, generated_at, source) "
+        "VALUES ('k', 'a', 'h', 'p', '[]', '[]', '[]', '[]', '[]', 'p', 'm', 't', 'live')"
+    )
+    conn.commit()
+
+    assert 76 in db.migrate(conn)
+
+    row = conn.execute("SELECT engine_lead, fix_lead FROM deck_narrative").fetchone()
+    assert (row[0], row[1]) == (None, None)
+    assert conn.execute("SELECT lead FROM matchup_brief").fetchone()[0] is None
+    conn.close()
+
+
+def test_migration_077_adds_nullable_summary_fields(tmp_path):
+    """Frozen at 076 with a stored match summary and coach report, migrate
+    forward: the new columns are NULL on the existing rows, never backfilled."""
+    conn = db.connect(tmp_path / "stuck_at_76.db")
+    _migrate_to(conn, through_version=76)
+    conn.execute(
+        "INSERT INTO match_narrative (match_id, prose, prompt, model, generated_at, "
+        "context_hash) VALUES ('m', 'old paragraph', 'p', 'x', 't', 'h')"
+    )
+    conn.execute(
+        "INSERT INTO coach_report (generated_at, model, prompt, prose, sources_json, "
+        "metrics_json, context_hash) VALUES ('t', 'x', 'p', 'old report', '[]', '{}', 'h')"
+    )
+    conn.commit()
+
+    assert 77 in db.migrate(conn)
+
+    assert conn.execute("SELECT sections_json FROM match_narrative").fetchone()[0] is None
+    assert conn.execute("SELECT headline FROM coach_report").fetchone()[0] is None
+    conn.close()

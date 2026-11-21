@@ -1231,11 +1231,13 @@ export interface paths {
          *
          *     Makes no model call. The answer is read through the answer contract
          *     (``answers.read_answer``, header required): 422 when it is another
-         *     card's or another match's, is not JSON, or carries no prose, and nothing
-         *     is stored; 413 over 256 KB, before anything else; 404 for an unknown
-         *     match, as for ``GET``. It is stored with the context its header says it
-         *     was written for, so one written for older evidence reads as stale, and
-         *     beside the copyable prompt rebuilt now; the model is the sentinel
+         *     card's or another match's, is not JSON, or is not the four parts
+         *     ``narrative._SUMMARY_TOOL`` describes (an older copied prompt's
+         *     ``{"prose": ...}`` is refused, not stored), and nothing is stored; 413
+         *     over 256 KB, before anything else; 404 for an unknown match, as for
+         *     ``GET``. It is stored with the context its header says it was written
+         *     for, so one written for older evidence reads as stale, and beside the
+         *     copyable prompt rebuilt now; the model is the sentinel
          *     ``pasted``, tokens and cost ``NULL``. Returns what ``GET`` on this path
          *     returns.
          */
@@ -1246,10 +1248,12 @@ export interface paths {
          *
          *     Sends ``full_prompt`` (``ai/review/narrative.py``): the evidence ``GET``
          *     on this same path builds, without the answer contract that ``GET``'s
-         *     ``copied_prompt`` adds, since the reply is prose. 503
-         *     with no credential configured (``sensei-top config --set-key``) —
-         *     the dashboard falls back to the copy-prompt path automatically. 502
-         *     wraps whatever the Claude API itself objected to.
+         *     ``copied_prompt`` adds: the reply is requested as ``narrative._SUMMARY_TOOL``'s
+         *     object through ``llm.write_json``, and stored as its four parts plus
+         *     their joined prose. 503 with no credential configured
+         *     (``sensei-top config --set-key``) — the dashboard falls back to the
+         *     copy-prompt path automatically. 502 wraps whatever the Claude API itself
+         *     objected to, and an answer that is not the four parts.
          */
         post: operations["generate_match_report_narrative_api_matches__match_id__report_narrative_post"];
         delete?: never;
@@ -1996,6 +2000,11 @@ export interface components {
              * @description the stored prose, once generated or pasted
              */
             narrative?: string | null;
+            /**
+             * Headline
+             * @description the report's 'One thing this week' section, lifted out of the prose at store time; null for a report written before it existed or an answer without it
+             */
+            headline?: string | null;
             /**
              * Prompt
              * @description the full text to write the report from — pass it to POST /api/coach/narrative to generate it with Claude (see docs/llm.md), or into an assistant you already pay for and PUT the answer to /api/coach/narrative. The by-id route serves that report's own stored prompt
@@ -2869,8 +2878,18 @@ export interface components {
         GuideNarrativeOut: {
             /** Engine */
             engine: string;
+            /**
+             * Engine Lead
+             * @description one sentence: how the deck wins; null for a guide written without one
+             */
+            engine_lead?: string | null;
             /** Fix */
             fix: string;
+            /**
+             * Fix Lead
+             * @description one sentence: the one change that matters most; null when absent
+             */
+            fix_lead?: string | null;
             /** Card Notes */
             card_notes: components["schemas"]["CardNoteOut"][];
             /** Matchups */
@@ -3745,6 +3764,63 @@ export interface components {
             cards: components["schemas"]["CurrentCardEvent"][];
         };
         /**
+         * MatchNarrativeResponse
+         * @description ``NarrativeResponse`` plus the summary's parts. ``sections`` is null
+         *     for a summary stored as one paragraph, before the parts were stored;
+         *     ``narrative`` is then that paragraph, and otherwise the four parts joined
+         *     under fixed English headings.
+         */
+        MatchNarrativeResponse: {
+            /**
+             * Status
+             * @description ok | prompt | no_report
+             */
+            status: string;
+            /**
+             * Narrative
+             * @description the stored prose, once generated or pasted
+             */
+            narrative?: string | null;
+            /**
+             * Prompt
+             * @description the full text to write the narrative from — pass it to POST on this same path to generate it with Claude (see docs/llm.md), or into an assistant you already pay for and PUT the answer back on this same path
+             */
+            prompt?: string | null;
+            /**
+             * Model
+             * @description what wrote the stored narrative
+             */
+            model?: string | null;
+            /**
+             * Generated At
+             * @description when the stored narrative was written
+             */
+            generated_at?: string | null;
+            /**
+             * Cost Usd
+             * @description measured cost of the call that wrote it; null for a pasted answer, and for a model with no price on file
+             */
+            cost_usd?: number | null;
+            /**
+             * Stale
+             * @description the evidence has changed since this was written
+             * @default false
+             */
+            stale: boolean;
+            /**
+             * Error
+             * @description set when something could not be built
+             */
+            error?: string | null;
+            /**
+             * Notes
+             * @description the rules notes the stored prose cites, by marker; always empty for the leak finder
+             */
+            notes?: components["schemas"]["RulesNoteOut"][];
+            /** @description the four stored parts; null for a summary written before they were stored */
+            sections?: components["schemas"]["MatchSummarySections"] | null;
+        };
+        /**
          * MatchReportOut
          * @description The post-game report: local, deterministic findings recomputed on
          *     every request rather than stored — see ``review/__init__.py`` for why.
@@ -3757,6 +3833,11 @@ export interface components {
             findings: components["schemas"]["ReportFinding"][];
             /** Gaps */
             gaps: components["schemas"]["ReportGap"][];
+            /**
+             * Caveats
+             * @description readings that apply to every finding of their kind, said once for the match; a finding's own caveats are only those specific to it
+             */
+            caveats?: string[];
             /**
              * Position Track
              * @description one point per turn with both life totals recorded; see review/position.py
@@ -3787,6 +3868,39 @@ export interface components {
             games?: components["schemas"]["SummaryGameLine"][];
             /** Gap Groups */
             gap_groups?: components["schemas"]["SummaryGapGroup"][];
+            /**
+             * Beat Definitions
+             * @description label -> the one plain sentence saying what that game-beat label measures; only labels that appear in games[].beats
+             */
+            beat_definitions?: {
+                [key: string]: string;
+            };
+        };
+        /**
+         * MatchSummarySections
+         * @description The match summary's four written parts, as the model wrote them.
+         */
+        MatchSummarySections: {
+            /**
+             * Games
+             * @description what decided each game, in order
+             */
+            games: string;
+            /**
+             * Key Leak
+             * @description the one thing to change, and why
+             */
+            key_leak: string;
+            /**
+             * Counter Argument
+             * @description the strongest reading that it was not the player's doing
+             */
+            counter_argument: string;
+            /**
+             * Confidence
+             * @description how far the evidence supports the key leak
+             */
+            confidence: string;
         };
         /** Matchup */
         Matchup: {
@@ -3934,6 +4048,11 @@ export interface components {
         MatchupPlanOut: {
             /** Archetype */
             archetype: string;
+            /**
+             * Lead
+             * @description one sentence naming the plan; null for a plan written without one
+             */
+            lead?: string | null;
             /** Prose */
             prose: string;
             /** Board In */
@@ -5708,11 +5827,6 @@ export interface components {
              * @description The source finding's player-turn; None when it has none
              */
             turn_number?: number | null;
-            /**
-             * Definition
-             * @description One plain sentence saying what a game beat's label measures; None when the label has none, and on every matchup beat
-             */
-            definition?: string | null;
         };
         /** SummaryGameLine */
         SummaryGameLine: {
@@ -7432,7 +7546,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NarrativeResponse"];
+                    "application/json": components["schemas"]["MatchNarrativeResponse"];
                 };
             };
             /** @description Validation Error */
@@ -7467,7 +7581,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NarrativeResponse"];
+                    "application/json": components["schemas"]["MatchNarrativeResponse"];
                 };
             };
             /** @description Validation Error */
@@ -7498,7 +7612,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NarrativeResponse"];
+                    "application/json": components["schemas"]["MatchNarrativeResponse"];
                 };
             };
             /** @description Validation Error */

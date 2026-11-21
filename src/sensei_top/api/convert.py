@@ -325,7 +325,7 @@ def _beat_out(b: Beat) -> SummaryBeat:
     return SummaryBeat(
         code=b.code, label=b.label, text=b.text, magnitude=b.magnitude,
         severity=b.severity.value, game_number=b.game_number, meter=b.meter,
-        turn_number=b.turn_number, definition=b.definition,
+        turn_number=b.turn_number,
     )
 
 def _game_line_out(g: GameLine) -> SummaryGameLine:
@@ -345,6 +345,7 @@ def _summary_out(s: MatchSummary) -> MatchSummaryOut:
         matchup=[_beat_out(b) for b in s.matchup],
         games=[_game_line_out(g) for g in s.games],
         gap_groups=[_gap_group_out(g) for g in s.gap_groups],
+        beat_definitions=dict(s.beat_definitions),
     )
 
 def _leak_out(leak) -> LeakOut:
@@ -461,10 +462,11 @@ def _deck_guide_out(guide) -> DeckGuideOut:
 def _guide_narrative_out(n) -> GuideNarrativeOut:
     return GuideNarrativeOut(
         engine=n.engine, fix=n.fix,
+        engine_lead=n.engine_lead, fix_lead=n.fix_lead,
         card_notes=[CardNoteOut(card=c.card, verdict=c.verdict, why=c.why) for c in n.card_notes],
         matchups=[
             MatchupPlanOut(
-                archetype=m.archetype, prose=m.prose,
+                archetype=m.archetype, prose=m.prose, lead=m.lead,
                 board_in=[BoardCardOut(card=c.card, n=c.n) for c in m.board_in],
                 board_out=[BoardCardOut(card=c.card, n=c.n) for c in m.board_out],
             )

@@ -51,12 +51,12 @@ const HERE = path.dirname(fileURLToPath(import.meta.url))
 export const SITE_VIEWS = [
   { name: 'home', path: '/', focal: { y: 72, height: 790 } },
   { name: 'matches', path: '/matches' },
-  { name: 'match-report', path: '/matches/:match', focal: { y: 118, height: 640 } },
+  { name: 'match-report', path: '/matches/:match', focal: { y: 118, height: 796, heightByLocale: { 'pt-BR': 812 } } },
   { name: 'replay', path: '/matches/:match/replay' },
   { name: 'matchups', path: '/decks/:largest/matchups', focal: { y: 470, height: 506, heightByLocale: { 'pt-BR': 524 } } },
   { name: 'guide', path: '/decks/:largest/guide' },
   { name: 'field', path: '/field' },
-  { name: 'coach', path: '/coach', focal: { y: 262, height: 630 } },
+  { name: 'coach', path: '/coach', focal: { y: 300, height: 664 } },
   { name: 'live', path: '/live' },
 ]
 
@@ -166,10 +166,12 @@ async function main() {
       only: { type: 'string' },
       // The browser's clock for the dashboard pages, ISO 8601.
       clock: { type: 'string' },
+      // The match `:match` opens, in place of the newest.
+      match: { type: 'string' },
     },
   })
   const usage =
-    'usage: pnpm site:images --base <server url> --out <dir> [--locale en-US|pt-BR] [--only home,og] [--clock 2026-08-26T21:36:00]'
+    'usage: pnpm site:images --base <server url> --out <dir> [--locale en-US|pt-BR] [--only home,og] [--clock 2026-08-26T21:36:00] [--match <match id>]'
   if (!args.base || !args.out) {
     console.error(usage)
     process.exitCode = 2
@@ -190,6 +192,7 @@ async function main() {
 
   const { chromium } = await import('playwright')
   const ids = await resolveIds(args.base)
+  if (args.match) ids.match = args.match
   await mkdir(outDir, { recursive: true })
 
   const browser = await chromium.launch()

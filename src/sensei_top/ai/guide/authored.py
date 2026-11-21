@@ -45,6 +45,8 @@ class AuthoredNarrative:
     author: str
     authored_at: str
     corpus_commit: str | None
+    engine_lead: str | None = None
+    fix_lead: str | None = None
     # NULL for a hand-imported narrative -- a real absence, not a cost of
     # zero (AGENTS.md non-negotiable #4).
     input_tokens: int | None = None
@@ -79,6 +81,8 @@ def write_narrative(
             "list_hash": list_hash,
             "engine": narrative.engine,
             "fix": narrative.fix,
+            "engine_lead": narrative.engine_lead,
+            "fix_lead": narrative.fix_lead,
             "card_notes_json": json.dumps([
                 {"card": c.card, "verdict": c.verdict, "why": c.why}
                 for c in narrative.card_notes
@@ -109,6 +113,8 @@ def read_narrative(conn: sqlite3.Connection, deck_key: str) -> AuthoredNarrative
         list_hash=row["list_hash"],
         engine=row["engine"],
         fix=row["fix"],
+        engine_lead=row["engine_lead"],
+        fix_lead=row["fix_lead"],
         card_notes=tuple(
             CardNote(card=d["card"], verdict=d["verdict"], why=d["why"])
             for d in json.loads(row["card_notes_json"])
@@ -147,12 +153,15 @@ def narrative_for(
             prose=b.prose,
             board_in=b.board_in,
             board_out=b.board_out,
+            lead=b.lead,
         )
         for b in briefs_for_deck(conn, deck_key)
     )
     return stored, GuideNarrative(
         engine=stored.engine,
         fix=stored.fix,
+        engine_lead=stored.engine_lead,
+        fix_lead=stored.fix_lead,
         card_notes=stored.card_notes,
         matchups=matchups,
         checklist=stored.checklist,

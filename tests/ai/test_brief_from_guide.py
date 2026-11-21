@@ -263,3 +263,42 @@ def test_an_older_hash_still_spares_a_live_brief_for_todays_list(conn):
     )
     assert written == 0
     assert store.read_brief(conn, "guid:x", "mardu_discard").prose == "live prose"
+
+
+def test_a_matchup_lead_lands_in_the_brief_row_and_reads_back(conn):
+    from sensei_top.ai.guide.authored import narrative_for, write_narrative
+
+    _archetype_row(conn, "mardu_discard", "Mardu Discard")
+    conn.commit()
+    narrative = _narrative(
+        MatchupPlan(
+            archetype="Mardu Discard", prose="p1", board_in=(), board_out=(),
+            lead="Bring in Slagstorm.",
+        ),
+    )
+    guide = _guide(_identity())
+    store_guide_matchups(conn, guide, narrative, model="claude-opus-5")
+    write_narrative(
+        conn, "guid:x", narrative, list_hash="h", prompt="p", author="a", corpus_commit=None
+    )
+    conn.commit()
+
+    row = conn.execute(
+        "SELECT lead FROM matchup_brief WHERE deck_key = 'guid:x' "
+        "AND archetype_key = 'mardu_discard'"
+    ).fetchone()
+    assert row["lead"] == "Bring in Slagstorm."
+    pair = narrative_for(conn, "guid:x")
+    assert pair is not None
+    assert pair[1].matchups[0].lead == "Bring in Slagstorm."
+
+    # A plan with no lead clears a stale one rather than keeping it.
+    store_guide_matchups(
+        conn, guide,
+        _narrative(MatchupPlan(archetype="Mardu Discard", prose="p2", board_in=(), board_out=())),
+        model="claude-opus-5",
+    )
+    row = conn.execute(
+        "SELECT lead FROM matchup_brief WHERE deck_key = 'guid:x'"
+    ).fetchone()
+    assert row["lead"] is None

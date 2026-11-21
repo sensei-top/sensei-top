@@ -24,7 +24,13 @@ from sensei_top.metagame.tiers import MIN_LARGE_PAPER_PLAYERS, TIER_WORDS
 from sensei_top.projector.matches import project
 from sensei_top.reader.ingest import ingest_file
 from sensei_top.review import build_match_report
-from sensei_top.review.analyzers import ANALYZERS, analyze_baseline, analyze_information
+from sensei_top.review.analyzers import (
+    ANALYZERS,
+    analyze_baseline,
+    analyze_clock,
+    analyze_information,
+    analyze_role_play,
+)
 from sensei_top.review.analyzers.frame import analyze_frame
 from sensei_top.review.analyzers.resources import analyze_resources
 from sensei_top.review.analyzers.trajectory import analyze_trajectory
@@ -559,8 +565,189 @@ def test_the_report_never_judges_a_mulligan(db):
 
     mulligan_findings = [f for f in frame_findings if f.code == "mulligan_taken"]
     assert mulligan_findings
-    for f in mulligan_findings:
-        assert any("shipped" in c and "not in the log" in c for c in f.caveats)
+    for r in (report_loss, report_win):
+        assert any("shipped" in c and "not in the log" in c for c in r.caveats)
+
+
+# --- match-level caveats ------------------------------------------------------
+
+_RACE_CAVEAT_START = "This counts damage dealt to a player only"
+_STRANDED_CAVEAT_START = "This is the last turn the log recorded"
+_SWEEPER_CAVEAT_START = "Whether the opponent actually held this card in hand"
+_MULLIGAN_CAVEAT_WORDS = ("shipped", "not in the log")
+
+
+def _hit(game_number: int, amount: int, *, to_self: bool) -> DamageRow:
+    return DamageRow(
+        game_number=game_number, turn_number=3, amount=amount, damage_type=1,
+        source_instance_id=None, source_grp_id=None, source_is_self=not to_self,
+        target_instance_id=None, target_is_self=to_self,
+    )
+
+
+def _three_game_snapshot() -> MatchSnapshot:
+    games = (_game(1, result="loss"), _game(2, result="loss"), _game(3, result="loss"))
+    turns = tuple(
+        _turn(g, 4, 2, self_permanents=5, self_hand=4, opp_hand=3) for g in (1, 2, 3)
+    )
+    damage = tuple(_hit(g, 8, to_self=False) for g in (1, 2, 3)) + tuple(
+        _hit(g, 2, to_self=True) for g in (1, 2, 3)
+    )
+    return _role_snapshot(games=games, self_turns=turns, damage_events=damage)
+
+
+def _results(snap):
+    return [analyze(snap) for analyze in (
+        analyze_frame, analyze_clock, analyze_information, analyze_resources)]
+
+
+def test_a_boilerplate_caveat_is_said_once_for_a_three_game_match_and_on_no_finding():
+    results = _results(_three_game_snapshot())
+    findings = [f for r in results for f in r.findings]
+    # Three games each emit the finding, so the caveat would have repeated three times.
+    for code in ("race_ahead", "over_committed_into_sweeper", "cards_stranded_in_a_loss",
+                 "mulligan_taken"):
+        assert sum(1 for f in findings if f.code == code) == 3, code
+    caveats = [c for r in results for c in r.caveats]
+    for start in (_RACE_CAVEAT_START, _SWEEPER_CAVEAT_START, _STRANDED_CAVEAT_START):
+        assert sum(1 for c in caveats if c.startswith(start)) == 1, start
+    assert sum(1 for c in caveats if all(w in c for w in _MULLIGAN_CAVEAT_WORDS)) == 1
+    for f in findings:
+        if f.code in ("race_ahead", "over_committed_into_sweeper",
+                      "cards_stranded_in_a_loss", "mulligan_taken"):
+            assert f.caveats == (), f.code
+
+
+def test_the_turning_point_caveat_is_said_once_for_a_three_game_match_and_on_no_finding():
+    turns = tuple(
+        _turn(g, t, i, self_life=life, opp_life=20, self_hand=hand)
+        for g in (1, 2, 3)
+        for t, i, life, hand in ((2, 1, 20, 7), (4, 2, 20, 7), (6, 3, 3, 0))
+    )
+    snap = _role_snapshot(
+        games=(_game(1, result="loss"), _game(2, result="loss"), _game(3, result="loss")),
+        self_turns=turns,
+    )
+    result = analyze_trajectory(snap)
+    assert sum(1 for f in result.findings if f.code == "turning_point") == 3
+    assert [c for c in result.caveats if c.startswith("The position index is a fixed-weight")]
+    assert len(result.caveats) == 1
+    assert all(f.caveats == () for f in result.findings)
+
+
+def test_a_match_level_caveat_is_emitted_only_with_a_finding_of_its_kind():
+    # No mulligan data, no damage, a calm game: none of the findings the caveats
+    # qualify can fire, so no result may carry any of them.
+    snap = _role_snapshot(
+        games=(_game(1, self_mulligans=None, on_play=None, result="win"),),
+        self_turns=(_turn(1, 4, 2),),
+    )
+    results = [*_results(snap), analyze_trajectory(snap), analyze_role_play(snap)]
+    for r in results:
+        assert r.caveats == ()
+
+
+def test_an_even_race_alone_carries_no_race_caveat():
+    snap = _role_snapshot(
+        games=(_game(1),), self_turns=(_turn(1, 4, 2),),
+        damage_events=(_hit(1, 5, to_self=False), _hit(1, 5, to_self=True)),
+    )
+    result = analyze_clock(snap)
+    assert [f.code for f in result.findings] == ["race_even"]
+    assert result.caveats == ()
+
+
+def test_a_finding_specific_caveat_stays_on_its_finding():
+    snap = _three_game_snapshot()
+    role = next(f for f in analyze_frame(snap).findings if f.code == "role_assignment")
+    assert role.caveats and role.caveats[0].startswith("The opponent's side of this comparison")
+    assert not any(c.startswith("The opponent's side") for c in analyze_frame(snap).caveats)
+
+
+_BEATDOWN_CAVEAT_START = "This reader cannot see combat tricks"
+_CONTROL_CAVEAT_START = "Card advantage can also cash out as board state"
+_TURNING_CAVEAT_START = "The position index is a fixed-weight"
+
+
+def _held_back_turns(*, self_hand: int = 7, opp_hand: int = 7) -> tuple[SelfTurnRow, ...]:
+    return tuple(
+        _turn(g, t, i, self_power=5, opp_power=1, self_hand=self_hand, opp_hand=opp_hand,
+              self_life=life, opp_life=20, self_permanents=5)
+        for g in (1, 2, 3)
+        for t, i, life in ((2, 1, 20), (4, 2, 20), (6, 3, 3))
+    )
+
+
+def test_the_report_carries_the_union_once_in_analyzer_order(monkeypatch):
+    """Frame, clock, trajectory, role_play, information and resources each
+    emit one match-level caveat here, so the report's union must hold six
+    strings, each once, in ANALYZERS order."""
+    from sensei_top.review import match_report
+
+    snap = _role_snapshot(
+        games=tuple(_game(g, result="loss") for g in (1, 2, 3)),
+        self_turns=_held_back_turns(),
+        damage_events=tuple(_hit(g, 8, to_self=False) for g in (1, 2, 3))
+        + tuple(_hit(g, 2, to_self=True) for g in (1, 2, 3)),
+    )
+    monkeypatch.setattr(match_report, "build_snapshot", lambda *a, **k: snap)
+    report = build_match_report(None, "m")
+
+    expected_in_order = [
+        lambda c: all(w in c for w in _MULLIGAN_CAVEAT_WORDS),   # frame
+        lambda c: c.startswith(_RACE_CAVEAT_START),               # clock
+        lambda c: c.startswith(_TURNING_CAVEAT_START),            # trajectory
+        lambda c: c.startswith(_BEATDOWN_CAVEAT_START),           # role_play
+        lambda c: c.startswith(_SWEEPER_CAVEAT_START),            # information
+        lambda c: c.startswith(_STRANDED_CAVEAT_START),           # resources
+    ]
+    assert len(report.caveats) == len(expected_in_order)
+    assert len(set(report.caveats)) == len(report.caveats)
+    for caveat, matches in zip(report.caveats, expected_in_order, strict=True):
+        assert matches(caveat), caveat
+    assert not {c for f in report.findings for c in f.caveats} & set(report.caveats)
+
+
+def test_role_play_says_the_beatdown_caveat_once_and_on_no_finding():
+    snap = _role_snapshot(
+        games=tuple(_game(g) for g in (1, 2, 3)), self_turns=_held_back_turns(),
+    )
+    result = analyze_role_play(snap)
+    held = [f for f in result.findings if f.code == "beatdown_held_back"]
+    assert len(held) == 3
+    assert [c.startswith(_BEATDOWN_CAVEAT_START) for c in result.caveats] == [True]
+    assert all(f.caveats == () for f in held)
+
+
+def test_role_play_says_the_control_caveat_once_and_on_no_finding():
+    own_cards = (
+        _own_card("Play with Fire", "Instant", frozenset({"spot_removal"}), count=1, grp_id=1),
+        _own_card("Consider", "Instant", frozenset({"card_draw"}), count=1, grp_id=2),
+        _own_card("Monastery Swiftspear", "Creature — Human Monk", frozenset(), count=1,
+                   grp_id=3),
+        _own_card("Filler Spell", "Sorcery", frozenset(), count=7, grp_id=4),
+    )
+    opp_consensus = ArchetypeConsensus(
+        archetype_key="CreatureArchetype", deck_count=50,
+        cards=(
+            _consensus_card("Sweep This", 0.5, 2.0, frozenset({"spot_removal"})),
+            _consensus_card("Draw This", 0.5, 2.0, frozenset({"card_draw"})),
+            _consensus_card("Big Beast", 1.0, 5.0, frozenset(), type_line="Creature — Beast"),
+            _consensus_card("Filler Card", 1.0, 3.0, frozenset()),
+        ),
+    )
+    snap = _snapshot(
+        own_cards=own_cards, own_archetype=_verdict("Aggro", "Mono Red Aggro"),
+        opponent_archetype_key="CreatureArchetype", opponent_label="Creature Deck",
+        opp_consensus=opp_consensus,
+        games=tuple(_game(g) for g in (1, 2, 3)),
+        self_turns=_held_back_turns(self_hand=3, opp_hand=5),
+    )
+    result = analyze_role_play(snap)
+    never = [f for f in result.findings if f.code == "control_never_ahead_on_cards"]
+    assert len(never) == 3
+    assert [c.startswith(_CONTROL_CAVEAT_START) for c in result.caveats] == [True]
+    assert all(f.caveats == () for f in never)
 
 
 # --- sample-size discipline ---------------------------------------------------
@@ -1196,3 +1383,28 @@ def test_own_archetype_of_a_deck_with_unresolved_copies_is_not_judged_complete(c
     assert _own_archetype_for(conn, "whole-1").name == "Test Alpha"
     assert _own_archetype_for(conn, "arena-1").name == "Test Alpha"
     assert _own_archetype_for(conn, "short-1") is None
+
+
+def test_beat_definitions_hold_each_present_label_once():
+    """Race (three codes across games) and Turned appear; Role and Stranded
+    don't, so they stay out of the map. No beat carries a definition."""
+    from sensei_top.review import build_summary
+    from sensei_top.review.findings import Category, Confidence, Finding, MatchReport, Severity
+
+    def finding(code, game):
+        return Finding(
+            code=code, analyzer="x", category=Category.CLOCK, severity=Severity.NOTICE,
+            confidence=Confidence.OBSERVED, title="t", detail="d", game_number=game,
+        )
+
+    report = MatchReport(
+        match_id="m", deck_id=None, result="loss",
+        games=tuple(_game(g, result="loss") for g in (1, 2, 3)),
+        findings=(finding("race_ahead", 1), finding("race_behind", 2),
+                  finding("race_even", 3), finding("turning_point", 1)),
+        gaps=(),
+    )
+    summary = build_summary(report)
+    assert sorted(summary.beat_definitions) == ["Race", "Turned"]
+    assert all(summary.beat_definitions.values())
+    assert not any(hasattr(b, "definition") for g in summary.games for b in g.beats)

@@ -210,6 +210,11 @@ class CoachNarrativeResponse(BaseModel):
     )
     id: int | None = Field(None, description="this stored report's id, once one exists")
     narrative: str | None = Field(None, description="the stored prose, once generated or pasted")
+    headline: str | None = Field(
+        None,
+        description="the report's 'One thing this week' section, lifted out of the prose at "
+        "store time; null for a report written before it existed or an answer without it",
+    )
     prompt: str | None = Field(
         None,
         description="the full text to write the report from — pass it to POST "

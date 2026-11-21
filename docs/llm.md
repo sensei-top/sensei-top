@@ -236,7 +236,7 @@ schedule, never a background worker:
 
 | Route | Sends | Writes |
 |---|---|---|
-| `POST /api/matches/{id}/report/narrative` | `ai/review/narrative.py`'s existing `full_prompt` — this game's turn-by-turn shape and the report's findings, no raw hand or graveyard | `match_narrative` |
+| `POST /api/matches/{id}/report/narrative` | `ai/review/narrative.py`'s `full_prompt` — this game's turn-by-turn shape and the report's findings, no raw hand or graveyard; the reply is requested as a structured answer (four fields, `llm.write_json`) | `match_narrative` (the four fields as `sections_json`, and their joined prose) |
 | `POST /api/guide/{key}/narrative` | `ai/guide/narrative.py`'s existing `full_prompt` — the player's 75 and the field's top archetypes' consensus staples, both with oracle text | `deck_narrative` **and** `matchup_brief` (every matchup plan the guide covers) |
 | `POST /api/review/leaks/narrative` | `ai/review/leaks_narrative.py`'s existing `full_prompt` — one bullet per recurring pattern with its win-rate interval | `leaks_narrative` |
 | `POST /api/coach/narrative` | `ai/coach/narrative.py`'s `full_prompt` — cross-deck win rates and recurring patterns over every completed constructed match, worked example losses, a curated reading list, and the previous report's own progress metrics; every field is a rate, a pattern label, or a reading id — no opponent name, user id, local path, or deck GUID, with the one documented exception of an example game's own `match_id` (`docs/coach.md`). Also takes an optional JSON body, `{"model": "..."}`, from the Coach page's model dropdown — one of `claude_config.py::REPORT_MODELS`, else a 422 naming the allowed ids; left out, the call uses the configured coach model exactly as before the dropdown existed. | `coach_report` (a new row every time — a coach report is history, never overwritten) |
@@ -310,7 +310,8 @@ call's whole prompt, which is the user's own match data, written to
 The prompt a card offers to copy ends with the answer contract
 (`ai/answers.py::answer_format`): a `for` line naming the card, a
 `context` hash of what the prompt was built from, and the JSON shape to
-answer in, one `{"prose": ...}` object for the prose cards. A generate
+answer in: one `{"prose": ...}` object for the prose cards, the four-field
+summary object for the match report. A generate
 call sends the prompt without that contract (`full_prompt`, the coach's
 `CoachPrompt.prompt`), because its reply is stored whole or read through
 the tool's own schema. The evidence is the same text either way, tested
@@ -402,6 +403,9 @@ fixture-backed scratch database used in `tests/ai/test_llm.py`:
 | Coach report | $0.8482 | Before prompt caching. Opus 5 over a real 245-match database, 2026-09-20: 110,718 input / 9,384 output tokens and 6 web searches (6 × $0.01 = $0.06 of that total). Measured against `$MTGA_LOG`, not the fixture, which can't reach `MIN_SAMPLE` (10) constructed matches. **The prompt is only ~10k tokens**; the billed input is it re-sent on every `pause_turn` continuation, so searches drive this cost, not history size — `web_search = false` under `[claude.coach]` takes it to a few cents. See `docs/coach.md` |
 | Coach report, Fable 5.1 | $3.2292 | Before prompt caching. Picked from the Coach tab's model dropdown, 2026-09-22, over 249 matches at `effort: high`: 238,886 input / 15,206 output tokens and 8 web searches ($0.08). About 3.8× the Opus 5 run: 2× from the per-token price, the rest from 2.2× the billed input through the same `pause_turn` re-sends. Not a controlled comparison — it was the second report, so its prompt also carried the first. See `docs/coach.md` |
 | Coach report, Opus 5.5, cached | $0.5998 | With prompt caching, 2026-10-07, Standard over 360 Standard matches (633 Constructed): 20 uncached input, 42,645 cache-write and 256,003 cache-read tokens (a 298,668-token prompt across the loop), 12,763 output tokens and 8 web searches ($0.08). Uncached, the same counts would have cost about $1.53. The last uncached Opus 5.5 report, 2026-10-02, with the same 8 searches, cost $1.7522 (345,874 input / 14,437 output). Not a controlled comparison: that one predates the per-format report, so its prompt differs |
+
+The deck guide's leads add a few output tokens per call, measured from usage like every other cost.
+The match summary's structured answer is measured from usage like every other cost.
 
 The first two coach rows predate prompt caching. Only Opus 5.5 was
 re-measured with caching on. The other dropdown models have no cached

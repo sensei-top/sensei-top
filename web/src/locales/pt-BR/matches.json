@@ -39,7 +39,6 @@
   },
   "game": {
     "title": "Jogo {{n}}",
-    "positionLabel": "Posição no jogo {{n}}, turno a turno",
     "seat": "Assento",
     "onPlay": "No play",
     "onDraw": "No draw",
@@ -49,7 +48,9 @@
     "turns_one": "{{n}} turno",
     "turns_other": "{{n}} turnos",
     "ended": "Terminou",
-    "replay": "Replay do jogo {{n}}"
+    "replay": "Replay do jogo {{n}}",
+    "result": "Resultado",
+    "factsLabel": "Jogo {{n}} em resumo"
   },
   "hero": {
     "kicker": "Relatório da partida",
@@ -144,16 +145,25 @@
     "legendDrawn": "Comprado: você o comprou neste turno."
   },
   "report": {
+    "summary": {
+      "games": "Jogo a jogo",
+      "keyLeak": "Leak principal",
+      "counterArgument": "Contra-argumento",
+      "confidence": "Confiança"
+    },
+    "about": {
+      "title": "Sobre estas leituras",
+      "caveats": "O que sustenta toda observação do mesmo tipo",
+      "labels": "O que os rótulos significam"
+    },
     "wholeMatch": "Partida inteira",
-    "placeYourTurn": "Jogo {{game}} · seu turno {{turn}}",
+    "placeYourTurn": "Jogo {{game}} · turno {{turn}} (seu turno {{self}})",
     "placeTurn": "Jogo {{game}} · turno {{turn}}",
     "placePartial": "{{place}} · parcialmente oculto",
     "numbersBehind": "Os números por trás",
     "detail": "Detalhe",
     "value": "Valor",
     "partlyHiddenNote": "Parcialmente oculto: parte do que sustenta a observação estava oculta, não foi observada, ou era ambígua.",
-    "stoodOut": "O que se destacou",
-    "nothingStoodOut": "Nada nesta partida pesou o bastante para se destacar.",
     "everyOther": "Todas as outras observações ({{n}})",
     "every": "Todas as observações ({{n}})",
     "pairing": "Este matchup",
@@ -169,7 +179,6 @@
     "showOther_one": "Mostrar a outra",
     "showOther_other": "Mostrar as outras {{n}}",
     "lineNote": "A linha é sua posição, turno a turno: vida, mesa, mão e mana pesadas em um só número. Acima de zero você está na frente.",
-    "dotNote": "O ponto é a maior virada do jogo.",
     "showNumbers": "Mostrar os números",
     "game": "Jogo",
     "turn": "Turno",
@@ -177,7 +186,8 @@
     "coachSubtitle": "A forma de cada jogo turno a turno e as observações deste relatório, escritas em prosa de treinador.",
     "coachShow": "Mostrar o resumo do treinador",
     "nothingToReview": "Nada para analisar nesta partida ainda.",
-    "nothingToReport": "Nada a relatar nesta partida: pouco dela foi registrado."
+    "nothingToReport": "Nada a relatar nesta partida: pouco dela foi registrado.",
+    "wholeMatchSubtitle": "Observações sobre a partida como um todo, não sobre um jogo."
   },
   "history": {
     "reading": "Lendo suas partidas…",
@@ -203,5 +213,22 @@
     "back": "O relatório da partida",
     "noGames": "Nenhum dado de jogo foi registrado para esta partida.",
     "gameResult": "Jogo {{n}} · {{result}}"
+  },
+  "timeline": {
+    "title": "A partida, turno a turno",
+    "subtitle": "Sua posição em todos os jogos. Cada marcador é uma observação; escolha um para lê-la.",
+    "chartLabel_one": "Sua posição ao longo da partida, turno a turno, com {{n}} observação marcada",
+    "chartLabel_other": "Sua posição ao longo da partida, turno a turno, com {{n}} observações marcadas",
+    "strip": "Observações, por jogo e turno",
+    "marker": "Jogo {{game}}, turno {{turn}}, {{severity}}: {{title}}",
+    "markerYourTurn": "Jogo {{game}}, turno {{turn}} (seu turno {{self}}), {{severity}}: {{title}}",
+    "markerGame": "Jogo {{game}}, {{severity}}: {{title}}",
+    "nearest": "O turno {{turn}} não foi registrado, então o marcador fica no turno {{shown}}.",
+    "replayTurn": "Replay a partir do turno {{turn}}",
+    "close": "Fechar",
+    "closeLabel": "Fechar esta observação",
+    "keys": "As setas do teclado passam de uma observação para outra.",
+    "nonePlaced": "Nenhuma observação pôde ser colocada em um turno desta partida.",
+    "noLine": "Nenhuma posição foi registrada para esta partida, então não há linha para desenhar."
   }
 }

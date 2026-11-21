@@ -112,8 +112,15 @@ class Gap:
 
 @dataclass(frozen=True, slots=True)
 class AnalyzerResult:
+    """``caveats`` are match-level readings: each applies to every finding of
+    its kind, not to one, so it is said once here rather than on each
+    per-game finding. Emit one only when at least one finding it qualifies
+    is emitted; a caveat with no finding is no reading. A caveat that names
+    something specific to its game (a number, a card) stays on its finding."""
+
     findings: tuple[Finding, ...] = ()
     gaps: tuple[Gap, ...] = ()
+    caveats: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -139,3 +146,5 @@ class MatchReport:
     findings: tuple[Finding, ...] = field(default_factory=tuple)
     gaps: tuple[Gap, ...] = field(default_factory=tuple)
     opponent_label: str | None = None
+    caveats: tuple[str, ...] = ()  # the analyzers' match-level caveats, de-duplicated, in
+    # analyzer order — what applies to every finding of its kind, not to one

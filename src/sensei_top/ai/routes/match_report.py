@@ -11,15 +11,22 @@ from sensei_top.ai import rules_notes, rules_questions
 from sensei_top.ai.answers import PASTED_AUTHOR, match_for
 from sensei_top.ai.review import narrative, narrative_store
 from sensei_top.ai.routes.narrative import (
+    NarrativeEnvelope,
     NarrativeSpec,
     check_pasted_length,
     narrative_get,
     narrative_post,
-    read_pasted_prose,
+    read_pasted,
     run_authored_write,
+    unreadable_answer,
 )
 from sensei_top.api.deps import Conn, WritableConn
-from sensei_top.api.models.common import NarrativeResponse, PastedAnswerIn, RulesNoteOut
+from sensei_top.api.models.common import (
+    MatchNarrativeResponse,
+    MatchSummarySections,
+    PastedAnswerIn,
+    RulesNoteOut,
+)
 from sensei_top.api.routes.matches import _no_match
 from sensei_top.api.sql import _consensus_window, match_format
 from sensei_top.i18n import _, english
@@ -127,15 +134,33 @@ def _match_report_narrative_spec(conn: sqlite3.Connection, match_id: str) -> Nar
         context_hash=narrative_store.context_hash,
         no_context_detail=_("Nothing to write about for this match yet."),
         label="match report",
+        schema=narrative._SUMMARY_TOOL["input_schema"],
+    )
+
+
+def _response(
+    conn: sqlite3.Connection, match_id: str, env: NarrativeEnvelope
+) -> MatchNarrativeResponse:
+    """The envelope plus the stored parts: ``sections`` is null for a row
+    written as one paragraph, and for any status but ``ok``."""
+    stored = narrative_store.read_match_narrative(conn, match_id) if env.status == "ok" else None
+    return MatchNarrativeResponse(
+        status=env.status, narrative=env.content, prompt=env.prompt,
+        model=env.who, generated_at=env.when, cost_usd=env.cost_usd, stale=env.stale,
+        notes=_notes_cited(conn, match_id) if env.status == "ok" else [],
+        sections=(
+            MatchSummarySections(**stored.sections)
+            if stored is not None and stored.sections is not None else None
+        ),
     )
 
 
 @router.get(
     "/api/matches/{match_id}/report/narrative",
-    response_model=NarrativeResponse,
+    response_model=MatchNarrativeResponse,
     tags=["matches"],
 )
-def match_report_narrative(match_id: str, conn: Conn) -> NarrativeResponse:
+def match_report_narrative(match_id: str, conn: Conn) -> MatchNarrativeResponse:
     """The stored "Coach's summary" for this match, and always the
     prompt to (re)write it from — see ``docs/llm.md``.
 
@@ -148,65 +173,69 @@ def match_report_narrative(match_id: str, conn: Conn) -> NarrativeResponse:
     """
     _require_match(conn, match_id)
     env = narrative_get(_match_report_narrative_spec(conn, match_id))
-    return NarrativeResponse(
-        status=env.status, narrative=env.content, prompt=env.prompt,
-        model=env.who, generated_at=env.when, cost_usd=env.cost_usd, stale=env.stale,
-        notes=_notes_cited(conn, match_id) if env.status == "ok" else [],
-    )
+    return _response(conn, match_id, env)
 
 
 @router.post(
     "/api/matches/{match_id}/report/narrative",
-    response_model=NarrativeResponse,
+    response_model=MatchNarrativeResponse,
     tags=["matches"],
 )
-def generate_match_report_narrative(match_id: str, conn: WritableConn) -> NarrativeResponse:
+def generate_match_report_narrative(match_id: str, conn: WritableConn) -> MatchNarrativeResponse:
     """Write this match's "Coach's summary" with Claude, and store it.
 
     Sends ``full_prompt`` (``ai/review/narrative.py``): the evidence ``GET``
     on this same path builds, without the answer contract that ``GET``'s
-    ``copied_prompt`` adds, since the reply is prose. 503
-    with no credential configured (``sensei-top config --set-key``) —
-    the dashboard falls back to the copy-prompt path automatically. 502
-    wraps whatever the Claude API itself objected to.
+    ``copied_prompt`` adds: the reply is requested as ``narrative._SUMMARY_TOOL``'s
+    object through ``llm.write_json``, and stored as its four parts plus
+    their joined prose. 503 with no credential configured
+    (``sensei-top config --set-key``) — the dashboard falls back to the
+    copy-prompt path automatically. 502 wraps whatever the Claude API itself
+    objected to, and an answer that is not the four parts.
     """
     _require_match(conn, match_id)
     spec = _match_report_narrative_spec(conn, match_id)
 
     def write(prompt: str, completion, context) -> None:
+        try:
+            summary = narrative.summary_from_json(completion.text)
+        except narrative.NarrativeError as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=_("Claude's answer could not be read: {error}").format(error=exc),
+            ) from exc
         narrative_store.write_match_narrative(
             conn, match_id,
-            prose=completion.text, prompt=prompt, model=completion.model,
+            prose=summary.prose, sections_json=summary.sections_json(),
+            prompt=prompt, model=completion.model,
             context_hash=narrative_store.context_hash(context),
             input_tokens=completion.input_tokens, output_tokens=completion.output_tokens,
             cost_usd=completion.cost_usd,
         )
 
     env = narrative_post(conn, spec, write=write)
-    return NarrativeResponse(
-        status=env.status, narrative=env.content, prompt=env.prompt,
-        model=env.who, generated_at=env.when, cost_usd=env.cost_usd, stale=env.stale,
-        notes=_notes_cited(conn, match_id) if env.status == "ok" else [],
-    )
+    return _response(conn, match_id, env)
 
 
 @router.put(
     "/api/matches/{match_id}/report/narrative",
-    response_model=NarrativeResponse,
+    response_model=MatchNarrativeResponse,
     tags=["matches"],
 )
 def paste_match_report_narrative(
     match_id: str, body: PastedAnswerIn, conn: WritableConn
-) -> NarrativeResponse:
+) -> MatchNarrativeResponse:
     """Store an answer pasted into this match's "Coach's summary" card.
 
     Makes no model call. The answer is read through the answer contract
     (``answers.read_answer``, header required): 422 when it is another
-    card's or another match's, is not JSON, or carries no prose, and nothing
-    is stored; 413 over 256 KB, before anything else; 404 for an unknown
-    match, as for ``GET``. It is stored with the context its header says it
-    was written for, so one written for older evidence reads as stale, and
-    beside the copyable prompt rebuilt now; the model is the sentinel
+    card's or another match's, is not JSON, or is not the four parts
+    ``narrative._SUMMARY_TOOL`` describes (an older copied prompt's
+    ``{"prose": ...}`` is refused, not stored), and nothing is stored; 413
+    over 256 KB, before anything else; 404 for an unknown match, as for
+    ``GET``. It is stored with the context its header says it was written
+    for, so one written for older evidence reads as stale, and beside the
+    copyable prompt rebuilt now; the model is the sentinel
     ``pasted``, tokens and cost ``NULL``. Returns what ``GET`` on this path
     returns.
     """
@@ -216,20 +245,24 @@ def paste_match_report_narrative(
     context = spec.build_context()
     if context is None:
         raise HTTPException(status_code=404, detail=spec.no_context_detail)
-    answer, prose = read_pasted_prose(body.answer, match_for(match_id))
+    answer = read_pasted(body.answer, match_for(match_id))
+    try:
+        summary = narrative.summary_from_json(answer.body)
+    except narrative.NarrativeError as exc:
+        raise unreadable_answer(exc) from exc
     prompt = spec.copied_prompt(context)
 
     run_authored_write(conn, lambda: narrative_store.write_match_narrative(
         conn, match_id,
-        prose=prose, prompt=prompt, model=PASTED_AUTHOR,
+        prose=summary.prose, sections_json=summary.sections_json(),
+        prompt=prompt, model=PASTED_AUTHOR,
         context_hash=answer.context,
     ))
 
     stored = spec.read_stored()
     assert stored is not None
-    return NarrativeResponse(
-        status="ok", narrative=stored.prose, prompt=prompt, model=stored.model,
-        generated_at=stored.generated_at, cost_usd=stored.cost_usd,
+    return _response(conn, match_id, NarrativeEnvelope(
+        status="ok", content=stored.prose, prompt=prompt, who=stored.model,
+        when=stored.generated_at, cost_usd=stored.cost_usd,
         stale=stored.context_hash != spec.context_hash(context),
-        notes=_notes_cited(conn, match_id),
-    )
+    ))

@@ -384,3 +384,47 @@ export function fieldCaption(
   else if (change?.verdict === 'gone') parts.push(t('decks.guide.fieldCaption.gone'))
   return parts.join(' · ')
 }
+
+/** How many archetypes the Field table shows before "Show all". */
+export const FIELD_TOP = 8
+
+/** The first `limit` of `rows`, all of them when `all`. The rows keep the
+ *  server's order (most played first). */
+export function topRows<T>(rows: readonly T[], all: boolean, limit: number = FIELD_TOP): T[] {
+  return all ? [...rows] : rows.slice(0, limit)
+}
+
+/** One picker option: an archetype with a written plan, and its share of
+ *  the field (`null` when the field has no row for it). */
+export type FocusOption = { archetype: string; share: number | null }
+
+/** The archetypes that have a plan, most played first. One without a row in
+ *  the field goes after every one that has one, in the plan's own order;
+ *  equal shares keep the plan's order. An archetype named twice by the
+ *  plans is listed once. */
+export function focusOptions(plans: readonly { archetype: string }[], shares: readonly ArchetypeShareOut[]): FocusOption[] {
+  const shareOf = new Map(shares.map((s) => [s.archetype, s.share]))
+  const seen = new Set<string>()
+  const options: FocusOption[] = []
+  for (const plan of plans) {
+    if (seen.has(plan.archetype)) continue
+    seen.add(plan.archetype)
+    options.push({ archetype: plan.archetype, share: shareOf.get(plan.archetype) ?? null })
+  }
+  return options
+    .map((option, index) => ({ option, index }))
+    .sort((a, b) => {
+      if (a.option.share == null || b.option.share == null) {
+        return a.option.share == null && b.option.share == null ? a.index - b.index : a.option.share == null ? 1 : -1
+      }
+      return b.option.share - a.option.share || a.index - b.index
+    })
+    .map(({ option }) => option)
+}
+
+/** The archetype `?vs=` chooses: `vs` when a plan is written for it, else
+ *  `null` (All matchups), with no error for an unknown one. */
+export function resolveVs(vs: string | null, plans: readonly { archetype: string }[]): string | null {
+  if (!vs) return null
+  return plans.some((plan) => plan.archetype === vs) ? vs : null
+}
